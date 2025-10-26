@@ -17,6 +17,8 @@ import Aprovacoes from "./pages/Aprovacoes";
 import NotFound from "./pages/NotFound";
 import TicketDetalhes from "./pages/TicketDetalhes";
 import NovaCobranca from "./pages/NovaCobranca";
+import TodosTickets from "./pages/TodosTickets";
+import Propriedades from "./pages/Propriedades";
 
 const queryClient = new QueryClient();
 
@@ -85,6 +87,22 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['agent', 'admin']}>
                   <NovaCobranca />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/todos-tickets"
+              element={
+                <ProtectedRoute allowedRoles={['agent', 'admin']}>
+                  <TodosTickets />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/propriedades"
+              element={
+                <ProtectedRoute allowedRoles={['agent', 'admin']}>
+                  <Propriedades />
                 </ProtectedRoute>
               }
             />
