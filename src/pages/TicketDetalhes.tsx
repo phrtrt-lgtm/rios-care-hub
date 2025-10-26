@@ -4,10 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Send, Paperclip, Loader2, Sparkles } from "lucide-react";
+import { ArrowLeft, Send, Paperclip, Loader2, Sparkles, FileText, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -56,6 +60,8 @@ export default function TicketDetalhes() {
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [generatingAI, setGeneratingAI] = useState(false);
+  const [showDocDialog, setShowDocDialog] = useState(false);
+  const [documentType, setDocumentType] = useState("");
 
   const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent';
   const canUpdate = ticket?.status !== 'concluido' && ticket?.status !== 'cancelado';
@@ -237,6 +243,66 @@ export default function TicketDetalhes() {
     }
   };
 
+  const generateDocument = async () => {
+    if (!documentType) {
+      toast({
+        title: "Selecione um tipo de documento",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setGeneratingAI(true);
+      setShowDocDialog(false);
+      
+      const messagesContext = messages
+        .map(m => `${m.profiles.name}: ${m.body}`)
+        .join('\n');
+
+      const { data, error } = await supabase.functions.invoke('ai-assistant', {
+        body: {
+          action: 'generate_document',
+          context: {
+            documentType,
+            subject: ticket?.subject,
+            description: ticket?.description,
+            messages: messagesContext,
+            propertyName: ticket?.properties?.name,
+            ownerName: ticket?.profiles.name
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      // Criar arquivo e fazer download
+      const blob = new Blob([data.result], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${documentType.toLowerCase().replace(/ /g, '_')}_ticket_${id}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Documento gerado!",
+        description: "O download iniciou automaticamente.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao gerar documento",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingAI(false);
+      setDocumentType("");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -369,19 +435,65 @@ export default function TicketDetalhes() {
                     </label>
                     
                     {isTeamMember && (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={generateAIResponse}
-                        disabled={generatingAI}
-                      >
-                        {generatingAI ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <Sparkles className="mr-2 h-4 w-4" />
-                        )}
-                        Gerar com IA
-                      </Button>
+                      <>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              disabled={generatingAI}
+                            >
+                              {generatingAI ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              ) : (
+                                <Sparkles className="mr-2 h-4 w-4" />
+                              )}
+                              IA Assistente
+                              <ChevronDown className="ml-2 h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                            <DropdownMenuItem onClick={generateAIResponse}>
+                              <Sparkles className="mr-2 h-4 w-4" />
+                              Gerar Resposta
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setShowDocDialog(true)}>
+                              <FileText className="mr-2 h-4 w-4" />
+                              Gerar Documento
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        <Dialog open={showDocDialog} onOpenChange={setShowDocDialog}>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Gerar Documento com IA</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4 py-4">
+                              <div className="space-y-2">
+                                <Label htmlFor="doc-type">Tipo de Documento</Label>
+                                <Select value={documentType} onValueChange={setDocumentType}>
+                                  <SelectTrigger id="doc-type">
+                                    <SelectValue placeholder="Selecione o tipo de documento" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="Relatório de Atendimento">Relatório de Atendimento</SelectItem>
+                                    <SelectItem value="Termo de Conclusão">Termo de Conclusão</SelectItem>
+                                    <SelectItem value="Protocolo de Serviço">Protocolo de Serviço</SelectItem>
+                                    <SelectItem value="Carta de Comunicação">Carta de Comunicação</SelectItem>
+                                    <SelectItem value="Resumo Executivo">Resumo Executivo</SelectItem>
+                                    <SelectItem value="Proposta de Solução">Proposta de Solução</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <Button onClick={generateDocument} className="w-full">
+                                <FileText className="mr-2 h-4 w-4" />
+                                Gerar e Baixar
+                              </Button>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      </>
                     )}
                   </div>
                   <Button onClick={sendMessage} disabled={sending || !newMessage.trim()}>

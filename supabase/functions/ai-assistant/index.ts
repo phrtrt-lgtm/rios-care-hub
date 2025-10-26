@@ -32,11 +32,19 @@ Gere uma resposta apropriada para este ticket.`;
         break;
 
       case "generate_document":
-        systemPrompt = "Você é um especialista em criar documentos profissionais. Crie documentos claros, bem estruturados e profissionais baseados nas informações fornecidas.";
+        systemPrompt = "Você é um especialista em criar documentos profissionais. Crie documentos claros, bem estruturados e profissionais baseados nas informações fornecidas. Use formatação adequada, seja formal e detalhado.";
         userPrompt = `Tipo de documento: ${context.documentType}
-Informações: ${context.info}
 
-Gere um documento profissional e bem formatado.`;
+Informações do Ticket:
+- Assunto: ${context.subject}
+- Descrição: ${context.description}
+- Propriedade: ${context.propertyName || 'Não especificada'}
+- Proprietário: ${context.ownerName}
+
+Histórico de mensagens:
+${context.messages}
+
+Gere um ${context.documentType} profissional, completo e bem formatado com base nessas informações. Inclua cabeçalho, corpo estruturado e conclusão apropriados.`;
         break;
 
       case "summarize":
