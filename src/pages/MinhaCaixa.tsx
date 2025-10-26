@@ -4,10 +4,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Plus, LogOut } from "lucide-react";
 import { TicketList } from "@/components/TicketList";
+import { AvatarUpload } from "@/components/AvatarUpload";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 export default function MinhaCaixa() {
-  const { profile, signOut } = useAuth();
+  const { profile, user, signOut } = useAuth();
   const navigate = useNavigate();
+  const [photoUrl, setPhotoUrl] = useState(profile?.photo_url);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
@@ -19,9 +23,38 @@ export default function MinhaCaixa() {
             <h1 className="text-xl font-semibold">Minha Caixa</h1>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">
-              {profile?.name}
-            </span>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  {profile?.name}
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Meu Perfil</DialogTitle>
+                </DialogHeader>
+                <div className="py-4">
+                  {user && profile && (
+                    <AvatarUpload
+                      userId={user.id}
+                      currentPhotoUrl={photoUrl}
+                      userName={profile.name}
+                      onUploadComplete={(url) => setPhotoUrl(url)}
+                    />
+                  )}
+                  <div className="mt-6 space-y-2">
+                    <div>
+                      <span className="text-sm font-medium">Nome:</span>
+                      <p className="text-muted-foreground">{profile?.name}</p>
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium">Email:</span>
+                      <p className="text-muted-foreground">{profile?.email}</p>
+                    </div>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
             <Button variant="outline" size="sm" onClick={signOut}>
               <LogOut className="mr-2 h-4 w-4" />
               Sair

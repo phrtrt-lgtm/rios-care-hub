@@ -115,7 +115,7 @@ export const TicketList = () => {
               <Card
                 key={ticket.id}
                 className="cursor-pointer transition-all hover:shadow-lg"
-                onClick={() => navigate(`/tickets/${ticket.id}`)}
+                onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
               >
                 <CardHeader>
                   <div className="flex items-start justify-between">

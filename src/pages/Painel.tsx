@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { LogOut, Users, Ticket, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { LogOut, Users, Ticket, AlertTriangle, CheckCircle2, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 
@@ -125,7 +125,7 @@ export default function Painel() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-3">
           <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/aprovacoes")}>
             <CardHeader>
               <CardTitle>Aprovações Pendentes</CardTitle>
@@ -136,6 +136,21 @@ export default function Painel() {
             <CardContent>
               <Button variant="outline" className="w-full">
                 Ver Solicitações
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/nova-cobranca")}>
+            <CardHeader>
+              <CardTitle>Nova Cobrança</CardTitle>
+              <CardDescription>
+                Criar cobrança para proprietários
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="outline" className="w-full">
+                <Plus className="mr-2 h-4 w-4" />
+                Criar Cobrança
               </Button>
             </CardContent>
           </Card>

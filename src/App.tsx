@@ -14,6 +14,8 @@ import NovoTicket from "./pages/NovoTicket";
 import Painel from "./pages/Painel";
 import Aprovacoes from "./pages/Aprovacoes";
 import NotFound from "./pages/NotFound";
+import TicketDetalhes from "./pages/TicketDetalhes";
+import NovaCobranca from "./pages/NovaCobranca";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +60,22 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <Aprovacoes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ticket-detalhes/:id"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'agent', 'admin']}>
+                  <TicketDetalhes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/nova-cobranca"
+              element={
+                <ProtectedRoute allowedRoles={['agent', 'admin']}>
+                  <NovaCobranca />
                 </ProtectedRoute>
               }
             />

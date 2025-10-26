@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      charge_attachments: {
+        Row: {
+          charge_id: string | null
+          created_at: string
+          created_by: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          id: string
+          mime_type: string | null
+        }
+        Insert: {
+          charge_id?: string | null
+          created_at?: string
+          created_by: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+        }
+        Update: {
+          charge_id?: string | null
+          created_at?: string
+          created_by?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "charge_attachments_charge_id_fkey"
+            columns: ["charge_id"]
+            isOneToOne: false
+            referencedRelation: "charges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       charges: {
         Row: {
           amount_cents: number
