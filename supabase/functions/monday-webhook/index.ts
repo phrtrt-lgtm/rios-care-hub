@@ -107,13 +107,34 @@ serve(async (req) => {
       return column?.text || column?.value;
     };
 
+    // Get property name from Monday (adjust column ID based on your board)
+    const propertyName = getColumnValue("text") || getColumnValue("text0");
+    
+    if (!propertyName) {
+      throw new Error('Coluna "Imóvel" não encontrada no item do Monday');
+    }
+
+    // Find property and get owner_id
+    const { data: property, error: propertyError } = await supabase
+      .from('properties')
+      .select('owner_id')
+      .eq('name', propertyName)
+      .single();
+
+    if (propertyError || !property) {
+      console.error("Property not found:", propertyName, propertyError);
+      throw new Error(`Imóvel "${propertyName}" não encontrado no sistema`);
+    }
+
+    console.log("Found property owner:", property.owner_id);
+
     // Extract charge data (adjust column IDs based on your Monday board)
     const chargeData = {
       title: item.name,
-      description: getColumnValue("text") || getColumnValue("long_text") || item.name,
+      description: getColumnValue("long_text") || item.name,
       amount_cents: parseInt(getColumnValue("numbers") || "0") * 100, // Convert to cents
       due_date: getColumnValue("date") || null,
-      owner_id: null, // Will need to map Monday person to Supabase user
+      owner_id: property.owner_id,
       currency: "BRL",
       status: "draft",
     };
