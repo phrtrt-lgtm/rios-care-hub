@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { LogOut, Users, Ticket, AlertTriangle, CheckCircle2, Plus } from "lucide-react";
+import { LogOut, Users, Ticket, AlertTriangle, CheckCircle2, Plus, DollarSign } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { AvatarUpload } from "@/components/AvatarUpload";
@@ -180,17 +180,17 @@ export default function Painel() {
             </CardContent>
           </Card>
 
-          <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/nova-cobranca")}>
+          <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/gerenciar-cobrancas")}>
             <CardHeader>
-              <CardTitle>Nova Cobrança</CardTitle>
+              <CardTitle>Gerenciar Cobranças</CardTitle>
               <CardDescription>
-                Criar cobrança para proprietários
+                Visualizar e atualizar status de cobranças
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Button variant="outline" className="w-full">
-                <Plus className="mr-2 h-4 w-4" />
-                Criar Cobrança
+                <DollarSign className="mr-2 h-4 w-4" />
+                Ver Cobranças
               </Button>
             </CardContent>
           </Card>

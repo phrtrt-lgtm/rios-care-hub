@@ -19,6 +19,7 @@ import TicketDetalhes from "./pages/TicketDetalhes";
 import NovaCobranca from "./pages/NovaCobranca";
 import TodosTickets from "./pages/TodosTickets";
 import Propriedades from "./pages/Propriedades";
+import GerenciarCobrancas from "./pages/GerenciarCobrancas";
 
 const queryClient = new QueryClient();
 
@@ -103,6 +104,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['agent', 'admin']}>
                   <Propriedades />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/gerenciar-cobrancas"
+              element={
+                <ProtectedRoute allowedRoles={['agent', 'admin']}>
+                  <GerenciarCobrancas />
                 </ProtectedRoute>
               }
             />
