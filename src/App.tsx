@@ -10,6 +10,7 @@ import Login from "./pages/Login";
 import Cadastro from "./pages/Cadastro";
 import AguardandoAprovacao from "./pages/AguardandoAprovacao";
 import MinhaCaixa from "./pages/MinhaCaixa";
+import MinhasCobrancas from "./pages/MinhasCobrancas";
 import NovoTicket from "./pages/NovoTicket";
 import Painel from "./pages/Painel";
 import Aprovacoes from "./pages/Aprovacoes";
@@ -36,6 +37,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['owner']}>
                   <MinhaCaixa />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/minhas-cobrancas"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <MinhasCobrancas />
                 </ProtectedRoute>
               }
             />

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Plus, LogOut } from "lucide-react";
+import { Plus, LogOut, DollarSign } from "lucide-react";
 import { TicketList } from "@/components/TicketList";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -72,10 +72,16 @@ export default function MinhaCaixa() {
               Acompanhe seus tickets e solicitações
             </p>
           </div>
-          <Button onClick={() => navigate("/novo-ticket")}>
-            <Plus className="mr-2 h-4 w-4" />
-            Novo Chamado
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => navigate("/minhas-cobrancas")} variant="outline">
+              <DollarSign className="mr-2 h-4 w-4" />
+              Minhas Cobranças
+            </Button>
+            <Button onClick={() => navigate("/novo-ticket")}>
+              <Plus className="mr-2 h-4 w-4" />
+              Novo Chamado
+            </Button>
+          </div>
         </div>
 
         <TicketList />
