@@ -13,29 +13,28 @@ serve(async (req) => {
   }
 
   try {
+    const payload = await req.json();
+    console.log("Received Monday webhook:", JSON.stringify(payload, null, 2));
+
+    // Handle Monday.com webhook challenge/verification
+    if (payload.challenge) {
+      console.log("Responding to Monday webhook challenge");
+      return new Response(
+        JSON.stringify({ challenge: payload.challenge }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     const MONDAY_API_KEY = Deno.env.get("MONDAY_API_KEY");
-    const MONDAY_WEBHOOK_SECRET = Deno.env.get("MONDAY_WEBHOOK_SECRET");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-    if (!MONDAY_API_KEY || !MONDAY_WEBHOOK_SECRET || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    if (!MONDAY_API_KEY || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       throw new Error("Missing required environment variables");
     }
-
-    // Validate webhook signature
-    const signature = req.headers.get("x-monday-signature");
-    const providedSecret = req.headers.get("authorization")?.replace("Bearer ", "");
-    
-    if (providedSecret !== MONDAY_WEBHOOK_SECRET) {
-      console.error("Invalid webhook secret");
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const payload = await req.json();
-    console.log("Received Monday webhook:", JSON.stringify(payload, null, 2));
 
     // Extract data from Monday webhook payload
     const { event } = payload;
