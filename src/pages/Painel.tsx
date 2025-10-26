@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { LogOut, Users, Ticket, AlertTriangle, CheckCircle2, Plus, DollarSign } from "lucide-react";
+import { LogOut, Users, Ticket, AlertTriangle, CheckCircle2, Plus, DollarSign, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { AvatarUpload } from "@/components/AvatarUpload";
@@ -165,7 +165,7 @@ export default function Painel() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/aprovacoes")}>
             <CardHeader>
               <CardTitle>Aprovações Pendentes</CardTitle>
@@ -195,7 +195,22 @@ export default function Painel() {
             </CardContent>
           </Card>
 
-          <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => alert("Em breve: Gerenciar todos os tickets")}>
+          <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/propriedades")}>
+            <CardHeader>
+              <CardTitle>Gerenciar Unidades</CardTitle>
+              <CardDescription>
+                Cadastrar e gerenciar propriedades
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="outline" className="w-full">
+                <Building2 className="mr-2 h-4 w-4" />
+                Ver Unidades
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/todos-tickets")}>
             <CardHeader>
               <CardTitle>Todos os Tickets</CardTitle>
               <CardDescription>
@@ -203,7 +218,7 @@ export default function Painel() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button variant="outline" className="w-full" onClick={() => navigate("/todos-tickets")}>
+              <Button variant="outline" className="w-full">
                 Ver Todos
               </Button>
             </CardContent>
