@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Send, Paperclip, Loader2 } from "lucide-react";
+import { ArrowLeft, Send, Paperclip, Loader2, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -55,6 +55,7 @@ export default function TicketDetalhes() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [generatingAI, setGeneratingAI] = useState(false);
 
   const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent';
   const canUpdate = ticket?.status !== 'concluido' && ticket?.status !== 'cancelado';
@@ -198,6 +199,44 @@ export default function TicketDetalhes() {
     }
   };
 
+  const generateAIResponse = async () => {
+    try {
+      setGeneratingAI(true);
+      
+      // Prepara o contexto do ticket e mensagens
+      const messagesContext = messages
+        .map(m => `${m.profiles.name}: ${m.body}`)
+        .join('\n');
+
+      const { data, error } = await supabase.functions.invoke('ai-assistant', {
+        body: {
+          action: 'generate_response',
+          context: {
+            subject: ticket?.subject,
+            description: ticket?.description,
+            messages: messagesContext
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      setNewMessage(data.result);
+      toast({
+        title: "Resposta gerada com sucesso!",
+        description: "A IA gerou uma sugestão de resposta para você.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao gerar resposta",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingAI(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -308,7 +347,7 @@ export default function TicketDetalhes() {
                   className="min-h-[100px]"
                 />
                 <div className="flex justify-between items-center">
-                  <div>
+                  <div className="flex gap-2">
                     <input
                       type="file"
                       id="attachment-upload"
@@ -328,6 +367,22 @@ export default function TicketDetalhes() {
                         </span>
                       </Button>
                     </label>
+                    
+                    {isTeamMember && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={generateAIResponse}
+                        disabled={generatingAI}
+                      >
+                        {generatingAI ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Sparkles className="mr-2 h-4 w-4" />
+                        )}
+                        Gerar com IA
+                      </Button>
+                    )}
                   </div>
                   <Button onClick={sendMessage} disabled={sending || !newMessage.trim()}>
                     {sending ? (

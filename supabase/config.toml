@@ -2,3 +2,6 @@ project_id = "ktzfovzwayfqczytmhno"
 
 [functions.notify-ticket]
 verify_jwt = false
+
+[functions.ai-assistant]
+verify_jwt = true
