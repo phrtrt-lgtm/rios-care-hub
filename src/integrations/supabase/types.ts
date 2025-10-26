@@ -14,16 +14,341 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      charges: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          currency: string
+          description: string | null
+          due_date: string | null
+          id: string
+          owner_id: string
+          payment_link_url: string | null
+          status: string
+          ticket_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          currency?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          owner_id: string
+          payment_link_url?: string | null
+          status?: string
+          ticket_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          currency?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          owner_id?: string
+          payment_link_url?: string | null
+          status?: string
+          ticket_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "charges_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charges_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string
+          phone: string | null
+          photo_url: string | null
+          role: Database["public"]["Enums"]["app_role"]
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id: string
+          name: string
+          phone?: string | null
+          photo_url?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          phone?: string | null
+          photo_url?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      properties: {
+        Row: {
+          address: string | null
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "properties_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ticket_attachments: {
+        Row: {
+          created_at: string
+          file_size: number | null
+          id: string
+          message_id: string | null
+          mime_type: string | null
+          path: string
+          ticket_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          file_size?: number | null
+          id?: string
+          message_id?: string | null
+          mime_type?: string | null
+          path: string
+          ticket_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          file_size?: number | null
+          id?: string
+          message_id?: string | null
+          mime_type?: string | null
+          path?: string
+          ticket_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_attachments_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_attachments_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ticket_messages: {
+        Row: {
+          author_id: string
+          body: string
+          created_at: string
+          id: string
+          is_internal: boolean
+          ticket_id: string
+        }
+        Insert: {
+          author_id: string
+          body: string
+          created_at?: string
+          id?: string
+          is_internal?: boolean
+          ticket_id: string
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+          is_internal?: boolean
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_messages_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tickets: {
+        Row: {
+          assigned_to: string | null
+          blocked_dates_end: string | null
+          blocked_dates_start: string | null
+          created_at: string
+          created_by: string
+          description: string
+          first_response_at: string | null
+          id: string
+          owner_id: string
+          priority: Database["public"]["Enums"]["ticket_priority"]
+          property_id: string | null
+          sla_due_at: string | null
+          status: Database["public"]["Enums"]["ticket_status"]
+          subject: string
+          ticket_type: Database["public"]["Enums"]["ticket_type"]
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          blocked_dates_end?: string | null
+          blocked_dates_start?: string | null
+          created_at?: string
+          created_by: string
+          description: string
+          first_response_at?: string | null
+          id?: string
+          owner_id: string
+          priority?: Database["public"]["Enums"]["ticket_priority"]
+          property_id?: string | null
+          sla_due_at?: string | null
+          status?: Database["public"]["Enums"]["ticket_status"]
+          subject: string
+          ticket_type: Database["public"]["Enums"]["ticket_type"]
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          blocked_dates_end?: string | null
+          blocked_dates_start?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string
+          first_response_at?: string | null
+          id?: string
+          owner_id?: string
+          priority?: Database["public"]["Enums"]["ticket_priority"]
+          property_id?: string | null
+          sla_due_at?: string | null
+          status?: Database["public"]["Enums"]["ticket_status"]
+          subject?: string
+          ticket_type?: Database["public"]["Enums"]["ticket_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tickets_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_team_member: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "owner" | "agent" | "admin" | "pending_owner"
+      ticket_priority: "normal" | "urgente"
+      ticket_status:
+        | "novo"
+        | "em_analise"
+        | "aguardando_info"
+        | "em_execucao"
+        | "concluido"
+        | "cancelado"
+      ticket_type:
+        | "duvida"
+        | "manutencao"
+        | "cobranca"
+        | "bloqueio_data"
+        | "financeiro"
+        | "outros"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +475,25 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["owner", "agent", "admin", "pending_owner"],
+      ticket_priority: ["normal", "urgente"],
+      ticket_status: [
+        "novo",
+        "em_analise",
+        "aguardando_info",
+        "em_execucao",
+        "concluido",
+        "cancelado",
+      ],
+      ticket_type: [
+        "duvida",
+        "manutencao",
+        "cobranca",
+        "bloqueio_data",
+        "financeiro",
+        "outros",
+      ],
+    },
   },
 } as const
