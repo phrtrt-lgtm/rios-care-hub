@@ -106,8 +106,9 @@ serve(async (req) => {
       return column?.text || column?.value;
     };
 
-    // Get property name from Monday (adjust column ID based on your board)
-    const propertyName = getColumnValue("text") || getColumnValue("text0");
+    // Get property name from Monday - using the actual column ID from your board
+    // The column ID is "text_mkx3ehs" based on the logs
+    const propertyName = getColumnValue("text_mkx3ehs");
     
     if (!propertyName) {
       throw new Error('Coluna "Imóvel" não encontrada no item do Monday');
@@ -127,12 +128,12 @@ serve(async (req) => {
 
     console.log("Found property owner:", property.owner_id);
 
-    // Extract charge data (adjust column IDs based on your Monday board)
+    // Extract charge data using the actual column IDs from your Monday board
     const chargeData = {
       title: item.name,
-      description: getColumnValue("long_text") || item.name,
-      amount_cents: parseInt(getColumnValue("numbers") || "0") * 100, // Convert to cents
-      due_date: getColumnValue("date") || null,
+      description: getColumnValue("long_text_mkx3tx1b") || item.name,
+      amount_cents: parseInt(getColumnValue("numeric_mkx355en") || "0") * 100, // Convert to cents
+      due_date: getColumnValue("data") || null,
       owner_id: property.owner_id,
       currency: "BRL",
       status: "draft",
