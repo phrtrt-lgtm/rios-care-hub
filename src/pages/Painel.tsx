@@ -3,12 +3,15 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { LogOut, Users, Ticket, AlertTriangle, CheckCircle2, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { AvatarUpload } from "@/components/AvatarUpload";
 
 export default function Painel() {
-  const { profile, signOut } = useAuth();
+  const { profile, user, signOut } = useAuth();
+  const [photoUrl, setPhotoUrl] = useState(profile?.photo_url);
   const [stats, setStats] = useState({
     novos: 0,
     urgentes: 0,
@@ -51,7 +54,44 @@ export default function Painel() {
             <Badge variant="secondary">
               {profile?.role === "admin" ? "Administrador" : "Atendente"}
             </Badge>
-            <span className="text-sm text-muted-foreground">{profile?.name}</span>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  {profile?.name}
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Meu Perfil</DialogTitle>
+                </DialogHeader>
+                <div className="py-4">
+                  {user && profile && (
+                    <AvatarUpload
+                      userId={user.id}
+                      currentPhotoUrl={photoUrl}
+                      userName={profile.name}
+                      onUploadComplete={(url) => setPhotoUrl(url)}
+                    />
+                  )}
+                  <div className="mt-6 space-y-2">
+                    <div>
+                      <span className="text-sm font-medium">Nome:</span>
+                      <p className="text-muted-foreground">{profile?.name}</p>
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium">Email:</span>
+                      <p className="text-muted-foreground">{profile?.email}</p>
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium">Função:</span>
+                      <p className="text-muted-foreground">
+                        {profile?.role === "admin" ? "Administrador" : "Atendente"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
             <Button variant="outline" size="sm" onClick={signOut}>
               <LogOut className="mr-2 h-4 w-4" />
               Sair
