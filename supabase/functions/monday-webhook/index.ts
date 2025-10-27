@@ -159,10 +159,14 @@ serve(async (req) => {
         try {
           console.log("Downloading asset:", asset.name);
 
-          // Download file from Monday
-          const fileResponse = await fetch(asset.url);
+          // Download file from Monday with authentication
+          const fileResponse = await fetch(asset.url, {
+            headers: {
+              "Authorization": MONDAY_API_KEY,
+            },
+          });
           if (!fileResponse.ok) {
-            console.error("Failed to download file:", asset.name);
+            console.error("Failed to download file:", asset.name, fileResponse.status);
             continue;
           }
 

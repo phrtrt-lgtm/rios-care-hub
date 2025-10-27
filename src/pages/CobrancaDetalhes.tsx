@@ -188,12 +188,21 @@ export default function CobrancaDetalhes() {
   };
 
   const downloadAttachment = async (filePath: string) => {
-    const { data } = supabase.storage
+    const { data, error } = await supabase.storage
       .from('attachments')
-      .getPublicUrl(filePath);
+      .createSignedUrl(filePath, 60); // URL válida por 60 segundos
+
+    if (error) {
+      toast({
+        title: "Erro ao baixar anexo",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
 
     if (data) {
-      window.open(data.publicUrl, '_blank');
+      window.open(data.signedUrl, '_blank');
     }
   };
 
