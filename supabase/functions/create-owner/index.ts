@@ -29,35 +29,41 @@ serve(async (req) => {
       );
     }
 
-    // Create client with anon key to verify user
-    const supabaseClient = createClient(
-      SUPABASE_URL,
-      authHeader.replace("Bearer ", "")
-    );
-
-    // Verify user is authenticated and is admin
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    // Create admin client to verify JWT and get user
+    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    
+    // Extract token from header
+    const token = authHeader.replace("Bearer ", "");
+    
+    // Verify JWT token
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
     
     if (userError || !user) {
+      console.error("User verification error:", userError);
       return new Response(
         JSON.stringify({ error: "Não autenticado" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    console.log("User authenticated:", user.id);
+
     // Check if user is admin
-    const { data: profile, error: profileError } = await supabaseClient
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from("profiles")
       .select("role")
       .eq("id", user.id)
       .single();
 
     if (profileError || profile?.role !== "admin") {
+      console.error("Profile check error:", profileError, "Role:", profile?.role);
       return new Response(
         JSON.stringify({ error: "Acesso negado. Apenas administradores podem cadastrar proprietários." }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    console.log("Admin verified:", user.id);
 
     // Get request body
     const { email, password, name, phone } = await req.json();
@@ -68,9 +74,6 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    // Create admin client with service role
-    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // Create user
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
