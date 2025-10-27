@@ -23,35 +23,34 @@ export default function AdminCadastrarProprietario() {
     setLoading(true);
 
     try {
-      // Create user account
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: formData.email,
-        password: formData.password,
-        email_confirm: true,
-        user_metadata: {
-          name: formData.name,
-          phone: formData.phone,
-        },
-      });
-
-      if (authError) throw authError;
-
-      if (!authData.user) {
-        throw new Error("Erro ao criar usuário");
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error("Sessão não encontrada");
       }
 
-      // Update profile to owner role and approved status
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({
-          role: "owner",
-          status: "approved",
-          name: formData.name,
-          phone: formData.phone,
-        })
-        .eq("id", authData.user.id);
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-owner`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password,
+            name: formData.name,
+            phone: formData.phone,
+          }),
+        }
+      );
 
-      if (profileError) throw profileError;
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Erro ao cadastrar proprietário");
+      }
 
       toast.success("Proprietário cadastrado com sucesso!");
       navigate("/painel");
