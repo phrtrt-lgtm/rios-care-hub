@@ -153,91 +153,46 @@ serve(async (req) => {
 
     console.log("Created charge:", charge.id);
 
-    // Download and upload attachments if any
+    // Save attachments metadata (we'll proxy downloads through edge function)
     if (item.assets && item.assets.length > 0) {
       for (const asset of item.assets) {
         try {
-          console.log("Downloading asset:", asset.name);
+          console.log("Saving asset metadata:", asset.name);
 
-          // Get public download URL from Monday API
-          const assetQuery = `
-            query ($assetId: [ID!]) {
-              assets(ids: $assetId) {
-                public_url
-              }
-            }
-          `;
-
-          const assetResponse = await fetch("https://api.monday.com/v2", {
-            method: "POST",
-            headers: {
-              "Authorization": MONDAY_API_KEY,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              query: assetQuery,
-              variables: { assetId: [asset.id] },
-            }),
-          });
-
-          if (!assetResponse.ok) {
-            console.error("Failed to get asset URL:", asset.name);
-            continue;
-          }
-
-          const assetData = await assetResponse.json();
-          const publicUrl = assetData.data?.assets?.[0]?.public_url;
-
-          if (!publicUrl) {
-            console.error("No public URL for asset:", asset.name);
-            continue;
-          }
-
-          // Download file from Monday using public URL
-          const fileResponse = await fetch(publicUrl);
-          if (!fileResponse.ok) {
-            console.error("Failed to download file:", asset.name, fileResponse.status);
-            continue;
-          }
-
-          const fileBlob = await fileResponse.blob();
-          const fileBuffer = await fileBlob.arrayBuffer();
-
-          // Upload to Supabase storage
-          const fileName = `${charge.id}/${asset.name}`;
-          const { error: uploadError } = await supabase.storage
-            .from("attachments")
-            .upload(fileName, fileBuffer, {
-              contentType: fileBlob.type,
-              upsert: false,
-            });
-
-          if (uploadError) {
-            console.error("Error uploading file to storage:", uploadError);
-            continue;
-          }
-
-          // Create attachment record
+          // Save attachment metadata with Monday asset ID
           const { error: attachmentError } = await supabase
             .from("charge_attachments")
             .insert({
               charge_id: charge.id,
               file_name: asset.name,
-              file_path: fileName,
-              file_size: asset.file_size || fileBuffer.byteLength,
-              mime_type: fileBlob.type,
+              file_path: asset.id, // Store Monday asset ID as path
+              file_size: asset.file_size,
+              mime_type: getMimeType(asset.file_extension),
               created_by: charge.owner_id,
             });
 
           if (attachmentError) {
             console.error("Error creating attachment record:", attachmentError);
           } else {
-            console.log("Uploaded attachment:", asset.name);
+            console.log("Saved attachment metadata:", asset.name);
           }
         } catch (error) {
           console.error("Error processing attachment:", asset.name, error);
         }
       }
+    }
+
+    function getMimeType(extension: string): string {
+      const mimeTypes: Record<string, string> = {
+        '.mp4': 'video/mp4',
+        '.jpeg': 'image/jpeg',
+        '.jpg': 'image/jpeg',
+        '.png': 'image/png',
+        '.pdf': 'application/pdf',
+        '.doc': 'application/msword',
+        '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      };
+      return mimeTypes[extension.toLowerCase()] || 'application/octet-stream';
     }
 
     return new Response(

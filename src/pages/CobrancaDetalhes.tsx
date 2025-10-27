@@ -187,23 +187,99 @@ export default function CobrancaDetalhes() {
     }
   };
 
-  const downloadAttachment = async (filePath: string) => {
-    const { data, error } = await supabase.storage
-      .from('attachments')
-      .createSignedUrl(filePath, 60); // URL válida por 60 segundos
+  const downloadAttachment = async (filePath: string, fileName: string) => {
+    try {
+      setSending(true);
+      
+      // filePath contains the Monday asset ID
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("Não autenticado");
+      }
 
-    if (error) {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-monday-asset?assetId=${filePath}`,
+        {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Erro ao baixar arquivo");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Download concluído!",
+      });
+    } catch (error: any) {
       toast({
         title: "Erro ao baixar anexo",
         description: error.message,
         variant: "destructive",
       });
-      return;
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const downloadAllAttachments = async () => {
+    for (const attachment of attachments) {
+      await downloadAttachment(attachment.file_path, attachment.file_name);
+      // Small delay between downloads
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+  };
+
+  const getFilePreview = (fileName: string, filePath: string) => {
+    const extension = fileName.split('.').pop()?.toLowerCase();
+    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+    const videoExtensions = ['mp4', 'webm', 'mov'];
+
+    if (imageExtensions.includes(extension || '')) {
+      return (
+        <div 
+          className="w-full h-48 bg-muted rounded-md overflow-hidden cursor-pointer"
+          onClick={() => downloadAttachment(filePath, fileName)}
+        >
+          <img 
+            src={`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-monday-asset?assetId=${filePath}`}
+            alt={fileName}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23ddd" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999"%3EImagem%3C/text%3E%3C/svg%3E';
+            }}
+          />
+        </div>
+      );
     }
 
-    if (data) {
-      window.open(data.signedUrl, '_blank');
+    if (videoExtensions.includes(extension || '')) {
+      return (
+        <div className="w-full h-48 bg-muted rounded-md overflow-hidden">
+          <video 
+            controls 
+            className="w-full h-full"
+            src={`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-monday-asset?assetId=${filePath}`}
+          >
+            Seu navegador não suporta vídeos.
+          </video>
+        </div>
+      );
     }
+
+    return null;
   };
 
   const getStatusBadge = (status: string) => {
@@ -298,24 +374,39 @@ export default function CobrancaDetalhes() {
 
             {attachments.length > 0 && (
               <div className="border-t pt-4">
-                <p className="mb-2 text-sm font-medium text-foreground">Anexos da Monday.com:</p>
-                <div className="space-y-2">
-                  {attachments.map((attachment) => (
-                    <button
-                      key={attachment.id}
-                      onClick={() => downloadAttachment(attachment.file_path)}
-                      className="flex w-full items-center gap-2 rounded-md border p-2 text-sm transition-colors hover:bg-accent"
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-medium text-foreground">Anexos:</p>
+                  {attachments.length > 1 && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={downloadAllAttachments}
+                      disabled={sending}
                     >
-                      <Paperclip className="h-4 w-4 text-muted-foreground" />
-                      <span className="flex-1 truncate text-left text-foreground">
-                        {attachment.file_name}
-                      </span>
-                      {attachment.file_size && (
-                        <span className="text-xs text-muted-foreground">
-                          {(attachment.file_size / 1024).toFixed(1)} KB
+                      Baixar Todos
+                    </Button>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {attachments.map((attachment) => (
+                    <div key={attachment.id} className="space-y-2">
+                      {getFilePreview(attachment.file_name, attachment.file_path)}
+                      <button
+                        onClick={() => downloadAttachment(attachment.file_path, attachment.file_name)}
+                        disabled={sending}
+                        className="flex w-full items-center gap-2 rounded-md border p-2 text-sm transition-colors hover:bg-accent disabled:opacity-50"
+                      >
+                        <Paperclip className="h-4 w-4 text-muted-foreground" />
+                        <span className="flex-1 truncate text-left text-foreground">
+                          {attachment.file_name}
                         </span>
-                      )}
-                    </button>
+                        {attachment.file_size && (
+                          <span className="text-xs text-muted-foreground">
+                            {(attachment.file_size / 1024).toFixed(1)} KB
+                          </span>
+                        )}
+                      </button>
+                    </div>
                   ))}
                 </div>
               </div>
