@@ -44,7 +44,7 @@ serve(async (req) => {
 
     // Get asset URL from Monday
     const assetQuery = `
-      query ($assetId: [Int!]) {
+      query ($assetId: [ID!]!) {
         assets(ids: $assetId) {
           url
           name
@@ -62,7 +62,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         query: assetQuery,
-        variables: { assetId: [parseInt(assetId)] },
+        variables: { assetId: [assetId] },
       }),
     });
 
