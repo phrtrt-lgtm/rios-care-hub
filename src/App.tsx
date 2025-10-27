@@ -22,6 +22,7 @@ import TodosTickets from "./pages/TodosTickets";
 import Propriedades from "./pages/Propriedades";
 import GerenciarCobrancas from "./pages/GerenciarCobrancas";
 import CobrancaDetalhes from "./pages/CobrancaDetalhes";
+import MigrarAnexos from "./pages/MigrarAnexos";
 
 const queryClient = new QueryClient();
 
@@ -130,6 +131,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['owner', 'agent', 'admin']}>
                   <CobrancaDetalhes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/migrar-anexos"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <MigrarAnexos />
                 </ProtectedRoute>
               }
             />
