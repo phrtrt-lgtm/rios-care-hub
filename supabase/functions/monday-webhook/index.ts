@@ -153,19 +153,90 @@ serve(async (req) => {
 
     console.log("Created charge:", charge.id);
 
-    // Save attachments metadata (we'll proxy downloads through edge function)
+    // Download and upload attachments to Supabase Storage
     if (item.assets && item.assets.length > 0) {
       for (const asset of item.assets) {
         try {
-          console.log("Saving asset metadata:", asset.name);
+          console.log("Downloading asset from Monday:", asset.name);
 
-          // Save attachment metadata with Monday asset ID
+          // Get asset URL from Monday
+          const assetQuery = `
+            query ($assetId: [ID!]!) {
+              assets(ids: $assetId) {
+                url
+                name
+              }
+            }
+          `;
+
+          const assetResponse = await fetch("https://api.monday.com/v2", {
+            method: "POST",
+            headers: {
+              "Authorization": MONDAY_API_KEY,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              query: assetQuery,
+              variables: { assetId: [asset.id] },
+            }),
+          });
+
+          const assetData = await assetResponse.json();
+          const assetUrl = assetData.data?.assets?.[0]?.url;
+
+          if (!assetUrl) {
+            console.error("Could not get asset URL for:", asset.name);
+            continue;
+          }
+
+          // Download file from Monday
+          console.log("Fetching file from Monday:", assetUrl);
+          const fileResponse = await fetch(assetUrl, {
+            headers: {
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+              "Accept": "*/*",
+            },
+          });
+
+          if (!fileResponse.ok) {
+            console.error("Failed to download file:", fileResponse.status);
+            continue;
+          }
+
+          const fileBlob = await fileResponse.blob();
+          const arrayBuffer = await fileBlob.arrayBuffer();
+          const uint8Array = new Uint8Array(arrayBuffer);
+
+          // Upload to Supabase Storage
+          const fileName = `${charge.id}/${asset.name}`;
+          console.log("Uploading to Supabase Storage:", fileName);
+
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from("attachments")
+            .upload(fileName, uint8Array, {
+              contentType: getMimeType(asset.file_extension),
+              upsert: false,
+            });
+
+          if (uploadError) {
+            console.error("Error uploading to storage:", uploadError);
+            continue;
+          }
+
+          console.log("File uploaded successfully:", uploadData.path);
+
+          // Get public URL
+          const { data: { publicUrl } } = supabase.storage
+            .from("attachments")
+            .getPublicUrl(uploadData.path);
+
+          // Save attachment metadata with storage path
           const { error: attachmentError } = await supabase
             .from("charge_attachments")
             .insert({
               charge_id: charge.id,
               file_name: asset.name,
-              file_path: asset.id, // Store Monday asset ID as path
+              file_path: uploadData.path,
               file_size: asset.file_size,
               mime_type: getMimeType(asset.file_extension),
               created_by: charge.owner_id,
@@ -174,7 +245,7 @@ serve(async (req) => {
           if (attachmentError) {
             console.error("Error creating attachment record:", attachmentError);
           } else {
-            console.log("Saved attachment metadata:", asset.name);
+            console.log("Saved attachment metadata:", asset.name, publicUrl);
           }
         } catch (error) {
           console.error("Error processing attachment:", asset.name, error);

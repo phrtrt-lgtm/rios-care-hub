@@ -161,9 +161,6 @@ export default function CobrancaDetalhes() {
   };
 
   const loadPreviews = async (attachments: ChargeAttachment[]) => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-
     const urls: Record<string, string> = {};
     
     for (const attachment of attachments) {
@@ -172,20 +169,12 @@ export default function CobrancaDetalhes() {
       
       if (previewExtensions.includes(extension || '')) {
         try {
-          const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-monday-asset?assetId=${attachment.file_path}`,
-            {
-              headers: {
-                Authorization: `Bearer ${session.access_token}`,
-              },
-            }
-          );
+          // Get public URL from Supabase Storage
+          const { data: { publicUrl } } = supabase.storage
+            .from('attachments')
+            .getPublicUrl(attachment.file_path);
           
-          if (response.ok) {
-            const data = await response.json();
-            // Use Monday.com URL directly for preview
-            urls[attachment.id] = data.url;
-          }
+          urls[attachment.id] = publicUrl;
         } catch (error) {
           console.error('Error loading preview:', error);
         }
@@ -230,32 +219,25 @@ export default function CobrancaDetalhes() {
     try {
       setSending(true);
       
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error("Não autenticado");
-      }
+      // Get public URL from Supabase Storage
+      const { data: { publicUrl } } = supabase.storage
+        .from('attachments')
+        .getPublicUrl(filePath);
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-monday-asset?assetId=${filePath}`,
-        {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Erro ao obter link do arquivo");
-      }
-
-      const data = await response.json();
-      
-      // Open Monday.com URL directly in new tab for download
-      window.open(data.url, '_blank');
+      // Download the file
+      const response = await fetch(publicUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
 
       toast({
         title: "Download iniciado!",
-        description: "O arquivo será baixado em uma nova aba",
       });
     } catch (error: any) {
       toast({
@@ -271,54 +253,51 @@ export default function CobrancaDetalhes() {
   const downloadAllAttachments = async () => {
     try {
       setSending(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error("Não autenticado");
-      }
       
       toast({
-        title: "Abrindo arquivos...",
-        description: `${attachments.length} arquivo(s) serão abertos em novas abas`,
+        title: "Preparando download...",
+        description: "Compactando arquivos...",
       });
 
-      // Open each file in a new tab with a small delay to avoid popup blocker
-      for (let i = 0; i < attachments.length; i++) {
-        const attachment = attachments[i];
-        
-        setTimeout(async () => {
-          try {
-            const response = await fetch(
-              `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-monday-asset?assetId=${attachment.file_path}`,
-              {
-                headers: {
-                  Authorization: `Bearer ${session.access_token}`,
-                },
-              }
-            );
+      // Create ZIP file
+      const zip = new JSZip();
+      
+      for (const attachment of attachments) {
+        try {
+          // Get public URL from Supabase Storage
+          const { data: { publicUrl } } = supabase.storage
+            .from('attachments')
+            .getPublicUrl(attachment.file_path);
 
-            if (response.ok) {
-              const data = await response.json();
-              window.open(data.url, '_blank');
-            }
-          } catch (error) {
-            console.error('Error opening file:', error);
-          }
-        }, i * 500); // 500ms delay between each file
+          const response = await fetch(publicUrl);
+          const blob = await response.blob();
+          zip.file(attachment.file_name, blob);
+        } catch (error) {
+          console.error('Error downloading:', attachment.file_name, error);
+        }
       }
 
-      setTimeout(() => {
-        toast({
-          title: "Arquivos abertos!",
-          description: "Verifique as novas abas do navegador",
-        });
-        setSending(false);
-      }, attachments.length * 500 + 500);
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const url = window.URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `anexos-cobranca-${id}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Download concluído!",
+        description: "Todos os anexos foram baixados",
+      });
     } catch (error: any) {
       toast({
-        title: "Erro ao abrir anexos",
+        title: "Erro ao baixar anexos",
         description: error.message,
         variant: "destructive",
       });
+    } finally {
       setSending(false);
     }
   };
