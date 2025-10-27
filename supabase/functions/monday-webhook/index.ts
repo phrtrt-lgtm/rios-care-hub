@@ -159,12 +159,42 @@ serve(async (req) => {
         try {
           console.log("Downloading asset:", asset.name);
 
-          // Download file from Monday with authentication
-          const fileResponse = await fetch(asset.url, {
+          // Get public download URL from Monday API
+          const assetQuery = `
+            query ($assetId: [ID!]) {
+              assets(ids: $assetId) {
+                public_url
+              }
+            }
+          `;
+
+          const assetResponse = await fetch("https://api.monday.com/v2", {
+            method: "POST",
             headers: {
               "Authorization": MONDAY_API_KEY,
+              "Content-Type": "application/json",
             },
+            body: JSON.stringify({
+              query: assetQuery,
+              variables: { assetId: [asset.id] },
+            }),
           });
+
+          if (!assetResponse.ok) {
+            console.error("Failed to get asset URL:", asset.name);
+            continue;
+          }
+
+          const assetData = await assetResponse.json();
+          const publicUrl = assetData.data?.assets?.[0]?.public_url;
+
+          if (!publicUrl) {
+            console.error("No public URL for asset:", asset.name);
+            continue;
+          }
+
+          // Download file from Monday using public URL
+          const fileResponse = await fetch(publicUrl);
           if (!fileResponse.ok) {
             console.error("Failed to download file:", asset.name, fileResponse.status);
             continue;
