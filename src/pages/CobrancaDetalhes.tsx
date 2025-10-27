@@ -11,6 +11,7 @@ import { ArrowLeft, Send, Loader2, Calendar, DollarSign, Paperclip } from "lucid
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import JSZip from "jszip";
 
 interface Charge {
   id: string;
@@ -60,6 +61,7 @@ export default function CobrancaDetalhes() {
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
 
   const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent';
 
@@ -153,7 +155,43 @@ export default function CobrancaDetalhes() {
 
     if (!error && data) {
       setAttachments(data);
+      // Load previews for images/videos
+      loadPreviews(data);
     }
+  };
+
+  const loadPreviews = async (attachments: ChargeAttachment[]) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    const urls: Record<string, string> = {};
+    
+    for (const attachment of attachments) {
+      const extension = attachment.file_name.split('.').pop()?.toLowerCase();
+      const previewExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'webm', 'mov'];
+      
+      if (previewExtensions.includes(extension || '')) {
+        try {
+          const response = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-monday-asset?assetId=${attachment.file_path}`,
+            {
+              headers: {
+                Authorization: `Bearer ${session.access_token}`,
+              },
+            }
+          );
+          
+          if (response.ok) {
+            const blob = await response.blob();
+            urls[attachment.id] = URL.createObjectURL(blob);
+          }
+        } catch (error) {
+          console.error('Error loading preview:', error);
+        }
+      }
+    }
+    
+    setPreviewUrls(urls);
   };
 
   const sendMessage = async () => {
@@ -235,43 +273,91 @@ export default function CobrancaDetalhes() {
   };
 
   const downloadAllAttachments = async () => {
-    for (const attachment of attachments) {
-      await downloadAttachment(attachment.file_path, attachment.file_name);
-      // Small delay between downloads
-      await new Promise(resolve => setTimeout(resolve, 500));
+    try {
+      setSending(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("Não autenticado");
+      }
+
+      const zip = new JSZip();
+      
+      toast({
+        title: "Preparando arquivos...",
+        description: "Compactando anexos em ZIP",
+      });
+
+      // Download all files and add to zip
+      for (const attachment of attachments) {
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-monday-asset?assetId=${attachment.file_path}`,
+          {
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+            },
+          }
+        );
+
+        if (response.ok) {
+          const blob = await response.blob();
+          zip.file(attachment.file_name, blob);
+        }
+      }
+
+      // Generate and download zip
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const url = window.URL.createObjectURL(zipBlob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `cobranca-${charge?.title || 'anexos'}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Download concluído!",
+        description: "Todos os anexos foram baixados em um arquivo ZIP",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao baixar anexos",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSending(false);
     }
   };
 
-  const getFilePreview = (fileName: string, filePath: string) => {
+  const getFilePreview = (attachmentId: string, fileName: string, filePath: string) => {
     const extension = fileName.split('.').pop()?.toLowerCase();
     const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
     const videoExtensions = ['mp4', 'webm', 'mov'];
+    const previewUrl = previewUrls[attachmentId];
 
-    if (imageExtensions.includes(extension || '')) {
+    if (imageExtensions.includes(extension || '') && previewUrl) {
       return (
         <div 
           className="w-full h-48 bg-muted rounded-md overflow-hidden cursor-pointer"
           onClick={() => downloadAttachment(filePath, fileName)}
         >
           <img 
-            src={`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-monday-asset?assetId=${filePath}`}
+            src={previewUrl}
             alt={fileName}
             className="w-full h-full object-cover"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23ddd" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999"%3EImagem%3C/text%3E%3C/svg%3E';
-            }}
           />
         </div>
       );
     }
 
-    if (videoExtensions.includes(extension || '')) {
+    if (videoExtensions.includes(extension || '') && previewUrl) {
       return (
         <div className="w-full h-48 bg-muted rounded-md overflow-hidden">
           <video 
             controls 
             className="w-full h-full"
-            src={`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-monday-asset?assetId=${filePath}`}
+            src={previewUrl}
           >
             Seu navegador não suporta vídeos.
           </video>
@@ -390,7 +476,7 @@ export default function CobrancaDetalhes() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {attachments.map((attachment) => (
                     <div key={attachment.id} className="space-y-2">
-                      {getFilePreview(attachment.file_name, attachment.file_path)}
+                      {getFilePreview(attachment.id, attachment.file_name, attachment.file_path)}
                       <button
                         onClick={() => downloadAttachment(attachment.file_path, attachment.file_name)}
                         disabled={sending}
