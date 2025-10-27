@@ -86,41 +86,22 @@ serve(async (req) => {
       throw new Error("Asset not found");
     }
 
-    console.log('Downloading file from URL:', asset.url);
+    console.log('Returning asset URL for direct browser access:', asset.url);
 
-    // Download file from Monday - try with full browser headers
-    const fileResponse = await fetch(asset.url, {
-      method: 'GET',
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Referer": "https://monday.com/",
-        "Connection": "keep-alive",
-      },
-      redirect: 'follow',
-    });
-
-    console.log('File download response status:', fileResponse.status, fileResponse.statusText);
-    console.log('Response headers:', Object.fromEntries(fileResponse.headers.entries()));
-
-    if (!fileResponse.ok) {
-      const errorText = await fileResponse.text();
-      console.error('Failed to download file. Status:', fileResponse.status, 'Error:', errorText);
-      throw new Error(`Failed to download file from Monday: ${fileResponse.status} ${fileResponse.statusText}`);
-    }
-
-    const fileBlob = await fileResponse.blob();
-    
-    // Return file with proper headers
-    return new Response(fileBlob, {
-      headers: {
-        ...corsHeaders,
-        "Content-Type": fileBlob.type || "application/octet-stream",
-        "Content-Disposition": `attachment; filename="${asset.name}"`,
-      },
-    });
+    // Return the URL directly so the browser can access it
+    // Monday's protected_static URLs work in browsers but not from servers
+    return new Response(
+      JSON.stringify({ 
+        url: asset.url,
+        name: asset.name 
+      }),
+      {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      }
+    );
   } catch (error) {
     console.error("Error in download-monday-asset function:", error);
     return new Response(

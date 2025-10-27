@@ -182,8 +182,9 @@ export default function CobrancaDetalhes() {
           );
           
           if (response.ok) {
-            const blob = await response.blob();
-            urls[attachment.id] = URL.createObjectURL(blob);
+            const data = await response.json();
+            // Use the Monday URL directly
+            urls[attachment.id] = data.url;
           }
         } catch (error) {
           console.error('Error loading preview:', error);
@@ -248,7 +249,12 @@ export default function CobrancaDetalhes() {
         throw new Error("Erro ao baixar arquivo");
       }
 
-      const blob = await response.blob();
+      const data = await response.json();
+      
+      // Download directly from Monday URL
+      const fileResponse = await fetch(data.url);
+      const blob = await fileResponse.blob();
+      
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -299,7 +305,10 @@ export default function CobrancaDetalhes() {
         );
 
         if (response.ok) {
-          const blob = await response.blob();
+          const data = await response.json();
+          // Download from Monday URL
+          const fileResponse = await fetch(data.url);
+          const blob = await fileResponse.blob();
           zip.file(attachment.file_name, blob);
         }
       }
