@@ -23,33 +23,21 @@ export default function AdminCadastrarProprietario() {
     setLoading(true);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        throw new Error("Sessão não encontrada");
+      const { data, error } = await supabase.functions.invoke("create-owner", {
+        body: {
+          email: formData.email,
+          password: formData.password,
+          name: formData.name,
+          phone: formData.phone,
+        },
+      });
+
+      if (error) {
+        throw error;
       }
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-owner`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({
-            email: formData.email,
-            password: formData.password,
-            name: formData.name,
-            phone: formData.phone,
-          }),
-        }
-      );
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Erro ao cadastrar proprietário");
+      if (data?.error) {
+        throw new Error(data.error);
       }
 
       toast.success("Proprietário cadastrado com sucesso!");
