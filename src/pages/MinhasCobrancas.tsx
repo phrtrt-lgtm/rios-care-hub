@@ -148,7 +148,11 @@ const MinhasCobrancas = () => {
         ) : (
           <div className="space-y-4">
             {charges.map((charge) => (
-              <Card key={charge.id}>
+              <Card 
+                key={charge.id}
+                className="cursor-pointer transition-colors hover:bg-accent/50"
+                onClick={() => navigate(`/cobranca/${charge.id}`)}
+              >
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -178,37 +182,17 @@ const MinhasCobrancas = () => {
 
                     {charge.attachments && charge.attachments.length > 0 && (
                       <div className="border-t pt-4">
-                        <p className="mb-2 text-sm font-medium text-foreground">Anexos:</p>
-                        <div className="space-y-2">
-                          {charge.attachments.map((attachment) => (
-                            <button
-                              key={attachment.id}
-                              onClick={() => downloadAttachment(attachment.file_path, attachment.file_name)}
-                              className="flex w-full items-center gap-2 rounded-md border p-2 text-sm transition-colors hover:bg-accent"
-                            >
-                              <Paperclip className="h-4 w-4 text-muted-foreground" />
-                              <span className="flex-1 truncate text-left text-foreground">
-                                {attachment.file_name}
-                              </span>
-                              {attachment.file_size && (
-                                <span className="text-xs text-muted-foreground">
-                                  {(attachment.file_size / 1024).toFixed(1)} KB
-                                </span>
-                              )}
-                            </button>
-                          ))}
-                        </div>
+                        <p className="mb-2 text-sm font-medium text-foreground">
+                          {charge.attachments.length} anexo(s) disponível(is)
+                        </p>
                       </div>
                     )}
 
                     {charge.payment_link_url && charge.status !== 'paid' && charge.status !== 'cancelled' && (
                       <div className="border-t pt-4">
-                        <Button 
-                          onClick={() => window.open(charge.payment_link_url!, '_blank')}
-                          className="w-full"
-                        >
-                          Pagar Agora
-                        </Button>
+                        <Badge variant="outline" className="w-full justify-center">
+                          Link de pagamento disponível
+                        </Badge>
                       </div>
                     )}
                   </div>

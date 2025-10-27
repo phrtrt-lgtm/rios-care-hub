@@ -293,7 +293,11 @@ const GerenciarCobrancas = () => {
             </Card>
           ) : (
             filteredCharges.map((charge) => (
-              <Card key={charge.id}>
+              <Card 
+                key={charge.id}
+                className="cursor-pointer transition-colors hover:bg-accent/50"
+                onClick={() => navigate(`/cobranca/${charge.id}`)}
+              >
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -304,7 +308,14 @@ const GerenciarCobrancas = () => {
                     </div>
                     <div className="flex flex-col gap-2">
                       {getStatusBadge(charge.status)}
-                      <Button size="sm" variant="outline" onClick={() => handleEdit(charge)}>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEdit(charge);
+                        }}
+                      >
                         <Pencil className="mr-2 h-3 w-3" />
                         Editar Status
                       </Button>

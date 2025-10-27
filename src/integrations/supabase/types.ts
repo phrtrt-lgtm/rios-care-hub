@@ -55,6 +55,41 @@ export type Database = {
           },
         ]
       }
+      charge_messages: {
+        Row: {
+          author_id: string
+          body: string
+          charge_id: string
+          created_at: string
+          id: string
+          is_internal: boolean
+        }
+        Insert: {
+          author_id: string
+          body: string
+          charge_id: string
+          created_at?: string
+          id?: string
+          is_internal?: boolean
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          charge_id?: string
+          created_at?: string
+          id?: string
+          is_internal?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "charge_messages_charge_id_fkey"
+            columns: ["charge_id"]
+            isOneToOne: false
+            referencedRelation: "charges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       charges: {
         Row: {
           amount_cents: number

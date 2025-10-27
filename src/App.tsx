@@ -21,6 +21,7 @@ import NovaCobranca from "./pages/NovaCobranca";
 import TodosTickets from "./pages/TodosTickets";
 import Propriedades from "./pages/Propriedades";
 import GerenciarCobrancas from "./pages/GerenciarCobrancas";
+import CobrancaDetalhes from "./pages/CobrancaDetalhes";
 
 const queryClient = new QueryClient();
 
@@ -121,6 +122,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['agent', 'admin']}>
                   <GerenciarCobrancas />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/cobranca/:id"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'agent', 'admin']}>
+                  <CobrancaDetalhes />
                 </ProtectedRoute>
               }
             />
