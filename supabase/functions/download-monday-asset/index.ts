@@ -88,15 +88,15 @@ serve(async (req) => {
 
     console.log('Downloading file from URL:', asset.url);
 
-    // Download file from Monday
-    const fileResponse = await fetch(asset.url, {
-      headers: {
-        "Authorization": MONDAY_API_KEY,
-      },
-    });
+    // Download file from Monday - protected_static URLs don't need Authorization header
+    const fileResponse = await fetch(asset.url);
+
+    console.log('File download response status:', fileResponse.status, fileResponse.statusText);
 
     if (!fileResponse.ok) {
-      throw new Error("Failed to download file from Monday");
+      const errorText = await fileResponse.text();
+      console.error('Failed to download file. Status:', fileResponse.status, 'Error:', errorText);
+      throw new Error(`Failed to download file from Monday: ${fileResponse.status} ${fileResponse.statusText}`);
     }
 
     const fileBlob = await fileResponse.blob();
