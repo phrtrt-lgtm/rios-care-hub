@@ -165,20 +165,39 @@ export default function Painel() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/aprovacoes")}>
-            <CardHeader>
-              <CardTitle>Aprovações Pendentes</CardTitle>
-              <CardDescription>
-                Gerencie solicitações de cadastro
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button variant="outline" className="w-full">
-                Ver Solicitações
-              </Button>
-            </CardContent>
-          </Card>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {profile?.role === "admin" && (
+            <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/admin/cadastrar-proprietario")}>
+              <CardHeader>
+                <CardTitle>Cadastrar Proprietário</CardTitle>
+                <CardDescription>
+                  Criar nova conta de proprietário
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button variant="outline" className="w-full">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Novo Proprietário
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {profile?.role === "admin" && (
+            <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/aprovacoes")}>
+              <CardHeader>
+                <CardTitle>Aprovações Pendentes</CardTitle>
+                <CardDescription>
+                  Gerencie solicitações de cadastro
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button variant="outline" className="w-full">
+                  Ver Solicitações
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
           <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/gerenciar-cobrancas")}>
             <CardHeader>
