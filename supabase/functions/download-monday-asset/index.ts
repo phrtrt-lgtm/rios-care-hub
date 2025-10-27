@@ -88,15 +88,22 @@ serve(async (req) => {
 
     console.log('Downloading file from URL:', asset.url);
 
-    // Download file from Monday - protected_static URLs need proper headers
+    // Download file from Monday - try with full browser headers
     const fileResponse = await fetch(asset.url, {
+      method: 'GET',
       headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        "Accept": "*/*",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Referer": "https://monday.com/",
+        "Connection": "keep-alive",
       },
+      redirect: 'follow',
     });
 
     console.log('File download response status:', fileResponse.status, fileResponse.statusText);
+    console.log('Response headers:', Object.fromEntries(fileResponse.headers.entries()));
 
     if (!fileResponse.ok) {
       const errorText = await fileResponse.text();
