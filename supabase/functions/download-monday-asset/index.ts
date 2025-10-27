@@ -88,8 +88,13 @@ serve(async (req) => {
 
     console.log('Downloading file from URL:', asset.url);
 
-    // Download file from Monday - protected_static URLs don't need Authorization header
-    const fileResponse = await fetch(asset.url);
+    // Download file from Monday - protected_static URLs need proper headers
+    const fileResponse = await fetch(asset.url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Accept": "*/*",
+      },
+    });
 
     console.log('File download response status:', fileResponse.status, fileResponse.statusText);
 
