@@ -9,7 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { ArrowLeft, DollarSign, Calendar, User, Paperclip, Search, Filter, Pencil } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ArrowLeft, DollarSign, Calendar, User, Paperclip, Search, Filter, Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -60,6 +62,9 @@ const GerenciarCobrancas = () => {
     status: "",
     payment_link_url: ""
   });
+  const [selectedCharges, setSelectedCharges] = useState<Set<string>>(new Set());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!user || !['admin', 'agent'].includes(profile?.role || '')) {
@@ -187,6 +192,54 @@ const GerenciarCobrancas = () => {
     }
   };
 
+  const toggleChargeSelection = (chargeId: string) => {
+    const newSelection = new Set(selectedCharges);
+    if (newSelection.has(chargeId)) {
+      newSelection.delete(chargeId);
+    } else {
+      newSelection.add(chargeId);
+    }
+    setSelectedCharges(newSelection);
+  };
+
+  const toggleAllCharges = () => {
+    if (selectedCharges.size === filteredCharges.length) {
+      setSelectedCharges(new Set());
+    } else {
+      setSelectedCharges(new Set(filteredCharges.map(c => c.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    try {
+      setDeleting(true);
+
+      const { error } = await supabase
+        .from('charges')
+        .delete()
+        .in('id', Array.from(selectedCharges));
+
+      if (error) throw error;
+
+      toast({
+        title: "Cobranças excluídas!",
+        description: `${selectedCharges.size} cobrança(s) excluída(s) com sucesso`,
+      });
+
+      setSelectedCharges(new Set());
+      setDeleteDialogOpen(false);
+      fetchCharges();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao excluir cobranças",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       draft: { label: 'Rascunho', variant: 'secondary' as const },
@@ -232,10 +285,21 @@ const GerenciarCobrancas = () => {
             <h1 className="text-3xl font-bold text-foreground">Gerenciar Cobranças</h1>
             <p className="text-muted-foreground">Visualize e atualize o status das cobranças</p>
           </div>
-          <Button onClick={() => navigate("/nova-cobranca")}>
-            <DollarSign className="mr-2 h-4 w-4" />
-            Nova Cobrança
-          </Button>
+          <div className="flex gap-2">
+            {selectedCharges.size > 0 && (
+              <Button 
+                variant="destructive" 
+                onClick={() => setDeleteDialogOpen(true)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Excluir ({selectedCharges.size})
+              </Button>
+            )}
+            <Button onClick={() => navigate("/nova-cobranca")}>
+              <DollarSign className="mr-2 h-4 w-4" />
+              Nova Cobrança
+            </Button>
+          </div>
         </div>
 
         {/* Filtros */}
@@ -283,37 +347,64 @@ const GerenciarCobrancas = () => {
               </CardContent>
             </Card>
           ) : (
-            filteredCharges.map((charge) => (
-              <Card 
-                key={charge.id}
-                className="cursor-pointer transition-colors hover:bg-accent/50"
-                onClick={() => navigate(`/cobranca/${charge.id}`)}
-              >
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="mb-2">{charge.title}</CardTitle>
-                      {charge.description && (
-                        <CardDescription>{charge.description}</CardDescription>
-                      )}
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      {getStatusBadge(charge.status)}
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEdit(charge);
-                        }}
+            <>
+              {filteredCharges.length > 0 && (
+                <Card className="bg-muted/30">
+                  <CardContent className="py-4 flex items-center gap-3">
+                    <Checkbox
+                      checked={selectedCharges.size === filteredCharges.length}
+                      onCheckedChange={toggleAllCharges}
+                    />
+                    <span className="text-sm text-muted-foreground">
+                      {selectedCharges.size === filteredCharges.length 
+                        ? "Desmarcar todas" 
+                        : `Selecionar todas (${filteredCharges.length})`}
+                    </span>
+                  </CardContent>
+                </Card>
+              )}
+              {filteredCharges.map((charge) => (
+                <Card 
+                  key={charge.id}
+                  className={`transition-colors ${selectedCharges.has(charge.id) ? 'border-primary' : 'hover:bg-accent/50'}`}
+                >
+                  <CardHeader>
+                    <div className="flex items-start gap-4">
+                      <Checkbox
+                        checked={selectedCharges.has(charge.id)}
+                        onCheckedChange={() => toggleChargeSelection(charge.id)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <div 
+                        className="flex-1 cursor-pointer"
+                        onClick={() => navigate(`/cobranca/${charge.id}`)}
                       >
-                        <Pencil className="mr-2 h-3 w-3" />
-                        Editar Status
-                      </Button>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <CardTitle className="mb-2">{charge.title}</CardTitle>
+                            {charge.description && (
+                              <CardDescription>{charge.description}</CardDescription>
+                            )}
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            {getStatusBadge(charge.status)}
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEdit(charge);
+                              }}
+                            >
+                              <Pencil className="mr-2 h-3 w-3" />
+                              Editar Status
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
+                  </CardHeader>
+                  <CardContent>
                   <div className="grid gap-4 md:grid-cols-3">
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Valor</p>
@@ -365,9 +456,11 @@ const GerenciarCobrancas = () => {
                       </a>
                     </div>
                   )}
-                </CardContent>
-              </Card>
-            ))
+                  </CardContent>
+                </Card>
+              ))
+            }
+            </>
           )}
         </div>
 
@@ -417,6 +510,29 @@ const GerenciarCobrancas = () => {
             </form>
           </DialogContent>
         </Dialog>
+
+        {/* Dialog de confirmação de exclusão em lote */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir Cobranças</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja excluir {selectedCharges.size} cobrança(s)? 
+                Esta ação não pode ser desfeita. Todos os anexos e mensagens associados também serão excluídos.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleBulkDelete}
+                disabled={deleting}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deleting ? "Excluindo..." : "Excluir"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

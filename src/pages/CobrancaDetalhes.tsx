@@ -7,8 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, Send, Loader2, Calendar, DollarSign, Paperclip, Download, Eye, FileText, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Send, Loader2, Calendar, DollarSign, Paperclip, Download, Eye, FileText, Image as ImageIcon, Trash2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -64,6 +65,8 @@ export default function CobrancaDetalhes() {
   const [sending, setSending] = useState(false);
   const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
   const [selectedImage, setSelectedImage] = useState<{ url: string; name: string } | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent';
 
@@ -323,6 +326,36 @@ export default function CobrancaDetalhes() {
     return ['mp4', 'webm', 'mov'].includes(extension || '');
   };
 
+  const handleDelete = async () => {
+    try {
+      setDeleting(true);
+      
+      // Delete charge (cascade will delete messages and attachments)
+      const { error } = await supabase
+        .from('charges')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Cobrança excluída!",
+        description: "A cobrança foi excluída com sucesso",
+      });
+
+      navigate(-1);
+    } catch (error: any) {
+      toast({
+        title: "Erro ao excluir cobrança",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
+      setDeleteDialogOpen(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       draft: { label: 'Rascunho', variant: 'secondary' as const },
@@ -396,6 +429,17 @@ export default function CobrancaDetalhes() {
                   )}
                 </div>
               </div>
+              {isTeamMember && (
+                <Button 
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setDeleteDialogOpen(true)}
+                  className="ml-4"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Excluir
+                </Button>
+              )}
             </div>
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
               <Avatar className="h-8 w-8">
@@ -645,6 +689,36 @@ export default function CobrancaDetalhes() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog de confirmação de exclusão */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Cobrança</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta cobrança? Esta ação não pode ser desfeita.
+              Todos os anexos e mensagens associados também serão excluídos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Excluindo...
+                </>
+              ) : (
+                "Excluir"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
