@@ -182,8 +182,9 @@ export default function CobrancaDetalhes() {
           );
           
           if (response.ok) {
-            const blob = await response.blob();
-            urls[attachment.id] = URL.createObjectURL(blob);
+            const data = await response.json();
+            // Use Monday.com URL directly for preview
+            urls[attachment.id] = data.url;
           }
         } catch (error) {
           console.error('Error loading preview:', error);
@@ -229,7 +230,6 @@ export default function CobrancaDetalhes() {
     try {
       setSending(true);
       
-      // filePath contains the Monday asset ID
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         throw new Error("Não autenticado");
@@ -245,21 +245,17 @@ export default function CobrancaDetalhes() {
       );
 
       if (!response.ok) {
-        throw new Error("Erro ao baixar arquivo");
+        throw new Error("Erro ao obter link do arquivo");
       }
 
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      const data = await response.json();
+      
+      // Open Monday.com URL directly in new tab for download
+      window.open(data.url, '_blank');
 
       toast({
-        title: "Download concluído!",
+        title: "Download iniciado!",
+        description: "O arquivo será baixado em uma nova aba",
       });
     } catch (error: any) {
       toast({
@@ -279,53 +275,50 @@ export default function CobrancaDetalhes() {
       if (!session) {
         throw new Error("Não autenticado");
       }
-
-      const zip = new JSZip();
       
       toast({
-        title: "Preparando arquivos...",
-        description: "Compactando anexos em ZIP",
+        title: "Abrindo arquivos...",
+        description: `${attachments.length} arquivo(s) serão abertos em novas abas`,
       });
 
-      // Download all files and add to zip
-      for (const attachment of attachments) {
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-monday-asset?assetId=${attachment.file_path}`,
-          {
-            headers: {
-              Authorization: `Bearer ${session.access_token}`,
-            },
-          }
-        );
+      // Open each file in a new tab with a small delay to avoid popup blocker
+      for (let i = 0; i < attachments.length; i++) {
+        const attachment = attachments[i];
+        
+        setTimeout(async () => {
+          try {
+            const response = await fetch(
+              `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-monday-asset?assetId=${attachment.file_path}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${session.access_token}`,
+                },
+              }
+            );
 
-        if (response.ok) {
-          const blob = await response.blob();
-          zip.file(attachment.file_name, blob);
-        }
+            if (response.ok) {
+              const data = await response.json();
+              window.open(data.url, '_blank');
+            }
+          } catch (error) {
+            console.error('Error opening file:', error);
+          }
+        }, i * 500); // 500ms delay between each file
       }
 
-      // Generate and download zip
-      const zipBlob = await zip.generateAsync({ type: "blob" });
-      const url = window.URL.createObjectURL(zipBlob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `cobranca-${charge?.title || 'anexos'}.zip`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-
-      toast({
-        title: "Download concluído!",
-        description: "Todos os anexos foram baixados em um arquivo ZIP",
-      });
+      setTimeout(() => {
+        toast({
+          title: "Arquivos abertos!",
+          description: "Verifique as novas abas do navegador",
+        });
+        setSending(false);
+      }, attachments.length * 500 + 500);
     } catch (error: any) {
       toast({
-        title: "Erro ao baixar anexos",
+        title: "Erro ao abrir anexos",
         description: error.message,
         variant: "destructive",
       });
-    } finally {
       setSending(false);
     }
   };

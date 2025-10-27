@@ -86,39 +86,22 @@ serve(async (req) => {
       throw new Error("Asset not found");
     }
 
-    console.log('Downloading file from Monday URL:', asset.url);
+    console.log('Returning direct Monday.com URL for browser access:', asset.url);
 
-    // Download file from Monday with full browser headers
-    const fileResponse = await fetch(asset.url, {
-      method: 'GET',
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "*/*",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Referer": "https://monday.com/",
-        "Connection": "keep-alive",
-      },
-      redirect: 'follow',
-    });
-
-    if (!fileResponse.ok) {
-      console.error('Failed to download file:', fileResponse.status, fileResponse.statusText);
-      throw new Error(`Failed to download file: ${fileResponse.status}`);
-    }
-
-    const fileBlob = await fileResponse.blob();
-    console.log('File downloaded successfully, size:', fileBlob.size);
-    
-    // Return file blob directly
-    return new Response(fileBlob, {
-      headers: {
-        ...corsHeaders,
-        "Content-Type": fileBlob.type || "application/octet-stream",
-        "Content-Disposition": `attachment; filename="${asset.name}"`,
-        "Cache-Control": "public, max-age=3600",
-      },
-    });
+    // Return the URL and filename as JSON for the browser to access directly
+    // Monday.com's protected_static URLs work in browsers but not from server proxies
+    return new Response(
+      JSON.stringify({ 
+        url: asset.url,
+        name: asset.name 
+      }),
+      {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      }
+    );
   } catch (error) {
     console.error("Error in download-monday-asset function:", error);
     return new Response(
