@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Send, Loader2, Calendar, DollarSign, Paperclip } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ArrowLeft, Send, Loader2, Calendar, DollarSign, Paperclip, Download, Eye, FileText, Image as ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -62,6 +63,7 @@ export default function CobrancaDetalhes() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
+  const [selectedImage, setSelectedImage] = useState<{ url: string; name: string } | null>(null);
 
   const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent';
 
@@ -164,20 +166,15 @@ export default function CobrancaDetalhes() {
     const urls: Record<string, string> = {};
     
     for (const attachment of attachments) {
-      const extension = attachment.file_name.split('.').pop()?.toLowerCase();
-      const previewExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'webm', 'mov'];
-      
-      if (previewExtensions.includes(extension || '')) {
-        try {
-          // Get public URL from Supabase Storage
-          const { data: { publicUrl } } = supabase.storage
-            .from('attachments')
-            .getPublicUrl(attachment.file_path);
-          
-          urls[attachment.id] = publicUrl;
-        } catch (error) {
-          console.error('Error loading preview:', error);
-        }
+      try {
+        // Get public URL from Supabase Storage
+        const { data: { publicUrl } } = supabase.storage
+          .from('attachments')
+          .getPublicUrl(attachment.file_path);
+        
+        urls[attachment.id] = publicUrl;
+      } catch (error) {
+        console.error('Error loading preview:', error);
       }
     }
     
@@ -302,42 +299,28 @@ export default function CobrancaDetalhes() {
     }
   };
 
-  const getFilePreview = (attachmentId: string, fileName: string, filePath: string) => {
+  const getFileIcon = (fileName: string) => {
     const extension = fileName.split('.').pop()?.toLowerCase();
     const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
     const videoExtensions = ['mp4', 'webm', 'mov'];
-    const previewUrl = previewUrls[attachmentId];
-
-    if (imageExtensions.includes(extension || '') && previewUrl) {
-      return (
-        <div 
-          className="w-full h-48 bg-muted rounded-md overflow-hidden cursor-pointer"
-          onClick={() => downloadAttachment(filePath, fileName)}
-        >
-          <img 
-            src={previewUrl}
-            alt={fileName}
-            className="w-full h-full object-cover"
-          />
-        </div>
-      );
+    
+    if (imageExtensions.includes(extension || '')) {
+      return <ImageIcon className="h-8 w-8 text-primary" />;
     }
-
-    if (videoExtensions.includes(extension || '') && previewUrl) {
-      return (
-        <div className="w-full h-48 bg-muted rounded-md overflow-hidden">
-          <video 
-            controls 
-            className="w-full h-full"
-            src={previewUrl}
-          >
-            Seu navegador não suporta vídeos.
-          </video>
-        </div>
-      );
+    if (videoExtensions.includes(extension || '')) {
+      return <FileText className="h-8 w-8 text-primary" />;
     }
+    return <Paperclip className="h-8 w-8 text-muted-foreground" />;
+  };
 
-    return null;
+  const isImageFile = (fileName: string) => {
+    const extension = fileName.split('.').pop()?.toLowerCase();
+    return ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '');
+  };
+
+  const isVideoFile = (fileName: string) => {
+    const extension = fileName.split('.').pop()?.toLowerCase();
+    return ['mp4', 'webm', 'mov'].includes(extension || '');
   };
 
   const getStatusBadge = (status: string) => {
@@ -431,9 +414,9 @@ export default function CobrancaDetalhes() {
             )}
 
             {attachments.length > 0 && (
-              <div className="border-t pt-4">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-medium text-foreground">Anexos:</p>
+              <div className="border-t pt-6 mt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-foreground">Anexos ({attachments.length})</h3>
                   {attachments.length > 1 && (
                     <Button 
                       variant="outline" 
@@ -441,32 +424,137 @@ export default function CobrancaDetalhes() {
                       onClick={downloadAllAttachments}
                       disabled={sending}
                     >
+                      <Download className="h-4 w-4 mr-2" />
                       Baixar Todos
                     </Button>
                   )}
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {attachments.map((attachment) => (
-                    <div key={attachment.id} className="space-y-2">
-                      {getFilePreview(attachment.id, attachment.file_name, attachment.file_path)}
-                      <button
-                        onClick={() => downloadAttachment(attachment.file_path, attachment.file_name)}
-                        disabled={sending}
-                        className="flex w-full items-center gap-2 rounded-md border p-2 text-sm transition-colors hover:bg-accent disabled:opacity-50"
-                      >
-                        <Paperclip className="h-4 w-4 text-muted-foreground" />
-                        <span className="flex-1 truncate text-left text-foreground">
-                          {attachment.file_name}
-                        </span>
-                        {attachment.file_size && (
-                          <span className="text-xs text-muted-foreground">
-                            {(attachment.file_size / 1024).toFixed(1)} KB
-                          </span>
-                        )}
-                      </button>
+
+                {/* Galeria de Imagens */}
+                {attachments.some(a => isImageFile(a.file_name)) && (
+                  <div className="mb-6">
+                    <h4 className="text-sm font-medium text-muted-foreground mb-3">Imagens</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                      {attachments
+                        .filter(a => isImageFile(a.file_name))
+                        .map((attachment) => {
+                          const previewUrl = previewUrls[attachment.id];
+                          return (
+                            <div key={attachment.id} className="group relative aspect-square rounded-lg overflow-hidden border bg-muted">
+                              {previewUrl ? (
+                                <img 
+                                  src={previewUrl}
+                                  alt={attachment.file_name}
+                                  className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                                  loading="lazy"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <ImageIcon className="h-12 w-12 text-muted-foreground" />
+                                </div>
+                              )}
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  onClick={() => setSelectedImage({ url: previewUrl, name: attachment.file_name })}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  onClick={() => downloadAttachment(attachment.file_path, attachment.file_name)}
+                                  disabled={sending}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Download className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
+
+                {/* Vídeos */}
+                {attachments.some(a => isVideoFile(a.file_name)) && (
+                  <div className="mb-6">
+                    <h4 className="text-sm font-medium text-muted-foreground mb-3">Vídeos</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {attachments
+                        .filter(a => isVideoFile(a.file_name))
+                        .map((attachment) => {
+                          const previewUrl = previewUrls[attachment.id];
+                          return (
+                            <div key={attachment.id} className="space-y-2">
+                              <div className="aspect-video rounded-lg overflow-hidden border bg-muted">
+                                {previewUrl && (
+                                  <video 
+                                    controls 
+                                    className="w-full h-full"
+                                    src={previewUrl}
+                                  >
+                                    Seu navegador não suporta vídeos.
+                                  </video>
+                                )}
+                              </div>
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-foreground truncate">{attachment.file_name}</span>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => downloadAttachment(attachment.file_path, attachment.file_name)}
+                                  disabled={sending}
+                                >
+                                  <Download className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Outros Arquivos */}
+                {attachments.some(a => !isImageFile(a.file_name) && !isVideoFile(a.file_name)) && (
+                  <div>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-3">Outros Arquivos</h4>
+                    <div className="space-y-2">
+                      {attachments
+                        .filter(a => !isImageFile(a.file_name) && !isVideoFile(a.file_name))
+                        .map((attachment) => (
+                          <div
+                            key={attachment.id}
+                            className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent transition-colors"
+                          >
+                            {getFileIcon(attachment.file_name)}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-foreground truncate">
+                                {attachment.file_name}
+                              </p>
+                              {attachment.file_size && (
+                                <p className="text-xs text-muted-foreground">
+                                  {(attachment.file_size / 1024).toFixed(1)} KB
+                                </p>
+                              )}
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => downloadAttachment(attachment.file_path, attachment.file_name)}
+                              disabled={sending}
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -539,6 +627,24 @@ export default function CobrancaDetalhes() {
           </CardContent>
         </Card>
       </main>
+
+      {/* Lightbox para visualizar imagens */}
+      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>{selectedImage?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="relative w-full max-h-[70vh] flex items-center justify-center bg-muted rounded-lg overflow-hidden">
+            {selectedImage && (
+              <img 
+                src={selectedImage.url}
+                alt={selectedImage.name}
+                className="max-w-full max-h-[70vh] object-contain"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
