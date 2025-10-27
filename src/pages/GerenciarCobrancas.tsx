@@ -208,15 +208,6 @@ const GerenciarCobrancas = () => {
     }).format(value);
   };
 
-  const downloadAttachment = async (filePath: string) => {
-    const { data } = supabase.storage
-      .from('attachments')
-      .getPublicUrl(filePath);
-
-    if (data) {
-      window.open(data.publicUrl, '_blank');
-    }
-  };
 
   if (loading) {
     return (
@@ -354,20 +345,9 @@ const GerenciarCobrancas = () => {
 
                   {charge.attachments.length > 0 && (
                     <div className="mt-4 border-t pt-4">
-                      <p className="mb-2 text-sm font-medium text-foreground">Anexos:</p>
-                      <div className="space-y-2">
-                        {charge.attachments.map((attachment) => (
-                          <button
-                            key={attachment.id}
-                            onClick={() => downloadAttachment(attachment.file_path)}
-                            className="flex w-full items-center gap-2 rounded-md border p-2 text-sm transition-colors hover:bg-accent"
-                          >
-                            <Paperclip className="h-4 w-4 text-muted-foreground" />
-                            <span className="flex-1 truncate text-left text-foreground">
-                              {attachment.file_name}
-                            </span>
-                          </button>
-                        ))}
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Paperclip className="h-4 w-4" />
+                        <span>{charge.attachments.length} {charge.attachments.length === 1 ? 'anexo' : 'anexos'}</span>
                       </div>
                     </div>
                   )}

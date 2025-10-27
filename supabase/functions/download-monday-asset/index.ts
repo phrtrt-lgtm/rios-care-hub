@@ -44,13 +44,15 @@ serve(async (req) => {
 
     // Get asset URL from Monday
     const assetQuery = `
-      query ($assetId: [ID!]) {
+      query ($assetId: [Int!]) {
         assets(ids: $assetId) {
           url
           name
         }
       }
     `;
+
+    console.log('Fetching asset from Monday with ID:', assetId);
 
     const assetResponse = await fetch("https://api.monday.com/v2", {
       method: "POST",
@@ -60,20 +62,31 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         query: assetQuery,
-        variables: { assetId: [assetId] },
+        variables: { assetId: [parseInt(assetId)] },
       }),
     });
 
     if (!assetResponse.ok) {
+      console.error('Monday API response not OK:', assetResponse.status, assetResponse.statusText);
       throw new Error("Failed to get asset from Monday");
     }
 
     const assetData = await assetResponse.json();
+    console.log('Monday API response:', JSON.stringify(assetData));
+
+    if (assetData.errors) {
+      console.error('Monday API errors:', assetData.errors);
+      throw new Error(`Monday API error: ${JSON.stringify(assetData.errors)}`);
+    }
+
     const asset = assetData.data?.assets?.[0];
 
     if (!asset) {
+      console.error('Asset not found in response. Full response:', JSON.stringify(assetData));
       throw new Error("Asset not found");
     }
+
+    console.log('Downloading file from URL:', asset.url);
 
     // Download file from Monday
     const fileResponse = await fetch(asset.url, {
