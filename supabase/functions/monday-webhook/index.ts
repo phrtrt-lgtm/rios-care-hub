@@ -189,24 +189,44 @@ serve(async (req) => {
             continue;
           }
 
-          // Use the download-monday-asset edge function to get the file
-          console.log("Downloading file via edge function, asset ID:", asset.id);
-          const downloadResponse = await fetch(`${SUPABASE_URL}/functions/v1/download-monday-asset`, {
-            method: "POST",
+          // Use the download-monday-asset edge function to get the file URL
+          console.log("Getting file URL via edge function, asset ID:", asset.id);
+          const downloadResponse = await fetch(`${SUPABASE_URL}/functions/v1/download-monday-asset?assetId=${asset.id}`, {
+            method: "GET",
             headers: {
               "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-              "Content-Type": "application/json",
             },
-            body: JSON.stringify({ assetId: asset.id }),
           });
 
           if (!downloadResponse.ok) {
             const errorText = await downloadResponse.text();
-            console.error("Failed to download file:", downloadResponse.status, errorText);
+            console.error("Failed to get file URL:", downloadResponse.status, errorText);
             continue;
           }
 
-          const arrayBuffer = await downloadResponse.arrayBuffer();
+          const fileData = await downloadResponse.json();
+          const fileUrl = fileData.url;
+          
+          if (!fileUrl) {
+            console.error("No URL returned from download function");
+            continue;
+          }
+
+          // Download the file from Monday
+          console.log("Downloading from Monday URL:", fileUrl);
+          const fileResponse = await fetch(fileUrl, {
+            headers: {
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            },
+          });
+
+          if (!fileResponse.ok) {
+            console.error("Failed to download file from Monday:", fileResponse.status);
+            continue;
+          }
+
+          const fileBlob = await fileResponse.blob();
+          const arrayBuffer = await fileBlob.arrayBuffer();
           const uint8Array = new Uint8Array(arrayBuffer);
 
           // Upload to Supabase Storage
