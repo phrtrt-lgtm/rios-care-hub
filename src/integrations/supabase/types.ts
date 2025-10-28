@@ -24,6 +24,9 @@ export type Database = {
           file_size: number | null
           id: string
           mime_type: string | null
+          mime_type_override: string | null
+          monday_asset_id: string | null
+          source: string | null
         }
         Insert: {
           charge_id?: string | null
@@ -34,6 +37,9 @@ export type Database = {
           file_size?: number | null
           id?: string
           mime_type?: string | null
+          mime_type_override?: string | null
+          monday_asset_id?: string | null
+          source?: string | null
         }
         Update: {
           charge_id?: string | null
@@ -44,6 +50,9 @@ export type Database = {
           file_size?: number | null
           id?: string
           mime_type?: string | null
+          mime_type_override?: string | null
+          monday_asset_id?: string | null
+          source?: string | null
         }
         Relationships: [
           {

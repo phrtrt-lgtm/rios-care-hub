@@ -189,39 +189,53 @@ serve(async (req) => {
             continue;
           }
 
-          // Use the download-monday-asset edge function to get the file URL
-          console.log("Getting file URL via edge function, asset ID:", asset.id);
-          const downloadResponse = await fetch(`${SUPABASE_URL}/functions/v1/download-monday-asset?assetId=${asset.id}`, {
-            method: "GET",
+          // Download file directly from Monday API using asset query
+          console.log("Downloading asset from Monday API:", asset.name, "ID:", asset.id);
+          
+          const assetQuery = `
+            query ($assetId: [ID!]!) {
+              assets(ids: $assetId) {
+                public_url
+              }
+            }
+          `;
+
+          const assetResponse = await fetch("https://api.monday.com/v2", {
+            method: "POST",
             headers: {
-              "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+              "Authorization": MONDAY_API_KEY,
+              "Content-Type": "application/json",
+              "API-Version": "2023-10",
             },
+            body: JSON.stringify({
+              query: assetQuery,
+              variables: { assetId: [asset.id] },
+            }),
           });
 
-          if (!downloadResponse.ok) {
-            const errorText = await downloadResponse.text();
-            console.error("Failed to get file URL:", downloadResponse.status, errorText);
+          if (!assetResponse.ok) {
+            console.error("Failed to query Monday API for asset:", assetResponse.status);
             continue;
           }
 
-          const fileData = await downloadResponse.json();
-          const fileUrl = fileData.url;
-          
-          if (!fileUrl) {
-            console.error("No URL returned from download function");
+          const assetData = await assetResponse.json();
+          const publicUrl = assetData.data?.assets?.[0]?.public_url;
+
+          if (!publicUrl) {
+            console.error("No public_url from Monday for asset:", asset.name);
             continue;
           }
 
-          // Download the file from Monday
-          console.log("Downloading from Monday URL:", fileUrl);
-          const fileResponse = await fetch(fileUrl, {
+          // Download file from Monday public URL
+          console.log("Downloading file from Monday public URL");
+          const fileResponse = await fetch(publicUrl, {
             headers: {
               "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
             },
           });
 
           if (!fileResponse.ok) {
-            console.error("Failed to download file from Monday:", fileResponse.status);
+            console.error("Failed to download file:", fileResponse.status, fileResponse.statusText);
             continue;
           }
 
@@ -252,7 +266,7 @@ serve(async (req) => {
             .from("attachments")
             .getPublicUrl(uploadData.path);
 
-          // Save attachment metadata with storage path
+          // Save attachment metadata with storage path and Monday info
           const { error: attachmentError } = await supabase
             .from("charge_attachments")
             .insert({
@@ -262,6 +276,8 @@ serve(async (req) => {
               file_size: asset.file_size,
               mime_type: getMimeType(asset.file_extension),
               created_by: charge.owner_id,
+              source: 'monday',
+              monday_asset_id: String(asset.id),
             });
 
           if (attachmentError) {

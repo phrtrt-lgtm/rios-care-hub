@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Send, Loader2, Calendar, DollarSign, Paperclip, Download, Eye, FileText, Image as ImageIcon, Trash2 } from "lucide-react";
+import { AuthenticatedImage, AuthenticatedVideo } from "@/components/AuthenticatedMedia";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
@@ -170,12 +171,12 @@ export default function CobrancaDetalhes() {
     
     for (const attachment of attachments) {
       try {
-        // Get public URL from Supabase Storage
-        const { data: { publicUrl } } = supabase.storage
-          .from('attachments')
-          .getPublicUrl(attachment.file_path);
-        
-        urls[attachment.id] = publicUrl;
+        // Use serve-attachment edge function for secure file access
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+          urls[attachment.id] = `${SUPABASE_URL}/functions/v1/serve-attachment/${attachment.id}`;
+        }
       } catch (error) {
         console.error('Error loading preview:', error);
       }
@@ -215,17 +216,29 @@ export default function CobrancaDetalhes() {
     }
   };
 
-  const downloadAttachment = async (filePath: string, fileName: string) => {
+  const downloadAttachment = async (attachmentId: string, fileName: string) => {
     try {
       setSending(true);
       
-      // Get public URL from Supabase Storage
-      const { data: { publicUrl } } = supabase.storage
-        .from('attachments')
-        .getPublicUrl(filePath);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("Sessão não encontrada");
+      }
+
+      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+      const downloadUrl = `${SUPABASE_URL}/functions/v1/serve-attachment/${attachmentId}?download=1`;
 
       // Download the file
-      const response = await fetch(publicUrl);
+      const response = await fetch(downloadUrl, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error("Falha ao baixar arquivo");
+      }
+
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -254,24 +267,35 @@ export default function CobrancaDetalhes() {
     try {
       setSending(true);
       
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("Sessão não encontrada");
+      }
+
       toast({
         title: "Preparando download...",
         description: "Compactando arquivos...",
       });
+
+      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
       // Create ZIP file
       const zip = new JSZip();
       
       for (const attachment of attachments) {
         try {
-          // Get public URL from Supabase Storage
-          const { data: { publicUrl } } = supabase.storage
-            .from('attachments')
-            .getPublicUrl(attachment.file_path);
-
-          const response = await fetch(publicUrl);
-          const blob = await response.blob();
-          zip.file(attachment.file_name, blob);
+          const downloadUrl = `${SUPABASE_URL}/functions/v1/serve-attachment/${attachment.id}`;
+          
+          const response = await fetch(downloadUrl, {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+          });
+          
+          if (response.ok) {
+            const blob = await response.blob();
+            zip.file(attachment.file_name, blob);
+          }
         } catch (error) {
           console.error('Error downloading:', attachment.file_name, error);
         }
@@ -484,19 +508,18 @@ export default function CobrancaDetalhes() {
                         .map((attachment) => {
                           const previewUrl = previewUrls[attachment.id];
                           return (
-                            <div key={attachment.id} className="group relative aspect-square rounded-lg overflow-hidden border bg-muted">
-                              {previewUrl ? (
-                                <img 
-                                  src={previewUrl}
-                                  alt={attachment.file_name}
-                                  className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                                  loading="lazy"
-                                />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center">
-                                  <ImageIcon className="h-12 w-12 text-muted-foreground" />
-                                </div>
-                              )}
+                             <div key={attachment.id} className="group relative aspect-square rounded-lg overflow-hidden border bg-muted">
+                               {previewUrl ? (
+                                 <AuthenticatedImage 
+                                   src={previewUrl}
+                                   alt={attachment.file_name}
+                                   className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                                 />
+                               ) : (
+                                 <div className="w-full h-full flex items-center justify-center">
+                                   <ImageIcon className="h-12 w-12 text-muted-foreground" />
+                                 </div>
+                               )}
                               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
                                 <Button
                                   size="sm"
@@ -509,7 +532,7 @@ export default function CobrancaDetalhes() {
                                 <Button
                                   size="sm"
                                   variant="secondary"
-                                  onClick={() => downloadAttachment(attachment.file_path, attachment.file_name)}
+                                  onClick={() => downloadAttachment(attachment.id, attachment.file_name)}
                                   disabled={sending}
                                   className="h-8 w-8 p-0"
                                 >
@@ -536,13 +559,12 @@ export default function CobrancaDetalhes() {
                             <div key={attachment.id} className="space-y-2">
                               <div className="aspect-video rounded-lg overflow-hidden border bg-muted">
                                 {previewUrl && (
-                                  <video 
-                                    controls 
-                                    className="w-full h-full"
+                                  <AuthenticatedVideo
                                     src={previewUrl}
-                                  >
-                                    Seu navegador não suporta vídeos.
-                                  </video>
+                                    controls 
+                                    preload="metadata"
+                                    className="w-full h-full"
+                                  />
                                 )}
                               </div>
                               <div className="flex items-center justify-between text-sm">
@@ -550,7 +572,7 @@ export default function CobrancaDetalhes() {
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  onClick={() => downloadAttachment(attachment.file_path, attachment.file_name)}
+                                  onClick={() => downloadAttachment(attachment.id, attachment.file_name)}
                                   disabled={sending}
                                 >
                                   <Download className="h-4 w-4" />
@@ -589,7 +611,7 @@ export default function CobrancaDetalhes() {
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => downloadAttachment(attachment.file_path, attachment.file_name)}
+                              onClick={() => downloadAttachment(attachment.id, attachment.file_name)}
                               disabled={sending}
                             >
                               <Download className="h-4 w-4" />
@@ -680,7 +702,7 @@ export default function CobrancaDetalhes() {
           </DialogHeader>
           <div className="relative w-full max-h-[70vh] flex items-center justify-center bg-muted rounded-lg overflow-hidden">
             {selectedImage && (
-              <img 
+              <AuthenticatedImage 
                 src={selectedImage.url}
                 alt={selectedImage.name}
                 className="max-w-full max-h-[70vh] object-contain"
