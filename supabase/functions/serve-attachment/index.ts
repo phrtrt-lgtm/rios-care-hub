@@ -5,6 +5,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.1";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, range",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Expose-Headers": "Content-Range, Accept-Ranges, Content-Length",
 };
 
 serve(async (req) => {
@@ -20,18 +22,13 @@ serve(async (req) => {
       throw new Error("Missing environment variables");
     }
 
-    // Extract attachment ID from URL
     const url = new URL(req.url);
-    const pathParts = url.pathname.split('/');
+    const pathParts = url.pathname.split("/");
     const attachmentId = pathParts[pathParts.length - 1];
-    const isDownload = url.searchParams.get('download') === '1';
+    const isPoster = pathParts.includes("poster");
+    const forceDownload = url.searchParams.get("download") === "1";
 
-    if (!attachmentId) {
-      return new Response(JSON.stringify({ error: "Attachment ID required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    console.log(`Serving ${isPoster ? 'poster' : 'file'} for attachment:`, attachmentId);
 
     // Get user from JWT
     const authHeader = req.headers.get("Authorization");
@@ -91,61 +88,80 @@ serve(async (req) => {
       });
     }
 
-    // Get file from storage
-    const { data: fileData, error: storageError } = await supabase.storage
-      .from("attachments")
-      .download(attachment.file_path);
+    // Determine which file to serve
+    const filePath = isPoster ? attachment.poster_path : attachment.file_path;
+    const mimeType = isPoster ? "image/jpeg" : (attachment.mime_type || "application/octet-stream");
+    const fileName = isPoster 
+      ? attachment.file_name.replace(/\.[^.]+$/, '.jpg')
+      : attachment.file_name;
 
-    if (storageError || !fileData) {
-      console.error("Storage error:", storageError);
-      return new Response(JSON.stringify({ error: "File not found in storage" }), {
+    if (!filePath) {
+      return new Response(JSON.stringify({ error: "File not found" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Handle Range requests for video streaming
-    const range = req.headers.get("Range");
-    const mimeType = attachment.mime_type || "application/octet-stream";
-    const fileName = attachment.file_name;
+    // Download file from storage
+    const { data: fileData, error: downloadError } = await supabase.storage
+      .from("attachments")
+      .download(filePath);
 
-    if (range) {
-      const fileBuffer = await fileData.arrayBuffer();
-      const fileSize = fileBuffer.byteLength;
-      
-      // Parse range header (e.g., "bytes=0-1024")
-      const parts = range.replace(/bytes=/, "").split("-");
-      const start = parseInt(parts[0], 10);
-      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-      const chunkSize = (end - start) + 1;
-
-      const chunk = fileBuffer.slice(start, end + 1);
-
-      return new Response(chunk, {
-        status: 206,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": mimeType,
-          "Content-Range": `bytes ${start}-${end}/${fileSize}`,
-          "Accept-Ranges": "bytes",
-          "Content-Length": chunkSize.toString(),
-          "Cache-Control": "private, max-age=3600",
-        },
+    if (downloadError || !fileData) {
+      console.error("Error downloading file:", downloadError);
+      return new Response(JSON.stringify({ error: "File not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Regular response
+    const fileBuffer = await fileData.arrayBuffer();
+    const totalSize = fileBuffer.byteLength;
+
+    // Handle Range requests for video streaming
+    const rangeHeader = req.headers.get("Range");
+    
+    if (rangeHeader && mimeType.startsWith("video/")) {
+      const match = rangeHeader.match(/bytes=(\d+)-(\d*)/);
+      if (match) {
+        const start = parseInt(match[1], 10);
+        const end = match[2] ? parseInt(match[2], 10) : totalSize - 1;
+        const chunkSize = end - start + 1;
+
+        const chunk = fileBuffer.slice(start, end + 1);
+
+        return new Response(chunk, {
+          status: 206,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": mimeType,
+            "Content-Range": `bytes ${start}-${end}/${totalSize}`,
+            "Accept-Ranges": "bytes",
+            "Content-Length": chunkSize.toString(),
+            "Cache-Control": "private, max-age=3600",
+          },
+        });
+      }
+    }
+
+    // Regular response (no range or non-video)
     const headers: Record<string, string> = {
       ...corsHeaders,
       "Content-Type": mimeType,
-      "Cache-Control": "private, max-age=3600",
+      "Content-Length": totalSize.toString(),
+      "Accept-Ranges": "bytes",
+      "Cache-Control": isPoster ? "public, max-age=86400" : "private, max-age=3600",
     };
 
-    if (isDownload) {
+    // Add Content-Disposition for downloads
+    if (forceDownload && !isPoster) {
       headers["Content-Disposition"] = `attachment; filename="${fileName}"`;
     }
 
-    return new Response(fileData, { headers });
+    return new Response(fileBuffer, {
+      status: 200,
+      headers,
+    });
 
   } catch (error) {
     console.error("Error in serve-attachment function:", error);

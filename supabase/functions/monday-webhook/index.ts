@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.1";
+import { join } from "https://deno.land/std@0.224.0/path/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -157,11 +158,9 @@ serve(async (req) => {
     if (item.assets && item.assets.length > 0) {
       for (const asset of item.assets) {
         try {
-          console.log("Downloading asset from Monday:", asset.name);
-
-          // Download file directly from Monday API using asset query
-          console.log("Downloading asset from Monday API:", asset.name, "ID:", asset.id);
+          console.log("Processing asset from Monday:", asset.name, "ID:", asset.id);
           
+          // Get asset URL from Monday API
           const assetQuery = `
             query ($assetId: [ID!]!) {
               assets(ids: $assetId) {
@@ -196,7 +195,7 @@ serve(async (req) => {
             continue;
           }
 
-          // Download file from Monday public URL
+          // Download file from Monday
           console.log("Downloading file from Monday public URL");
           const fileResponse = await fetch(publicUrl, {
             headers: {
@@ -209,51 +208,181 @@ serve(async (req) => {
             continue;
           }
 
-          const fileBlob = await fileResponse.blob();
-          const arrayBuffer = await fileBlob.arrayBuffer();
-          const uint8Array = new Uint8Array(arrayBuffer);
+          const mimeType = getMimeType(asset.file_extension);
+          const isVideo = mimeType.startsWith('video/');
 
-          // Upload to Supabase Storage
-          const fileName = `${charge.id}/${asset.name}`;
-          console.log("Uploading to Supabase Storage:", fileName);
+          if (isVideo) {
+            console.log("Processing video file:", asset.name);
+            
+            // Save to temp file
+            const tempInputPath = join("/tmp", `input_${asset.id}${asset.file_extension}`);
+            const tempOutputPath = join("/tmp", `output_${asset.id}.mp4`);
+            const tempPosterPath = join("/tmp", `poster_${asset.id}.jpg`);
 
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from("attachments")
-            .upload(fileName, uint8Array, {
-              contentType: getMimeType(asset.file_extension),
-              upsert: false,
-            });
+            const fileBlob = await fileResponse.blob();
+            const arrayBuffer = await fileBlob.arrayBuffer();
+            await Deno.writeFile(tempInputPath, new Uint8Array(arrayBuffer));
 
-          if (uploadError) {
-            console.error("Error uploading to storage:", uploadError);
-            continue;
-          }
+            try {
+              // Check if we need transcoding using ffprobe
+              const probeCommand = new Deno.Command("ffprobe", {
+                args: [
+                  "-v", "quiet",
+                  "-print_format", "json",
+                  "-show_streams",
+                  "-show_format",
+                  tempInputPath
+                ],
+              });
 
-          console.log("File uploaded successfully:", uploadData.path);
+              const { stdout: probeOutput } = await probeCommand.output();
+              const probeData = JSON.parse(new TextDecoder().decode(probeOutput));
+              
+              const videoStream = probeData.streams?.find((s: any) => s.codec_type === "video");
+              const audioStream = probeData.streams?.find((s: any) => s.codec_type === "audio");
+              
+              const needsTranscode = videoStream?.codec_name !== "h264" || audioStream?.codec_name !== "aac";
+              
+              // Extract metadata
+              const duration = Math.round(parseFloat(probeData.format?.duration || "0"));
+              const width = videoStream?.width || null;
+              const height = videoStream?.height || null;
 
-          // Get public URL for logging
-          const { data: { publicUrl: storageUrl } } = supabase.storage
-            .from("attachments")
-            .getPublicUrl(uploadData.path);
+              console.log(`Video info: ${width}x${height}, ${duration}s, needs transcode: ${needsTranscode}`);
 
-          // Save attachment metadata with storage path and Monday info
-          const { error: attachmentError } = await supabase
-            .from("charge_attachments")
-            .insert({
-              charge_id: charge.id,
-              file_name: asset.name,
-              file_path: uploadData.path,
-              file_size: asset.file_size,
-              mime_type: getMimeType(asset.file_extension),
-              created_by: charge.owner_id,
-              source: 'monday',
-              monday_asset_id: String(asset.id),
-            });
+              // Convert/remux video
+              const ffmpegArgs = needsTranscode
+                ? ["-i", tempInputPath, "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", 
+                   "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", "-y", tempOutputPath]
+                : ["-i", tempInputPath, "-c", "copy", "-movflags", "+faststart", "-y", tempOutputPath];
 
-          if (attachmentError) {
-            console.error("Error creating attachment record:", attachmentError);
+              const convertCommand = new Deno.Command("ffmpeg", { args: ffmpegArgs });
+              const { success: convertSuccess } = await convertCommand.output();
+
+              if (!convertSuccess) {
+                throw new Error("FFmpeg conversion failed");
+              }
+
+              // Generate poster
+              const posterCommand = new Deno.Command("ffmpeg", {
+                args: [
+                  "-ss", "00:00:01",
+                  "-i", tempOutputPath,
+                  "-frames:v", "1",
+                  "-vf", "scale='min(1280,iw)':-2",
+                  "-y",
+                  tempPosterPath
+                ],
+              });
+              
+              await posterCommand.output();
+
+              // Upload video
+              const videoData = await Deno.readFile(tempOutputPath);
+              const videoPath = `${charge.id}/${asset.id}.mp4`;
+              
+              const { data: videoUpload, error: videoUploadError } = await supabase.storage
+                .from("attachments")
+                .upload(videoPath, videoData, {
+                  contentType: "video/mp4",
+                  upsert: false,
+                });
+
+              if (videoUploadError) {
+                console.error("Error uploading video:", videoUploadError);
+                continue;
+              }
+
+              console.log("Video uploaded:", videoPath);
+
+              // Upload poster
+              const posterData = await Deno.readFile(tempPosterPath);
+              const posterPath = `${charge.id}/${asset.id}.jpg`;
+              
+              const { data: posterUpload, error: posterUploadError } = await supabase.storage
+                .from("attachments")
+                .upload(posterPath, posterData, {
+                  contentType: "image/jpeg",
+                  upsert: false,
+                });
+
+              if (!posterUploadError) {
+                console.log("Poster uploaded:", posterPath);
+              }
+
+              // Save attachment metadata
+              const { error: attachmentError } = await supabase
+                .from("charge_attachments")
+                .insert({
+                  charge_id: charge.id,
+                  file_name: asset.name.replace(/\.[^.]+$/, '.mp4'),
+                  file_path: videoUpload.path,
+                  file_size: videoData.length,
+                  mime_type: "video/mp4",
+                  poster_path: posterUpload?.path || null,
+                  duration_sec: duration,
+                  width: width,
+                  height: height,
+                  created_by: charge.owner_id,
+                  source: 'monday',
+                  monday_asset_id: String(asset.id),
+                });
+
+              if (attachmentError) {
+                console.error("Error creating attachment record:", attachmentError);
+              } else {
+                console.log("Video attachment saved:", asset.name);
+              }
+
+            } finally {
+              // Cleanup temp files
+              try { await Deno.remove(tempInputPath); } catch {}
+              try { await Deno.remove(tempOutputPath); } catch {}
+              try { await Deno.remove(tempPosterPath); } catch {}
+            }
+
           } else {
-            console.log("Saved attachment metadata:", asset.name, storageUrl);
+            // Non-video files - upload as-is
+            const fileBlob = await fileResponse.blob();
+            const arrayBuffer = await fileBlob.arrayBuffer();
+            const uint8Array = new Uint8Array(arrayBuffer);
+
+            const fileName = `${charge.id}/${asset.name}`;
+            console.log("Uploading to Supabase Storage:", fileName);
+
+            const { data: uploadData, error: uploadError } = await supabase.storage
+              .from("attachments")
+              .upload(fileName, uint8Array, {
+                contentType: mimeType,
+                upsert: false,
+              });
+
+            if (uploadError) {
+              console.error("Error uploading to storage:", uploadError);
+              continue;
+            }
+
+            console.log("File uploaded successfully:", uploadData.path);
+
+            // Save attachment metadata
+            const { error: attachmentError } = await supabase
+              .from("charge_attachments")
+              .insert({
+                charge_id: charge.id,
+                file_name: asset.name,
+                file_path: uploadData.path,
+                file_size: asset.file_size,
+                mime_type: mimeType,
+                created_by: charge.owner_id,
+                source: 'monday',
+                monday_asset_id: String(asset.id),
+              });
+
+            if (attachmentError) {
+              console.error("Error creating attachment record:", attachmentError);
+            } else {
+              console.log("Saved attachment metadata:", asset.name);
+            }
           }
         } catch (error) {
           console.error("Error processing attachment:", asset.name, error);

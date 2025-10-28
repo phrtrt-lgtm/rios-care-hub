@@ -58,13 +58,63 @@ export const AuthenticatedImage = ({ src, alt, ...props }: AuthenticatedImagePro
 
 interface AuthenticatedVideoProps extends React.VideoHTMLAttributes<HTMLVideoElement> {
   src: string;
-  mimeType?: string;
+  posterSrc?: string;
 }
 
-export const AuthenticatedVideo = ({ src, mimeType = "video/mp4", ...props }: AuthenticatedVideoProps) => {
+export const AuthenticatedVideo = ({ src, posterSrc, ...props }: AuthenticatedVideoProps) => {
+  const [videoBlobUrl, setVideoBlobUrl] = useState<string>("");
+  const [posterBlobUrl, setPosterBlobUrl] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadMedia = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          setLoading(false);
+          return;
+        }
+
+        // Load poster
+        if (posterSrc) {
+          const posterResponse = await fetch(posterSrc, {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+          });
+
+          if (posterResponse.ok) {
+            const posterBlob = await posterResponse.blob();
+            const posterObjectUrl = URL.createObjectURL(posterBlob);
+            setPosterBlobUrl(posterObjectUrl);
+          }
+        }
+
+        setLoading(false);
+      } catch (error) {
+        console.error("Error loading video media:", error);
+        setLoading(false);
+      }
+    };
+
+    loadMedia();
+
+    return () => {
+      if (videoBlobUrl) URL.revokeObjectURL(videoBlobUrl);
+      if (posterBlobUrl) URL.revokeObjectURL(posterBlobUrl);
+    };
+  }, [src, posterSrc]);
+
+  if (loading) {
+    return <div className="w-full h-full flex items-center justify-center bg-muted animate-pulse" />;
+  }
+
   return (
-    <video {...props}>
-      <source src={src} type={mimeType} />
+    <video 
+      {...props}
+      poster={posterBlobUrl || undefined}
+    >
+      <source src={src} type="video/mp4" />
       Seu navegador não suporta vídeos.
     </video>
   );

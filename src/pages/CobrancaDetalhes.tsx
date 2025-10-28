@@ -51,6 +51,8 @@ interface ChargeAttachment {
   file_name: string;
   file_path: string;
   file_size: number | null;
+  mime_type: string | null;
+  poster_path: string | null;
 }
 
 export default function CobrancaDetalhes() {
@@ -156,33 +158,22 @@ export default function CobrancaDetalhes() {
   const fetchAttachments = async () => {
     const { data, error } = await supabase
       .from('charge_attachments')
-      .select('id, file_name, file_path, file_size')
+      .select('id, file_name, file_path, file_size, mime_type, poster_path')
       .eq('charge_id', id);
 
     if (!error && data) {
       setAttachments(data);
-      // Load previews for images/videos
-      loadPreviews(data);
     }
   };
 
-  const loadPreviews = async (attachments: ChargeAttachment[]) => {
-    const urls: Record<string, string> = {};
-    
-    for (const attachment of attachments) {
-      try {
-        // Use serve-attachment edge function for secure file access
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-          urls[attachment.id] = `${SUPABASE_URL}/functions/v1/serve-attachment/${attachment.id}`;
-        }
-      } catch (error) {
-        console.error('Error loading preview:', error);
-      }
-    }
-    
-    setPreviewUrls(urls);
+  const getAttachmentUrl = (attachment: ChargeAttachment) => {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    return `${supabaseUrl}/functions/v1/serve-attachment/${attachment.id}/file`;
+  };
+
+  const getPosterUrl = (attachment: ChargeAttachment) => {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    return `${supabaseUrl}/functions/v1/serve-attachment/${attachment.id}/poster`;
   };
 
   const sendMessage = async () => {
@@ -326,28 +317,22 @@ export default function CobrancaDetalhes() {
     }
   };
 
-  const getFileIcon = (fileName: string) => {
-    const extension = fileName.split('.').pop()?.toLowerCase();
-    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-    const videoExtensions = ['mp4', 'webm', 'mov'];
-    
-    if (imageExtensions.includes(extension || '')) {
+  const getFileIcon = (mimeType: string) => {
+    if (mimeType.startsWith('image/')) {
       return <ImageIcon className="h-8 w-8 text-primary" />;
     }
-    if (videoExtensions.includes(extension || '')) {
+    if (mimeType.startsWith('video/')) {
       return <FileText className="h-8 w-8 text-primary" />;
     }
     return <Paperclip className="h-8 w-8 text-muted-foreground" />;
   };
 
-  const isImageFile = (fileName: string) => {
-    const extension = fileName.split('.').pop()?.toLowerCase();
-    return ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '');
+  const isImageFile = (attachment: ChargeAttachment) => {
+    return attachment.mime_type?.startsWith('image/') || false;
   };
 
-  const isVideoFile = (fileName: string) => {
-    const extension = fileName.split('.').pop()?.toLowerCase();
-    return ['mp4', 'webm', 'mov'].includes(extension || '');
+  const isVideoFile = (attachment: ChargeAttachment) => {
+    return attachment.mime_type?.startsWith('video/') || false;
   };
 
   const handleDelete = async () => {
@@ -499,27 +484,21 @@ export default function CobrancaDetalhes() {
                 </div>
 
                 {/* Galeria de Imagens */}
-                {attachments.some(a => isImageFile(a.file_name)) && (
+                {attachments.some(a => isImageFile(a)) && (
                   <div className="mb-6">
                     <h4 className="text-sm font-medium text-muted-foreground mb-3">Imagens</h4>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                       {attachments
-                        .filter(a => isImageFile(a.file_name))
+                        .filter(a => isImageFile(a))
                         .map((attachment) => {
-                          const previewUrl = previewUrls[attachment.id];
+                          const previewUrl = getAttachmentUrl(attachment);
                           return (
                              <div key={attachment.id} className="group relative aspect-square rounded-lg overflow-hidden border bg-muted">
-                               {previewUrl ? (
-                                 <AuthenticatedImage 
-                                   src={previewUrl}
-                                   alt={attachment.file_name}
-                                   className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                                 />
-                               ) : (
-                                 <div className="w-full h-full flex items-center justify-center">
-                                   <ImageIcon className="h-12 w-12 text-muted-foreground" />
-                                 </div>
-                               )}
+                               <AuthenticatedImage 
+                                 src={previewUrl}
+                                 alt={attachment.file_name}
+                                 className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                               />
                               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
                                 <Button
                                   size="sm"
@@ -547,57 +526,55 @@ export default function CobrancaDetalhes() {
                 )}
 
                 {/* Vídeos */}
-                {attachments.some(a => isVideoFile(a.file_name)) && (
+                {attachments.some(a => isVideoFile(a)) && (
                   <div className="mb-6">
                     <h4 className="text-sm font-medium text-muted-foreground mb-3">Vídeos</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {attachments
-                        .filter(a => isVideoFile(a.file_name))
-                        .map((attachment) => {
-                          const previewUrl = previewUrls[attachment.id];
-                          return (
-                            <div key={attachment.id} className="space-y-2">
-                              <div className="aspect-video rounded-lg overflow-hidden border bg-muted">
-                                {previewUrl && (
-                                  <AuthenticatedVideo
-                                    src={previewUrl}
-                                    controls 
-                                    preload="metadata"
-                                    className="w-full h-full"
-                                  />
-                                )}
-                              </div>
-                              <div className="flex items-center justify-between text-sm">
-                                <span className="text-foreground truncate">{attachment.file_name}</span>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => downloadAttachment(attachment.id, attachment.file_name)}
-                                  disabled={sending}
-                                >
-                                  <Download className="h-4 w-4" />
-                                </Button>
-                              </div>
+                        .filter(a => isVideoFile(a))
+                        .map((attachment) => (
+                          <div key={attachment.id} className="space-y-2">
+                            <div className="aspect-video rounded-lg overflow-hidden border bg-muted">
+                              <AuthenticatedVideo
+                                src={getAttachmentUrl(attachment)}
+                                posterSrc={attachment.poster_path ? getPosterUrl(attachment) : undefined}
+                                controls 
+                                preload="metadata"
+                                playsInline
+                                className="w-full h-full"
+                                style={{ maxHeight: "480px" }}
+                              />
                             </div>
-                          );
-                        })}
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-foreground truncate">{attachment.file_name}</span>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => downloadAttachment(attachment.id, attachment.file_name)}
+                                disabled={sending}
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
                     </div>
                   </div>
                 )}
 
                 {/* Outros Arquivos */}
-                {attachments.some(a => !isImageFile(a.file_name) && !isVideoFile(a.file_name)) && (
+                {attachments.some(a => !isImageFile(a) && !isVideoFile(a)) && (
                   <div>
                     <h4 className="text-sm font-medium text-muted-foreground mb-3">Outros Arquivos</h4>
                     <div className="space-y-2">
                       {attachments
-                        .filter(a => !isImageFile(a.file_name) && !isVideoFile(a.file_name))
+                        .filter(a => !isImageFile(a) && !isVideoFile(a))
                         .map((attachment) => (
                           <div
                             key={attachment.id}
                             className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent transition-colors"
                           >
-                            {getFileIcon(attachment.file_name)}
+                            {getFileIcon(attachment.mime_type || '')}
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-foreground truncate">
                                 {attachment.file_name}

@@ -19,40 +19,52 @@ export type Database = {
           charge_id: string | null
           created_at: string
           created_by: string
+          duration_sec: number | null
           file_name: string
           file_path: string
           file_size: number | null
+          height: number | null
           id: string
           mime_type: string | null
           mime_type_override: string | null
           monday_asset_id: string | null
+          poster_path: string | null
           source: string | null
+          width: number | null
         }
         Insert: {
           charge_id?: string | null
           created_at?: string
           created_by: string
+          duration_sec?: number | null
           file_name: string
           file_path: string
           file_size?: number | null
+          height?: number | null
           id?: string
           mime_type?: string | null
           mime_type_override?: string | null
           monday_asset_id?: string | null
+          poster_path?: string | null
           source?: string | null
+          width?: number | null
         }
         Update: {
           charge_id?: string | null
           created_at?: string
           created_by?: string
+          duration_sec?: number | null
           file_name?: string
           file_path?: string
           file_size?: number | null
+          height?: number | null
           id?: string
           mime_type?: string | null
           mime_type_override?: string | null
           monday_asset_id?: string | null
+          poster_path?: string | null
           source?: string | null
+          width?: number | null
         }
         Relationships: [
           {
