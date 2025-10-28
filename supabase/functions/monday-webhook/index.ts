@@ -159,36 +159,6 @@ serve(async (req) => {
         try {
           console.log("Downloading asset from Monday:", asset.name);
 
-          // Get asset URL from Monday
-          const assetQuery = `
-            query ($assetId: [ID!]!) {
-              assets(ids: $assetId) {
-                url
-                name
-              }
-            }
-          `;
-
-          const assetResponse = await fetch("https://api.monday.com/v2", {
-            method: "POST",
-            headers: {
-              "Authorization": MONDAY_API_KEY,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              query: assetQuery,
-              variables: { assetId: [asset.id] },
-            }),
-          });
-
-          const assetData = await assetResponse.json();
-          const assetUrl = assetData.data?.assets?.[0]?.url;
-
-          if (!assetUrl) {
-            console.error("Could not get asset URL for:", asset.name);
-            continue;
-          }
-
           // Download file directly from Monday API using asset query
           console.log("Downloading asset from Monday API:", asset.name, "ID:", asset.id);
           
@@ -261,8 +231,8 @@ serve(async (req) => {
 
           console.log("File uploaded successfully:", uploadData.path);
 
-          // Get public URL
-          const { data: { publicUrl } } = supabase.storage
+          // Get public URL for logging
+          const { data: { publicUrl: storageUrl } } = supabase.storage
             .from("attachments")
             .getPublicUrl(uploadData.path);
 
@@ -283,7 +253,7 @@ serve(async (req) => {
           if (attachmentError) {
             console.error("Error creating attachment record:", attachmentError);
           } else {
-            console.log("Saved attachment metadata:", asset.name, publicUrl);
+            console.log("Saved attachment metadata:", asset.name, storageUrl);
           }
         } catch (error) {
           console.error("Error processing attachment:", asset.name, error);
