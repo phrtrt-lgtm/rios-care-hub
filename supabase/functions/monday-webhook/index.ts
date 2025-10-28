@@ -189,22 +189,24 @@ serve(async (req) => {
             continue;
           }
 
-          // Download file from Monday
-          console.log("Fetching file from Monday:", assetUrl);
-          const fileResponse = await fetch(assetUrl, {
+          // Use the download-monday-asset edge function to get the file
+          console.log("Downloading file via edge function, asset ID:", asset.id);
+          const downloadResponse = await fetch(`${SUPABASE_URL}/functions/v1/download-monday-asset`, {
+            method: "POST",
             headers: {
-              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-              "Accept": "*/*",
+              "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+              "Content-Type": "application/json",
             },
+            body: JSON.stringify({ assetId: asset.id }),
           });
 
-          if (!fileResponse.ok) {
-            console.error("Failed to download file:", fileResponse.status);
+          if (!downloadResponse.ok) {
+            const errorText = await downloadResponse.text();
+            console.error("Failed to download file:", downloadResponse.status, errorText);
             continue;
           }
 
-          const fileBlob = await fileResponse.blob();
-          const arrayBuffer = await fileBlob.arrayBuffer();
+          const arrayBuffer = await downloadResponse.arrayBuffer();
           const uint8Array = new Uint8Array(arrayBuffer);
 
           // Upload to Supabase Storage
