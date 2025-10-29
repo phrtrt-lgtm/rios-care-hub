@@ -64,10 +64,9 @@ interface AuthenticatedVideoProps extends React.VideoHTMLAttributes<HTMLVideoEle
 export const AuthenticatedVideo = ({ src, posterSrc, ...props }: AuthenticatedVideoProps) => {
   const [posterBlobUrl, setPosterBlobUrl] = useState<string>("");
   const [loading, setLoading] = useState(true);
-  const [authenticatedSrc, setAuthenticatedSrc] = useState<string>("");
 
   useEffect(() => {
-    const loadMedia = async () => {
+    const loadPoster = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
@@ -75,10 +74,7 @@ export const AuthenticatedVideo = ({ src, posterSrc, ...props }: AuthenticatedVi
           return;
         }
 
-        // Set authenticated src with token
-        setAuthenticatedSrc(`${src}?token=${session.access_token}`);
-
-        // Load poster
+        // Load poster if available
         if (posterSrc) {
           const posterResponse = await fetch(posterSrc, {
             headers: {
@@ -95,28 +91,40 @@ export const AuthenticatedVideo = ({ src, posterSrc, ...props }: AuthenticatedVi
 
         setLoading(false);
       } catch (error) {
-        console.error("Error loading video media:", error);
+        console.error("Error loading video poster:", error);
         setLoading(false);
       }
     };
 
-    loadMedia();
+    loadPoster();
 
     return () => {
       if (posterBlobUrl) URL.revokeObjectURL(posterBlobUrl);
     };
-  }, [src, posterSrc]);
+  }, [posterSrc]);
 
   if (loading) {
     return <div className="w-full h-full flex items-center justify-center bg-muted animate-pulse" />;
   }
 
+  // Build authenticated video src with token
+  const getAuthenticatedSrc = () => {
+    return src; // The edge function already handles authentication via headers
+  };
+
   return (
     <video 
       {...props}
       poster={posterBlobUrl || undefined}
+      onError={(e) => {
+        console.error("Video error:", e);
+        const videoEl = e.currentTarget;
+        if (videoEl.error) {
+          console.error("Video error code:", videoEl.error.code, "message:", videoEl.error.message);
+        }
+      }}
     >
-      {authenticatedSrc && <source src={authenticatedSrc} type="video/mp4" />}
+      <source src={getAuthenticatedSrc()} type="video/mp4" />
       Seu navegador não suporta vídeos.
     </video>
   );

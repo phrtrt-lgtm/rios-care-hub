@@ -10,6 +10,7 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight and HEAD requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -110,6 +111,8 @@ serve(async (req) => {
       });
     }
 
+    console.log(`File path: ${filePath}, MIME: ${mimeType}`);
+
     // Download file from storage
     const { data: fileData, error: downloadError } = await supabase.storage
       .from("attachments")
@@ -126,15 +129,34 @@ serve(async (req) => {
     const fileBuffer = await fileData.arrayBuffer();
     const totalSize = fileBuffer.byteLength;
 
+    console.log(`File size: ${totalSize} bytes`);
+
+    // Handle HEAD requests
+    if (req.method === "HEAD") {
+      return new Response(null, {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": mimeType,
+          "Content-Length": totalSize.toString(),
+          "Accept-Ranges": "bytes",
+          "Cache-Control": isPoster ? "public, max-age=86400" : "private, max-age=3600",
+        },
+      });
+    }
+
     // Handle Range requests for video streaming
     const rangeHeader = req.headers.get("Range");
     
-    if (rangeHeader && mimeType.startsWith("video/")) {
+    if (rangeHeader) {
+      console.log(`Range request: ${rangeHeader}`);
       const match = rangeHeader.match(/bytes=(\d+)-(\d*)/);
       if (match) {
         const start = parseInt(match[1], 10);
         const end = match[2] ? parseInt(match[2], 10) : totalSize - 1;
         const chunkSize = end - start + 1;
+
+        console.log(`Serving range: ${start}-${end}/${totalSize}`);
 
         const chunk = fileBuffer.slice(start, end + 1);
 
@@ -152,7 +174,7 @@ serve(async (req) => {
       }
     }
 
-    // Regular response (no range or non-video)
+    // Regular response (no range)
     const headers: Record<string, string> = {
       ...corsHeaders,
       "Content-Type": mimeType,
@@ -161,10 +183,15 @@ serve(async (req) => {
       "Cache-Control": isPoster ? "public, max-age=86400" : "private, max-age=3600",
     };
 
-    // Add Content-Disposition for downloads
+    // Add Content-Disposition ONLY for downloads (not for video playback)
     if (forceDownload && !isPoster) {
       headers["Content-Disposition"] = `attachment; filename="${fileName}"`;
+    } else if (mimeType.startsWith("video/")) {
+      // For video, explicitly set inline to prevent download
+      headers["Content-Disposition"] = `inline; filename="${fileName}"`;
     }
+
+    console.log(`Serving full file (${totalSize} bytes)`);
 
     return new Response(fileBuffer, {
       status: 200,
