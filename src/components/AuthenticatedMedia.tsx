@@ -62,9 +62,9 @@ interface AuthenticatedVideoProps extends React.VideoHTMLAttributes<HTMLVideoEle
 }
 
 export const AuthenticatedVideo = ({ src, posterSrc, ...props }: AuthenticatedVideoProps) => {
-  const [videoBlobUrl, setVideoBlobUrl] = useState<string>("");
   const [posterBlobUrl, setPosterBlobUrl] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const [authenticatedSrc, setAuthenticatedSrc] = useState<string>("");
 
   useEffect(() => {
     const loadMedia = async () => {
@@ -74,6 +74,9 @@ export const AuthenticatedVideo = ({ src, posterSrc, ...props }: AuthenticatedVi
           setLoading(false);
           return;
         }
+
+        // Set authenticated src with token
+        setAuthenticatedSrc(`${src}?token=${session.access_token}`);
 
         // Load poster
         if (posterSrc) {
@@ -100,7 +103,6 @@ export const AuthenticatedVideo = ({ src, posterSrc, ...props }: AuthenticatedVi
     loadMedia();
 
     return () => {
-      if (videoBlobUrl) URL.revokeObjectURL(videoBlobUrl);
       if (posterBlobUrl) URL.revokeObjectURL(posterBlobUrl);
     };
   }, [src, posterSrc]);
@@ -108,19 +110,6 @@ export const AuthenticatedVideo = ({ src, posterSrc, ...props }: AuthenticatedVi
   if (loading) {
     return <div className="w-full h-full flex items-center justify-center bg-muted animate-pulse" />;
   }
-
-  // For authenticated video, we need to pass the session token
-  const [authenticatedSrc, setAuthenticatedSrc] = React.useState<string>("");
-
-  React.useEffect(() => {
-    const loadAuthenticatedSrc = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        setAuthenticatedSrc(`${src}?token=${session.access_token}`);
-      }
-    };
-    loadAuthenticatedSrc();
-  }, [src]);
 
   return (
     <video 
