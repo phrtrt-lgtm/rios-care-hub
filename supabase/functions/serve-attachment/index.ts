@@ -32,8 +32,14 @@ serve(async (req) => {
 
     console.log(`Serving ${isPoster ? 'poster' : 'file'} for attachment ID:`, attachmentId);
 
-    // Get user from JWT
-    const authHeader = req.headers.get("Authorization");
+    // Get user from JWT (check both Authorization header and token query param)
+    let authHeader = req.headers.get("Authorization");
+    const tokenParam = url.searchParams.get("token");
+    
+    if (!authHeader && tokenParam) {
+      authHeader = `Bearer ${tokenParam}`;
+    }
+    
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,

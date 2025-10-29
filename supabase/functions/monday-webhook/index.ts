@@ -208,161 +208,15 @@ serve(async (req) => {
             continue;
           }
 
-          const mimeType = getMimeType(asset.file_extension);
-          const isVideo = mimeType.startsWith('video/');
-
-          if (isVideo) {
-            console.log("Processing video file:", asset.name);
+            const mimeType = getMimeType(asset.file_extension);
             
-            // Save to temp file
-            const tempInputPath = join("/tmp", `input_${asset.id}${asset.file_extension}`);
-            const tempOutputPath = join("/tmp", `output_${asset.id}.mp4`);
-            const tempPosterPath = join("/tmp", `poster_${asset.id}.jpg`);
-
-            const fileBlob = await fileResponse.blob();
-            const arrayBuffer = await fileBlob.arrayBuffer();
-            await Deno.writeFile(tempInputPath, new Uint8Array(arrayBuffer));
-
-            try {
-              // Check if we need transcoding using ffprobe
-              const probeCommand = new Deno.Command("ffprobe", {
-                args: [
-                  "-v", "quiet",
-                  "-print_format", "json",
-                  "-show_streams",
-                  "-show_format",
-                  tempInputPath
-                ],
-              });
-
-              const { stdout: probeOutput } = await probeCommand.output();
-              const probeData = JSON.parse(new TextDecoder().decode(probeOutput));
-              
-              const videoStream = probeData.streams?.find((s: any) => s.codec_type === "video");
-              const audioStream = probeData.streams?.find((s: any) => s.codec_type === "audio");
-              
-              const needsTranscode = videoStream?.codec_name !== "h264" || audioStream?.codec_name !== "aac";
-              
-              // Extract metadata
-              const duration = Math.round(parseFloat(probeData.format?.duration || "0"));
-              const width = videoStream?.width || null;
-              const height = videoStream?.height || null;
-
-              console.log(`Video info: ${width}x${height}, ${duration}s, needs transcode: ${needsTranscode}`);
-
-              // Convert/remux video
-              const ffmpegArgs = needsTranscode
-                ? ["-i", tempInputPath, "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", 
-                   "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", "-y", tempOutputPath]
-                : ["-i", tempInputPath, "-c", "copy", "-movflags", "+faststart", "-y", tempOutputPath];
-
-              const convertCommand = new Deno.Command("ffmpeg", { args: ffmpegArgs });
-              const { success: convertSuccess } = await convertCommand.output();
-
-              if (!convertSuccess) {
-                throw new Error("FFmpeg conversion failed");
-              }
-
-              // Generate poster
-              const posterCommand = new Deno.Command("ffmpeg", {
-                args: [
-                  "-ss", "00:00:01",
-                  "-i", tempOutputPath,
-                  "-frames:v", "1",
-                  "-vf", "scale='min(1280,iw)':-2",
-                  "-y",
-                  tempPosterPath
-                ],
-              });
-              
-              const { success: posterSuccess } = await posterCommand.output();
-              
-              if (!posterSuccess) {
-                console.error("Failed to generate poster");
-              }
-
-              // Upload video
-              const videoData = await Deno.readFile(tempOutputPath);
-              const videoPath = `${charge.id}/${asset.id}.mp4`;
-              
-              const { data: videoUpload, error: videoUploadError } = await supabase.storage
-                .from("attachments")
-                .upload(videoPath, videoData, {
-                  contentType: "video/mp4",
-                  upsert: false,
-                });
-
-              if (videoUploadError) {
-                console.error("Error uploading video:", videoUploadError);
-                continue;
-              }
-
-              console.log("Video uploaded:", videoPath);
-
-              // Upload poster if it was generated
-              let posterUploadPath = null;
-              
-              try {
-                const posterData = await Deno.readFile(tempPosterPath);
-                const posterPath = `${charge.id}/${asset.id}.jpg`;
-                
-                const { data: posterUpload, error: posterUploadError } = await supabase.storage
-                  .from("attachments")
-                  .upload(posterPath, posterData, {
-                    contentType: "image/jpeg",
-                    upsert: false,
-                  });
-
-                if (posterUploadError) {
-                  console.error("Error uploading poster:", posterUploadError);
-                } else {
-                  posterUploadPath = posterUpload.path;
-                  console.log("Poster uploaded:", posterPath);
-                }
-              } catch (error) {
-                console.error("Error reading/uploading poster:", error);
-              }
-
-              // Save attachment metadata
-              const { error: attachmentError } = await supabase
-                .from("charge_attachments")
-                .insert({
-                  charge_id: charge.id,
-                  file_name: asset.name.replace(/\.[^.]+$/, '.mp4'),
-                  file_path: videoUpload.path,
-                  file_size: videoData.length,
-                  mime_type: "video/mp4",
-                  poster_path: posterUploadPath,
-                  duration_sec: duration,
-                  width: width,
-                  height: height,
-                  created_by: charge.owner_id,
-                  source: 'monday',
-                  monday_asset_id: String(asset.id),
-                });
-
-              if (attachmentError) {
-                console.error("Error creating attachment record:", attachmentError);
-              } else {
-                console.log("Video attachment saved:", asset.name);
-              }
-
-            } finally {
-              // Cleanup temp files
-              try { await Deno.remove(tempInputPath); } catch {}
-              try { await Deno.remove(tempOutputPath); } catch {}
-              try { await Deno.remove(tempPosterPath); } catch {}
-            }
-
-          } else {
-            // Non-video files - upload as-is
+            // Download file from Monday
             const fileBlob = await fileResponse.blob();
             const arrayBuffer = await fileBlob.arrayBuffer();
             const uint8Array = new Uint8Array(arrayBuffer);
 
             const fileName = `${charge.id}/${asset.name}`;
             console.log("Uploading to Supabase Storage:", fileName);
-
             const { data: uploadData, error: uploadError } = await supabase.storage
               .from("attachments")
               .upload(fileName, uint8Array, {
@@ -396,7 +250,6 @@ serve(async (req) => {
             } else {
               console.log("Saved attachment metadata:", asset.name);
             }
-          }
         } catch (error) {
           console.error("Error processing attachment:", asset.name, error);
         }

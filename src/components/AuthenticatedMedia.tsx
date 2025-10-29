@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface AuthenticatedImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
@@ -109,12 +109,25 @@ export const AuthenticatedVideo = ({ src, posterSrc, ...props }: AuthenticatedVi
     return <div className="w-full h-full flex items-center justify-center bg-muted animate-pulse" />;
   }
 
+  // For authenticated video, we need to pass the session token
+  const [authenticatedSrc, setAuthenticatedSrc] = React.useState<string>("");
+
+  React.useEffect(() => {
+    const loadAuthenticatedSrc = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        setAuthenticatedSrc(`${src}?token=${session.access_token}`);
+      }
+    };
+    loadAuthenticatedSrc();
+  }, [src]);
+
   return (
     <video 
       {...props}
       poster={posterBlobUrl || undefined}
     >
-      <source src={src} type="video/mp4" />
+      {authenticatedSrc && <source src={authenticatedSrc} type="video/mp4" />}
       Seu navegador não suporta vídeos.
     </video>
   );
