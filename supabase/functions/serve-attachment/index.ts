@@ -23,12 +23,14 @@ serve(async (req) => {
     }
 
     const url = new URL(req.url);
-    const pathParts = url.pathname.split("/");
-    const attachmentId = pathParts[pathParts.length - 1];
+    const pathParts = url.pathname.split("/").filter(p => p);
+    const attachmentId = pathParts[pathParts.length - 1] === 'poster' || pathParts[pathParts.length - 1] === 'file' 
+      ? pathParts[pathParts.length - 2] 
+      : pathParts[pathParts.length - 1];
     const isPoster = pathParts.includes("poster");
     const forceDownload = url.searchParams.get("download") === "1";
 
-    console.log(`Serving ${isPoster ? 'poster' : 'file'} for attachment:`, attachmentId);
+    console.log(`Serving ${isPoster ? 'poster' : 'file'} for attachment ID:`, attachmentId);
 
     // Get user from JWT
     const authHeader = req.headers.get("Authorization");

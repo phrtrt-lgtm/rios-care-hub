@@ -275,7 +275,11 @@ serve(async (req) => {
                 ],
               });
               
-              await posterCommand.output();
+              const { success: posterSuccess } = await posterCommand.output();
+              
+              if (!posterSuccess) {
+                console.error("Failed to generate poster");
+              }
 
               // Upload video
               const videoData = await Deno.readFile(tempOutputPath);
@@ -295,19 +299,28 @@ serve(async (req) => {
 
               console.log("Video uploaded:", videoPath);
 
-              // Upload poster
-              const posterData = await Deno.readFile(tempPosterPath);
-              const posterPath = `${charge.id}/${asset.id}.jpg`;
+              // Upload poster if it was generated
+              let posterUploadPath = null;
               
-              const { data: posterUpload, error: posterUploadError } = await supabase.storage
-                .from("attachments")
-                .upload(posterPath, posterData, {
-                  contentType: "image/jpeg",
-                  upsert: false,
-                });
+              try {
+                const posterData = await Deno.readFile(tempPosterPath);
+                const posterPath = `${charge.id}/${asset.id}.jpg`;
+                
+                const { data: posterUpload, error: posterUploadError } = await supabase.storage
+                  .from("attachments")
+                  .upload(posterPath, posterData, {
+                    contentType: "image/jpeg",
+                    upsert: false,
+                  });
 
-              if (!posterUploadError) {
-                console.log("Poster uploaded:", posterPath);
+                if (posterUploadError) {
+                  console.error("Error uploading poster:", posterUploadError);
+                } else {
+                  posterUploadPath = posterUpload.path;
+                  console.log("Poster uploaded:", posterPath);
+                }
+              } catch (error) {
+                console.error("Error reading/uploading poster:", error);
               }
 
               // Save attachment metadata
@@ -319,7 +332,7 @@ serve(async (req) => {
                   file_path: videoUpload.path,
                   file_size: videoData.length,
                   mime_type: "video/mp4",
-                  poster_path: posterUpload?.path || null,
+                  poster_path: posterUploadPath,
                   duration_sec: duration,
                   width: width,
                   height: height,
