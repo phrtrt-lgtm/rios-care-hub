@@ -24,12 +24,12 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 206 56% 22%;
 
-    /* Primary = RIOS Blue */
-    --primary: 206 56% 22%;
+    /* Primary = RIOS Terra (Laranja) */
+    --primary: 20 63% 48%;
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary = RIOS Terra */
-    --secondary: 20 63% 48%;
+    /* Secondary = RIOS Blue */
+    --secondary: 206 56% 22%;
     --secondary-foreground: 0 0% 100%;
 
     --muted: 206 20% 96%;
