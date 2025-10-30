@@ -14,6 +14,92 @@ export type Database = {
   }
   public: {
     Tables: {
+      broadcast_recipients: {
+        Row: {
+          broadcast_id: string
+          created_at: string
+          email: string
+          error_message: string | null
+          id: string
+          owner_id: string
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          broadcast_id: string
+          created_at?: string
+          email: string
+          error_message?: string | null
+          id?: string
+          owner_id: string
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          broadcast_id?: string
+          created_at?: string
+          email?: string
+          error_message?: string | null
+          id?: string
+          owner_id?: string
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "broadcast_recipients_broadcast_id_fkey"
+            columns: ["broadcast_id"]
+            isOneToOne: false
+            referencedRelation: "broadcasts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "broadcast_recipients_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      broadcasts: {
+        Row: {
+          body_html: string
+          created_at: string
+          created_by: string
+          id: string
+          include_rules_link: boolean | null
+          recipients_count: number
+          subject: string
+        }
+        Insert: {
+          body_html: string
+          created_at?: string
+          created_by: string
+          id?: string
+          include_rules_link?: boolean | null
+          recipients_count?: number
+          subject: string
+        }
+        Update: {
+          body_html?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          include_rules_link?: boolean | null
+          recipients_count?: number
+          subject?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "broadcasts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       charge_attachments: {
         Row: {
           charge_id: string | null
@@ -114,13 +200,22 @@ export type Database = {
       charges: {
         Row: {
           amount_cents: number
+          contested_at: string | null
           created_at: string
           currency: string
+          debit_notice_at: string | null
+          debited_at: string | null
           description: string | null
           due_date: string | null
           id: string
           owner_id: string
+          owner_note: string | null
+          owner_proof_path: string | null
+          paid_at: string | null
           payment_link_url: string | null
+          reminder_24h_sent: boolean | null
+          reminder_48h_sent: boolean | null
+          reminder_day_sent: boolean | null
           status: string
           ticket_id: string | null
           title: string
@@ -128,13 +223,22 @@ export type Database = {
         }
         Insert: {
           amount_cents: number
+          contested_at?: string | null
           created_at?: string
           currency?: string
+          debit_notice_at?: string | null
+          debited_at?: string | null
           description?: string | null
           due_date?: string | null
           id?: string
           owner_id: string
+          owner_note?: string | null
+          owner_proof_path?: string | null
+          paid_at?: string | null
           payment_link_url?: string | null
+          reminder_24h_sent?: boolean | null
+          reminder_48h_sent?: boolean | null
+          reminder_day_sent?: boolean | null
           status?: string
           ticket_id?: string | null
           title: string
@@ -142,13 +246,22 @@ export type Database = {
         }
         Update: {
           amount_cents?: number
+          contested_at?: string | null
           created_at?: string
           currency?: string
+          debit_notice_at?: string | null
+          debited_at?: string | null
           description?: string | null
           due_date?: string | null
           id?: string
           owner_id?: string
+          owner_note?: string | null
+          owner_proof_path?: string | null
+          paid_at?: string | null
           payment_link_url?: string | null
+          reminder_24h_sent?: boolean | null
+          reminder_48h_sent?: boolean | null
+          reminder_day_sent?: boolean | null
           status?: string
           ticket_id?: string | null
           title?: string
@@ -236,6 +349,38 @@ export type Database = {
           {
             foreignKeyName: "properties_owner_id_fkey"
             columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      system_config: {
+        Row: {
+          id: string
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          id?: string
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value: Json
+        }
+        Update: {
+          id?: string
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_config_updated_by_fkey"
+            columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
