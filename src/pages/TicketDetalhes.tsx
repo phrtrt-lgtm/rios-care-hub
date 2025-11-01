@@ -131,32 +131,20 @@ export default function TicketDetalhes() {
   };
 
   const fetchMessages = async () => {
-    const { data, error } = await supabase
-      .from('ticket_messages')
-      .select(`
-        *,
-        profiles!ticket_messages_author_id_fkey (name, photo_url, role)
-      `)
-      .eq('ticket_id', id)
-      .order('created_at', { ascending: true });
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
 
-    if (!error && data) {
-      // Buscar anexos para cada mensagem
-      const messagesWithAttachments = await Promise.all(
-        data.map(async (message) => {
-          const { data: attachments } = await supabase
-            .from('ticket_attachments')
-            .select('id, file_url, file_name, file_type, size_bytes')
-            .eq('message_id', message.id);
-          
-          return {
-            ...message,
-            attachments: attachments || []
-          };
-        })
-      );
-      
-      setMessages(messagesWithAttachments);
+      const { data, error } = await supabase.functions.invoke(`get-ticket-messages/${id}`, {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
+      });
+
+      if (error) throw error;
+      setMessages(data || []);
+    } catch (error: any) {
+      console.error('Error fetching messages:', error);
     }
   };
 
@@ -166,26 +154,12 @@ export default function TicketDetalhes() {
     try {
       setSending(true);
       
-      // Criar a mensagem primeiro
-      const { data: messageData, error: messageError } = await supabase
-        .from('ticket_messages')
-        .insert({
-          ticket_id: id,
-          author_id: user?.id,
-          body: newMessage || '',
-          is_internal: false
-        })
-        .select()
-        .single();
-
-      if (messageError) throw messageError;
-
-      // Upload de anexos se houver
+      // Upload de anexos primeiro se houver
+      const attachments = [];
       if (selectedFiles.length > 0) {
         for (const file of selectedFiles) {
           setUploadingFiles(prev => new Set(prev).add(file.name));
           
-          const fileExt = file.name.split('.').pop();
           const filePath = `${id}/${Date.now()}_${file.name}`;
 
           const { error: uploadError } = await supabase.storage
@@ -198,19 +172,13 @@ export default function TicketDetalhes() {
             .from('attachments')
             .getPublicUrl(filePath);
 
-          const { error: dbError } = await supabase
-            .from('ticket_attachments')
-            .insert({
-              message_id: messageData.id,
-              ticket_id: id,
-              file_url: publicUrl,
-              file_name: file.name,
-              file_type: file.type,
-              size_bytes: file.size,
-              path: filePath
-            });
-
-          if (dbError) throw dbError;
+          attachments.push({
+            file_url: publicUrl,
+            file_name: file.name,
+            file_type: file.type,
+            size_bytes: file.size,
+            path: filePath
+          });
           
           setUploadingFiles(prev => {
             const next = new Set(prev);
@@ -220,11 +188,31 @@ export default function TicketDetalhes() {
         }
       }
 
+      // Criar mensagem via edge function
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase.functions.invoke(`create-ticket-message/${id}/messages`, {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        },
+        body: {
+          message: newMessage.trim() || null,
+          attachments,
+          is_internal: false
+        }
+      });
+
+      if (error) throw error;
+
       setNewMessage("");
       setSelectedFiles([]);
       toast({
         title: "Mensagem enviada!",
       });
+      
+      // Recarrega as mensagens
+      await fetchMessages();
     } catch (error: any) {
       toast({
         title: "Erro ao enviar mensagem",

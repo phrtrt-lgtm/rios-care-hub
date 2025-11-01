@@ -65,12 +65,19 @@ export default function NovoTicket() {
 
           if (uploadError) throw uploadError;
 
-          // Create attachment record
+          // Get public URL for the uploaded file
+          const { data: { publicUrl } } = supabase.storage
+            .from("attachments")
+            .getPublicUrl(filePath);
+
+          // Create attachment record (tickets without messages need ticket_id null for now)
           await supabase.from("ticket_attachments").insert({
-            ticket_id: ticket.id,
+            message_id: ticket.id, // Using ticket.id as placeholder - will be linked to first message later
+            file_url: publicUrl,
+            file_name: file.name,
+            file_type: file.type,
+            size_bytes: file.size,
             path: filePath,
-            mime_type: file.type,
-            file_size: file.size,
           });
         }
       }
