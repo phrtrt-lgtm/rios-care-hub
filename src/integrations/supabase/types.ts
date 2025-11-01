@@ -572,29 +572,41 @@ export type Database = {
       ticket_attachments: {
         Row: {
           created_at: string
+          file_name: string | null
           file_size: number | null
+          file_type: string | null
+          file_url: string
           id: string
-          message_id: string | null
+          message_id: string
           mime_type: string | null
           path: string
+          size_bytes: number | null
           ticket_id: string | null
         }
         Insert: {
           created_at?: string
+          file_name?: string | null
           file_size?: number | null
+          file_type?: string | null
+          file_url: string
           id?: string
-          message_id?: string | null
+          message_id: string
           mime_type?: string | null
           path: string
+          size_bytes?: number | null
           ticket_id?: string | null
         }
         Update: {
           created_at?: string
+          file_name?: string | null
           file_size?: number | null
+          file_type?: string | null
+          file_url?: string
           id?: string
-          message_id?: string | null
+          message_id?: string
           mime_type?: string | null
           path?: string
+          size_bytes?: number | null
           ticket_id?: string | null
         }
         Relationships: [
