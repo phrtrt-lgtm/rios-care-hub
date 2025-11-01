@@ -61,7 +61,7 @@ export const ChargeCreatedToOwnerEmail = ({
         
         {description && (
           <Section style={descriptionBox}>
-            <Text style={description Text}>{description}</Text>
+            <Text style={descriptionText}>{description}</Text>
           </Section>
         )}
         
