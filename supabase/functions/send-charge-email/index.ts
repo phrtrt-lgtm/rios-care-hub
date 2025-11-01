@@ -1,43 +1,19 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Resend } from "npm:resend@4.0.0";
-import { renderAsync } from "npm:@react-email/components@0.0.22";
-import React from "npm:react@18.3.1";
-import {
-  ChargeCreatedToOwnerEmail,
-  ChargeReminderEmail,
-  ChargeOverdueEmail,
-  ChargeDebitNoticeEmail,
-  ChargePaidEmail,
-  ChargeProofReceivedEmail,
-  ChargeContestedEmail,
-} from "../_shared/email-templates.tsx";
+import { Resend } from "https://esm.sh/resend@2.0.0";
+import { generateChargeEmailHTML } from '../_shared/email-utils.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 interface NotifyRequest {
-  type: 
-    | "charge_created_owner"
-    | "charge_created_admin"
-    | "charge_reminder"
-    | "charge_overdue"
-    | "charge_debit_notice"
-    | "charge_paid_owner"
-    | "charge_paid_team"
-    | "charge_proof_received"
-    | "charge_contested"
-    | "charge_debited_owner"
-    | "charge_debited_team";
+  type: "charge_created" | "charge_reminder" | "charge_overdue";
   chargeId: string;
-  diasRestantes?: string;
 }
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-const adminEmails = (Deno.env.get("ADMIN_NOTIFY_EMAILS") || "").split(",");
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
@@ -50,11 +26,10 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { type, chargeId, diasRestantes }: NotifyRequest = await req.json();
+    const { type, chargeId }: NotifyRequest = await req.json();
+    console.log("Email notification request:", { type, chargeId });
 
-    console.log("Email notification request:", { type, chargeId, diasRestantes });
-
-    // Buscar dados da cobrança
+    // Fetch charge data
     const { data: charge, error: chargeError } = await supabaseClient
       .from("charges")
       .select(`
@@ -72,208 +47,51 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Buscar configurações do sistema
-    const { data: configData } = await supabaseClient
-      .from("system_config")
-      .select("*")
-      .in("key", ["email_signature", "billing_rules"]);
-
-    const emailSignature = configData?.find((c) => c.key === "email_signature")?.value || {
-      company_name: "RIOS – Operação e Gestão de Hospedagens",
-      support_email: "suporte@rios.com.br",
-      support_phone: "+55 (00) 0000-0000",
-    };
-
-    const baseUrl = Deno.env.get("SUPABASE_URL")?.replace("/v1", "") || "";
-    const chargeUrl = `${baseUrl}/cobranca/${chargeId}`;
-    const rulesUrl = `${baseUrl}/regras-cobrancas`;
-
-    const amountBr = new Intl.NumberFormat("pt-BR", {
+    const amountBRL = new Intl.NumberFormat("pt-BR", {
       style: "currency",
       currency: charge.currency || "BRL",
     }).format(charge.amount_cents / 100);
 
-    const dueDateBr = charge.due_date
+    const formattedDueDate = charge.due_date
       ? new Intl.DateTimeFormat("pt-BR").format(new Date(charge.due_date))
       : "";
 
-    const ownerName = charge.owner?.name || "Proprietário";
-    const ownerEmail = charge.owner?.email;
+    const baseUrl = Deno.env.get("SUPABASE_URL")?.replace("/functions/v1", "") || "";
+    const portalUrl = `${baseUrl}/cobranca-detalhes/${chargeId}`;
+    
+    const contestDeadline = charge.due_date 
+      ? new Intl.DateTimeFormat("pt-BR").format(new Date(charge.due_date))
+      : "";
 
-    let emailHtml = "";
+    const html = generateChargeEmailHTML({
+      ownerName: charge.owner?.name || "Proprietário",
+      chargeTitle: charge.title,
+      amountBRL,
+      dueDate: formattedDueDate,
+      paymentLink: charge.payment_link_url || undefined,
+      description: charge.description || undefined,
+      contestDeadline,
+      portalUrl
+    });
+
     let subject = "";
-    let toEmail: string[] = [];
-
     switch (type) {
-      case "charge_created_owner":
-        subject = `[RIOS] Nova cobrança – vence em 7 dias: ${charge.title}`;
-        toEmail = [ownerEmail];
-        emailHtml = await renderAsync(
-          React.createElement(ChargeCreatedToOwnerEmail, {
-            ownerName,
-            chargeId,
-            title: charge.title,
-            description: charge.description,
-            amountBr,
-            dueDateBr,
-            chargeUrl,
-            rulesUrl,
-            signature: emailSignature,
-          })
-        );
+      case "charge_created":
+        subject = `[RIOS] Nova cobrança – ${charge.title}`;
         break;
-
-      case "charge_created_admin":
-        subject = `[RIOS] Cobrança enviada a ${ownerName}: ${charge.title}`;
-        toEmail = adminEmails;
-        emailHtml = `
-          <h2>Nova cobrança criada</h2>
-          <p><strong>Proprietário:</strong> ${ownerName}</p>
-          <p><strong>Cobrança:</strong> ${charge.title}</p>
-          <p><strong>Valor:</strong> ${amountBr}</p>
-          <p><strong>Vencimento:</strong> ${dueDateBr}</p>
-          <p><a href="${chargeUrl}">Ver cobrança</a></p>
-        `;
-        break;
-
       case "charge_reminder":
-        subject = `[RIOS] Lembrete: cobrança vence em ${diasRestantes} dias – ${charge.title}`;
-        toEmail = [ownerEmail];
-        emailHtml = await renderAsync(
-          React.createElement(ChargeReminderEmail, {
-            ownerName,
-            chargeId,
-            title: charge.title,
-            amountBr,
-            dueDateBr,
-            chargeUrl,
-            rulesUrl,
-            signature: emailSignature,
-            diasRestantes: diasRestantes || "X",
-          })
-        );
+        subject = `[RIOS] Lembrete: cobrança vence em breve – ${charge.title}`;
         break;
-
       case "charge_overdue":
-        subject = `[RIOS] Cobrança vencida – ação necessária: ${charge.title}`;
-        toEmail = [ownerEmail];
-        emailHtml = await renderAsync(
-          React.createElement(ChargeOverdueEmail, {
-            ownerName,
-            chargeId,
-            title: charge.title,
-            description: charge.description,
-            amountBr,
-            dueDateBr,
-            chargeUrl,
-            rulesUrl,
-            signature: emailSignature,
-          })
-        );
+        subject = `[RIOS] Cobrança vencida – ${charge.title}`;
         break;
-
-      case "charge_debit_notice":
-        subject = `[RIOS] Aviso: cobrança será debitada de reservas futuras – ${charge.title}`;
-        toEmail = [ownerEmail];
-        emailHtml = await renderAsync(
-          React.createElement(ChargeDebitNoticeEmail, {
-            ownerName,
-            chargeId,
-            title: charge.title,
-            description: charge.description,
-            amountBr,
-            dueDateBr,
-            chargeUrl,
-            rulesUrl,
-            signature: emailSignature,
-          })
-        );
-        break;
-
-      case "charge_paid_owner":
-        subject = `[RIOS] Pagamento confirmado – ${charge.title}`;
-        toEmail = [ownerEmail];
-        emailHtml = await renderAsync(
-          React.createElement(ChargePaidEmail, {
-            ownerName,
-            chargeId,
-            title: charge.title,
-            description: charge.description,
-            amountBr,
-            dueDateBr,
-            chargeUrl,
-            rulesUrl,
-            signature: emailSignature,
-          })
-        );
-        break;
-
-      case "charge_paid_team":
-        subject = `[RIOS] Cobrança paga – ${ownerName} – ${charge.title}`;
-        toEmail = adminEmails;
-        emailHtml = `
-          <h2>Cobrança paga</h2>
-          <p><strong>Proprietário:</strong> ${ownerName}</p>
-          <p><strong>Cobrança:</strong> ${charge.title}</p>
-          <p><strong>Valor:</strong> ${amountBr}</p>
-          <p><a href="${chargeUrl}">Ver cobrança</a></p>
-        `;
-        break;
-
-      case "charge_proof_received":
-        subject = `[RIOS] Comprovante recebido – revisar cobrança: ${charge.title}`;
-        toEmail = adminEmails;
-        emailHtml = await renderAsync(
-          React.createElement(ChargeProofReceivedEmail, {
-            ownerName,
-            title: charge.title,
-            chargeUrl,
-            rulesUrl,
-            signature: emailSignature,
-          })
-        );
-        break;
-
-      case "charge_contested":
-        subject = `[RIOS] Cobrança contestada por ${ownerName} – ${charge.title}`;
-        toEmail = adminEmails;
-        emailHtml = await renderAsync(
-          React.createElement(ChargeContestedEmail, {
-            ownerName,
-            title: charge.title,
-            chargeUrl,
-            rulesUrl,
-            signature: emailSignature,
-          })
-        );
-        break;
-
-      case "charge_debited_owner":
-      case "charge_debited_team":
-        subject = `[RIOS] Débito realizado em reservas futuras – ${charge.title}`;
-        toEmail = type === "charge_debited_owner" ? [ownerEmail] : adminEmails;
-        emailHtml = `
-          <h2>Débito realizado</h2>
-          <p><strong>Proprietário:</strong> ${ownerName}</p>
-          <p><strong>Cobrança:</strong> ${charge.title}</p>
-          <p><strong>Valor:</strong> ${amountBr}</p>
-          <p>O valor foi debitado de reservas futuras.</p>
-        `;
-        break;
-    }
-
-    if (!toEmail.length || !emailHtml) {
-      return new Response(
-        JSON.stringify({ error: "Invalid email configuration" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
     }
 
     const { error: emailError } = await resend.emails.send({
       from: "RIOS <onboarding@resend.dev>",
-      to: toEmail,
+      to: [charge.owner?.email],
       subject,
-      html: emailHtml,
+      html,
     });
 
     if (emailError) {
@@ -281,7 +99,7 @@ const handler = async (req: Request): Promise<Response> => {
       throw emailError;
     }
 
-    console.log("Email sent successfully:", { type, to: toEmail });
+    console.log("Email sent successfully");
 
     return new Response(
       JSON.stringify({ success: true }),

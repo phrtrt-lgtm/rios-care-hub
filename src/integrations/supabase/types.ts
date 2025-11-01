@@ -14,6 +14,188 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_prompt_versions: {
+        Row: {
+          ai_settings_id: string | null
+          changelog: string | null
+          created_at: string
+          created_by: string | null
+          guardrails: string | null
+          id: string
+          max_tokens: number
+          model: string
+          style_guide: string | null
+          system_prompt: string
+          temperature: number
+        }
+        Insert: {
+          ai_settings_id?: string | null
+          changelog?: string | null
+          created_at?: string
+          created_by?: string | null
+          guardrails?: string | null
+          id?: string
+          max_tokens: number
+          model: string
+          style_guide?: string | null
+          system_prompt: string
+          temperature: number
+        }
+        Update: {
+          ai_settings_id?: string | null
+          changelog?: string | null
+          created_at?: string
+          created_by?: string | null
+          guardrails?: string | null
+          id?: string
+          max_tokens?: number
+          model?: string
+          style_guide?: string | null
+          system_prompt?: string
+          temperature?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_prompt_versions_ai_settings_id_fkey"
+            columns: ["ai_settings_id"]
+            isOneToOne: false
+            referencedRelation: "ai_settings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_settings: {
+        Row: {
+          created_at: string
+          guardrails: string | null
+          id: string
+          max_tokens: number
+          model: string
+          style_guide: string | null
+          system_prompt: string
+          temperature: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          guardrails?: string | null
+          id?: string
+          max_tokens?: number
+          model?: string
+          style_guide?: string | null
+          system_prompt?: string
+          temperature?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          guardrails?: string | null
+          id?: string
+          max_tokens?: number
+          model?: string
+          style_guide?: string | null
+          system_prompt?: string
+          temperature?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      ai_templates: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          key: string
+          label: string
+          order_index: number
+          template_prompt: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          key: string
+          label: string
+          order_index?: number
+          template_prompt: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          key?: string
+          label?: string
+          order_index?: number
+          template_prompt?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ai_usage_logs: {
+        Row: {
+          charge_id: string | null
+          created_at: string
+          created_by: string | null
+          error: string | null
+          id: string
+          latency_ms: number | null
+          model: string
+          request_tokens: number | null
+          response_tokens: number | null
+          success: boolean
+          template_key: string | null
+          ticket_id: string | null
+        }
+        Insert: {
+          charge_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          error?: string | null
+          id?: string
+          latency_ms?: number | null
+          model: string
+          request_tokens?: number | null
+          response_tokens?: number | null
+          success?: boolean
+          template_key?: string | null
+          ticket_id?: string | null
+        }
+        Update: {
+          charge_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          error?: string | null
+          id?: string
+          latency_ms?: number | null
+          model?: string
+          request_tokens?: number | null
+          response_tokens?: number | null
+          success?: boolean
+          template_key?: string | null
+          ticket_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_usage_logs_charge_id_fkey"
+            columns: ["charge_id"]
+            isOneToOne: false
+            referencedRelation: "charges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_usage_logs_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       broadcast_recipients: {
         Row: {
           broadcast_id: string
