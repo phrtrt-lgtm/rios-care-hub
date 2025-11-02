@@ -93,6 +93,7 @@ const handler = async (req: Request): Promise<Response> => {
       try {
         const { error: emailError } = await resend.emails.send({
           from: 'RIOS <onboarding@resend.dev>',
+          reply_to: 'suporte@rios.com.br',
           to: [recipient.email],
           subject: renderTemplate(template.subject, variables),
           html: renderTemplate(template.body_html, variables),
