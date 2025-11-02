@@ -8,6 +8,7 @@ import { AvatarUpload } from "@/components/AvatarUpload";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertBanner } from "@/components/AlertBanner";
+import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
 
 export default function MinhaCaixa() {
   const { profile, user, signOut } = useAuth();
@@ -50,7 +51,7 @@ export default function MinhaCaixa() {
                         onUploadComplete={(url) => setPhotoUrl(url)}
                       />
                     )}
-                    <div className="mt-6 space-y-2">
+                    <div className="mt-6 space-y-4">
                       <div>
                         <span className="text-sm font-medium">Nome:</span>
                         <p className="text-muted-foreground">{profile?.name}</p>
@@ -58,6 +59,9 @@ export default function MinhaCaixa() {
                       <div>
                         <span className="text-sm font-medium">Email:</span>
                         <p className="text-muted-foreground">{profile?.email}</p>
+                      </div>
+                      <div className="pt-4 border-t">
+                        <ChangePasswordDialog />
                       </div>
                     </div>
                   </div>

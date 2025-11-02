@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { AlertBanner } from "@/components/AlertBanner";
+import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
 
 export default function Painel() {
   const { profile, user, signOut } = useAuth();
@@ -100,7 +101,7 @@ export default function Painel() {
                           onUploadComplete={(url) => setPhotoUrl(url)}
                         />
                       )}
-                      <div className="mt-6 space-y-2">
+                      <div className="mt-6 space-y-4">
                         <div>
                           <span className="text-sm font-medium">Nome:</span>
                           <p className="text-muted-foreground">{profile?.name}</p>
@@ -114,6 +115,9 @@ export default function Painel() {
                           <p className="text-muted-foreground">
                             {profile?.role === "admin" ? "Administrador" : "Atendente"}
                           </p>
+                        </div>
+                        <div className="pt-4 border-t">
+                          <ChangePasswordDialog />
                         </div>
                       </div>
                     </div>
