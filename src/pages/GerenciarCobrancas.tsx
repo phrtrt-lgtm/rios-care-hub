@@ -11,7 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, DollarSign, Calendar, User, Paperclip, Search, Filter, Pencil, Trash2 } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ArrowLeft, DollarSign, Calendar, User, Paperclip, Search, Filter, Pencil, Trash2, Video, Image } from "lucide-react";
+import { AuthenticatedImage } from "@/components/AuthenticatedMedia";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -38,6 +40,9 @@ interface Charge {
     email: string;
   };
   attachments: ChargeAttachment[];
+  _count?: {
+    messages: number;
+  };
 }
 
 interface ChargeAttachment {
@@ -45,6 +50,8 @@ interface ChargeAttachment {
   file_name: string;
   file_path: string;
   file_size: number | null;
+  mime_type: string | null;
+  poster_path: string | null;
 }
 
 const GerenciarCobrancas = () => {
@@ -89,24 +96,32 @@ const GerenciarCobrancas = () => {
 
       if (error) throw error;
 
-      // Fetch owner and attachments for each charge
+      // Fetch owner, attachments, and message counts for each charge
       const enrichedCharges = await Promise.all(
         (chargesData || []).map(async (charge) => {
-          const { data: ownerData } = await supabase
-            .from('profiles')
-            .select('name, email')
-            .eq('id', charge.owner_id)
-            .single();
-
-          const { data: attachmentsData } = await supabase
-            .from('charge_attachments')
-            .select('id, file_name, file_path, file_size')
-            .eq('charge_id', charge.id);
+          const [ownerResult, attachmentsResult, messagesResult] = await Promise.all([
+            supabase
+              .from('profiles')
+              .select('name, email')
+              .eq('id', charge.owner_id)
+              .single(),
+            supabase
+              .from('charge_attachments')
+              .select('id, file_name, file_path, file_size, mime_type, poster_path')
+              .eq('charge_id', charge.id),
+            supabase
+              .from('charge_messages')
+              .select('id', { count: 'exact', head: true })
+              .eq('charge_id', charge.id)
+          ]);
 
           return {
             ...charge,
-            owner: ownerData || { name: 'N/A', email: 'N/A' },
-            attachments: attachmentsData || []
+            owner: ownerResult.data || { name: 'N/A', email: 'N/A' },
+            attachments: attachmentsResult.data || [],
+            _count: {
+              messages: messagesResult.count || 0
+            }
           };
         })
       );
@@ -154,7 +169,6 @@ const GerenciarCobrancas = () => {
     e.preventDefault();
 
     try {
-      // Validate input
       const validated = statusUpdateSchema.parse(formData);
 
       const { error } = await supabase
@@ -240,6 +254,16 @@ const GerenciarCobrancas = () => {
     }
   };
 
+  const getAttachmentUrl = (attachment: ChargeAttachment) => {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    return `${supabaseUrl}/functions/v1/serve-attachment/${attachment.id}/file`;
+  };
+
+  const getPosterUrl = (attachment: ChargeAttachment) => {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    return `${supabaseUrl}/functions/v1/serve-attachment/${attachment.id}/poster`;
+  };
+
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       draft: { label: 'Rascunho', variant: 'secondary' as const },
@@ -261,6 +285,13 @@ const GerenciarCobrancas = () => {
     }).format(value);
   };
 
+  const isImageFile = (attachment: ChargeAttachment) => {
+    return attachment.mime_type?.startsWith('image/') || false;
+  };
+
+  const isVideoFile = (attachment: ChargeAttachment) => {
+    return attachment.mime_type?.startsWith('video/') || false;
+  };
 
   if (loading) {
     return (
@@ -271,17 +302,19 @@ const GerenciarCobrancas = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-6 flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate("/painel")}
-          >
-            <ArrowLeft className="h-5 w-5" />
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+      <header className="border-b bg-card/50 backdrop-blur-sm">
+        <div className="container mx-auto flex h-16 items-center px-4">
+          <Button variant="ghost" size="sm" onClick={() => navigate("/painel")}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Voltar
           </Button>
-          <div className="flex-1">
+        </div>
+      </header>
+
+      <main className="container mx-auto px-4 py-8 max-w-7xl">
+        <div className="mb-6 flex items-center justify-between">
+          <div>
             <h1 className="text-3xl font-bold text-foreground">Gerenciar Cobranças</h1>
             <p className="text-muted-foreground">Visualize e atualize o status das cobranças</p>
           </div>
@@ -338,131 +371,158 @@ const GerenciarCobrancas = () => {
           </CardContent>
         </Card>
 
+        {/* Seleção em massa */}
+        {filteredCharges.length > 0 && (
+          <Card className="mb-4 bg-muted/30">
+            <CardContent className="py-4 flex items-center gap-3">
+              <Checkbox
+                checked={selectedCharges.size === filteredCharges.length}
+                onCheckedChange={toggleAllCharges}
+              />
+              <span className="text-sm text-muted-foreground">
+                {selectedCharges.size === filteredCharges.length 
+                  ? "Desmarcar todas" 
+                  : `Selecionar todas (${filteredCharges.length})`}
+              </span>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Lista de Cobranças */}
-        <div className="space-y-4">
-          {filteredCharges.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">Nenhuma cobrança encontrada com os filtros aplicados.</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <>
-              {filteredCharges.length > 0 && (
-                <Card className="bg-muted/30">
-                  <CardContent className="py-4 flex items-center gap-3">
+        {filteredCharges.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <p className="text-muted-foreground">Nenhuma cobrança encontrada com os filtros aplicados.</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {filteredCharges.map((charge) => (
+              <Card 
+                key={charge.id}
+                className={`group transition-all hover:shadow-lg ${selectedCharges.has(charge.id) ? 'ring-2 ring-primary' : ''}`}
+              >
+                <CardHeader>
+                  <div className="flex items-start gap-3 mb-2">
                     <Checkbox
-                      checked={selectedCharges.size === filteredCharges.length}
-                      onCheckedChange={toggleAllCharges}
+                      checked={selectedCharges.has(charge.id)}
+                      onCheckedChange={() => toggleChargeSelection(charge.id)}
+                      onClick={(e) => e.stopPropagation()}
                     />
-                    <span className="text-sm text-muted-foreground">
-                      {selectedCharges.size === filteredCharges.length 
-                        ? "Desmarcar todas" 
-                        : `Selecionar todas (${filteredCharges.length})`}
-                    </span>
-                  </CardContent>
-                </Card>
-              )}
-              {filteredCharges.map((charge) => (
-                <Card 
-                  key={charge.id}
-                  className={`transition-colors ${selectedCharges.has(charge.id) ? 'border-primary' : 'hover:bg-accent/50'}`}
-                >
-                  <CardHeader>
-                    <div className="flex items-start gap-4">
-                      <Checkbox
-                        checked={selectedCharges.has(charge.id)}
-                        onCheckedChange={() => toggleChargeSelection(charge.id)}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                      <div 
-                        className="flex-1 cursor-pointer"
-                        onClick={() => navigate(`/cobranca/${charge.id}`)}
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <CardTitle className="mb-2">{charge.title}</CardTitle>
-                            {charge.description && (
-                              <CardDescription>{charge.description}</CardDescription>
-                            )}
-                          </div>
-                          <div className="flex flex-col gap-2">
-                            {getStatusBadge(charge.status)}
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEdit(charge);
-                              }}
-                            >
-                              <Pencil className="mr-2 h-3 w-3" />
-                              Editar Status
-                            </Button>
-                          </div>
-                        </div>
+                    <div 
+                      className="flex-1 cursor-pointer"
+                      onClick={() => navigate(`/cobranca/${charge.id}`)}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <CardTitle className="text-lg line-clamp-2 flex-1">{charge.title}</CardTitle>
+                        {getStatusBadge(charge.status)}
                       </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                  <div className="grid gap-4 md:grid-cols-3">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Valor</p>
-                      <p className="text-2xl font-bold text-foreground">
-                        {formatCurrency(charge.amount_cents, charge.currency)}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{charge.owner.name}</p>
-                        <p className="text-xs text-muted-foreground">{charge.owner.email}</p>
-                      </div>
-                    </div>
-                    <div>
-                      {charge.due_date && (
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          <div>
-                            <p className="text-xs text-muted-foreground">Vencimento</p>
-                            <p className="text-sm font-medium text-foreground">
-                              {format(new Date(charge.due_date), "dd/MM/yyyy", { locale: ptBR })}
-                            </p>
-                          </div>
-                        </div>
+                      {charge.description && (
+                        <CardDescription className="line-clamp-2">
+                          {charge.description}
+                        </CardDescription>
                       )}
                     </div>
                   </div>
+                </CardHeader>
+                <CardContent 
+                  className="space-y-4 cursor-pointer"
+                  onClick={() => navigate(`/cobranca/${charge.id}`)}
+                >
+                  {/* Valor */}
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-2xl font-bold text-foreground">
+                      {formatCurrency(charge.amount_cents, charge.currency)}
+                    </span>
+                  </div>
 
+                  {/* Proprietário */}
+                  <div className="flex items-center gap-2 text-sm">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-foreground truncate">{charge.owner.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{charge.owner.email}</p>
+                    </div>
+                  </div>
+
+                  {/* Data de Vencimento */}
+                  {charge.due_date && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Calendar className="h-4 w-4" />
+                      <span>Venc: {format(new Date(charge.due_date), "dd/MM/yyyy", { locale: ptBR })}</span>
+                    </div>
+                  )}
+
+                  {/* Preview de Anexos */}
                   {charge.attachments.length > 0 && (
-                    <div className="mt-4 border-t pt-4">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Paperclip className="h-4 w-4" />
-                        <span>{charge.attachments.length} {charge.attachments.length === 1 ? 'anexo' : 'anexos'}</span>
+                    <div className="border-t pt-4">
+                      <div className="grid grid-cols-3 gap-2">
+                        {charge.attachments.slice(0, 3).map((attachment) => (
+                          <div key={attachment.id} className="aspect-square rounded-md overflow-hidden bg-muted">
+                            {isImageFile(attachment) ? (
+                              <AuthenticatedImage
+                                src={getAttachmentUrl(attachment)}
+                                alt={attachment.file_name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : isVideoFile(attachment) ? (
+                              <div className="relative w-full h-full bg-muted flex items-center justify-center">
+                                {attachment.poster_path ? (
+                                  <AuthenticatedImage
+                                    src={getPosterUrl(attachment)}
+                                    alt={attachment.file_name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <Video className="h-8 w-8 text-muted-foreground" />
+                                )}
+                              </div>
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Paperclip className="h-6 w-6 text-muted-foreground" />
+                              </div>
+                            )}
+                          </div>
+                        ))}
                       </div>
+                      {charge.attachments.length > 3 && (
+                        <p className="text-xs text-muted-foreground mt-2">
+                          +{charge.attachments.length - 3} {charge.attachments.length - 3 === 1 ? 'anexo' : 'anexos'}
+                        </p>
+                      )}
                     </div>
                   )}
 
-                  {charge.payment_link_url && (
-                    <div className="mt-4 border-t pt-4">
-                      <p className="mb-2 text-sm font-medium text-foreground">Link de Pagamento:</p>
-                      <a
-                        href={charge.payment_link_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-primary hover:underline"
-                      >
-                        {charge.payment_link_url}
-                      </a>
+                  {/* Contador de Mensagens */}
+                  {charge._count && charge._count.messages > 0 && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground border-t pt-4">
+                      <Avatar className="h-6 w-6">
+                        <AvatarFallback className="text-xs">
+                          {charge._count.messages}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span>{charge._count.messages} {charge._count.messages === 1 ? 'mensagem' : 'mensagens'}</span>
                     </div>
                   )}
-                  </CardContent>
-                </Card>
-              ))
-            }
-            </>
-          )}
-        </div>
+
+                  {/* Botão de Editar */}
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEdit(charge);
+                    }}
+                  >
+                    <Pencil className="mr-2 h-3 w-3" />
+                    Editar Status
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
 
         {/* Dialog de Edição */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -488,37 +548,32 @@ const GerenciarCobrancas = () => {
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="payment_link_url">Link de Pagamento</Label>
+                  <Label htmlFor="payment_link">Link de Pagamento</Label>
                   <Input
-                    id="payment_link_url"
-                    type="url"
+                    id="payment_link"
+                    placeholder="https://..."
                     value={formData.payment_link_url}
                     onChange={(e) => setFormData({ ...formData, payment_link_url: e.target.value })}
-                    placeholder="https://exemplo.com/pagamento/123"
                   />
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Link para o cliente realizar o pagamento (opcional)
-                  </p>
                 </div>
               </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                   Cancelar
                 </Button>
-                <Button type="submit">Atualizar</Button>
+                <Button type="submit">Salvar</Button>
               </DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
 
-        {/* Dialog de confirmação de exclusão em lote */}
+        {/* Dialog de Exclusão em Massa */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Excluir Cobranças</AlertDialogTitle>
               <AlertDialogDescription>
-                Tem certeza que deseja excluir {selectedCharges.size} cobrança(s)? 
-                Esta ação não pode ser desfeita. Todos os anexos e mensagens associados também serão excluídos.
+                Tem certeza que deseja excluir {selectedCharges.size} cobrança(s)? Esta ação não pode ser desfeita.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -533,7 +588,7 @@ const GerenciarCobrancas = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </div>
+      </main>
     </div>
   );
 };

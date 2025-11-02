@@ -5,7 +5,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Calendar, FileText, Paperclip } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ArrowLeft, Calendar, FileText, Image, Video, Paperclip } from "lucide-react";
+import { AuthenticatedImage, AuthenticatedVideo } from "@/components/AuthenticatedMedia";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -20,6 +22,9 @@ interface Charge {
   payment_link_url: string | null;
   created_at: string;
   attachments?: ChargeAttachment[];
+  _count?: {
+    messages: number;
+  };
 }
 
 interface ChargeAttachment {
@@ -27,6 +32,8 @@ interface ChargeAttachment {
   file_name: string;
   file_path: string;
   file_size: number | null;
+  mime_type: string | null;
+  poster_path: string | null;
 }
 
 const MinhasCobrancas = () => {
@@ -47,7 +54,6 @@ const MinhasCobrancas = () => {
     try {
       setLoading(true);
       
-      // Fetch charges
       const { data: chargesData, error: chargesError } = await supabase
         .from('charges')
         .select('*')
@@ -56,27 +62,46 @@ const MinhasCobrancas = () => {
 
       if (chargesError) throw chargesError;
 
-      // Fetch attachments for all charges
-      const chargesWithAttachments = await Promise.all(
+      // Fetch attachments and message counts for all charges
+      const enrichedCharges = await Promise.all(
         (chargesData || []).map(async (charge) => {
-          const { data: attachments } = await supabase
-            .from('charge_attachments')
-            .select('id, file_name, file_path, file_size')
-            .eq('charge_id', charge.id);
+          const [attachmentsResult, messagesResult] = await Promise.all([
+            supabase
+              .from('charge_attachments')
+              .select('id, file_name, file_path, file_size, mime_type, poster_path')
+              .eq('charge_id', charge.id),
+            supabase
+              .from('charge_messages')
+              .select('id', { count: 'exact', head: true })
+              .eq('charge_id', charge.id)
+          ]);
 
           return {
             ...charge,
-            attachments: attachments || []
+            attachments: attachmentsResult.data || [],
+            _count: {
+              messages: messagesResult.count || 0
+            }
           };
         })
       );
 
-      setCharges(chargesWithAttachments);
+      setCharges(enrichedCharges);
     } catch (error) {
       console.error('Erro ao carregar cobranças:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const getAttachmentUrl = (attachment: ChargeAttachment) => {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    return `${supabaseUrl}/functions/v1/serve-attachment/${attachment.id}/file`;
+  };
+
+  const getPosterUrl = (attachment: ChargeAttachment) => {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    return `${supabaseUrl}/functions/v1/serve-attachment/${attachment.id}/poster`;
   };
 
   const getStatusBadge = (status: string) => {
@@ -100,14 +125,12 @@ const MinhasCobrancas = () => {
     }).format(value);
   };
 
-  const downloadAttachment = async (filePath: string, fileName: string) => {
-    const { data } = supabase.storage
-      .from('attachments')
-      .getPublicUrl(filePath);
+  const isImageFile = (attachment: ChargeAttachment) => {
+    return attachment.mime_type?.startsWith('image/') || false;
+  };
 
-    if (data) {
-      window.open(data.publicUrl, '_blank');
-    }
+  const isVideoFile = (attachment: ChargeAttachment) => {
+    return attachment.mime_type?.startsWith('video/') || false;
   };
 
   if (loading) {
@@ -119,20 +142,20 @@ const MinhasCobrancas = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
-      <div className="mx-auto max-w-4xl">
-        <div className="mb-6 flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate("/minha-caixa")}
-          >
-            <ArrowLeft className="h-5 w-5" />
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+      <header className="border-b bg-card/50 backdrop-blur-sm">
+        <div className="container mx-auto flex h-16 items-center px-4">
+          <Button variant="ghost" size="sm" onClick={() => navigate("/minha-caixa")}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Voltar
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Minhas Cobranças</h1>
-            <p className="text-muted-foreground">Visualize todas as suas cobranças</p>
-          </div>
+        </div>
+      </header>
+
+      <main className="container mx-auto px-4 py-8 max-w-6xl">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-foreground">Minhas Cobranças</h1>
+          <p className="text-muted-foreground">Visualize todas as suas cobranças</p>
         </div>
 
         {charges.length === 0 ? (
@@ -146,62 +169,106 @@ const MinhasCobrancas = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {charges.map((charge) => (
               <Card 
                 key={charge.id}
-                className="cursor-pointer transition-colors hover:bg-accent/50"
+                className="group cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02]"
                 onClick={() => navigate(`/cobranca/${charge.id}`)}
               >
                 <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-xl">{charge.title}</CardTitle>
-                      {charge.description && (
-                        <CardDescription className="mt-2">
-                          {charge.description}
-                        </CardDescription>
-                      )}
-                    </div>
+                  <div className="flex items-start justify-between mb-2">
+                    <CardTitle className="text-lg line-clamp-2">{charge.title}</CardTitle>
                     {getStatusBadge(charge.status)}
                   </div>
+                  {charge.description && (
+                    <CardDescription className="line-clamp-2">
+                      {charge.description}
+                    </CardDescription>
+                  )}
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
+                <CardContent className="space-y-4">
+                  {/* Valor e Data */}
+                  <div className="space-y-2">
+                    <div className="flex items-baseline justify-between">
                       <span className="text-2xl font-bold text-foreground">
                         {formatCurrency(charge.amount_cents, charge.currency)}
                       </span>
-                      {charge.due_date && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Calendar className="h-4 w-4" />
-                          Vencimento: {format(new Date(charge.due_date), "dd/MM/yyyy", { locale: ptBR })}
-                        </div>
-                      )}
                     </div>
-
-                    {charge.attachments && charge.attachments.length > 0 && (
-                      <div className="border-t pt-4">
-                        <p className="mb-2 text-sm font-medium text-foreground">
-                          {charge.attachments.length} anexo(s) disponível(is)
-                        </p>
-                      </div>
-                    )}
-
-                    {charge.payment_link_url && charge.status !== 'paid' && charge.status !== 'cancelled' && (
-                      <div className="border-t pt-4">
-                        <Badge variant="outline" className="w-full justify-center">
-                          Link de pagamento disponível
-                        </Badge>
+                    {charge.due_date && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Calendar className="h-4 w-4" />
+                        Venc: {format(new Date(charge.due_date), "dd/MM/yyyy", { locale: ptBR })}
                       </div>
                     )}
                   </div>
+
+                  {/* Preview de Anexos */}
+                  {charge.attachments && charge.attachments.length > 0 && (
+                    <div className="border-t pt-4">
+                      <div className="grid grid-cols-3 gap-2">
+                        {charge.attachments.slice(0, 3).map((attachment) => (
+                          <div key={attachment.id} className="aspect-square rounded-md overflow-hidden bg-muted">
+                            {isImageFile(attachment) ? (
+                              <AuthenticatedImage
+                                src={getAttachmentUrl(attachment)}
+                                alt={attachment.file_name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : isVideoFile(attachment) ? (
+                              <div className="relative w-full h-full bg-muted flex items-center justify-center">
+                                {attachment.poster_path ? (
+                                  <AuthenticatedImage
+                                    src={getPosterUrl(attachment)}
+                                    alt={attachment.file_name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <Video className="h-8 w-8 text-muted-foreground" />
+                                )}
+                              </div>
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Paperclip className="h-6 w-6 text-muted-foreground" />
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      {charge.attachments.length > 3 && (
+                        <p className="text-xs text-muted-foreground mt-2">
+                          +{charge.attachments.length - 3} {charge.attachments.length - 3 === 1 ? 'anexo' : 'anexos'}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Contador de Mensagens */}
+                  {charge._count && charge._count.messages > 0 && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground border-t pt-4">
+                      <Avatar className="h-6 w-6">
+                        <AvatarFallback className="text-xs">
+                          {charge._count.messages}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span>{charge._count.messages} {charge._count.messages === 1 ? 'mensagem' : 'mensagens'}</span>
+                    </div>
+                  )}
+
+                  {/* Link de Pagamento */}
+                  {charge.payment_link_url && charge.status !== 'paid' && charge.status !== 'cancelled' && (
+                    <div className="border-t pt-4">
+                      <Badge variant="outline" className="w-full justify-center">
+                        Link de pagamento disponível
+                      </Badge>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 };
