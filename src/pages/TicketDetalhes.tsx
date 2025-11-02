@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowLeft, Send, Paperclip, Loader2, Sparkles, FileText, ChevronDown, X, Download, ZoomIn } from "lucide-react";
 import { AttachmentBubble } from "@/components/AttachmentBubble";
 import { AttachmentInspector } from "@/components/AttachmentInspector";
+import { MediaGallery } from "@/components/MediaGallery";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -78,6 +79,9 @@ export default function TicketDetalhes() {
   const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
   const [selectedImage, setSelectedImage] = useState<{ url: string; name: string } | null>(null);
   const [downloadingAll, setDownloadingAll] = useState(false);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryStartIndex, setGalleryStartIndex] = useState(0);
+  const [allMediaItems, setAllMediaItems] = useState<Attachment[]>([]);
 
   const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent';
   const canUpdate = ticket?.status !== 'concluido' && ticket?.status !== 'cancelado';
@@ -148,6 +152,17 @@ export default function TicketDetalhes() {
 
       if (error) throw error;
       setMessages(data || []);
+      
+      // Coletar todos os anexos de mídia para a galeria
+      const mediaItems: Attachment[] = [];
+      (data || []).forEach((msg: Message) => {
+        msg.attachments?.forEach((att) => {
+          if (att.file_type?.startsWith('image/') || att.file_type?.startsWith('video/')) {
+            mediaItems.push(att);
+          }
+        });
+      });
+      setAllMediaItems(mediaItems);
     } catch (error: any) {
       console.error('Error fetching messages:', error);
       toast({
@@ -531,7 +546,15 @@ export default function TicketDetalhes() {
                         <AttachmentBubble
                           key={attachment.id}
                           {...attachment}
-                          onPreview={(url, name) => setSelectedImage({ url, name })}
+                          onPreview={() => {
+                            if (attachment.file_type?.startsWith('image/') || attachment.file_type?.startsWith('video/')) {
+                              const index = allMediaItems.findIndex(item => item.id === attachment.id);
+                              if (index !== -1) {
+                                setGalleryStartIndex(index);
+                                setGalleryOpen(true);
+                              }
+                            }
+                          }}
                         />
                       ))}
                     </div>
@@ -691,37 +714,13 @@ export default function TicketDetalhes() {
         )}
       </main>
 
-      {/* Dialog de visualização de imagem */}
-      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>{selectedImage?.name || 'Imagem'}</DialogTitle>
-          </DialogHeader>
-          <div className="flex items-center justify-center">
-            <img 
-              src={selectedImage?.url} 
-              alt={selectedImage?.name || 'Imagem'} 
-              className="max-w-full max-h-[70vh] object-contain rounded-lg"
-            />
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setSelectedImage(null)}>
-              Fechar
-            </Button>
-            <a
-              href={selectedImage?.url}
-              download={selectedImage?.name}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Button>
-                <Download className="h-4 w-4 mr-2" />
-                Baixar
-              </Button>
-            </a>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Galeria de Mídia */}
+      <MediaGallery
+        items={allMediaItems}
+        initialIndex={galleryStartIndex}
+        open={galleryOpen}
+        onOpenChange={setGalleryOpen}
+      />
     </div>
   );
 }
