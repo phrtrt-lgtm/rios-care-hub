@@ -11,12 +11,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Send, Paperclip, Loader2, Sparkles, FileText, ChevronDown, X } from "lucide-react";
+import { ArrowLeft, Send, Paperclip, Loader2, Sparkles, FileText, ChevronDown, X, Download, ZoomIn } from "lucide-react";
 import { AttachmentBubble } from "@/components/AttachmentBubble";
 import { AttachmentInspector } from "@/components/AttachmentInspector";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import JSZip from "jszip";
 
 interface Ticket {
   id: string;
@@ -75,6 +76,8 @@ export default function TicketDetalhes() {
   const [documentType, setDocumentType] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
+  const [selectedImage, setSelectedImage] = useState<{ url: string; name: string } | null>(null);
+  const [downloadingAll, setDownloadingAll] = useState(false);
 
   const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent';
   const canUpdate = ticket?.status !== 'concluido' && ticket?.status !== 'cancelado';
@@ -252,6 +255,65 @@ export default function TicketDetalhes() {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  const downloadAllAttachments = async () => {
+    try {
+      setDownloadingAll(true);
+      
+      // Coleta todos os anexos de todas as mensagens
+      const allAttachments = messages.flatMap(m => m.attachments || []);
+      
+      if (allAttachments.length === 0) {
+        toast({
+          title: "Nenhum anexo encontrado",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Preparando download...",
+        description: "Compactando arquivos...",
+      });
+
+      const zip = new JSZip();
+      
+      for (const attachment of allAttachments) {
+        try {
+          const response = await fetch(attachment.file_url);
+          if (response.ok) {
+            const blob = await response.blob();
+            zip.file(attachment.file_name || `arquivo_${attachment.id}`, blob);
+          }
+        } catch (error) {
+          console.error('Erro ao baixar:', attachment.file_name, error);
+        }
+      }
+
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const url = window.URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `anexos-ticket-${id}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Download concluído!",
+        description: "Todos os anexos foram baixados",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao baixar anexos",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setDownloadingAll(false);
+    }
+  };
+
   const generateAIResponse = async () => {
     try {
       setGeneratingAI(true);
@@ -411,6 +473,24 @@ export default function TicketDetalhes() {
           </CardHeader>
         </Card>
 
+        {messages.some(m => m.attachments && m.attachments.length > 0) && (
+          <div className="mb-6 flex justify-end">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={downloadAllAttachments}
+              disabled={downloadingAll}
+            >
+              {downloadingAll ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              Baixar Todos os Anexos
+            </Button>
+          </div>
+        )}
+
         <div className="space-y-4 mb-6">
           {messages.map((message) => (
             <Card key={message.id}>
@@ -440,11 +520,12 @@ export default function TicketDetalhes() {
                     <div className="text-xs text-muted-foreground font-medium">
                       Anexos ({message.attachments.length})
                     </div>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                       {message.attachments.map((attachment) => (
                         <AttachmentBubble
                           key={attachment.id}
                           {...attachment}
+                          onPreview={(url, name) => setSelectedImage({ url, name })}
                         />
                       ))}
                     </div>
@@ -603,6 +684,38 @@ export default function TicketDetalhes() {
           </Card>
         )}
       </main>
+
+      {/* Dialog de visualização de imagem */}
+      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>{selectedImage?.name || 'Imagem'}</DialogTitle>
+          </DialogHeader>
+          <div className="flex items-center justify-center">
+            <img 
+              src={selectedImage?.url} 
+              alt={selectedImage?.name || 'Imagem'} 
+              className="max-w-full max-h-[70vh] object-contain rounded-lg"
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setSelectedImage(null)}>
+              Fechar
+            </Button>
+            <a
+              href={selectedImage?.url}
+              download={selectedImage?.name}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button>
+                <Download className="h-4 w-4 mr-2" />
+                Baixar
+              </Button>
+            </a>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

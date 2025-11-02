@@ -1,5 +1,6 @@
-import { FileIcon, ImageIcon, FileTextIcon, Download } from "lucide-react";
+import { FileIcon, ImageIcon, FileTextIcon, Download, Eye } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 interface AttachmentBubbleProps {
   id: string;
@@ -7,13 +8,15 @@ interface AttachmentBubbleProps {
   file_name?: string;
   file_type?: string;
   size_bytes?: number;
+  onPreview?: (url: string, name: string) => void;
 }
 
 export function AttachmentBubble({
   file_url,
   file_name,
   file_type,
-  size_bytes
+  size_bytes,
+  onPreview
 }: AttachmentBubbleProps) {
   const isImage = file_type?.startsWith('image/');
   const isPDF = file_type === 'application/pdf';
@@ -27,31 +30,33 @@ export function AttachmentBubble({
 
   if (isImage) {
     return (
-      <a 
-        href={file_url} 
-        target="_blank" 
-        rel="noopener noreferrer"
-        className="block"
-        aria-label={`Ver imagem ${file_name || 'anexada'}`}
-      >
-        <img 
-          src={file_url} 
-          alt={file_name || 'Anexo'} 
-          className="max-w-[280px] rounded-lg border border-border hover:opacity-90 transition-opacity"
-          loading="lazy"
-        />
+      <div className="relative group">
+        <div 
+          onClick={() => onPreview?.(file_url, file_name || 'Imagem')}
+          className="cursor-pointer relative overflow-hidden rounded-lg border border-border hover:border-primary transition-colors"
+        >
+          <img 
+            src={file_url} 
+            alt={file_name || 'Anexo'} 
+            className="w-full h-32 object-cover"
+            loading="lazy"
+          />
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+            <Eye className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
+        </div>
         {file_name && (
-          <div className="text-xs text-muted-foreground mt-1">
+          <div className="text-xs text-muted-foreground mt-1 truncate">
             {file_name} {size_bytes && `(${formatSize(size_bytes)})`}
           </div>
         )}
-      </a>
+      </div>
     );
   }
 
   if (isPDF) {
     return (
-      <Card className="p-3 max-w-[280px]">
+      <Card className="p-3 w-full">
         <div className="flex items-center gap-3">
           <FileTextIcon className="h-8 w-8 text-destructive flex-shrink-0" />
           <div className="flex-1 min-w-0">
@@ -79,7 +84,7 @@ export function AttachmentBubble({
   }
 
   return (
-    <Card className="p-3 max-w-[280px]">
+    <Card className="p-3 w-full">
       <div className="flex items-center gap-3">
         <FileIcon className="h-8 w-8 text-muted-foreground flex-shrink-0" />
         <div className="flex-1 min-w-0">
