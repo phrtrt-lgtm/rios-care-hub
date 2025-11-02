@@ -47,13 +47,21 @@ const NovoAlerta = () => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, name, email')
-        .eq('role', 'owner')
-        .eq('status', 'active')
+        .select('id, name, email, role, status')
+        .in('status', ['active', 'approved'])
         .order('name');
 
       if (error) throw error;
-      setOwners(data || []);
+      
+      console.log('Perfis carregados:', data);
+      
+      // Filter only actual owners (not agent or admin)
+      const actualOwners = (data || []).filter(p => 
+        p.role === 'owner'
+      );
+      
+      console.log('Proprietários filtrados:', actualOwners);
+      setOwners(actualOwners);
     } catch (error) {
       console.error('Erro ao carregar proprietários:', error);
       toast.error('Erro ao carregar proprietários');
@@ -123,9 +131,18 @@ const NovoAlerta = () => {
           .from('profiles')
           .select('id')
           .in('role', ['admin', 'agent'])
-          .eq('status', 'active');
+          .in('status', ['active', 'approved']);
         recipientIds = teamMembers?.map(m => m.id) || [];
       }
+
+      // Ensure the creator receives the alert if they are in the target audience
+      if (!recipientIds.includes(user!.id)) {
+        if (formData.target_audience === 'team' && ['admin', 'agent'].includes(profile?.role || '')) {
+          recipientIds.push(user!.id);
+        }
+      }
+
+      console.log('Recipients:', recipientIds);
 
       // Create alert recipients
       const { error: recipientsError } = await supabase
@@ -137,7 +154,10 @@ const NovoAlerta = () => {
           }))
         );
 
-      if (recipientsError) throw recipientsError;
+      if (recipientsError) {
+        console.error('Erro ao criar recipients:', recipientsError);
+        throw recipientsError;
+      }
 
       // Send emails via edge function
       await supabase.functions.invoke('send-alert-email', {

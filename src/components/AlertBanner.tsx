@@ -48,6 +48,8 @@ export const AlertBanner = () => {
   const fetchAlerts = async () => {
     if (!user) return;
 
+    console.log('Buscando alertas para user:', user.id);
+
     const { data, error } = await supabase
       .from('alert_recipients')
       .select(`
@@ -71,6 +73,8 @@ export const AlertBanner = () => {
       return;
     }
 
+    console.log('Dados brutos de alertas:', data);
+
     const now = new Date();
     const activeAlerts = (data || [])
       .filter((item: any) => {
@@ -86,6 +90,7 @@ export const AlertBanner = () => {
         is_read: item.is_read,
       }));
 
+    console.log('Alertas ativos processados:', activeAlerts);
     setAlerts(activeAlerts);
   };
 
