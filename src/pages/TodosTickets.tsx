@@ -7,7 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Search, Filter, Building2, User } from "lucide-react";
+import { ArrowLeft, Search, Filter, Building2, User, Trash2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -40,6 +42,8 @@ const TodosTickets = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [selectedTickets, setSelectedTickets] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!user || !['admin', 'agent'].includes(profile?.role || '')) {
@@ -169,6 +173,51 @@ const TodosTickets = () => {
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
+  const toggleTicketSelection = (ticketId: string) => {
+    const newSelected = new Set(selectedTickets);
+    if (newSelected.has(ticketId)) {
+      newSelected.delete(ticketId);
+    } else {
+      newSelected.add(ticketId);
+    }
+    setSelectedTickets(newSelected);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedTickets.size === filteredTickets.length) {
+      setSelectedTickets(new Set());
+    } else {
+      setSelectedTickets(new Set(filteredTickets.map(t => t.id)));
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedTickets.size === 0) return;
+
+    if (!confirm(`Tem certeza que deseja excluir ${selectedTickets.size} ticket(s)?`)) {
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('tickets')
+        .delete()
+        .in('id', Array.from(selectedTickets));
+
+      if (error) throw error;
+
+      toast.success(`${selectedTickets.size} ticket(s) excluído(s) com sucesso`);
+      setSelectedTickets(new Set());
+      await fetchTickets();
+    } catch (error) {
+      console.error('Erro ao excluir tickets:', error);
+      toast.error('Erro ao excluir tickets');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -192,10 +241,22 @@ const TodosTickets = () => {
             <h1 className="text-3xl font-bold text-foreground">Todos os Tickets</h1>
             <p className="text-muted-foreground">Visualização completa de todos os tickets do sistema</p>
           </div>
-          <Button onClick={() => navigate("/propriedades")} variant="outline">
-            <Building2 className="mr-2 h-4 w-4" />
-            Gerenciar Unidades
-          </Button>
+          <div className="flex gap-2">
+            {selectedTickets.size > 0 && (
+              <Button 
+                onClick={handleDeleteSelected} 
+                variant="destructive"
+                disabled={deleting}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Excluir {selectedTickets.size}
+              </Button>
+            )}
+            <Button onClick={() => navigate("/propriedades")} variant="outline">
+              <Building2 className="mr-2 h-4 w-4" />
+              Gerenciar Unidades
+            </Button>
+          </div>
         </div>
 
         {/* Filtros */}
@@ -248,6 +309,17 @@ const TodosTickets = () => {
 
         {/* Lista de Tickets */}
         <div className="space-y-4">
+          {filteredTickets.length > 0 && (
+            <div className="flex items-center gap-2 px-2">
+              <Checkbox
+                checked={selectedTickets.size === filteredTickets.length}
+                onCheckedChange={toggleSelectAll}
+              />
+              <span className="text-sm text-muted-foreground">
+                Selecionar todos ({filteredTickets.length})
+              </span>
+            </div>
+          )}
           {filteredTickets.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
@@ -258,11 +330,19 @@ const TodosTickets = () => {
             filteredTickets.map((ticket) => (
               <Card 
                 key={ticket.id} 
-                className="cursor-pointer transition-all hover:shadow-md"
-                onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
+                className="transition-all hover:shadow-md"
               >
                 <CardHeader>
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-4">
+                    <Checkbox
+                      checked={selectedTickets.has(ticket.id)}
+                      onCheckedChange={() => toggleTicketSelection(ticket.id)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <div 
+                      className="flex flex-1 cursor-pointer items-start justify-between"
+                      onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
+                    >
                     <div className="flex-1">
                       <CardTitle className="mb-2">{ticket.subject}</CardTitle>
                       <CardDescription className="line-clamp-2">
@@ -273,6 +353,7 @@ const TodosTickets = () => {
                       {getStatusBadge(ticket.status)}
                       {getPriorityBadge(ticket.priority)}
                       {getTicketTypeBadge(ticket.ticket_type)}
+                    </div>
                     </div>
                   </div>
                 </CardHeader>
