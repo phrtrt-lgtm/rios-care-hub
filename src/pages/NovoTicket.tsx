@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -7,25 +7,147 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Loader2, Upload } from "lucide-react";
+import { ArrowLeft, Loader2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { sanitizeFilename } from "@/lib/storage";
+
+type ReadyAttachment = { 
+  file_url: string; 
+  file_type: string; 
+  size_bytes: number; 
+  name: string;
+  ticket_id?: string;
+};
 
 export default function NovoTicket() {
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
   const [ticketType, setTicketType] = useState<"duvida" | "manutencao" | "cobranca" | "bloqueio_data" | "financeiro" | "outros" | "">("");
   const [priority, setPriority] = useState<"normal" | "urgente">("normal");
-  const [files, setFiles] = useState<File[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<ReadyAttachment[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setFiles(Array.from(e.target.files));
+  const uploadOne = async (file: File): Promise<ReadyAttachment> => {
+    const session = await supabase.auth.getSession();
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    
+    // 1) Get signed key from server
+    const signRes = await fetch(`${supabaseUrl}/functions/v1/upload-sign`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.data.session?.access_token}`,
+        'apikey': supabaseKey,
+      },
+      body: JSON.stringify({
+        scope: 'ticket-draft',
+        ownerId: user?.id,
+        filename: file.name,
+      }),
+    });
+    
+    if (!signRes.ok) throw new Error('Falha ao assinar upload');
+    const { key } = await signRes.json();
+
+    // 2) Upload with the sanitized key
+    try {
+      const { data, error } = await supabase.storage
+        .from('attachments')
+        .upload(key, file, {
+          cacheControl: '3600',
+          upsert: false,
+        });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('attachments')
+        .getPublicUrl(key);
+
+      return {
+        file_url: publicUrl,
+        file_type: file.type || 'application/octet-stream',
+        size_bytes: file.size,
+        name: sanitizeFilename(file.name),
+      };
+    } catch (err: any) {
+      // Fallback: retry with timestamp suffix if invalid key
+      if (String(err?.message || err).toLowerCase().includes('invalid key')) {
+        const session2 = await supabase.auth.getSession();
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+        
+        const sign2 = await fetch(`${supabaseUrl}/functions/v1/upload-sign`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session2.data.session?.access_token}`,
+            'apikey': supabaseKey,
+          },
+          body: JSON.stringify({
+            scope: 'ticket-draft',
+            ownerId: user?.id,
+            filename: `${Date.now()}-${file.name}`,
+          }),
+        });
+        
+        const { key: key2 } = await sign2.json();
+        
+        const { data, error: error2 } = await supabase.storage
+          .from('attachments')
+          .upload(key2, file, {
+            cacheControl: '3600',
+            upsert: false,
+          });
+
+        if (error2) throw error2;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('attachments')
+          .getPublicUrl(key2);
+
+        return {
+          file_url: publicUrl,
+          file_type: file.type || 'application/octet-stream',
+          size_bytes: file.size,
+          name: sanitizeFilename(file.name),
+        };
+      }
+      throw err;
     }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = e.target.files;
+    if (!selectedFiles?.length) return;
+
+    setUploading(true);
+    try {
+      const uploaded: ReadyAttachment[] = [];
+      for (const file of Array.from(selectedFiles)) {
+        const result = await uploadOne(file);
+        uploaded.push(result);
+      }
+      setUploadedFiles((prev) => [...prev, ...uploaded]);
+      toast.success(`${uploaded.length} arquivo(s) enviado(s) com sucesso!`);
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      toast.error(error.message || 'Erro ao fazer upload dos arquivos');
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = '';
+    }
+  };
+
+  const removeFile = (fileUrl: string) => {
+    setUploadedFiles((prev) => prev.filter((f) => f.file_url !== fileUrl));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -55,37 +177,35 @@ export default function NovoTicket() {
 
       if (ticketError) throw ticketError;
 
-      // Upload files if any
-      if (files.length > 0) {
-        for (const file of files) {
-          const filePath = `${user?.id}/${ticket.id}/${file.name}`;
-          const { error: uploadError } = await supabase.storage
-            .from("attachments")
-            .upload(filePath, file);
+      // Create initial message with uploaded attachments
+      if (uploadedFiles.length > 0 || description) {
+        const session = await supabase.auth.getSession();
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+        
+        const messageRes = await fetch(`${supabaseUrl}/functions/v1/create-ticket-message/${ticket.id}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.data.session?.access_token}`,
+            'apikey': supabaseKey,
+          },
+          body: JSON.stringify({
+            author_type: 'owner',
+            message: description || null,
+            attachments: uploadedFiles.map(f => ({
+              file_url: f.file_url,
+              file_type: f.file_type,
+              size_bytes: f.size_bytes,
+              name: f.name,
+            })),
+          }),
+        });
 
-          if (uploadError) throw uploadError;
-
-          // Get public URL for the uploaded file
-          const { data: { publicUrl } } = supabase.storage
-            .from("attachments")
-            .getPublicUrl(filePath);
-
-          // Create attachment record (tickets without messages need ticket_id null for now)
-          await supabase.from("ticket_attachments").insert({
-            message_id: ticket.id, // Using ticket.id as placeholder - will be linked to first message later
-            file_url: publicUrl,
-            file_name: file.name,
-            file_type: file.type,
-            size_bytes: file.size,
-            path: filePath,
-          });
+        if (!messageRes.ok) {
+          console.error('Message creation failed but ticket was created');
         }
       }
-
-      // TODO: Send notification email (edge function temporarily disabled)
-      // await supabase.functions.invoke("notify-ticket", {
-      //   body: { type: "ticket_created", ticketId: ticket.id },
-      // });
 
       toast.success("Chamado criado com sucesso!");
       navigate(`/minha-caixa`);
@@ -180,23 +300,47 @@ export default function NovoTicket() {
                 <Label htmlFor="files">Anexos (opcional)</Label>
                 <div className="flex items-center gap-2">
                   <Input
+                    ref={inputRef}
                     id="files"
                     type="file"
                     multiple
-                    accept="image/*,video/*"
+                    accept="image/*,video/*,application/pdf,.pdf"
                     onChange={handleFileChange}
                     className="cursor-pointer"
+                    disabled={uploading}
                   />
-                  <Upload className="h-5 w-5 text-muted-foreground" />
+                  {uploading ? (
+                    <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
+                  ) : (
+                    <Upload className="h-5 w-5 text-muted-foreground" />
+                  )}
                 </div>
-                {files.length > 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    {files.length} arquivo(s) selecionado(s)
-                  </p>
+                {uploadedFiles.length > 0 && (
+                  <div className="space-y-2 mt-2">
+                    <p className="text-sm text-muted-foreground">
+                      {uploadedFiles.length} arquivo(s) pronto(s):
+                    </p>
+                    <div className="space-y-1">
+                      {uploadedFiles.map((file, idx) => (
+                        <div key={idx} className="flex items-center justify-between text-xs border rounded px-2 py-1">
+                          <span className="truncate flex-1">{file.name}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 ml-2"
+                            onClick={() => removeFile(file.file_url)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
 
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="w-full" disabled={loading || uploading}>
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
