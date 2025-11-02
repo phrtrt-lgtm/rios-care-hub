@@ -62,16 +62,30 @@ interface AuthenticatedVideoProps extends React.VideoHTMLAttributes<HTMLVideoEle
 }
 
 export const AuthenticatedVideo = ({ src, posterSrc, ...props }: AuthenticatedVideoProps) => {
+  const [videoBlobUrl, setVideoBlobUrl] = useState<string>("");
   const [posterBlobUrl, setPosterBlobUrl] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadPoster = async () => {
+    const loadVideoAndPoster = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
           setLoading(false);
           return;
+        }
+
+        // Load video
+        const videoResponse = await fetch(src, {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+        });
+
+        if (videoResponse.ok) {
+          const videoBlob = await videoResponse.blob();
+          const videoObjectUrl = URL.createObjectURL(videoBlob);
+          setVideoBlobUrl(videoObjectUrl);
         }
 
         // Load poster if available
@@ -91,41 +105,32 @@ export const AuthenticatedVideo = ({ src, posterSrc, ...props }: AuthenticatedVi
 
         setLoading(false);
       } catch (error) {
-        console.error("Error loading video poster:", error);
+        console.error("Error loading video:", error);
         setLoading(false);
       }
     };
 
-    loadPoster();
+    loadVideoAndPoster();
 
     return () => {
+      if (videoBlobUrl) URL.revokeObjectURL(videoBlobUrl);
       if (posterBlobUrl) URL.revokeObjectURL(posterBlobUrl);
     };
-  }, [posterSrc]);
+  }, [src, posterSrc]);
 
   if (loading) {
     return <div className="w-full h-full flex items-center justify-center bg-muted animate-pulse" />;
   }
 
-  // Build authenticated video src with token
-  const getAuthenticatedSrc = () => {
-    return src; // The edge function already handles authentication via headers
-  };
+  if (!videoBlobUrl) {
+    return <div className="w-full h-full flex items-center justify-center bg-muted text-muted-foreground">Erro ao carregar vídeo</div>;
+  }
 
   return (
     <video 
       {...props}
       poster={posterBlobUrl || undefined}
-      onError={(e) => {
-        console.error("Video error:", e);
-        const videoEl = e.currentTarget;
-        if (videoEl.error) {
-          console.error("Video error code:", videoEl.error.code, "message:", videoEl.error.message);
-        }
-      }}
-    >
-      <source src={getAuthenticatedSrc()} type="video/mp4" />
-      Seu navegador não suporta vídeos.
-    </video>
+      src={videoBlobUrl}
+    />
   );
 };
