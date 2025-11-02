@@ -51,12 +51,7 @@ Deno.serve(async (req) => {
 
     const isTeam = profile?.role === 'admin' || profile?.role === 'agent'
 
-    // Seta contexto de sessão para RLS
-    await supabase.rpc('set_session_context', {
-      p_role: profile?.role || 'owner',
-      p_owner_id: user.id
-    })
-
+    // Busca o ticket PRIMEIRO (usa auth.uid() nas políticas RLS existentes)
     const { data: ticket } = await supabase
       .from('tickets')
       .select('id, owner_id, status')
@@ -83,6 +78,12 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
+
+    // AGORA seta o contexto RLS com o owner_id correto do ticket
+    await supabase.rpc('set_session_context', {
+      p_role: profile?.role || 'owner',
+      p_owner_id: ticket.owner_id
+    })
 
     // Cria a mensagem
     const { data: messageData, error: messageError } = await supabase
