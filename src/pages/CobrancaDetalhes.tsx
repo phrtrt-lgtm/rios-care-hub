@@ -7,11 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Send, Loader2, Calendar, DollarSign, Paperclip, Download, Eye, FileText, Image as ImageIcon, Trash2, Sparkles, ChevronDown, X } from "lucide-react";
+import { ArrowLeft, Send, Loader2, Calendar, DollarSign, Paperclip, Download, Eye, FileText, Image as ImageIcon, Trash2, Sparkles, ChevronDown, X, ZoomIn } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { AuthenticatedImage, AuthenticatedVideo } from "@/components/AuthenticatedMedia";
+import { MediaGallery } from "@/components/MediaGallery";
+import { AttachmentBubble } from "@/components/AttachmentBubble";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
@@ -56,6 +58,17 @@ interface ChargeAttachment {
   file_size: number | null;
   mime_type: string | null;
   poster_path: string | null;
+  width?: number;
+  height?: number;
+  duration_sec?: number;
+}
+
+interface MediaItem {
+  id: string;
+  file_url: string;
+  file_name?: string | null;
+  file_type?: string | null;
+  size_bytes?: number | null;
 }
 
 export default function CobrancaDetalhes() {
@@ -69,7 +82,6 @@ export default function CobrancaDetalhes() {
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
   const [selectedImage, setSelectedImage] = useState<{ url: string; name: string } | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -78,6 +90,10 @@ export default function CobrancaDetalhes() {
   const [generatingAI, setGeneratingAI] = useState(false);
   const [showDocDialog, setShowDocDialog] = useState(false);
   const [documentType, setDocumentType] = useState("");
+  const [allMediaItems, setAllMediaItems] = useState<MediaItem[]>([]);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryStartIndex, setGalleryStartIndex] = useState(0);
+  const [downloadingAll, setDownloadingAll] = useState(false);
 
   const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent';
 
@@ -166,11 +182,24 @@ export default function CobrancaDetalhes() {
   const fetchAttachments = async () => {
     const { data, error } = await supabase
       .from('charge_attachments')
-      .select('id, file_name, file_path, file_size, mime_type, poster_path')
+      .select('id, file_name, file_path, file_size, mime_type, poster_path, width, height, duration_sec')
       .eq('charge_id', id);
 
     if (!error && data) {
       setAttachments(data);
+      
+      // Prepare media gallery items
+      const mediaItems: MediaItem[] = data
+        .filter(att => isImageFile(att) || isVideoFile(att))
+        .map(att => ({
+          id: att.id,
+          file_url: getAttachmentUrl(att),
+          file_name: att.file_name,
+          file_type: att.mime_type,
+          size_bytes: att.file_size
+        }));
+      
+      setAllMediaItems(mediaItems);
     }
   };
 
@@ -418,26 +447,37 @@ export default function CobrancaDetalhes() {
   };
 
   const downloadAllAttachments = async () => {
+    if (downloadingAll) return;
+    
     try {
-      setSending(true);
+      setDownloadingAll(true);
       
+      if (attachments.length === 0) {
+        toast({
+          title: "Nenhum anexo encontrado",
+          variant: "destructive",
+        });
+        setDownloadingAll(false);
+        return;
+      }
+
+      console.log(`📦 Iniciando download de ${attachments.length} arquivos`);
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         throw new Error("Sessão não encontrada");
       }
 
-      toast({
-        title: "Preparando download...",
-        description: "Compactando arquivos...",
-      });
-
       const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-
-      // Create ZIP file
       const zip = new JSZip();
+      let successCount = 0;
       
-      for (const attachment of attachments) {
+      for (let i = 0; i < attachments.length; i++) {
+        const attachment = attachments[i];
+        
         try {
+          console.log(`📥 Processando ${i + 1}/${attachments.length}: ${attachment.file_name}`);
+          
           const downloadUrl = `${SUPABASE_URL}/functions/v1/serve-attachment/${attachment.id}`;
           
           const response = await fetch(downloadUrl, {
@@ -449,34 +489,81 @@ export default function CobrancaDetalhes() {
           if (response.ok) {
             const blob = await response.blob();
             zip.file(attachment.file_name, blob);
+            successCount++;
+            console.log(`✅ ${attachment.file_name} adicionado`);
           }
         } catch (error) {
-          console.error('Error downloading:', attachment.file_name, error);
+          console.error(`❌ Erro ao processar arquivo ${i + 1}:`, error);
         }
       }
 
-      const zipBlob = await zip.generateAsync({ type: 'blob' });
-      const url = window.URL.createObjectURL(zipBlob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `anexos-cobranca-${id}.zip`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      if (successCount === 0) {
+        toast({
+          title: "Erro ao baixar",
+          description: "Nenhum arquivo pôde ser processado",
+          variant: "destructive",
+        });
+        setDownloadingAll(false);
+        return;
+      }
+
+      console.log(`🗜️ Compactando ${successCount} arquivos...`);
+
+      const zipBlob = await zip.generateAsync({ 
+        type: 'blob',
+        compression: "DEFLATE",
+        compressionOptions: { level: 6 }
+      });
+      
+      console.log(`📦 ZIP gerado: ${(zipBlob.size / 1024 / 1024).toFixed(2)} MB`);
+      
+      const fileName = `cobranca-${id?.substring(0, 8)}-anexos.zip`;
+      
+      // Método tradicional de download - otimizado para mobile
+      const url = URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      
+      console.log(`⬇️ Iniciando download: ${fileName}`);
+      
+      try {
+        link.click();
+        
+        const event = new MouseEvent('click', {
+          view: window,
+          bubbles: true,
+          cancelable: true
+        });
+        link.dispatchEvent(event);
+      } catch (e) {
+        console.error('Erro ao clicar:', e);
+      }
+      
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+        if (link.parentNode) {
+          document.body.removeChild(link);
+        }
+      }, 3000);
 
       toast({
-        title: "Download concluído!",
-        description: "Todos os anexos foram baixados",
+        title: "✅ Download iniciado!",
+        description: `${successCount} arquivo(s) compactados`,
       });
+      
     } catch (error: any) {
+      console.error('❌ Erro geral:', error);
       toast({
-        title: "Erro ao baixar anexos",
-        description: error.message,
+        title: "Erro ao baixar",
+        description: error.message || "Tente novamente",
         variant: "destructive",
       });
     } finally {
-      setSending(false);
+      setDownloadingAll(false);
     }
   };
 
@@ -625,7 +712,7 @@ export default function CobrancaDetalhes() {
                       variant="outline" 
                       size="sm"
                       onClick={downloadAllAttachments}
-                      disabled={sending}
+                      disabled={downloadingAll}
                     >
                       <Download className="h-4 w-4 mr-2" />
                       Baixar Todos
@@ -640,10 +727,19 @@ export default function CobrancaDetalhes() {
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                       {attachments
                         .filter(a => isImageFile(a))
-                        .map((attachment) => {
+                        .map((attachment, idx) => {
                           const previewUrl = getAttachmentUrl(attachment);
+                          const mediaIndex = allMediaItems.findIndex(item => item.file_url === previewUrl);
+                          
                           return (
-                             <div key={attachment.id} className="group relative aspect-square rounded-lg overflow-hidden border bg-muted">
+                             <div 
+                               key={attachment.id} 
+                               className="group relative aspect-square rounded-lg overflow-hidden border bg-muted cursor-pointer"
+                               onClick={() => {
+                                 setGalleryStartIndex(mediaIndex);
+                                 setGalleryOpen(true);
+                               }}
+                             >
                                <AuthenticatedImage 
                                  src={previewUrl}
                                  alt={attachment.file_name}
@@ -653,15 +749,22 @@ export default function CobrancaDetalhes() {
                                 <Button
                                   size="sm"
                                   variant="secondary"
-                                  onClick={() => setSelectedImage({ url: previewUrl, name: attachment.file_name })}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setGalleryStartIndex(mediaIndex);
+                                    setGalleryOpen(true);
+                                  }}
                                   className="h-8 w-8 p-0"
                                 >
-                                  <Eye className="h-4 w-4" />
+                                  <ZoomIn className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   size="sm"
                                   variant="secondary"
-                                  onClick={() => downloadAttachment(attachment.id, attachment.file_name)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    downloadAttachment(attachment.id, attachment.file_name);
+                                  }}
                                   disabled={sending}
                                   className="h-8 w-8 p-0"
                                 >
@@ -929,23 +1032,13 @@ export default function CobrancaDetalhes() {
         </Card>
       </main>
 
-      {/* Lightbox para visualizar imagens */}
-      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>{selectedImage?.name}</DialogTitle>
-          </DialogHeader>
-          <div className="relative w-full max-h-[70vh] flex items-center justify-center bg-muted rounded-lg overflow-hidden">
-            {selectedImage && (
-              <AuthenticatedImage 
-                src={selectedImage.url}
-                alt={selectedImage.name}
-                className="max-w-full max-h-[70vh] object-contain"
-              />
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Galeria de Mídia */}
+      <MediaGallery
+        items={allMediaItems}
+        initialIndex={galleryStartIndex}
+        open={galleryOpen}
+        onOpenChange={setGalleryOpen}
+      />
 
       {/* Dialog de confirmação de exclusão */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
