@@ -38,6 +38,8 @@ Deno.serve(async (req) => {
       .eq('id', user.id)
       .single()
 
+    console.log(`👤 User ${user.id} has role: ${profile?.role}`)
+
     const isTeam = profile?.role === 'admin' || profile?.role === 'agent'
 
     // Seta contexto de sessão para RLS
@@ -46,11 +48,19 @@ Deno.serve(async (req) => {
       p_owner_id: user.id
     })
 
-    const { data: ticket } = await supabase
+    console.log(`🔍 Searching for ticket ${ticketId}`)
+
+    const { data: ticket, error: ticketError } = await supabase
       .from('tickets')
       .select('id, owner_id')
       .eq('id', ticketId)
       .single()
+
+    if (ticketError) {
+      console.error(`❌ Error fetching ticket:`, ticketError)
+    }
+
+    console.log(`🎫 Ticket found:`, ticket ? 'Yes' : 'No')
 
     if (!ticket) {
       return new Response(JSON.stringify({ error: 'Ticket not found' }), {
