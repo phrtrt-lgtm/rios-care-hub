@@ -155,6 +155,20 @@ serve(async (req) => {
 
     console.log("Created charge:", charge.id);
 
+    // Send email notification
+    try {
+      await supabase.functions.invoke('send-charge-email', {
+        body: { 
+          type: 'charge_created', 
+          chargeId: charge.id 
+        }
+      });
+      console.log("Charge email notification sent");
+    } catch (emailError) {
+      console.error("Error sending charge email:", emailError);
+      // Don't fail the whole webhook if email fails
+    }
+
     // Download and upload attachments to Supabase Storage
     if (item.assets && item.assets.length > 0) {
       for (const asset of item.assets) {

@@ -24,6 +24,7 @@ import GerenciarCobrancas from "./pages/GerenciarCobrancas";
 import CobrancaDetalhes from "./pages/CobrancaDetalhes";
 import MigrarAnexos from "./pages/MigrarAnexos";
 import NovoAlerta from "./pages/NovoAlerta";
+import ConfiguracaoEmail from "./pages/ConfiguracaoEmail";
 import ConfiguracaoIA from "./pages/ConfiguracaoIA";
 import RegrasCobrancas from "./pages/RegrasCobrancas";
 
@@ -153,22 +154,9 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/configuracao-ia"
-              element={
-                <ProtectedRoute allowedRoles={['admin']}>
-                  <ConfiguracaoIA />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/regras-cobrancas"
-              element={
-                <ProtectedRoute allowedRoles={['admin']}>
-                  <RegrasCobrancas />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/configuracao-email" element={<ProtectedRoute allowedRoles={["admin"]}><ConfiguracaoEmail /></ProtectedRoute>} />
+            <Route path="/configuracao-ia" element={<ProtectedRoute allowedRoles={["admin"]}><ConfiguracaoIA /></ProtectedRoute>} />
+            <Route path="/regras-cobrancas" element={<ProtectedRoute allowedRoles={["admin"]}><RegrasCobrancas /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -547,6 +547,42 @@ export type Database = {
           },
         ]
       }
+      email_templates: {
+        Row: {
+          available_variables: Json
+          body_html: string
+          created_at: string
+          description: string | null
+          id: string
+          key: string
+          name: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          available_variables?: Json
+          body_html: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          key: string
+          name: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          available_variables?: Json
+          body_html?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          key?: string
+          name?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string

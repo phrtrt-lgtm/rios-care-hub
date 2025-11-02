@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { LogOut, Users, Ticket, AlertTriangle, CheckCircle2, Plus, DollarSign, Building2, Bell } from "lucide-react";
+import { LogOut, Users, Ticket, AlertTriangle, CheckCircle2, Plus, DollarSign, Building2, Bell, Settings } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { AvatarUpload } from "@/components/AvatarUpload";
@@ -58,6 +58,17 @@ export default function Painel() {
             
             {/* Perfil e Ações */}
             <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
+              {profile?.role === "admin" && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate("/configuracao-email")}
+                  title="Configurar Templates de Email"
+                >
+                  <Settings className="h-5 w-5" />
+                </Button>
+              )}
+              
               <Dialog>
                 <DialogTrigger asChild>
                   <Button 

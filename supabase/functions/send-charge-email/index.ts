@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
-import { generateChargeEmailHTML } from '../_shared/email-utils.ts';
+import { renderTemplate, getTemplate } from '../_shared/template-renderer.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -47,6 +47,11 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Get property name if available
+    const { data: property } = charge.property_id
+      ? await supabaseClient.from("properties").select("name, address").eq("id", charge.property_id).single()
+      : { data: null };
+
     const amountBRL = new Intl.NumberFormat("pt-BR", {
       style: "currency",
       currency: charge.currency || "BRL",
@@ -63,35 +68,51 @@ const handler = async (req: Request): Promise<Response> => {
       ? new Intl.DateTimeFormat("pt-BR").format(new Date(charge.due_date))
       : "";
 
-    const html = generateChargeEmailHTML({
-      ownerName: charge.owner?.name || "Proprietário",
-      chargeTitle: charge.title,
-      amountBRL,
-      dueDate: formattedDueDate,
-      paymentLink: charge.payment_link_url || undefined,
-      description: charge.description || undefined,
-      contestDeadline,
-      portalUrl
-    });
-
-    let subject = "";
+    // Determine template key based on type
+    let templateKey = "";
     switch (type) {
       case "charge_created":
-        subject = `[RIOS] Nova cobrança – ${charge.title}`;
+        templateKey = "charge_created";
         break;
       case "charge_reminder":
-        subject = `[RIOS] Lembrete: cobrança vence em breve – ${charge.title}`;
+        // Use specific reminder template based on timing - default to 24h
+        templateKey = "charge_reminder_24h";
         break;
       case "charge_overdue":
-        subject = `[RIOS] Cobrança vencida – ${charge.title}`;
+        templateKey = "charge_overdue";
         break;
     }
+
+    const template = await getTemplate(supabaseClient, templateKey);
+
+    if (!template) {
+      console.error("Template not found:", templateKey);
+      return new Response(
+        JSON.stringify({ error: "Template not found" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const variables = {
+      owner_name: charge.owner?.name || "Proprietário",
+      owner_email: charge.owner?.email || "",
+      charge_id: charge.id,
+      charge_title: charge.title,
+      charge_description: charge.description || "",
+      charge_amount: amountBRL,
+      charge_due_date: formattedDueDate,
+      payment_link: charge.payment_link_url || "",
+      contest_deadline: contestDeadline,
+      portal_url: portalUrl,
+      property_name: property?.name || "",
+      property_address: property?.address || "",
+    };
 
     const { error: emailError } = await resend.emails.send({
       from: "RIOS <onboarding@resend.dev>",
       to: [charge.owner?.email],
-      subject,
-      html,
+      subject: renderTemplate(template.subject, variables),
+      html: renderTemplate(template.body_html, variables),
     });
 
     if (emailError) {
