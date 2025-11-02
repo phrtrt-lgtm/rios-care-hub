@@ -424,7 +424,7 @@ export default function CobrancaDetalhes() {
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <CardTitle className="text-2xl mb-2">{charge.title}</CardTitle>
-                <div className="flex flex-wrap gap-2 mb-4">
+                <div className="flex flex-wrap gap-2">
                   {getStatusBadge(charge.status)}
                   <Badge variant="outline">
                     <DollarSign className="h-3 w-3 mr-1" />
@@ -450,21 +450,8 @@ export default function CobrancaDetalhes() {
                 </Button>
               )}
             </div>
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={charge.profiles.photo_url || undefined} />
-                <AvatarFallback>{getInitials(charge.profiles.name)}</AvatarFallback>
-              </Avatar>
-              <div>
-                <div className="font-medium">{charge.profiles.name}</div>
-                <div>{format(new Date(charge.created_at), "d 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}</div>
-              </div>
-            </div>
           </CardHeader>
           <CardContent>
-            {charge.description && (
-              <p className="text-muted-foreground whitespace-pre-wrap mb-4">{charge.description}</p>
-            )}
 
             {attachments.length > 0 && (
               <div className="border-t pt-6 mt-6">

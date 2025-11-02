@@ -399,7 +399,7 @@ export default function TicketDetalhes() {
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <CardTitle className="text-2xl mb-2">{ticket.subject}</CardTitle>
-                <div className="flex flex-wrap gap-2 mb-4">
+                <div className="flex flex-wrap gap-2">
                   <Badge variant="outline">{statusLabels[ticket.status as keyof typeof statusLabels]}</Badge>
                   <Badge>{ticket.priority}</Badge>
                   {ticket.properties && (
@@ -408,20 +408,7 @@ export default function TicketDetalhes() {
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={ticket.profiles.photo_url || undefined} />
-                <AvatarFallback>{getInitials(ticket.profiles.name)}</AvatarFallback>
-              </Avatar>
-              <div>
-                <div className="font-medium">{ticket.profiles.name}</div>
-                <div>{format(new Date(ticket.created_at), "d 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}</div>
-              </div>
-            </div>
           </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground whitespace-pre-wrap">{ticket.description}</p>
-          </CardContent>
         </Card>
 
         <div className="space-y-4 mb-6">
