@@ -31,9 +31,13 @@ interface Charge {
   payment_link_url: string | null;
   created_at: string;
   owner_id: string;
+  property_id: string | null;
   profiles: {
     name: string;
     photo_url: string | null;
+  };
+  property?: {
+    name: string;
   };
 }
 
@@ -125,13 +129,21 @@ export default function CobrancaDetalhes() {
         .from('charges')
         .select(`
           *,
-          profiles!charges_owner_id_fkey (name, photo_url)
+          profiles!charges_owner_id_fkey (name, photo_url),
+          properties (name)
         `)
         .eq('id', id)
         .single();
 
       if (chargeError) throw chargeError;
-      setCharge(chargeData);
+      
+      // Flatten the property object
+      const enrichedCharge = {
+        ...chargeData,
+        property: chargeData.properties
+      };
+      
+      setCharge(enrichedCharge);
 
       await Promise.all([
         fetchMessages(),
@@ -622,6 +634,11 @@ export default function CobrancaDetalhes() {
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <CardTitle className="text-2xl mb-2">{charge.title}</CardTitle>
+                {charge.property && (
+                  <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100 mb-3">
+                    📍 {charge.property.name}
+                  </Badge>
+                )}
                 <div className="flex flex-wrap gap-2">
                   {getStatusBadge(charge.status)}
                   <Badge variant="outline">

@@ -190,9 +190,9 @@ const MinhasCobrancas = () => {
                     {getStatusBadge(charge.status)}
                   </div>
                   {charge.property && (
-                    <div className="flex items-center gap-2 text-sm font-medium text-primary mb-2">
-                      <span>Unidade: {charge.property.name}</span>
-                    </div>
+                    <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100 mb-2">
+                      📍 {charge.property.name}
+                    </Badge>
                   )}
                   {charge.description && (
                     <CardDescription className="line-clamp-2">
