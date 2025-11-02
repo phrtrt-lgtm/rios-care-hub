@@ -22,8 +22,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    const url = new URL(req.url)
-    const ticketId = url.pathname.split('/').pop()
+    const { ticketId } = await req.json()
 
     if (!ticketId) {
       return new Response(JSON.stringify({ error: 'Ticket ID is required' }), {

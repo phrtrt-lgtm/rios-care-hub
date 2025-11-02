@@ -139,7 +139,8 @@ export default function TicketDetalhes() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      const { data, error } = await supabase.functions.invoke(`get-ticket-messages/${id}`, {
+      const { data, error } = await supabase.functions.invoke('get-ticket-messages', {
+        body: { ticketId: id },
         headers: {
           Authorization: `Bearer ${session.access_token}`
         }
@@ -149,6 +150,11 @@ export default function TicketDetalhes() {
       setMessages(data || []);
     } catch (error: any) {
       console.error('Error fetching messages:', error);
+      toast({
+        title: "Erro ao carregar mensagens",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
