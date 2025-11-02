@@ -90,11 +90,17 @@ Deno.serve(async (req) => {
     // Busca anexos para cada mensagem
     const messagesWithAttachments = await Promise.all(
       (messages || []).map(async (message) => {
-        const { data: attachments } = await supabase
+        const { data: attachments, error: attachmentsError } = await supabase
           .from('ticket_attachments')
           .select('id, file_url, file_name, file_type, size_bytes')
           .eq('message_id', message.id)
           .order('created_at', { ascending: true })
+
+        if (attachmentsError) {
+          console.error(`❌ Error fetching attachments for message ${message.id}:`, attachmentsError)
+        }
+
+        console.log(`📎 Message ${message.id} has ${attachments?.length || 0} attachments`)
 
         return {
           ...message,
@@ -102,6 +108,9 @@ Deno.serve(async (req) => {
         }
       })
     )
+
+    console.log(`✅ Retrieved ${messagesWithAttachments.length} messages for ticket ${ticketId}`)
+    console.log(`📊 Total attachments: ${messagesWithAttachments.reduce((sum, m) => sum + (m.attachments?.length || 0), 0)}`)
 
     console.log(`✅ Retrieved ${messagesWithAttachments.length} messages for ticket ${ticketId}`)
 
