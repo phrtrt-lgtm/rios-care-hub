@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Send, Loader2, Calendar, DollarSign, Paperclip, Download, Eye, FileText, Image as ImageIcon, Trash2, Sparkles, ChevronDown, X, ZoomIn } from "lucide-react";
+import { ArrowLeft, Send, Loader2, Calendar, DollarSign, Paperclip, Download, Eye, FileText, Image as ImageIcon, Trash2, Sparkles, ChevronDown, X, ZoomIn, Play, Video } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -782,35 +782,63 @@ export default function CobrancaDetalhes() {
                 {attachments.some(a => isVideoFile(a)) && (
                   <div className="mb-6">
                     <h4 className="text-sm font-medium text-muted-foreground mb-3">Vídeos</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                       {attachments
                         .filter(a => isVideoFile(a))
-                        .map((attachment) => (
-                          <div key={attachment.id} className="space-y-2">
-                            <div className="aspect-video rounded-lg overflow-hidden border bg-muted">
-                              <AuthenticatedVideo
-                                src={getAttachmentUrl(attachment)}
-                                posterSrc={attachment.poster_path ? getPosterUrl(attachment) : undefined}
-                                controls 
-                                preload="metadata"
-                                playsInline
-                                className="w-full h-full"
-                                style={{ maxHeight: "480px" }}
-                              />
+                        .map((attachment) => {
+                          const previewUrl = getAttachmentUrl(attachment);
+                          const posterUrl = attachment.poster_path ? getPosterUrl(attachment) : undefined;
+                          const mediaIndex = allMediaItems.findIndex(item => item.file_url === previewUrl);
+                          
+                          return (
+                            <div 
+                              key={attachment.id} 
+                              className="group relative aspect-square rounded-lg overflow-hidden border bg-muted cursor-pointer"
+                              onClick={() => {
+                                setGalleryStartIndex(mediaIndex);
+                                setGalleryOpen(true);
+                              }}
+                            >
+                              {posterUrl ? (
+                                <AuthenticatedImage 
+                                  src={posterUrl}
+                                  alt={attachment.file_name}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-muted flex items-center justify-center">
+                                  <Video className="h-12 w-12 text-muted-foreground" />
+                                </div>
+                              )}
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setGalleryStartIndex(mediaIndex);
+                                    setGalleryOpen(true);
+                                  }}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Play className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    downloadAttachment(attachment.id, attachment.file_name);
+                                  }}
+                                  disabled={sending}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Download className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </div>
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-foreground truncate">{attachment.file_name}</span>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => downloadAttachment(attachment.id, attachment.file_name)}
-                                disabled={sending}
-                              >
-                                <Download className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                     </div>
                   </div>
                 )}
