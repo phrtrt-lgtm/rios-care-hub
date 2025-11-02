@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertBanner } from "@/components/AlertBanner";
 import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
+import { EnablePush } from "@/components/EnablePush";
 
 export default function MinhaCaixa() {
   const { profile, user, signOut } = useAuth();
@@ -81,6 +82,11 @@ export default function MinhaCaixa() {
         {/* Alert Banner */}
         <div className="mb-6">
           <AlertBanner />
+        </div>
+
+        {/* Push Notifications */}
+        <div className="mb-6">
+          <EnablePush />
         </div>
 
         <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">

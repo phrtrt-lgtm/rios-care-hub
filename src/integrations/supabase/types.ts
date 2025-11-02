@@ -695,6 +695,47 @@ export type Database = {
           },
         ]
       }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string | null
+          endpoint: string
+          id: string
+          is_active: boolean | null
+          owner_id: string
+          p256dh: string
+          user_agent: string | null
+        }
+        Insert: {
+          auth: string
+          created_at?: string | null
+          endpoint: string
+          id?: string
+          is_active?: boolean | null
+          owner_id: string
+          p256dh: string
+          user_agent?: string | null
+        }
+        Update: {
+          auth?: string
+          created_at?: string | null
+          endpoint?: string
+          id?: string
+          is_active?: boolean | null
+          owner_id?: string
+          p256dh?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_config: {
         Row: {
           id: string
