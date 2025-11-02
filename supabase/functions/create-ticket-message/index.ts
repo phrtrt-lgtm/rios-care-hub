@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
     }
 
     const url = new URL(req.url)
-    const ticketId = url.pathname.split('/')[url.pathname.split('/').length - 2]
+    const ticketId = url.pathname.split('/').filter(Boolean).pop()
     const body = await req.json()
 
     if (!ticketId) {
