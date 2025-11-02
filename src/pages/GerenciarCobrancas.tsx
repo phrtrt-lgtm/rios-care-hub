@@ -35,9 +35,13 @@ interface Charge {
   payment_link_url: string | null;
   created_at: string;
   owner_id: string;
+  property_id: string | null;
   owner: {
     name: string;
     email: string;
+  };
+  property?: {
+    name: string;
   };
   attachments: ChargeAttachment[];
   _count?: {
@@ -96,15 +100,18 @@ const GerenciarCobrancas = () => {
 
       if (error) throw error;
 
-      // Fetch owner, attachments, and message counts for each charge
+      // Fetch owner, property, attachments, and message counts for each charge
       const enrichedCharges = await Promise.all(
         (chargesData || []).map(async (charge) => {
-          const [ownerResult, attachmentsResult, messagesResult] = await Promise.all([
+          const [ownerResult, propertyResult, attachmentsResult, messagesResult] = await Promise.all([
             supabase
               .from('profiles')
               .select('name, email')
               .eq('id', charge.owner_id)
               .single(),
+            charge.property_id
+              ? supabase.from('properties').select('name').eq('id', charge.property_id).single()
+              : Promise.resolve({ data: null }),
             supabase
               .from('charge_attachments')
               .select('id, file_name, file_path, file_size, mime_type, poster_path')
@@ -118,6 +125,7 @@ const GerenciarCobrancas = () => {
           return {
             ...charge,
             owner: ownerResult.data || { name: 'N/A', email: 'N/A' },
+            property: propertyResult.data || undefined,
             attachments: attachmentsResult.data || [],
             _count: {
               messages: messagesResult.count || 0
@@ -417,6 +425,11 @@ const GerenciarCobrancas = () => {
                         <CardTitle className="text-lg line-clamp-2 flex-1">{charge.title}</CardTitle>
                         {getStatusBadge(charge.status)}
                       </div>
+                      {charge.property && (
+                        <div className="flex items-center gap-2 text-sm font-medium text-primary mb-2">
+                          <span>Unidade: {charge.property.name}</span>
+                        </div>
+                      )}
                       {charge.description && (
                         <CardDescription className="line-clamp-2">
                           {charge.description}

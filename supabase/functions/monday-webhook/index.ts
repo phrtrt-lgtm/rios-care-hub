@@ -107,13 +107,14 @@ serve(async (req) => {
       return column?.text || column?.value;
     };
 
-    // Get property name from Monday - using the actual column ID from your board
-    // The column ID is "text_mkx3ehs" based on the logs
-    const propertyName = getColumnValue("text_mkx3ehs");
+    // Get property name from Monday item name (nome da unidade)
+    const propertyName = item.name;
     
     if (!propertyName) {
-      throw new Error('Coluna "Imóvel" não encontrada no item do Monday');
+      throw new Error('Nome da unidade não encontrado no item do Monday');
     }
+
+    console.log("Looking for property with name:", propertyName);
 
     // Find property and get owner_id and property_id
     const { data: property, error: propertyError } = await supabase
@@ -124,15 +125,17 @@ serve(async (req) => {
 
     if (propertyError || !property) {
       console.error("Property not found:", propertyName, propertyError);
-      throw new Error(`Imóvel "${propertyName}" não encontrado no sistema`);
+      throw new Error(`Unidade "${propertyName}" não encontrada no sistema. Certifique-se de que a propriedade existe e está associada a um proprietário.`);
     }
 
     console.log("Found property:", property.id, "owner:", property.owner_id);
 
     // Extract charge data using the actual column IDs from your Monday board
+    // The title will be based on description or a default format with property name
+    const description = getColumnValue("long_text_mkx3tx1b");
     const chargeData = {
-      title: item.name,
-      description: getColumnValue("long_text_mkx3tx1b") || item.name,
+      title: description || `Cobrança - ${propertyName}`,
+      description: description || null,
       amount_cents: parseInt(getColumnValue("numeric_mkx355en") || "0") * 100, // Convert to cents
       due_date: getColumnValue("data") || null,
       owner_id: property.owner_id,
