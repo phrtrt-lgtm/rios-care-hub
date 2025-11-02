@@ -293,41 +293,81 @@ export default function TicketDetalhes() {
 
       toast({
         title: "Preparando download...",
-        description: "Compactando arquivos...",
+        description: `Baixando ${allAttachments.length} arquivo(s)...`,
       });
 
       const zip = new JSZip();
+      let successCount = 0;
       
-      for (const attachment of allAttachments) {
+      for (let i = 0; i < allAttachments.length; i++) {
+        const attachment = allAttachments[i];
         try {
+          console.log(`Baixando ${i + 1}/${allAttachments.length}: ${attachment.file_name}`);
+          
           const response = await fetch(attachment.file_url);
-          if (response.ok) {
-            const blob = await response.blob();
-            zip.file(attachment.file_name || `arquivo_${attachment.id}`, blob);
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+          
+          const blob = await response.blob();
+          const fileName = attachment.file_name || `arquivo_${attachment.id}`;
+          zip.file(fileName, blob);
+          successCount++;
+          
+          // Atualiza progresso
+          if ((i + 1) % 5 === 0 || i === allAttachments.length - 1) {
+            toast({
+              title: "Baixando...",
+              description: `${i + 1}/${allAttachments.length} arquivos processados`,
+            });
           }
         } catch (error) {
-          console.error('Erro ao baixar:', attachment.file_name, error);
+          console.error(`Erro ao baixar ${attachment.file_name}:`, error);
         }
       }
 
-      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      if (successCount === 0) {
+        toast({
+          title: "Erro",
+          description: "Não foi possível baixar nenhum arquivo",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Compactando...",
+        description: "Gerando arquivo ZIP",
+      });
+
+      const zipBlob = await zip.generateAsync({ 
+        type: 'blob',
+        compression: "DEFLATE",
+        compressionOptions: { level: 6 }
+      });
+      
       const url = window.URL.createObjectURL(zipBlob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `anexos-ticket-${id}.zip`;
+      a.download = `anexos-ticket-${ticket?.subject || id}.zip`;
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      
+      // Limpa recursos
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }, 100);
 
       toast({
         title: "Download concluído!",
-        description: "Todos os anexos foram baixados",
+        description: `${successCount} de ${allAttachments.length} arquivo(s) baixados`,
       });
     } catch (error: any) {
+      console.error('Erro geral ao baixar anexos:', error);
       toast({
         title: "Erro ao baixar anexos",
-        description: error.message,
+        description: error.message || "Erro desconhecido",
         variant: "destructive",
       });
     } finally {
