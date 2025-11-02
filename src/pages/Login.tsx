@@ -48,16 +48,14 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-4">
+      <div className="mb-8 w-48 md:w-64">
+        <img src="/logo.png" alt="RIOS Logo" className="w-full" />
+      </div>
       <Card className="w-full max-w-md shadow-xl">
-        <CardHeader className="space-y-4 text-center">
-          <div className="mx-auto w-32">
-            <img src="/logo.png" alt="RIOS Logo" className="w-full" />
-          </div>
-          <div>
-            <CardTitle className="text-2xl">Bem-vindo de volta</CardTitle>
-            <CardDescription>Entre com suas credenciais para acessar o portal</CardDescription>
-          </div>
+        <CardHeader className="space-y-2 text-center">
+          <CardTitle className="text-2xl">Bem-vindo de volta</CardTitle>
+          <CardDescription>Entre com suas credenciais para acessar o portal</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
