@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -152,9 +152,9 @@ export function EnablePush() {
   };
 
   // Check subscription status on mount
-  useState(() => {
+  useEffect(() => {
     checkSubscription();
-  });
+  }, []);
 
   return (
     <Card>

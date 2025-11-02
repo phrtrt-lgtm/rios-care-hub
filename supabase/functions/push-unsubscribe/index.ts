@@ -17,7 +17,7 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const authHeader = req.headers.get("Authorization")!;
     
     const supabase = createClient(supabaseUrl, supabaseKey, {
@@ -30,6 +30,8 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const { endpoint }: UnsubscribeRequest = await req.json();
+
+    console.log("Removing subscription for user:", user.id);
 
     await supabase
       .from("push_subscriptions")

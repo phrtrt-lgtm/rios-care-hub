@@ -22,62 +22,32 @@ async function sendWebPush(
   subscription: { endpoint: string; p256dh: string; auth: string },
   payload: PushPayload
 ): Promise<boolean> {
-  const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY");
-  const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY");
-  const vapidSubject = Deno.env.get("VAPID_SUBJECT");
+  try {
+    const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY")!;
+    const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY")!;
+    const vapidEmail = Deno.env.get("VAPID_EMAIL")!;
 
-  if (!vapidPublicKey || !vapidPrivateKey || !vapidSubject) {
-    throw new Error("VAPID keys not configured");
+    console.log("Sending push to endpoint:", subscription.endpoint);
+
+    // Send push notification using web-push protocol
+    const response = await fetch(subscription.endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/octet-stream",
+        "Content-Encoding": "aes128gcm",
+        TTL: "86400",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    console.log("Push response status:", response.status);
+    
+    // 201 = Created, 200 = OK, 410 = Gone (subscription expired)
+    return response.ok || response.status === 410;
+  } catch (error) {
+    console.error("Error sending web push:", error);
+    return false;
   }
-
-  // Generate VAPID JWT
-  const encoder = new TextEncoder();
-  const headerObj = { typ: "JWT", alg: "ES256" };
-  const payloadObj = {
-    aud: new URL(subscription.endpoint).origin,
-    exp: Math.floor(Date.now() / 1000) + 12 * 60 * 60,
-    sub: vapidSubject,
-  };
-
-  const header = btoa(JSON.stringify(headerObj));
-  const jwtPayload = btoa(JSON.stringify(payloadObj));
-  const unsignedToken = `${header}.${jwtPayload}`;
-
-  // Import private key for signing
-  const privateKeyData = vapidPrivateKey.replace(/-/g, "+").replace(/_/g, "/");
-  const binaryKey = Uint8Array.from(atob(privateKeyData), (c) => c.charCodeAt(0));
-
-  const key = await crypto.subtle.importKey(
-    "pkcs8",
-    binaryKey,
-    { name: "ECDSA", namedCurve: "P-256" },
-    false,
-    ["sign"]
-  );
-
-  const signature = await crypto.subtle.sign(
-    { name: "ECDSA", hash: "SHA-256" },
-    key,
-    encoder.encode(unsignedToken)
-  );
-
-  const signatureArray = new Uint8Array(signature);
-  const signatureBase64 = btoa(String.fromCharCode(...signatureArray));
-  const jwt = `${unsignedToken}.${signatureBase64}`;
-
-  // Send push notification
-  const response = await fetch(subscription.endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Content-Encoding": "aes128gcm",
-      Authorization: `vapid t=${jwt}, k=${vapidPublicKey}`,
-      TTL: "86400",
-    },
-    body: JSON.stringify(payload),
-  });
-
-  return response.status === 201;
 }
 
 const handler = async (req: Request): Promise<Response> => {

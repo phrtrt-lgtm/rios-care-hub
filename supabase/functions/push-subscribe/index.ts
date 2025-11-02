@@ -22,7 +22,7 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const authHeader = req.headers.get("Authorization")!;
     
     const supabase = createClient(supabaseUrl, supabaseKey, {
@@ -36,21 +36,29 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { endpoint, keys, userAgent }: SubscribeRequest = await req.json();
 
+    console.log("Processing subscription for user:", user.id);
+
     // Check if subscription already exists
     const { data: existing } = await supabase
       .from("push_subscriptions")
       .select()
       .eq("endpoint", endpoint)
-      .single();
+      .maybeSingle();
 
     if (existing) {
-      // Update to active if it was inactive
+      console.log("Updating existing subscription");
       await supabase
         .from("push_subscriptions")
-        .update({ is_active: true, owner_id: user.id })
+        .update({ 
+          is_active: true, 
+          owner_id: user.id,
+          p256dh: keys.p256dh,
+          auth: keys.auth,
+          user_agent: userAgent
+        })
         .eq("endpoint", endpoint);
     } else {
-      // Insert new subscription
+      console.log("Creating new subscription");
       await supabase
         .from("push_subscriptions")
         .insert({
