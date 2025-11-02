@@ -45,34 +45,37 @@ export default function Painel() {
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur-sm">
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex flex-col gap-3 md:flex-row md:h-16 md:items-center md:justify-between">
+        <div className="container mx-auto px-4">
+          <div className="flex h-16 items-center justify-between gap-3">
             {/* Logo e Título */}
-            <div className="flex items-center gap-2 md:gap-4">
-              <img src="/logo.png" alt="RIOS" className="h-6 md:h-8" />
-              <div className="flex flex-col md:flex-row md:items-center md:gap-2">
-                <h1 className="text-base md:text-xl font-semibold">Painel</h1>
-                <span className="hidden md:inline text-base md:text-xl font-semibold">Administrativo</span>
-              </div>
+            <div className="flex items-center gap-2 md:gap-4 min-w-0">
+              <img src="/logo.png" alt="RIOS" className="h-6 md:h-8 flex-shrink-0" />
+              <h1 className="text-base md:text-xl font-semibold truncate">
+                Painel <span className="hidden sm:inline">Administrativo</span>
+              </h1>
             </div>
             
-            {/* Botões de ação */}
-            <div className="flex items-center justify-between gap-2 md:gap-4">
-              <Badge variant="secondary" className="text-xs">
-                {profile?.role === "admin" ? "Administrador" : "Atendente"}
-              </Badge>
-              
-              <div className="flex items-center gap-2">
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="ghost" size="sm" className="text-xs md:text-sm">
-                      {profile?.name && profile.name.length > 15 
-                        ? `${profile.name.substring(0, 15)}...` 
+            {/* Perfil e Ações */}
+            <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="flex items-center gap-2 max-w-[140px] md:max-w-none"
+                  >
+                    <Badge variant="secondary" className="text-xs hidden sm:flex">
+                      {profile?.role === "admin" ? "Admin" : "Atendente"}
+                    </Badge>
+                    <span className="truncate text-xs md:text-sm">
+                      {profile?.name && profile.name.length > 12 
+                        ? `${profile.name.substring(0, 12)}...` 
                         : profile?.name
                       }
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
+                    </span>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
                     <DialogHeader>
                       <DialogTitle>Meu Perfil</DialogTitle>
                     </DialogHeader>
@@ -102,13 +105,13 @@ export default function Painel() {
                         </div>
                       </div>
                     </div>
-                  </DialogContent>
-                </Dialog>
-                <Button variant="outline" size="sm" onClick={signOut}>
-                  <LogOut className="h-4 w-4 md:mr-2" />
-                  <span className="hidden md:inline">Sair</span>
-                </Button>
-              </div>
+                </DialogContent>
+              </Dialog>
+              
+              <Button variant="outline" size="sm" onClick={signOut}>
+                <LogOut className="h-4 w-4 md:mr-2" />
+                <span className="hidden md:inline">Sair</span>
+              </Button>
             </div>
           </div>
         </div>
