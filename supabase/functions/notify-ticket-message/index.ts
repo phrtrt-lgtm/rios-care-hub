@@ -72,8 +72,8 @@ const handler = async (req: Request): Promise<Response> => {
       
       if (template) {
         await resend.emails.send({
-          from: "RIOS Suporte <onboarding@resend.dev>",
-          reply_to: "suporte@rios.com.br",
+          from: "RIOS Suporte <sistema@rioshospedagens.com.br>",
+          reply_to: "rioslagoon@gmail.com",
           to: [ticket.owner.email],
           subject: renderTemplate(template.subject, variables),
           html: renderTemplate(template.body_html, variables),
@@ -85,8 +85,8 @@ const handler = async (req: Request): Promise<Response> => {
       
       if (adminEmails.length > 0 && adminEmails[0] !== "" && template) {
         await resend.emails.send({
-          from: "RIOS Suporte <onboarding@resend.dev>",
-          reply_to: "suporte@rios.com.br",
+          from: "RIOS Suporte <sistema@rioshospedagens.com.br>",
+          reply_to: "rioslagoon@gmail.com",
           to: adminEmails,
           subject: renderTemplate(template.subject, variables),
           html: renderTemplate(template.body_html, variables),

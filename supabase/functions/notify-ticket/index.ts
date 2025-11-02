@@ -73,8 +73,8 @@ const handler = async (req: Request): Promise<Response> => {
         // Send confirmation to owner
         if (ownerTemplate) {
           await resend.emails.send({
-            from: "RIOS Suporte <onboarding@resend.dev>",
-            reply_to: "suporte@rios.com.br",
+            from: "RIOS Suporte <sistema@rioshospedagens.com.br>",
+            reply_to: "rioslagoon@gmail.com",
             to: [ticket.profiles.email],
             subject: renderTemplate(ownerTemplate.subject, variables),
             html: renderTemplate(ownerTemplate.body_html, variables),
@@ -84,8 +84,8 @@ const handler = async (req: Request): Promise<Response> => {
         // Notify team
         if (adminEmails.length > 0 && adminEmails[0] !== "" && teamTemplate) {
           await resend.emails.send({
-            from: "RIOS Suporte <onboarding@resend.dev>",
-            reply_to: "suporte@rios.com.br",
+            from: "RIOS Suporte <sistema@rioshospedagens.com.br>",
+            reply_to: "rioslagoon@gmail.com",
             to: adminEmails,
             subject: renderTemplate(teamTemplate.subject, variables),
             html: renderTemplate(teamTemplate.body_html, variables),
@@ -115,8 +115,8 @@ const handler = async (req: Request): Promise<Response> => {
         // Notify admins
         if (adminEmails.length > 0 && adminEmails[0] !== "" && template) {
           emailResponse = await resend.emails.send({
-            from: "RIOS Suporte <onboarding@resend.dev>",
-            reply_to: "suporte@rios.com.br",
+            from: "RIOS Suporte <sistema@rioshospedagens.com.br>",
+            reply_to: "rioslagoon@gmail.com",
             to: adminEmails,
             subject: renderTemplate(template.subject, variables),
             html: renderTemplate(template.body_html, variables),
@@ -145,8 +145,8 @@ const handler = async (req: Request): Promise<Response> => {
         // Send welcome email
         if (template) {
           emailResponse = await resend.emails.send({
-            from: "RIOS Suporte <onboarding@resend.dev>",
-            reply_to: "suporte@rios.com.br",
+            from: "RIOS Suporte <sistema@rioshospedagens.com.br>",
+            reply_to: "rioslagoon@gmail.com",
             to: [user.email],
             subject: renderTemplate(template.subject, variables),
             html: renderTemplate(template.body_html, variables),

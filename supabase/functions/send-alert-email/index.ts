@@ -92,8 +92,8 @@ const handler = async (req: Request): Promise<Response> => {
     for (const recipient of recipients) {
       try {
         const { error: emailError } = await resend.emails.send({
-          from: 'RIOS <onboarding@resend.dev>',
-          reply_to: 'suporte@rios.com.br',
+          from: 'RIOS <sistema@rioshospedagens.com.br>',
+          reply_to: 'rioslagoon@gmail.com',
           to: [recipient.email],
           subject: renderTemplate(template.subject, variables),
           html: renderTemplate(template.body_html, variables),
