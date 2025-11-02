@@ -293,7 +293,7 @@ export default function TicketDetalhes() {
 
       toast({
         title: "Preparando download...",
-        description: `Baixando ${allAttachments.length} arquivo(s)...`,
+        description: `Processando ${allAttachments.length} arquivo(s)...`,
       });
 
       const zip = new JSZip();
@@ -302,27 +302,49 @@ export default function TicketDetalhes() {
       for (let i = 0; i < allAttachments.length; i++) {
         const attachment = allAttachments[i];
         try {
-          console.log(`Baixando ${i + 1}/${allAttachments.length}: ${attachment.file_name}`);
+          console.log(`📥 Baixando ${i + 1}/${allAttachments.length}: ${attachment.file_name}`);
           
-          const response = await fetch(attachment.file_url);
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
+          // Extrai o path do storage da URL
+          const urlParts = attachment.file_url.split('/object/public/');
+          if (urlParts.length !== 2) {
+            throw new Error('URL inválida');
           }
           
-          const blob = await response.blob();
-          const fileName = attachment.file_name || `arquivo_${attachment.id}`;
-          zip.file(fileName, blob);
+          const [bucket, ...pathParts] = urlParts[1].split('/');
+          const filePath = pathParts.join('/');
+          
+          console.log(`📂 Bucket: ${bucket}, Path: ${filePath}`);
+          
+          // Baixa usando a API do Supabase
+          const { data, error } = await supabase.storage
+            .from(bucket)
+            .download(filePath);
+          
+          if (error) {
+            console.error(`❌ Erro Supabase:`, error);
+            throw error;
+          }
+          
+          if (!data) {
+            throw new Error('Arquivo vazio');
+          }
+          
+          const fileName = attachment.file_name || `arquivo_${i + 1}`;
+          zip.file(fileName, data);
           successCount++;
           
+          console.log(`✅ Arquivo ${fileName} adicionado ao ZIP`);
+          
           // Atualiza progresso
-          if ((i + 1) % 5 === 0 || i === allAttachments.length - 1) {
+          if ((i + 1) % 3 === 0 || i === allAttachments.length - 1) {
             toast({
               title: "Baixando...",
               description: `${i + 1}/${allAttachments.length} arquivos processados`,
             });
           }
         } catch (error) {
-          console.error(`Erro ao baixar ${attachment.file_name}:`, error);
+          console.error(`❌ Erro ao processar ${attachment.file_name}:`, error);
+          // Continua com os próximos arquivos
         }
       }
 
@@ -335,9 +357,11 @@ export default function TicketDetalhes() {
         return;
       }
 
+      console.log(`🗜️ Compactando ${successCount} arquivos...`);
+      
       toast({
         title: "Compactando...",
-        description: "Gerando arquivo ZIP",
+        description: `Gerando arquivo ZIP com ${successCount} arquivo(s)`,
       });
 
       const zipBlob = await zip.generateAsync({ 
@@ -346,25 +370,32 @@ export default function TicketDetalhes() {
         compressionOptions: { level: 6 }
       });
       
+      console.log(`📦 ZIP gerado: ${(zipBlob.size / 1024 / 1024).toFixed(2)} MB`);
+      
+      // Força o download
       const url = window.URL.createObjectURL(zipBlob);
       const a = document.createElement('a');
+      a.style.display = 'none';
       a.href = url;
-      a.download = `anexos-ticket-${ticket?.subject || id}.zip`;
+      a.download = `anexos-ticket-${ticket?.subject?.substring(0, 30) || id}.zip`;
+      
       document.body.appendChild(a);
       a.click();
       
-      // Limpa recursos
+      console.log(`⬇️ Download iniciado`);
+      
+      // Limpa recursos após um delay
       setTimeout(() => {
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
       }, 100);
 
       toast({
-        title: "Download concluído!",
-        description: `${successCount} de ${allAttachments.length} arquivo(s) baixados`,
+        title: "✅ Download concluído!",
+        description: `${successCount} arquivo(s) compactados`,
       });
     } catch (error: any) {
-      console.error('Erro geral ao baixar anexos:', error);
+      console.error('❌ Erro geral ao baixar anexos:', error);
       toast({
         title: "Erro ao baixar anexos",
         description: error.message || "Erro desconhecido",
