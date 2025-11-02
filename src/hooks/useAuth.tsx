@@ -112,8 +112,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    navigate("/login");
+    try {
+      // Limpa o estado local primeiro
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      
+      // Tenta fazer logout no Supabase (mesmo que a sessão não exista)
+      const { error } = await supabase.auth.signOut();
+      
+      // Ignora erros de "session not found" pois o objetivo já foi alcançado
+      if (error && !error.message?.includes('Session not found') && !error.message?.includes('session id')) {
+        console.error('Logout error:', error);
+      }
+    } catch (error) {
+      console.error('Unexpected logout error:', error);
+    } finally {
+      // Sempre redireciona para login, independente de erros
+      navigate("/login");
+    }
   };
 
   return (
