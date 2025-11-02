@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { LogOut, Users, Ticket, AlertTriangle, CheckCircle2, Plus, DollarSign, Building2 } from "lucide-react";
+import { LogOut, Users, Ticket, AlertTriangle, CheckCircle2, Plus, DollarSign, Building2, Bell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { AvatarUpload } from "@/components/AvatarUpload";
+import { AlertBanner } from "@/components/AlertBanner";
 
 export default function Painel() {
   const { profile, user, signOut } = useAuth();
@@ -126,8 +127,13 @@ export default function Painel() {
           </p>
         </div>
 
+        {/* Alert Banner */}
+        <div className="mb-6">
+          <AlertBanner />
+        </div>
+
         {/* Ações Principais - Destaque no Topo */}
-        <div className="mb-8 grid gap-4 md:grid-cols-2">
+        <div className="mb-8 grid gap-4 md:grid-cols-3">
           <Button 
             size="lg" 
             className="h-20 text-lg font-semibold"
@@ -144,6 +150,16 @@ export default function Painel() {
           >
             <DollarSign className="mr-3 h-6 w-6" />
             Gerenciar Cobranças
+          </Button>
+
+          <Button 
+            size="lg" 
+            className="h-20 text-lg font-semibold"
+            onClick={() => navigate("/novo-alerta")}
+            variant="secondary"
+          >
+            <Bell className="mr-3 h-6 w-6" />
+            Criar Alerta
           </Button>
         </div>
 

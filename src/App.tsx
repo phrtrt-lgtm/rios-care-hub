@@ -23,6 +23,9 @@ import Propriedades from "./pages/Propriedades";
 import GerenciarCobrancas from "./pages/GerenciarCobrancas";
 import CobrancaDetalhes from "./pages/CobrancaDetalhes";
 import MigrarAnexos from "./pages/MigrarAnexos";
+import NovoAlerta from "./pages/NovoAlerta";
+import ConfiguracaoIA from "./pages/ConfiguracaoIA";
+import RegrasCobrancas from "./pages/RegrasCobrancas";
 
 const queryClient = new QueryClient();
 
@@ -139,6 +142,30 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <MigrarAnexos />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/novo-alerta"
+              element={
+                <ProtectedRoute allowedRoles={['agent', 'admin']}>
+                  <NovoAlerta />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/configuracao-ia"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <ConfiguracaoIA />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/regras-cobrancas"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <RegrasCobrancas />
                 </ProtectedRoute>
               }
             />

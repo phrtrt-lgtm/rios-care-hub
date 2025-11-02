@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { AlertBanner } from "@/components/AlertBanner";
 
 const Index = () => {
   const { user, profile, loading } = useAuth();
@@ -23,7 +24,16 @@ const Index = () => {
     }
   }, [user, profile, loading, navigate]);
 
-  return <LoadingScreen />;
+  return (
+    <div>
+      {user && (
+        <div className="container mx-auto p-4">
+          <AlertBanner />
+        </div>
+      )}
+      <LoadingScreen />
+    </div>
+  );
 };
 
 export default Index;

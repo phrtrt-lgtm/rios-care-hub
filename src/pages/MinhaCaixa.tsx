@@ -7,6 +7,7 @@ import { TicketList } from "@/components/TicketList";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertBanner } from "@/components/AlertBanner";
 
 export default function MinhaCaixa() {
   const { profile, user, signOut } = useAuth();
@@ -73,6 +74,11 @@ export default function MinhaCaixa() {
 
       {/* Content */}
       <main className="container mx-auto px-4 py-6 md:py-8">
+        {/* Alert Banner */}
+        <div className="mb-6">
+          <AlertBanner />
+        </div>
+
         <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="text-xl md:text-2xl font-bold">Meus Chamados</h2>

@@ -196,6 +196,77 @@ export type Database = {
           },
         ]
       }
+      alert_recipients: {
+        Row: {
+          alert_id: string
+          created_at: string
+          id: string
+          is_read: boolean
+          read_at: string | null
+          user_id: string
+        }
+        Insert: {
+          alert_id: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          read_at?: string | null
+          user_id: string
+        }
+        Update: {
+          alert_id?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          read_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alert_recipients_alert_id_fkey"
+            columns: ["alert_id"]
+            isOneToOne: false
+            referencedRelation: "alerts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      alerts: {
+        Row: {
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          message: string
+          target_audience: string
+          title: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          message: string
+          target_audience: string
+          title: string
+          type?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          message?: string
+          target_audience?: string
+          title?: string
+          type?: string
+        }
+        Relationships: []
+      }
       broadcast_recipients: {
         Row: {
           broadcast_id: string
