@@ -770,6 +770,10 @@ export type Database = {
         Returns: boolean
       }
       is_team_member: { Args: { _user_id: string }; Returns: boolean }
+      set_session_context: {
+        Args: { p_owner_id: string; p_role: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "owner" | "agent" | "admin" | "pending_owner"

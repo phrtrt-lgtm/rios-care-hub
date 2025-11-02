@@ -78,6 +78,12 @@ Deno.serve(async (req) => {
       })
     }
 
+    // Setar contexto RLS
+    await supabase.rpc('set_session_context', {
+      p_role: profile?.role || 'owner',
+      p_owner_id: ticket.owner_id
+    })
+
     // Cria a mensagem
     const { data: messageData, error: messageError } = await supabase
       .from('ticket_messages')

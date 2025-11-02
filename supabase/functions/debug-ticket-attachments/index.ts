@@ -61,6 +61,12 @@ Deno.serve(async (req) => {
       })
     }
 
+    // Setar contexto RLS
+    await supabase.rpc('set_session_context', {
+      p_role: profile?.role || 'owner',
+      p_owner_id: ticket.owner_id
+    })
+
     // Lista TODOS os anexos do ticket (debug)
     const { data: attachments, error: attachmentsError } = await supabase
       .from('ticket_attachments')
