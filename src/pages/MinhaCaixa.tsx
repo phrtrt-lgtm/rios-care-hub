@@ -17,67 +17,84 @@ export default function MinhaCaixa() {
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur-sm">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-4">
-            <img src="/logo.png" alt="RIOS" className="h-8" />
-            <h1 className="text-xl font-semibold">Minha Caixa</h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="sm">
-                  {profile?.name}
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Meu Perfil</DialogTitle>
-                </DialogHeader>
-                <div className="py-4">
-                  {user && profile && (
-                    <AvatarUpload
-                      userId={user.id}
-                      currentPhotoUrl={photoUrl}
-                      userName={profile.name}
-                      onUploadComplete={(url) => setPhotoUrl(url)}
-                    />
-                  )}
-                  <div className="mt-6 space-y-2">
-                    <div>
-                      <span className="text-sm font-medium">Nome:</span>
-                      <p className="text-muted-foreground">{profile?.name}</p>
-                    </div>
-                    <div>
-                      <span className="text-sm font-medium">Email:</span>
-                      <p className="text-muted-foreground">{profile?.email}</p>
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex flex-col gap-3 md:flex-row md:h-16 md:items-center md:justify-between">
+            {/* Logo e Título */}
+            <div className="flex items-center gap-2 md:gap-4">
+              <img src="/logo.png" alt="RIOS" className="h-6 md:h-8" />
+              <div>
+                <h1 className="text-lg md:text-xl font-semibold">Minha Caixa</h1>
+                <p className="text-xs text-muted-foreground md:hidden">{profile?.name}</p>
+              </div>
+            </div>
+            
+            {/* Botões de ação */}
+            <div className="flex items-center gap-2 md:gap-4">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" size="sm" className="hidden md:inline-flex">
+                    {profile?.name}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Meu Perfil</DialogTitle>
+                  </DialogHeader>
+                  <div className="py-4">
+                    {user && profile && (
+                      <AvatarUpload
+                        userId={user.id}
+                        currentPhotoUrl={photoUrl}
+                        userName={profile.name}
+                        onUploadComplete={(url) => setPhotoUrl(url)}
+                      />
+                    )}
+                    <div className="mt-6 space-y-2">
+                      <div>
+                        <span className="text-sm font-medium">Nome:</span>
+                        <p className="text-muted-foreground">{profile?.name}</p>
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium">Email:</span>
+                        <p className="text-muted-foreground">{profile?.email}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-            <Button variant="outline" size="sm" onClick={signOut}>
-              <LogOut className="mr-2 h-4 w-4" />
-              Sair
-            </Button>
+                </DialogContent>
+              </Dialog>
+              <Button variant="outline" size="sm" onClick={signOut}>
+                <LogOut className="h-4 w-4 md:mr-2" />
+                <span className="hidden md:inline">Sair</span>
+              </Button>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Content */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-6 flex items-center justify-between">
+      <main className="container mx-auto px-4 py-6 md:py-8">
+        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-2xl font-bold">Meus Chamados</h2>
-            <p className="text-muted-foreground">
+            <h2 className="text-xl md:text-2xl font-bold">Meus Chamados</h2>
+            <p className="text-sm text-muted-foreground">
               Acompanhe seus tickets e solicitações
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button onClick={() => navigate("/minhas-cobrancas")} variant="outline">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button 
+              onClick={() => navigate("/minhas-cobrancas")} 
+              variant="outline"
+              size="sm"
+              className="w-full sm:w-auto"
+            >
               <DollarSign className="mr-2 h-4 w-4" />
               Minhas Cobranças
             </Button>
-            <Button onClick={() => navigate("/novo-ticket")}>
+            <Button 
+              onClick={() => navigate("/novo-ticket")}
+              size="sm"
+              className="w-full sm:w-auto"
+            >
               <Plus className="mr-2 h-4 w-4" />
               Novo Chamado
             </Button>
