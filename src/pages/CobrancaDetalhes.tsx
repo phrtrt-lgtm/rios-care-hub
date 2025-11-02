@@ -7,7 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Send, Loader2, Calendar, DollarSign, Paperclip, Download, Eye, FileText, Image as ImageIcon, Trash2 } from "lucide-react";
+import { ArrowLeft, Send, Loader2, Calendar, DollarSign, Paperclip, Download, Eye, FileText, Image as ImageIcon, Trash2, Sparkles, ChevronDown, X } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { AuthenticatedImage, AuthenticatedVideo } from "@/components/AuthenticatedMedia";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -70,6 +73,11 @@ export default function CobrancaDetalhes() {
   const [selectedImage, setSelectedImage] = useState<{ url: string; name: string } | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [generatingAI, setGeneratingAI] = useState(false);
+  const [showDocDialog, setShowDocDialog] = useState(false);
+  const [documentType, setDocumentType] = useState("");
 
   const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent';
 
@@ -176,23 +184,82 @@ export default function CobrancaDetalhes() {
     return `${supabaseUrl}/functions/v1/serve-attachment/${attachment.id}/poster`;
   };
 
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    const validFiles = files.filter(file => {
+      const maxSize = 20 * 1024 * 1024; // 20MB
+      if (file.size > maxSize) {
+        toast({
+          title: "Arquivo muito grande",
+          description: `${file.name} excede o limite de 20MB`,
+          variant: "destructive",
+        });
+        return false;
+      }
+      return true;
+    });
+    
+    setSelectedFiles(prev => [...prev, ...validFiles]);
+    event.target.value = '';
+  };
+
+  const removeFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
   const sendMessage = async () => {
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() && selectedFiles.length === 0) return;
 
     try {
       setSending(true);
-      const { error } = await supabase
-        .from('charge_messages')
-        .insert({
-          charge_id: id,
-          author_id: user?.id,
-          body: newMessage,
-          is_internal: false
-        });
+      setUploading(true);
 
-      if (error) throw error;
+      // Upload de anexos primeiro
+      const uploadedAttachments = [];
+      for (const file of selectedFiles) {
+        const filePath = `charges/${id}/${Date.now()}_${file.name}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('attachments')
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: attachmentData, error: attachmentError } = await supabase
+          .from('charge_attachments')
+          .insert({
+            charge_id: id,
+            file_name: file.name,
+            file_path: filePath,
+            file_size: file.size,
+            mime_type: file.type,
+            created_by: user?.id
+          })
+          .select()
+          .single();
+
+        if (attachmentError) throw attachmentError;
+        uploadedAttachments.push(attachmentData);
+      }
+
+      // Enviar mensagem
+      if (newMessage.trim()) {
+        const { error } = await supabase
+          .from('charge_messages')
+          .insert({
+            charge_id: id,
+            author_id: user?.id,
+            body: newMessage,
+            is_internal: false
+          });
+
+        if (error) throw error;
+      }
 
       setNewMessage("");
+      setSelectedFiles([]);
+      await fetchAttachments();
+      
       toast({
         title: "Mensagem enviada!",
       });
@@ -204,6 +271,102 @@ export default function CobrancaDetalhes() {
       });
     } finally {
       setSending(false);
+      setUploading(false);
+    }
+  };
+
+  const generateAIResponse = async () => {
+    try {
+      setGeneratingAI(true);
+      
+      const messagesContext = messages
+        .map(m => `${m.profiles.name}: ${m.body}`)
+        .join('\n');
+
+      const { data, error } = await supabase.functions.invoke('ai-assistant', {
+        body: {
+          action: 'generate_response',
+          context: {
+            subject: charge?.title,
+            description: charge?.description,
+            messages: messagesContext
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      setNewMessage(data.result);
+      toast({
+        title: "Resposta gerada com sucesso!",
+        description: "A IA gerou uma sugestão de resposta para você.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao gerar resposta",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingAI(false);
+    }
+  };
+
+  const generateDocument = async () => {
+    if (!documentType) {
+      toast({
+        title: "Selecione um tipo de documento",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setGeneratingAI(true);
+      setShowDocDialog(false);
+      
+      const messagesContext = messages
+        .map(m => `${m.profiles.name}: ${m.body}`)
+        .join('\n');
+
+      const { data, error } = await supabase.functions.invoke('ai-assistant', {
+        body: {
+          action: 'generate_document',
+          context: {
+            documentType,
+            subject: charge?.title,
+            description: charge?.description,
+            messages: messagesContext,
+            ownerName: charge?.profiles.name
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      const blob = new Blob([data.result], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${documentType.toLowerCase().replace(/ /g, '_')}_cobranca_${id}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Documento gerado!",
+        description: "O download iniciou automaticamente.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao gerar documento",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingAI(false);
+      setDocumentType("");
     }
   };
 
@@ -637,20 +800,128 @@ export default function CobrancaDetalhes() {
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 className="min-h-[100px]"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    sendMessage();
+                  }
+                }}
               />
-              <div className="flex justify-end">
-                <Button onClick={sendMessage} disabled={sending || !newMessage.trim()}>
-                  {sending ? (
+              
+              {selectedFiles.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Arquivos selecionados:</p>
+                  {selectedFiles.map((file, index) => (
+                    <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded-md">
+                      <Paperclip className="h-4 w-4" />
+                      <span className="text-sm flex-1">{file.name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {(file.size / 1024).toFixed(1)} KB
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeFile(index)}
+                        disabled={uploading || sending}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="file"
+                    id="attachment-upload"
+                    multiple
+                    className="hidden"
+                    onChange={handleFileSelect}
+                    disabled={uploading || sending}
+                  />
+                  <label htmlFor="attachment-upload">
+                    <Button variant="outline" size="sm" disabled={uploading || sending} asChild>
+                      <span className="cursor-pointer">
+                        <Paperclip className="mr-2 h-4 w-4" />
+                        Anexar arquivo
+                      </span>
+                    </Button>
+                  </label>
+                  
+                  {isTeamMember && (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Enviando...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="mr-2 h-4 w-4" />
-                      Enviar Mensagem
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            disabled={generatingAI}
+                          >
+                            {generatingAI ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <Sparkles className="mr-2 h-4 w-4" />
+                            )}
+                            IA Assistente
+                            <ChevronDown className="ml-2 h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuItem onClick={generateAIResponse}>
+                            <Sparkles className="mr-2 h-4 w-4" />
+                            Gerar Resposta
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setShowDocDialog(true)}>
+                            <FileText className="mr-2 h-4 w-4" />
+                            Gerar Documento
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+
+                      <Dialog open={showDocDialog} onOpenChange={setShowDocDialog}>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Gerar Documento com IA</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="doc-type">Tipo de Documento</Label>
+                              <Select value={documentType} onValueChange={setDocumentType}>
+                                <SelectTrigger id="doc-type">
+                                  <SelectValue placeholder="Selecione o tipo de documento" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Relatório de Cobrança">Relatório de Cobrança</SelectItem>
+                                  <SelectItem value="Termo de Conclusão">Termo de Conclusão</SelectItem>
+                                  <SelectItem value="Protocolo de Pagamento">Protocolo de Pagamento</SelectItem>
+                                  <SelectItem value="Carta de Comunicação">Carta de Comunicação</SelectItem>
+                                  <SelectItem value="Resumo Executivo">Resumo Executivo</SelectItem>
+                                  <SelectItem value="Proposta de Acordo">Proposta de Acordo</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <Button onClick={generateDocument} className="w-full">
+                              <FileText className="mr-2 h-4 w-4" />
+                              Gerar e Baixar
+                            </Button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
                     </>
                   )}
+                </div>
+                <Button 
+                  onClick={sendMessage} 
+                  disabled={sending || (!newMessage.trim() && selectedFiles.length === 0)}
+                >
+                  {sending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="mr-2 h-4 w-4" />
+                  )}
+                  Enviar
                 </Button>
               </div>
             </div>
