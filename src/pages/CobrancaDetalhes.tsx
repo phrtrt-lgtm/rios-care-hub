@@ -9,8 +9,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Send, Calendar, DollarSign, Paperclip, Download, Eye, FileText, Image as ImageIcon, Trash2, Sparkles, ChevronDown, X, ZoomIn, Play, Video, Loader2 } from "lucide-react";
 import { LoadingScreen } from "@/components/LoadingScreen";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { AuthenticatedImage, AuthenticatedVideo } from "@/components/AuthenticatedMedia";
 import { MediaGallery } from "@/components/MediaGallery";
@@ -89,8 +87,6 @@ export default function CobrancaDetalhes() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [generatingAI, setGeneratingAI] = useState(false);
-  const [showDocDialog, setShowDocDialog] = useState(false);
-  const [documentType, setDocumentType] = useState("");
   const [allMediaItems, setAllMediaItems] = useState<MediaItem[]>([]);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryStartIndex, setGalleryStartIndex] = useState(0);
@@ -305,28 +301,30 @@ export default function CobrancaDetalhes() {
     }
   };
 
+  const [aiInstructions, setAiInstructions] = useState("");
+  const [showAiDialog, setShowAiDialog] = useState(false);
+
   const generateAIResponse = async () => {
     try {
       setGeneratingAI(true);
+      setShowAiDialog(false);
       
       const messagesContext = messages
         .map(m => `${m.profiles.name}: ${m.body}`)
         .join('\n');
 
-      const { data, error } = await supabase.functions.invoke('ai-assistant', {
+      const { data, error } = await supabase.functions.invoke('ai-generate-response', {
         body: {
-          action: 'generate_response',
-          context: {
-            subject: charge?.title,
-            description: charge?.description,
-            messages: messagesContext
-          }
+          templateKey: 'charge_response',
+          chargeId: id,
+          customInstructions: aiInstructions
         }
       });
 
       if (error) throw error;
 
-      setNewMessage(data.result);
+      setNewMessage(data.generatedText);
+      setAiInstructions("");
       toast({
         title: "Resposta gerada com sucesso!",
         description: "A IA gerou uma sugestão de resposta para você.",
@@ -342,63 +340,6 @@ export default function CobrancaDetalhes() {
     }
   };
 
-  const generateDocument = async () => {
-    if (!documentType) {
-      toast({
-        title: "Selecione um tipo de documento",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      setGeneratingAI(true);
-      setShowDocDialog(false);
-      
-      const messagesContext = messages
-        .map(m => `${m.profiles.name}: ${m.body}`)
-        .join('\n');
-
-      const { data, error } = await supabase.functions.invoke('ai-assistant', {
-        body: {
-          action: 'generate_document',
-          context: {
-            documentType,
-            subject: charge?.title,
-            description: charge?.description,
-            messages: messagesContext,
-            ownerName: charge?.profiles.name
-          }
-        }
-      });
-
-      if (error) throw error;
-
-      const blob = new Blob([data.result], { type: 'text/plain' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${documentType.toLowerCase().replace(/ /g, '_')}_cobranca_${id}.txt`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-
-      toast({
-        title: "Documento gerado!",
-        description: "O download iniciou automaticamente.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Erro ao gerar documento",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setGeneratingAI(false);
-      setDocumentType("");
-    }
-  };
 
   const downloadAttachment = async (attachmentId: string, fileName: string) => {
     try {
@@ -989,65 +930,19 @@ export default function CobrancaDetalhes() {
                   </label>
                   
                   {isTeamMember && (
-                    <>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            disabled={generatingAI}
-                          >
-                            {generatingAI ? (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                              <Sparkles className="mr-2 h-4 w-4" />
-                            )}
-                            IA Assistente
-                            <ChevronDown className="ml-2 h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                          <DropdownMenuItem onClick={generateAIResponse}>
-                            <Sparkles className="mr-2 h-4 w-4" />
-                            Gerar Resposta
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setShowDocDialog(true)}>
-                            <FileText className="mr-2 h-4 w-4" />
-                            Gerar Documento
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-
-                      <Dialog open={showDocDialog} onOpenChange={setShowDocDialog}>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Gerar Documento com IA</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-4 py-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="doc-type">Tipo de Documento</Label>
-                              <Select value={documentType} onValueChange={setDocumentType}>
-                                <SelectTrigger id="doc-type">
-                                  <SelectValue placeholder="Selecione o tipo de documento" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="Relatório de Cobrança">Relatório de Cobrança</SelectItem>
-                                  <SelectItem value="Termo de Conclusão">Termo de Conclusão</SelectItem>
-                                  <SelectItem value="Protocolo de Pagamento">Protocolo de Pagamento</SelectItem>
-                                  <SelectItem value="Carta de Comunicação">Carta de Comunicação</SelectItem>
-                                  <SelectItem value="Resumo Executivo">Resumo Executivo</SelectItem>
-                                  <SelectItem value="Proposta de Acordo">Proposta de Acordo</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <Button onClick={generateDocument} className="w-full">
-                              <FileText className="mr-2 h-4 w-4" />
-                              Gerar e Baixar
-                            </Button>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                    </>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      disabled={generatingAI}
+                      onClick={() => setShowAiDialog(true)}
+                    >
+                      {generatingAI ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Sparkles className="mr-2 h-4 w-4" />
+                      )}
+                      IA Assistente
+                    </Button>
                   )}
                 </div>
                 <Button 
@@ -1074,6 +969,48 @@ export default function CobrancaDetalhes() {
         open={galleryOpen}
         onOpenChange={setGalleryOpen}
       />
+
+      {/* Dialog de instruções IA */}
+      <Dialog open={showAiDialog} onOpenChange={setShowAiDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assistente IA - Gerar Resposta</DialogTitle>
+            <DialogDescription>
+              Adicione instruções personalizadas para a IA gerar uma resposta mais adequada.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="ai-instructions">Instruções Personalizadas (Opcional)</Label>
+              <Textarea
+                id="ai-instructions"
+                placeholder="Ex: Seja mais formal, mencione prazo de 48h, inclua opções de parcelamento..."
+                value={aiInstructions}
+                onChange={(e) => setAiInstructions(e.target.value)}
+                className="min-h-[100px]"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAiDialog(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={generateAIResponse} disabled={generatingAI}>
+              {generatingAI ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Gerando...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Gerar Resposta
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog de confirmação de exclusão */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

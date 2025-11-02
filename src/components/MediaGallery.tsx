@@ -90,8 +90,8 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange }: MediaG
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] max-h-[95vh] w-full h-full p-0 bg-black/95 border-none">
-        <div className="relative w-full h-full flex items-center justify-center">
+      <DialogContent className="max-w-[100vw] max-h-[100vh] w-full h-full p-0 bg-black/95 border-none overflow-hidden">
+        <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
           {/* Botão Fechar */}
           <Button
             variant="ghost"
@@ -125,19 +125,19 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange }: MediaG
           )}
 
           {/* Conteúdo Principal */}
-          <div className="w-full h-full flex items-center justify-center p-16">
+          <div className="w-full h-full flex items-center justify-center p-4 md:p-16">
             {isImage && (
               <AuthenticatedImage
                 src={currentItem.file_url}
                 alt={currentItem.file_name || 'Imagem'}
-                className="max-w-full max-h-full object-contain"
+                className="max-w-full max-h-full w-auto h-auto object-contain"
               />
             )}
             {isVideo && (
               <AuthenticatedVideo
                 src={currentItem.file_url}
                 controls
-                className="max-w-full max-h-full"
+                className="max-w-full max-h-full w-auto h-auto"
                 autoPlay
               />
             )}
