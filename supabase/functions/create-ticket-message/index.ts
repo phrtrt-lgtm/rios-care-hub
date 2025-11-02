@@ -116,6 +116,19 @@ Deno.serve(async (req) => {
       for (const att of attachments) {
         if (!att.file_url) continue
         
+        // Extrai o path do file_url se não for fornecido
+        let filePath = att.path
+        if (!filePath) {
+          // file_url format: https://.../storage/v1/object/public/attachments/PATH
+          const match = att.file_url.match(/\/attachments\/(.+)$/)
+          if (match) {
+            filePath = match[1]
+          } else {
+            console.error('Could not extract path from file_url:', att.file_url)
+            continue
+          }
+        }
+        
         const { data: attachmentData, error: attachmentError } = await supabase
           .from('ticket_attachments')
           .insert({
@@ -125,7 +138,7 @@ Deno.serve(async (req) => {
             file_name: att.file_name || null,
             file_type: att.file_type || null,
             size_bytes: att.size_bytes || null,
-            path: att.path || null
+            path: filePath
           })
           .select('id, file_url, file_name, file_type, size_bytes')
           .single()
