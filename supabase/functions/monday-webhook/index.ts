@@ -107,40 +107,39 @@ serve(async (req) => {
       return column?.text || column?.value;
     };
 
-    // Get owner name from the text column (text_mkx3ehs)
-    const ownerName = getColumnValue("text_mkx3ehs");
+    // Get property name from the text column (text_mkx3ehs)
+    const propertyName = getColumnValue("text_mkx3ehs");
     
-    if (!ownerName) {
-      throw new Error('Nome do proprietário não encontrado no item do Monday');
+    if (!propertyName) {
+      throw new Error('Nome da unidade não encontrado no item do Monday');
     }
 
-    console.log("Looking for owner with name:", ownerName);
+    console.log("Looking for property with name:", propertyName);
 
-    // Find owner by name
-    const { data: owner, error: ownerError } = await supabase
-      .from('profiles')
-      .select('id')
-      .ilike('name', ownerName)
-      .eq('role', 'owner')
-      .single();
+    // Find property and get owner_id and property_id
+    const { data: property, error: propertyError } = await supabase
+      .from('properties')
+      .select('id, owner_id')
+      .ilike('name', propertyName)
+      .maybeSingle();
 
-    if (ownerError || !owner) {
-      console.error("Owner not found:", ownerName, ownerError);
-      throw new Error(`Proprietário "${ownerName}" não encontrado no sistema. Certifique-se de que o nome está correto.`);
+    if (propertyError || !property) {
+      console.error("Property not found:", propertyName, propertyError);
+      throw new Error(`Unidade "${propertyName}" não encontrada no sistema. Certifique-se de que a propriedade existe e está associada a um proprietário.`);
     }
 
-    console.log("Found owner:", owner.id);
+    console.log("Found property:", property.id, "owner:", property.owner_id);
 
     // Extract charge data using the actual column IDs from your Monday board
     // The title will be the Monday item name
     const description = getColumnValue("long_text_mkx3tx1b");
     const chargeData = {
-      title: item.name || `Cobrança - ${ownerName}`,
+      title: item.name || `Cobrança - ${propertyName}`,
       description: description || null,
       amount_cents: parseInt(getColumnValue("numeric_mkx355en") || "0") * 100, // Convert to cents
       due_date: getColumnValue("data") || null,
-      owner_id: owner.id,
-      property_id: null,
+      owner_id: property.owner_id,
+      property_id: property.id,
       currency: "BRL",
       status: "draft",
     };
