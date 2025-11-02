@@ -24,7 +24,8 @@ const Index = () => {
   }, [user, profile, loading, navigate]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background gap-6">
+      <img src="/logo.png" alt="RIOS" className="h-16 md:h-20" />
       <Loader2 className="h-8 w-8 animate-spin text-primary" />
     </div>
   );
