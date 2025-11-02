@@ -230,6 +230,18 @@ const NovoTicketMassa = () => {
             });
           }
 
+          // Send email notification to owner
+          try {
+            await supabase.functions.invoke('notify-ticket', {
+              body: {
+                type: 'ticket_created',
+                ticketId: ticket.id,
+              },
+            });
+          } catch (emailError) {
+            console.error('Erro ao enviar email de notificação:', emailError);
+          }
+
           successCount++;
         } catch (error) {
           console.error(`Erro ao criar ticket para ${ownerId}:`, error);
