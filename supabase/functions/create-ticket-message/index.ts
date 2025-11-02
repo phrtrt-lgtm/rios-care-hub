@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Verifica permissão
+    // Busca perfil do usuário
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
 
     const isTeam = profile?.role === 'admin' || profile?.role === 'agent'
 
-    // Setar contexto RLS antes de qualquer query
+    // Seta contexto de sessão para RLS
     await supabase.rpc('set_session_context', {
       p_role: profile?.role || 'owner',
       p_owner_id: user.id
