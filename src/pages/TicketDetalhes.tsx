@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowLeft, Send, Paperclip, Loader2, Sparkles, FileText, ChevronDown, X } from "lucide-react";
 import { AttachmentBubble } from "@/components/AttachmentBubble";
+import { AttachmentInspector } from "@/components/AttachmentInspector";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -391,6 +392,8 @@ export default function TicketDetalhes() {
       </header>
 
       <main className="container mx-auto px-4 py-8 max-w-4xl">
+        <AttachmentInspector ticketId={id!} />
+        
         <Card className="mb-6">
           <CardHeader>
             <div className="flex items-start justify-between">

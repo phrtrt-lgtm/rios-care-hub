@@ -579,6 +579,7 @@ export type Database = {
           id: string
           message_id: string
           mime_type: string | null
+          name: string | null
           path: string
           size_bytes: number | null
           ticket_id: string | null
@@ -592,6 +593,7 @@ export type Database = {
           id?: string
           message_id: string
           mime_type?: string | null
+          name?: string | null
           path: string
           size_bytes?: number | null
           ticket_id?: string | null
@@ -605,6 +607,7 @@ export type Database = {
           id?: string
           message_id?: string
           mime_type?: string | null
+          name?: string | null
           path?: string
           size_bytes?: number | null
           ticket_id?: string | null
