@@ -382,30 +382,41 @@ export default function TicketDetalhes() {
         }
       }
       
-      // Método tradicional de download
+      // Método tradicional de download - otimizado para mobile
       const url = URL.createObjectURL(zipBlob);
       const link = document.createElement('a');
       link.href = url;
       link.download = fileName;
       
-      // Force download no mobile
-      link.setAttribute('target', '_blank');
+      // Adiciona atributos importantes para mobile
       link.style.display = 'none';
-      
       document.body.appendChild(link);
       
-      // Aguarda um pouco antes de clicar (importante para mobile)
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Trigger do download com eventos múltiplos para garantir compatibilidade
+      console.log(`⬇️ Iniciando download: ${fileName}`);
       
-      link.click();
+      // Tenta múltiplos métodos
+      try {
+        link.click();
+        
+        // Fallback: dispara evento manualmente
+        const event = new MouseEvent('click', {
+          view: window,
+          bubbles: true,
+          cancelable: true
+        });
+        link.dispatchEvent(event);
+      } catch (e) {
+        console.error('Erro ao clicar:', e);
+      }
       
-      console.log(`⬇️ Download iniciado: ${fileName}`);
-      
-      // Aguarda antes de limpar
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      URL.revokeObjectURL(url);
-      document.body.removeChild(link);
+      // Limpa após delay maior para mobile
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+        if (link.parentNode) {
+          document.body.removeChild(link);
+        }
+      }, 3000);
 
       toast({
         title: "✅ Download iniciado!",
