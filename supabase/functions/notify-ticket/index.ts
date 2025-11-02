@@ -50,8 +50,12 @@ const handler = async (req: Request): Promise<Response> => {
 
         if (!ticket) throw new Error("Ticket not found");
 
-        // Get templates
-        const ownerTemplate = await getTemplate(supabase, "ticket_created_owner");
+        // Check if ticket was created by admin/agent or by the owner
+        const createdByTeam = ticket.created_by !== ticket.owner_id;
+
+        // Get templates - use different template if created by admin
+        const ownerTemplateKey = createdByTeam ? "ticket_created_by_admin_owner" : "ticket_created_owner";
+        const ownerTemplate = await getTemplate(supabase, ownerTemplateKey);
         const teamTemplate = await getTemplate(supabase, "ticket_created_team");
 
         const variables = {
