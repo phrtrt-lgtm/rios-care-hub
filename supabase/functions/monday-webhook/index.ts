@@ -115,10 +115,10 @@ serve(async (req) => {
       throw new Error('Coluna "Imóvel" não encontrada no item do Monday');
     }
 
-    // Find property and get owner_id
+    // Find property and get owner_id and property_id
     const { data: property, error: propertyError } = await supabase
       .from('properties')
-      .select('owner_id')
+      .select('id, owner_id')
       .eq('name', propertyName)
       .single();
 
@@ -127,7 +127,7 @@ serve(async (req) => {
       throw new Error(`Imóvel "${propertyName}" não encontrado no sistema`);
     }
 
-    console.log("Found property owner:", property.owner_id);
+    console.log("Found property:", property.id, "owner:", property.owner_id);
 
     // Extract charge data using the actual column IDs from your Monday board
     const chargeData = {
@@ -136,6 +136,7 @@ serve(async (req) => {
       amount_cents: parseInt(getColumnValue("numeric_mkx355en") || "0") * 100, // Convert to cents
       due_date: getColumnValue("data") || null,
       owner_id: property.owner_id,
+      property_id: property.id,
       currency: "BRL",
       status: "draft",
     };

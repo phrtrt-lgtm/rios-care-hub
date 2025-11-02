@@ -17,15 +17,24 @@ interface Owner {
   email: string;
 }
 
+interface Property {
+  id: string;
+  name: string;
+  address: string;
+  owner_id: string;
+}
+
 export default function NovaCobranca() {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [owners, setOwners] = useState<Owner[]>([]);
+  const [properties, setProperties] = useState<Property[]>([]);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [formData, setFormData] = useState({
     owner_id: "",
+    property_id: "",
     title: "",
     description: "",
     amount_cents: "",
@@ -52,6 +61,26 @@ export default function NovaCobranca() {
 
     if (!error && data) {
       setOwners(data);
+    }
+  };
+
+  const fetchProperties = async (ownerId: string) => {
+    if (!ownerId) {
+      setProperties([]);
+      setFormData({ ...formData, property_id: "" });
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('properties')
+      .select('id, name, address, owner_id')
+      .eq('owner_id', ownerId)
+      .order('name');
+
+    if (!error && data) {
+      setProperties(data);
+    } else {
+      setProperties([]);
     }
   };
 
@@ -85,6 +114,7 @@ export default function NovaCobranca() {
         .from('charges')
         .insert({
           owner_id: formData.owner_id,
+          property_id: formData.property_id || null,
           title: formData.title,
           description: formData.description,
           amount_cents: parseInt(formData.amount_cents) * 100, // Convert to cents
@@ -158,7 +188,13 @@ export default function NovaCobranca() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="owner_id">Proprietário *</Label>
-                <Select value={formData.owner_id} onValueChange={(value) => setFormData({ ...formData, owner_id: value })}>
+                <Select 
+                  value={formData.owner_id} 
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, owner_id: value });
+                    fetchProperties(value);
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o proprietário" />
                   </SelectTrigger>
@@ -166,6 +202,26 @@ export default function NovaCobranca() {
                     {owners.map((owner) => (
                       <SelectItem key={owner.id} value={owner.id}>
                         {owner.name} ({owner.email})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="property_id">Unidade</Label>
+                <Select 
+                  value={formData.property_id} 
+                  onValueChange={(value) => setFormData({ ...formData, property_id: value })}
+                  disabled={!formData.owner_id}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={formData.owner_id ? "Selecione a unidade (opcional)" : "Primeiro selecione o proprietário"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {properties.map((property) => (
+                      <SelectItem key={property.id} value={property.id}>
+                        {property.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

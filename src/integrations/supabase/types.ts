@@ -395,6 +395,7 @@ export type Database = {
           owner_proof_path: string | null
           paid_at: string | null
           payment_link_url: string | null
+          property_id: string | null
           reminder_24h_sent: boolean | null
           reminder_48h_sent: boolean | null
           reminder_day_sent: boolean | null
@@ -418,6 +419,7 @@ export type Database = {
           owner_proof_path?: string | null
           paid_at?: string | null
           payment_link_url?: string | null
+          property_id?: string | null
           reminder_24h_sent?: boolean | null
           reminder_48h_sent?: boolean | null
           reminder_day_sent?: boolean | null
@@ -441,6 +443,7 @@ export type Database = {
           owner_proof_path?: string | null
           paid_at?: string | null
           payment_link_url?: string | null
+          property_id?: string | null
           reminder_24h_sent?: boolean | null
           reminder_48h_sent?: boolean | null
           reminder_day_sent?: boolean | null
@@ -455,6 +458,13 @@ export type Database = {
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charges_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
             referencedColumns: ["id"]
           },
           {

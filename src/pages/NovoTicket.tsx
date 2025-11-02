@@ -21,17 +21,44 @@ type ReadyAttachment = {
   ticket_id?: string;
 };
 
+interface Property {
+  id: string;
+  name: string;
+  address: string;
+}
+
 export default function NovoTicket() {
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
   const [ticketType, setTicketType] = useState<"duvida" | "manutencao" | "cobranca" | "bloqueio_data" | "financeiro" | "outros" | "">("");
   const [priority, setPriority] = useState<"normal" | "urgente">("normal");
+  const [propertyId, setPropertyId] = useState<string>("");
+  const [properties, setProperties] = useState<Property[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<ReadyAttachment[]>([]);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch user properties
+  useState(() => {
+    const fetchProperties = async () => {
+      const { data, error } = await supabase
+        .from('properties')
+        .select('id, name, address')
+        .eq('owner_id', user?.id)
+        .order('name');
+      
+      if (!error && data) {
+        setProperties(data);
+      }
+    };
+    
+    if (user?.id) {
+      fetchProperties();
+    }
+  });
 
   const uploadOne = async (file: File): Promise<ReadyAttachment> => {
     const session = await supabase.auth.getSession();
@@ -171,6 +198,7 @@ export default function NovoTicket() {
           subject,
           description,
           priority,
+          property_id: propertyId || null,
         }])
         .select()
         .single();
@@ -251,6 +279,22 @@ export default function NovoTicket() {
                     <SelectItem value="bloqueio_data">Bloqueio de Data</SelectItem>
                     <SelectItem value="financeiro">Financeiro</SelectItem>
                     <SelectItem value="outros">Outros</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="property">Unidade</Label>
+                <Select value={propertyId} onValueChange={setPropertyId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a unidade (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {properties.map((property) => (
+                      <SelectItem key={property.id} value={property.id}>
+                        {property.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
