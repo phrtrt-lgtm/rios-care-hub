@@ -10,6 +10,7 @@ interface GenerateRequest {
   templateKey: string;
   ticketId?: string;
   chargeId?: string;
+  customInstructions?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -54,7 +55,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { templateKey, ticketId, chargeId }: GenerateRequest = await req.json();
+    const { templateKey, ticketId, chargeId, customInstructions }: GenerateRequest = await req.json();
 
     // Get AI settings
     const { data: aiSettings } = await supabaseClient
@@ -92,14 +93,36 @@ const handler = async (req: Request): Promise<Response> => {
         .from("tickets")
         .select(`
           *,
-          owner:profiles!tickets_owner_id_fkey(name, email),
+          owner:profiles!tickets_owner_id_fkey(name, email, phone),
           property:properties(name, address)
         `)
         .eq("id", ticketId)
         .single();
 
+      // Buscar mensagens do ticket
+      const { data: ticketMessages } = await supabaseClient
+        .from("ticket_messages")
+        .select(`
+          *,
+          profiles(name, role)
+        `)
+        .eq("ticket_id", ticketId)
+        .order("created_at", { ascending: true });
+
+      const messagesHistory = ticketMessages?.map(m => 
+        `${m.profiles.name} (${m.profiles.role === 'owner' ? 'Proprietário' : 'Equipe'}): ${m.body}`
+      ).join('\n') || '';
+
       if (ticket) {
         context = `
+CONTEXTO DA EMPRESA:
+A RIOS é uma empresa de Operação e Gestão de Hospedagens que administra imóveis de aluguel por temporada. Oferecemos gestão completa de propriedades, incluindo:
+- Gestão de reservas e check-in/check-out
+- Manutenção e limpeza profissional
+- Suporte 24/7 aos proprietários
+- Gestão financeira e repasses
+- Marketing e divulgação dos imóveis
+
 CONTEXTO DO TICKET:
 - ID: ${ticket.id}
 - Assunto: ${ticket.subject}
@@ -108,9 +131,12 @@ CONTEXTO DO TICKET:
 - Prioridade: ${ticket.priority}
 - Tipo: ${ticket.ticket_type}
 - Criado em: ${new Intl.DateTimeFormat("pt-BR").format(new Date(ticket.created_at))}
-- Proprietário: ${ticket.owner?.name} (${ticket.owner?.email})
-- Propriedade: ${ticket.property?.name} ${ticket.property?.address ? `- ${ticket.property.address}` : ""}
-${ticket.blocked_dates_start ? `- Período de bloqueio: ${new Intl.DateTimeFormat("pt-BR").format(new Date(ticket.blocked_dates_start))} a ${new Intl.DateTimeFormat("pt-BR").format(new Date(ticket.blocked_dates_end!))}` : ""}
+- Proprietário: ${ticket.owner?.name} (${ticket.owner?.email})${ticket.owner?.phone ? ` - Tel: ${ticket.owner.phone}` : ''}
+- Propriedade: ${ticket.property?.name}${ticket.property?.address ? ` - ${ticket.property.address}` : ''}
+${ticket.blocked_dates_start ? `- Período de bloqueio solicitado: ${new Intl.DateTimeFormat("pt-BR").format(new Date(ticket.blocked_dates_start))} a ${new Intl.DateTimeFormat("pt-BR").format(new Date(ticket.blocked_dates_end!))}` : ''}
+
+HISTÓRICO DA CONVERSA:
+${messagesHistory}
 `;
       }
     }
@@ -157,9 +183,14 @@ ${aiSettings.guardrails ? `REGRAS DE SEGURANÇA:\n${aiSettings.guardrails}\n` : 
 
     const userPrompt = `${context}
 
-${template.template_prompt}
+${customInstructions ? `INSTRUÇÕES DO ATENDENTE:\n${customInstructions}\n\n` : ''}${template.template_prompt}
 
-IMPORTANTE: Responda sempre em PT-BR, de forma direta e profissional, no máximo 2-4 parágrafos. Não invente informações que não estão no contexto acima.`;
+IMPORTANTE: 
+- Responda sempre em PT-BR, de forma direta e profissional
+- Use o contexto da RIOS e do histórico da conversa
+- Mantenha 2-4 parágrafos no máximo
+- Não invente informações que não estão no contexto
+- Assine como "— Equipe RIOS"`;
 
     // Call Lovable AI
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
