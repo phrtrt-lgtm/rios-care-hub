@@ -24,6 +24,7 @@ import GerenciarCobrancas from "./pages/GerenciarCobrancas";
 import CobrancaDetalhes from "./pages/CobrancaDetalhes";
 import MigrarAnexos from "./pages/MigrarAnexos";
 import NovoAlerta from "./pages/NovoAlerta";
+import NovoTicketMassa from "./pages/NovoTicketMassa";
 import ConfiguracaoEmail from "./pages/ConfiguracaoEmail";
 import ConfiguracaoIA from "./pages/ConfiguracaoIA";
 import RegrasCobrancas from "./pages/RegrasCobrancas";
@@ -151,6 +152,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['agent', 'admin']}>
                   <NovoAlerta />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/novo-ticket-massa"
+              element={
+                <ProtectedRoute allowedRoles={['agent', 'admin']}>
+                  <NovoTicketMassa />
                 </ProtectedRoute>
               }
             />

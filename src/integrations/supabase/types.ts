@@ -196,6 +196,44 @@ export type Database = {
           },
         ]
       }
+      alert_attachments: {
+        Row: {
+          alert_id: string
+          created_at: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          file_type: string | null
+          id: string
+        }
+        Insert: {
+          alert_id: string
+          created_at?: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+        }
+        Update: {
+          alert_id?: string
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alert_attachments_alert_id_fkey"
+            columns: ["alert_id"]
+            isOneToOne: false
+            referencedRelation: "alerts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       alert_recipients: {
         Row: {
           alert_id: string
@@ -236,6 +274,7 @@ export type Database = {
           created_at: string
           created_by: string
           expires_at: string | null
+          has_attachments: boolean | null
           id: string
           is_active: boolean
           message: string
@@ -247,6 +286,7 @@ export type Database = {
           created_at?: string
           created_by: string
           expires_at?: string | null
+          has_attachments?: boolean | null
           id?: string
           is_active?: boolean
           message: string
@@ -258,6 +298,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           expires_at?: string | null
+          has_attachments?: boolean | null
           id?: string
           is_active?: boolean
           message?: string

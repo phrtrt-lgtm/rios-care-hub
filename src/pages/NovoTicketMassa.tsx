@@ -27,7 +27,7 @@ type ReadyAttachment = {
   name: string;
 };
 
-const NovoAlerta = () => {
+const NovoTicketMassa = () => {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -37,13 +37,13 @@ const NovoAlerta = () => {
   const [uploading, setUploading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<ReadyAttachment[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
-  
+
   const [formData, setFormData] = useState({
-    title: "",
-    message: "",
-    type: "info",
+    subject: "",
+    description: "",
+    ticket_type: "outros" as "duvida" | "manutencao" | "cobranca" | "bloqueio_data" | "financeiro" | "outros",
+    priority: "normal" as "normal" | "urgente",
     target_audience: "specific",
-    expires_at: "",
   });
 
   useEffect(() => {
@@ -63,15 +63,8 @@ const NovoAlerta = () => {
         .order('name');
 
       if (error) throw error;
-      
-      console.log('Perfis carregados:', data);
-      
-      // Filter only actual owners (not agent or admin)
-      const actualOwners = (data || []).filter(p => 
-        p.role === 'owner'
-      );
-      
-      console.log('Proprietários filtrados:', actualOwners);
+
+      const actualOwners = (data || []).filter(p => p.role === 'owner');
       setOwners(actualOwners);
     } catch (error) {
       console.error('Erro ao carregar proprietários:', error);
@@ -170,8 +163,8 @@ const NovoAlerta = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.title.trim() || !formData.message.trim()) {
+
+    if (!formData.subject.trim() || !formData.description.trim()) {
       toast.error('Preencha todos os campos obrigatórios');
       return;
     }
@@ -183,103 +176,71 @@ const NovoAlerta = () => {
 
     setSubmitting(true);
     try {
-      // Create alert
-      const { data: alert, error: alertError } = await supabase
-        .from('alerts')
-        .insert({
-          title: formData.title,
-          message: formData.message,
-          type: formData.type,
-          target_audience: formData.target_audience,
-          expires_at: formData.expires_at || null,
-          created_by: user!.id,
-        })
-        .select()
-        .single();
-
-      if (alertError) throw alertError;
-
-      // Upload attachments if any
-      if (uploadedFiles.length > 0) {
-        const attachmentInserts = uploadedFiles.map(f => ({
-          alert_id: alert.id,
-          file_path: new URL(f.file_url).pathname.split('/attachments/')[1],
-          file_name: f.name,
-          file_type: f.file_type,
-          file_size: f.size_bytes,
-        }));
-
-        const { error: attachError } = await supabase
-          .from('alert_attachments')
-          .insert(attachmentInserts);
-
-        if (attachError) {
-          console.error('Erro ao salvar anexos:', attachError);
-        }
-
-        // Update alert to mark it has attachments
-        await supabase
-          .from('alerts')
-          .update({ has_attachments: true })
-          .eq('id', alert.id);
-      }
-
-      // Determine recipients
       let recipientIds: string[] = [];
-      
+
       if (formData.target_audience === 'specific') {
         recipientIds = Array.from(selectedOwners);
       } else if (formData.target_audience === 'all_owners') {
         recipientIds = owners.map(o => o.id);
-      } else if (formData.target_audience === 'team') {
-        const { data: teamMembers } = await supabase
-          .from('profiles')
-          .select('id')
-          .in('role', ['admin', 'agent'])
-          .in('status', ['active', 'approved']);
-        recipientIds = teamMembers?.map(m => m.id) || [];
       }
 
-      // Ensure the creator receives the alert if they are in the target audience
-      if (!recipientIds.includes(user!.id)) {
-        if (formData.target_audience === 'team' && ['admin', 'agent'].includes(profile?.role || '')) {
-          recipientIds.push(user!.id);
+      // Create tickets for each owner
+      let successCount = 0;
+      for (const ownerId of recipientIds) {
+        try {
+          // Create ticket
+          const { data: ticket, error: ticketError } = await supabase
+            .from("tickets")
+            .insert([{
+              owner_id: ownerId,
+              created_by: user!.id,
+              ticket_type: formData.ticket_type,
+              subject: formData.subject,
+              description: formData.description,
+              priority: formData.priority,
+            }])
+            .select()
+            .single();
+
+          if (ticketError) throw ticketError;
+
+          // Create initial message with attachments
+          if (uploadedFiles.length > 0 || formData.description) {
+            const session = await supabase.auth.getSession();
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+            await fetch(`${supabaseUrl}/functions/v1/create-ticket-message/${ticket.id}`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.data.session?.access_token}`,
+                'apikey': supabaseKey,
+              },
+              body: JSON.stringify({
+                author_type: 'agent',
+                message: formData.description,
+                attachments: uploadedFiles.map(f => ({
+                  file_url: f.file_url,
+                  file_type: f.file_type,
+                  size_bytes: f.size_bytes,
+                  name: f.name,
+                })),
+              }),
+            });
+          }
+
+          successCount++;
+        } catch (error) {
+          console.error(`Erro ao criar ticket para ${ownerId}:`, error);
         }
       }
 
-      console.log('Recipients:', recipientIds);
-
-      // Create alert recipients
-      const { error: recipientsError } = await supabase
-        .from('alert_recipients')
-        .insert(
-          recipientIds.map(userId => ({
-            alert_id: alert.id,
-            user_id: userId,
-          }))
-        );
-
-      if (recipientsError) {
-        console.error('Erro ao criar recipients:', recipientsError);
-        throw recipientsError;
-      }
-
-      // Send emails via edge function
-      await supabase.functions.invoke('send-alert-email', {
-        body: {
-          alert_id: alert.id,
-          title: formData.title,
-          message: formData.message,
-          type: formData.type,
-          recipient_ids: recipientIds,
-        },
-      });
-
-      toast.success('Alerta criado e enviado com sucesso!');
+      toast.success(`${successCount} ticket(s) criado(s) com sucesso!`);
       navigate('/painel');
     } catch (error) {
-      console.error('Erro ao criar alerta:', error);
-      toast.error('Erro ao criar alerta');
+      console.error('Erro ao criar tickets:', error);
+      toast.error('Erro ao criar tickets');
     } finally {
       setSubmitting(false);
     }
@@ -301,122 +262,75 @@ const NovoAlerta = () => {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Novo Alerta</h1>
-            <p className="text-muted-foreground">Crie e envie alertas para proprietários ou equipe</p>
+            <h1 className="text-3xl font-bold text-foreground">Criar Tickets em Massa</h1>
+            <p className="text-muted-foreground">Crie tickets para múltiplos proprietários</p>
           </div>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Informações do Alerta</CardTitle>
+            <CardTitle>Informações do Ticket</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <Label htmlFor="title">Título *</Label>
-                <Input
-                  id="title"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="Título do alerta"
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="message">Mensagem *</Label>
-                <Textarea
-                  id="message"
-                  value={formData.message}
-                  onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                  placeholder="Escreva a mensagem do alerta..."
-                  rows={6}
-                  required
-                />
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <Label htmlFor="type">Tipo</Label>
-                  <Select
-                    value={formData.type}
-                    onValueChange={(value) => setFormData({ ...formData, type: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="info">Informação</SelectItem>
-                      <SelectItem value="warning">Aviso</SelectItem>
-                      <SelectItem value="error">Erro</SelectItem>
-                      <SelectItem value="success">Sucesso</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="expires_at">Data de Expiração (Opcional)</Label>
-                  <Input
-                    id="expires_at"
-                    type="datetime-local"
-                    value={formData.expires_at}
-                    onChange={(e) => setFormData({ ...formData, expires_at: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="target_audience">Público Alvo</Label>
+                <Label htmlFor="ticket_type">Tipo de Chamado *</Label>
                 <Select
-                  value={formData.target_audience}
-                  onValueChange={(value) => setFormData({ ...formData, target_audience: value })}
+                  value={formData.ticket_type}
+                  onValueChange={(value) => setFormData({ ...formData, ticket_type: value as any })}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="specific">Proprietários Específicos</SelectItem>
-                    <SelectItem value="all_owners">Todos os Proprietários</SelectItem>
-                    <SelectItem value="team">Equipe (Admins e Agentes)</SelectItem>
+                    <SelectItem value="duvida">Dúvida</SelectItem>
+                    <SelectItem value="manutencao">Manutenção</SelectItem>
+                    <SelectItem value="cobranca">Cobrança</SelectItem>
+                    <SelectItem value="bloqueio_data">Bloqueio de Data</SelectItem>
+                    <SelectItem value="financeiro">Financeiro</SelectItem>
+                    <SelectItem value="outros">Outros</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              {formData.target_audience === 'specific' && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <Label>Selecionar Proprietários</Label>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={toggleSelectAll}
-                    >
-                      {selectedOwners.size === owners.length ? 'Desmarcar Todos' : 'Selecionar Todos'}
-                    </Button>
-                  </div>
-                  <div className="max-h-64 space-y-2 overflow-y-auto rounded-md border p-4">
-                    {owners.map((owner) => (
-                      <div key={owner.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={owner.id}
-                          checked={selectedOwners.has(owner.id)}
-                          onCheckedChange={() => toggleOwner(owner.id)}
-                        />
-                        <label
-                          htmlFor={owner.id}
-                          className="flex-1 cursor-pointer text-sm"
-                        >
-                          {owner.name} ({owner.email})
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedOwners.size} proprietário(s) selecionado(s)
-                  </p>
-                </div>
-              )}
+              <div>
+                <Label htmlFor="subject">Assunto *</Label>
+                <Input
+                  id="subject"
+                  value={formData.subject}
+                  onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                  placeholder="Assunto do ticket"
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="description">Descrição *</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Descrição detalhada do ticket..."
+                  rows={6}
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="priority">Prioridade</Label>
+                <Select
+                  value={formData.priority}
+                  onValueChange={(value) => setFormData({ ...formData, priority: value as any })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="urgente">Urgente</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
               <div className="space-y-2">
                 <Label htmlFor="files">Anexos (opcional)</Label>
@@ -462,6 +376,58 @@ const NovoAlerta = () => {
                 )}
               </div>
 
+              <div>
+                <Label htmlFor="target_audience">Destinatários</Label>
+                <Select
+                  value={formData.target_audience}
+                  onValueChange={(value) => setFormData({ ...formData, target_audience: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="specific">Proprietários Específicos</SelectItem>
+                    <SelectItem value="all_owners">Todos os Proprietários</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {formData.target_audience === 'specific' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label>Selecionar Proprietários</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={toggleSelectAll}
+                    >
+                      {selectedOwners.size === owners.length ? 'Desmarcar Todos' : 'Selecionar Todos'}
+                    </Button>
+                  </div>
+                  <div className="max-h-64 space-y-2 overflow-y-auto rounded-md border p-4">
+                    {owners.map((owner) => (
+                      <div key={owner.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={owner.id}
+                          checked={selectedOwners.has(owner.id)}
+                          onCheckedChange={() => toggleOwner(owner.id)}
+                        />
+                        <label
+                          htmlFor={owner.id}
+                          className="flex-1 cursor-pointer text-sm"
+                        >
+                          {owner.name} ({owner.email})
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedOwners.size} proprietário(s) selecionado(s)
+                  </p>
+                </div>
+              )}
+
               <div className="flex gap-4">
                 <Button
                   type="button"
@@ -473,7 +439,7 @@ const NovoAlerta = () => {
                 </Button>
                 <Button type="submit" disabled={submitting || uploading}>
                   <Send className="mr-2 h-4 w-4" />
-                  {submitting ? 'Enviando...' : 'Criar e Enviar Alerta'}
+                  {submitting ? 'Criando...' : 'Criar Tickets'}
                 </Button>
               </div>
             </form>
@@ -484,4 +450,4 @@ const NovoAlerta = () => {
   );
 };
 
-export default NovoAlerta;
+export default NovoTicketMassa;

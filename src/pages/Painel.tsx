@@ -144,7 +144,7 @@ export default function Painel() {
         </div>
 
         {/* Ações Principais - Destaque no Topo */}
-        <div className="mb-8 grid gap-4 md:grid-cols-3">
+        <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Button 
             size="lg" 
             className="h-20 text-lg font-semibold"
@@ -171,6 +171,16 @@ export default function Painel() {
           >
             <Bell className="mr-3 h-6 w-6" />
             Criar Alerta
+          </Button>
+
+          <Button 
+            size="lg" 
+            className="h-20 text-lg font-semibold"
+            onClick={() => navigate("/novo-ticket-massa")}
+            variant="secondary"
+          >
+            <Ticket className="mr-3 h-6 w-6" />
+            Criar Tickets
           </Button>
         </div>
 
