@@ -3,10 +3,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Check, X, Loader2 } from "lucide-react";
+import { ArrowLeft, Check, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { LoadingScreen } from "@/components/LoadingScreen";
 
 export default function Aprovacoes() {
   const { profile } = useAuth();
@@ -76,9 +77,7 @@ export default function Aprovacoes() {
 
       <main className="container mx-auto max-w-4xl px-4 py-8">
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
+          <LoadingScreen message="Carregando aprovações..." />
         ) : pendingUsers.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
