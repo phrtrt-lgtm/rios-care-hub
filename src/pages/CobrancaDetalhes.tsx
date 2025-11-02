@@ -409,7 +409,7 @@ export default function CobrancaDetalhes() {
       }
 
       const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-      const downloadUrl = `${SUPABASE_URL}/functions/v1/serve-attachment/${attachmentId}?download=1`;
+      const downloadUrl = `${SUPABASE_URL}/functions/v1/serve-attachment/${attachmentId}/file?download=1`;
 
       // Download the file
       const response = await fetch(downloadUrl, {
@@ -422,11 +422,21 @@ export default function CobrancaDetalhes() {
         throw new Error("Falha ao baixar arquivo");
       }
 
+      // Get the content-type to determine file extension
+      const contentType = response.headers.get('content-type');
+      let finalFileName = fileName;
+      
+      // Ensure correct file extension for videos
+      if (contentType?.startsWith('video/') && !fileName.match(/\.(mp4|mov|avi|webm)$/i)) {
+        const ext = contentType.split('/')[1] || 'mp4';
+        finalFileName = `${fileName}.${ext}`;
+      }
+
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = fileName;
+      a.download = finalFileName;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);

@@ -2,6 +2,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Download, X } from "lucide-react";
 import { useState, useEffect } from "react";
+import { AuthenticatedImage, AuthenticatedVideo } from "./AuthenticatedMedia";
 
 interface MediaItem {
   id: string;
@@ -39,7 +40,21 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange }: MediaG
 
   const handleDownload = async () => {
     try {
-      const response = await fetch(currentItem.file_url);
+      // Import supabase here to get auth token
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        console.error('Sessão não encontrada');
+        return;
+      }
+
+      const response = await fetch(currentItem.file_url, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
+      
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -112,14 +127,14 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange }: MediaG
           {/* Conteúdo Principal */}
           <div className="w-full h-full flex items-center justify-center p-16">
             {isImage && (
-              <img
+              <AuthenticatedImage
                 src={currentItem.file_url}
                 alt={currentItem.file_name || 'Imagem'}
                 className="max-w-full max-h-full object-contain"
               />
             )}
             {isVideo && (
-              <video
+              <AuthenticatedVideo
                 src={currentItem.file_url}
                 controls
                 className="max-w-full max-h-full"
