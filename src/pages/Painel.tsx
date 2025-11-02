@@ -109,6 +109,27 @@ export default function Painel() {
           </p>
         </div>
 
+        {/* Ações Principais - Destaque no Topo */}
+        <div className="mb-8 grid gap-4 md:grid-cols-2">
+          <Button 
+            size="lg" 
+            className="h-20 text-lg font-semibold"
+            onClick={() => navigate("/todos-tickets")}
+          >
+            <Ticket className="mr-3 h-6 w-6" />
+            Ver Todos os Tickets
+          </Button>
+          
+          <Button 
+            size="lg" 
+            className="h-20 text-lg font-semibold"
+            onClick={() => navigate("/gerenciar-cobrancas")}
+          >
+            <DollarSign className="mr-3 h-6 w-6" />
+            Gerenciar Cobranças
+          </Button>
+        </div>
+
         {/* Stats Cards */}
         <div className="mb-8 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           <Card className="border-l-4 border-l-blue-500">
@@ -164,8 +185,10 @@ export default function Painel() {
           </Card>
         </div>
 
-        {/* Quick Actions */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {/* Quick Actions - Outras Ações */}
+        <div>
+          <h3 className="mb-4 text-xl font-semibold">Outras Ações</h3>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {profile?.role === "admin" && (
             <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/admin/cadastrar-proprietario")}>
               <CardHeader>
@@ -199,21 +222,6 @@ export default function Painel() {
             </Card>
           )}
 
-          <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/gerenciar-cobrancas")}>
-            <CardHeader>
-              <CardTitle>Gerenciar Cobranças</CardTitle>
-              <CardDescription>
-                Visualizar e atualizar status de cobranças
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button variant="outline" className="w-full">
-                <DollarSign className="mr-2 h-4 w-4" />
-                Ver Cobranças
-              </Button>
-            </CardContent>
-          </Card>
-
           <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/propriedades")}>
             <CardHeader>
               <CardTitle>Gerenciar Unidades</CardTitle>
@@ -228,20 +236,7 @@ export default function Painel() {
               </Button>
             </CardContent>
           </Card>
-
-          <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/todos-tickets")}>
-            <CardHeader>
-              <CardTitle>Todos os Tickets</CardTitle>
-              <CardDescription>
-                Visualize e gerencie todos os chamados
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button variant="outline" className="w-full">
-                Ver Todos
-              </Button>
-            </CardContent>
-          </Card>
+          </div>
         </div>
       </main>
     </div>
