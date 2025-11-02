@@ -277,6 +277,8 @@ export default function TicketDetalhes() {
   };
 
   const downloadAllAttachments = async () => {
+    if (downloadingAll) return;
+    
     try {
       setDownloadingAll(true);
       
@@ -288,82 +290,66 @@ export default function TicketDetalhes() {
           title: "Nenhum anexo encontrado",
           variant: "destructive",
         });
+        setDownloadingAll(false);
         return;
       }
 
-      toast({
-        title: "Preparando download...",
-        description: `Processando ${allAttachments.length} arquivo(s)...`,
-      });
+      console.log(`📦 Iniciando download de ${allAttachments.length} arquivos`);
 
       const zip = new JSZip();
       let successCount = 0;
+      let totalSize = 0;
       
       for (let i = 0; i < allAttachments.length; i++) {
         const attachment = allAttachments[i];
+        
         try {
-          console.log(`📥 Baixando ${i + 1}/${allAttachments.length}: ${attachment.file_name}`);
+          console.log(`📥 Processando ${i + 1}/${allAttachments.length}: ${attachment.file_name || attachment.file_url}`);
           
-          // Extrai o path do storage da URL
-          const urlParts = attachment.file_url.split('/object/public/');
-          if (urlParts.length !== 2) {
-            throw new Error('URL inválida');
-          }
+          // Extrai o path do URL do Supabase Storage
+          const url = new URL(attachment.file_url);
+          const pathParts = url.pathname.split('/object/public/');
           
-          const [bucket, ...pathParts] = urlParts[1].split('/');
-          const filePath = pathParts.join('/');
-          
-          console.log(`📂 Bucket: ${bucket}, Path: ${filePath}`);
-          
-          // Baixa usando a API do Supabase
-          const { data, error } = await supabase.storage
-            .from(bucket)
-            .download(filePath);
-          
-          if (error) {
-            console.error(`❌ Erro Supabase:`, error);
-            throw error;
-          }
-          
-          if (!data) {
-            throw new Error('Arquivo vazio');
-          }
-          
-          const fileName = attachment.file_name || `arquivo_${i + 1}`;
-          zip.file(fileName, data);
-          successCount++;
-          
-          console.log(`✅ Arquivo ${fileName} adicionado ao ZIP`);
-          
-          // Atualiza progresso
-          if ((i + 1) % 3 === 0 || i === allAttachments.length - 1) {
-            toast({
-              title: "Baixando...",
-              description: `${i + 1}/${allAttachments.length} arquivos processados`,
-            });
+          if (pathParts.length === 2) {
+            const [bucket, ...fileParts] = pathParts[1].split('/');
+            const filePath = fileParts.join('/');
+            
+            // Usa a API do Supabase
+            const { data, error } = await supabase.storage
+              .from(bucket)
+              .download(filePath);
+            
+            if (error) {
+              console.error(`❌ Erro no arquivo:`, error);
+              continue;
+            }
+            
+            if (data) {
+              const fileName = attachment.file_name || `arquivo-${i + 1}`;
+              zip.file(fileName, data);
+              successCount++;
+              totalSize += data.size;
+              console.log(`✅ ${fileName} adicionado (${(data.size / 1024).toFixed(1)} KB)`);
+            }
           }
         } catch (error) {
-          console.error(`❌ Erro ao processar ${attachment.file_name}:`, error);
-          // Continua com os próximos arquivos
+          console.error(`❌ Erro ao processar arquivo ${i + 1}:`, error);
         }
       }
 
       if (successCount === 0) {
         toast({
-          title: "Erro",
-          description: "Não foi possível baixar nenhum arquivo",
+          title: "Erro ao baixar",
+          description: "Nenhum arquivo pôde ser processado",
           variant: "destructive",
         });
+        setDownloadingAll(false);
         return;
       }
 
-      console.log(`🗜️ Compactando ${successCount} arquivos...`);
-      
-      toast({
-        title: "Compactando...",
-        description: `Gerando arquivo ZIP com ${successCount} arquivo(s)`,
-      });
+      console.log(`🗜️ Compactando ${successCount} arquivos (${(totalSize / 1024 / 1024).toFixed(2)} MB)...`);
 
+      // Gera o ZIP
       const zipBlob = await zip.generateAsync({ 
         type: 'blob',
         compression: "DEFLATE",
@@ -372,33 +358,65 @@ export default function TicketDetalhes() {
       
       console.log(`📦 ZIP gerado: ${(zipBlob.size / 1024 / 1024).toFixed(2)} MB`);
       
-      // Força o download
-      const url = window.URL.createObjectURL(zipBlob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = `anexos-ticket-${ticket?.subject?.substring(0, 30) || id}.zip`;
+      // Cria o download - método compatível com mobile
+      const fileName = `ticket-${id?.substring(0, 8)}-anexos.zip`;
       
-      document.body.appendChild(a);
-      a.click();
+      // Tenta usar a API mais moderna se disponível
+      if (navigator.share && zipBlob.size < 10 * 1024 * 1024) {
+        // Se o arquivo for menor que 10MB, tenta compartilhar (mobile)
+        try {
+          const file = new File([zipBlob], fileName, { type: 'application/zip' });
+          await navigator.share({
+            files: [file],
+            title: 'Anexos do Ticket',
+            text: `${successCount} arquivo(s) compactados`
+          });
+          
+          toast({
+            title: "✅ Compartilhamento iniciado",
+            description: `${successCount} arquivo(s)`,
+          });
+          return;
+        } catch (shareError) {
+          console.log('Share API não disponível, usando download tradicional');
+        }
+      }
       
-      console.log(`⬇️ Download iniciado`);
+      // Método tradicional de download
+      const url = URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
       
-      // Limpa recursos após um delay
-      setTimeout(() => {
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      }, 100);
+      // Force download no mobile
+      link.setAttribute('target', '_blank');
+      link.style.display = 'none';
+      
+      document.body.appendChild(link);
+      
+      // Aguarda um pouco antes de clicar (importante para mobile)
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      link.click();
+      
+      console.log(`⬇️ Download iniciado: ${fileName}`);
+      
+      // Aguarda antes de limpar
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      URL.revokeObjectURL(url);
+      document.body.removeChild(link);
 
       toast({
-        title: "✅ Download concluído!",
+        title: "✅ Download iniciado!",
         description: `${successCount} arquivo(s) compactados`,
       });
+      
     } catch (error: any) {
-      console.error('❌ Erro geral ao baixar anexos:', error);
+      console.error('❌ Erro geral:', error);
       toast({
-        title: "Erro ao baixar anexos",
-        description: error.message || "Erro desconhecido",
+        title: "Erro ao baixar",
+        description: error.message || "Tente novamente",
         variant: "destructive",
       });
     } finally {
