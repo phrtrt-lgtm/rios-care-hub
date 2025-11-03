@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import webpush from "https://esm.sh/web-push@3.6.7";
+import * as jose from "https://deno.land/x/jose@v5.9.6/index.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,6 +19,88 @@ interface SendPushRequest {
   payload: PushPayload;
 }
 
+// Helper to convert base64url to Uint8Array
+function base64UrlToUint8Array(base64String: string): Uint8Array {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding)
+    .replace(/-/g, '+')
+    .replace(/_/g, '/');
+  const rawData = atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; i++) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+async function sendWebPush(
+  subscription: { endpoint: string; p256dh: string; auth: string },
+  payload: PushPayload
+): Promise<boolean> {
+  try {
+    const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY")!;
+    const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY")!;
+    const vapidEmail = Deno.env.get("VAPID_EMAIL")!;
+
+    console.log("Sending push to endpoint:", subscription.endpoint);
+
+    // Parse endpoint to get audience
+    const url = new URL(subscription.endpoint);
+    const audience = `${url.protocol}//${url.host}`;
+
+    // Decode the VAPID keys
+    const publicKeyBytes = base64UrlToUint8Array(vapidPublicKey);
+    const privateKeyBytes = base64UrlToUint8Array(vapidPrivateKey);
+
+    // Create JWK for signing
+    const jwk: jose.JWK = {
+      kty: "EC",
+      crv: "P-256",
+      x: jose.base64url.encode(publicKeyBytes.slice(1, 33)),
+      y: jose.base64url.encode(publicKeyBytes.slice(33, 65)),
+      d: jose.base64url.encode(privateKeyBytes),
+    };
+
+    // Import the key
+    const privateKey = await jose.importJWK(jwk, "ES256");
+
+    // Create and sign the JWT
+    const jwt = await new jose.SignJWT({})
+      .setProtectedHeader({ alg: "ES256", typ: "JWT" })
+      .setAudience(audience)
+      .setSubject(`mailto:${vapidEmail}`)
+      .setExpirationTime("12h")
+      .sign(privateKey);
+
+    console.log("JWT created successfully");
+
+    // Send the push notification
+    const response = await fetch(subscription.endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Content-Encoding": "aes128gcm",
+        TTL: "86400",
+        Authorization: `vapid t=${jwt}, k=${vapidPublicKey}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    console.log("Push response status:", response.status);
+
+    if (!response.ok && response.status !== 410) {
+      const text = await response.text();
+      console.error("Push response error:", text);
+    }
+
+    // 200/201 = success, 410 = subscription expired
+    return response.ok || response.status === 410;
+  } catch (error) {
+    console.error("Error sending web push:", error);
+    return false;
+  }
+}
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -28,17 +110,6 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
-
-    const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY")!;
-    const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY")!;
-    const vapidEmail = Deno.env.get("VAPID_EMAIL")!;
-
-    // Configure web-push with VAPID keys
-    webpush.setVapidDetails(
-      `mailto:${vapidEmail}`,
-      vapidPublicKey,
-      vapidPrivateKey
-    );
 
     const { ownerId, payload }: SendPushRequest = await req.json();
 
@@ -69,38 +140,31 @@ const handler = async (req: Request): Promise<Response> => {
     // Send to all subscriptions
     for (const sub of subscriptions) {
       try {
-        const pushSubscription = {
+        const subscription = {
           endpoint: sub.endpoint,
-          keys: {
-            p256dh: sub.p256dh,
-            auth: sub.auth,
-          },
+          p256dh: sub.p256dh,
+          auth: sub.auth,
         };
 
-        console.log("Sending push to endpoint:", sub.endpoint);
-
-        await webpush.sendNotification(
-          pushSubscription,
-          JSON.stringify(payload),
-          {
-            TTL: 86400,
-          }
-        );
-
-        console.log("Push sent successfully");
-        successCount++;
-      } catch (error: any) {
-        console.error("Error sending push to subscription:", error);
-        console.error("Error details:", error.body);
-
-        // Mark as inactive if subscription is no longer valid (410 Gone)
-        if (error.statusCode === 410) {
+        const success = await sendWebPush(subscription, payload);
+        
+        if (success) {
+          successCount++;
+        } else {
+          // Mark as inactive if push failed
           await supabase
             .from("push_subscriptions")
             .update({ is_active: false })
             .eq("id", sub.id);
-          console.log("Subscription marked as inactive (410 Gone)");
         }
+      } catch (error: any) {
+        console.error("Error sending push to subscription:", error);
+        
+        // Mark as inactive if subscription is no longer valid
+        await supabase
+          .from("push_subscriptions")
+          .update({ is_active: false })
+          .eq("id", sub.id);
       }
     }
 
