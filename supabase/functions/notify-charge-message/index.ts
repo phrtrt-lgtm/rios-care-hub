@@ -100,6 +100,29 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Email sent successfully");
 
+    // Send push notification
+    try {
+      if (isTeamMessage) {
+        // Team sent message, notify owner via push
+        await supabase.functions.invoke("send-push", {
+          body: {
+            ownerId: charge.owner_id,
+            payload: {
+              title: `Nova mensagem em ${charge.title}`,
+              body: message.body.substring(0, 100),
+              url: `/cobranca-detalhes/${chargeId}`,
+              tag: `charge_message_${chargeId}`,
+            },
+          },
+        });
+      }
+      console.log("Push notification sent");
+    } catch (pushError) {
+      console.error("Push notification error (non-critical):", pushError);
+      // Don't fail the request if push fails
+    }
+
+
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
       headers: {

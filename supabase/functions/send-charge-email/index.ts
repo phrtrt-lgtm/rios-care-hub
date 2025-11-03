@@ -123,6 +123,45 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Email sent successfully");
 
+    // Send push notification to owner
+    try {
+      let pushTitle = "";
+      let pushBody = "";
+      
+      switch (type) {
+        case "charge_created":
+          pushTitle = "Nova Cobrança 💰";
+          pushBody = `${charge.title} - ${amountBRL} (Vence ${formattedDueDate})`;
+          break;
+        case "charge_reminder":
+          pushTitle = "Lembrete de Cobrança ⏰";
+          pushBody = `${charge.title} vence em breve - ${amountBRL}`;
+          break;
+        case "charge_overdue":
+          pushTitle = "Cobrança Vencida ⚠️";
+          pushBody = `${charge.title} - ${amountBRL} está vencida`;
+          break;
+      }
+
+      await supabaseClient.functions.invoke("send-push", {
+        body: {
+          ownerId: charge.owner.id,
+          payload: {
+            title: pushTitle,
+            body: pushBody,
+            url: `/cobranca-detalhes/${chargeId}`,
+            tag: `charge_${chargeId}`,
+          },
+        },
+      });
+      
+      console.log("Push notification sent to owner");
+    } catch (pushError) {
+      console.error("Push notification error (non-critical):", pushError);
+      // Don't fail the request if push fails
+    }
+
+
     return new Response(
       JSON.stringify({ success: true }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
