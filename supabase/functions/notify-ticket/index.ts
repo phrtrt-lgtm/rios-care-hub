@@ -85,6 +85,32 @@ const handler = async (req: Request): Promise<Response> => {
           });
         }
 
+        // Send push notification to owner about new ticket
+        try {
+          const pushTitle = createdByTeam 
+            ? `Novo Ticket: ${ticket.subject}` 
+            : `Ticket Criado: ${ticket.subject}`;
+          
+          const pushBody = createdByTeam
+            ? `A equipe criou um ticket para você: ${ticket.description.substring(0, 80)}`
+            : `Recebemos seu ticket e responderemos em breve`;
+
+          await supabase.functions.invoke("send-push", {
+            body: {
+              ownerId: ticket.owner_id,
+              payload: {
+                title: pushTitle,
+                body: pushBody,
+                url: `/ticket-detalhes/${ticketId}`,
+                tag: `ticket_created_${ticketId}`,
+              },
+            },
+          });
+          console.log("Push notification sent to owner");
+        } catch (pushError) {
+          console.error("Push notification error (non-critical):", pushError);
+        }
+
         // Notify team
         if (adminEmails.length > 0 && adminEmails[0] !== "" && teamTemplate) {
           await resend.emails.send({
@@ -155,6 +181,24 @@ const handler = async (req: Request): Promise<Response> => {
             subject: renderTemplate(template.subject, variables),
             html: renderTemplate(template.body_html, variables),
           });
+        }
+
+        // Send push notification about approval
+        try {
+          await supabase.functions.invoke("send-push", {
+            body: {
+              ownerId: userId,
+              payload: {
+                title: "Conta Aprovada! ✅",
+                body: "Sua conta foi aprovada! Você já pode acessar o sistema.",
+                url: "/",
+                tag: `approval_${userId}`,
+              },
+            },
+          });
+          console.log("Approval push notification sent");
+        } catch (pushError) {
+          console.error("Push notification error (non-critical):", pushError);
         }
         break;
       }

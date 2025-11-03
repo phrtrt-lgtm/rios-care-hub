@@ -88,6 +88,7 @@ const handler = async (req: Request): Promise<Response> => {
     };
     
     let emailsSent = 0
+    let pushSent = 0
 
     for (const recipient of recipients) {
       try {
@@ -109,6 +110,28 @@ const handler = async (req: Request): Promise<Response> => {
         console.error(`Error sending email to ${recipient.email}:`, error)
       }
     }
+
+    // Send push notifications to all recipients
+    for (const recipientId of recipientIds) {
+      try {
+        await supabase.functions.invoke("send-push", {
+          body: {
+            ownerId: recipientId,
+            payload: {
+              title: `${typeInfo.emoji} ${alert.title}`,
+              body: alert.message.substring(0, 100),
+              url: "/",
+              tag: `alert_${alertId}`,
+            },
+          },
+        });
+        pushSent++
+      } catch (pushError) {
+        console.error(`Push notification error for recipient ${recipientId}:`, pushError)
+      }
+    }
+
+    console.log(`Push notifications sent: ${pushSent}/${recipientIds.length}`)
 
     return new Response(
       JSON.stringify({ message: `Sent ${emailsSent}/${recipients.length} emails` }),
