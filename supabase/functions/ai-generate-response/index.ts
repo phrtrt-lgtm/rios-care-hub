@@ -48,6 +48,8 @@ const handler = async (req: Request): Promise<Response> => {
       .eq("id", user.id)
       .single();
 
+    console.log("User profile:", { userId: user.id, profile });
+
     if (!profile || !["admin", "agent"].includes(profile.role)) {
       return new Response(
         JSON.stringify({ error: "Forbidden" }),
@@ -71,16 +73,24 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Get template
-    const { data: template } = await supabaseClient
+    console.log("Fetching template with key:", templateKey);
+    const { data: template, error: templateError } = await supabaseClient
       .from("ai_templates")
       .select("*")
       .eq("key", templateKey)
       .eq("enabled", true)
       .single();
 
-    if (!template) {
+    console.log("Template query result:", { template, templateError });
+
+    if (templateError || !template) {
+      console.error("Template error:", templateError);
       return new Response(
-        JSON.stringify({ error: "Template not found or disabled" }),
+        JSON.stringify({ 
+          error: "Template not found or disabled",
+          details: templateError?.message,
+          templateKey 
+        }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
