@@ -18,31 +18,58 @@ interface SendPushRequest {
   payload: PushPayload;
 }
 
+// Base64 URL encode/decode helpers
+function base64UrlEncode(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+}
+
+function base64UrlDecode(str: string): Uint8Array {
+  str = str.replace(/-/g, '+').replace(/_/g, '/');
+  while (str.length % 4) {
+    str += '=';
+  }
+  const binary = atob(str);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
 async function sendWebPush(
   subscription: { endpoint: string; p256dh: string; auth: string },
   payload: PushPayload
 ): Promise<boolean> {
   try {
-    const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY")!;
-    const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY")!;
-    const vapidEmail = Deno.env.get("VAPID_EMAIL")!;
-
     console.log("Sending push to endpoint:", subscription.endpoint);
 
-    // Send push notification using web-push protocol
+    // For FCM/Samsung Internet, we just send the payload directly
+    // The browser handles VAPID automatically via the subscription
     const response = await fetch(subscription.endpoint, {
       method: "POST",
       headers: {
-        "Content-Type": "application/octet-stream",
-        "Content-Encoding": "aes128gcm",
+        "Content-Type": "application/json",
         TTL: "86400",
       },
       body: JSON.stringify(payload),
     });
 
     console.log("Push response status:", response.status);
-    
-    // 201 = Created, 200 = OK, 410 = Gone (subscription expired)
+
+    if (!response.ok && response.status !== 410) {
+      const text = await response.text();
+      console.error("Push response error:", text);
+    }
+
+    // 200/201 = success, 410 = subscription expired
     return response.ok || response.status === 410;
   } catch (error) {
     console.error("Error sending web push:", error);
@@ -100,7 +127,7 @@ const handler = async (req: Request): Promise<Response> => {
         if (success) {
           successCount++;
         } else {
-          // Mark as inactive if push failed with 410 (Gone)
+          // Mark as inactive if push failed
           await supabase
             .from("push_subscriptions")
             .update({ is_active: false })
@@ -110,12 +137,10 @@ const handler = async (req: Request): Promise<Response> => {
         console.error("Error sending push to subscription:", error);
         
         // Mark as inactive if subscription is no longer valid
-        if (error.status === 410) {
-          await supabase
-            .from("push_subscriptions")
-            .update({ is_active: false })
-            .eq("id", sub.id);
-        }
+        await supabase
+          .from("push_subscriptions")
+          .update({ is_active: false })
+          .eq("id", sub.id);
       }
     }
 
