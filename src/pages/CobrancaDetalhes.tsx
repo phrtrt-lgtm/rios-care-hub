@@ -335,7 +335,7 @@ export default function CobrancaDetalhes() {
 
       if (error) throw error;
 
-      setNewMessage(data.generatedText);
+      setNewMessage(data.text);
       setAiInstructions("");
       toast({
         title: "Resposta gerada com sucesso!",
