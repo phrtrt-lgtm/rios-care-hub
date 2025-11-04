@@ -28,6 +28,8 @@ import NovoTicketMassa from "./pages/NovoTicketMassa";
 import ConfiguracaoEmail from "./pages/ConfiguracaoEmail";
 import ConfiguracaoIA from "./pages/ConfiguracaoIA";
 import RegrasCobrancas from "./pages/RegrasCobrancas";
+import Manutencoes from "./pages/Manutencoes";
+import ManutencaoDetalhes from "./pages/ManutencaoDetalhes";
 
 const queryClient = new QueryClient();
 
@@ -166,6 +168,22 @@ const App = () => (
             <Route path="/configuracao-email" element={<ProtectedRoute allowedRoles={["admin"]}><ConfiguracaoEmail /></ProtectedRoute>} />
             <Route path="/configuracao-ia" element={<ProtectedRoute allowedRoles={["admin"]}><ConfiguracaoIA /></ProtectedRoute>} />
             <Route path="/regras-cobrancas" element={<ProtectedRoute allowedRoles={["admin"]}><RegrasCobrancas /></ProtectedRoute>} />
+            <Route
+              path="/manutencoes"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'agent', 'admin']}>
+                  <Manutencoes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/manutencao/:id"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'agent', 'admin']}>
+                  <ManutencaoDetalhes />
+                </ProtectedRoute>
+              }
+            />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
