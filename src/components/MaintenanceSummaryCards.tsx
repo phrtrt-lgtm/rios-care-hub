@@ -8,6 +8,7 @@ interface MaintenanceSummaryCardsProps {
     paidCount: number;
     totalCents: number;
     avgOrderCents: number;
+    nextPayments?: any[];
   } | null;
 }
 

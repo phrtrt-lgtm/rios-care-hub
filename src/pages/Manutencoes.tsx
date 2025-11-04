@@ -37,10 +37,11 @@ export default function Manutencoes() {
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, any> = {
-      open: { variant: "secondary", label: "Aberta" },
-      in_progress: { variant: "default", label: "Em andamento" },
-      completed: { variant: "outline", label: "Concluída" },
+      draft: { variant: "secondary", label: "Rascunho" },
+      pending: { variant: "default", label: "Pendente" },
       paid: { variant: "default", label: "Paga" },
+      contested: { variant: "destructive", label: "Contestada" },
+      debited: { variant: "outline", label: "Debitada" },
       cancelled: { variant: "destructive", label: "Cancelada" },
     };
     const config = variants[status] || { variant: "secondary", label: status };
@@ -128,10 +129,11 @@ export default function Manutencoes() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="open">Aberta</SelectItem>
-                  <SelectItem value="in_progress">Em andamento</SelectItem>
-                  <SelectItem value="completed">Concluída</SelectItem>
+                  <SelectItem value="draft">Rascunho</SelectItem>
+                  <SelectItem value="pending">Pendente</SelectItem>
                   <SelectItem value="paid">Paga</SelectItem>
+                  <SelectItem value="contested">Contestada</SelectItem>
+                  <SelectItem value="debited">Debitada</SelectItem>
                   <SelectItem value="cancelled">Cancelada</SelectItem>
                 </SelectContent>
               </Select>
@@ -185,7 +187,7 @@ export default function Manutencoes() {
                       className="border-t hover:bg-accent cursor-pointer transition-colors"
                       onClick={() => navigate(`/manutencao/${m.id}`)}
                     >
-                      <td className="p-3">{formatDateTime(m.opened_at)}</td>
+                      <td className="p-3">{formatDateTime(m.created_at)}</td>
                       <td className="p-3">{m.property?.name || '-'}</td>
                       <td className="p-3">
                         <div className="font-medium">{m.title}</div>
@@ -194,7 +196,7 @@ export default function Manutencoes() {
                         )}
                       </td>
                       <td className="p-3 text-right font-medium">
-                        {formatBRL(m.cost_total_cents)}
+                        {formatBRL(m.amount_cents)}
                       </td>
                       <td className="p-3 text-center text-xs">
                         {getResponsibleLabel(m.cost_responsible, m.split_owner_percent)}

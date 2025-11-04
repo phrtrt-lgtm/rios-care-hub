@@ -33,7 +33,7 @@ export default function ManutencaoDetalhes() {
 
   const isTeam = profile?.role === 'admin' || profile?.role === 'agent';
   const totalPaid = maintenance.payments?.reduce((sum: number, p: any) => sum + p.amount_cents, 0) || 0;
-  const remaining = maintenance.cost_total_cents - totalPaid;
+  const remaining = (maintenance.amount_cents || 0) - totalPaid;
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, any> = {
@@ -98,12 +98,12 @@ export default function ManutencaoDetalhes() {
               </div>
             )}
 
-            {maintenance.due_at && (
+            {maintenance.due_date && (
               <div>
                 <div className="text-sm text-muted-foreground">Vencimento</div>
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
-                  <span className="font-medium">{formatDate(maintenance.due_at)}</span>
+                  <span className="font-medium">{formatDate(maintenance.due_date)}</span>
                 </div>
               </div>
             )}
@@ -128,7 +128,7 @@ export default function ManutencaoDetalhes() {
           <CardContent className="space-y-3">
             <div>
               <div className="text-sm text-muted-foreground">Valor Total</div>
-              <div className="text-2xl font-bold">{formatBRL(maintenance.cost_total_cents)}</div>
+              <div className="text-2xl font-bold">{formatBRL(maintenance.amount_cents)}</div>
             </div>
 
             <div>
@@ -243,36 +243,41 @@ export default function ManutencaoDetalhes() {
         </Card>
       )}
 
-      {/* Histórico de eventos */}
-      {maintenance.events && maintenance.events.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <History className="h-4 w-4" />
-              Histórico
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {maintenance.events
-                .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-                .map((event: any) => (
-                  <div key={event.id} className="flex items-start gap-3 text-sm">
-                    <div className="text-muted-foreground whitespace-nowrap">
-                      {formatDateTime(event.created_at)}
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-medium">{event.event_type}</div>
-                      {event.actor_role && (
-                        <div className="text-xs text-muted-foreground">por {event.actor_role}</div>
-                      )}
-                    </div>
-                  </div>
-                ))}
+      {/* Status da cobrança */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <History className="h-4 w-4" />
+            Informações da Cobrança
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3 text-sm">
+            <div>
+              <span className="text-muted-foreground">Status: </span>
+              {getStatusBadge(maintenance.status)}
             </div>
-          </CardContent>
-        </Card>
-      )}
+            {maintenance.paid_at && (
+              <div>
+                <span className="text-muted-foreground">Pago em: </span>
+                <span>{formatDateTime(maintenance.paid_at)}</span>
+              </div>
+            )}
+            {maintenance.contested_at && (
+              <div>
+                <span className="text-muted-foreground">Contestado em: </span>
+                <span>{formatDateTime(maintenance.contested_at)}</span>
+              </div>
+            )}
+            {maintenance.debited_at && (
+              <div>
+                <span className="text-muted-foreground">Debitado em: </span>
+                <span>{formatDateTime(maintenance.debited_at)}</span>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

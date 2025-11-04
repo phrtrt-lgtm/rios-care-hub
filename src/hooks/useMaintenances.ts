@@ -41,14 +41,13 @@ export const useMaintenances = (filters?: MaintenanceFilters) => {
     queryKey: ["maintenances", filters],
     queryFn: async () => {
       let query = supabase
-        .from("maintenances")
+        .from("charges")
         .select(`
           *,
           property:properties(id, name),
-          owner:profiles!maintenances_owner_id_fkey(id, name),
-          payments:maintenance_payments(amount_cents)
+          owner:profiles!charges_owner_id_fkey(id, name)
         `)
-        .order("opened_at", { ascending: false });
+        .order("created_at", { ascending: false });
 
       if (filters?.ownerId) {
         query = query.eq("owner_id", filters.ownerId);
@@ -63,10 +62,10 @@ export const useMaintenances = (filters?: MaintenanceFilters) => {
         query = query.eq("category", filters.category);
       }
       if (filters?.fromDate) {
-        query = query.gte("opened_at", filters.fromDate);
+        query = query.gte("created_at", filters.fromDate);
       }
       if (filters?.toDate) {
-        query = query.lte("opened_at", filters.toDate);
+        query = query.lte("created_at", filters.toDate);
       }
       if (filters?.search) {
         query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
@@ -75,10 +74,20 @@ export const useMaintenances = (filters?: MaintenanceFilters) => {
       const { data, error } = await query;
       if (error) throw error;
 
-      return data.map((m: any) => ({
-        ...m,
-        paid_cents: m.payments?.reduce((sum: number, p: any) => sum + (p.amount_cents || 0), 0) || 0,
-      }));
+      // Enrich with paid amounts from charge_payments
+      const enriched = await Promise.all(
+        (data || []).map(async (charge) => {
+          const { data: payments } = await supabase
+            .from("charge_payments")
+            .select("amount_cents")
+            .eq("charge_id", charge.id);
+          
+          const paid_cents = payments?.reduce((sum, p) => sum + p.amount_cents, 0) || 0;
+          return { ...charge, paid_cents };
+        })
+      );
+
+      return enriched;
     },
   });
 };
@@ -88,21 +97,36 @@ export const useMaintenance = (id?: string) => {
     queryKey: ["maintenance", id],
     queryFn: async () => {
       if (!id) return null;
-      const { data, error } = await supabase
-        .from("maintenances")
+      
+      const { data: charge, error } = await supabase
+        .from("charges")
         .select(`
           *,
           property:properties(id, name),
-          owner:profiles!maintenances_owner_id_fkey(id, name, email),
-          payments:maintenance_payments(*),
-          attachments:maintenance_attachments(*),
-          events:maintenance_events(*)
+          owner:profiles!charges_owner_id_fkey(id, name, email)
         `)
         .eq("id", id)
         .single();
 
       if (error) throw error;
-      return data;
+
+      // Fetch payments from charge_payments
+      const { data: payments } = await supabase
+        .from("charge_payments")
+        .select("*")
+        .eq("charge_id", id)
+        .order("payment_date", { ascending: false });
+
+      // Fetch attachments
+      const { data: attachments } = await supabase
+        .from("charge_attachments")
+        .select("*")
+        .eq("charge_id", id)
+        .order("created_at", { ascending: false });
+
+      const paid_cents = payments?.reduce((sum, p) => sum + p.amount_cents, 0) || 0;
+
+      return { ...charge, payments, attachments, paid_cents };
     },
     enabled: !!id,
   });
@@ -115,10 +139,10 @@ export const useMaintenanceSummary = (ownerId?: string, year?: number) => {
     queryKey: ["maintenance-summary", ownerId, currentYear],
     queryFn: async () => {
       let query = supabase
-        .from("maintenances")
+        .from("charges")
         .select("*")
-        .gte("opened_at", `${currentYear}-01-01`)
-        .lte("opened_at", `${currentYear}-12-31`);
+        .gte("created_at", `${currentYear}-01-01`)
+        .lte("created_at", `${currentYear}-12-31`);
 
       if (ownerId) {
         query = query.eq("owner_id", ownerId);
@@ -127,10 +151,10 @@ export const useMaintenanceSummary = (ownerId?: string, year?: number) => {
       const { data, error } = await query;
       if (error) throw error;
 
-      const openCount = data.filter(m => ['open', 'in_progress'].includes(m.status)).length;
-      const completedCount = data.filter(m => m.status === 'completed').length;
+      const openCount = data.filter(m => ['draft', 'pending'].includes(m.status)).length;
+      const completedCount = data.filter(m => m.status === 'paid').length;
       const paidCount = data.filter(m => m.status === 'paid').length;
-      const totalCents = data.reduce((sum, m) => sum + (m.cost_total_cents || 0), 0);
+      const totalCents = data.reduce((sum, m) => sum + (m.amount_cents || 0), 0);
       const avgOrderCents = data.length > 0 ? totalCents / data.length : 0;
 
       // Próximos pagamentos (30 dias)
@@ -139,8 +163,8 @@ export const useMaintenanceSummary = (ownerId?: string, year?: number) => {
       next30Days.setDate(today.getDate() + 30);
 
       const nextPayments = data
-        .filter(m => m.due_at && new Date(m.due_at) >= today && new Date(m.due_at) <= next30Days)
-        .sort((a, b) => new Date(a.due_at).getTime() - new Date(b.due_at).getTime());
+        .filter(m => m.due_date && new Date(m.due_date) >= today && new Date(m.due_date) <= next30Days)
+        .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
 
       return {
         openCount,
@@ -177,58 +201,40 @@ export const useUpsertMaintenance = () => {
         title: data.title,
         description: data.description || null,
         category: data.category || null,
-        status: data.status || 'open',
-        cost_total_cents: data.cost_total_cents,
+        status: data.status || 'draft',
+        amount_cents: data.cost_total_cents,
         cost_responsible: data.cost_responsible,
         split_owner_percent: data.split_owner_percent,
-        due_at: data.due_at || null,
-        created_by: user.user.id,
+        due_date: data.due_at || null,
       };
 
       if (data.id) {
         // Update
         const { data: result, error } = await supabase
-          .from("maintenances")
+          .from("charges")
           .update(payload)
           .eq("id", data.id)
           .select()
           .single();
 
         if (error) throw error;
-
-        // Event
-        await supabase.from("maintenance_events").insert({
-          maintenance_id: data.id,
-          event_type: 'updated',
-          metadata: payload,
-          actor_id: user.user.id,
-        });
-
         return result;
       } else {
         // Create
         const { data: result, error } = await supabase
-          .from("maintenances")
+          .from("charges")
           .insert(payload)
           .select()
           .single();
 
         if (error) throw error;
-
-        // Event
-        await supabase.from("maintenance_events").insert({
-          maintenance_id: result.id,
-          event_type: 'created',
-          metadata: payload,
-          actor_id: user.user.id,
-        });
-
         return result;
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["maintenances"] });
       queryClient.invalidateQueries({ queryKey: ["maintenance-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["charges"] });
       toast({
         title: "Sucesso",
         description: "Manutenção salva com sucesso",
@@ -253,11 +259,11 @@ export const useAddPayment = () => {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) throw new Error('Não autenticado');
 
-      // Inserir pagamento
+      // Inserir pagamento em charge_payments
       const { data: payment, error: payError } = await supabase
-        .from("maintenance_payments")
+        .from("charge_payments")
         .insert({
-          maintenance_id: data.maintenance_id,
+          charge_id: data.maintenance_id,
           amount_cents: data.amount_cents,
           payment_date: data.payment_date || new Date().toISOString(),
           method: data.method || 'pix',
@@ -271,40 +277,25 @@ export const useAddPayment = () => {
 
       if (payError) throw payError;
 
-      // Event
-      await supabase.from("maintenance_events").insert({
-        maintenance_id: data.maintenance_id,
-        event_type: 'payment_added',
-        metadata: { amount_cents: data.amount_cents, method: data.method },
-        actor_id: user.user.id,
-      });
-
       // Verificar se já está totalmente pago
-      const { data: maintenance } = await supabase
-        .from("maintenances")
-        .select("cost_total_cents, status")
+      const { data: charge } = await supabase
+        .from("charges")
+        .select("amount_cents, status")
         .eq("id", data.maintenance_id)
         .single();
 
       const { data: payments } = await supabase
-        .from("maintenance_payments")
+        .from("charge_payments")
         .select("amount_cents")
-        .eq("maintenance_id", data.maintenance_id);
+        .eq("charge_id", data.maintenance_id);
 
       const totalPaid = payments?.reduce((sum, p) => sum + p.amount_cents, 0) || 0;
 
-      if (maintenance && totalPaid >= maintenance.cost_total_cents && maintenance.status !== 'paid') {
+      if (charge && totalPaid >= charge.amount_cents && charge.status !== 'paid') {
         await supabase
-          .from("maintenances")
+          .from("charges")
           .update({ status: 'paid', paid_at: new Date().toISOString() })
           .eq("id", data.maintenance_id);
-
-        await supabase.from("maintenance_events").insert({
-          maintenance_id: data.maintenance_id,
-          event_type: 'status_changed',
-          metadata: { from: maintenance.status, to: 'paid' },
-          actor_id: user.user.id,
-        });
       }
 
       return payment;
@@ -313,6 +304,7 @@ export const useAddPayment = () => {
       queryClient.invalidateQueries({ queryKey: ["maintenances"] });
       queryClient.invalidateQueries({ queryKey: ["maintenance"] });
       queryClient.invalidateQueries({ queryKey: ["maintenance-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["charges"] });
       toast({
         title: "Sucesso",
         description: "Pagamento registrado com sucesso",
@@ -335,10 +327,10 @@ export const useMaintenanceCharts = (ownerId?: string, year?: number, propertyId
     queryKey: ["maintenance-charts", ownerId, currentYear, propertyId],
     queryFn: async () => {
       let query = supabase
-        .from("maintenances")
+        .from("charges")
         .select("*")
-        .gte("opened_at", `${currentYear}-01-01`)
-        .lte("opened_at", `${currentYear}-12-31`);
+        .gte("created_at", `${currentYear}-01-01`)
+        .lte("created_at", `${currentYear}-12-31`);
 
       if (ownerId) query = query.eq("owner_id", ownerId);
       if (propertyId) query = query.eq("property_id", propertyId);
@@ -353,15 +345,15 @@ export const useMaintenanceCharts = (ownerId?: string, year?: number, propertyId
       }));
 
       data.forEach(m => {
-        const month = new Date(m.opened_at).getMonth();
-        monthly[month].total_cents += m.cost_total_cents || 0;
+        const month = new Date(m.created_at).getMonth();
+        monthly[month].total_cents += m.amount_cents || 0;
       });
 
       // Pizza por responsável
       const pieData: Record<string, number> = {};
       data.forEach(m => {
-        const key = m.cost_responsible;
-        pieData[key] = (pieData[key] || 0) + (m.cost_total_cents || 0);
+        const key = m.cost_responsible || 'owner';
+        pieData[key] = (pieData[key] || 0) + (m.amount_cents || 0);
       });
 
       const pie = Object.entries(pieData).map(([name, value]) => ({

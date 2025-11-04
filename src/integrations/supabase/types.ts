@@ -491,10 +491,59 @@ export type Database = {
           },
         ]
       }
+      charge_payments: {
+        Row: {
+          amount_cents: number
+          applies_to: string
+          charge_id: string
+          created_at: string
+          created_by: string
+          id: string
+          method: string | null
+          note: string | null
+          payment_date: string
+          proof_file_url: string | null
+        }
+        Insert: {
+          amount_cents: number
+          applies_to?: string
+          charge_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          method?: string | null
+          note?: string | null
+          payment_date?: string
+          proof_file_url?: string | null
+        }
+        Update: {
+          amount_cents?: number
+          applies_to?: string
+          charge_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          method?: string | null
+          note?: string | null
+          payment_date?: string
+          proof_file_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "charge_payments_charge_id_fkey"
+            columns: ["charge_id"]
+            isOneToOne: false
+            referencedRelation: "charges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       charges: {
         Row: {
           amount_cents: number
+          category: string | null
           contested_at: string | null
+          cost_responsible: string | null
           created_at: string
           currency: string
           debit_notice_at: string | null
@@ -511,6 +560,7 @@ export type Database = {
           reminder_24h_sent: boolean | null
           reminder_48h_sent: boolean | null
           reminder_day_sent: boolean | null
+          split_owner_percent: number | null
           status: string
           ticket_id: string | null
           title: string
@@ -518,7 +568,9 @@ export type Database = {
         }
         Insert: {
           amount_cents: number
+          category?: string | null
           contested_at?: string | null
+          cost_responsible?: string | null
           created_at?: string
           currency?: string
           debit_notice_at?: string | null
@@ -535,6 +587,7 @@ export type Database = {
           reminder_24h_sent?: boolean | null
           reminder_48h_sent?: boolean | null
           reminder_day_sent?: boolean | null
+          split_owner_percent?: number | null
           status?: string
           ticket_id?: string | null
           title: string
@@ -542,7 +595,9 @@ export type Database = {
         }
         Update: {
           amount_cents?: number
+          category?: string | null
           contested_at?: string | null
+          cost_responsible?: string | null
           created_at?: string
           currency?: string
           debit_notice_at?: string | null
@@ -559,6 +614,7 @@ export type Database = {
           reminder_24h_sent?: boolean | null
           reminder_48h_sent?: boolean | null
           reminder_day_sent?: boolean | null
+          split_owner_percent?: number | null
           status?: string
           ticket_id?: string | null
           title?: string
@@ -623,235 +679,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
-      }
-      maintenance_attachments: {
-        Row: {
-          created_at: string
-          created_by: string
-          file_name: string | null
-          file_type: string | null
-          file_url: string
-          id: string
-          maintenance_id: string
-          size_bytes: number | null
-        }
-        Insert: {
-          created_at?: string
-          created_by: string
-          file_name?: string | null
-          file_type?: string | null
-          file_url: string
-          id?: string
-          maintenance_id: string
-          size_bytes?: number | null
-        }
-        Update: {
-          created_at?: string
-          created_by?: string
-          file_name?: string | null
-          file_type?: string | null
-          file_url?: string
-          id?: string
-          maintenance_id?: string
-          size_bytes?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "maintenance_attachments_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "maintenance_attachments_maintenance_id_fkey"
-            columns: ["maintenance_id"]
-            isOneToOne: false
-            referencedRelation: "maintenances"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      maintenance_events: {
-        Row: {
-          actor_id: string | null
-          actor_role: string | null
-          created_at: string
-          event_type: string
-          id: string
-          maintenance_id: string
-          metadata: Json | null
-        }
-        Insert: {
-          actor_id?: string | null
-          actor_role?: string | null
-          created_at?: string
-          event_type: string
-          id?: string
-          maintenance_id: string
-          metadata?: Json | null
-        }
-        Update: {
-          actor_id?: string | null
-          actor_role?: string | null
-          created_at?: string
-          event_type?: string
-          id?: string
-          maintenance_id?: string
-          metadata?: Json | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "maintenance_events_actor_id_fkey"
-            columns: ["actor_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "maintenance_events_maintenance_id_fkey"
-            columns: ["maintenance_id"]
-            isOneToOne: false
-            referencedRelation: "maintenances"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      maintenance_payments: {
-        Row: {
-          amount_cents: number
-          applies_to: string
-          created_at: string
-          created_by: string
-          id: string
-          maintenance_id: string
-          method: string | null
-          note: string | null
-          payment_date: string
-          proof_file_url: string | null
-        }
-        Insert: {
-          amount_cents: number
-          applies_to?: string
-          created_at?: string
-          created_by: string
-          id?: string
-          maintenance_id: string
-          method?: string | null
-          note?: string | null
-          payment_date?: string
-          proof_file_url?: string | null
-        }
-        Update: {
-          amount_cents?: number
-          applies_to?: string
-          created_at?: string
-          created_by?: string
-          id?: string
-          maintenance_id?: string
-          method?: string | null
-          note?: string | null
-          payment_date?: string
-          proof_file_url?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "maintenance_payments_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "maintenance_payments_maintenance_id_fkey"
-            columns: ["maintenance_id"]
-            isOneToOne: false
-            referencedRelation: "maintenances"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      maintenances: {
-        Row: {
-          category: string | null
-          completed_at: string | null
-          cost_responsible: string
-          cost_total_cents: number
-          created_at: string
-          created_by: string
-          description: string | null
-          due_at: string | null
-          id: string
-          opened_at: string
-          owner_id: string
-          paid_at: string | null
-          property_id: string | null
-          split_owner_percent: number | null
-          status: string
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          category?: string | null
-          completed_at?: string | null
-          cost_responsible?: string
-          cost_total_cents?: number
-          created_at?: string
-          created_by: string
-          description?: string | null
-          due_at?: string | null
-          id?: string
-          opened_at?: string
-          owner_id: string
-          paid_at?: string | null
-          property_id?: string | null
-          split_owner_percent?: number | null
-          status?: string
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          category?: string | null
-          completed_at?: string | null
-          cost_responsible?: string
-          cost_total_cents?: number
-          created_at?: string
-          created_by?: string
-          description?: string | null
-          due_at?: string | null
-          id?: string
-          opened_at?: string
-          owner_id?: string
-          paid_at?: string | null
-          property_id?: string | null
-          split_owner_percent?: number | null
-          status?: string
-          title?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "maintenances_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "maintenances_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "maintenances_property_id_fkey"
-            columns: ["property_id"]
-            isOneToOne: false
-            referencedRelation: "properties"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       profiles: {
         Row: {
