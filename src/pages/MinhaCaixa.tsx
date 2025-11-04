@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Plus, LogOut, DollarSign } from "lucide-react";
+import { Plus, LogOut, DollarSign, BarChart3 } from "lucide-react";
 import { TicketList } from "@/components/TicketList";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -94,6 +94,15 @@ export default function MinhaCaixa() {
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
+            <Button 
+              onClick={() => navigate("/manutencoes")} 
+              variant="outline"
+              size="sm"
+              className="w-full sm:w-auto"
+            >
+              <BarChart3 className="mr-2 h-4 w-4" />
+              Relatório de Gastos
+            </Button>
             <Button 
               onClick={() => navigate("/minhas-cobrancas")} 
               variant="outline"
