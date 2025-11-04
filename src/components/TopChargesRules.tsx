@@ -46,13 +46,6 @@ export default function TopChargesRules() {
             <strong> não aportar</strong>. Em serviços pequenos ou com parceiros de longa data e ótimo resultado, podemos
             <strong> contribuir parcialmente</strong>.
           </div>
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            <a href="/tickets/new?tipo=contestacao"
-               className="px-4 py-2 rounded-xl font-medium bg-secondary text-secondary-foreground hover:bg-secondary/90 transition-colors">Abrir contestação</a>
-            <a href="/charges"
-               className="px-4 py-2 rounded-xl font-medium border bg-card hover:bg-accent transition-colors">Anexar comprovante</a>
-          </div>
         </div>
 
         {/* Diagrama SVG do fluxo de cobranças */}
@@ -200,12 +193,8 @@ export default function TopChargesRules() {
               <strong> gráficos por mês/ano</strong>. Filtre por período, tipo e status; exporte quando precisar.
             </p>
             <div className="flex flex-wrap gap-2 pt-2">
-              <a href="/hub/manutencoes"
+              <a href="/manutencoes"
                  className="px-4 py-2 rounded-xl font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">Abrir Hub</a>
-              <a href="/tickets/new?tipo=contestacao"
-                 className="px-4 py-2 rounded-xl font-medium border bg-card hover:bg-accent transition-colors">Contestar cobrança</a>
-              <a href="/charges"
-                 className="px-4 py-2 rounded-xl font-medium border bg-card hover:bg-accent transition-colors">Anexar comprovante</a>
             </div>
           </div>
         </details>
