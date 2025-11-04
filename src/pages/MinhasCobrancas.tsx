@@ -234,43 +234,11 @@ const MinhasCobrancas = () => {
                     )}
                   </div>
 
-                  {/* Preview de Anexos */}
+                  {/* Contador de Anexos */}
                   {charge.attachments && charge.attachments.length > 0 && (
-                    <div className="border-t pt-4">
-                      <div className="grid grid-cols-3 gap-2">
-                        {charge.attachments.slice(0, 3).map((attachment) => (
-                          <div key={attachment.id} className="aspect-square rounded-md overflow-hidden bg-muted">
-                            {isImageFile(attachment) ? (
-                              <AuthenticatedImage
-                                src={getAttachmentUrl(attachment)}
-                                alt={attachment.file_name}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : isVideoFile(attachment) ? (
-                              <div className="relative w-full h-full bg-muted flex items-center justify-center">
-                                {attachment.poster_path ? (
-                                  <AuthenticatedImage
-                                    src={getPosterUrl(attachment)}
-                                    alt={attachment.file_name}
-                                    className="w-full h-full object-cover"
-                                  />
-                                ) : (
-                                  <Video className="h-8 w-8 text-muted-foreground" />
-                                )}
-                              </div>
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center">
-                                <Paperclip className="h-6 w-6 text-muted-foreground" />
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                      {charge.attachments.length > 3 && (
-                        <p className="text-xs text-muted-foreground mt-2">
-                          +{charge.attachments.length - 3} {charge.attachments.length - 3 === 1 ? 'anexo' : 'anexos'}
-                        </p>
-                      )}
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground border-t pt-4">
+                      <Paperclip className="h-4 w-4" />
+                      <span>+{charge.attachments.length} {charge.attachments.length === 1 ? 'anexo' : 'anexos'}</span>
                     </div>
                   )}
 
