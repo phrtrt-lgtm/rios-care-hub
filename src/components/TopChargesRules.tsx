@@ -9,9 +9,9 @@ export default function TopChargesRules() {
           <div className="max-w-3xl">
             <h2 className="text-xl md:text-2xl font-semibold">Como funcionam as cobranças de manutenção</h2>
             <p className="mt-2 text-sm md:text-base opacity-95">
-              Cada cobrança mostra o <strong>valor total do serviço</strong>, o <strong>aporte da gestão (quando houver)</strong> e o <strong>valor devido</strong>.
-              Você tem <strong>7 dias</strong> para <strong>contestar</strong> ou <strong>anexar o comprovante</strong>. Sem resposta, o valor poderá ser
-              <strong> compensado em reservas futuras</strong>.
+              Cada cobrança mostra o valor total do serviço, o aporte da gestão (quando houver) e o valor devido.
+              Você tem 7 dias para contestar ou anexar o comprovante. Sem resposta, o valor será
+              compensado em reservas futuras.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -38,20 +38,20 @@ export default function TopChargesRules() {
                   Transparência e critérios de aporte
                 </h3>
                 <p className="mt-2 text-sm md:text-base text-muted-foreground">
-                  Em cada cobrança você verá: <strong>valor total</strong> da manutenção, <strong>aporte da gestão</strong> (se houver),
-                  <strong> valor devido</strong>, <strong>justificativa resumida</strong> e <strong>anexos</strong> (fotos, vídeos, notas).
+                  Em cada cobrança você verá: valor total da manutenção, aporte da gestão (se houver),
+                  valor devido, justificativa resumida e anexos (fotos, vídeos, notas).
                   Nossa eventual participação financeira é avaliada caso a caso considerando:
                 </p>
                 <ul className="list-disc pl-5 mt-3 space-y-1 text-sm md:text-base text-muted-foreground">
-                  <li><strong>Relacionamento</strong> com o proprietário (histórico e parceria).</li>
-                  <li><strong>Resultados</strong> da unidade (giro e desempenho).</li>
-                  <li><strong>Custo e contexto</strong> da manutenção.</li>
-                  <li><strong>Urgência e risco operacional</strong> (impacto em reservas e avaliações).</li>
+                  <li>Relacionamento com o proprietário (histórico e parceria).</li>
+                  <li>Resultados da unidade (giro e desempenho).</li>
+                  <li>Custo e contexto da manutenção.</li>
+                  <li>Urgência e risco operacional (impacto em reservas e avaliações).</li>
                 </ul>
                 <div className="mt-3 p-3 rounded-xl text-sm bg-accent border border-primary/20">
-                  <strong>Exemplos:</strong> Em alta urgência com risco às reservas (escassez de mão de obra/preço elevado), podemos
-                  <strong> não aportar</strong>. Em serviços pequenos ou com parceiros de longa data e ótimo resultado, podemos
-                  <strong> contribuir parcialmente</strong>.
+                  Exemplos: Em alta urgência com risco às reservas (escassez de mão de obra/preço elevado), podemos
+                  não aportar. Em serviços pequenos ou com parceiros de longa data e ótimo resultado, podemos
+                  contribuir parcialmente.
                 </div>
               </div>
 
@@ -167,7 +167,7 @@ export default function TopChargesRules() {
                   </svg>
                 </div>
                 <p className="text-xs text-muted-foreground mt-3">
-                  Fluxo: <strong>Emissão</strong> → <strong>7 dias para ação</strong> → <strong>Pagamento/Contestação/Timeout</strong> → <strong>Liquidação ou Offset</strong>
+                  Fluxo: Emissão → 7 dias para ação → Pagamento/Contestação/Timeout → Liquidação ou Offset
                 </p>
               </div>
             </div>
@@ -176,8 +176,8 @@ export default function TopChargesRules() {
             <div className="pt-3">
               <h4 className="font-semibold text-foreground text-base">Hub de Manutenções</h4>
               <p className="mt-2 text-sm md:text-base text-muted-foreground">
-                Acesse o <strong>Hub</strong> para ver todas as manutenções por unidade, com mídias, notas e
-                <strong> gráficos por mês/ano</strong>. Filtre por período, tipo e status; exporte quando precisar.
+                Acesse o Hub para ver todas as manutenções por unidade, com mídias, notas e
+                gráficos por mês/ano. Filtre por período, tipo e status; exporte quando precisar.
               </p>
               <div className="flex flex-wrap gap-2 pt-3">
                 <a href="/manutencoes"
