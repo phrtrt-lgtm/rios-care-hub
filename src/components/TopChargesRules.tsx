@@ -24,7 +24,7 @@ export default function TopChargesRules() {
       </div>
 
       {/* Grade: texto + diagrama */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         {/* Texto introdutório */}
         <div className="bg-card rounded-2xl border p-5 md:p-6">
           <h3 className="text-lg md:text-xl font-semibold text-secondary">
