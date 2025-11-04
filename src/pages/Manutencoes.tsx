@@ -122,12 +122,12 @@ export default function Manutencoes() {
 
             <div className="space-y-2 w-48">
               <label className="text-sm font-medium">Status</label>
-              <Select value={status} onValueChange={setStatus}>
+              <Select value={status || "all"} onValueChange={(v) => setStatus(v === "all" ? "" : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="open">Aberta</SelectItem>
                   <SelectItem value="in_progress">Em andamento</SelectItem>
                   <SelectItem value="completed">Concluída</SelectItem>
