@@ -15,7 +15,7 @@ export default function TopChargesRules() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <a href="/hub/manutencoes"
+            <a href="/manutencoes"
                className="px-4 py-2 rounded-xl font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">Ver minhas manutenções</a>
             <a href="#regras-completas"
                className="px-4 py-2 rounded-xl font-medium bg-white text-secondary hover:bg-white/90 transition-colors">Regras completas</a>
