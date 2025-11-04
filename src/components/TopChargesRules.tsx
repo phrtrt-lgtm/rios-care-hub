@@ -3,19 +3,8 @@ import React from "react";
 export default function TopChargesRules() {
   return (
     <section id="charges-rules" className="w-full">
-      {/* Paleta com fallback */}
-      <style>{`
-        :root{
-          --brand-blue: var(--color-primary, #1E40AF);
-          --brand-terracotta: #E07A5F;
-          --brand-ink: #0F172A;
-          --brand-bg: #F8FAFC;
-        }
-      `}</style>
-
       {/* Banner compacto (topo fixo) */}
-      <div className="w-full rounded-2xl p-5 md:p-6 mb-4"
-           style={{background:"linear-gradient(135deg,var(--brand-blue) 0%, #213E7A 100%)", color:"#fff"}}>
+      <div className="w-full rounded-2xl p-5 md:p-6 mb-4 bg-gradient-to-br from-secondary to-secondary/80 text-secondary-foreground">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="max-w-3xl">
             <h2 className="text-xl md:text-2xl font-semibold">Como funcionam as cobranças de manutenção</h2>
@@ -27,10 +16,9 @@ export default function TopChargesRules() {
           </div>
           <div className="flex flex-wrap gap-2">
             <a href="/hub/manutencoes"
-               className="px-4 py-2 rounded-xl font-medium"
-               style={{background:"var(--brand-terracotta)", color:"#fff"}}>Ver minhas manutenções</a>
+               className="px-4 py-2 rounded-xl font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">Ver minhas manutenções</a>
             <a href="#regras-completas"
-               className="px-4 py-2 rounded-xl font-medium bg-white text-black">Regras completas</a>
+               className="px-4 py-2 rounded-xl font-medium bg-white text-secondary hover:bg-white/90 transition-colors">Regras completas</a>
           </div>
         </div>
       </div>
@@ -38,23 +26,22 @@ export default function TopChargesRules() {
       {/* Grade: texto + diagrama */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Texto introdutório */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 md:p-6">
-          <h3 className="text-lg md:text-xl font-semibold" style={{color:"var(--brand-blue)"}}>
+        <div className="bg-card rounded-2xl border p-5 md:p-6">
+          <h3 className="text-lg md:text-xl font-semibold text-secondary">
             Transparência e critérios de aporte
           </h3>
-          <p className="mt-2 text-sm md:text-base text-slate-700">
+          <p className="mt-2 text-sm md:text-base text-muted-foreground">
             Em cada cobrança você verá: <strong>valor total</strong> da manutenção, <strong>aporte da gestão</strong> (se houver),
             <strong> valor devido</strong>, <strong>justificativa resumida</strong> e <strong>anexos</strong> (fotos, vídeos, notas).
             Nossa eventual participação financeira é avaliada caso a caso considerando:
           </p>
-          <ul className="list-disc pl-5 mt-3 space-y-1 text-sm md:text-base text-slate-700">
+          <ul className="list-disc pl-5 mt-3 space-y-1 text-sm md:text-base text-muted-foreground">
             <li><strong>Relacionamento</strong> com o proprietário (histórico e parceria).</li>
             <li><strong>Resultados</strong> da unidade (giro e desempenho).</li>
             <li><strong>Custo e contexto</strong> da manutenção.</li>
             <li><strong>Urgência e risco operacional</strong> (impacto em reservas e avaliações).</li>
           </ul>
-          <div className="mt-3 p-3 rounded-xl text-sm bg-orange-50 border border-orange-200"
-               style={{borderColor:"rgba(224,122,95,0.35)"}}>
+          <div className="mt-3 p-3 rounded-xl text-sm bg-accent border border-primary/20">
             <strong>Exemplos:</strong> Em alta urgência com risco às reservas (escassez de mão de obra/preço elevado), podemos
             <strong> não aportar</strong>. Em serviços pequenos ou com parceiros de longa data e ótimo resultado, podemos
             <strong> contribuir parcialmente</strong>.
@@ -62,133 +49,136 @@ export default function TopChargesRules() {
 
           <div className="mt-4 flex flex-wrap gap-2">
             <a href="/tickets/new?tipo=contestacao"
-               className="px-4 py-2 rounded-xl font-medium"
-               style={{background:"var(--brand-blue)", color:"#fff"}}>Abrir contestação</a>
+               className="px-4 py-2 rounded-xl font-medium bg-secondary text-secondary-foreground hover:bg-secondary/90 transition-colors">Abrir contestação</a>
             <a href="/charges"
-               className="px-4 py-2 rounded-xl font-medium border border-slate-300 bg-white">Anexar comprovante</a>
+               className="px-4 py-2 rounded-xl font-medium border bg-card hover:bg-accent transition-colors">Anexar comprovante</a>
           </div>
         </div>
 
         {/* Diagrama SVG do fluxo de cobranças */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-5">
-          <h3 className="text-lg md:text-xl font-semibold mb-3" style={{color:"var(--brand-blue)"}}>
+        <div className="bg-card rounded-2xl border p-4 md:p-5">
+          <h3 className="text-lg md:text-xl font-semibold mb-4 text-secondary">
             Fluxo de cobranças
           </h3>
-          <div className="w-full overflow-auto" aria-label="Diagrama do fluxo de cobranças">
-            <svg viewBox="0 0 980 560" role="img" aria-labelledby="fluxoTitle fluxoDesc"
-                 className="w-[900px] max-w-none">
+          <div className="w-full overflow-x-auto" aria-label="Diagrama do fluxo de cobranças">
+            <svg viewBox="0 0 1100 320" role="img" aria-labelledby="fluxoTitle fluxoDesc"
+                 className="w-full min-w-[900px]">
               <title id="fluxoTitle">Fluxo de cobranças</title>
-              <desc id="fluxoDesc">Etapas e decisões do processo de cobranças com prazos e possíveis resultados.</desc>
+              <desc id="fluxoDesc">Processo linear de cobranças com decisões e resultados</desc>
 
-              {/* Definições de setas */}
+              {/* Definições */}
               <defs>
-                <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-                  <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--brand-blue)" />
+                <marker id="arrowBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="hsl(206 56% 22%)" />
                 </marker>
-                <marker id="arrowTerracotta" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-                  <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--brand-terracotta)" />
+                <marker id="arrowOrange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="hsl(20 63% 48%)" />
                 </marker>
-                <style>
-                  {`
-                    .node { fill: #fff; stroke: rgba(2,6,23,0.12); stroke-width: 1.5; rx: 14; }
-                    .node-title { font: 600 15px/1.2 ui-sans-serif, system-ui; fill: var(--brand-ink); }
-                    .node-sub { font: 400 12px/1.3 ui-sans-serif, system-ui; fill: #475569; }
-                    .pill { font: 700 11px/1 ui-sans-serif, system-ui; fill: #fff; }
-                  `}
-                </style>
               </defs>
 
-              {/* Linha 1 */}
-              <g transform="translate(40,40)">
-                <rect className="node" width="260" height="90" />
-                <text className="node-title" x="18" y="28">Cobrança emitida</text>
-                <text className="node-sub" x="18" y="52">Detalhe: total, aporte da gestão, devido</text>
-                <rect x="170" y="60" width="80" height="20" fill="var(--brand-blue)" rx="10"/>
-                <text className="pill" x="176" y="74">PENDING</text>
+              {/* Etapa 1: Emissão */}
+              <g transform="translate(20,40)">
+                <rect width="160" height="100" rx="12" fill="hsl(206 56% 22%)" stroke="hsl(206 56% 30%)" strokeWidth="2"/>
+                <text x="80" y="35" textAnchor="middle" fill="white" fontSize="14" fontWeight="600">Cobrança</text>
+                <text x="80" y="52" textAnchor="middle" fill="white" fontSize="14" fontWeight="600">emitida</text>
+                <text x="80" y="72" textAnchor="middle" fill="white" fontSize="11">Total, aporte</text>
+                <text x="80" y="86" textAnchor="middle" fill="white" fontSize="11">e valor devido</text>
               </g>
 
-              {/* seta 1 */}
-              <line x1="300" y1="85" x2="430" y2="85" stroke="var(--brand-blue)" strokeWidth="2.5" markerEnd="url(#arrow)" />
+              {/* Seta 1 */}
+              <line x1="185" y1="90" x2="225" y2="90" stroke="hsl(206 56% 22%)" strokeWidth="2.5" markerEnd="url(#arrowBlue)" />
 
-              {/* Linha 2 */}
+              {/* Etapa 2: Janela 7 dias */}
+              <g transform="translate(225,40)">
+                <rect width="160" height="100" rx="12" fill="white" stroke="hsl(20 63% 48%)" strokeWidth="2.5"/>
+                <text x="80" y="35" textAnchor="middle" fill="hsl(206 56% 22%)" fontSize="14" fontWeight="600">Janela de</text>
+                <text x="80" y="52" textAnchor="middle" fill="hsl(206 56% 22%)" fontSize="14" fontWeight="600">7 dias</text>
+                <rect x="30" y="62" width="100" height="22" rx="11" fill="hsl(20 63% 48%)"/>
+                <text x="80" y="77" textAnchor="middle" fill="white" fontSize="11" fontWeight="700">D-7 a D-0</text>
+                <text x="80" y="93" textAnchor="middle" fill="hsl(206 20% 45%)" fontSize="10">Contestar ou pagar</text>
+              </g>
+
+              {/* Seta 2 - dividida em 3 */}
+              <line x1="390" y1="90" x2="430" y2="90" stroke="hsl(206 56% 22%)" strokeWidth="2.5" markerEnd="url(#arrowBlue)" />
+              
+              {/* Seta para contestação (curva para cima) */}
+              <path d="M 390 90 Q 420 50, 455 50" fill="none" stroke="hsl(206 56% 22%)" strokeWidth="2" markerEnd="url(#arrowBlue)" />
+              
+              {/* Seta para sem resposta (curva para baixo) */}
+              <path d="M 390 90 Q 420 230, 455 230" fill="none" stroke="hsl(20 63% 48%)" strokeWidth="2" markerEnd="url(#arrowOrange)" />
+
+              {/* Etapa 3a: Pagamento */}
               <g transform="translate(430,40)">
-                <rect className="node" width="260" height="90" />
-                <text className="node-title" x="18" y="28">Janela de 7 dias</text>
-                <text className="node-sub" x="18" y="52">Contestar ou pagar/anexar comprovante</text>
-                <rect x="155" y="60" width="105" height="20" fill="var(--brand-terracotta)" rx="10"/>
-                <text className="pill" x="162" y="74">D-7 a D-0</text>
+                <rect width="160" height="100" rx="12" fill="hsl(206 56% 22%)" stroke="hsl(206 56% 30%)" strokeWidth="2"/>
+                <text x="80" y="40" textAnchor="middle" fill="white" fontSize="14" fontWeight="600">Pagamento</text>
+                <text x="80" y="62" textAnchor="middle" fill="white" fontSize="11">Comprovante</text>
+                <text x="80" y="76" textAnchor="middle" fill="white" fontSize="11">anexado</text>
+                <rect x="50" y="82" width="60" height="16" rx="8" fill="white"/>
+                <text x="80" y="93" textAnchor="middle" fill="hsl(206 56% 22%)" fontSize="10" fontWeight="700">PAID</text>
               </g>
 
-              {/* setas ramificadas */}
-              <line x1="560" y1="130" x2="560" y2="200" stroke="var(--brand-blue)" strokeWidth="2.5" markerEnd="url(#arrow)" />
-              <line x1="560" y1="130" x2="830" y2="200" stroke="var(--brand-blue)" strokeWidth="2.5" markerEnd="url(#arrow)" />
-              <line x1="560" y1="130" x2="290" y2="200" stroke="var(--brand-terracotta)" strokeWidth="2.5" markerEnd="url(#arrowTerracotta)" />
-
-              {/* Linha 3: Contestação */}
-              <g transform="translate(430,200)">
-                <rect className="node" width="260" height="90" />
-                <text className="node-title" x="18" y="28">Contestação</text>
-                <text className="node-sub" x="18" y="52">Gestão analisa e responde no portal</text>
+              {/* Etapa 3b: Contestação */}
+              <g transform="translate(455,10)">
+                <rect width="140" height="70" rx="10" fill="white" stroke="hsl(206 56% 22%)" strokeWidth="2"/>
+                <text x="70" y="25" textAnchor="middle" fill="hsl(206 56% 22%)" fontSize="13" fontWeight="600">Contestação</text>
+                <text x="70" y="42" textAnchor="middle" fill="hsl(206 20% 45%)" fontSize="10">Gestão analisa</text>
+                <text x="70" y="56" textAnchor="middle" fill="hsl(206 20% 45%)" fontSize="10">e responde</text>
               </g>
 
-              {/* Linha 3: Pagamento */}
-              <g transform="translate(700,200)">
-                <rect className="node" width="240" height="90" />
-                <text className="node-title" x="18" y="28">Pagamento</text>
-                <text className="node-sub" x="18" y="52">Upload do comprovante</text>
-                <rect x="150" y="60" width="80" height="20" fill="var(--brand-blue)" rx="10"/>
-                <text className="pill" x="172" y="74">PAID</text>
+              {/* Etapa 3c: Sem resposta */}
+              <g transform="translate(455,200)">
+                <rect width="140" height="70" rx="10" fill="white" stroke="hsl(20 63% 48%)" strokeWidth="2.5"/>
+                <text x="70" y="28" textAnchor="middle" fill="hsl(206 56% 22%)" fontSize="13" fontWeight="600">Sem resposta</text>
+                <text x="70" y="48" textAnchor="middle" fill="hsl(206 20% 45%)" fontSize="10">Após 7 dias</text>
+                <text x="70" y="62" textAnchor="middle" fill="hsl(20 63% 48%)" fontSize="10" fontWeight="600">⚠ Automático</text>
               </g>
 
-              {/* Linha 3: Sem resposta */}
-              <g transform="translate(160,200)">
-                <rect className="node" width="260" height="90" />
-                <text className="node-title" x="18" y="28">Sem resposta</text>
-                <text className="node-sub" x="18" y="52">Após 7 dias</text>
+              {/* Setas finais */}
+              <line x1="595" y1="90" x2="635" y2="90" stroke="hsl(206 56% 22%)" strokeWidth="2.5" markerEnd="url(#arrowBlue)" />
+              <path d="M 595 45 Q 615 45, 615 90 L 635 90" fill="none" stroke="hsl(206 56% 22%)" strokeWidth="2" markerEnd="url(#arrowBlue)" />
+              <line x1="600" y1="235" x2="640" y2="235" stroke="hsl(20 63% 48%)" strokeWidth="2.5" markerEnd="url(#arrowOrange)" />
+
+              {/* Etapa 4a: Liquidada */}
+              <g transform="translate(635,40)">
+                <rect width="140" height="100" rx="12" fill="hsl(134 61% 41%)" stroke="hsl(134 61% 35%)" strokeWidth="2"/>
+                <text x="70" y="45" textAnchor="middle" fill="white" fontSize="14" fontWeight="600">✓ Liquidada</text>
+                <text x="70" y="65" textAnchor="middle" fill="white" fontSize="11">Cobrança</text>
+                <text x="70" y="79" textAnchor="middle" fill="white" fontSize="11">encerrada</text>
               </g>
 
-              {/* setas para resultados */}
-              <line x1="560" y1="290" x2="560" y2="360" stroke="var(--brand-blue)" strokeWidth="2.5" markerEnd="url(#arrow)" />
-              <line x1="820" y1="245" x2="900" y2="245" stroke="var(--brand-blue)" strokeWidth="2.5" markerEnd="url(#arrow)" />
-              <line x1="290" y1="245" x2="120" y2="245" stroke="var(--brand-terracotta)" strokeWidth="2.5" markerEnd="url(#arrowTerracotta)" />
-
-              {/* Linha 4: Decisão da gestão */}
-              <g transform="translate(430,360)">
-                <rect className="node" width="260" height="120" />
-                <text className="node-title" x="18" y="28">Decisão</text>
-                <text className="node-sub" x="18" y="52">Aprovada: sem débito</text>
-                <text className="node-sub" x="18" y="72">Rejeitada: volta a pagar/offset</text>
+              {/* Etapa 4b: Offset */}
+              <g transform="translate(640,200)">
+                <rect width="140" height="70" rx="10" fill="hsl(20 63% 48%)" stroke="hsl(20 60% 40%)" strokeWidth="2"/>
+                <text x="70" y="28" textAnchor="middle" fill="white" fontSize="13" fontWeight="600">Offset</text>
+                <text x="70" y="45" textAnchor="middle" fill="white" fontSize="10">Desconto em</text>
+                <text x="70" y="59" textAnchor="middle" fill="white" fontSize="10">reserva futura</text>
               </g>
 
-              {/* Resultado: Liquidada */}
-              <g transform="translate(900,200)">
-                <rect className="node" width="260" height="90" />
-                <text className="node-title" x="18" y="28">Liquidada</text>
-                <text className="node-sub" x="18" y="52">Cobrança encerrada</text>
-              </g>
-
-              {/* Resultado: Offset */}
-              <g transform="translate(0,200)">
-                <rect className="node" width="140" height="90" />
-                <text className="node-title" x="18" y="28">Offset</text>
-                <text className="node-sub" x="18" y="52">Desconto em reserva futura</text>
+              {/* Legenda */}
+              <g transform="translate(820,40)">
+                <text x="0" y="0" fill="hsl(206 20% 45%)" fontSize="11" fontWeight="600">Status:</text>
+                <circle cx="8" cy="18" r="5" fill="hsl(206 56% 22%)"/>
+                <text x="18" y="22" fill="hsl(206 20% 45%)" fontSize="10">Fluxo normal</text>
+                <circle cx="8" cy="38" r="5" fill="hsl(20 63% 48%)"/>
+                <text x="18" y="42" fill="hsl(206 20% 45%)" fontSize="10">Sem resposta</text>
+                <circle cx="8" cy="58" r="5" fill="hsl(134 61% 41%)"/>
+                <text x="18" y="62" fill="hsl(206 20% 45%)" fontSize="10">Finalizado</text>
               </g>
             </svg>
           </div>
-          <p className="sr-only">
-            Fluxo: Emissão → Janela de 7 dias → (Contestação → Decisão / Pagamento → Liquidada / Sem resposta → Offset).
+          <p className="text-xs text-muted-foreground mt-3">
+            Fluxo: <strong>Emissão</strong> → <strong>7 dias para ação</strong> → <strong>Pagamento/Contestação/Timeout</strong> → <strong>Liquidação ou Offset</strong>
           </p>
         </div>
       </div>
 
       {/* Acordeão - Regras completas */}
-      <div id="regras-completas" className="mt-6 bg-[var(--brand-bg)] rounded-2xl border border-slate-200 p-5 md:p-6">
+      <div id="regras-completas" className="mt-6 bg-card rounded-2xl border p-5 md:p-6">
         <details>
-          <summary className="cursor-pointer text-base md:text-lg font-semibold"
-                   style={{color:"var(--brand-blue)"}}>
+          <summary className="cursor-pointer text-base md:text-lg font-semibold text-secondary">
             Regras completas
           </summary>
-          <div className="mt-3 text-sm md:text-base text-slate-800 space-y-3">
+          <div className="mt-3 text-sm md:text-base text-muted-foreground space-y-3">
             <p>
               Em cada cobrança você verá: <strong>valor total</strong> da manutenção, <strong>aporte da gestão</strong> (quando houver),
               <strong> valor devido</strong>, <strong>justificativa</strong> e <strong>anexos</strong>. Você tem <strong>7 dias</strong> corridos para
@@ -203,20 +193,19 @@ export default function TopChargesRules() {
               <li><strong>Alta urgência/risco</strong>: objetivo é proteger reservas e avaliações — pode não haver aporte.</li>
               <li><strong>Serviços pequenos ou parceiros de longa data com ótimo resultado</strong>: podemos aportar parte do valor.</li>
             </ul>
-            <hr className="my-3 border-slate-200"/>
-            <h4 className="font-semibold">Hub de Manutenções</h4>
+            <hr className="my-3 border"/>
+            <h4 className="font-semibold text-foreground">Hub de Manutenções</h4>
             <p>
               Acesse o <strong>Hub</strong> para ver todas as manutenções por unidade, com mídias, notas e
               <strong> gráficos por mês/ano</strong>. Filtre por período, tipo e status; exporte quando precisar.
             </p>
             <div className="flex flex-wrap gap-2 pt-2">
               <a href="/hub/manutencoes"
-                 className="px-4 py-2 rounded-xl font-medium"
-                 style={{background:"var(--brand-terracotta)", color:"#fff"}}>Abrir Hub</a>
+                 className="px-4 py-2 rounded-xl font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">Abrir Hub</a>
               <a href="/tickets/new?tipo=contestacao"
-                 className="px-4 py-2 rounded-xl font-medium border border-slate-300 bg-white">Contestar cobrança</a>
+                 className="px-4 py-2 rounded-xl font-medium border bg-card hover:bg-accent transition-colors">Contestar cobrança</a>
               <a href="/charges"
-                 className="px-4 py-2 rounded-xl font-medium border border-slate-300 bg-white">Anexar comprovante</a>
+                 className="px-4 py-2 rounded-xl font-medium border bg-card hover:bg-accent transition-colors">Anexar comprovante</a>
             </div>
           </div>
         </details>
