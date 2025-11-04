@@ -131,6 +131,20 @@ export default function ManutencaoDetalhes() {
               <div className="text-2xl font-bold">{formatBRL(maintenance.amount_cents)}</div>
             </div>
 
+            {maintenance.management_contribution_cents > 0 && (
+              <div>
+                <div className="text-sm text-muted-foreground">Aporte da Gestão</div>
+                <div className="text-xl font-semibold text-green-600">- {formatBRL(maintenance.management_contribution_cents)}</div>
+              </div>
+            )}
+
+            <div>
+              <div className="text-sm text-muted-foreground">Valor Devido</div>
+              <div className="text-2xl font-bold text-primary">
+                {formatBRL(maintenance.amount_cents - (maintenance.management_contribution_cents || 0))}
+              </div>
+            </div>
+
             <div>
               <div className="text-sm text-muted-foreground">Responsável pelo Custo</div>
               <div className="font-medium text-sm">

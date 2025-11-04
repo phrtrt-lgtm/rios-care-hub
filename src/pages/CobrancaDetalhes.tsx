@@ -25,6 +25,7 @@ interface Charge {
   title: string;
   description: string | null;
   amount_cents: number;
+  management_contribution_cents: number;
   currency: string;
   due_date: string | null;
   status: string;
@@ -641,9 +642,17 @@ export default function CobrancaDetalhes() {
                 )}
                 <div className="flex flex-wrap gap-2">
                   {getStatusBadge(charge.status)}
-                  <Badge variant="outline">
-                    <DollarSign className="h-3 w-3 mr-1" />
-                    {formatCurrency(charge.amount_cents, charge.currency)}
+                  <Badge variant="outline" className="text-base">
+                    <DollarSign className="h-4 w-4 mr-1" />
+                    Total: {formatCurrency(charge.amount_cents, charge.currency)}
+                  </Badge>
+                  {charge.management_contribution_cents > 0 && (
+                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-base">
+                      Aporte: {formatCurrency(charge.management_contribution_cents, charge.currency)}
+                    </Badge>
+                  )}
+                  <Badge variant="default" className="text-base">
+                    Devido: {formatCurrency(charge.amount_cents - (charge.management_contribution_cents || 0), charge.currency)}
                   </Badge>
                   {charge.due_date && (
                     <Badge variant="secondary">

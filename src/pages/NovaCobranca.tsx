@@ -38,6 +38,7 @@ export default function NovaCobranca() {
     title: "",
     description: "",
     amount_cents: "",
+    management_contribution_cents: "",
     due_date: "",
   });
 
@@ -118,6 +119,7 @@ export default function NovaCobranca() {
           title: formData.title,
           description: formData.description,
           amount_cents: parseInt(formData.amount_cents) * 100, // Convert to cents
+          management_contribution_cents: formData.management_contribution_cents ? parseInt(formData.management_contribution_cents) * 100 : 0,
           due_date: formData.due_date || null,
           status: 'draft'
         })
@@ -252,7 +254,7 @@ export default function NovaCobranca() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="amount_cents">Valor (R$) *</Label>
+                  <Label htmlFor="amount_cents">Valor Total (R$) *</Label>
                   <Input
                     id="amount_cents"
                     type="number"
@@ -266,14 +268,27 @@ export default function NovaCobranca() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="due_date">Vencimento</Label>
+                  <Label htmlFor="management_contribution_cents">Aporte da Gestão (R$)</Label>
                   <Input
-                    id="due_date"
-                    type="date"
-                    value={formData.due_date}
-                    onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+                    id="management_contribution_cents"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.management_contribution_cents}
+                    onChange={(e) => setFormData({ ...formData, management_contribution_cents: e.target.value })}
+                    placeholder="0.00"
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="due_date">Vencimento</Label>
+                <Input
+                  id="due_date"
+                  type="date"
+                  value={formData.due_date}
+                  onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+                />
               </div>
 
               <div className="space-y-2">

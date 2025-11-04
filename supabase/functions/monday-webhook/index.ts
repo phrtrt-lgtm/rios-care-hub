@@ -133,10 +133,12 @@ serve(async (req) => {
     // Extract charge data using the actual column IDs from your Monday board
     // The title will be the Monday item name
     const description = getColumnValue("long_text_mkx3tx1b");
+    const managementContribution = parseInt(getColumnValue("numeric__1") || "0") * 100; // Second numeric column - management contribution
     const chargeData = {
       title: item.name || `Cobrança - ${propertyName}`,
       description: description || null,
       amount_cents: parseInt(getColumnValue("numeric_mkx355en") || "0") * 100, // Convert to cents
+      management_contribution_cents: managementContribution,
       due_date: getColumnValue("data") || null,
       owner_id: property.owner_id,
       property_id: property.id,

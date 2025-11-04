@@ -551,6 +551,7 @@ export type Database = {
           description: string | null
           due_date: string | null
           id: string
+          management_contribution_cents: number
           owner_id: string
           owner_note: string | null
           owner_proof_path: string | null
@@ -578,6 +579,7 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          management_contribution_cents?: number
           owner_id: string
           owner_note?: string | null
           owner_proof_path?: string | null
@@ -605,6 +607,7 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          management_contribution_cents?: number
           owner_id?: string
           owner_note?: string | null
           owner_proof_path?: string | null

@@ -168,6 +168,8 @@ export default function Manutencoes() {
                   <th className="text-left p-3">Imóvel</th>
                   <th className="text-left p-3">Título / Categoria</th>
                   <th className="text-right p-3">Valor Total</th>
+                  <th className="text-right p-3">Aporte Gestão</th>
+                  <th className="text-right p-3">Valor Devido</th>
                   <th className="text-center p-3">Responsável</th>
                   <th className="text-right p-3">Pago</th>
                   <th className="text-center p-3">Status</th>
@@ -176,7 +178,7 @@ export default function Manutencoes() {
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={7} className="text-center p-8 text-muted-foreground">
+                    <td colSpan={9} className="text-center p-8 text-muted-foreground">
                       Carregando...
                     </td>
                   </tr>
@@ -198,6 +200,12 @@ export default function Manutencoes() {
                       <td className="p-3 text-right font-medium">
                         {formatBRL(m.amount_cents)}
                       </td>
+                      <td className="p-3 text-right text-green-600 font-medium">
+                        {m.management_contribution_cents > 0 ? formatBRL(m.management_contribution_cents) : '-'}
+                      </td>
+                      <td className="p-3 text-right font-bold">
+                        {formatBRL(m.amount_cents - (m.management_contribution_cents || 0))}
+                      </td>
                       <td className="p-3 text-center text-xs">
                         {getResponsibleLabel(m.cost_responsible, m.split_owner_percent)}
                       </td>
@@ -209,7 +217,7 @@ export default function Manutencoes() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={7} className="text-center p-8 text-muted-foreground">
+                    <td colSpan={9} className="text-center p-8 text-muted-foreground">
                       Nenhuma manutenção encontrada
                     </td>
                   </tr>

@@ -16,6 +16,7 @@ interface Charge {
   title: string;
   description: string | null;
   amount_cents: number;
+  management_contribution_cents: number;
   currency: string;
   due_date: string | null;
   status: string;
@@ -203,10 +204,27 @@ const MinhasCobrancas = () => {
                 <CardContent className="space-y-4">
                   {/* Valor e Data */}
                   <div className="space-y-2">
-                    <div className="flex items-baseline justify-between">
-                      <span className="text-2xl font-bold text-foreground">
-                        {formatCurrency(charge.amount_cents, charge.currency)}
-                      </span>
+                    <div className="space-y-1">
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-sm text-muted-foreground">Valor Total:</span>
+                        <span className="text-lg font-semibold text-foreground">
+                          {formatCurrency(charge.amount_cents, charge.currency)}
+                        </span>
+                      </div>
+                      {charge.management_contribution_cents > 0 && (
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-sm text-muted-foreground">Aporte Gestão:</span>
+                          <span className="text-lg font-semibold text-green-600">
+                            - {formatCurrency(charge.management_contribution_cents, charge.currency)}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex items-baseline justify-between border-t pt-1">
+                        <span className="text-sm font-medium">Valor Devido:</span>
+                        <span className="text-xl font-bold text-foreground">
+                          {formatCurrency(charge.amount_cents - (charge.management_contribution_cents || 0), charge.currency)}
+                        </span>
+                      </div>
                     </div>
                     {charge.due_date && (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
