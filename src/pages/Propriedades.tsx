@@ -93,6 +93,7 @@ const Propriedades = () => {
         .order('name');
 
       if (cleanersError) throw cleanersError;
+      console.log('Faxineiras carregadas:', cleanersData);
       setCleaners(cleanersData || []);
 
       // Fetch properties
@@ -139,18 +140,24 @@ const Propriedades = () => {
       return;
     }
 
+    console.log('formData antes do save:', formData);
+
     try {
       if (editingProperty) {
         // Update existing property
+        const updateData = {
+          name: formData.name,
+          address: formData.address || null,
+          owner_id: formData.owner_id,
+          assigned_cleaner_id: formData.assigned_cleaner_id || null,
+          owner_phone: formData.owner_phone || null
+        };
+        
+        console.log('Atualizando propriedade com:', updateData);
+        
         const { error } = await supabase
           .from('properties')
-          .update({
-            name: formData.name,
-            address: formData.address || null,
-            owner_id: formData.owner_id,
-            assigned_cleaner_id: formData.assigned_cleaner_id || null,
-            owner_phone: formData.owner_phone || null
-          })
+          .update(updateData)
           .eq('id', editingProperty.id);
 
         if (error) throw error;
@@ -396,11 +403,18 @@ const Propriedades = () => {
                   </div>
                   <div>
                     <Label htmlFor="assigned_cleaner_id">Faxineira Responsável</Label>
-                    <Select value={formData.assigned_cleaner_id || undefined} onValueChange={(value) => setFormData({ ...formData, assigned_cleaner_id: value })}>
+                    <Select 
+                      value={formData.assigned_cleaner_id || ""} 
+                      onValueChange={(value) => {
+                        console.log('Faxineira selecionada:', value);
+                        setFormData({ ...formData, assigned_cleaner_id: value });
+                      }}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Nenhuma (opcional)" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="">Nenhuma</SelectItem>
                         {cleaners.map((cleaner) => (
                           <SelectItem key={cleaner.id} value={cleaner.id}>
                             {cleaner.name} {cleaner.phone ? `- ${cleaner.phone}` : ''}
