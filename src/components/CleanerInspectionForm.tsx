@@ -21,10 +21,23 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
   const [files, setFiles] = useState<File[]>([]);
   const [audioFiles, setAudioFiles] = useState<Array<{ file: File; transcript: string }>>([]);
   const [sending, setSending] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string>('');
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setFiles(Array.from(e.target.files));
+      const selectedFiles = Array.from(e.target.files);
+      
+      // Validar tamanho de cada arquivo (max 50MB)
+      const maxSize = 50 * 1024 * 1024; // 50MB
+      const oversizedFiles = selectedFiles.filter(f => f.size > maxSize);
+      
+      if (oversizedFiles.length > 0) {
+        toast.error(`Arquivos muito grandes (máx 50MB): ${oversizedFiles.map(f => f.name).join(', ')}`);
+        e.target.value = ''; // Limpar input
+        return;
+      }
+      
+      setFiles(selectedFiles);
     }
   };
 
@@ -60,7 +73,18 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
       return;
     }
 
+    // Validar tamanho total
+    const totalSize = [...files, ...audioFiles.map(a => a.file)].reduce((sum, f) => sum + f.size, 0);
+    const maxTotalSize = 100 * 1024 * 1024; // 100MB total
+    
+    if (totalSize > maxTotalSize) {
+      toast.error('Tamanho total dos arquivos excede 100MB. Remova alguns arquivos.');
+      return;
+    }
+
     setSending(true);
+    setUploadProgress('Iniciando...');
+    
     try {
       console.log('Iniciando upload de arquivos...');
       const attachments: Array<{
@@ -71,7 +95,10 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
       }> = [];
 
       // Upload attachments
+      let fileIndex = 0;
       for (const file of files) {
+        fileIndex++;
+        setUploadProgress(`Upload ${fileIndex}/${files.length + audioFiles.length}: ${file.name}`);
         console.log('Fazendo upload de arquivo:', file.name);
         const url = await uploadFile(file);
         attachments.push({
@@ -85,6 +112,8 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
       // Upload audio files and add to attachments
       const audioData: Array<{ audio_url: string; transcript: string }> = [];
       for (const { file, transcript } of audioFiles) {
+        fileIndex++;
+        setUploadProgress(`Upload ${fileIndex}/${files.length + audioFiles.length}: ${file.name}`);
         console.log('Fazendo upload de áudio:', file.name);
         const url = await uploadFile(file);
         audioData.push({ audio_url: url, transcript });
@@ -98,6 +127,7 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
         });
       }
 
+      setUploadProgress('Criando vistoria...');
       console.log('Uploads concluídos. Criando vistoria...');
       
       // Get user info
@@ -138,12 +168,14 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
       setNotes('');
       setFiles([]);
       setAudioFiles([]);
+      setUploadProgress('');
       onBack();
     } catch (error: any) {
       console.error('Erro completo ao enviar vistoria:', error);
       toast.error('Erro ao enviar vistoria: ' + (error.message || 'Erro desconhecido'));
     } finally {
       setSending(false);
+      setUploadProgress('');
     }
   };
 
@@ -219,8 +251,14 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
         className="w-full"
       >
         {sending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-        {sending ? 'Enviando...' : 'Enviar vistoria'}
+        {sending ? (uploadProgress || 'Enviando...') : 'Enviar vistoria'}
       </Button>
+      
+      {files.length > 0 && (
+        <p className="text-xs text-muted-foreground text-center">
+          Tamanho total: {(files.reduce((sum, f) => sum + f.size, 0) / (1024 * 1024)).toFixed(1)} MB
+        </p>
+      )}
     </div>
   );
 }
