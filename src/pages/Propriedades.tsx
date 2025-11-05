@@ -404,7 +404,7 @@ const Propriedades = () => {
                   <div>
                     <Label htmlFor="assigned_cleaner_id">Faxineira Responsável</Label>
                     <Select 
-                      value={formData.assigned_cleaner_id || ""} 
+                      value={formData.assigned_cleaner_id || undefined} 
                       onValueChange={(value) => {
                         console.log('Faxineira selecionada:', value);
                         setFormData({ ...formData, assigned_cleaner_id: value });
@@ -414,7 +414,6 @@ const Propriedades = () => {
                         <SelectValue placeholder="Nenhuma (opcional)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Nenhuma</SelectItem>
                         {cleaners.map((cleaner) => (
                           <SelectItem key={cleaner.id} value={cleaner.id}>
                             {cleaner.name} {cleaner.phone ? `- ${cleaner.phone}` : ''}
@@ -422,6 +421,17 @@ const Propriedades = () => {
                         ))}
                       </SelectContent>
                     </Select>
+                    {formData.assigned_cleaner_id && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="mt-1"
+                        onClick={() => setFormData({ ...formData, assigned_cleaner_id: "" })}
+                      >
+                        Limpar seleção
+                      </Button>
+                    )}
                   </div>
                 </div>
                 <DialogFooter>
