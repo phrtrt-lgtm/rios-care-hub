@@ -105,8 +105,12 @@ serve(async (req) => {
     if (mondayEnabled) {
       try {
         mondayItemId = await createMondayItem({
+          ownerName: property?.profiles?.name || 'Proprietário',
           unitName: property?.name || 'Imóvel',
-          notes: transcript || payload.notes || '',
+          inspectionDate: new Date().toISOString().slice(0, 10),
+          cleanerName: payload.cleaner_name || 'Faxineira',
+          status: payload.notes || '',
+          transcript: transcript || '',
           attachments: payload.attachments || [],
           audioUrl: firstAudioUrl,
         });
@@ -212,13 +216,21 @@ serve(async (req) => {
 });
 
 async function createMondayItem({
+  ownerName,
   unitName,
-  notes,
+  inspectionDate,
+  cleanerName,
+  status,
+  transcript,
   attachments,
   audioUrl,
 }: {
+  ownerName: string;
   unitName: string;
-  notes: string;
+  inspectionDate: string;
+  cleanerName: string;
+  status: string;
+  transcript: string;
   attachments: Array<{ file_url: string; file_name?: string }>;
   audioUrl?: string;
 }) {
@@ -226,14 +238,31 @@ async function createMondayItem({
   if (!mondayToken) return null;
 
   const boardId = Deno.env.get('MONDAY_BOARD_ID');
-  const colUnit = Deno.env.get('MONDAY_COL_UNIT_NAME') || 'imovel';
-  const colDate = Deno.env.get('MONDAY_COL_DATE') || 'data_vistoria';
-  const colNotes = Deno.env.get('MONDAY_COL_NOTES') || 'texto_vistoria';
+  const colOwner = Deno.env.get('MONDAY_COL_OWNER') || 'proprietario';
+  const colUnit = Deno.env.get('MONDAY_COL_UNIT') || 'unidade';
+  const colDate = Deno.env.get('MONDAY_COL_DATE') || 'data';
+  const colCleaner = Deno.env.get('MONDAY_COL_CLEANER') || 'faxineira';
+  const colStatus = Deno.env.get('MONDAY_COL_STATUS') || 'status';
+  const colTranscript = Deno.env.get('MONDAY_COL_TRANSCRIPT') || 'transcricao';
+  const colAttachments = Deno.env.get('MONDAY_COL_ATTACHMENTS') || 'arquivos';
 
   const columnValues: Record<string, any> = {};
+  
+  // Preencher valores das colunas
+  columnValues[colOwner] = ownerName;
   columnValues[colUnit] = unitName;
-  columnValues[colDate] = { date: new Date().toISOString().slice(0, 10) };
-  columnValues[colNotes] = notes.slice(0, 9500);
+  columnValues[colDate] = { date: inspectionDate };
+  columnValues[colCleaner] = cleanerName;
+  columnValues[colStatus] = status;
+  columnValues[colTranscript] = transcript.slice(0, 9500);
+
+  // Adicionar anexos como links se houver
+  if (attachments.length > 0) {
+    const fileLinks = attachments
+      .map((att, idx) => `<a href="${att.file_url}">${att.file_name || `Arquivo ${idx + 1}`}</a>`)
+      .join('<br>');
+    columnValues[colAttachments] = fileLinks;
+  }
 
   const mutation = `
     mutation($boardId: Int!, $itemName: String!, $columnValues: JSON!) {
@@ -258,5 +287,11 @@ async function createMondayItem({
   });
 
   const json = await response.json();
+  console.log('Monday response:', json);
+  
+  if (json.errors) {
+    console.error('Monday API errors:', json.errors);
+  }
+  
   return json?.data?.create_item?.id;
 }
