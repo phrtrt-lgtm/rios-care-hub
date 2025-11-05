@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { ArrowLeft, Building2, Plus, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Building2, Plus, Pencil, Trash2, Upload, X, Image } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Property {
@@ -16,6 +16,8 @@ interface Property {
   name: string;
   address: string | null;
   owner_id: string;
+  cover_photo_url: string | null;
+  assigned_cleaner_phone: string | null;
   owner: {
     name: string;
     email: string;
@@ -40,8 +42,11 @@ const Propriedades = () => {
   const [formData, setFormData] = useState({
     name: "",
     address: "",
-    owner_id: ""
+    owner_id: "",
+    assigned_cleaner_phone: ""
   });
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user || !['admin', 'agent'].includes(profile?.role || '')) {
@@ -116,7 +121,8 @@ const Propriedades = () => {
           .update({
             name: formData.name,
             address: formData.address || null,
-            owner_id: formData.owner_id
+            owner_id: formData.owner_id,
+            assigned_cleaner_phone: formData.assigned_cleaner_phone || null
           })
           .eq('id', editingProperty.id);
 
@@ -133,7 +139,8 @@ const Propriedades = () => {
           .insert({
             name: formData.name,
             address: formData.address || null,
-            owner_id: formData.owner_id
+            owner_id: formData.owner_id,
+            assigned_cleaner_phone: formData.assigned_cleaner_phone || null
           });
 
         if (error) throw error;
@@ -156,12 +163,86 @@ const Propriedades = () => {
     }
   };
 
+  const handlePhotoUpload = async (propertyId: string, file: File) => {
+    setUploadingPhoto(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${propertyId}/${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('property-photos')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('property-photos')
+        .getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase
+        .from('properties')
+        .update({ cover_photo_url: publicUrl })
+        .eq('id', propertyId);
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: "Foto atualizada!",
+        description: "A foto de capa foi atualizada com sucesso."
+      });
+
+      fetchData();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao fazer upload",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const handleRemovePhoto = async (propertyId: string, photoUrl: string | null) => {
+    if (!photoUrl) return;
+
+    try {
+      // Extract file path from URL
+      const urlParts = photoUrl.split('/property-photos/');
+      if (urlParts.length > 1) {
+        const filePath = urlParts[1];
+        await supabase.storage.from('property-photos').remove([filePath]);
+      }
+
+      const { error } = await supabase
+        .from('properties')
+        .update({ cover_photo_url: null })
+        .eq('id', propertyId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Foto removida!",
+        description: "A foto de capa foi removida com sucesso."
+      });
+
+      fetchData();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao remover foto",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleEdit = (property: Property) => {
     setEditingProperty(property);
     setFormData({
       name: property.name,
       address: property.address || "",
-      owner_id: property.owner_id
+      owner_id: property.owner_id,
+      assigned_cleaner_phone: property.assigned_cleaner_phone || ""
     });
     setDialogOpen(true);
   };
@@ -193,8 +274,9 @@ const Propriedades = () => {
   };
 
   const resetForm = () => {
-    setFormData({ name: "", address: "", owner_id: "" });
+    setFormData({ name: "", address: "", owner_id: "", assigned_cleaner_phone: "" });
     setEditingProperty(null);
+    setPhotoPreview(null);
   };
 
   const handleDialogChange = (open: boolean) => {
@@ -260,6 +342,15 @@ const Propriedades = () => {
                     />
                   </div>
                   <div>
+                    <Label htmlFor="assigned_cleaner_phone">Telefone da Faxineira</Label>
+                    <Input
+                      id="assigned_cleaner_phone"
+                      value={formData.assigned_cleaner_phone}
+                      onChange={(e) => setFormData({ ...formData, assigned_cleaner_phone: e.target.value })}
+                      placeholder="Ex: (11) 99999-9999"
+                    />
+                  </div>
+                  <div>
                     <Label htmlFor="owner_id">Proprietário *</Label>
                     <Select value={formData.owner_id} onValueChange={(value) => setFormData({ ...formData, owner_id: value })}>
                       <SelectTrigger>
@@ -291,7 +382,65 @@ const Propriedades = () => {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {properties.map((property) => (
             <Card key={property.id}>
-              <CardHeader>
+              <CardHeader className="pb-3">
+                {/* Foto de capa */}
+                <div className="relative w-full h-40 mb-3 bg-muted rounded-lg overflow-hidden group">
+                  {property.cover_photo_url ? (
+                    <>
+                      <img 
+                        src={property.cover_photo_url} 
+                        alt={property.name}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        <label className="cursor-pointer">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handlePhotoUpload(property.id, file);
+                            }}
+                            disabled={uploadingPhoto}
+                          />
+                          <Button size="sm" variant="secondary" asChild>
+                            <span>
+                              <Upload className="h-4 w-4 mr-2" />
+                              Alterar
+                            </span>
+                          </Button>
+                        </label>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleRemovePhoto(property.id, property.cover_photo_url)}
+                        >
+                          <X className="h-4 w-4 mr-2" />
+                          Remover
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-muted/80 transition-colors">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handlePhotoUpload(property.id, file);
+                        }}
+                        disabled={uploadingPhoto}
+                      />
+                      <Image className="h-8 w-8 text-muted-foreground mb-2" />
+                      <span className="text-xs text-muted-foreground">
+                        {uploadingPhoto ? "Enviando..." : "Adicionar foto"}
+                      </span>
+                    </label>
+                  )}
+                </div>
+
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <CardTitle className="flex items-center gap-2">
@@ -311,6 +460,12 @@ const Propriedades = () => {
                     <p className="text-sm font-medium text-foreground">{property.owner.name}</p>
                     <p className="text-xs text-muted-foreground">{property.owner.email}</p>
                   </div>
+                  {property.assigned_cleaner_phone && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Faxineira</p>
+                      <p className="text-sm font-medium text-foreground">{property.assigned_cleaner_phone}</p>
+                    </div>
+                  )}
                   <div className="flex gap-2">
                     <Button
                       size="sm"
