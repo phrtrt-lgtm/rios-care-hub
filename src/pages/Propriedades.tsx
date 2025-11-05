@@ -74,7 +74,7 @@ const Propriedades = () => {
     try {
       setLoading(true);
       
-      // Fetch owners
+      // Fetch owners with phone
       const { data: ownersData, error: ownersError } = await supabase
         .from('profiles')
         .select('id, name, email, phone')
