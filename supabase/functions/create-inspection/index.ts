@@ -96,7 +96,7 @@ serve(async (req) => {
       .eq('property_id', payload.property_id)
       .single();
 
-    console.log('Property:', property?.name, 'Settings:', settings);
+    console.log('Property:', property?.name, 'Owner:', property?.profiles?.name, 'Settings:', settings);
 
     // 4) Create Monday item
     let mondayItemId: string | null = null;
