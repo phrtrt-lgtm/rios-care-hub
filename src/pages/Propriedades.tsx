@@ -19,10 +19,10 @@ interface Property {
   cover_photo_url: string | null;
   assigned_cleaner_id: string | null;
   assigned_cleaner_phone: string | null;
+  owner_phone: string | null;
   owner: {
     name: string;
     email: string;
-    phone: string | null;
   };
   cleaner?: {
     name: string;
@@ -34,7 +34,6 @@ interface Owner {
   id: string;
   name: string;
   email: string;
-  phone: string | null;
 }
 
 interface Cleaner {
@@ -57,7 +56,8 @@ const Propriedades = () => {
     name: "",
     address: "",
     owner_id: "",
-    assigned_cleaner_id: ""
+    assigned_cleaner_id: "",
+    owner_phone: ""
   });
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -74,10 +74,10 @@ const Propriedades = () => {
     try {
       setLoading(true);
       
-      // Fetch owners with phone
+      // Fetch owners
       const { data: ownersData, error: ownersError } = await supabase
         .from('profiles')
-        .select('id, name, email, phone')
+        .select('id, name, email')
         .eq('role', 'owner')
         .eq('status', 'approved')
         .order('name');
@@ -109,7 +109,7 @@ const Propriedades = () => {
         const cleaner = cleanersData?.find(c => c.id === property.assigned_cleaner_id);
         return {
           ...property,
-          owner: owner || { name: 'N/A', email: 'N/A', phone: null },
+          owner: owner || { name: 'N/A', email: 'N/A' },
           cleaner: cleaner ? { name: cleaner.name, phone: cleaner.phone } : undefined
         };
       });
@@ -148,7 +148,8 @@ const Propriedades = () => {
             name: formData.name,
             address: formData.address || null,
             owner_id: formData.owner_id,
-            assigned_cleaner_id: formData.assigned_cleaner_id || null
+            assigned_cleaner_id: formData.assigned_cleaner_id || null,
+            owner_phone: formData.owner_phone || null
           })
           .eq('id', editingProperty.id);
 
@@ -166,7 +167,8 @@ const Propriedades = () => {
             name: formData.name,
             address: formData.address || null,
             owner_id: formData.owner_id,
-            assigned_cleaner_id: formData.assigned_cleaner_id || null
+            assigned_cleaner_id: formData.assigned_cleaner_id || null,
+            owner_phone: formData.owner_phone || null
           });
 
         if (error) throw error;
@@ -268,7 +270,8 @@ const Propriedades = () => {
       name: property.name,
       address: property.address || "",
       owner_id: property.owner_id,
-      assigned_cleaner_id: property.assigned_cleaner_id || ""
+      assigned_cleaner_id: property.assigned_cleaner_id || "",
+      owner_phone: property.owner_phone || ""
     });
     setDialogOpen(true);
   };
@@ -300,7 +303,7 @@ const Propriedades = () => {
   };
 
   const resetForm = () => {
-    setFormData({ name: "", address: "", owner_id: "", assigned_cleaner_id: "" });
+    setFormData({ name: "", address: "", owner_id: "", assigned_cleaner_id: "", owner_phone: "" });
     setEditingProperty(null);
     setPhotoPreview(null);
   };
@@ -381,6 +384,15 @@ const Propriedades = () => {
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="owner_phone">Telefone do Proprietário</Label>
+                    <Input
+                      id="owner_phone"
+                      value={formData.owner_phone}
+                      onChange={(e) => setFormData({ ...formData, owner_phone: e.target.value })}
+                      placeholder="Ex: (22) 99999-9999"
+                    />
                   </div>
                   <div>
                     <Label htmlFor="assigned_cleaner_id">Faxineira Responsável</Label>
@@ -491,8 +503,8 @@ const Propriedades = () => {
                     <p className="text-xs text-muted-foreground">Proprietário</p>
                     <p className="text-sm font-medium text-foreground">{property.owner.name}</p>
                     <p className="text-xs text-muted-foreground">{property.owner.email}</p>
-                    {property.owner.phone && (
-                      <p className="text-xs text-muted-foreground">{property.owner.phone}</p>
+                    {property.owner_phone && (
+                      <p className="text-xs text-muted-foreground">📞 {property.owner_phone}</p>
                     )}
                   </div>
                   {property.cleaner && (
@@ -500,7 +512,7 @@ const Propriedades = () => {
                       <p className="text-xs text-muted-foreground">Faxineira Responsável</p>
                       <p className="text-sm font-medium text-foreground">{property.cleaner.name}</p>
                       {property.cleaner.phone && (
-                        <p className="text-xs text-muted-foreground">{property.cleaner.phone}</p>
+                        <p className="text-xs text-muted-foreground">📞 {property.cleaner.phone}</p>
                       )}
                     </div>
                   )}
