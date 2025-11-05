@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Paperclip, Loader2 } from 'lucide-react';
+import { Paperclip, Loader2, Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -18,8 +18,7 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
   const navigate = useNavigate();
   const [notes, setNotes] = useState('');
   const [files, setFiles] = useState<File[]>([]);
-  const [audioFile, setAudioFile] = useState<File | null>(null);
-  const [transcript, setTranscript] = useState('');
+  const [audioFiles, setAudioFiles] = useState<Array<{ file: File; transcript: string }>>([]);
   const [sending, setSending] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -29,9 +28,17 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
   };
 
   const handleAudioReady = (file: File, transcriptText: string) => {
-    setAudioFile(file);
-    // Substituir ao invés de acumular
-    setTranscript(transcriptText);
+    setAudioFiles(prev => [...prev, { file, transcript: transcriptText }]);
+  };
+
+  const handleDeleteAudio = (index: number) => {
+    setAudioFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handlePlayAudio = (file: File) => {
+    const url = URL.createObjectURL(file);
+    const audio = new Audio(url);
+    audio.play();
   };
 
   const uploadFile = async (file: File): Promise<string> => {
@@ -53,7 +60,7 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
   };
 
   const handleSubmit = async () => {
-    if (!notes && !audioFile && files.length === 0) {
+    if (!notes && audioFiles.length === 0 && files.length === 0) {
       toast.error('Adicione pelo menos uma observação, áudio ou anexo');
       return;
     }
@@ -78,10 +85,19 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
         });
       }
 
-      // Upload audio
-      let audioUrl: string | undefined;
-      if (audioFile) {
-        audioUrl = await uploadFile(audioFile);
+      // Upload audio files and add to attachments
+      const audioData: Array<{ audio_url: string; transcript: string }> = [];
+      for (const { file, transcript } of audioFiles) {
+        const url = await uploadFile(file);
+        audioData.push({ audio_url: url, transcript });
+        
+        // Adicionar áudio aos anexos para enviar ao Monday
+        attachments.push({
+          file_url: url,
+          file_name: file.name,
+          file_type: file.type,
+          size_bytes: file.size,
+        });
       }
 
       // Call edge function to create inspection
@@ -89,8 +105,7 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
         body: {
           property_id: propertyId,
           notes,
-          transcript,
-          audio_url: audioUrl,
+          audio_data: audioData,
           attachments,
         },
       });
@@ -101,8 +116,7 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
       toast.success('Vistoria enviada com sucesso!');
       setNotes('');
       setFiles([]);
-      setAudioFile(null);
-      setTranscript('');
+      setAudioFiles([]);
       onBack();
     } catch (error: any) {
       console.error('Error submitting inspection:', error);
@@ -133,6 +147,35 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
       <div className="space-y-2">
         <Label>Áudio (opcional)</Label>
         <AudioRecorder onAudioReady={handleAudioReady} />
+        
+        {audioFiles.length > 0 && (
+          <div className="space-y-2 mt-2">
+            <p className="text-xs text-muted-foreground">{audioFiles.length} áudio(s) gravado(s)</p>
+            {audioFiles.map((audio, index) => (
+              <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handlePlayAudio(audio.file)}
+                  className="gap-1"
+                >
+                  <Mic className="h-3 w-3" />
+                  Áudio {index + 1}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDeleteAudio(index)}
+                  className="text-destructive hover:text-destructive"
+                >
+                  Deletar
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="space-y-2">

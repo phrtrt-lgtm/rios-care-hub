@@ -15,8 +15,10 @@ interface InspectionPayload {
   cleaner_name?: string;
   cleaner_phone?: string;
   notes?: string;
-  transcript?: string;
-  audio_url?: string;
+  audio_data?: Array<{
+    audio_url: string;
+    transcript: string;
+  }>;
   attachments?: Array<{
     file_url: string;
     file_name?: string;
@@ -42,6 +44,10 @@ serve(async (req) => {
 
     const payload: InspectionPayload = await req.json();
     console.log('Creating inspection:', payload);
+    
+    // Combinar todas as transcrições em uma só
+    const transcript = payload.audio_data?.map(a => a.transcript).filter(Boolean).join('\n') || '';
+    const firstAudioUrl = payload.audio_data?.[0]?.audio_url;
 
     // 1) Create inspection record
     const { data: inspection, error: inspError } = await supabase
@@ -51,8 +57,8 @@ serve(async (req) => {
         cleaner_name: payload.cleaner_name,
         cleaner_phone: payload.cleaner_phone,
         notes: payload.notes,
-        transcript: payload.transcript,
-        audio_url: payload.audio_url,
+        transcript,
+        audio_url: firstAudioUrl,
       })
       .select()
       .single();
@@ -100,9 +106,9 @@ serve(async (req) => {
       try {
         mondayItemId = await createMondayItem({
           unitName: property?.name || 'Imóvel',
-          notes: payload.transcript || payload.notes || '',
+          notes: transcript || payload.notes || '',
           attachments: payload.attachments || [],
-          audioUrl: payload.audio_url,
+          audioUrl: firstAudioUrl,
         });
 
         if (mondayItemId) {
@@ -133,8 +139,8 @@ serve(async (req) => {
           cleaner_name: payload.cleaner_name || '',
           cleaner_phone: payload.cleaner_phone ? `(${payload.cleaner_phone})` : '',
           inspection_date: new Date().toLocaleString('pt-BR'),
-          inspection_notes: (payload.transcript || payload.notes || '').slice(0, 400),
-          has_audio: !!payload.audio_url,
+          inspection_notes: (transcript || payload.notes || '').slice(0, 400),
+          has_audio: !!firstAudioUrl,
           portal_url: portalUrl,
           monday_item_id: mondayItemId || '',
         };
@@ -159,7 +165,7 @@ serve(async (req) => {
           owner_id: property.owner_id,
           property_id: property.id,
           subject: `Vistoria de Faxina – ${property.name}`,
-          description: payload.transcript || payload.notes || 'Vistoria registrada com anexos.',
+          description: transcript || payload.notes || 'Vistoria registrada com anexos.',
           ticket_type: 'duvida',
           priority: 'normal',
           status: 'novo',

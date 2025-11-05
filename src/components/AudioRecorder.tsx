@@ -80,24 +80,17 @@ export default function AudioRecorder({ onAudioReady }: AudioRecorderProps) {
   };
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        {!recording ? (
-          <Button type="button" onClick={startRecording} variant="outline" className="gap-2">
-            <Mic className="h-4 w-4" />
-            Gravar áudio
-          </Button>
-        ) : (
-          <Button type="button" onClick={stopRecording} variant="destructive" className="gap-2">
-            <Square className="h-4 w-4" />
-            Parar gravação
-          </Button>
-        )}
-      </div>
-      {transcript && (
-        <p className="text-xs text-muted-foreground line-clamp-3 p-2 bg-muted rounded">
-          {transcript}
-        </p>
+    <div className="flex items-center gap-2">
+      {!recording ? (
+        <Button type="button" onClick={startRecording} variant="outline" className="gap-2">
+          <Mic className="h-4 w-4" />
+          Gravar áudio
+        </Button>
+      ) : (
+        <Button type="button" onClick={stopRecording} variant="destructive" className="gap-2">
+          <Square className="h-4 w-4" />
+          Parar gravação
+        </Button>
       )}
     </div>
   );
