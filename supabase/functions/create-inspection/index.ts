@@ -270,6 +270,12 @@ async function createMondayItem({
       create_item(board_id:$boardId, item_name:$itemName, column_values:$columnValues) { id }
     }
   `;
+  
+  console.log('Monday mutation variables:', {
+    boardId: String(boardId),
+    itemName: ownerName,
+    columnValues: JSON.stringify(columnValues)
+  });
 
   const response = await fetch('https://api.monday.com/v2', {
     method: 'POST',
