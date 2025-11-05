@@ -23,6 +23,8 @@ export default function Login() {
         navigate("/aguardando-aprovacao");
       } else if (profile.role === 'owner') {
         navigate("/minha-caixa");
+      } else if (profile.role === 'cleaner') {
+        navigate("/faxineira");
       } else if (profile.role === 'agent' || profile.role === 'admin') {
         navigate("/painel");
       }

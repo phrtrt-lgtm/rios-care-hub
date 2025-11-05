@@ -202,7 +202,7 @@ const App = () => (
             <Route
               path="/faxineira"
               element={
-                <ProtectedRoute allowedRoles={['agent', 'admin']}>
+                <ProtectedRoute allowedRoles={['cleaner', 'agent', 'admin']}>
                   <Faxineira />
                 </ProtectedRoute>
               }
