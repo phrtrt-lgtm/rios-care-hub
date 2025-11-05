@@ -384,12 +384,11 @@ const Propriedades = () => {
                   </div>
                   <div>
                     <Label htmlFor="assigned_cleaner_id">Faxineira Responsável</Label>
-                    <Select value={formData.assigned_cleaner_id} onValueChange={(value) => setFormData({ ...formData, assigned_cleaner_id: value })}>
+                    <Select value={formData.assigned_cleaner_id || undefined} onValueChange={(value) => setFormData({ ...formData, assigned_cleaner_id: value })}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecione a faxineira" />
+                        <SelectValue placeholder="Nenhuma (opcional)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Nenhuma</SelectItem>
                         {cleaners.map((cleaner) => (
                           <SelectItem key={cleaner.id} value={cleaner.id}>
                             {cleaner.name} {cleaner.phone ? `- ${cleaner.phone}` : ''}
