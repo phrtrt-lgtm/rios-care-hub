@@ -26,19 +26,20 @@ export default function Faxineira() {
 
   const fetchProperties = async () => {
     try {
-      // For cleaner role, filter by assigned_cleaner_phone
+      // For cleaner role, filter by assigned_cleaner_id
       // For team members (admin/agent), show all properties
       let query = supabase
         .from('properties')
         .select('id, name, address, cover_photo_url')
         .order('name');
 
-      if (profile?.role !== 'admin' && profile?.role !== 'agent') {
-        // Filter by phone for cleaners
-        if (profile?.phone) {
-          query = query.eq('assigned_cleaner_phone', profile.phone);
+      if (profile?.role === 'cleaner') {
+        // Filter by cleaner ID - only show properties assigned to this cleaner
+        if (user?.id) {
+          query = query.eq('assigned_cleaner_id', user.id);
         }
       }
+      // Admin and agents can see all properties
 
       const { data, error } = await query;
 
