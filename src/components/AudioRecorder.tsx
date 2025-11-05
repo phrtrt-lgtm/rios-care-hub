@@ -12,6 +12,7 @@ export default function AudioRecorder({ onAudioReady }: AudioRecorderProps) {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recognitionRef = useRef<any>(null);
   const chunksRef = useRef<BlobPart[]>([]);
+  const transcriptRef = useRef<string>('');
 
   const startRecording = async () => {
     try {
@@ -29,7 +30,8 @@ export default function AudioRecorder({ onAudioReady }: AudioRecorderProps) {
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: 'audio/mp4' });
         const file = new File([blob], `audio_${Date.now()}.m4a`, { type: 'audio/mp4' });
-        onAudioReady(file, transcript.trim());
+        onAudioReady(file, transcriptRef.current);
+        transcriptRef.current = '';
         stream.getTracks().forEach(track => track.stop());
       };
 
@@ -51,6 +53,7 @@ export default function AudioRecorder({ onAudioReady }: AudioRecorderProps) {
           }
           // Atualizar com a transcrição completa (não acumular)
           if (fullTranscript.trim()) {
+            transcriptRef.current = fullTranscript.trim();
             setTranscript(fullTranscript.trim());
           }
         };
