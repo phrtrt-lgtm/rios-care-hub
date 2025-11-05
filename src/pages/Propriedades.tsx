@@ -17,10 +17,16 @@ interface Property {
   address: string | null;
   owner_id: string;
   cover_photo_url: string | null;
+  assigned_cleaner_id: string | null;
   assigned_cleaner_phone: string | null;
   owner: {
     name: string;
     email: string;
+    phone: string | null;
+  };
+  cleaner?: {
+    name: string;
+    phone: string | null;
   };
 }
 
@@ -28,6 +34,13 @@ interface Owner {
   id: string;
   name: string;
   email: string;
+  phone: string | null;
+}
+
+interface Cleaner {
+  id: string;
+  name: string;
+  phone: string | null;
 }
 
 const Propriedades = () => {
@@ -36,6 +49,7 @@ const Propriedades = () => {
   const { toast } = useToast();
   const [properties, setProperties] = useState<Property[]>([]);
   const [owners, setOwners] = useState<Owner[]>([]);
+  const [cleaners, setCleaners] = useState<Cleaner[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
@@ -43,7 +57,7 @@ const Propriedades = () => {
     name: "",
     address: "",
     owner_id: "",
-    assigned_cleaner_phone: ""
+    assigned_cleaner_id: ""
   });
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -63,13 +77,23 @@ const Propriedades = () => {
       // Fetch owners
       const { data: ownersData, error: ownersError } = await supabase
         .from('profiles')
-        .select('id, name, email')
+        .select('id, name, email, phone')
         .eq('role', 'owner')
         .eq('status', 'approved')
         .order('name');
 
       if (ownersError) throw ownersError;
       setOwners(ownersData || []);
+
+      // Fetch cleaners
+      const { data: cleanersData, error: cleanersError } = await supabase
+        .from('profiles')
+        .select('id, name, phone')
+        .eq('role', 'cleaner')
+        .order('name');
+
+      if (cleanersError) throw cleanersError;
+      setCleaners(cleanersData || []);
 
       // Fetch properties
       const { data: propertiesData, error: propertiesError } = await supabase
@@ -79,12 +103,14 @@ const Propriedades = () => {
 
       if (propertiesError) throw propertiesError;
 
-      // Enrich properties with owner details
+      // Enrich properties with owner and cleaner details
       const enrichedProperties = (propertiesData || []).map(property => {
         const owner = ownersData?.find(o => o.id === property.owner_id);
+        const cleaner = cleanersData?.find(c => c.id === property.assigned_cleaner_id);
         return {
           ...property,
-          owner: owner || { name: 'N/A', email: 'N/A' }
+          owner: owner || { name: 'N/A', email: 'N/A', phone: null },
+          cleaner: cleaner ? { name: cleaner.name, phone: cleaner.phone } : undefined
         };
       });
 
@@ -122,7 +148,7 @@ const Propriedades = () => {
             name: formData.name,
             address: formData.address || null,
             owner_id: formData.owner_id,
-            assigned_cleaner_phone: formData.assigned_cleaner_phone || null
+            assigned_cleaner_id: formData.assigned_cleaner_id || null
           })
           .eq('id', editingProperty.id);
 
@@ -140,7 +166,7 @@ const Propriedades = () => {
             name: formData.name,
             address: formData.address || null,
             owner_id: formData.owner_id,
-            assigned_cleaner_phone: formData.assigned_cleaner_phone || null
+            assigned_cleaner_id: formData.assigned_cleaner_id || null
           });
 
         if (error) throw error;
@@ -242,7 +268,7 @@ const Propriedades = () => {
       name: property.name,
       address: property.address || "",
       owner_id: property.owner_id,
-      assigned_cleaner_phone: property.assigned_cleaner_phone || ""
+      assigned_cleaner_id: property.assigned_cleaner_id || ""
     });
     setDialogOpen(true);
   };
@@ -274,7 +300,7 @@ const Propriedades = () => {
   };
 
   const resetForm = () => {
-    setFormData({ name: "", address: "", owner_id: "", assigned_cleaner_phone: "" });
+    setFormData({ name: "", address: "", owner_id: "", assigned_cleaner_id: "" });
     setEditingProperty(null);
     setPhotoPreview(null);
   };
@@ -342,15 +368,6 @@ const Propriedades = () => {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="assigned_cleaner_phone">Telefone da Faxineira</Label>
-                    <Input
-                      id="assigned_cleaner_phone"
-                      value={formData.assigned_cleaner_phone}
-                      onChange={(e) => setFormData({ ...formData, assigned_cleaner_phone: e.target.value })}
-                      placeholder="Ex: (11) 99999-9999"
-                    />
-                  </div>
-                  <div>
                     <Label htmlFor="owner_id">Proprietário *</Label>
                     <Select value={formData.owner_id} onValueChange={(value) => setFormData({ ...formData, owner_id: value })}>
                       <SelectTrigger>
@@ -360,6 +377,22 @@ const Propriedades = () => {
                         {owners.map((owner) => (
                           <SelectItem key={owner.id} value={owner.id}>
                             {owner.name} - {owner.email}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="assigned_cleaner_id">Faxineira Responsável</Label>
+                    <Select value={formData.assigned_cleaner_id} onValueChange={(value) => setFormData({ ...formData, assigned_cleaner_id: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a faxineira" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Nenhuma</SelectItem>
+                        {cleaners.map((cleaner) => (
+                          <SelectItem key={cleaner.id} value={cleaner.id}>
+                            {cleaner.name} {cleaner.phone ? `- ${cleaner.phone}` : ''}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -459,11 +492,17 @@ const Propriedades = () => {
                     <p className="text-xs text-muted-foreground">Proprietário</p>
                     <p className="text-sm font-medium text-foreground">{property.owner.name}</p>
                     <p className="text-xs text-muted-foreground">{property.owner.email}</p>
+                    {property.owner.phone && (
+                      <p className="text-xs text-muted-foreground">{property.owner.phone}</p>
+                    )}
                   </div>
-                  {property.assigned_cleaner_phone && (
+                  {property.cleaner && (
                     <div>
-                      <p className="text-xs text-muted-foreground">Faxineira</p>
-                      <p className="text-sm font-medium text-foreground">{property.assigned_cleaner_phone}</p>
+                      <p className="text-xs text-muted-foreground">Faxineira Responsável</p>
+                      <p className="text-sm font-medium text-foreground">{property.cleaner.name}</p>
+                      {property.cleaner.phone && (
+                        <p className="text-xs text-muted-foreground">{property.cleaner.phone}</p>
+                      )}
                     </div>
                   )}
                   <div className="flex gap-2">

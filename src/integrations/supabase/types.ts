@@ -836,6 +836,7 @@ export type Database = {
       properties: {
         Row: {
           address: string | null
+          assigned_cleaner_id: string | null
           assigned_cleaner_phone: string | null
           cover_photo_url: string | null
           created_at: string
@@ -846,6 +847,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          assigned_cleaner_id?: string | null
           assigned_cleaner_phone?: string | null
           cover_photo_url?: string | null
           created_at?: string
@@ -856,6 +858,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          assigned_cleaner_id?: string | null
           assigned_cleaner_phone?: string | null
           cover_photo_url?: string | null
           created_at?: string
@@ -865,6 +868,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "properties_assigned_cleaner_id_fkey"
+            columns: ["assigned_cleaner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "properties_owner_id_fkey"
             columns: ["owner_id"]
@@ -1154,7 +1164,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "owner" | "agent" | "admin" | "pending_owner"
+      app_role: "owner" | "agent" | "admin" | "pending_owner" | "cleaner"
       ticket_priority: "normal" | "urgente"
       ticket_status:
         | "novo"
@@ -1297,7 +1307,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["owner", "agent", "admin", "pending_owner"],
+      app_role: ["owner", "agent", "admin", "pending_owner", "cleaner"],
       ticket_priority: ["normal", "urgente"],
       ticket_status: [
         "novo",
