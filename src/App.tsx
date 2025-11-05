@@ -34,6 +34,7 @@ import Faxineira from "./pages/Faxineira";
 import AdminVistorias from "./pages/AdminVistorias";
 import AdminVistoriasImovel from "./pages/AdminVistoriasImovel";
 import AdminVistoriaDetalhes from "./pages/AdminVistoriaDetalhes";
+import AdminVistoriasTodas from "./pages/AdminVistoriasTodas";
 import AdminVistoriasConfiguracoes from "./pages/AdminVistoriasConfiguracoes";
 
 const queryClient = new QueryClient();
@@ -218,6 +219,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['agent', 'admin']}>
                   <AdminVistoriaDetalhes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/vistorias/todas"
+              element={
+                <ProtectedRoute allowedRoles={['agent', 'admin']}>
+                  <AdminVistoriasTodas />
                 </ProtectedRoute>
               }
             />
