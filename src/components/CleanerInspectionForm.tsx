@@ -62,6 +62,7 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
 
     setSending(true);
     try {
+      console.log('Iniciando upload de arquivos...');
       const attachments: Array<{
         file_url: string;
         file_name: string;
@@ -71,6 +72,7 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
 
       // Upload attachments
       for (const file of files) {
+        console.log('Fazendo upload de arquivo:', file.name);
         const url = await uploadFile(file);
         attachments.push({
           file_url: url,
@@ -83,6 +85,7 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
       // Upload audio files and add to attachments
       const audioData: Array<{ audio_url: string; transcript: string }> = [];
       for (const { file, transcript } of audioFiles) {
+        console.log('Fazendo upload de áudio:', file.name);
         const url = await uploadFile(file);
         audioData.push({ audio_url: url, transcript });
         
@@ -95,15 +98,38 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
         });
       }
 
-      // Call edge function to create inspection
-      const { data, error } = await supabase.functions.invoke('create-inspection', {
+      console.log('Uploads concluídos. Criando vistoria...');
+      
+      // Get user info
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('name, phone')
+        .eq('id', user?.id)
+        .single();
+
+      // Call edge function to create inspection with timeout
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout: A requisição demorou muito')), 30000)
+      );
+
+      const inspectionPromise = supabase.functions.invoke('create-inspection', {
         body: {
           property_id: propertyId,
+          cleaner_name: profile?.name,
+          cleaner_phone: profile?.phone,
           notes,
           audio_data: audioData,
           attachments,
         },
       });
+
+      const { data, error } = await Promise.race([
+        inspectionPromise,
+        timeoutPromise
+      ]) as any;
+
+      console.log('Resposta da edge function:', { data, error });
 
       if (error) throw error;
       if (!data?.ok) throw new Error(data?.error || 'Falha no envio');
@@ -114,8 +140,8 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
       setAudioFiles([]);
       onBack();
     } catch (error: any) {
-      console.error('Error submitting inspection:', error);
-      toast.error('Erro ao enviar vistoria: ' + error.message);
+      console.error('Erro completo ao enviar vistoria:', error);
+      toast.error('Erro ao enviar vistoria: ' + (error.message || 'Erro desconhecido'));
     } finally {
       setSending(false);
     }
