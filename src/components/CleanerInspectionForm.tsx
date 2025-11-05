@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Paperclip, Loader2, Mic } from 'lucide-react';
+import { Paperclip, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import AudioRecorder from '@/components/AudioRecorder';
+import AudioPlayer from '@/components/AudioPlayer';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -33,12 +34,6 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
 
   const handleDeleteAudio = (index: number) => {
     setAudioFiles(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const handlePlayAudio = (file: File) => {
-    const url = URL.createObjectURL(file);
-    const audio = new Audio(url);
-    audio.play();
   };
 
   const uploadFile = async (file: File): Promise<string> => {
@@ -152,25 +147,21 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
           <div className="space-y-2 mt-2">
             <p className="text-xs text-muted-foreground">{audioFiles.length} áudio(s) gravado(s)</p>
             {audioFiles.map((audio, index) => (
-              <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handlePlayAudio(audio.file)}
-                  className="gap-1"
-                >
-                  <Mic className="h-3 w-3" />
-                  Áudio {index + 1}
-                </Button>
+              <div key={index} className="flex items-center gap-2 p-3 bg-muted rounded">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm font-medium">Áudio {index + 1}</span>
+                  </div>
+                  <AudioPlayer file={audio.file} />
+                </div>
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
                   onClick={() => handleDeleteAudio(index)}
-                  className="text-destructive hover:text-destructive"
+                  className="text-destructive hover:text-destructive shrink-0"
                 >
-                  Deletar
+                  <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
             ))}
