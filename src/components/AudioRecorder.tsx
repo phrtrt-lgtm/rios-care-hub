@@ -42,11 +42,17 @@ export default function AudioRecorder({ onAudioReady }: AudioRecorderProps) {
         recognition.interimResults = true;
 
         recognition.onresult = (event: any) => {
-          let transcriptText = '';
-          for (let i = event.resultIndex; i < event.results.length; i++) {
-            transcriptText += event.results[i][0].transcript;
+          // Reconstruir a transcrição completa a partir de TODOS os resultados finais
+          let fullTranscript = '';
+          for (let i = 0; i < event.results.length; i++) {
+            if (event.results[i].isFinal) {
+              fullTranscript += event.results[i][0].transcript + ' ';
+            }
           }
-          setTranscript(prev => (prev + ' ' + transcriptText).trim());
+          // Atualizar com a transcrição completa (não acumular)
+          if (fullTranscript.trim()) {
+            setTranscript(fullTranscript.trim());
+          }
         };
 
         recognition.start();
@@ -69,6 +75,8 @@ export default function AudioRecorder({ onAudioReady }: AudioRecorderProps) {
       recognitionRef.current.stop();
     }
     setRecording(false);
+    // Resetar transcrição local após parar
+    setTimeout(() => setTranscript(''), 100);
   };
 
   return (

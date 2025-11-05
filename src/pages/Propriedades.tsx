@@ -93,7 +93,6 @@ const Propriedades = () => {
         .order('name');
 
       if (cleanersError) throw cleanersError;
-      console.log('Faxineiras carregadas:', cleanersData);
       setCleaners(cleanersData || []);
 
       // Fetch properties
@@ -140,8 +139,6 @@ const Propriedades = () => {
       return;
     }
 
-    console.log('formData antes do save:', formData);
-
     try {
       if (editingProperty) {
         // Update existing property
@@ -152,8 +149,6 @@ const Propriedades = () => {
           assigned_cleaner_id: formData.assigned_cleaner_id || null,
           owner_phone: formData.owner_phone || null
         };
-        
-        console.log('Atualizando propriedade com:', updateData);
         
         const { error } = await supabase
           .from('properties')
@@ -406,7 +401,6 @@ const Propriedades = () => {
                     <Select 
                       value={formData.assigned_cleaner_id || undefined} 
                       onValueChange={(value) => {
-                        console.log('Faxineira selecionada:', value);
                         setFormData({ ...formData, assigned_cleaner_id: value });
                       }}
                     >

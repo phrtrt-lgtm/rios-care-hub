@@ -30,9 +30,8 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
 
   const handleAudioReady = (file: File, transcriptText: string) => {
     setAudioFile(file);
-    if (transcriptText) {
-      setTranscript(prev => (prev ? prev + '\n' : '') + transcriptText);
-    }
+    // Substituir ao invés de acumular
+    setTranscript(transcriptText);
   };
 
   const uploadFile = async (file: File): Promise<string> => {

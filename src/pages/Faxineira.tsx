@@ -32,9 +32,6 @@ export default function Faxineira() {
 
   const fetchProperties = async () => {
     try {
-      console.log('Faxineira - User ID:', user?.id);
-      console.log('Faxineira - Profile role:', profile?.role);
-      
       // For cleaner role, filter by assigned_cleaner_id
       // For team members (admin/agent), show all properties
       let query = supabase
@@ -45,16 +42,12 @@ export default function Faxineira() {
       if (profile?.role === 'cleaner') {
         // Filter by cleaner ID - only show properties assigned to this cleaner
         if (user?.id) {
-          console.log('Filtrando por assigned_cleaner_id:', user.id);
           query = query.eq('assigned_cleaner_id', user.id);
         }
       }
       // Admin and agents can see all properties
 
       const { data, error } = await query;
-
-      console.log('Resultado da query:', data);
-      console.log('Erro da query:', error);
 
       if (error) throw error;
       setProperties(data || []);
