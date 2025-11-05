@@ -30,6 +30,11 @@ import ConfiguracaoIA from "./pages/ConfiguracaoIA";
 import RegrasCobrancas from "./pages/RegrasCobrancas";
 import Manutencoes from "./pages/Manutencoes";
 import ManutencaoDetalhes from "./pages/ManutencaoDetalhes";
+import Faxineira from "./pages/Faxineira";
+import AdminVistorias from "./pages/AdminVistorias";
+import AdminVistoriasImovel from "./pages/AdminVistoriasImovel";
+import AdminVistoriaDetalhes from "./pages/AdminVistoriaDetalhes";
+import AdminVistoriasConfiguracoes from "./pages/AdminVistoriasConfiguracoes";
 
 const queryClient = new QueryClient();
 
@@ -181,6 +186,46 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['owner', 'agent', 'admin']}>
                   <ManutencaoDetalhes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/faxineira"
+              element={
+                <ProtectedRoute allowedRoles={['agent', 'admin']}>
+                  <Faxineira />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/vistorias"
+              element={
+                <ProtectedRoute allowedRoles={['agent', 'admin']}>
+                  <AdminVistorias />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/vistorias/imovel/:id"
+              element={
+                <ProtectedRoute allowedRoles={['agent', 'admin']}>
+                  <AdminVistoriasImovel />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/vistorias/:inspectionId"
+              element={
+                <ProtectedRoute allowedRoles={['agent', 'admin']}>
+                  <AdminVistoriaDetalhes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/vistorias/configuracoes"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminVistoriasConfiguracoes />
                 </ProtectedRoute>
               }
             />

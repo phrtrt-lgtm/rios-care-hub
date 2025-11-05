@@ -647,6 +647,88 @@ export type Database = {
           },
         ]
       }
+      cleaning_inspection_attachments: {
+        Row: {
+          created_at: string
+          file_name: string | null
+          file_type: string | null
+          file_url: string
+          id: string
+          inspection_id: string
+          size_bytes: number | null
+        }
+        Insert: {
+          created_at?: string
+          file_name?: string | null
+          file_type?: string | null
+          file_url: string
+          id?: string
+          inspection_id: string
+          size_bytes?: number | null
+        }
+        Update: {
+          created_at?: string
+          file_name?: string | null
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          inspection_id?: string
+          size_bytes?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cleaning_inspection_attachments_inspection_id_fkey"
+            columns: ["inspection_id"]
+            isOneToOne: false
+            referencedRelation: "cleaning_inspections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cleaning_inspections: {
+        Row: {
+          audio_url: string | null
+          cleaner_name: string | null
+          cleaner_phone: string | null
+          created_at: string
+          id: string
+          monday_item_id: string | null
+          notes: string | null
+          property_id: string
+          transcript: string | null
+        }
+        Insert: {
+          audio_url?: string | null
+          cleaner_name?: string | null
+          cleaner_phone?: string | null
+          created_at?: string
+          id?: string
+          monday_item_id?: string | null
+          notes?: string | null
+          property_id: string
+          transcript?: string | null
+        }
+        Update: {
+          audio_url?: string | null
+          cleaner_name?: string | null
+          cleaner_phone?: string | null
+          created_at?: string
+          id?: string
+          monday_item_id?: string | null
+          notes?: string | null
+          property_id?: string
+          transcript?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cleaning_inspections_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_templates: {
         Row: {
           available_variables: Json
@@ -682,6 +764,38 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      inspection_settings: {
+        Row: {
+          id: string
+          notify_owner: boolean
+          owner_portal_enabled: boolean
+          property_id: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          notify_owner?: boolean
+          owner_portal_enabled?: boolean
+          property_id: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          notify_owner?: boolean
+          owner_portal_enabled?: boolean
+          property_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inspection_settings_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: true
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -722,6 +836,8 @@ export type Database = {
       properties: {
         Row: {
           address: string | null
+          assigned_cleaner_phone: string | null
+          cover_photo_url: string | null
           created_at: string
           id: string
           name: string
@@ -730,6 +846,8 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          assigned_cleaner_phone?: string | null
+          cover_photo_url?: string | null
           created_at?: string
           id?: string
           name: string
@@ -738,6 +856,8 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          assigned_cleaner_phone?: string | null
+          cover_photo_url?: string | null
           created_at?: string
           id?: string
           name?: string
