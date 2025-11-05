@@ -238,7 +238,6 @@ async function createMondayItem({
   if (!mondayToken) return null;
 
   const boardId = Deno.env.get('MONDAY_BOARD_ID');
-  const colOwner = Deno.env.get('MONDAY_COL_OWNER') || 'proprietario';
   const colUnit = Deno.env.get('MONDAY_COL_UNIT') || 'unidade';
   const colDate = Deno.env.get('MONDAY_COL_DATE') || 'data';
   const colCleaner = Deno.env.get('MONDAY_COL_CLEANER') || 'faxineira';
@@ -248,20 +247,12 @@ async function createMondayItem({
 
   const columnValues: Record<string, any> = {};
   
-  // Preencher valores das colunas (proprietário vai no itemName, não nas colunas)
+  // Preencher valores das colunas
   columnValues[colUnit] = unitName;
-  columnValues[colDate] = { date: inspectionDate };
+  columnValues[colDate] = inspectionDate;
   columnValues[colCleaner] = cleanerName;
   columnValues[colStatus] = status;
   columnValues[colTranscript] = transcript.slice(0, 9500);
-
-  // Adicionar anexos como links se houver
-  if (attachments.length > 0) {
-    const fileLinks = attachments
-      .map((att, idx) => `<a href="${att.file_url}">${att.file_name || `Arquivo ${idx + 1}`}</a>`)
-      .join('<br>');
-    columnValues[colAttachments] = fileLinks;
-  }
   
   console.log('Monday column values:', JSON.stringify(columnValues, null, 2));
 
@@ -298,7 +289,39 @@ async function createMondayItem({
   
   if (json.errors) {
     console.error('Monday API errors:', json.errors);
+    return null;
   }
   
-  return json?.data?.create_item?.id;
+  const itemId = json?.data?.create_item?.id;
+  
+  // Upload attachments to Monday
+  if (itemId && attachments.length > 0) {
+    for (const attachment of attachments) {
+      try {
+        // Download file from Supabase
+        const fileResponse = await fetch(attachment.file_url);
+        const fileBlob = await fileResponse.blob();
+        
+        // Upload to Monday
+        const formData = new FormData();
+        formData.append('query', `mutation ($file: File!) { add_file_to_column (item_id: ${itemId}, column_id: "${colAttachments}", file: $file) { id } }`);
+        formData.append('variables[file]', fileBlob, attachment.file_name || 'file');
+        
+        const uploadResponse = await fetch('https://api.monday.com/v2/file', {
+          method: 'POST',
+          headers: {
+            'Authorization': mondayToken,
+          },
+          body: formData,
+        });
+        
+        const uploadJson = await uploadResponse.json();
+        console.log('File upload response:', uploadJson);
+      } catch (e) {
+        console.error('Error uploading file to Monday:', e);
+      }
+    }
+  }
+  
+  return itemId;
 }
