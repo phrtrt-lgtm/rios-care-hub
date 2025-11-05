@@ -248,8 +248,7 @@ async function createMondayItem({
 
   const columnValues: Record<string, any> = {};
   
-  // Preencher valores das colunas
-  columnValues[colOwner] = ownerName;
+  // Preencher valores das colunas (proprietário vai no itemName, não nas colunas)
   columnValues[colUnit] = unitName;
   columnValues[colDate] = { date: inspectionDate };
   columnValues[colCleaner] = cleanerName;
@@ -280,7 +279,7 @@ async function createMondayItem({
       query: mutation,
       variables: {
         boardId: String(boardId),
-        itemName: `Vistoria • ${unitName}`,
+        itemName: ownerName,
         columnValues: JSON.stringify(columnValues),
       },
     }),
