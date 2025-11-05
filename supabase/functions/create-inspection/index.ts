@@ -262,6 +262,8 @@ async function createMondayItem({
       .join('<br>');
     columnValues[colAttachments] = fileLinks;
   }
+  
+  console.log('Monday column values:', JSON.stringify(columnValues, null, 2));
 
   const mutation = `
     mutation($boardId: ID!, $itemName: String!, $columnValues: JSON!) {
