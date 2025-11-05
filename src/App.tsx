@@ -15,6 +15,7 @@ import NovoTicket from "./pages/NovoTicket";
 import Painel from "./pages/Painel";
 import Aprovacoes from "./pages/Aprovacoes";
 import AdminCadastrarProprietario from "./pages/AdminCadastrarProprietario";
+import AdminCadastrarFaxineira from "./pages/AdminCadastrarFaxineira";
 import NotFound from "./pages/NotFound";
 import TicketDetalhes from "./pages/TicketDetalhes";
 import NovaCobranca from "./pages/NovaCobranca";
@@ -96,6 +97,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <AdminCadastrarProprietario />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/cadastrar-faxineira"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminCadastrarFaxineira />
                 </ProtectedRoute>
               }
             />

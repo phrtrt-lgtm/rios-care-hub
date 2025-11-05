@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.migrate-attachments]
 verify_jwt = false
+
+[functions.create-cleaner]
+verify_jwt = true
