@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
+import { renderTemplate, getTemplate } from "../_shared/template-renderer.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -115,7 +116,7 @@ serve(async (req) => {
       }
     }
 
-    // 5) Send email to team
+    // 5) Send email to team using template
     const teamEmails = (Deno.env.get('TEAM_NOTIFY_EMAILS') || '')
       .split(',')
       .map(e => e.trim())
@@ -124,18 +125,30 @@ serve(async (req) => {
     if (teamEmails.length > 0) {
       const portalUrl = `${Deno.env.get('PUBLIC_BASE_URL') || 'https://rios-care-hub.lovable.app'}/admin/vistorias/${inspection.id}`;
       
-      await resend.emails.send({
-        from: Deno.env.get('MAIL_FROM') || 'RIOS <onboarding@resend.dev>',
-        to: teamEmails,
-        subject: `[Vistoria] ${property?.name || 'Imóvel'} • ${new Date().toLocaleString('pt-BR')}`,
-        html: `
-          <h2>Nova vistoria de faxina</h2>
-          <p><b>Imóvel:</b> ${property?.name || 'Imóvel'}</p>
-          <p><b>Faxineira:</b> ${payload.cleaner_name || ''} ${payload.cleaner_phone ? `(${payload.cleaner_phone})` : ''}</p>
-          <p><b>Resumo:</b> ${(payload.transcript || payload.notes || '').slice(0, 400)}</p>
-          <p><a href="${portalUrl}">Abrir no Portal</a>${mondayItemId ? ` • Item Monday: <b>${mondayItemId}</b>` : ''}</p>
-        `,
-      });
+      const template = await getTemplate(supabase, 'inspection_created');
+      
+      if (template) {
+        const variables = {
+          property_name: property?.name || 'Imóvel',
+          cleaner_name: payload.cleaner_name || '',
+          cleaner_phone: payload.cleaner_phone ? `(${payload.cleaner_phone})` : '',
+          inspection_date: new Date().toLocaleString('pt-BR'),
+          inspection_notes: (payload.transcript || payload.notes || '').slice(0, 400),
+          has_audio: !!payload.audio_url,
+          portal_url: portalUrl,
+          monday_item_id: mondayItemId || '',
+        };
+
+        const subject = renderTemplate(template.subject, variables);
+        const body = renderTemplate(template.body_html, variables);
+        
+        await resend.emails.send({
+          from: Deno.env.get('MAIL_FROM') || 'RIOS <onboarding@resend.dev>',
+          to: teamEmails,
+          subject,
+          html: body,
+        });
+      }
     }
 
     // 6) Create ticket for owner if configured
