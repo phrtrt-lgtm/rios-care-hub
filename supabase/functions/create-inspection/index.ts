@@ -45,8 +45,12 @@ serve(async (req) => {
     const payload: InspectionPayload = await req.json();
     console.log('Creating inspection:', payload);
     
-    // Combinar todas as transcrições em uma só
-    const transcript = payload.audio_data?.map(a => a.transcript).filter(Boolean).join('\n') || '';
+    // Combinar todas as transcrições numeradas
+    const transcript = payload.audio_data?.map((a, idx) => {
+      const audioNum = idx + 1;
+      const text = a.transcript?.trim() || '(sem transcrição)';
+      return `Áudio ${audioNum}: ${text}`;
+    }).join(' | ') || '';
     const firstAudioUrl = payload.audio_data?.[0]?.audio_url;
 
     // 1) Create inspection record
