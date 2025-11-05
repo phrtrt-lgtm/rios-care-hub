@@ -265,7 +265,7 @@ async function createMondayItem({
   }
 
   const mutation = `
-    mutation($boardId: Int!, $itemName: String!, $columnValues: JSON!) {
+    mutation($boardId: ID!, $itemName: String!, $columnValues: JSON!) {
       create_item(board_id:$boardId, item_name:$itemName, column_values:$columnValues) { id }
     }
   `;
@@ -279,7 +279,7 @@ async function createMondayItem({
     body: JSON.stringify({
       query: mutation,
       variables: {
-        boardId: Number(boardId),
+        boardId: String(boardId),
         itemName: `Vistoria • ${unitName}`,
         columnValues: JSON.stringify(columnValues),
       },
