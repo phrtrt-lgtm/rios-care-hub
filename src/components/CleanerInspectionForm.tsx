@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Paperclip, Loader2, Trash2 } from 'lucide-react';
+import { Paperclip, Loader2, Trash2, CheckCircle2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import AudioRecorder from '@/components/AudioRecorder';
 import AudioPlayer from '@/components/AudioPlayer';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 interface CleanerInspectionFormProps {
   propertyId: string;
@@ -17,7 +17,7 @@ interface CleanerInspectionFormProps {
 
 export default function CleanerInspectionForm({ propertyId, propertyName, onBack }: CleanerInspectionFormProps) {
   const navigate = useNavigate();
-  const [notes, setNotes] = useState('');
+  const [inspectionStatus, setInspectionStatus] = useState<'OK' | 'NÃO' | ''>('');
   const [files, setFiles] = useState<File[]>([]);
   const [audioFiles, setAudioFiles] = useState<Array<{ file: File; transcript: string }>>([]);
   const [sending, setSending] = useState(false);
@@ -68,8 +68,8 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
   };
 
   const handleSubmit = async () => {
-    if (!notes && audioFiles.length === 0 && files.length === 0) {
-      toast.error('Adicione pelo menos uma observação, áudio ou anexo');
+    if (!inspectionStatus) {
+      toast.error('Selecione o status da vistoria (OK ou NÃO)');
       return;
     }
 
@@ -148,7 +148,7 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
           property_id: propertyId,
           cleaner_name: profile?.name,
           cleaner_phone: profile?.phone,
-          notes,
+          notes: inspectionStatus,
           audio_data: audioData,
           attachments,
         },
@@ -165,7 +165,7 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
       if (!data?.ok) throw new Error(data?.error || 'Falha no envio');
 
       toast.success('Vistoria enviada com sucesso!');
-      setNotes('');
+      setInspectionStatus('');
       setFiles([]);
       setAudioFiles([]);
       setUploadProgress('');
@@ -180,21 +180,47 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Vistoria – {propertyName}</h3>
         <Button variant="ghost" onClick={onBack}>Voltar</Button>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="notes">Observações (opcional)</Label>
-        <Textarea
-          id="notes"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="Ex.: Vazamento na pia / lâmpada queimada..."
-          rows={3}
-        />
+      <div className="space-y-4">
+        <Label className="text-lg font-medium">Como está o imóvel?</Label>
+        <RadioGroup value={inspectionStatus} onValueChange={(value) => setInspectionStatus(value as 'OK' | 'NÃO')}>
+          <div className="grid grid-cols-2 gap-4">
+            <label 
+              htmlFor="status-ok"
+              className={`cursor-pointer border-2 rounded-lg p-8 flex flex-col items-center gap-4 transition-all ${
+                inspectionStatus === 'OK' 
+                  ? 'border-green-500 bg-green-50 dark:bg-green-950' 
+                  : 'border-border hover:border-green-300'
+              }`}
+            >
+              <RadioGroupItem value="OK" id="status-ok" className="sr-only" />
+              <CheckCircle2 className={`h-20 w-20 ${inspectionStatus === 'OK' ? 'text-green-600' : 'text-muted-foreground'}`} />
+              <span className={`text-3xl font-bold ${inspectionStatus === 'OK' ? 'text-green-600' : 'text-muted-foreground'}`}>
+                OK
+              </span>
+            </label>
+
+            <label 
+              htmlFor="status-nao"
+              className={`cursor-pointer border-2 rounded-lg p-8 flex flex-col items-center gap-4 transition-all ${
+                inspectionStatus === 'NÃO' 
+                  ? 'border-red-500 bg-red-50 dark:bg-red-950' 
+                  : 'border-border hover:border-red-300'
+              }`}
+            >
+              <RadioGroupItem value="NÃO" id="status-nao" className="sr-only" />
+              <XCircle className={`h-20 w-20 ${inspectionStatus === 'NÃO' ? 'text-red-600' : 'text-muted-foreground'}`} />
+              <span className={`text-3xl font-bold ${inspectionStatus === 'NÃO' ? 'text-red-600' : 'text-muted-foreground'}`}>
+                NÃO
+              </span>
+            </label>
+          </div>
+        </RadioGroup>
       </div>
 
       <div className="space-y-2">
