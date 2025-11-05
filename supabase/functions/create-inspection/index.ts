@@ -104,6 +104,21 @@ serve(async (req) => {
     
     if (mondayEnabled) {
       try {
+        // List board columns to help debug
+        const boardId = Deno.env.get('MONDAY_BOARD_ID');
+        const mondayToken = Deno.env.get('MONDAY_API_TOKEN');
+        
+        if (boardId && mondayToken) {
+          const columnsQuery = `query { boards(ids: [${boardId}]) { columns { id title type } } }`;
+          const columnsRes = await fetch('https://api.monday.com/v2', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': mondayToken },
+            body: JSON.stringify({ query: columnsQuery }),
+          });
+          const columnsData = await columnsRes.json();
+          console.log('Monday board columns:', JSON.stringify(columnsData?.data?.boards?.[0]?.columns, null, 2));
+        }
+        
         mondayItemId = await createMondayItem({
           ownerName: property?.profiles?.name || 'Proprietário',
           unitName: property?.name || 'Imóvel',
