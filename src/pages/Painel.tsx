@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { LogOut, Users, Ticket, AlertTriangle, CheckCircle2, Plus, DollarSign, Building2, Bell, Settings, Sparkles } from "lucide-react";
+import { LogOut, Users, Ticket, AlertTriangle, CheckCircle2, Plus, DollarSign, Building2, Bell, Settings, Sparkles, UserPlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { AvatarUpload } from "@/components/AvatarUpload";
@@ -269,6 +269,23 @@ export default function Painel() {
                 <Button variant="outline" className="w-full">
                   <Plus className="mr-2 h-4 w-4" />
                   Novo Proprietário
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {profile?.role === "admin" && (
+            <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/admin/cadastrar-faxineira")}>
+              <CardHeader>
+                <CardTitle>Cadastrar Faxineira</CardTitle>
+                <CardDescription>
+                  Criar nova conta de faxineira
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button variant="outline" className="w-full">
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Nova Faxineira
                 </Button>
               </CardContent>
             </Card>
