@@ -122,18 +122,30 @@ export default function AdminVistoriaDetalhes() {
             {inspection.cleaner_phone && <span className="text-muted-foreground"> ({inspection.cleaner_phone})</span>}
           </div>
 
-          {inspection.audio_url && (
-            <div className="space-y-2">
-              <span className="font-semibold">Áudio:</span>
-              <audio controls src={inspection.audio_url} className="w-full" />
+          <div>
+            <span className="font-semibold">Status:</span>{' '}
+            <span className={`font-bold ${inspection.notes === 'OK' ? 'text-green-600' : 'text-red-600'}`}>
+              {inspection.notes || '-'}
+            </span>
+          </div>
+
+          {attachments.filter(a => a.file_type?.startsWith('audio/')).length > 0 && (
+            <div className="space-y-3">
+              <span className="font-semibold">Áudios:</span>
+              {attachments.filter(a => a.file_type?.startsWith('audio/')).map((audio, idx) => (
+                <div key={audio.id} className="space-y-1">
+                  <div className="text-sm text-muted-foreground">Áudio {idx + 1}</div>
+                  <audio controls src={audio.file_url} className="w-full" />
+                </div>
+              ))}
             </div>
           )}
 
-          {(inspection.transcript || inspection.notes) && (
+          {inspection.transcript && (
             <div className="space-y-2">
               <span className="font-semibold">Resumo / Transcrição:</span>
               <div className="whitespace-pre-wrap text-sm bg-muted p-3 rounded">
-                {inspection.transcript || inspection.notes}
+                {inspection.transcript}
               </div>
             </div>
           )}
