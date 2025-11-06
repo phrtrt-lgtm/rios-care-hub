@@ -5,11 +5,12 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 interface AudioRecorderProps {
-  onAudioReady: (file: File, transcript: string) => void;
+  onAudioReady: (file: File, transcript: string, transcribing: boolean) => void;
 }
 
 export default function AudioRecorder({ onAudioReady }: AudioRecorderProps) {
   const [recording, setRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
   const { toast } = useToast();
@@ -70,16 +71,21 @@ export default function AudioRecorder({ onAudioReady }: AudioRecorderProps) {
         const blob = new Blob(chunksRef.current, { type: 'audio/mp4' });
         const file = new File([blob], `audio_${Date.now()}.m4a`, { type: 'audio/mp4' });
         
-        // Transcribe audio first
+        // Envia o arquivo imediatamente, transcrição em background
+        onAudioReady(file, '', true);
+        
+        // Inicia transcrição em background
+        setTranscribing(true);
         toast({
           title: "Transcrevendo áudio...",
-          description: "Aguarde enquanto processamos o áudio",
+          description: "Continue adicionando fotos ou vídeos enquanto isso",
         });
         
         const transcribedText = await transcribeAudio(blob);
         
-        // Send file with transcript
-        onAudioReady(file, transcribedText);
+        // Atualiza com a transcrição quando pronta
+        onAudioReady(file, transcribedText, false);
+        setTranscribing(false);
         
         stream.getTracks().forEach(track => track.stop());
       };
@@ -112,9 +118,10 @@ export default function AudioRecorder({ onAudioReady }: AudioRecorderProps) {
           onClick={startRecording} 
           variant="outline" 
           className="gap-2"
+          disabled={transcribing}
         >
           <Mic className="h-4 w-4" />
-          Gravar áudio
+          {transcribing ? 'Transcrevendo...' : 'Gravar áudio'}
         </Button>
       ) : (
         <Button type="button" onClick={stopRecording} variant="destructive" className="gap-2">

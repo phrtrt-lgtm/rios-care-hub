@@ -19,7 +19,7 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
   const navigate = useNavigate();
   const [inspectionStatus, setInspectionStatus] = useState<'OK' | 'NÃO' | ''>('');
   const [files, setFiles] = useState<File[]>([]);
-  const [audioFiles, setAudioFiles] = useState<Array<{ file: File; transcript: string }>>([]);
+  const [audioFiles, setAudioFiles] = useState<Array<{ file: File; transcript: string; transcribing: boolean }>>([]);
   const [sending, setSending] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string>('');
 
@@ -41,8 +41,21 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
     }
   };
 
-  const handleAudioReady = (file: File, transcriptText: string) => {
-    setAudioFiles(prev => [...prev, { file, transcript: transcriptText }]);
+  const handleAudioReady = (file: File, transcriptText: string, transcribing: boolean) => {
+    setAudioFiles(prev => {
+      // Se está transcrevendo, adiciona novo áudio
+      if (transcribing) {
+        return [...prev, { file, transcript: transcriptText, transcribing }];
+      }
+      // Se não está transcrevendo, atualiza o áudio existente com a transcrição
+      const index = prev.findIndex(a => a.file.name === file.name && a.file.size === file.size);
+      if (index !== -1) {
+        const updated = [...prev];
+        updated[index] = { ...updated[index], transcript: transcriptText, transcribing: false };
+        return updated;
+      }
+      return prev;
+    });
   };
 
   const handleDeleteAudio = (index: number) => {
@@ -70,6 +83,13 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
   const handleSubmit = async () => {
     if (!inspectionStatus) {
       toast.error('Selecione o status da vistoria (OK ou NÃO)');
+      return;
+    }
+
+    // Verificar se há transcrições pendentes
+    const hasTranscribing = audioFiles.some(a => a.transcribing);
+    if (hasTranscribing) {
+      toast.error('Aguarde a transcrição dos áudios terminar');
       return;
     }
 
@@ -339,12 +359,12 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
 
       <Button 
         onClick={handleSubmit} 
-        disabled={sending} 
+        disabled={sending || audioFiles.some(a => a.transcribing)} 
         size="lg"
         className="w-full text-lg font-bold"
       >
         {sending && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-        {sending ? (uploadProgress || 'Enviando...') : 'Enviar vistoria'}
+        {audioFiles.some(a => a.transcribing) ? 'Transcrevendo áudios...' : sending ? (uploadProgress || 'Enviando...') : 'Enviar vistoria'}
       </Button>
       
       {files.length > 0 && (
