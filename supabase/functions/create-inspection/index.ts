@@ -146,10 +146,12 @@ serve(async (req) => {
     }
 
     // 5) Send email to team using template
-    const teamEmails = (Deno.env.get('TEAM_NOTIFY_EMAILS') || '')
+    const teamEmails = (Deno.env.get('ADMIN_NOTIFY_EMAILS') || '')
       .split(',')
       .map(e => e.trim())
       .filter(Boolean);
+
+    console.log('Team emails to notify:', teamEmails);
 
     if (teamEmails.length > 0) {
       const portalUrl = `${Deno.env.get('PUBLIC_BASE_URL') || 'https://rios-care-hub.lovable.app'}/admin/vistorias/${inspection.id}`;
