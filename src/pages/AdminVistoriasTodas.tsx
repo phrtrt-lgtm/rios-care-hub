@@ -31,6 +31,7 @@ export default function AdminVistoriasTodas() {
   const [filteredInspections, setFilteredInspections] = useState<Inspection[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"todos" | "ok" | "nao">("todos");
 
   useEffect(() => {
     if (profile?.role !== "admin") {
@@ -41,16 +42,25 @@ export default function AdminVistoriasTodas() {
   }, [profile, navigate]);
 
   useEffect(() => {
-    if (searchTerm.trim() === "") {
-      setFilteredInspections(inspections);
-    } else {
-      const filtered = inspections.filter((insp) =>
+    let filtered = inspections;
+    
+    // Filtro por busca
+    if (searchTerm.trim() !== "") {
+      filtered = filtered.filter((insp) =>
         insp.property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         insp.cleaner_name?.toLowerCase().includes(searchTerm.toLowerCase())
       );
-      setFilteredInspections(filtered);
     }
-  }, [searchTerm, inspections]);
+    
+    // Filtro por status
+    if (statusFilter === "ok") {
+      filtered = filtered.filter((insp) => insp.notes === "OK");
+    } else if (statusFilter === "nao") {
+      filtered = filtered.filter((insp) => insp.notes === "NÃO");
+    }
+    
+    setFilteredInspections(filtered);
+  }, [searchTerm, statusFilter, inspections]);
 
   const fetchInspections = async () => {
     try {
@@ -101,8 +111,8 @@ export default function AdminVistoriasTodas() {
       </header>
 
       <main className="container mx-auto px-4 py-6">
-        {/* Barra de pesquisa */}
-        <div className="mb-6">
+        {/* Barra de pesquisa e filtros */}
+        <div className="mb-6 space-y-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -112,6 +122,33 @@ export default function AdminVistoriasTodas() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
             />
+          </div>
+          
+          {/* Filtros de status */}
+          <div className="flex gap-2">
+            <Button
+              variant={statusFilter === "todos" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setStatusFilter("todos")}
+            >
+              Todos
+            </Button>
+            <Button
+              variant={statusFilter === "ok" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setStatusFilter("ok")}
+              className={statusFilter === "ok" ? "bg-green-600 hover:bg-green-700" : ""}
+            >
+              OK
+            </Button>
+            <Button
+              variant={statusFilter === "nao" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setStatusFilter("nao")}
+              className={statusFilter === "nao" ? "bg-red-600 hover:bg-red-700" : ""}
+            >
+              NÃO
+            </Button>
           </div>
         </div>
 
@@ -147,7 +184,18 @@ export default function AdminVistoriasTodas() {
 
                   {/* Informações */}
                   <div className="flex-1 space-y-2">
-                    <CardTitle className="text-lg">{inspection.property.name}</CardTitle>
+                    <div className="flex items-center justify-between gap-2">
+                      <CardTitle className="text-lg">{inspection.property.name}</CardTitle>
+                      {inspection.notes && (
+                        <span className={`text-sm font-bold px-2 py-1 rounded ${
+                          inspection.notes === "OK" 
+                            ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" 
+                            : "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
+                        }`}>
+                          {inspection.notes}
+                        </span>
+                      )}
+                    </div>
                     
                     <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">
