@@ -180,51 +180,51 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
   };
 
   return (
-    <div className="space-y-8 pb-8">
+    <div className="space-y-6 pb-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-2xl font-bold">Vistoria – {propertyName}</h3>
-        <Button variant="ghost" onClick={onBack} size="lg">Voltar</Button>
+        <h3 className="text-xl font-bold">Vistoria – {propertyName}</h3>
+        <Button variant="ghost" onClick={onBack}>Voltar</Button>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-4">
         <div className="text-center">
-          <h2 className="text-3xl font-bold mb-2">Como está o imóvel?</h2>
-          <p className="text-lg text-muted-foreground">Toque em uma das opções abaixo</p>
+          <h2 className="text-2xl font-bold mb-1">Como está o imóvel?</h2>
+          <p className="text-base text-muted-foreground">Toque em uma das opções abaixo</p>
         </div>
         <RadioGroup value={inspectionStatus} onValueChange={(value) => setInspectionStatus(value as 'OK' | 'NÃO')}>
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-2 gap-4">
             <label 
               htmlFor="status-ok"
-              className={`cursor-pointer border-4 rounded-2xl p-12 flex flex-col items-center gap-6 transition-all shadow-lg ${
+              className={`cursor-pointer border-3 rounded-xl p-6 flex flex-col items-center gap-3 transition-all shadow ${
                 inspectionStatus === 'OK' 
                   ? 'border-green-500 bg-green-50 dark:bg-green-950 scale-105' 
-                  : 'border-border hover:border-green-300 hover:scale-102'
+                  : 'border-border hover:border-green-300'
               }`}
             >
               <RadioGroupItem value="OK" id="status-ok" className="sr-only" />
-              <CheckCircle2 className={`h-32 w-32 ${inspectionStatus === 'OK' ? 'text-green-600' : 'text-muted-foreground'}`} />
-              <span className={`text-5xl font-bold ${inspectionStatus === 'OK' ? 'text-green-600' : 'text-muted-foreground'}`}>
+              <CheckCircle2 className={`h-20 w-20 ${inspectionStatus === 'OK' ? 'text-green-600' : 'text-muted-foreground'}`} />
+              <span className={`text-3xl font-bold ${inspectionStatus === 'OK' ? 'text-green-600' : 'text-muted-foreground'}`}>
                 OK
               </span>
-              <span className={`text-xl ${inspectionStatus === 'OK' ? 'text-green-600' : 'text-muted-foreground'}`}>
+              <span className={`text-base ${inspectionStatus === 'OK' ? 'text-green-600' : 'text-muted-foreground'}`}>
                 Tudo bem
               </span>
             </label>
 
             <label 
               htmlFor="status-nao"
-              className={`cursor-pointer border-4 rounded-2xl p-12 flex flex-col items-center gap-6 transition-all shadow-lg ${
+              className={`cursor-pointer border-3 rounded-xl p-6 flex flex-col items-center gap-3 transition-all shadow ${
                 inspectionStatus === 'NÃO' 
                   ? 'border-red-500 bg-red-50 dark:bg-red-950 scale-105' 
-                  : 'border-border hover:border-red-300 hover:scale-102'
+                  : 'border-border hover:border-red-300'
               }`}
             >
               <RadioGroupItem value="NÃO" id="status-nao" className="sr-only" />
-              <XCircle className={`h-32 w-32 ${inspectionStatus === 'NÃO' ? 'text-red-600' : 'text-muted-foreground'}`} />
-              <span className={`text-5xl font-bold ${inspectionStatus === 'NÃO' ? 'text-red-600' : 'text-muted-foreground'}`}>
+              <XCircle className={`h-20 w-20 ${inspectionStatus === 'NÃO' ? 'text-red-600' : 'text-muted-foreground'}`} />
+              <span className={`text-3xl font-bold ${inspectionStatus === 'NÃO' ? 'text-red-600' : 'text-muted-foreground'}`}>
                 NÃO
               </span>
-              <span className={`text-xl ${inspectionStatus === 'NÃO' ? 'text-red-600' : 'text-muted-foreground'}`}>
+              <span className={`text-base ${inspectionStatus === 'NÃO' ? 'text-red-600' : 'text-muted-foreground'}`}>
                 Tem problema
               </span>
             </label>
@@ -232,41 +232,41 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
         </RadioGroup>
       </div>
 
-      <div className="space-y-4 bg-card border-2 rounded-xl p-6">
+      <div className="space-y-3 bg-card border-2 rounded-xl p-4">
         <div className="flex items-center gap-3">
-          <div className="bg-primary/10 p-3 rounded-full">
-            <Mic className="h-8 w-8 text-primary" />
+          <div className="bg-primary/10 p-2 rounded-full">
+            <Mic className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h3 className="text-xl font-bold">Gravar áudio</h3>
-            <p className="text-muted-foreground">Opcional - Conte o que viu</p>
+            <h3 className="text-lg font-bold">Gravar áudio</h3>
+            <p className="text-sm text-muted-foreground">Opcional - Conte o que viu</p>
           </div>
         </div>
         <AudioRecorder onAudioReady={handleAudioReady} />
         
         {audioFiles.length > 0 && (
-          <div className="space-y-3 mt-4">
-            <p className="text-lg font-semibold flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
+          <div className="space-y-2 mt-3">
+            <p className="text-base font-semibold flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
               {audioFiles.length} áudio(s) gravado(s)
             </p>
             {audioFiles.map((audio, index) => (
-              <div key={index} className="flex items-center gap-3 p-4 bg-muted rounded-lg">
+              <div key={index} className="flex items-center gap-2 p-3 bg-muted rounded-lg">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     <Mic className="h-4 w-4 text-primary" />
-                    <span className="text-base font-medium">Áudio {index + 1}</span>
+                    <span className="text-sm font-medium">Áudio {index + 1}</span>
                   </div>
                   <AudioPlayer file={audio.file} />
                 </div>
                 <Button
                   type="button"
                   variant="ghost"
-                  size="lg"
+                  size="sm"
                   onClick={() => handleDeleteAudio(index)}
                   className="text-destructive hover:text-destructive shrink-0"
                 >
-                  <Trash2 className="h-6 w-6" />
+                  <Trash2 className="h-5 w-5" />
                 </Button>
               </div>
             ))}
@@ -274,28 +274,28 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
         )}
       </div>
 
-      <div className="space-y-4 bg-card border-2 rounded-xl p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="bg-primary/10 p-3 rounded-full">
-            <Camera className="h-8 w-8 text-primary" />
+      <div className="space-y-3 bg-card border-2 rounded-xl p-4">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="bg-primary/10 p-2 rounded-full">
+            <Camera className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h3 className="text-xl font-bold">Adicionar fotos e vídeos</h3>
-            <p className="text-muted-foreground">Opcional - Mostre o que viu</p>
+            <h3 className="text-lg font-bold">Adicionar fotos e vídeos</h3>
+            <p className="text-sm text-muted-foreground">Opcional - Mostre o que viu</p>
           </div>
         </div>
         
         <label 
           htmlFor="files" 
-          className="cursor-pointer border-2 border-dashed rounded-xl p-8 flex flex-col items-center gap-4 hover:border-primary transition-colors bg-muted/30"
+          className="cursor-pointer border-2 border-dashed rounded-xl p-6 flex flex-col items-center gap-3 hover:border-primary transition-colors bg-muted/30"
         >
-          <div className="flex gap-6">
-            <Camera className="h-16 w-16 text-primary" />
-            <Video className="h-16 w-16 text-primary" />
+          <div className="flex gap-4">
+            <Camera className="h-12 w-12 text-primary" />
+            <Video className="h-12 w-12 text-primary" />
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold mb-2">Toque aqui para tirar foto ou vídeo</p>
-            <p className="text-lg text-muted-foreground">Ou escolha da galeria</p>
+            <p className="text-lg font-bold mb-1">Toque aqui para tirar foto ou vídeo</p>
+            <p className="text-sm text-muted-foreground">Ou escolha da galeria</p>
           </div>
         </label>
         
@@ -310,9 +310,9 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
         />
         
         {files.length > 0 && (
-          <div className="space-y-3">
-            <p className="text-lg font-semibold flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
+          <div className="space-y-2">
+            <p className="text-base font-semibold flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
               {files.length} arquivo(s) selecionado(s)
             </p>
             <div className="grid grid-cols-3 gap-2">
@@ -340,9 +340,9 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
         onClick={handleSubmit} 
         disabled={sending} 
         size="lg"
-        className="w-full h-16 text-2xl font-bold"
+        className="w-full text-lg font-bold"
       >
-        {sending && <Loader2 className="mr-3 h-6 w-6 animate-spin" />}
+        {sending && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
         {sending ? (uploadProgress || 'Enviando...') : 'Enviar vistoria'}
       </Button>
       
