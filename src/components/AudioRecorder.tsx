@@ -10,17 +10,12 @@ interface AudioRecorderProps {
 
 export default function AudioRecorder({ onAudioReady }: AudioRecorderProps) {
   const [recording, setRecording] = useState(false);
-  const [transcript, setTranscript] = useState('');
-  const [isTranscribing, setIsTranscribing] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
-  const transcriptRef = useRef<string>('');
   const { toast } = useToast();
 
   const transcribeAudio = async (audioBlob: Blob): Promise<string> => {
     try {
-      setIsTranscribing(true);
-      
       // Convert blob to base64
       const reader = new FileReader();
       const base64Promise = new Promise<string>((resolve, reject) => {
@@ -53,14 +48,7 @@ export default function AudioRecorder({ onAudioReady }: AudioRecorderProps) {
       return data.text || '';
     } catch (error) {
       console.error('Error transcribing audio:', error);
-      toast({
-        title: "Erro na transcrição",
-        description: "Não foi possível transcrever o áudio. A gravação será salva sem transcrição.",
-        variant: "destructive",
-      });
       return '';
-    } finally {
-      setIsTranscribing(false);
     }
   };
 
@@ -71,8 +59,6 @@ export default function AudioRecorder({ onAudioReady }: AudioRecorderProps) {
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
-      transcriptRef.current = '';
-      setTranscript('');
 
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
@@ -82,15 +68,18 @@ export default function AudioRecorder({ onAudioReady }: AudioRecorderProps) {
 
       mediaRecorder.onstop = async () => {
         const blob = new Blob(chunksRef.current, { type: 'audio/mp4' });
-        
-        // Transcribe with Whisper
-        const transcribedText = await transcribeAudio(blob);
-        
         const file = new File([blob], `audio_${Date.now()}.m4a`, { type: 'audio/mp4' });
-        onAudioReady(file, transcribedText);
         
-        transcriptRef.current = '';
-        setTranscript('');
+        // Send file immediately, transcribe in background
+        onAudioReady(file, '');
+        
+        // Transcribe in background without blocking
+        transcribeAudio(blob).then(transcribedText => {
+          if (transcribedText) {
+            console.log('Background transcription completed:', transcribedText);
+          }
+        });
+        
         stream.getTracks().forEach(track => track.stop());
       };
 
@@ -122,26 +111,15 @@ export default function AudioRecorder({ onAudioReady }: AudioRecorderProps) {
           onClick={startRecording} 
           variant="outline" 
           className="gap-2"
-          disabled={isTranscribing}
         >
           <Mic className="h-4 w-4" />
-          {isTranscribing ? 'Transcrevendo...' : 'Gravar áudio'}
+          Gravar áudio
         </Button>
       ) : (
         <Button type="button" onClick={stopRecording} variant="destructive" className="gap-2">
           <Square className="h-4 w-4" />
           Parar gravação
         </Button>
-      )}
-      {isTranscribing && (
-        <p className="text-sm text-muted-foreground italic">
-          Processando transcrição com Whisper...
-        </p>
-      )}
-      {transcript && (
-        <p className="text-sm text-muted-foreground italic">
-          Transcrição: {transcript}
-        </p>
       )}
     </div>
   );
