@@ -102,14 +102,6 @@ serve(async (req) => {
 
     console.log('Property:', property?.name, 'Owner:', property?.profiles?.name, 'Settings:', settings);
 
-    // Get cleaner profile to send confirmation email
-    const { data: { user } } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
-    const { data: cleanerProfile } = await supabase
-      .from('profiles')
-      .select('email, name')
-      .eq('id', user?.id)
-      .single();
-
     // 4) Create Monday item
     let mondayItemId: string | null = null;
     const mondayEnabled = Deno.env.get('MONDAY_ENABLED') === 'true';
@@ -153,126 +145,17 @@ serve(async (req) => {
       }
     }
 
-    // 5) Send email to team/admins using template
-    const teamEmails = (Deno.env.get('ADMIN_NOTIFY_EMAILS') || '')
-      .split(',')
-      .map(e => e.trim())
-      .filter(Boolean);
-
-    console.log('Team emails to notify:', teamEmails);
-
-    if (teamEmails.length > 0) {
-      const portalUrl = `${Deno.env.get('PUBLIC_BASE_URL') || 'https://rios-care-hub.lovable.app'}/admin/vistorias/${inspection.id}`;
-      
-      try {
-        const template = await getTemplate(supabase, 'inspection_created');
-        
-        if (template) {
-          const variables = {
-            property_name: property?.name || 'Imóvel',
-            cleaner_name: payload.cleaner_name || '',
-            cleaner_phone: payload.cleaner_phone ? `(${payload.cleaner_phone})` : '',
-            inspection_date: new Date().toLocaleString('pt-BR'),
-            inspection_notes: (transcript || payload.notes || '').slice(0, 400),
-            has_audio: !!firstAudioUrl,
-            portal_url: portalUrl,
-            monday_item_id: mondayItemId || '',
-          };
-
-          const subject = renderTemplate(template.subject, variables);
-          const body = renderTemplate(template.body_html, variables);
-          
-          await resend.emails.send({
-            from: Deno.env.get('MAIL_FROM') || 'RIOS <onboarding@resend.dev>',
-            to: teamEmails,
-            subject,
-            html: body,
-          });
-          
-          console.log('Team notification email sent to:', teamEmails.join(', '));
-        } else {
-          // Fallback email for team if template doesn't exist
-          await resend.emails.send({
-            from: Deno.env.get('MAIL_FROM') || 'RIOS <onboarding@resend.dev>',
-            to: teamEmails,
-            subject: `[Vistoria] ${property?.name || 'Imóvel'} • ${new Date().toLocaleString('pt-BR')}`,
-            html: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2>Nova Vistoria Registrada</h2>
-                <p><strong>Unidade:</strong> ${property?.name || 'Imóvel'}</p>
-                <p><strong>Faxineira:</strong> ${payload.cleaner_name || ''} ${payload.cleaner_phone ? `(${payload.cleaner_phone})` : ''}</p>
-                <p><strong>Data:</strong> ${new Date().toLocaleString('pt-BR')}</p>
-                <p><strong>Status:</strong> ${payload.notes || ''}</p>
-                ${transcript ? `<p><strong>Transcrição:</strong> ${transcript.slice(0, 400)}</p>` : ''}
-                <p><a href="${portalUrl}" style="display: inline-block; padding: 12px 24px; background-color: #0066cc; color: white; text-decoration: none; border-radius: 4px; margin-top: 16px;">Ver Detalhes</a></p>
-                <p style="margin-top: 24px; color: #666; font-size: 12px;">— Equipe RIOS</p>
-              </div>
-            `,
-          });
-          
-          console.log('Team fallback notification email sent to:', teamEmails.join(', '));
-        }
-      } catch (error) {
-        console.error('Error sending team email:', error);
-      }
-    }
-
-    // 6) Send email to owner if notify_owner is enabled
-    if (settings?.notify_owner && property) {
-      const ownerProfile = property.profiles;
-      if (ownerProfile?.email) {
-        const portalUrl = `${Deno.env.get('PUBLIC_BASE_URL') || 'https://rios-care-hub.lovable.app'}/vistorias/${inspection.id}`;
-        
-        try {
-          // Always use fallback for owner notification
-          await resend.emails.send({
-            from: Deno.env.get('MAIL_FROM') || 'RIOS <onboarding@resend.dev>',
-            to: ownerProfile.email,
-            subject: `Nova Vistoria • ${property.name}`,
-            html: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2>Nova Vistoria Registrada</h2>
-                <p>Olá ${ownerProfile.name},</p>
-                <p>Uma nova vistoria foi registrada para sua unidade <strong>${property.name}</strong>.</p>
-                <p><strong>Data:</strong> ${new Date().toLocaleString('pt-BR')}</p>
-                <p><strong>Status:</strong> ${payload.notes || 'Informações disponíveis no portal'}</p>
-                ${transcript ? `<p><strong>Observações:</strong> ${transcript.slice(0, 400)}</p>` : ''}
-                <p><a href="${portalUrl}" style="display: inline-block; padding: 12px 24px; background-color: #0066cc; color: white; text-decoration: none; border-radius: 4px; margin-top: 16px;">Ver Detalhes da Vistoria</a></p>
-                <p style="margin-top: 24px; color: #666; font-size: 12px;">— Equipe RIOS</p>
-              </div>
-            `,
-          });
-          
-          console.log('Owner notification email sent to:', ownerProfile.email);
-        } catch (error) {
-          console.error('Error sending owner email:', error);
-      }
-    }
-
-    // 7) Send confirmation email to cleaner
-    if (cleanerProfile?.email) {
-      try {
-        await resend.emails.send({
-          from: Deno.env.get('MAIL_FROM') || 'RIOS <onboarding@resend.dev>',
-          to: cleanerProfile.email,
-          subject: 'Vistoria enviada com sucesso',
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2>✓ Vistoria Enviada</h2>
-              <p>Olá ${cleanerProfile.name || payload.cleaner_name},</p>
-              <p>Sua vistoria foi enviada com sucesso!</p>
-              <p><strong>Unidade:</strong> ${property?.name || 'Imóvel'}</p>
-              <p><strong>Data:</strong> ${new Date().toLocaleString('pt-BR')}</p>
-              <p style="margin-top: 24px; color: #666; font-size: 12px;">— Equipe RIOS</p>
-            </div>
-          `,
-        });
-        
-        console.log('Cleaner confirmation email sent to:', cleanerProfile.email);
-      } catch (error) {
-        console.error('Error sending cleaner confirmation email:', error);
-      }
-    }
+    // 5) Send notifications via dedicated edge function
+    try {
+      await supabase.functions.invoke('send-inspection-email', {
+        body: {
+          inspectionId: inspection.id,
+          propertyId: payload.property_id,
+        },
+      });
+      console.log('Inspection notification triggered');
+    } catch (error) {
+      console.error('Error triggering inspection notification:', error);
     }
 
     return new Response(
