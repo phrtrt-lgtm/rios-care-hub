@@ -70,15 +70,16 @@ export default function AudioRecorder({ onAudioReady }: AudioRecorderProps) {
         const blob = new Blob(chunksRef.current, { type: 'audio/mp4' });
         const file = new File([blob], `audio_${Date.now()}.m4a`, { type: 'audio/mp4' });
         
-        // Send file immediately, transcribe in background
-        onAudioReady(file, '');
-        
-        // Transcribe in background without blocking
-        transcribeAudio(blob).then(transcribedText => {
-          if (transcribedText) {
-            console.log('Background transcription completed:', transcribedText);
-          }
+        // Transcribe audio first
+        toast({
+          title: "Transcrevendo áudio...",
+          description: "Aguarde enquanto processamos o áudio",
         });
+        
+        const transcribedText = await transcribeAudio(blob);
+        
+        // Send file with transcript
+        onAudioReady(file, transcribedText);
         
         stream.getTracks().forEach(track => track.stop());
       };
