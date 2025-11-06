@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Paperclip, Loader2, Trash2, CheckCircle2, XCircle } from 'lucide-react';
+import { Paperclip, Loader2, Trash2, CheckCircle2, XCircle, Camera, Video, Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import AudioRecorder from '@/components/AudioRecorder';
@@ -180,72 +180,93 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 pb-8">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Vistoria – {propertyName}</h3>
-        <Button variant="ghost" onClick={onBack}>Voltar</Button>
+        <h3 className="text-2xl font-bold">Vistoria – {propertyName}</h3>
+        <Button variant="ghost" onClick={onBack} size="lg">Voltar</Button>
       </div>
 
-      <div className="space-y-4">
-        <Label className="text-lg font-medium">Como está o imóvel?</Label>
+      <div className="space-y-6">
+        <div className="text-center">
+          <h2 className="text-3xl font-bold mb-2">Como está o imóvel?</h2>
+          <p className="text-lg text-muted-foreground">Toque em uma das opções abaixo</p>
+        </div>
         <RadioGroup value={inspectionStatus} onValueChange={(value) => setInspectionStatus(value as 'OK' | 'NÃO')}>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-6">
             <label 
               htmlFor="status-ok"
-              className={`cursor-pointer border-2 rounded-lg p-8 flex flex-col items-center gap-4 transition-all ${
+              className={`cursor-pointer border-4 rounded-2xl p-12 flex flex-col items-center gap-6 transition-all shadow-lg ${
                 inspectionStatus === 'OK' 
-                  ? 'border-green-500 bg-green-50 dark:bg-green-950' 
-                  : 'border-border hover:border-green-300'
+                  ? 'border-green-500 bg-green-50 dark:bg-green-950 scale-105' 
+                  : 'border-border hover:border-green-300 hover:scale-102'
               }`}
             >
               <RadioGroupItem value="OK" id="status-ok" className="sr-only" />
-              <CheckCircle2 className={`h-20 w-20 ${inspectionStatus === 'OK' ? 'text-green-600' : 'text-muted-foreground'}`} />
-              <span className={`text-3xl font-bold ${inspectionStatus === 'OK' ? 'text-green-600' : 'text-muted-foreground'}`}>
+              <CheckCircle2 className={`h-32 w-32 ${inspectionStatus === 'OK' ? 'text-green-600' : 'text-muted-foreground'}`} />
+              <span className={`text-5xl font-bold ${inspectionStatus === 'OK' ? 'text-green-600' : 'text-muted-foreground'}`}>
                 OK
+              </span>
+              <span className={`text-xl ${inspectionStatus === 'OK' ? 'text-green-600' : 'text-muted-foreground'}`}>
+                Tudo bem
               </span>
             </label>
 
             <label 
               htmlFor="status-nao"
-              className={`cursor-pointer border-2 rounded-lg p-8 flex flex-col items-center gap-4 transition-all ${
+              className={`cursor-pointer border-4 rounded-2xl p-12 flex flex-col items-center gap-6 transition-all shadow-lg ${
                 inspectionStatus === 'NÃO' 
-                  ? 'border-red-500 bg-red-50 dark:bg-red-950' 
-                  : 'border-border hover:border-red-300'
+                  ? 'border-red-500 bg-red-50 dark:bg-red-950 scale-105' 
+                  : 'border-border hover:border-red-300 hover:scale-102'
               }`}
             >
               <RadioGroupItem value="NÃO" id="status-nao" className="sr-only" />
-              <XCircle className={`h-20 w-20 ${inspectionStatus === 'NÃO' ? 'text-red-600' : 'text-muted-foreground'}`} />
-              <span className={`text-3xl font-bold ${inspectionStatus === 'NÃO' ? 'text-red-600' : 'text-muted-foreground'}`}>
+              <XCircle className={`h-32 w-32 ${inspectionStatus === 'NÃO' ? 'text-red-600' : 'text-muted-foreground'}`} />
+              <span className={`text-5xl font-bold ${inspectionStatus === 'NÃO' ? 'text-red-600' : 'text-muted-foreground'}`}>
                 NÃO
+              </span>
+              <span className={`text-xl ${inspectionStatus === 'NÃO' ? 'text-red-600' : 'text-muted-foreground'}`}>
+                Tem problema
               </span>
             </label>
           </div>
         </RadioGroup>
       </div>
 
-      <div className="space-y-2">
-        <Label>Áudio (opcional)</Label>
+      <div className="space-y-4 bg-card border-2 rounded-xl p-6">
+        <div className="flex items-center gap-3">
+          <div className="bg-primary/10 p-3 rounded-full">
+            <Mic className="h-8 w-8 text-primary" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold">Gravar áudio</h3>
+            <p className="text-muted-foreground">Opcional - Conte o que viu</p>
+          </div>
+        </div>
         <AudioRecorder onAudioReady={handleAudioReady} />
         
         {audioFiles.length > 0 && (
-          <div className="space-y-2 mt-2">
-            <p className="text-xs text-muted-foreground">{audioFiles.length} áudio(s) gravado(s)</p>
+          <div className="space-y-3 mt-4">
+            <p className="text-lg font-semibold flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-green-600" />
+              {audioFiles.length} áudio(s) gravado(s)
+            </p>
             {audioFiles.map((audio, index) => (
-              <div key={index} className="flex items-center gap-2 p-3 bg-muted rounded">
+              <div key={index} className="flex items-center gap-3 p-4 bg-muted rounded-lg">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm font-medium">Áudio {index + 1}</span>
+                    <Mic className="h-4 w-4 text-primary" />
+                    <span className="text-base font-medium">Áudio {index + 1}</span>
                   </div>
                   <AudioPlayer file={audio.file} />
                 </div>
                 <Button
                   type="button"
                   variant="ghost"
-                  size="sm"
+                  size="lg"
                   onClick={() => handleDeleteAudio(index)}
                   className="text-destructive hover:text-destructive shrink-0"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-6 w-6" />
                 </Button>
               </div>
             ))}
@@ -253,35 +274,80 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
         )}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="files">Anexos (fotos/vídeos)</Label>
+      <div className="space-y-4 bg-card border-2 rounded-xl p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="bg-primary/10 p-3 rounded-full">
+            <Camera className="h-8 w-8 text-primary" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold">Adicionar fotos e vídeos</h3>
+            <p className="text-muted-foreground">Opcional - Mostre o que viu</p>
+          </div>
+        </div>
+        
+        <label 
+          htmlFor="files" 
+          className="cursor-pointer border-2 border-dashed rounded-xl p-8 flex flex-col items-center gap-4 hover:border-primary transition-colors bg-muted/30"
+        >
+          <div className="flex gap-6">
+            <Camera className="h-16 w-16 text-primary" />
+            <Video className="h-16 w-16 text-primary" />
+          </div>
+          <div className="text-center">
+            <p className="text-2xl font-bold mb-2">Toque aqui para tirar foto ou vídeo</p>
+            <p className="text-lg text-muted-foreground">Ou escolha da galeria</p>
+          </div>
+        </label>
+        
         <input
           id="files"
           type="file"
           accept="image/*,video/*"
           multiple
+          capture="environment"
           onChange={handleFileChange}
-          className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+          className="sr-only"
         />
+        
         {files.length > 0 && (
-          <p className="text-xs text-muted-foreground flex items-center gap-1">
-            <Paperclip className="h-3 w-3" />
-            {files.length} arquivo(s) selecionado(s)
-          </p>
+          <div className="space-y-3">
+            <p className="text-lg font-semibold flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-green-600" />
+              {files.length} arquivo(s) selecionado(s)
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {files.map((file, index) => (
+                <div key={index} className="relative aspect-square rounded-lg overflow-hidden border-2 border-primary">
+                  {file.type.startsWith('image/') ? (
+                    <img 
+                      src={URL.createObjectURL(file)} 
+                      alt={`Preview ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-muted flex items-center justify-center">
+                      <Video className="h-8 w-8 text-primary" />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </div>
 
       <Button 
         onClick={handleSubmit} 
         disabled={sending} 
-        className="w-full"
+        size="lg"
+        className="w-full h-16 text-2xl font-bold"
       >
-        {sending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        {sending && <Loader2 className="mr-3 h-6 w-6 animate-spin" />}
         {sending ? (uploadProgress || 'Enviando...') : 'Enviar vistoria'}
       </Button>
       
       {files.length > 0 && (
-        <p className="text-xs text-muted-foreground text-center">
+        <p className="text-sm text-muted-foreground text-center">
           Tamanho total: {(files.reduce((sum, f) => sum + f.size, 0) / (1024 * 1024)).toFixed(1)} MB
         </p>
       )}
