@@ -145,7 +145,7 @@ serve(async (req) => {
       }
     }
 
-    // 5) Send email to team using template
+    // 5) Send email to team/admins using template
     const teamEmails = (Deno.env.get('ADMIN_NOTIFY_EMAILS') || '')
       .split(',')
       .map(e => e.trim())
@@ -182,42 +182,58 @@ serve(async (req) => {
       }
     }
 
-    // 6) Create ticket for owner if configured
+    // 6) Send email to owner if notify_owner is enabled
     if (settings?.notify_owner && property) {
-      const { data: ticket } = await supabase
-        .from('tickets')
-        .insert({
-          owner_id: property.owner_id,
-          property_id: property.id,
-          subject: `Vistoria de Faxina – ${property.name}`,
-          description: transcript || payload.notes || 'Vistoria registrada com anexos.',
-          ticket_type: 'duvida',
-          priority: 'normal',
-          status: 'novo',
-          created_by: property.owner_id,
-        })
-        .select()
-        .single();
+      const ownerProfile = property.profiles;
+      if (ownerProfile?.email) {
+        const portalUrl = `${Deno.env.get('PUBLIC_BASE_URL') || 'https://rios-care-hub.lovable.app'}/vistorias/${inspection.id}`;
+        
+        const template = await getTemplate(supabase, 'inspection_owner_notification');
+        
+        if (template) {
+          const variables = {
+            owner_name: ownerProfile.name || 'Proprietário',
+            property_name: property.name || 'Imóvel',
+            cleaner_name: payload.cleaner_name || '',
+            inspection_date: new Date().toLocaleString('pt-BR'),
+            inspection_status: payload.notes || '',
+            inspection_notes: (transcript || payload.notes || '').slice(0, 400),
+            has_audio: !!firstAudioUrl,
+            portal_url: portalUrl,
+          };
 
-      if (ticket) {
-        await supabase.from('ticket_messages').insert({
-          ticket_id: ticket.id,
-          author_id: property.owner_id,
-          body: 'Vistoria de faxina registrada. Verifique os detalhes e anexos.',
-          is_internal: false,
-        });
-
-        const ownerProfile = property.profiles;
-        if (ownerProfile?.email) {
+          const subject = renderTemplate(template.subject, variables);
+          const body = renderTemplate(template.body_html, variables);
+          
           await resend.emails.send({
             from: Deno.env.get('MAIL_FROM') || 'RIOS <onboarding@resend.dev>',
             to: ownerProfile.email,
-            subject: `Ticket aberto: Vistoria • ${property.name}`,
+            subject,
+            html: body,
+          });
+          
+          console.log('Owner notification email sent to:', ownerProfile.email);
+        } else {
+          // Fallback email if template doesn't exist
+          await resend.emails.send({
+            from: Deno.env.get('MAIL_FROM') || 'RIOS <onboarding@resend.dev>',
+            to: ownerProfile.email,
+            subject: `Nova Vistoria • ${property.name}`,
             html: `
-              <p>Olá ${ownerProfile.name}, abrimos um ticket com a vistoria de faxina da sua unidade.</p>
-              <p><a href="${Deno.env.get('PUBLIC_BASE_URL') || 'https://rios-care-hub.lovable.app'}/ticket/${ticket.id}">Acessar ticket</a></p>
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2>Nova Vistoria Registrada</h2>
+                <p>Olá ${ownerProfile.name},</p>
+                <p>Uma nova vistoria foi registrada para sua unidade <strong>${property.name}</strong>.</p>
+                <p><strong>Data:</strong> ${new Date().toLocaleString('pt-BR')}</p>
+                <p><strong>Status:</strong> ${payload.notes || 'Informações disponíveis no portal'}</p>
+                ${transcript ? `<p><strong>Observações:</strong> ${transcript.slice(0, 400)}</p>` : ''}
+                <p><a href="${portalUrl}" style="display: inline-block; padding: 12px 24px; background-color: #0066cc; color: white; text-decoration: none; border-radius: 4px; margin-top: 16px;">Ver Detalhes da Vistoria</a></p>
+                <p style="margin-top: 24px; color: #666; font-size: 12px;">— Equipe RIOS</p>
+              </div>
             `,
           });
+          
+          console.log('Owner fallback notification email sent to:', ownerProfile.email);
         }
       }
     }
