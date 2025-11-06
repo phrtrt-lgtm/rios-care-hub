@@ -1,6 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { Mic, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AudioRecorderProps {
   onAudioReady: (file: File, transcript: string) => void;
@@ -9,10 +11,59 @@ interface AudioRecorderProps {
 export default function AudioRecorder({ onAudioReady }: AudioRecorderProps) {
   const [recording, setRecording] = useState(false);
   const [transcript, setTranscript] = useState('');
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const recognitionRef = useRef<any>(null);
   const chunksRef = useRef<BlobPart[]>([]);
   const transcriptRef = useRef<string>('');
+  const { toast } = useToast();
+
+  const transcribeAudio = async (audioBlob: Blob): Promise<string> => {
+    try {
+      setIsTranscribing(true);
+      
+      // Convert blob to base64
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        reader.onloadend = () => {
+          const base64 = (reader.result as string).split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror = reject;
+      });
+      
+      reader.readAsDataURL(audioBlob);
+      const base64Audio = await base64Promise;
+
+      console.log('Sending audio to Whisper API, size:', audioBlob.size);
+
+      // Call edge function for transcription
+      const { data, error } = await supabase.functions.invoke('transcribe-audio', {
+        body: {
+          audio: base64Audio,
+          mimeType: audioBlob.type
+        }
+      });
+
+      if (error) {
+        console.error('Transcription error:', error);
+        throw error;
+      }
+
+      console.log('Transcription result:', data);
+      return data.text || '';
+    } catch (error) {
+      console.error('Error transcribing audio:', error);
+      toast({
+        title: "Erro na transcrição",
+        description: "Não foi possível transcrever o áudio. A gravação será salva sem transcrição.",
+        variant: "destructive",
+      });
+      return '';
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
 
   const startRecording = async () => {
     try {
@@ -20,6 +71,8 @@ export default function AudioRecorder({ onAudioReady }: AudioRecorderProps) {
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
+      transcriptRef.current = '';
+      setTranscript('');
 
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
@@ -27,46 +80,30 @@ export default function AudioRecorder({ onAudioReady }: AudioRecorderProps) {
         }
       };
 
-      mediaRecorder.onstop = () => {
+      mediaRecorder.onstop = async () => {
         const blob = new Blob(chunksRef.current, { type: 'audio/mp4' });
+        
+        // Transcribe with Whisper
+        const transcribedText = await transcribeAudio(blob);
+        
         const file = new File([blob], `audio_${Date.now()}.m4a`, { type: 'audio/mp4' });
-        onAudioReady(file, transcriptRef.current);
+        onAudioReady(file, transcribedText);
+        
         transcriptRef.current = '';
+        setTranscript('');
         stream.getTracks().forEach(track => track.stop());
       };
 
-      // Web Speech API for transcription (if available)
-      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-      if (SpeechRecognition) {
-        const recognition = new SpeechRecognition();
-        recognition.lang = 'pt-BR';
-        recognition.continuous = true;
-        recognition.interimResults = true;
-
-        recognition.onresult = (event: any) => {
-          // Reconstruir a transcrição completa a partir de TODOS os resultados finais
-          let fullTranscript = '';
-          for (let i = 0; i < event.results.length; i++) {
-            if (event.results[i].isFinal) {
-              fullTranscript += event.results[i][0].transcript + ' ';
-            }
-          }
-          // Atualizar com a transcrição completa (não acumular)
-          if (fullTranscript.trim()) {
-            transcriptRef.current = fullTranscript.trim();
-            setTranscript(fullTranscript.trim());
-          }
-        };
-
-        recognition.start();
-        recognitionRef.current = recognition;
-      }
 
       mediaRecorder.start();
       setRecording(true);
     } catch (error) {
       console.error('Error starting recording:', error);
-      alert('Erro ao iniciar gravação. Verifique as permissões do microfone.');
+      toast({
+        title: "Erro ao acessar microfone",
+        description: "Verifique as permissões do navegador",
+        variant: "destructive",
+      });
     }
   };
 
@@ -74,26 +111,37 @@ export default function AudioRecorder({ onAudioReady }: AudioRecorderProps) {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop();
     }
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-    }
     setRecording(false);
-    // Resetar transcrição local após parar
-    setTimeout(() => setTranscript(''), 100);
   };
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-col gap-2">
       {!recording ? (
-        <Button type="button" onClick={startRecording} variant="outline" className="gap-2">
+        <Button 
+          type="button" 
+          onClick={startRecording} 
+          variant="outline" 
+          className="gap-2"
+          disabled={isTranscribing}
+        >
           <Mic className="h-4 w-4" />
-          Gravar áudio
+          {isTranscribing ? 'Transcrevendo...' : 'Gravar áudio'}
         </Button>
       ) : (
         <Button type="button" onClick={stopRecording} variant="destructive" className="gap-2">
           <Square className="h-4 w-4" />
           Parar gravação
         </Button>
+      )}
+      {isTranscribing && (
+        <p className="text-sm text-muted-foreground italic">
+          Processando transcrição com Whisper...
+        </p>
+      )}
+      {transcript && (
+        <p className="text-sm text-muted-foreground italic">
+          Transcrição: {transcript}
+        </p>
       )}
     </div>
   );
