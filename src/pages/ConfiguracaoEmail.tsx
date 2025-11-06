@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Edit, Info } from "lucide-react";
+import { ArrowLeft, Edit, Info, Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 
@@ -28,6 +28,7 @@ export default function ConfiguracaoEmail() {
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null);
+  const [previewTemplate, setPreviewTemplate] = useState<EmailTemplate | null>(null);
   const [formData, setFormData] = useState({ subject: "", body_html: "" });
 
   useEffect(() => {
@@ -123,6 +124,48 @@ export default function ConfiguracaoEmail() {
     }
   };
 
+  // Render template with example data
+  const renderTemplate = (template: string, variables: Record<string, any>): string => {
+    let result = template;
+
+    // Process conditional blocks {{#if variable}}...{{/if}}
+    const ifRegex = /\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/g;
+    result = result.replace(ifRegex, (match, varName, content) => {
+      const value = variables[varName];
+      return value ? content : '';
+    });
+
+    // Replace simple variables {{variable}}
+    const varRegex = /\{\{(\w+)\}\}/g;
+    result = result.replace(varRegex, (match, varName) => {
+      const value = variables[varName];
+      return value !== undefined && value !== null ? String(value) : '';
+    });
+
+    return result;
+  };
+
+  const getExampleData = (templateKey: string): Record<string, any> => {
+    const examples: Record<string, Record<string, any>> = {
+      inspection_created: {
+        property_name: "Apto 301 - Edifício Vista Mar",
+        cleaner_name: "Maria Silva",
+        cleaner_phone: "(48) 99999-8888",
+        inspection_date: new Date().toLocaleString("pt-BR"),
+        inspection_notes: "Vistoria realizada com sucesso. Apartamento em excelente estado de conservação. Todos os itens checados e aprovados. Limpeza completa realizada incluindo banheiros, cozinha e área de serviço.",
+        has_audio: true,
+        portal_url: "#preview",
+        monday_item_id: "12345678",
+      },
+    };
+
+    return examples[templateKey] || {};
+  };
+
+  const handlePreview = (template: EmailTemplate) => {
+    setPreviewTemplate(template);
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Carregando...</div>;
   }
@@ -164,85 +207,134 @@ export default function ConfiguracaoEmail() {
                       </Badge>
                     </div>
                   </div>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(template)}
-                      >
-                        <Edit className="h-4 w-4 mr-2" />
-                        Editar
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                      <DialogHeader>
-                        <DialogTitle>Editar Template: {template.name}</DialogTitle>
-                      </DialogHeader>
-                      
-                      {editingTemplate?.id === template.id && (
-                        <div className="space-y-4 py-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="subject">Assunto do Email</Label>
-                            <Input
-                              id="subject"
-                              value={formData.subject}
-                              onChange={(e) =>
-                                setFormData({ ...formData, subject: e.target.value })
-                              }
-                              placeholder="Assunto do email"
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="body_html">Corpo do Email (HTML)</Label>
-                            <Textarea
-                              id="body_html"
-                              value={formData.body_html}
-                              onChange={(e) =>
-                                setFormData({ ...formData, body_html: e.target.value })
-                              }
-                              placeholder="Corpo do email em HTML"
-                              className="min-h-[300px] font-mono text-sm"
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-sm font-medium">
-                              <Info className="h-4 w-4" />
-                              <span>Variáveis Disponíveis</span>
+                  <div className="flex gap-2">
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePreview(template)}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          Preview
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle>Preview: {template.name}</DialogTitle>
+                        </DialogHeader>
+                        
+                        {previewTemplate?.id === template.id && (
+                          <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                              <Label>Assunto:</Label>
+                              <div className="p-3 bg-muted rounded-lg text-sm">
+                                {renderTemplate(template.subject, getExampleData(template.key))}
+                              </div>
                             </div>
-                            <div className="flex flex-wrap gap-2 p-4 bg-muted rounded-lg">
-                              {template.available_variables.map((variable) => (
-                                <Button
-                                  key={variable}
-                                  variant="secondary"
-                                  size="sm"
-                                  onClick={() => insertVariable(variable)}
-                                  className="text-xs"
-                                >
-                                  {`{{${variable}}}`}
-                                </Button>
-                              ))}
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                              Clique em uma variável para inseri-la no cursor. Para blocos condicionais, use: {`{{#if variavel}}...{{/if}}`}
-                            </p>
-                          </div>
 
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="outline"
-                              onClick={() => setEditingTemplate(null)}
-                            >
-                              Cancelar
-                            </Button>
-                            <Button onClick={handleSave}>Salvar</Button>
+                            <div className="space-y-2">
+                              <Label>Corpo do Email:</Label>
+                              <div className="border rounded-lg overflow-hidden bg-white">
+                                <iframe
+                                  srcDoc={renderTemplate(template.body_html, getExampleData(template.key))}
+                                  className="w-full h-[600px]"
+                                  title="Email Preview"
+                                  sandbox="allow-same-origin"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                              <p className="text-sm text-amber-800">
+                                <strong>Nota:</strong> Este é um exemplo com dados fictícios. O email real será preenchido com dados reais do sistema.
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </DialogContent>
-                  </Dialog>
+                        )}
+                      </DialogContent>
+                    </Dialog>
+
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(template)}
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Editar
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle>Editar Template: {template.name}</DialogTitle>
+                        </DialogHeader>
+                        
+                        {editingTemplate?.id === template.id && (
+                          <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="subject">Assunto do Email</Label>
+                              <Input
+                                id="subject"
+                                value={formData.subject}
+                                onChange={(e) =>
+                                  setFormData({ ...formData, subject: e.target.value })
+                                }
+                                placeholder="Assunto do email"
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="body_html">Corpo do Email (HTML)</Label>
+                              <Textarea
+                                id="body_html"
+                                value={formData.body_html}
+                                onChange={(e) =>
+                                  setFormData({ ...formData, body_html: e.target.value })
+                                }
+                                placeholder="Corpo do email em HTML"
+                                className="min-h-[300px] font-mono text-sm"
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2 text-sm font-medium">
+                                <Info className="h-4 w-4" />
+                                <span>Variáveis Disponíveis</span>
+                              </div>
+                              <div className="flex flex-wrap gap-2 p-4 bg-muted rounded-lg">
+                                {template.available_variables.map((variable) => (
+                                  <Button
+                                    key={variable}
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() => insertVariable(variable)}
+                                    className="text-xs"
+                                  >
+                                    {`{{${variable}}}`}
+                                  </Button>
+                                ))}
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                Clique em uma variável para inseri-la no cursor. Para blocos condicionais, use: {`{{#if variavel}}...{{/if}}`}
+                              </p>
+                            </div>
+
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                onClick={() => setEditingTemplate(null)}
+                              >
+                                Cancelar
+                              </Button>
+                              <Button onClick={handleSave}>Salvar</Button>
+                            </div>
+                          </div>
+                        )}
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
