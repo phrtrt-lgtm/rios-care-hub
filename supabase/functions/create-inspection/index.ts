@@ -156,29 +156,56 @@ serve(async (req) => {
     if (teamEmails.length > 0) {
       const portalUrl = `${Deno.env.get('PUBLIC_BASE_URL') || 'https://rios-care-hub.lovable.app'}/admin/vistorias/${inspection.id}`;
       
-      const template = await getTemplate(supabase, 'inspection_created');
-      
-      if (template) {
-        const variables = {
-          property_name: property?.name || 'Imóvel',
-          cleaner_name: payload.cleaner_name || '',
-          cleaner_phone: payload.cleaner_phone ? `(${payload.cleaner_phone})` : '',
-          inspection_date: new Date().toLocaleString('pt-BR'),
-          inspection_notes: (transcript || payload.notes || '').slice(0, 400),
-          has_audio: !!firstAudioUrl,
-          portal_url: portalUrl,
-          monday_item_id: mondayItemId || '',
-        };
-
-        const subject = renderTemplate(template.subject, variables);
-        const body = renderTemplate(template.body_html, variables);
+      try {
+        const template = await getTemplate(supabase, 'inspection_created');
         
-        await resend.emails.send({
-          from: Deno.env.get('MAIL_FROM') || 'RIOS <onboarding@resend.dev>',
-          to: teamEmails,
-          subject,
-          html: body,
-        });
+        if (template) {
+          const variables = {
+            property_name: property?.name || 'Imóvel',
+            cleaner_name: payload.cleaner_name || '',
+            cleaner_phone: payload.cleaner_phone ? `(${payload.cleaner_phone})` : '',
+            inspection_date: new Date().toLocaleString('pt-BR'),
+            inspection_notes: (transcript || payload.notes || '').slice(0, 400),
+            has_audio: !!firstAudioUrl,
+            portal_url: portalUrl,
+            monday_item_id: mondayItemId || '',
+          };
+
+          const subject = renderTemplate(template.subject, variables);
+          const body = renderTemplate(template.body_html, variables);
+          
+          await resend.emails.send({
+            from: Deno.env.get('MAIL_FROM') || 'RIOS <onboarding@resend.dev>',
+            to: teamEmails,
+            subject,
+            html: body,
+          });
+          
+          console.log('Team notification email sent to:', teamEmails.join(', '));
+        } else {
+          // Fallback email for team if template doesn't exist
+          await resend.emails.send({
+            from: Deno.env.get('MAIL_FROM') || 'RIOS <onboarding@resend.dev>',
+            to: teamEmails,
+            subject: `[Vistoria] ${property?.name || 'Imóvel'} • ${new Date().toLocaleString('pt-BR')}`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2>Nova Vistoria Registrada</h2>
+                <p><strong>Unidade:</strong> ${property?.name || 'Imóvel'}</p>
+                <p><strong>Faxineira:</strong> ${payload.cleaner_name || ''} ${payload.cleaner_phone ? `(${payload.cleaner_phone})` : ''}</p>
+                <p><strong>Data:</strong> ${new Date().toLocaleString('pt-BR')}</p>
+                <p><strong>Status:</strong> ${payload.notes || ''}</p>
+                ${transcript ? `<p><strong>Transcrição:</strong> ${transcript.slice(0, 400)}</p>` : ''}
+                <p><a href="${portalUrl}" style="display: inline-block; padding: 12px 24px; background-color: #0066cc; color: white; text-decoration: none; border-radius: 4px; margin-top: 16px;">Ver Detalhes</a></p>
+                <p style="margin-top: 24px; color: #666; font-size: 12px;">— Equipe RIOS</p>
+              </div>
+            `,
+          });
+          
+          console.log('Team fallback notification email sent to:', teamEmails.join(', '));
+        }
+      } catch (error) {
+        console.error('Error sending team email:', error);
       }
     }
 
@@ -188,33 +215,8 @@ serve(async (req) => {
       if (ownerProfile?.email) {
         const portalUrl = `${Deno.env.get('PUBLIC_BASE_URL') || 'https://rios-care-hub.lovable.app'}/vistorias/${inspection.id}`;
         
-        const template = await getTemplate(supabase, 'inspection_owner_notification');
-        
-        if (template) {
-          const variables = {
-            owner_name: ownerProfile.name || 'Proprietário',
-            property_name: property.name || 'Imóvel',
-            cleaner_name: payload.cleaner_name || '',
-            inspection_date: new Date().toLocaleString('pt-BR'),
-            inspection_status: payload.notes || '',
-            inspection_notes: (transcript || payload.notes || '').slice(0, 400),
-            has_audio: !!firstAudioUrl,
-            portal_url: portalUrl,
-          };
-
-          const subject = renderTemplate(template.subject, variables);
-          const body = renderTemplate(template.body_html, variables);
-          
-          await resend.emails.send({
-            from: Deno.env.get('MAIL_FROM') || 'RIOS <onboarding@resend.dev>',
-            to: ownerProfile.email,
-            subject,
-            html: body,
-          });
-          
-          console.log('Owner notification email sent to:', ownerProfile.email);
-        } else {
-          // Fallback email if template doesn't exist
+        try {
+          // Always use fallback for owner notification
           await resend.emails.send({
             from: Deno.env.get('MAIL_FROM') || 'RIOS <onboarding@resend.dev>',
             to: ownerProfile.email,
@@ -233,7 +235,9 @@ serve(async (req) => {
             `,
           });
           
-          console.log('Owner fallback notification email sent to:', ownerProfile.email);
+          console.log('Owner notification email sent to:', ownerProfile.email);
+        } catch (error) {
+          console.error('Error sending owner email:', error);
         }
       }
     }
