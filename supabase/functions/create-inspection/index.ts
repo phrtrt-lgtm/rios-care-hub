@@ -102,6 +102,14 @@ serve(async (req) => {
 
     console.log('Property:', property?.name, 'Owner:', property?.profiles?.name, 'Settings:', settings);
 
+    // Get cleaner profile to send confirmation email
+    const { data: { user } } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
+    const { data: cleanerProfile } = await supabase
+      .from('profiles')
+      .select('email, name')
+      .eq('id', user?.id)
+      .single();
+
     // 4) Create Monday item
     let mondayItemId: string | null = null;
     const mondayEnabled = Deno.env.get('MONDAY_ENABLED') === 'true';
@@ -238,8 +246,33 @@ serve(async (req) => {
           console.log('Owner notification email sent to:', ownerProfile.email);
         } catch (error) {
           console.error('Error sending owner email:', error);
-        }
       }
+    }
+
+    // 7) Send confirmation email to cleaner
+    if (cleanerProfile?.email) {
+      try {
+        await resend.emails.send({
+          from: Deno.env.get('MAIL_FROM') || 'RIOS <onboarding@resend.dev>',
+          to: cleanerProfile.email,
+          subject: 'Vistoria enviada com sucesso',
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2>✓ Vistoria Enviada</h2>
+              <p>Olá ${cleanerProfile.name || payload.cleaner_name},</p>
+              <p>Sua vistoria foi enviada com sucesso!</p>
+              <p><strong>Unidade:</strong> ${property?.name || 'Imóvel'}</p>
+              <p><strong>Data:</strong> ${new Date().toLocaleString('pt-BR')}</p>
+              <p style="margin-top: 24px; color: #666; font-size: 12px;">— Equipe RIOS</p>
+            </div>
+          `,
+        });
+        
+        console.log('Cleaner confirmation email sent to:', cleanerProfile.email);
+      } catch (error) {
+        console.error('Error sending cleaner confirmation email:', error);
+      }
+    }
     }
 
     return new Response(
