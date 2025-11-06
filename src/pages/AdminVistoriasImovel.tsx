@@ -32,8 +32,10 @@ export default function AdminVistoriasImovel() {
   const { profile, loading: authLoading } = useAuth();
   const [property, setProperty] = useState<Property | null>(null);
   const [inspections, setInspections] = useState<Inspection[]>([]);
+  const [filteredInspections, setFilteredInspections] = useState<Inspection[]>([]);
   const [attachmentCounts, setAttachmentCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<"todos" | "ok" | "nao">("todos");
 
   useEffect(() => {
     if (!authLoading) {
@@ -44,6 +46,18 @@ export default function AdminVistoriasImovel() {
       fetchData();
     }
   }, [authLoading, profile, id]);
+
+  useEffect(() => {
+    let filtered = inspections;
+    
+    if (statusFilter === "ok") {
+      filtered = filtered.filter((insp) => insp.notes === "OK");
+    } else if (statusFilter === "nao") {
+      filtered = filtered.filter((insp) => insp.notes === "NÃO");
+    }
+    
+    setFilteredInspections(filtered);
+  }, [statusFilter, inspections]);
 
   const fetchData = async () => {
     try {
@@ -124,9 +138,40 @@ export default function AdminVistoriasImovel() {
         </div>
       </Card>
 
-      {inspections.length === 0 ? (
+      {/* Filtros de status */}
+      <div className="flex gap-2">
+        <Button
+          variant={statusFilter === "todos" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setStatusFilter("todos")}
+        >
+          Todos
+        </Button>
+        <Button
+          variant={statusFilter === "ok" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setStatusFilter("ok")}
+          className={statusFilter === "ok" ? "bg-green-600 hover:bg-green-700" : ""}
+        >
+          OK
+        </Button>
+        <Button
+          variant={statusFilter === "nao" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setStatusFilter("nao")}
+          className={statusFilter === "nao" ? "bg-red-600 hover:bg-red-700" : ""}
+        >
+          NÃO
+        </Button>
+      </div>
+
+      {filteredInspections.length === 0 ? (
         <Card className="p-12 text-center">
-          <p className="text-muted-foreground">Nenhuma vistoria registrada para este imóvel.</p>
+          <p className="text-muted-foreground">
+            {statusFilter !== "todos" 
+              ? `Nenhuma vistoria com status "${statusFilter === "ok" ? "OK" : "NÃO"}" encontrada.`
+              : "Nenhuma vistoria registrada para este imóvel."}
+          </p>
         </Card>
       ) : (
         <Card>
@@ -135,18 +180,32 @@ export default function AdminVistoriasImovel() {
               <TableRow>
                 <TableHead>Data da vistoria</TableHead>
                 <TableHead>Faxineira</TableHead>
+                <TableHead>OK OU NÃO</TableHead>
                 <TableHead className="text-center">Áudio</TableHead>
                 <TableHead className="text-center">Anexos</TableHead>
                 <TableHead></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {inspections.map((inspection) => (
+              {filteredInspections.map((inspection) => (
                 <TableRow key={inspection.id}>
                   <TableCell>{formatDateTime(inspection.created_at)}</TableCell>
                   <TableCell className="text-sm">
                     {inspection.cleaner_name || '-'}
                     {inspection.cleaner_phone && <span className="text-muted-foreground"> ({inspection.cleaner_phone})</span>}
+                  </TableCell>
+                  <TableCell>
+                    {inspection.notes ? (
+                      <span className={`text-sm font-bold px-2 py-1 rounded ${
+                        inspection.notes === "OK" 
+                          ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" 
+                          : "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
+                      }`}>
+                        {inspection.notes}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
                   </TableCell>
                   <TableCell className="text-center">
                     {inspection.audio_url ? <Headphones className="h-4 w-4 inline" /> : '—'}
