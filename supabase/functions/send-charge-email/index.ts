@@ -75,8 +75,7 @@ const handler = async (req: Request): Promise<Response> => {
         templateKey = "charge_created";
         break;
       case "charge_reminder":
-        // Use specific reminder template based on timing - default to 24h
-        templateKey = "charge_reminder_24h";
+        templateKey = "charge_reminder";
         break;
       case "charge_overdue":
         templateKey = "charge_overdue";
@@ -101,9 +100,11 @@ const handler = async (req: Request): Promise<Response> => {
       charge_description: charge.description || "",
       charge_amount: amountBRL,
       charge_due_date: formattedDueDate,
+      due_date: formattedDueDate,
       payment_link: charge.payment_link_url || "",
       contest_deadline: contestDeadline,
       portal_url: portalUrl,
+      charge_url: portalUrl,
       property_name: property?.name || "",
       property_address: property?.address || "",
     };

@@ -146,6 +146,8 @@ export default function ConfiguracaoEmail() {
   };
 
   const getExampleData = (templateKey: string): Record<string, any> => {
+    const baseUrl = window.location.origin;
+    
     const examples: Record<string, Record<string, any>> = {
       inspection_created: {
         property_name: "Apto 301 - Edifício Vista Mar",
@@ -154,8 +156,56 @@ export default function ConfiguracaoEmail() {
         inspection_date: new Date().toLocaleString("pt-BR"),
         inspection_notes: "Vistoria realizada com sucesso. Apartamento em excelente estado de conservação. Todos os itens checados e aprovados. Limpeza completa realizada incluindo banheiros, cozinha e área de serviço.",
         has_audio: true,
-        portal_url: "#preview",
+        portal_url: `${baseUrl}/vistorias`,
         monday_item_id: "12345678",
+      },
+      charge_created: {
+        charge_title: "Reposição de toalha danificada",
+        charge_description: "Substituição de toalha de banho danificada durante a estadia. Valor referente ao custo de reposição do item.",
+        charge_amount: "R$ 89,90",
+        due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString("pt-BR"),
+        property_name: "Apto 301 - Edifício Vista Mar",
+        charge_url: `${baseUrl}/minhas-cobrancas`,
+      },
+      charge_reminder: {
+        charge_title: "Reposição de toalha danificada",
+        charge_amount: "R$ 89,90",
+        due_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toLocaleDateString("pt-BR"),
+        charge_url: `${baseUrl}/minhas-cobrancas`,
+      },
+      charge_overdue: {
+        charge_title: "Reposição de toalha danificada",
+        charge_amount: "R$ 89,90",
+        due_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toLocaleDateString("pt-BR"),
+        charge_url: `${baseUrl}/minhas-cobrancas`,
+      },
+      ticket_message_owner: {
+        ticket_subject: "Dúvida sobre bloqueio de datas",
+        author_name: "Equipe RIOS",
+        message_body: "Olá! Recebi sua solicitação de bloqueio das datas de 15/12 a 20/12. Já realizei o bloqueio no sistema. As datas não estarão mais disponíveis para reserva. Se precisar de mais alguma coisa, é só avisar!",
+        message_date: new Date().toLocaleString("pt-BR"),
+        ticket_url: `${baseUrl}/`,
+      },
+      ticket_message_team: {
+        ticket_subject: "Dúvida sobre bloqueio de datas",
+        owner_name: "João Silva",
+        message_body: "Gostaria de bloquear meu apartamento de 15/12 a 20/12 para uma reforma. Como faço isso?",
+        message_date: new Date().toLocaleString("pt-BR"),
+        ticket_url: `${baseUrl}/todos-tickets`,
+      },
+      charge_message_owner: {
+        charge_title: "Reposição de toalha danificada",
+        author_name: "Equipe RIOS",
+        message_body: "Olá! Verifiquei sua contestação sobre a cobrança. A faxineira confirmou que a toalha estava danificada com um rasgo grande. Enviei fotos para você verificar. Ficamos à disposição para esclarecer.",
+        message_date: new Date().toLocaleString("pt-BR"),
+        charge_url: `${baseUrl}/minhas-cobrancas`,
+      },
+      charge_message_team: {
+        charge_title: "Reposição de toalha danificada",
+        owner_name: "João Silva",
+        message_body: "Não concordo com essa cobrança. A toalha já estava velha e precisava ser trocada mesmo. Por favor, verifiquem.",
+        message_date: new Date().toLocaleString("pt-BR"),
+        charge_url: `${baseUrl}/gerenciar-cobrancas`,
       },
     };
 

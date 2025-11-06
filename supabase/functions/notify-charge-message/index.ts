@@ -68,6 +68,7 @@ const handler = async (req: Request): Promise<Response> => {
       author_name: message.author.name,
       message_date: new Date(message.created_at).toLocaleString("pt-BR"),
       portal_url: portalUrl,
+      charge_url: portalUrl,
     };
 
     if (isTeamMessage) {
