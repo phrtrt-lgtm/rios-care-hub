@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Plus, LogOut, DollarSign, BarChart3 } from "lucide-react";
+import { Plus, LogOut, DollarSign, BarChart3, ClipboardCheck } from "lucide-react";
 import { TicketList } from "@/components/TicketList";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,11 +11,51 @@ import { AlertBanner } from "@/components/AlertBanner";
 import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
 import { NotificationButton } from "@/components/NotificationButton";
 import TopChargesRules from "@/components/TopChargesRules";
+import { supabase } from "@/integrations/supabase/client";
+
 
 export default function MinhaCaixa() {
   const { profile, user, signOut } = useAuth();
   const navigate = useNavigate();
   const [photoUrl, setPhotoUrl] = useState(profile?.photo_url);
+  const [hasInspectionAccess, setHasInspectionAccess] = useState(false);
+
+  useEffect(() => {
+    const checkInspectionAccess = async () => {
+      if (!user) return;
+      
+      try {
+        // Buscar propriedades do usuário
+        const { data: properties, error: propError } = await supabase
+          .from('properties')
+          .select('id')
+          .eq('owner_id', user.id);
+
+        if (propError) throw propError;
+        
+        if (!properties || properties.length === 0) {
+          setHasInspectionAccess(false);
+          return;
+        }
+
+        // Verificar se alguma propriedade tem acesso ao portal habilitado
+        const { data: settings, error: settingsError } = await supabase
+          .from('inspection_settings')
+          .select('owner_portal_enabled')
+          .in('property_id', properties.map(p => p.id))
+          .eq('owner_portal_enabled', true);
+
+        if (settingsError) throw settingsError;
+
+        setHasInspectionAccess(settings && settings.length > 0);
+      } catch (error) {
+        console.error('Error checking inspection access:', error);
+        setHasInspectionAccess(false);
+      }
+    };
+
+    checkInspectionAccess();
+  }, [user]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
@@ -100,6 +140,17 @@ export default function MinhaCaixa() {
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
+            {hasInspectionAccess && (
+              <Button 
+                onClick={() => navigate("/admin/vistorias")} 
+                variant="outline"
+                size="sm"
+                className="w-full sm:w-auto"
+              >
+                <ClipboardCheck className="mr-2 h-4 w-4" />
+                Vistorias
+              </Button>
+            )}
             <Button 
               onClick={() => navigate("/manutencoes")} 
               variant="outline"
