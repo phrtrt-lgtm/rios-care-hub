@@ -37,6 +37,8 @@ import AdminVistoriasImovel from "./pages/AdminVistoriasImovel";
 import AdminVistoriaDetalhes from "./pages/AdminVistoriaDetalhes";
 import AdminVistoriasTodas from "./pages/AdminVistoriasTodas";
 import AdminVistoriasConfiguracoes from "./pages/AdminVistoriasConfiguracoes";
+import Vistorias from "./pages/Vistorias";
+import VistoriaDetalhes from "./pages/VistoriaDetalhes";
 
 const queryClient = new QueryClient();
 
@@ -244,6 +246,22 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <AdminVistoriasConfiguracoes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/vistorias"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <Vistorias />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/vistoria/:id"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <VistoriaDetalhes />
                 </ProtectedRoute>
               }
             />

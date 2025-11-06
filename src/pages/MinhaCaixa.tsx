@@ -74,6 +74,17 @@ export default function MinhaCaixa() {
             
             {/* Botões de ação */}
             <div className="flex items-center gap-2 md:gap-4">
+              {hasInspectionAccess && (
+                <Button 
+                  onClick={() => navigate("/vistorias")} 
+                  variant="ghost"
+                  size="sm"
+                >
+                  <ClipboardCheck className="h-4 w-4 md:mr-2" />
+                  <span className="hidden md:inline">Vistorias</span>
+                </Button>
+              )}
+              
               <NotificationButton />
               
               <Dialog>
@@ -140,17 +151,6 @@ export default function MinhaCaixa() {
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
-            {hasInspectionAccess && (
-              <Button 
-                onClick={() => navigate("/admin/vistorias")} 
-                variant="outline"
-                size="sm"
-                className="w-full sm:w-auto"
-              >
-                <ClipboardCheck className="mr-2 h-4 w-4" />
-                Vistorias
-              </Button>
-            )}
             <Button 
               onClick={() => navigate("/manutencoes")} 
               variant="outline"
