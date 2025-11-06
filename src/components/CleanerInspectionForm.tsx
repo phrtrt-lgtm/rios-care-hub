@@ -132,11 +132,15 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
       
       // Get user info
       const { data: { user } } = await supabase.auth.getUser();
+      console.log('User logado:', user?.id, user?.email);
+      
       const { data: profile } = await supabase
         .from('profiles')
-        .select('name, phone')
+        .select('name, phone, role')
         .eq('id', user?.id)
         .single();
+      
+      console.log('Profile encontrado:', profile);
 
       // Call edge function to create inspection with timeout
       const timeoutPromise = new Promise((_, reject) => 
