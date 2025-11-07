@@ -10,15 +10,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { messaging, getToken } from "@/lib/firebase";
 
 export function EnablePush() {
   const [loading, setLoading] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
 
   const checkSubscription = async () => {
-    if (!messaging) return false;
-
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return false;
@@ -39,103 +36,11 @@ export function EnablePush() {
   };
 
   const enablePush = async () => {
-    if (!messaging) {
-      toast.error("Notificações push não são suportadas neste navegador");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const permission = await Notification.requestPermission();
-      if (permission !== "granted") {
-        toast.error("Permissão de notificação negada");
-        setLoading(false);
-        return;
-      }
-
-      // Register Firebase messaging service worker
-      await navigator.serviceWorker.register("/firebase-messaging-sw.js");
-
-      // Get FCM token
-      const token = await getToken(messaging, {
-        vapidKey: "BPxWLHkxgDk5n9V7g8XcSLNPRcXtSkVxCqKnKf8R3n7vQjc1cK6pT7M8DhV5Y2F3gK9RpT4mZ6wN8sJ2xQ5bL0c"
-      });
-
-      if (!token) {
-        toast.error("Não foi possível obter token FCM");
-        setLoading(false);
-        return;
-      }
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error("Você precisa estar logado");
-        setLoading(false);
-        return;
-      }
-
-      // Send FCM token to backend
-      const { error } = await supabase.functions.invoke("push-subscribe", {
-        body: {
-          endpoint: token,
-          keys: {},
-          userAgent: navigator.userAgent,
-        },
-      });
-
-      if (error) throw error;
-
-      toast.success("Notificações ativadas com sucesso!");
-      setIsSubscribed(true);
-
-      // Send test notification
-      await supabase.functions.invoke("send-push", {
-        body: {
-          ownerId: session.user.id,
-          payload: {
-            title: "Notificações ativadas! 🔔",
-            body: "Você receberá alertas de tickets e cobranças aqui também.",
-            url: "/",
-          },
-        },
-      });
-    } catch (error: any) {
-      console.error("Error enabling push:", error);
-      toast.error("Erro ao ativar notificações: " + error.message);
-    } finally {
-      setLoading(false);
-    }
+    toast.info("Use o app nativo para ativar notificações push");
   };
 
   const disablePush = async () => {
-    if (!messaging) return;
-
-    setLoading(true);
-
-    try {
-      const token = await getToken(messaging, {
-        vapidKey: "BPxWLHkxgDk5n9V7g8XcSLNPRcXtSkVxCqKnKf8R3n7vQjc1cK6pT7M8DhV5Y2F3gK9RpT4mZ6wN8sJ2xQ5bL0c"
-      });
-
-      if (token) {
-        const { error } = await supabase.functions.invoke("push-unsubscribe", {
-          body: {
-            endpoint: token,
-          },
-        });
-
-        if (error) throw error;
-
-        toast.success("Notificações desativadas");
-        setIsSubscribed(false);
-      }
-    } catch (error: any) {
-      console.error("Error disabling push:", error);
-      toast.error("Erro ao desativar notificações: " + error.message);
-    } finally {
-      setLoading(false);
-    }
+    toast.info("Use o app nativo para desativar notificações push");
   };
 
   // Check subscription status on mount
