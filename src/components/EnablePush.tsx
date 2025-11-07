@@ -10,36 +10,28 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding)
-    .replace(/-/g, "+")
-    .replace(/_/g, "/");
-
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
-}
+import { messaging, getToken } from "@/lib/firebase";
 
 export function EnablePush() {
   const [loading, setLoading] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
 
   const checkSubscription = async () => {
-    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-      return false;
-    }
+    if (!messaging) return false;
 
     try {
-      const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
-      setIsSubscribed(!!subscription);
-      return !!subscription;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return false;
+
+      const { data } = await supabase
+        .from("push_subscriptions")
+        .select("*")
+        .eq("owner_id", session.user.id)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      setIsSubscribed(!!data);
+      return !!data;
     } catch (error) {
       console.error("Error checking subscription:", error);
       return false;
@@ -47,7 +39,7 @@ export function EnablePush() {
   };
 
   const enablePush = async () => {
-    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+    if (!messaging) {
       toast.error("Notificações push não são suportadas neste navegador");
       return;
     }
@@ -55,7 +47,6 @@ export function EnablePush() {
     setLoading(true);
 
     try {
-      // Request notification permission
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
         toast.error("Permissão de notificação negada");
@@ -63,26 +54,20 @@ export function EnablePush() {
         return;
       }
 
-      // Register service worker
-      const registration = await navigator.serviceWorker.register("/sw.js");
-      await navigator.serviceWorker.ready;
+      // Register Firebase messaging service worker
+      await navigator.serviceWorker.register("/firebase-messaging-sw.js");
 
-      // Get VAPID public key from environment
-      const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
-      if (!vapidPublicKey) {
-        toast.error("Chave VAPID não configurada");
+      // Get FCM token
+      const token = await getToken(messaging, {
+        vapidKey: "BPxWLHkxgDk5n9V7g8XcSLNPRcXtSkVxCqKnKf8R3n7vQjc1cK6pT7M8DhV5Y2F3gK9RpT4mZ6wN8sJ2xQ5bL0c"
+      });
+
+      if (!token) {
+        toast.error("Não foi possível obter token FCM");
         setLoading(false);
         return;
       }
 
-      // Subscribe to push notifications
-      const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: applicationServerKey as unknown as BufferSource,
-      });
-
-      // Send subscription to backend
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         toast.error("Você precisa estar logado");
@@ -90,10 +75,11 @@ export function EnablePush() {
         return;
       }
 
+      // Send FCM token to backend
       const { error } = await supabase.functions.invoke("push-subscribe", {
         body: {
-          endpoint: subscription.endpoint,
-          keys: subscription.toJSON().keys,
+          endpoint: token,
+          keys: {},
           userAgent: navigator.userAgent,
         },
       });
@@ -123,18 +109,19 @@ export function EnablePush() {
   };
 
   const disablePush = async () => {
+    if (!messaging) return;
+
     setLoading(true);
 
     try {
-      const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
+      const token = await getToken(messaging, {
+        vapidKey: "BPxWLHkxgDk5n9V7g8XcSLNPRcXtSkVxCqKnKf8R3n7vQjc1cK6pT7M8DhV5Y2F3gK9RpT4mZ6wN8sJ2xQ5bL0c"
+      });
 
-      if (subscription) {
-        await subscription.unsubscribe();
-
+      if (token) {
         const { error } = await supabase.functions.invoke("push-unsubscribe", {
           body: {
-            endpoint: subscription.endpoint,
+            endpoint: token,
           },
         });
 
