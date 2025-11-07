@@ -185,7 +185,11 @@ const handler = async (req: Request): Promise<Response> => {
     // Send to all subscriptions - assuming fcm_token is stored in endpoint field
     for (const sub of subscriptions) {
       try {
-        const fcmToken = sub.endpoint; // FCM token stored in endpoint field
+        // Extract FCM token from endpoint (format: https://fcm.googleapis.com/fcm/send/TOKEN)
+        let fcmToken = sub.endpoint;
+        if (fcmToken.includes('fcm/send/')) {
+          fcmToken = fcmToken.split('fcm/send/')[1];
+        }
         
         const success = await sendFirebasePush(fcmToken, payload);
         
