@@ -40,6 +40,9 @@ import AdminVistoriasTodas from "./pages/AdminVistoriasTodas";
 import AdminVistoriasConfiguracoes from "./pages/AdminVistoriasConfiguracoes";
 import Vistorias from "./pages/Vistorias";
 import VistoriaDetalhes from "./pages/VistoriaDetalhes";
+import Votacoes from "./pages/Votacoes";
+import NovaPropostaVotacao from "./pages/NovaPropostaVotacao";
+import VotacaoDetalhes from "./pages/VotacaoDetalhes";
 
 const queryClient = new QueryClient();
 
@@ -271,6 +274,30 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['owner']}>
                   <VistoriaDetalhes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/votacoes"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'agent', 'admin', 'maintenance']}>
+                  <Votacoes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/nova-proposta-votacao"
+              element={
+                <ProtectedRoute allowedRoles={['agent', 'admin', 'maintenance']}>
+                  <NovaPropostaVotacao />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/votacao-detalhes/:id"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'agent', 'admin', 'maintenance']}>
+                  <VotacaoDetalhes />
                 </ProtectedRoute>
               }
             />

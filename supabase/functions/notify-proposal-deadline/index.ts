@@ -1,0 +1,109 @@
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { Resend } from "npm:resend@4.0.0";
+import { renderTemplate, getTemplate } from "../_shared/template-renderer.ts";
+
+const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    console.log('Checking for proposals with upcoming deadlines...');
+
+    // Get proposals expiring in 2 days that are still active
+    const twoDaysFromNow = new Date();
+    twoDaysFromNow.setDate(twoDaysFromNow.getDate() + 2);
+    const twoDaysStr = twoDaysFromNow.toISOString().split('T')[0];
+
+    const { data: proposals, error: proposalsError } = await supabase
+      .from('proposals')
+      .select('*')
+      .eq('status', 'active')
+      .eq('deadline', twoDaysStr);
+
+    if (proposalsError) {
+      throw proposalsError;
+    }
+
+    console.log('Found proposals:', proposals?.length || 0);
+
+    const template = await getTemplate(supabase, 'proposal_deadline_reminder');
+    if (!template) {
+      throw new Error('Email template not found');
+    }
+
+    const mailFrom = Deno.env.get('MAIL_FROM') || 'noreply@resend.dev';
+    let totalSent = 0;
+
+    for (const proposal of proposals || []) {
+      // Get owners who haven't responded yet
+      const { data: pendingResponses, error: responsesError } = await supabase
+        .from('proposal_responses')
+        .select(`
+          owner_id,
+          approved,
+          profiles!proposal_responses_owner_id_fkey (
+            name,
+            email
+          )
+        `)
+        .eq('proposal_id', proposal.id)
+        .is('approved', null);
+
+      if (responsesError) {
+        console.error('Error fetching pending responses:', responsesError);
+        continue;
+      }
+
+      // Send reminders to owners who haven't responded
+      for (const response of pendingResponses || []) {
+        const profile = response.profiles as any;
+        if (!profile?.email) continue;
+
+        const variables = {
+          owner_name: profile.name || 'Proprietário',
+          title: proposal.title,
+          description: proposal.description,
+          deadline: new Date(proposal.deadline).toLocaleDateString('pt-BR'),
+        };
+
+        const subject = renderTemplate(template.subject, variables);
+        const bodyHtml = renderTemplate(template.body_html, variables);
+
+        await resend.emails.send({
+          from: mailFrom,
+          to: [profile.email],
+          subject,
+          html: bodyHtml,
+        });
+
+        totalSent++;
+      }
+    }
+
+    console.log('Total reminder emails sent:', totalSent);
+
+    return new Response(
+      JSON.stringify({ success: true, sent: totalSent }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  } catch (error) {
+    console.error('Error in notify-proposal-deadline:', error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+});
