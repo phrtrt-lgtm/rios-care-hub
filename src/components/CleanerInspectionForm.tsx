@@ -86,10 +86,10 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
       return;
     }
 
-    // Verificar se há transcrições pendentes
-    const hasTranscribing = audioFiles.some(a => a.transcribing);
-    if (hasTranscribing) {
-      toast.error('Aguarde a transcrição dos áudios terminar');
+    // Verificar se há uploads pendentes
+    const hasUploading = audioFiles.some(a => a.transcribing);
+    if (hasUploading) {
+      toast.error('Aguarde o upload dos áudios terminar');
       return;
     }
 
@@ -277,8 +277,18 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
                   <div className="flex items-center gap-2 mb-2">
                     <Mic className="h-4 w-4 text-primary" />
                     <span className="text-sm font-medium">Áudio {index + 1}</span>
+                    {audio.transcribing && (
+                      <span className="text-xs text-muted-foreground ml-auto">Carregando...</span>
+                    )}
                   </div>
                   <AudioPlayer file={audio.file} />
+                  {audio.transcribing && (
+                    <div className="mt-2">
+                      <div className="h-1.5 w-full bg-muted-foreground/20 rounded-full overflow-hidden">
+                        <div className="h-full bg-primary rounded-full animate-pulse" style={{ width: '75%' }} />
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <Button
                   type="button"
@@ -286,6 +296,7 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
                   size="sm"
                   onClick={() => handleDeleteAudio(index)}
                   className="text-destructive hover:text-destructive shrink-0"
+                  disabled={audio.transcribing}
                 >
                   <Trash2 className="h-5 w-5" />
                 </Button>
@@ -364,7 +375,7 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
         className="w-full text-lg font-bold"
       >
         {sending && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-        {audioFiles.some(a => a.transcribing) ? 'Transcrevendo áudios...' : sending ? (uploadProgress || 'Enviando...') : 'Enviar vistoria'}
+        {audioFiles.some(a => a.transcribing) ? 'Carregando áudios...' : sending ? (uploadProgress || 'Enviando...') : 'Enviar vistoria'}
       </Button>
       
       {files.length > 0 && (

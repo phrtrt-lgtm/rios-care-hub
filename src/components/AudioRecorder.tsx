@@ -74,13 +74,8 @@ export default function AudioRecorder({ onAudioReady }: AudioRecorderProps) {
         // Envia o arquivo imediatamente, transcrição em background
         onAudioReady(file, '', true);
         
-        // Inicia transcrição em background
+        // Inicia transcrição em background (silenciosamente)
         setTranscribing(true);
-        toast({
-          title: "Transcrevendo áudio...",
-          description: "Continue adicionando fotos ou vídeos enquanto isso",
-        });
-        
         const transcribedText = await transcribeAudio(blob);
         
         // Atualiza com a transcrição quando pronta
@@ -121,7 +116,7 @@ export default function AudioRecorder({ onAudioReady }: AudioRecorderProps) {
           disabled={transcribing}
         >
           <Mic className="h-4 w-4" />
-          {transcribing ? 'Transcrevendo...' : 'Gravar áudio'}
+          Gravar áudio
         </Button>
       ) : (
         <Button type="button" onClick={stopRecording} variant="destructive" className="gap-2">
