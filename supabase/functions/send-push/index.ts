@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import * as jose from "https://deno.land/x/jose@v5.9.6/index.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,84 +18,130 @@ interface SendPushRequest {
   payload: PushPayload;
 }
 
-// Helper to convert base64url to Uint8Array
-function base64UrlToUint8Array(base64String: string): Uint8Array {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding)
-    .replace(/-/g, '+')
-    .replace(/_/g, '/');
-  const rawData = atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; i++) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
+// Get OAuth2 access token from Firebase Service Account
+async function getAccessToken(): Promise<string> {
+  const serviceAccountJson = Deno.env.get("FIREBASE_SERVICE_ACCOUNT_KEY")!;
+  const serviceAccount = JSON.parse(serviceAccountJson);
+
+  const now = Math.floor(Date.now() / 1000);
+  const expiry = now + 3600;
+
+  const header = {
+    alg: "RS256",
+    typ: "JWT",
+  };
+
+  const claimSet = {
+    iss: serviceAccount.client_email,
+    scope: "https://www.googleapis.com/auth/firebase.messaging",
+    aud: "https://oauth2.googleapis.com/token",
+    exp: expiry,
+    iat: now,
+  };
+
+  const encodedHeader = btoa(JSON.stringify(header));
+  const encodedClaimSet = btoa(JSON.stringify(claimSet));
+  const signatureInput = `${encodedHeader}.${encodedClaimSet}`;
+
+  // Import private key
+  const pemKey = serviceAccount.private_key;
+  const pemContents = pemKey.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\n/g, '');
+  const binaryKey = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
+  
+  const cryptoKey = await crypto.subtle.importKey(
+    "pkcs8",
+    binaryKey,
+    {
+      name: "RSASSA-PKCS1-v1_5",
+      hash: "SHA-256",
+    },
+    false,
+    ["sign"]
+  );
+
+  // Sign the JWT
+  const signature = await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5",
+    cryptoKey,
+    new TextEncoder().encode(signatureInput)
+  );
+
+  const encodedSignature = btoa(String.fromCharCode(...new Uint8Array(signature)));
+  const jwt = `${signatureInput}.${encodedSignature}`;
+
+  // Exchange JWT for access token
+  const response = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
+  });
+
+  const data = await response.json();
+  return data.access_token;
 }
 
-async function sendWebPush(
-  subscription: { endpoint: string; p256dh: string; auth: string },
+// Send push notification via Firebase FCM v1 API
+async function sendFirebasePush(
+  token: string,
   payload: PushPayload
 ): Promise<boolean> {
   try {
-    const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY")!;
-    const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY")!;
-    const vapidEmail = Deno.env.get("VAPID_EMAIL")!;
+    const serviceAccountJson = Deno.env.get("FIREBASE_SERVICE_ACCOUNT_KEY")!;
+    const serviceAccount = JSON.parse(serviceAccountJson);
+    const projectId = serviceAccount.project_id;
 
-    console.log("Sending push to endpoint:", subscription.endpoint);
+    const accessToken = await getAccessToken();
 
-    // Parse endpoint to get audience
-    const url = new URL(subscription.endpoint);
-    const audience = `${url.protocol}//${url.host}`;
+    console.log("Sending Firebase push to token:", token.substring(0, 20) + "...");
 
-    // Decode the VAPID keys
-    const publicKeyBytes = base64UrlToUint8Array(vapidPublicKey);
-    const privateKeyBytes = base64UrlToUint8Array(vapidPrivateKey);
-
-    // Create JWK for signing
-    const jwk: jose.JWK = {
-      kty: "EC",
-      crv: "P-256",
-      x: jose.base64url.encode(publicKeyBytes.slice(1, 33)),
-      y: jose.base64url.encode(publicKeyBytes.slice(33, 65)),
-      d: jose.base64url.encode(privateKeyBytes),
+    const message = {
+      message: {
+        token: token,
+        notification: {
+          title: payload.title,
+          body: payload.body,
+        },
+        data: {
+          url: payload.url || "",
+          tag: payload.tag || "",
+        },
+        webpush: payload.url ? {
+          fcm_options: {
+            link: payload.url,
+          },
+        } : undefined,
+      },
     };
 
-    // Import the key
-    const privateKey = await jose.importJWK(jwk, "ES256");
+    const response = await fetch(
+      `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(message),
+      }
+    );
 
-    // Create and sign the JWT
-    const jwt = await new jose.SignJWT({})
-      .setProtectedHeader({ alg: "ES256", typ: "JWT" })
-      .setAudience(audience)
-      .setSubject(`mailto:${vapidEmail}`)
-      .setExpirationTime("12h")
-      .sign(privateKey);
+    console.log("Firebase push response status:", response.status);
 
-    console.log("JWT created successfully");
-
-    // Send the push notification
-    const response = await fetch(subscription.endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Content-Encoding": "aes128gcm",
-        TTL: "86400",
-        Authorization: `vapid t=${jwt}, k=${vapidPublicKey}`,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    console.log("Push response status:", response.status);
-
-    if (!response.ok && response.status !== 410) {
+    if (!response.ok) {
       const text = await response.text();
-      console.error("Push response error:", text);
+      console.error("Firebase push error:", text);
+      
+      // Check if token is invalid or not registered
+      if (text.includes("NOT_FOUND") || text.includes("INVALID_ARGUMENT")) {
+        return false; // Token is invalid, should be removed
+      }
     }
 
-    // 200/201 = success, 410 = subscription expired
-    return response.ok || response.status === 410;
+    return response.ok;
   } catch (error) {
-    console.error("Error sending web push:", error);
+    console.error("Error sending Firebase push:", error);
     return false;
   }
 }
@@ -137,16 +182,12 @@ const handler = async (req: Request): Promise<Response> => {
 
     let successCount = 0;
 
-    // Send to all subscriptions
+    // Send to all subscriptions - assuming fcm_token is stored in endpoint field
     for (const sub of subscriptions) {
       try {
-        const subscription = {
-          endpoint: sub.endpoint,
-          p256dh: sub.p256dh,
-          auth: sub.auth,
-        };
-
-        const success = await sendWebPush(subscription, payload);
+        const fcmToken = sub.endpoint; // FCM token stored in endpoint field
+        
+        const success = await sendFirebasePush(fcmToken, payload);
         
         if (success) {
           successCount++;
