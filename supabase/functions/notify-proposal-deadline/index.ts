@@ -82,12 +82,31 @@ serve(async (req) => {
         const subject = renderTemplate(template.subject, variables);
         const bodyHtml = renderTemplate(template.body_html, variables);
 
+        // Send email
         await resend.emails.send({
           from: mailFrom,
           to: [profile.email],
           subject,
           html: bodyHtml,
         });
+
+        // Send push notification
+        try {
+          const daysLeft = Math.ceil((new Date(proposal.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+          await supabase.functions.invoke('send-push', {
+            body: {
+              ownerId: response.owner_id,
+              payload: {
+                title: '⏰ Lembrete de Votação',
+                body: `${proposal.title} - Faltam ${daysLeft} dias para votar!`,
+                url: `/votacao-detalhes/${proposal.id}`,
+                tag: `proposal-reminder-${proposal.id}`,
+              },
+            },
+          });
+        } catch (pushError) {
+          console.error('Error sending push notification:', pushError);
+        }
 
         totalSent++;
       }

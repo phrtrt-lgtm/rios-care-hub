@@ -82,12 +82,30 @@ serve(async (req) => {
       const subject = renderTemplate(template.subject, variables);
       const bodyHtml = renderTemplate(template.body_html, variables);
 
+      // Send email
       const emailResult = await resend.emails.send({
         from: mailFrom,
         to: [profile.email],
         subject,
         html: bodyHtml,
       });
+
+      // Send push notification
+      try {
+        await supabase.functions.invoke('send-push', {
+          body: {
+            ownerId: response.owner_id,
+            payload: {
+              title: '📋 Nova Proposta de Votação',
+              body: `${proposal.title} - Prazo: ${new Date(proposal.deadline).toLocaleDateString('pt-BR')}`,
+              url: `/votacao-detalhes/${proposalId}`,
+              tag: `proposal-${proposalId}`,
+            },
+          },
+        });
+      } catch (pushError) {
+        console.error('Error sending push notification:', pushError);
+      }
 
       results.push({
         owner_id: response.owner_id,
