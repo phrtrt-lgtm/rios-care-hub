@@ -149,19 +149,18 @@ const handler = async (req: Request): Promise<Response> => {
         try {
           await supabase.functions.invoke("send-push", {
             body: {
-              userId: property.owner_id,
-              title: "Nova Vistoria",
-              message: `Vistoria registrada para ${property.name}`,
-              data: {
-                type: "inspection",
-                inspectionId: inspection.id,
-                url: ownerPortalUrl,
+              ownerId: property.owner_id,
+              payload: {
+                title: "🏠 Nova Vistoria",
+                body: `Vistoria registrada para ${property.name}`,
+                url: `/vistorias/${inspection.id}`,
+                tag: `inspection_${inspection.id}`,
               },
             },
           });
           console.log("Push notification sent to owner");
         } catch (pushError) {
-          console.error("Error sending push notification:", pushError);
+          console.error("Push notification error (non-critical):", pushError);
         }
       } catch (error) {
         console.error("Error sending owner email:", error);
