@@ -88,7 +88,7 @@ export default function Login() {
               />
             </div>
           </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
+          <CardFooter>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? (
                 <>
@@ -99,12 +99,6 @@ export default function Login() {
                 "Entrar"
               )}
             </Button>
-            <p className="text-center text-sm text-muted-foreground">
-              Não tem uma conta?{" "}
-              <Link to="/cadastro" className="text-primary hover:underline font-medium">
-                Cadastre-se aqui
-              </Link>
-            </p>
           </CardFooter>
         </form>
       </Card>
