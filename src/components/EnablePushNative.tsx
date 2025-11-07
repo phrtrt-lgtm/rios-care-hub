@@ -65,17 +65,23 @@ export function EnablePushNative() {
           return;
         }
 
-        // Save FCM token to database
+        // Save FCM token to database with correct endpoint format
+        const fcmEndpoint = `https://fcm.googleapis.com/fcm/send/${token.value}`;
         const { error } = await supabase
           .from('push_subscriptions')
-          .upsert({
-            owner_id: session.user.id,
-            endpoint: token.value,
-            p256dh: 'native', // Not used for native
-            auth: 'native', // Not used for native
-            user_agent: navigator.userAgent,
-            is_active: true,
-          });
+          .upsert(
+            {
+              owner_id: session.user.id,
+              endpoint: fcmEndpoint,
+              p256dh: 'native', // Not used for native
+              auth: 'native', // Not used for native
+              user_agent: navigator.userAgent,
+              is_active: true,
+            },
+            {
+              onConflict: 'owner_id,endpoint',
+            }
+          );
 
         if (error) {
           console.error('Error saving token:', error);
