@@ -16,6 +16,7 @@ import Painel from "./pages/Painel";
 import Aprovacoes from "./pages/Aprovacoes";
 import AdminCadastrarProprietario from "./pages/AdminCadastrarProprietario";
 import AdminCadastrarFaxineira from "./pages/AdminCadastrarFaxineira";
+import AdminCadastrarUsuario from "./pages/AdminCadastrarUsuario";
 import NotFound from "./pages/NotFound";
 import TicketDetalhes from "./pages/TicketDetalhes";
 import NovaCobranca from "./pages/NovaCobranca";
@@ -81,7 +82,7 @@ const App = () => (
             <Route
               path="/painel"
               element={
-                <ProtectedRoute allowedRoles={['agent', 'admin']}>
+                <ProtectedRoute allowedRoles={['agent', 'admin', 'maintenance']}>
                   <Painel />
                 </ProtectedRoute>
               }
@@ -89,7 +90,7 @@ const App = () => (
             <Route
               path="/aprovacoes"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'maintenance']}>
                   <Aprovacoes />
                 </ProtectedRoute>
               }
@@ -111,9 +112,17 @@ const App = () => (
               }
             />
             <Route
+              path="/admin/cadastrar-usuario"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminCadastrarUsuario />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/ticket-detalhes/:id"
               element={
-                <ProtectedRoute allowedRoles={['owner', 'agent', 'admin']}>
+                <ProtectedRoute allowedRoles={['owner', 'agent', 'admin', 'maintenance']}>
                   <TicketDetalhes />
                 </ProtectedRoute>
               }
@@ -121,7 +130,7 @@ const App = () => (
             <Route
               path="/nova-cobranca"
               element={
-                <ProtectedRoute allowedRoles={['agent', 'admin']}>
+                <ProtectedRoute allowedRoles={['agent', 'admin', 'maintenance']}>
                   <NovaCobranca />
                 </ProtectedRoute>
               }
@@ -129,7 +138,7 @@ const App = () => (
             <Route
               path="/todos-tickets"
               element={
-                <ProtectedRoute allowedRoles={['agent', 'admin']}>
+                <ProtectedRoute allowedRoles={['agent', 'admin', 'maintenance']}>
                   <TodosTickets />
                 </ProtectedRoute>
               }
@@ -137,7 +146,7 @@ const App = () => (
             <Route
               path="/propriedades"
               element={
-                <ProtectedRoute allowedRoles={['agent', 'admin']}>
+                <ProtectedRoute allowedRoles={['agent', 'admin', 'maintenance']}>
                   <Propriedades />
                 </ProtectedRoute>
               }
@@ -145,7 +154,7 @@ const App = () => (
             <Route
               path="/gerenciar-cobrancas"
               element={
-                <ProtectedRoute allowedRoles={['agent', 'admin']}>
+                <ProtectedRoute allowedRoles={['agent', 'admin', 'maintenance']}>
                   <GerenciarCobrancas />
                 </ProtectedRoute>
               }
@@ -153,7 +162,7 @@ const App = () => (
             <Route
               path="/cobranca/:id"
               element={
-                <ProtectedRoute allowedRoles={['owner', 'agent', 'admin']}>
+                <ProtectedRoute allowedRoles={['owner', 'agent', 'admin', 'maintenance']}>
                   <CobrancaDetalhes />
                 </ProtectedRoute>
               }
@@ -169,7 +178,7 @@ const App = () => (
             <Route
               path="/novo-alerta"
               element={
-                <ProtectedRoute allowedRoles={['agent', 'admin']}>
+                <ProtectedRoute allowedRoles={['agent', 'admin', 'maintenance']}>
                   <NovoAlerta />
                 </ProtectedRoute>
               }
@@ -177,7 +186,7 @@ const App = () => (
             <Route
               path="/novo-ticket-massa"
               element={
-                <ProtectedRoute allowedRoles={['agent', 'admin']}>
+                <ProtectedRoute allowedRoles={['agent', 'admin', 'maintenance']}>
                   <NovoTicketMassa />
                 </ProtectedRoute>
               }
@@ -188,7 +197,7 @@ const App = () => (
             <Route
               path="/manutencoes"
               element={
-                <ProtectedRoute allowedRoles={['owner', 'agent', 'admin']}>
+                <ProtectedRoute allowedRoles={['owner', 'agent', 'admin', 'maintenance']}>
                   <Manutencoes />
                 </ProtectedRoute>
               }
@@ -196,7 +205,7 @@ const App = () => (
             <Route
               path="/manutencao/:id"
               element={
-                <ProtectedRoute allowedRoles={['owner', 'agent', 'admin']}>
+                <ProtectedRoute allowedRoles={['owner', 'agent', 'admin', 'maintenance']}>
                   <ManutencaoDetalhes />
                 </ProtectedRoute>
               }
@@ -204,7 +213,7 @@ const App = () => (
             <Route
               path="/faxineira"
               element={
-                <ProtectedRoute allowedRoles={['cleaner', 'agent', 'admin']}>
+                <ProtectedRoute allowedRoles={['cleaner', 'agent', 'admin', 'maintenance']}>
                   <Faxineira />
                 </ProtectedRoute>
               }
@@ -212,7 +221,7 @@ const App = () => (
             <Route
               path="/admin/vistorias"
               element={
-                <ProtectedRoute allowedRoles={['agent', 'admin']}>
+                <ProtectedRoute allowedRoles={['agent', 'admin', 'maintenance']}>
                   <AdminVistorias />
                 </ProtectedRoute>
               }
@@ -220,7 +229,7 @@ const App = () => (
             <Route
               path="/admin/vistorias/imovel/:id"
               element={
-                <ProtectedRoute allowedRoles={['agent', 'admin']}>
+                <ProtectedRoute allowedRoles={['agent', 'admin', 'maintenance']}>
                   <AdminVistoriasImovel />
                 </ProtectedRoute>
               }
@@ -228,7 +237,7 @@ const App = () => (
             <Route
               path="/admin/vistorias/:inspectionId"
               element={
-                <ProtectedRoute allowedRoles={['agent', 'admin']}>
+                <ProtectedRoute allowedRoles={['agent', 'admin', 'maintenance']}>
                   <AdminVistoriaDetalhes />
                 </ProtectedRoute>
               }
@@ -236,7 +245,7 @@ const App = () => (
             <Route
               path="/admin/vistorias/todas"
               element={
-                <ProtectedRoute allowedRoles={['agent', 'admin']}>
+                <ProtectedRoute allowedRoles={['agent', 'admin', 'maintenance']}>
                   <AdminVistoriasTodas />
                 </ProtectedRoute>
               }

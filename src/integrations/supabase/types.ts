@@ -1160,6 +1160,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_admin_or_maintenance: { Args: { _user_id: string }; Returns: boolean }
       is_team_member: { Args: { _user_id: string }; Returns: boolean }
       set_session_context: {
         Args: { p_owner_id: string; p_role: string }
@@ -1167,7 +1168,13 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "owner" | "agent" | "admin" | "pending_owner" | "cleaner"
+      app_role:
+        | "owner"
+        | "agent"
+        | "admin"
+        | "pending_owner"
+        | "cleaner"
+        | "maintenance"
       ticket_priority: "normal" | "urgente"
       ticket_status:
         | "novo"
@@ -1310,7 +1317,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["owner", "agent", "admin", "pending_owner", "cleaner"],
+      app_role: [
+        "owner",
+        "agent",
+        "admin",
+        "pending_owner",
+        "cleaner",
+        "maintenance",
+      ],
       ticket_priority: ["normal", "urgente"],
       ticket_status: [
         "novo",

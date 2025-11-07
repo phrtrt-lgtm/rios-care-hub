@@ -88,7 +88,11 @@ export default function Painel() {
                     className="flex items-center gap-2 max-w-[140px] md:max-w-none"
                   >
                     <Badge variant="secondary" className="text-xs hidden sm:flex">
-                      {profile?.role === "admin" ? "Admin" : "Atendente"}
+                      {profile?.role === "admin" 
+                        ? "Admin" 
+                        : profile?.role === "maintenance" 
+                        ? "Manutenção" 
+                        : "Atendente"}
                     </Badge>
                     <span className="truncate text-xs md:text-sm">
                       {profile?.name && profile.name.length > 12 
@@ -123,7 +127,11 @@ export default function Painel() {
                         <div>
                           <span className="text-sm font-medium">Função:</span>
                           <p className="text-muted-foreground">
-                            {profile?.role === "admin" ? "Administrador" : "Atendente"}
+                            {profile?.role === "admin" 
+                              ? "Administrador" 
+                              : profile?.role === "maintenance" 
+                              ? "Manutenção" 
+                              : "Atendente"}
                           </p>
                         </div>
                         <div className="pt-4 border-t">
@@ -258,34 +266,17 @@ export default function Painel() {
           <h3 className="mb-4 text-xl font-semibold">Outras Ações</h3>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {profile?.role === "admin" && (
-            <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/admin/cadastrar-proprietario")}>
+            <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/admin/cadastrar-usuario")}>
               <CardHeader>
-                <CardTitle>Cadastrar Proprietário</CardTitle>
+                <CardTitle>Cadastrar Usuário</CardTitle>
                 <CardDescription>
-                  Criar nova conta de proprietário
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button variant="outline" className="w-full">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Novo Proprietário
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-
-          {profile?.role === "admin" && (
-            <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/admin/cadastrar-faxineira")}>
-              <CardHeader>
-                <CardTitle>Cadastrar Faxineira</CardTitle>
-                <CardDescription>
-                  Criar nova conta de faxineira
+                  Criar nova conta no sistema
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <Button variant="outline" className="w-full">
                   <UserPlus className="mr-2 h-4 w-4" />
-                  Nova Faxineira
+                  Novo Usuário
                 </Button>
               </CardContent>
             </Card>
