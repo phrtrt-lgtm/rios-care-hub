@@ -1153,6 +1153,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_view_ticket_type: {
+        Args: {
+          _ticket_type: Database["public"]["Enums"]["ticket_type"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1190,6 +1197,9 @@ export type Database = {
         | "bloqueio_data"
         | "financeiro"
         | "outros"
+        | "informacao"
+        | "conversar_hospedes"
+        | "melhorias_compras"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1341,6 +1351,9 @@ export const Constants = {
         "bloqueio_data",
         "financeiro",
         "outros",
+        "informacao",
+        "conversar_hospedes",
+        "melhorias_compras",
       ],
     },
   },

@@ -30,7 +30,7 @@ interface Property {
 export default function NovoTicket() {
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
-  const [ticketType, setTicketType] = useState<"duvida" | "manutencao" | "cobranca" | "bloqueio_data" | "financeiro" | "outros" | "">("");
+  const [ticketType, setTicketType] = useState<"duvida" | "informacao" | "conversar_hospedes" | "bloqueio_data" | "manutencao" | "melhorias_compras" | "financeiro" | "">("");
   const [priority, setPriority] = useState<"normal" | "urgente">("normal");
   const [propertyId, setPropertyId] = useState<string>("");
   const [properties, setProperties] = useState<Property[]>([]);
@@ -194,7 +194,7 @@ export default function NovoTicket() {
         .insert([{
           owner_id: user?.id,
           created_by: user?.id,
-          ticket_type: ticketType as "duvida" | "manutencao" | "cobranca" | "bloqueio_data" | "financeiro" | "outros",
+          ticket_type: ticketType as "duvida" | "informacao" | "conversar_hospedes" | "bloqueio_data" | "manutencao" | "melhorias_compras" | "financeiro",
           subject,
           description,
           priority,
@@ -273,12 +273,13 @@ export default function NovoTicket() {
                     <SelectValue placeholder="Selecione o tipo" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="duvida">Dúvida</SelectItem>
+                    <SelectItem value="duvida">Dúvida/Informação</SelectItem>
+                    <SelectItem value="informacao">Informação</SelectItem>
+                    <SelectItem value="conversar_hospedes">Conversar com Hóspedes e Sugestões</SelectItem>
+                    <SelectItem value="bloqueio_data">Bloqueio de Datas</SelectItem>
                     <SelectItem value="manutencao">Manutenção</SelectItem>
-                    <SelectItem value="cobranca">Cobrança</SelectItem>
-                    <SelectItem value="bloqueio_data">Bloqueio de Data</SelectItem>
+                    <SelectItem value="melhorias_compras">Melhorias/Compras pro Imóvel</SelectItem>
                     <SelectItem value="financeiro">Financeiro</SelectItem>
-                    <SelectItem value="outros">Outros</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
