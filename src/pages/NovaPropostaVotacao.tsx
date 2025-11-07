@@ -251,11 +251,10 @@ export default function NovaPropostaVotacao() {
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Selecione um imóvel" />
+                              <SelectValue placeholder="Todos os imóveis" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">Todos os imóveis</SelectItem>
                             {properties?.map((property) => (
                               <SelectItem key={property.id} value={property.id}>
                                 {property.name}
