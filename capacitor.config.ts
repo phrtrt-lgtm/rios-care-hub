@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.3e755580de694b879e320e8bf7881879',
+  appId: 'com.rioscarehubb.app',
   appName: 'rios-care-hub',
   webDir: 'dist',
   server: {
