@@ -216,7 +216,7 @@ export default function TicketDetalhes() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
 
-      const { data, error } = await supabase.functions.invoke(`create-ticket-message/${id}/messages`, {
+      const { data, error } = await supabase.functions.invoke(`create-ticket-message/${id}`, {
         headers: {
           Authorization: `Bearer ${session.access_token}`
         },
