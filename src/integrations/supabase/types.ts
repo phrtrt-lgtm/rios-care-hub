@@ -887,6 +887,147 @@ export type Database = {
           },
         ]
       }
+      proposal_attachments: {
+        Row: {
+          created_at: string
+          created_by: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          file_type: string | null
+          id: string
+          proposal_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          proposal_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          proposal_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_attachments_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proposal_responses: {
+        Row: {
+          approved: boolean
+          attachment_path: string | null
+          created_at: string
+          id: string
+          note: string | null
+          owner_id: string
+          proposal_id: string
+          responded_at: string
+        }
+        Insert: {
+          approved: boolean
+          attachment_path?: string | null
+          created_at?: string
+          id?: string
+          note?: string | null
+          owner_id: string
+          proposal_id: string
+          responded_at?: string
+        }
+        Update: {
+          approved?: boolean
+          attachment_path?: string | null
+          created_at?: string
+          id?: string
+          note?: string | null
+          owner_id?: string
+          proposal_id?: string
+          responded_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_responses_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proposals: {
+        Row: {
+          amount_cents: number | null
+          category: string | null
+          created_at: string
+          created_by: string
+          currency: string | null
+          deadline: string
+          description: string
+          has_attachments: boolean | null
+          id: string
+          property_id: string | null
+          required_approvals: number | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          amount_cents?: number | null
+          category?: string | null
+          created_at?: string
+          created_by: string
+          currency?: string | null
+          deadline: string
+          description: string
+          has_attachments?: boolean | null
+          id?: string
+          property_id?: string | null
+          required_approvals?: number | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number | null
+          category?: string | null
+          created_at?: string
+          created_by?: string
+          currency?: string | null
+          deadline?: string
+          description?: string
+          has_attachments?: boolean | null
+          id?: string
+          property_id?: string | null
+          required_approvals?: number | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposals_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       push_subscriptions: {
         Row: {
           auth: string
