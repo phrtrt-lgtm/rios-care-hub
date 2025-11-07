@@ -11,6 +11,7 @@ import { AlertBanner } from "@/components/AlertBanner";
 import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
 import { NotificationButton } from "@/components/NotificationButton";
 import TopChargesRules from "@/components/TopChargesRules";
+import { EnablePushNative } from "@/components/EnablePushNative";
 import { supabase } from "@/integrations/supabase/client";
 
 
@@ -141,6 +142,11 @@ export default function MinhaCaixa() {
         {/* Top Charges Rules Section */}
         <div className="mb-6">
           <TopChargesRules />
+        </div>
+
+        {/* Notificações Push */}
+        <div className="mb-6">
+          <EnablePushNative />
         </div>
 
         <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
