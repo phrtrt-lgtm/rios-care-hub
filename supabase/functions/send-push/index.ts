@@ -26,23 +26,6 @@ async function getAccessToken(): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const expiry = now + 3600;
 
-  const header = {
-    alg: "RS256",
-    typ: "JWT",
-  };
-
-  const claimSet = {
-    iss: serviceAccount.client_email,
-    scope: "https://www.googleapis.com/auth/firebase.messaging",
-    aud: "https://oauth2.googleapis.com/token",
-    exp: expiry,
-    iat: now,
-  };
-
-  const encodedHeader = btoa(JSON.stringify(header));
-  const encodedClaimSet = btoa(JSON.stringify(claimSet));
-  const signatureInput = `${encodedHeader}.${encodedClaimSet}`;
-
   // Import private key
   const pemKey = serviceAccount.private_key;
   const pemContents = pemKey.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\n/g, '');
@@ -59,15 +42,37 @@ async function getAccessToken(): Promise<string> {
     ["sign"]
   );
 
-  // Sign the JWT
+  // Create JWT header and payload
+  const header = { alg: "RS256", typ: "JWT" };
+  const payload = {
+    iss: serviceAccount.client_email,
+    scope: "https://www.googleapis.com/auth/firebase.messaging",
+    aud: "https://oauth2.googleapis.com/token",
+    exp: expiry,
+    iat: now,
+  };
+
+  // Base64url encode (not standard base64)
+  const base64url = (input: string) => {
+    return btoa(input)
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+  };
+
+  const encodedHeader = base64url(JSON.stringify(header));
+  const encodedPayload = base64url(JSON.stringify(payload));
+  const unsignedToken = `${encodedHeader}.${encodedPayload}`;
+
+  // Sign the token
   const signature = await crypto.subtle.sign(
     "RSASSA-PKCS1-v1_5",
     cryptoKey,
-    new TextEncoder().encode(signatureInput)
+    new TextEncoder().encode(unsignedToken)
   );
 
-  const encodedSignature = btoa(String.fromCharCode(...new Uint8Array(signature)));
-  const jwt = `${signatureInput}.${encodedSignature}`;
+  const encodedSignature = base64url(String.fromCharCode(...new Uint8Array(signature)));
+  const jwt = `${unsignedToken}.${encodedSignature}`;
 
   // Exchange JWT for access token
   const response = await fetch("https://oauth2.googleapis.com/token", {
@@ -77,6 +82,12 @@ async function getAccessToken(): Promise<string> {
     },
     body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
   });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("Token exchange failed:", errorText);
+    throw new Error(`Failed to get access token: ${errorText}`);
+  }
 
   const data = await response.json();
   return data.access_token;
