@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { ForgotPasswordDialog } from "@/components/ForgotPasswordDialog";
@@ -12,6 +13,7 @@ import { ForgotPasswordDialog } from "@/components/ForgotPasswordDialog";
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const { signIn, user, profile } = useAuth();
   const navigate = useNavigate();
@@ -44,6 +46,13 @@ export default function Login() {
         toast.error(error.message);
       }
     } else {
+      // Save remember me preference
+      if (rememberMe) {
+        localStorage.setItem("rememberMe", "true");
+      } else {
+        localStorage.removeItem("rememberMe");
+        sessionStorage.setItem("tempSession", "true");
+      }
       toast.success("Login realizado com sucesso!");
     }
 
@@ -86,6 +95,19 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="remember" 
+                checked={rememberMe}
+                onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+              />
+              <Label 
+                htmlFor="remember" 
+                className="text-sm font-normal cursor-pointer"
+              >
+                Lembrar-me neste dispositivo
+              </Label>
             </div>
           </CardContent>
           <CardFooter>

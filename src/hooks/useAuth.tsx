@@ -33,6 +33,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Check if user should be logged out (browser was closed and "remember me" was not checked)
+    const checkRememberMe = async () => {
+      const rememberMe = localStorage.getItem("rememberMe");
+      const tempSession = sessionStorage.getItem("tempSession");
+      
+      // If "remember me" is not set and there's no temp session flag, user closed browser
+      if (!rememberMe && !tempSession) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          await supabase.auth.signOut();
+        }
+      }
+    };
+    
+    checkRememberMe();
+
     // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -113,6 +129,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     try {
+      // Clear remember me preferences
+      localStorage.removeItem("rememberMe");
+      sessionStorage.removeItem("tempSession");
+      
       // Limpa o estado local primeiro
       setSession(null);
       setUser(null);
