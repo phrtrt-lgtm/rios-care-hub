@@ -343,37 +343,14 @@ export default function NovoTicket() {
 
               <div className="space-y-2">
                 <Label htmlFor="description">Descrição</Label>
-                <div className="space-y-2">
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Digite ou grave um comando para a IA gerar a descrição..."
-                      value={aiPrompt}
-                      onChange={(e) => setAiPrompt(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), generateDescription())}
-                    />
-                    <VoiceToTextInput
-                      onTranscript={(text) => setAiPrompt(text)}
-                      disabled={isGenerating}
-                    />
-                    <Button 
-                      type="button" 
-                      onClick={generateDescription}
-                      disabled={isGenerating || !aiPrompt.trim()}
-                      variant="secondary"
-                    >
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      {isGenerating ? "Gerando..." : "Gerar"}
-                    </Button>
-                  </div>
-                  <Textarea
-                    id="description"
-                    placeholder="Descreva detalhadamente sua solicitação"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    rows={6}
-                    required
-                  />
-                </div>
+                <Textarea
+                  id="description"
+                  placeholder="Descreva detalhadamente sua solicitação"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={6}
+                  required
+                />
               </div>
 
               <div className="space-y-2">
