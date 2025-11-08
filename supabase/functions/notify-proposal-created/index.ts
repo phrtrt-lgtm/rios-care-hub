@@ -39,12 +39,12 @@ serve(async (req) => {
       throw new Error('Proposal not found');
     }
 
-    // Fetch responses to get list of owners
+    // Fetch responses to get list of participants
     const { data: responses, error: responsesError } = await supabase
       .from('proposal_responses')
       .select(`
         owner_id,
-        profiles!proposal_responses_owner_id_fkey (
+        profiles (
           name,
           email
         )
@@ -52,6 +52,7 @@ serve(async (req) => {
       .eq('proposal_id', proposalId);
 
     if (responsesError) {
+      console.error('Error fetching responses:', responsesError);
       throw new Error('Error fetching responses');
     }
 
