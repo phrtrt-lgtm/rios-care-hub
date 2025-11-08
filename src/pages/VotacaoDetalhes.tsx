@@ -40,11 +40,7 @@ export default function VotacaoDetalhes() {
             attachment_path,
             responded_at,
             selected_option_id,
-            is_visible_to_owner,
-            profiles!proposal_responses_owner_id_fkey (
-              name,
-              email
-            )
+            is_visible_to_owner
           ),
           proposal_attachments (
             id,
@@ -58,7 +54,28 @@ export default function VotacaoDetalhes() {
           )
         `)
         .eq('id', id)
-        .single();
+        .maybeSingle();
+      
+      if (error) throw error;
+      if (!data) {
+        throw new Error('Votação não encontrada');
+      }
+      
+      // Fetch owner details separately if team member
+      if (data.proposal_responses && isTeam) {
+        const ownerIds = data.proposal_responses.map((r: any) => r.owner_id);
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, name, email')
+          .in('id', ownerIds);
+        
+        if (profiles) {
+          data.proposal_responses = data.proposal_responses.map((r: any) => ({
+            ...r,
+            profiles: profiles.find((p: any) => p.id === r.owner_id)
+          }));
+        }
+      }
       
       if (error) throw error;
       return data;
