@@ -17,7 +17,7 @@ const Index = () => {
           navigate("/aguardando-aprovacao");
         } else if (profile.role === 'owner') {
           navigate("/minha-caixa");
-        } else if (profile.role === 'agent' || profile.role === 'admin') {
+        } else if (profile.role === 'agent' || profile.role === 'admin' || profile.role === 'maintenance') {
           navigate("/painel");
         }
       }
