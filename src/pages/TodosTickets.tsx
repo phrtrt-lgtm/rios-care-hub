@@ -42,6 +42,7 @@ const TodosTickets = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
   const [selectedTickets, setSelectedTickets] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
 
@@ -55,7 +56,7 @@ const TodosTickets = () => {
 
   useEffect(() => {
     filterTickets();
-  }, [searchTerm, statusFilter, priorityFilter, tickets]);
+  }, [searchTerm, statusFilter, priorityFilter, typeFilter, tickets]);
 
   const fetchTickets = async () => {
     try {
@@ -130,6 +131,10 @@ const TodosTickets = () => {
 
     if (priorityFilter !== 'all') {
       filtered = filtered.filter(ticket => ticket.priority === priorityFilter);
+    }
+
+    if (typeFilter !== 'all') {
+      filtered = filtered.filter(ticket => ticket.ticket_type === typeFilter);
     }
 
     setFilteredTickets(filtered);
@@ -268,7 +273,7 @@ const TodosTickets = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-4">
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -301,6 +306,19 @@ const TodosTickets = () => {
                   <SelectItem value="normal">Normal</SelectItem>
                   <SelectItem value="alta">Alta</SelectItem>
                   <SelectItem value="urgente">Urgente</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Tipos</SelectItem>
+                  <SelectItem value="manutencao">Manutenção</SelectItem>
+                  <SelectItem value="financeiro">Financeiro</SelectItem>
+                  <SelectItem value="duvida">Dúvida</SelectItem>
+                  <SelectItem value="reclamacao">Reclamação</SelectItem>
+                  <SelectItem value="outro">Outro</SelectItem>
                 </SelectContent>
               </Select>
             </div>
