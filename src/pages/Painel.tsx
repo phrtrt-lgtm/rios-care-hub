@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { LogOut, Users, Ticket, AlertTriangle, CheckCircle2, Plus, DollarSign, Building2, Bell, Settings, Sparkles, UserPlus } from "lucide-react";
+import { LogOut, Users, Ticket, AlertTriangle, CheckCircle2, Plus, DollarSign, Building2, Bell, Settings, Sparkles, UserPlus, Vote } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { AvatarUpload } from "@/components/AvatarUpload";
@@ -204,6 +204,16 @@ export default function Painel() {
           >
             <Ticket className="mr-3 h-6 w-6" />
             Criar Tickets
+          </Button>
+
+          <Button 
+            size="lg" 
+            className="h-20 text-lg font-semibold"
+            onClick={() => navigate("/nova-proposta-votacao")}
+            variant="secondary"
+          >
+            <Vote className="mr-3 h-6 w-6" />
+            Criar Votação
           </Button>
         </div>
 
