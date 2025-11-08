@@ -33,38 +33,64 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if user should be logged out (browser was closed and "remember me" was not checked)
-    const checkRememberMe = async () => {
+    let isMounted = true;
+
+    const initAuth = async () => {
+      // Check if user should be logged out (browser was closed and "remember me" was not checked)
       const rememberMe = localStorage.getItem("rememberMe");
       const tempSession = sessionStorage.getItem("tempSession");
       
-      // If "remember me" is not set and there's no temp session flag, user closed browser
       if (!rememberMe && !tempSession) {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
           await supabase.auth.signOut();
+          setLoading(false);
+          return;
         }
       }
-    };
-    
-    checkRememberMe();
 
-    // Set up auth state listener first
+      // Check for existing session
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!isMounted) return;
+      
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        const { data } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", session.user.id)
+          .single();
+        
+        if (isMounted) {
+          setProfile(data);
+          setLoading(false);
+        }
+      } else {
+        setLoading(false);
+      }
+    };
+
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (!isMounted) return;
+        
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Fetch profile data
-          setTimeout(async () => {
-            const { data } = await supabase
-              .from("profiles")
-              .select("*")
-              .eq("id", session.user.id)
-              .single();
+          const { data } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", session.user.id)
+            .single();
+          
+          if (isMounted) {
             setProfile(data);
-          }, 0);
+          }
         } else {
           setProfile(null);
         }
@@ -73,27 +99,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     );
 
-    // Then check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", session.user.id)
-          .single()
-          .then(({ data }) => {
-            setProfile(data);
-            setLoading(false);
-          });
-      } else {
-        setLoading(false);
-      }
-    });
+    initAuth();
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
