@@ -55,8 +55,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     const isTeamMessage = ["admin", "agent"].includes(message.author.role);
 
-    const baseUrl = Deno.env.get("SUPABASE_URL")?.replace("/functions/v1", "") || "";
-    const ticketUrl = `${baseUrl}/ticket-detalhes/${ticketId}`;
+    const portalUrl = Deno.env.get("PORTAL_URL") || "https://ktzfovzwayfqczytmhno.lovableproject.com";
+    const ticketUrl = `${portalUrl}/ticket-detalhes/${ticketId}`;
 
     const variables = {
       owner_name: ticket.owner.name,

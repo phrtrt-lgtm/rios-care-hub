@@ -57,9 +57,8 @@ const handler = async (req: Request): Promise<Response> => {
       .eq("property_id", propertyId)
       .single();
 
-    const portalUrl = `${
-      Deno.env.get("PUBLIC_BASE_URL") || "https://rios-care-hub.lovable.app"
-    }/admin/vistorias/${inspection.id}`;
+    const portalUrl = Deno.env.get("PORTAL_URL") || "https://ktzfovzwayfqczytmhno.lovableproject.com";
+    const inspectionUrl = `${portalUrl}/admin/vistorias/${inspection.id}`;
 
     // 1) Send email to team/admins
     if (adminEmails.length > 0) {
@@ -82,7 +81,7 @@ const handler = async (req: Request): Promise<Response> => {
               ""
             ).slice(0, 400),
             has_audio: !!inspection.audio_url,
-            portal_url: portalUrl,
+            portal_url: inspectionUrl,
             monday_item_id: inspection.monday_item_id || "",
           };
 
@@ -108,9 +107,7 @@ const handler = async (req: Request): Promise<Response> => {
     // 2) Send email to owner if enabled
     if (settings?.notify_owner && property?.profiles?.email) {
       const ownerProfile = property.profiles;
-      const ownerPortalUrl = `${
-        Deno.env.get("PUBLIC_BASE_URL") || "https://rios-care-hub.lovable.app"
-      }/vistorias/${inspection.id}`;
+      const ownerInspectionUrl = `${portalUrl}/vistorias/${inspection.id}`;
 
       try {
         await resend.emails.send({
@@ -137,7 +134,7 @@ const handler = async (req: Request): Promise<Response> => {
                     )}</p>`
                   : ""
               }
-              <p><a href="${ownerPortalUrl}" style="display: inline-block; padding: 12px 24px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 6px; margin-top: 16px;">Ver Detalhes da Vistoria</a></p>
+              <p><a href="${ownerInspectionUrl}" style="display: inline-block; padding: 12px 24px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 6px; margin-top: 16px;">Ver Detalhes da Vistoria</a></p>
               <p style="margin-top: 24px; color: #666; font-size: 12px;">— Equipe RIOS</p>
             </div>
           `,

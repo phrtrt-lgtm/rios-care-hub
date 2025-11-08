@@ -63,6 +63,7 @@ serve(async (req) => {
     }
 
     const mailFrom = Deno.env.get('MAIL_FROM') || 'noreply@resend.dev';
+    const portalUrl = Deno.env.get("PORTAL_URL") || "https://ktzfovzwayfqczytmhno.lovableproject.com";
     const results = [];
 
     // Send email to each owner
@@ -78,6 +79,7 @@ serve(async (req) => {
           ? `R$ ${(proposal.amount_cents / 100).toFixed(2)}`
           : '',
         deadline: new Date(proposal.deadline).toLocaleDateString('pt-BR'),
+        proposal_url: `${portalUrl}/votacao-detalhes/${proposalId}`,
       };
 
       const subject = renderTemplate(template.subject, variables);

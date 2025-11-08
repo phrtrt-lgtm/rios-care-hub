@@ -56,8 +56,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     const isTeamMessage = ["admin", "agent"].includes(message.author.role);
     
-    const baseUrl = Deno.env.get("SUPABASE_URL")?.replace("/functions/v1", "") || "";
-    const portalUrl = `${baseUrl}/cobranca-detalhes/${chargeId}`;
+    const portalUrl = Deno.env.get("PORTAL_URL") || "https://ktzfovzwayfqczytmhno.lovableproject.com";
+    const chargeUrl = `${portalUrl}/cobranca-detalhes/${chargeId}`;
 
     const variables = {
       owner_name: charge.owner.name,
@@ -67,8 +67,8 @@ const handler = async (req: Request): Promise<Response> => {
       message_body: message.body,
       author_name: message.author.name,
       message_date: new Date(message.created_at).toLocaleString("pt-BR"),
-      portal_url: portalUrl,
-      charge_url: portalUrl,
+      portal_url: chargeUrl,
+      charge_url: chargeUrl,
     };
 
     if (isTeamMessage) {

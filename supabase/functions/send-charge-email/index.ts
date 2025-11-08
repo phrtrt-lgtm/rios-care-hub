@@ -61,8 +61,8 @@ const handler = async (req: Request): Promise<Response> => {
       ? new Intl.DateTimeFormat("pt-BR").format(new Date(charge.due_date))
       : "";
 
-    const baseUrl = Deno.env.get("SUPABASE_URL")?.replace("/functions/v1", "") || "";
-    const portalUrl = `${baseUrl}/cobranca-detalhes/${chargeId}`;
+    const portalUrl = Deno.env.get("PORTAL_URL") || "https://ktzfovzwayfqczytmhno.lovableproject.com";
+    const chargeUrl = `${portalUrl}/cobranca-detalhes/${chargeId}`;
     
     const contestDeadline = charge.due_date 
       ? new Intl.DateTimeFormat("pt-BR").format(new Date(charge.due_date))
@@ -103,8 +103,8 @@ const handler = async (req: Request): Promise<Response> => {
       due_date: formattedDueDate,
       payment_link: charge.payment_link_url || "",
       contest_deadline: contestDeadline,
-      portal_url: portalUrl,
-      charge_url: portalUrl,
+      portal_url: chargeUrl,
+      charge_url: chargeUrl,
       property_name: property?.name || "",
       property_address: property?.address || "",
     };
