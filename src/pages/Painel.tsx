@@ -184,14 +184,16 @@ export default function Painel() {
               Ver Todos os Tickets
             </Button>
             
-            <Button 
-              size="lg" 
-              className="h-20 text-base font-semibold"
-              onClick={() => navigate("/gerenciar-cobrancas")}
-            >
-              <DollarSign className="mr-3 h-6 w-6" />
-              Gerenciar Cobranças
-            </Button>
+            {(profile?.role === "admin" || profile?.role === "maintenance") && (
+              <Button 
+                size="lg" 
+                className="h-20 text-base font-semibold"
+                onClick={() => navigate("/gerenciar-cobrancas")}
+              >
+                <DollarSign className="mr-3 h-6 w-6" />
+                Gerenciar Cobranças
+              </Button>
+            )}
 
             {profile?.role === "admin" && (
               <>
