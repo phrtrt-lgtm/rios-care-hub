@@ -171,55 +171,55 @@ export default function Painel() {
           <VotacoesPendentes />
         </div>
 
-        {/* Ações Principais - Destaque no Topo */}
-        <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Button 
-            size="lg" 
-            className="h-20 text-lg font-semibold"
-            onClick={() => navigate("/todos-tickets")}
-          >
-            <Ticket className="mr-3 h-6 w-6" />
-            Ver Todos os Tickets
-          </Button>
-          
-          <Button 
-            size="lg" 
-            className="h-20 text-lg font-semibold"
-            onClick={() => navigate("/gerenciar-cobrancas")}
-          >
-            <DollarSign className="mr-3 h-6 w-6" />
-            Gerenciar Cobranças
-          </Button>
+        {/* Ações Principais */}
+        <div className="mb-8">
+          <h3 className="mb-4 text-lg font-semibold">Ações Rápidas</h3>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <Button 
+              size="lg" 
+              className="h-20 text-base font-semibold"
+              onClick={() => navigate("/todos-tickets")}
+            >
+              <Ticket className="mr-3 h-6 w-6" />
+              Ver Todos os Tickets
+            </Button>
+            
+            <Button 
+              size="lg" 
+              className="h-20 text-base font-semibold"
+              onClick={() => navigate("/gerenciar-cobrancas")}
+            >
+              <DollarSign className="mr-3 h-6 w-6" />
+              Gerenciar Cobranças
+            </Button>
 
-          <Button 
-            size="lg" 
-            className="h-20 text-lg font-semibold"
-            onClick={() => navigate("/novo-alerta")}
-            variant="secondary"
-          >
-            <Bell className="mr-3 h-6 w-6" />
-            Criar Alerta
-          </Button>
+            <Button 
+              size="lg" 
+              className="h-20 text-base font-semibold"
+              onClick={() => navigate("/novo-alerta")}
+            >
+              <Bell className="mr-3 h-6 w-6" />
+              Criar Alerta
+            </Button>
 
-          <Button 
-            size="lg" 
-            className="h-20 text-lg font-semibold"
-            onClick={() => navigate("/novo-ticket-massa")}
-            variant="secondary"
-          >
-            <Ticket className="mr-3 h-6 w-6" />
-            Criar Tickets
-          </Button>
+            <Button 
+              size="lg" 
+              className="h-20 text-base font-semibold"
+              onClick={() => navigate("/novo-ticket-massa")}
+            >
+              <Ticket className="mr-3 h-6 w-6" />
+              Criar Tickets
+            </Button>
 
-          <Button 
-            size="lg" 
-            className="h-20 text-lg font-semibold"
-            onClick={() => navigate("/nova-proposta-votacao")}
-            variant="secondary"
-          >
-            <Vote className="mr-3 h-6 w-6" />
-            Criar Proposta
-          </Button>
+            <Button 
+              size="lg" 
+              className="h-20 text-base font-semibold"
+              onClick={() => navigate("/nova-proposta-votacao")}
+            >
+              <Vote className="mr-3 h-6 w-6" />
+              Criar Proposta
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}
