@@ -95,12 +95,12 @@ serve(async (req) => {
       throw new Error("Erro ao criar usuário");
     }
 
-    // Update profile to owner role and approved status
+    // Update profile to pending_owner role and pending status
     const { error: profileUpdateError } = await supabaseAdmin
       .from("profiles")
       .update({
-        role: "owner",
-        status: "approved",
+        role: "pending_owner",
+        status: "pending",
         name,
         phone,
       })
@@ -111,7 +111,24 @@ serve(async (req) => {
       throw profileUpdateError;
     }
 
-    console.log("Owner created successfully:", newUser.user.id);
+    console.log("Owner created successfully with pending status:", newUser.user.id);
+
+    // Send notification for approval request
+    try {
+      await supabaseAdmin.functions.invoke("notify-ticket", {
+        body: {
+          type: "approval_request",
+          userId: newUser.user.id,
+          data: {
+            name,
+            email,
+          },
+        },
+      });
+      console.log("Approval notification sent");
+    } catch (notifyError) {
+      console.error("Error sending notification (non-critical):", notifyError);
+    }
 
     return new Response(
       JSON.stringify({ 
