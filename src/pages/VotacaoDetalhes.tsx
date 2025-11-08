@@ -7,11 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, CheckCircle2, XCircle, Upload, Paperclip, Download } from "lucide-react";
+import { ArrowLeft, Image as ImageIcon } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { MediaGallery } from "@/components/MediaGallery";
 
 
 export default function VotacaoDetalhes() {
@@ -23,6 +24,9 @@ export default function VotacaoDetalhes() {
   const [note, setNote] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [selectedOption, setSelectedOption] = useState<string>("");
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryItems, setGalleryItems] = useState<any[]>([]);
+  const [galleryIndex, setGalleryIndex] = useState(0);
 
   const isTeam = profile?.role && ['admin', 'maintenance'].includes(profile.role);
 
@@ -241,13 +245,35 @@ export default function VotacaoDetalhes() {
                 <div className="space-y-2">
                   {responses.filter((r: any) => r.selected_option_id).map((response: any) => {
                     const selectedOpt = options.find((o: any) => o.id === response.selected_option_id);
-                    const handleDownload = async () => {
+                    
+                    const openGallery = async () => {
                       if (!response.attachment_path) return;
+                      
                       const { data } = await supabaseClient.storage
                         .from('attachments')
-                        .createSignedUrl(response.attachment_path, 60);
+                        .createSignedUrl(response.attachment_path, 3600);
+                      
                       if (data?.signedUrl) {
-                        window.open(data.signedUrl, '_blank');
+                        // Detectar tipo do arquivo pelo path
+                        const extension = response.attachment_path.split('.').pop()?.toLowerCase();
+                        let file_type = 'application/octet-stream';
+                        
+                        if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '')) {
+                          file_type = `image/${extension === 'jpg' ? 'jpeg' : extension}`;
+                        } else if (['mp4', 'webm', 'ogg'].includes(extension || '')) {
+                          file_type = `video/${extension}`;
+                        } else if (extension === 'pdf') {
+                          file_type = 'application/pdf';
+                        }
+                        
+                        setGalleryItems([{
+                          id: response.id,
+                          file_url: data.signedUrl,
+                          file_name: response.attachment_path.split('/').pop(),
+                          file_type,
+                        }]);
+                        setGalleryIndex(0);
+                        setGalleryOpen(true);
                       }
                     };
                     
@@ -262,14 +288,13 @@ export default function VotacaoDetalhes() {
                         )}
                         {response.attachment_path && (
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
-                            onClick={handleDownload}
-                            className="gap-2 h-auto p-2"
+                            onClick={openGallery}
+                            className="gap-2"
                           >
-                            <Paperclip className="h-4 w-4" />
-                            <span className="text-sm">Ver anexo</span>
-                            <Download className="h-3 w-3" />
+                            <ImageIcon className="h-4 w-4" />
+                            Ver anexo
                           </Button>
                         )}
                       </div>
@@ -336,6 +361,13 @@ export default function VotacaoDetalhes() {
           </CardContent>
         </Card>
       </div>
+
+      <MediaGallery
+        items={galleryItems}
+        initialIndex={galleryIndex}
+        open={galleryOpen}
+        onOpenChange={setGalleryOpen}
+      />
     </div>
   );
 }
