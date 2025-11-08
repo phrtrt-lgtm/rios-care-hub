@@ -99,6 +99,16 @@ serve(async (req) => {
 
     if (createError) {
       console.error("Error creating user:", createError);
+      
+      // Check if it's a duplicate email error
+      if (createError.message?.includes("already been registered") || 
+          createError.message?.includes("User already registered")) {
+        return new Response(
+          JSON.stringify({ error: "Este email já está cadastrado no sistema" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
       throw createError;
     }
 
