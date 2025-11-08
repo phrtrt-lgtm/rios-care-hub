@@ -15,23 +15,14 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
-  const { signIn, user, profile } = useAuth();
+  const { signIn, user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user && profile) {
-      // Redirect based on role
-      if (profile.role === 'pending_owner' && profile.status === 'pending') {
-        navigate("/aguardando-aprovacao");
-      } else if (profile.role === 'owner') {
-        navigate("/minha-caixa");
-      } else if (profile.role === 'cleaner') {
-        navigate("/faxineira");
-      } else if (profile.role === 'agent' || profile.role === 'admin' || profile.role === 'maintenance') {
-        navigate("/painel");
-      }
+    if (user) {
+      navigate("/");
     }
-  }, [user, profile, navigate]);
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
