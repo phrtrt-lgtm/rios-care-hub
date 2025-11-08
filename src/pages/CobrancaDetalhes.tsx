@@ -915,13 +915,13 @@ export default function CobrancaDetalhes() {
               <CardContent className="pt-6">
                 <div className="flex items-start gap-3 mb-3">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={message.profiles.photo_url || undefined} />
-                    <AvatarFallback>{getInitials(message.profiles.name)}</AvatarFallback>
+                    <AvatarImage src={message.profiles?.photo_url || undefined} />
+                    <AvatarFallback>{getInitials(message.profiles?.name || 'Desconhecido')}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{message.profiles.name}</span>
-                      {message.profiles.role !== 'owner' && message.profiles.role !== 'pending_owner' && (
+                      <span className="font-medium">{message.profiles?.name || 'Desconhecido'}</span>
+                      {message.profiles?.role && message.profiles.role !== 'owner' && message.profiles.role !== 'pending_owner' && (
                         <Badge variant="secondary" className="text-xs">Equipe</Badge>
                       )}
                     </div>
