@@ -7,6 +7,13 @@ export default function TopChargesRules() {
   const handleOpenRules = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     setIsOpen(true);
+    // Scroll suave até a seção
+    setTimeout(() => {
+      document.getElementById('regras-completas')?.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start' 
+      });
+    }, 100);
   };
 
   return (
