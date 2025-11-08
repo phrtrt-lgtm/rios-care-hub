@@ -1,16 +1,23 @@
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Plus, Calendar, CheckCircle2, XCircle, Clock, Trash2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "sonner";
+import { useState } from "react";
 
 export default function Votacoes() {
   const navigate = useNavigate();
   const { profile } = useAuth();
+  const queryClient = useQueryClient();
   const isTeam = profile?.role && ['admin', 'maintenance'].includes(profile.role);
+  const isAdmin = profile?.role === 'admin';
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { data: proposals, isLoading } = useQuery({
     queryKey: ['proposals'],
@@ -31,6 +38,49 @@ export default function Votacoes() {
       return data;
     },
   });
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(proposals?.map(p => p.id) || []);
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (id: string, checked: boolean) => {
+    if (checked) {
+      setSelectedIds([...selectedIds, id]);
+    } else {
+      setSelectedIds(selectedIds.filter(sid => sid !== id));
+    }
+  };
+
+  const handleDelete = async () => {
+    if (selectedIds.length === 0) return;
+    
+    if (!confirm(`Tem certeza que deseja excluir ${selectedIds.length} votação(ões)?`)) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('proposals')
+        .delete()
+        .in('id', selectedIds);
+
+      if (error) throw error;
+
+      toast.success(`${selectedIds.length} votação(ões) excluída(s) com sucesso`);
+      setSelectedIds([]);
+      queryClient.invalidateQueries({ queryKey: ['proposals'] });
+    } catch (error) {
+      console.error('Error deleting proposals:', error);
+      toast.error('Erro ao excluir votações');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const getStatusBadge = (proposal: any) => {
     if (proposal.status === 'expired') {
@@ -78,13 +128,38 @@ export default function Votacoes() {
                 : "Veja as propostas e registre sua aprovação ou rejeição"}
             </p>
           </div>
-          {isTeam && (
-            <Button onClick={() => navigate('/nova-proposta-votacao')}>
-              <Plus className="mr-2 h-4 w-4" />
-              Nova Proposta
-            </Button>
-          )}
+          <div className="flex gap-2">
+            {isAdmin && selectedIds.length > 0 && (
+              <Button 
+                variant="destructive" 
+                onClick={handleDelete}
+                disabled={isDeleting}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Excluir ({selectedIds.length})
+              </Button>
+            )}
+            {isTeam && (
+              <Button onClick={() => navigate('/nova-proposta-votacao')}>
+                <Plus className="mr-2 h-4 w-4" />
+                Nova Proposta
+              </Button>
+            )}
+          </div>
         </div>
+
+        {isAdmin && proposals && proposals.length > 0 && (
+          <div className="mb-4 flex items-center gap-2">
+            <Checkbox
+              id="select-all"
+              checked={selectedIds.length === proposals.length}
+              onCheckedChange={handleSelectAll}
+            />
+            <label htmlFor="select-all" className="text-sm cursor-pointer">
+              Selecionar todas ({proposals.length})
+            </label>
+          </div>
+        )}
 
         {isLoading ? (
           <div className="text-center py-12">Carregando...</div>
@@ -100,10 +175,24 @@ export default function Votacoes() {
               <Card
                 key={proposal.id}
                 className="cursor-pointer hover:border-primary transition-colors"
-                onClick={() => navigate(`/votacao-detalhes/${proposal.id}`)}
+                onClick={(e) => {
+                  if ((e.target as HTMLElement).closest('.checkbox-wrapper')) {
+                    e.stopPropagation();
+                    return;
+                  }
+                  navigate(`/votacao-detalhes/${proposal.id}`);
+                }}
               >
                 <CardHeader>
-                  <div className="flex justify-between items-start">
+                  <div className="flex justify-between items-start gap-3">
+                    {isAdmin && (
+                      <div className="checkbox-wrapper pt-1" onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedIds.includes(proposal.id)}
+                          onCheckedChange={(checked) => handleSelectOne(proposal.id, checked as boolean)}
+                        />
+                      </div>
+                    )}
                     <div className="flex-1">
                       <CardTitle className="text-xl">{proposal.title}</CardTitle>
                       {proposal.category && (
