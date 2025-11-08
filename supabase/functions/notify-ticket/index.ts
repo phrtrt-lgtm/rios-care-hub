@@ -74,87 +74,101 @@ const handler = async (req: Request): Promise<Response> => {
           created_date: new Date().toLocaleString("pt-BR"),
         };
 
-        // Send confirmation to owner
-        if (ownerTemplate) {
-          await resend.emails.send({
-            from: "RIOS Suporte <sistema@rioshospedagens.com.br>",
-            reply_to: "rioslagoon@gmail.com",
-            to: [ticket.profiles.email],
-            subject: renderTemplate(ownerTemplate.subject, variables),
-            html: renderTemplate(ownerTemplate.body_html, variables),
-          });
-        }
-
-        // Send push notification to owner about new ticket
-        try {
-          const pushTitle = createdByTeam 
-            ? `Novo Ticket: ${ticket.subject}` 
-            : `Ticket Criado: ${ticket.subject}`;
-          
-          const pushBody = createdByTeam
-            ? `A equipe criou um ticket para você: ${ticket.description.substring(0, 80)}`
-            : `Recebemos seu ticket e responderemos em breve`;
-
-          await supabase.functions.invoke("send-push", {
-            body: {
-              ownerId: ticket.owner_id,
-              payload: {
-                title: pushTitle,
-                body: pushBody,
-                url: `/ticket-detalhes/${ticketId}`,
-                tag: `ticket_created_${ticketId}`,
-              },
-            },
-          });
-          console.log("Push notification sent to owner");
-        } catch (pushError) {
-          console.error("Push notification error (non-critical):", pushError);
-        }
-
-        // Notify team - filter by ticket type permissions
-        if (adminEmails.length > 0 && adminEmails[0] !== "" && teamTemplate) {
-          // Get team members with their roles
-          const { data: teamMembers } = await supabase
-            .from("profiles")
-            .select("id, email, role")
-            .in("role", ["admin", "agent", "maintenance"]);
-
-          // Filter team members based on ticket type visibility
-          const eligibleEmails: string[] = [];
-          
-          for (const member of teamMembers || []) {
-            let canView = false;
-            
-            // Admin can see everything
-            if (member.role === "admin") {
-              canView = true;
-            }
-            // Maintenance can see: duvida, informacao, bloqueio_data, manutencao, cobranca
-            else if (member.role === "maintenance") {
-              canView = ["duvida", "informacao", "bloqueio_data", "manutencao", "cobranca"].includes(ticket.ticket_type);
-            }
-            // Agent can see: duvida, informacao, conversar_hospedes, bloqueio_data
-            else if (member.role === "agent") {
-              canView = ["duvida", "informacao", "conversar_hospedes", "bloqueio_data"].includes(ticket.ticket_type);
-            }
-            
-            if (canView && member.email) {
-              eligibleEmails.push(member.email);
-            }
-          }
-
-          // Only send if there are eligible recipients
-          if (eligibleEmails.length > 0) {
+        // Send notification based on who created the ticket
+        if (createdByTeam) {
+          // Ticket created by admin/agent → Notify OWNER only
+          if (ownerTemplate) {
             await resend.emails.send({
               from: "RIOS Suporte <sistema@rioshospedagens.com.br>",
               reply_to: "rioslagoon@gmail.com",
-              to: eligibleEmails,
-              subject: renderTemplate(teamTemplate.subject, variables),
-              html: renderTemplate(teamTemplate.body_html, variables),
+              to: [ticket.profiles.email],
+              subject: renderTemplate(ownerTemplate.subject, variables),
+              html: renderTemplate(ownerTemplate.body_html, variables),
             });
-            console.log(`Team notification sent to ${eligibleEmails.length} eligible members`);
-          } else {
-            console.log("No eligible team members for this ticket type");
+            console.log("Owner notification sent (ticket created by team)");
+          }
+
+          // Send push notification to owner
+          try {
+            await supabase.functions.invoke("send-push", {
+              body: {
+                ownerId: ticket.owner_id,
+                payload: {
+                  title: `Novo Ticket: ${ticket.subject}`,
+                  body: `A equipe criou um ticket para você: ${ticket.description.substring(0, 80)}`,
+                  url: `/ticket-detalhes/${ticketId}`,
+                  tag: `ticket_created_${ticketId}`,
+                },
+              },
+            });
+            console.log("Push notification sent to owner");
+          } catch (pushError) {
+            console.error("Push notification error (non-critical):", pushError);
+          }
+        } else {
+          // Ticket created by owner → Notify TEAM only
+          if (adminEmails.length > 0 && adminEmails[0] !== "" && teamTemplate) {
+            // Get team members with their roles
+            const { data: teamMembers } = await supabase
+              .from("profiles")
+              .select("id, email, role")
+              .in("role", ["admin", "agent", "maintenance"]);
+
+            // Filter team members based on ticket type visibility
+            const eligibleEmails: string[] = [];
+            
+            for (const member of teamMembers || []) {
+              let canView = false;
+              
+              // Admin can see everything
+              if (member.role === "admin") {
+                canView = true;
+              }
+              // Maintenance can see: duvida, informacao, bloqueio_data, manutencao, cobranca
+              else if (member.role === "maintenance") {
+                canView = ["duvida", "informacao", "bloqueio_data", "manutencao", "cobranca"].includes(ticket.ticket_type);
+              }
+              // Agent can see: duvida, informacao, conversar_hospedes, bloqueio_data
+              else if (member.role === "agent") {
+                canView = ["duvida", "informacao", "conversar_hospedes", "bloqueio_data"].includes(ticket.ticket_type);
+              }
+              
+              if (canView && member.email) {
+                eligibleEmails.push(member.email);
+              }
+            }
+
+            // Only send if there are eligible recipients
+            if (eligibleEmails.length > 0) {
+              await resend.emails.send({
+                from: "RIOS Suporte <sistema@rioshospedagens.com.br>",
+                reply_to: "rioslagoon@gmail.com",
+                to: eligibleEmails,
+                subject: renderTemplate(teamTemplate.subject, variables),
+                html: renderTemplate(teamTemplate.body_html, variables),
+              });
+              console.log(`Team notification sent to ${eligibleEmails.length} eligible members (ticket created by owner)`);
+            } else {
+              console.log("No eligible team members for this ticket type");
+            }
+          }
+
+          // Send confirmation push to owner
+          try {
+            await supabase.functions.invoke("send-push", {
+              body: {
+                ownerId: ticket.owner_id,
+                payload: {
+                  title: `Ticket Criado: ${ticket.subject}`,
+                  body: `Recebemos seu ticket e responderemos em breve`,
+                  url: `/ticket-detalhes/${ticketId}`,
+                  tag: `ticket_created_${ticketId}`,
+                },
+              },
+            });
+            console.log("Confirmation push notification sent to owner");
+          } catch (pushError) {
+            console.error("Push notification error (non-critical):", pushError);
           }
         }
         break;
