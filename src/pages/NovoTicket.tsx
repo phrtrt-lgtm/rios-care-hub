@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,8 @@ interface Property {
   id: string;
   name: string;
   address: string;
+  owner_id?: string;
+  profiles?: { name: string };
 }
 
 export default function NovoTicket() {
@@ -44,24 +46,37 @@ export default function NovoTicket() {
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch user properties
-  useState(() => {
+  // Fetch properties based on user role
+  useEffect(() => {
     const fetchProperties = async () => {
-      const { data, error } = await supabase
+      // Check if user is team member (admin, agent, maintenance)
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user?.id)
+        .single();
+
+      let query = supabase
         .from('properties')
-        .select('id, name, address')
-        .eq('owner_id', user?.id)
+        .select('id, name, address, owner_id, profiles!properties_owner_id_fkey(name)')
         .order('name');
       
+      // If not team member, filter by owner_id
+      if (profileData?.role !== 'admin' && profileData?.role !== 'agent' && profileData?.role !== 'maintenance') {
+        query = query.eq('owner_id', user?.id);
+      }
+      
+      const { data, error } = await query;
+      
       if (!error && data) {
-        setProperties(data);
+        setProperties(data as any);
       }
     };
     
     if (user?.id) {
       fetchProperties();
     }
-  });
+  }, [user?.id]);
 
   const uploadOne = async (file: File): Promise<ReadyAttachment> => {
     const session = await supabase.auth.getSession();
@@ -320,10 +335,11 @@ export default function NovoTicket() {
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione a unidade (opcional)" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-background border-border z-50">
                     {properties.map((property) => (
                       <SelectItem key={property.id} value={property.id}>
                         {property.name}
+                        {property.profiles?.name && ` - ${property.profiles.name}`}
                       </SelectItem>
                     ))}
                   </SelectContent>

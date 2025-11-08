@@ -19,12 +19,22 @@ interface TeamMember {
   role: string;
 }
 
+interface Property {
+  id: string;
+  name: string;
+  address: string;
+  owner_id?: string;
+  profiles?: { name: string };
+}
+
 export default function NovoTicketInterno() {
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<"normal" | "urgente">("normal");
   const [assignedTo, setAssignedTo] = useState<string>("all");
+  const [propertyId, setPropertyId] = useState<string>("");
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -37,6 +47,7 @@ export default function NovoTicketInterno() {
       return;
     }
     fetchTeamMembers();
+    fetchProperties();
   }, [profile, navigate]);
 
   const fetchTeamMembers = async () => {
@@ -48,6 +59,17 @@ export default function NovoTicketInterno() {
     
     if (!error && data) {
       setTeamMembers(data);
+    }
+  };
+
+  const fetchProperties = async () => {
+    const { data, error } = await supabase
+      .from('properties')
+      .select('id, name, address, owner_id, profiles!properties_owner_id_fkey(name)')
+      .order('name');
+    
+    if (!error && data) {
+      setProperties(data as any);
     }
   };
 
@@ -102,6 +124,7 @@ export default function NovoTicketInterno() {
               subject: subject,
               description: description,
               priority: priority,
+              property_id: propertyId || null,
               kind: "internal"
             }]);
 
@@ -120,6 +143,7 @@ export default function NovoTicketInterno() {
             subject: subject,
             description: description,
             priority: priority,
+            property_id: propertyId || null,
             kind: "internal"
           }])
           .select()
@@ -170,6 +194,23 @@ export default function NovoTicketInterno() {
                     {teamMembers.map((member) => (
                       <SelectItem key={member.id} value={member.id}>
                         {member.name} ({member.role === 'admin' ? 'Admin' : member.role === 'maintenance' ? 'Manutenção' : 'Atendente'})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="property">Unidade (opcional)</Label>
+                <Select value={propertyId} onValueChange={setPropertyId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a unidade (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border-border z-50">
+                    {properties.map((property) => (
+                      <SelectItem key={property.id} value={property.id}>
+                        {property.name}
+                        {property.profiles?.name && ` - ${property.profiles.name}`}
                       </SelectItem>
                     ))}
                   </SelectContent>

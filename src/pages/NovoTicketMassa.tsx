@@ -21,6 +21,14 @@ interface Owner {
   email: string;
 }
 
+interface Property {
+  id: string;
+  name: string;
+  address: string;
+  owner_id?: string;
+  profiles?: { name: string };
+}
+
 type ReadyAttachment = {
   file_url: string;
   file_type: string;
@@ -34,6 +42,7 @@ const NovoTicketMassa = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [owners, setOwners] = useState<Owner[]>([]);
+  const [properties, setProperties] = useState<Property[]>([]);
   const [selectedOwners, setSelectedOwners] = useState<Set<string>>(new Set());
   const [uploading, setUploading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<ReadyAttachment[]>([]);
@@ -47,6 +56,7 @@ const NovoTicketMassa = () => {
     ticket_type: "duvida" as "duvida" | "informacao" | "conversar_hospedes" | "bloqueio_data" | "manutencao" | "melhorias_compras" | "financeiro",
     priority: "normal" as "normal" | "urgente",
     target_audience: "specific",
+    property_id: "",
   });
 
   useEffect(() => {
@@ -55,6 +65,7 @@ const NovoTicketMassa = () => {
       return;
     }
     fetchOwners();
+    fetchProperties();
   }, [user, profile, navigate]);
 
   const fetchOwners = async () => {
@@ -74,6 +85,17 @@ const NovoTicketMassa = () => {
       toast.error('Erro ao carregar proprietários');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchProperties = async () => {
+    const { data, error } = await supabase
+      .from('properties')
+      .select('id, name, address, owner_id, profiles!properties_owner_id_fkey(name)')
+      .order('name');
+    
+    if (!error && data) {
+      setProperties(data as any);
     }
   };
 
@@ -228,6 +250,7 @@ const NovoTicketMassa = () => {
               subject: formData.subject,
               description: formData.description,
               priority: formData.priority,
+              property_id: formData.property_id || null,
             }])
             .select()
             .single();
@@ -332,6 +355,26 @@ const NovoTicketMassa = () => {
                     <SelectItem value="manutencao">Manutenção</SelectItem>
                     <SelectItem value="melhorias_compras">Melhorias/Compras pro Imóvel</SelectItem>
                     <SelectItem value="financeiro">Financeiro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="property">Unidade (opcional)</Label>
+                <Select
+                  value={formData.property_id}
+                  onValueChange={(value) => setFormData({ ...formData, property_id: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a unidade (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border-border z-50">
+                    {properties.map((property) => (
+                      <SelectItem key={property.id} value={property.id}>
+                        {property.name}
+                        {property.profiles?.name && ` - ${property.profiles.name}`}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
