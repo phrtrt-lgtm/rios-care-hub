@@ -61,21 +61,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             console.log('[useAuth] Profile data:', data);
             if (isMounted) {
               setProfile(data);
+              setLoading(false);
             }
           } catch (error) {
             console.error('[useAuth] Exception fetching profile:', error);
+            if (isMounted) {
+              setLoading(false);
+            }
           }
         } else {
-          setProfile(null);
-        }
-        
-        if (isMounted) {
-          setLoading(false);
+          if (isMounted) {
+            setProfile(null);
+            setLoading(false);
+          }
         }
       }
     );
 
-    // Initialize session - only once
+    // Initialize session
     const initSession = async () => {
       try {
         console.log('[useAuth] Getting initial session');
@@ -98,22 +101,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (session?.user) {
           console.log('[useAuth] Fetching initial profile');
           try {
-            const { data } = await supabase
+            const { data, error } = await supabase
               .from("profiles")
               .select("*")
               .eq("id", session.user.id)
               .single();
             
+            if (error) {
+              console.error('[useAuth] Error fetching initial profile:', error);
+            }
+            
             if (isMounted) {
               setProfile(data);
+              setLoading(false);
             }
           } catch (error) {
             console.error('[useAuth] Error fetching initial profile:', error);
+            if (isMounted) {
+              setLoading(false);
+            }
           }
-        }
-        
-        if (isMounted) {
-          setLoading(false);
+        } else {
+          if (isMounted) {
+            setLoading(false);
+          }
         }
       } catch (error) {
         console.error('[useAuth] Error in initSession:', error);
