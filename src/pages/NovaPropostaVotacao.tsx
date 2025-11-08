@@ -22,10 +22,21 @@ const formSchema = z.object({
   category: z.string().optional(),
   deadline: z.string().min(1, "Prazo é obrigatório"),
   target_audience: z.enum(['owners', 'team'], { required_error: "Selecione o público-alvo" }),
-  owner_ids: z.array(z.string()).optional(),
+  owner_ids: z.array(z.string()).min(1, "Selecione pelo menos um proprietário"),
   team_ids: z.array(z.string()).optional(),
   property_ids: z.array(z.string()).optional(),
   options: z.array(z.string()).min(2, "Adicione pelo menos 2 opções"),
+}).refine((data) => {
+  if (data.target_audience === 'owners') {
+    return (data.owner_ids?.length ?? 0) > 0;
+  }
+  if (data.target_audience === 'team') {
+    return (data.team_ids?.length ?? 0) > 0;
+  }
+  return true;
+}, {
+  message: "Selecione pelo menos um participante",
+  path: ["owner_ids"],
 });
 
 export default function NovaPropostaVotacao() {
@@ -238,6 +249,15 @@ export default function NovaPropostaVotacao() {
       ? current.filter(id => id !== ownerId)
       : [...current, ownerId];
     form.setValue('owner_ids', updated);
+  };
+
+  const selectAllOwners = () => {
+    const allOwnerIds = owners?.map(o => o.id) || [];
+    form.setValue('owner_ids', allOwnerIds);
+  };
+
+  const deselectAllOwners = () => {
+    form.setValue('owner_ids', []);
   };
 
   const toggleTeamMember = (memberId: string) => {
@@ -531,7 +551,17 @@ export default function NovaPropostaVotacao() {
                     name="owner_ids"
                     render={() => (
                       <FormItem>
-                        <FormLabel>Proprietários *</FormLabel>
+                        <div className="flex items-center justify-between">
+                          <FormLabel>Proprietários *</FormLabel>
+                          <div className="flex gap-2">
+                            <Button type="button" variant="outline" size="sm" onClick={selectAllOwners}>
+                              Selecionar todos
+                            </Button>
+                            <Button type="button" variant="outline" size="sm" onClick={deselectAllOwners}>
+                              Desselecionar todos
+                            </Button>
+                          </div>
+                        </div>
                         <div className="border rounded-md p-4 max-h-60 overflow-y-auto space-y-2">
                           {owners?.map((owner) => (
                             <div key={owner.id} className="flex items-center space-x-2">
@@ -539,7 +569,7 @@ export default function NovaPropostaVotacao() {
                                 checked={form.watch('owner_ids')?.includes(owner.id)}
                                 onCheckedChange={() => toggleOwner(owner.id)}
                               />
-                              <label className="text-sm cursor-pointer" onClick={() => toggleOwner(owner.id)}>
+                              <label className="text-sm cursor-pointer flex-1" onClick={() => toggleOwner(owner.id)}>
                                 {owner.name} ({owner.email})
                               </label>
                             </div>
