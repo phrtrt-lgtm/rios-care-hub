@@ -210,8 +210,9 @@ export default function NovaPropostaVotacao() {
       const responses = participantIds.map(userId => ({
         proposal_id: proposal.id,
         owner_id: userId,
-        approved: null as any,
+        approved: false, // Default to false, user will vote later
         is_visible_to_owner: values.target_audience === 'owners',
+        responded_at: new Date().toISOString(),
       }));
 
       const { error: responsesError } = await supabase
