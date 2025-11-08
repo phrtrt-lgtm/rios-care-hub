@@ -68,8 +68,8 @@ export const VotacaoPendente = ({ proposal, userRole, onVoteSubmitted }: Votacao
       if (error) throw error;
 
       toast({
-        title: "Resposta registrada!",
-        description: "Sua resposta foi enviada com sucesso.",
+        title: "Sucesso",
+        description: "Resposta enviada com sucesso!",
       });
 
       onVoteSubmitted();
