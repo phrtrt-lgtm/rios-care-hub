@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Send, Calendar, DollarSign, Paperclip, Download, Eye, FileText, Image as ImageIcon, Trash2, Sparkles, ChevronDown, X, ZoomIn, Play, Video, Loader2 } from "lucide-react";
+import { VoiceToTextInput } from "@/components/VoiceToTextInput";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { Label } from "@/components/ui/label";
 import { AuthenticatedImage, AuthenticatedVideo } from "@/components/AuthenticatedMedia";
@@ -314,33 +315,36 @@ export default function CobrancaDetalhes() {
     }
   };
 
-  const [aiInstructions, setAiInstructions] = useState("");
-  const [showAiDialog, setShowAiDialog] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
 
   const generateAIResponse = async () => {
+    if (!aiPrompt.trim()) {
+      toast({
+        title: "Digite um comando",
+        description: "Digite ou grave um comando para a IA gerar a resposta",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setGeneratingAI(true);
-      setShowAiDialog(false);
       
-      const messagesContext = messages
-        .map(m => `${m.profiles.name}: ${m.body}`)
-        .join('\n');
-
       const { data, error } = await supabase.functions.invoke('ai-generate-response', {
         body: {
           templateKey: 'charge_response',
           chargeId: id,
-          customInstructions: aiInstructions
+          customInstructions: aiPrompt
         }
       });
 
       if (error) throw error;
 
       setNewMessage(data.text);
-      setAiInstructions("");
+      setAiPrompt("");
       toast({
-        title: "Resposta gerada com sucesso!",
-        description: "A IA gerou uma sugestão de resposta para você.",
+        title: "Resposta gerada!",
+        description: "Revise e edite se necessário antes de enviar.",
       });
     } catch (error: any) {
       toast({
@@ -900,18 +904,64 @@ export default function CobrancaDetalhes() {
         <Card>
           <CardContent className="pt-6">
             <div className="space-y-4">
-              <Textarea
-                placeholder="Digite sua mensagem..."
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                className="min-h-[100px]"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                    e.preventDefault();
-                    sendMessage();
-                  }
-                }}
-              />
+              {isTeamMember && (
+                <div className="space-y-2">
+                  <Label htmlFor="ai-prompt">IA Assistente - Gerar Resposta</Label>
+                  <div className="flex gap-2">
+                    <Textarea
+                      id="ai-prompt"
+                      placeholder="Digite ou grave um comando para a IA gerar a resposta (ex: explique o motivo da cobrança de forma cordial)"
+                      value={aiPrompt}
+                      onChange={(e) => setAiPrompt(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), generateAIResponse())}
+                      className="min-h-[80px]"
+                      disabled={generatingAI}
+                    />
+                    <div className="flex flex-col gap-2">
+                      <VoiceToTextInput
+                        onTranscript={(text) => setAiPrompt(text)}
+                        disabled={generatingAI}
+                      />
+                      <Button 
+                        type="button" 
+                        onClick={generateAIResponse}
+                        disabled={generatingAI || !aiPrompt.trim()}
+                        variant="secondary"
+                        className="whitespace-nowrap"
+                      >
+                        {generatingAI ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Gerando...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-4 w-4 mr-2" />
+                            Gerar
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              <div className="space-y-2">
+                <Label htmlFor="message">Mensagem</Label>
+                <Textarea
+                  id="message"
+                  placeholder="Digite sua mensagem..."
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  className="min-h-[100px]"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                      e.preventDefault();
+                      sendMessage();
+                    }
+                  }}
+                />
+              </div>
               
               {selectedFiles.length > 0 && (
                 <div className="space-y-2">
@@ -954,22 +1004,6 @@ export default function CobrancaDetalhes() {
                       </span>
                     </Button>
                   </label>
-                  
-                  {isTeamMember && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      disabled={generatingAI}
-                      onClick={() => setShowAiDialog(true)}
-                    >
-                      {generatingAI ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Sparkles className="mr-2 h-4 w-4" />
-                      )}
-                      IA Assistente
-                    </Button>
-                  )}
                 </div>
                 <Button 
                   onClick={sendMessage} 
@@ -995,48 +1029,6 @@ export default function CobrancaDetalhes() {
         open={galleryOpen}
         onOpenChange={setGalleryOpen}
       />
-
-      {/* Dialog de instruções IA */}
-      <Dialog open={showAiDialog} onOpenChange={setShowAiDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Assistente IA - Gerar Resposta</DialogTitle>
-            <DialogDescription>
-              Adicione instruções personalizadas para a IA gerar uma resposta mais adequada.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="ai-instructions">Instruções Personalizadas (Opcional)</Label>
-              <Textarea
-                id="ai-instructions"
-                placeholder="Ex: Seja mais formal, mencione prazo de 48h, inclua opções de parcelamento..."
-                value={aiInstructions}
-                onChange={(e) => setAiInstructions(e.target.value)}
-                className="min-h-[100px]"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAiDialog(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={generateAIResponse} disabled={generatingAI}>
-              {generatingAI ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Gerando...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Gerar Resposta
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Dialog de confirmação de exclusão */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

@@ -272,6 +272,20 @@ ${messagesHistory}
         .eq("id", chargeId)
         .single();
 
+      // Buscar mensagens da cobrança
+      const { data: chargeMessages } = await supabaseClient
+        .from("charge_messages")
+        .select(`
+          *,
+          profiles(name, role)
+        `)
+        .eq("charge_id", chargeId)
+        .order("created_at", { ascending: true });
+
+      const messagesHistory = chargeMessages?.map(m => 
+        `${m.profiles.name} (${m.profiles.role === 'owner' ? 'Proprietário' : 'Equipe'}): ${m.body}`
+      ).join('\n') || '';
+
       if (charge) {
         const amountBRL = new Intl.NumberFormat("pt-BR", {
           style: "currency",
@@ -279,6 +293,15 @@ ${messagesHistory}
         }).format(charge.amount_cents / 100);
 
         contextStr = `
+CONTEXTO DA EMPRESA:
+A RIOS é uma empresa de Operação e Gestão de Hospedagens que administra imóveis de aluguel por temporada. Oferecemos gestão completa de propriedades.
+
+IMPORTANTE SOBRE COBRANÇAS:
+- TODAS as cobranças são criadas PELA EQUIPE RIOS, NUNCA pelo proprietário
+- O proprietário está recebendo esta cobrança da RIOS por serviços prestados, manutenções realizadas, ou despesas relacionadas ao seu imóvel
+- Não trate como se o proprietário estivesse cobrando algo da RIOS
+- A RIOS está cobrando o proprietário, não o contrário
+
 CONTEXTO DA COBRANÇA:
 - ID: ${charge.id}
 - Título: ${charge.title}
@@ -290,6 +313,16 @@ CONTEXTO DA COBRANÇA:
 ${charge.ticket ? `- Relacionado ao ticket: ${charge.ticket.subject}` : ""}
 ${charge.ticket?.property ? `- Propriedade: ${charge.ticket.property.name}` : ""}
 ${charge.payment_link_url ? `- Link de pagamento: ${charge.payment_link_url}` : ""}
+
+HISTÓRICO DA CONVERSA:
+${messagesHistory}
+
+ORIENTAÇÕES PARA RESPOSTA:
+- Lembre-se: você está respondendo EM NOME DA RIOS para o proprietário
+- Seja claro sobre o motivo da cobrança
+- Se houver dúvidas sobre a cobrança, explique detalhadamente
+- Mencione prazos de contestação se relevante (7 dias corridos após recebimento)
+- Seja cordial mas profissional
 `;
       }
     }
