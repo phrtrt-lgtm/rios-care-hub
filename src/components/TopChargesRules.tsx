@@ -1,6 +1,14 @@
-import React from "react";
+import React, { useState } from "react";
+
 
 export default function TopChargesRules() {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleOpenRules = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    setIsOpen(true);
+  };
+
   return (
     <section id="charges-rules" className="w-full">
       {/* Banner compacto (topo fixo) */}
@@ -17,16 +25,27 @@ export default function TopChargesRules() {
           <div className="flex flex-wrap gap-2">
             <a href="/manutencoes"
                className="px-4 py-2 rounded-xl font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">Ver minhas manutenções</a>
-            <a href="#regras-completas"
-               className="px-4 py-2 rounded-xl font-medium bg-white text-secondary hover:bg-white/90 transition-colors">Regras completas</a>
+            <a 
+              href="#regras-completas"
+              onClick={handleOpenRules}
+              className="px-4 py-2 rounded-xl font-medium bg-white text-secondary hover:bg-white/90 transition-colors cursor-pointer"
+            >
+              Regras completas
+            </a>
           </div>
         </div>
       </div>
 
       {/* Acordeão - Regras completas */}
       <div id="regras-completas" className="bg-card rounded-2xl border p-5 md:p-6">
-        <details>
-          <summary className="cursor-pointer text-base md:text-lg font-semibold text-secondary">
+        <details open={isOpen}>
+          <summary 
+            className="cursor-pointer text-base md:text-lg font-semibold text-secondary"
+            onClick={(e) => {
+              e.preventDefault();
+              setIsOpen(!isOpen);
+            }}
+          >
             Regras completas
           </summary>
           <div className="mt-4 space-y-6">
