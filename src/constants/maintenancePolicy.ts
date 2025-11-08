@@ -4,7 +4,7 @@ export const MAINTENANCE_POLICY_HTML = `
 <h2 style="margin:0 0 8px 0;">Política de Manutenção — Vigente em 01/01/2026</h2>
 <p>Para garantir qualidade, segurança e desempenho nas plataformas, a <b>manutenção preventiva e corretiva</b> passa a seguir estas regras:</p>
 <ol>
-  <li><b>Chamados de manutenção:</b> tanto o <b>proprietário</b> quanto a <b>gestão</b> podem abrir chamados de manutenção identificando problemas na unidade. Ao abrir, detalharemos evidências (fotos/vídeos) e impacto operacional.</li>
+  <li><b>Chamados de manutenção:</b> tanto o <b>proprietário</b> quanto a <b>gestão</b> podem abrir chamados de manutenção identificando problemas na unidade. Ao abrir, detalharemos evidências (fotos/vídeos) e impacto operacional. <b>Dentro dos chamados</b>, poderemos conversar, responder dúvidas, enviar anexos e você receberá <b>notificações por e-mail</b> de cada atualização.</li>
   <li><b>Classificação:</b>
     <ul>
       <li><b>Essencial (atendimento imediato):</b> geladeira, fogão, micro-ondas, água quente/chuveiro, energia, infiltração grave, fechadura/portas, <i>piscina não utilizável</i> em imóveis com piscina, e itens cuja falha inviabilize a estadia. Pode ser executado <b>de imediato</b> pela gestão, sobretudo em "check-in no mesmo dia".</li>
