@@ -135,7 +135,7 @@ export default function MinhaCaixa() {
 
       {/* Content */}
       <main className="container mx-auto px-4 py-6 md:py-8">
-        {/* Votações Pendentes - Prioridade no topo */}
+        {/* Propostas Pendentes - Prioridade no topo */}
         <VotacoesPendentes />
 
         {/* Maintenance Policy Banner */}

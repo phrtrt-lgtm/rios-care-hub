@@ -63,7 +63,7 @@ export default function VotacaoDetalhes() {
       
       if (error) throw error;
       if (!data) {
-        throw new Error('Votação não encontrada');
+        throw new Error('Proposta não encontrada');
       }
       
       // Fetch owner details separately if team member
@@ -225,12 +225,12 @@ export default function VotacaoDetalhes() {
             </div>
 
             <div>
-              <h3 className="font-semibold mb-3">Resultado da Votação</h3>
+              <h3 className="font-semibold mb-3">Resultado da Proposta</h3>
               <div className="space-y-2">
                 {optionVotes.map((option: any) => (
                   <div key={option.id} className="flex items-center justify-between p-3 border rounded-md">
                     <span>{option.option_text}</span>
-                    <Badge variant="secondary">{option.votes} voto{option.votes !== 1 && 's'}</Badge>
+                    <Badge variant="secondary">{option.votes} resposta{option.votes !== 1 && 's'}</Badge>
                   </div>
                 ))}
                 <div className="flex gap-2 text-sm text-muted-foreground mt-3">

@@ -32,7 +32,7 @@ export const VotacaoPendente = ({ proposal, userRole, onVoteSubmitted }: Votacao
     if (!selectedOption) {
       toast({
         title: "Selecione uma opção",
-        description: "Por favor, escolha uma opção de voto.",
+        description: "Por favor, escolha uma opção de resposta.",
         variant: "destructive",
       });
       return;
@@ -68,14 +68,14 @@ export const VotacaoPendente = ({ proposal, userRole, onVoteSubmitted }: Votacao
       if (error) throw error;
 
       toast({
-        title: "Voto registrado!",
+        title: "Resposta registrada!",
         description: "Sua resposta foi enviada com sucesso.",
       });
 
       onVoteSubmitted();
     } catch (error: any) {
       toast({
-        title: "Erro ao enviar voto",
+        title: "Erro ao enviar resposta",
         description: error.message,
         variant: "destructive",
       });
@@ -121,13 +121,13 @@ export const VotacaoPendente = ({ proposal, userRole, onVoteSubmitted }: Votacao
 
         {expanded && (
           <div className="mt-6 space-y-6 border-t pt-6">
-            {/* Resultados da votação */}
+            {/* Resultados da proposta */}
             <div className="space-y-3">
               <h4 className="font-semibold">Resultados:</h4>
               {optionVotes?.map((option: any) => (
                 <div key={option.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                   <span className="text-sm">{option.option_text}</span>
-                  <Badge variant="secondary">{option.votes} voto(s)</Badge>
+                  <Badge variant="secondary">{option.votes} resposta(s)</Badge>
                 </div>
               ))}
             </div>

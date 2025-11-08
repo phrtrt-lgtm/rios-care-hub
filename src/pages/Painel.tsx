@@ -166,7 +166,7 @@ export default function Painel() {
           <AlertBanner />
         </div>
 
-        {/* Votações Pendentes */}
+         {/* Propostas Pendentes */}
         <div className="mb-6">
           <VotacoesPendentes />
         </div>
@@ -218,7 +218,7 @@ export default function Painel() {
             variant="secondary"
           >
             <Vote className="mr-3 h-6 w-6" />
-            Criar Votação
+            Criar Proposta
           </Button>
         </div>
 

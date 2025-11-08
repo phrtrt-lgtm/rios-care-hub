@@ -28,7 +28,7 @@ export function VotacoesPendentes() {
         return data || [];
       }
 
-      // Para owners, mostrar apenas suas votações pendentes
+      // Para owners, mostrar apenas suas propostas pendentes
       const { data, error } = await supabase
         .from('proposals')
         .select(`
@@ -62,10 +62,10 @@ export function VotacoesPendentes() {
           <div>
             <CardTitle className="flex items-center gap-2">
               <Vote className="h-5 w-5" />
-              Votações Pendentes
+              Propostas Pendentes
             </CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              Você tem {pendingProposals.length} {pendingProposals.length === 1 ? 'votação pendente' : 'votações pendentes'}
+              Você tem {pendingProposals.length} {pendingProposals.length === 1 ? 'proposta pendente' : 'propostas pendentes'}
             </p>
           </div>
           <Button
@@ -100,7 +100,7 @@ export function VotacoesPendentes() {
                     </div>
                   </div>
                   <Button size="sm">
-                    Votar
+                    Responder
                   </Button>
                 </div>
               </CardContent>

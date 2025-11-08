@@ -58,7 +58,7 @@ export default function Votacoes() {
   const handleDelete = async () => {
     if (selectedIds.length === 0) return;
     
-    if (!confirm(`Tem certeza que deseja excluir ${selectedIds.length} votação(ões)?`)) {
+    if (!confirm(`Tem certeza que deseja excluir ${selectedIds.length} proposta(s)?`)) {
       return;
     }
 
@@ -71,12 +71,12 @@ export default function Votacoes() {
 
       if (error) throw error;
 
-      toast.success(`${selectedIds.length} votação(ões) excluída(s) com sucesso`);
+      toast.success(`${selectedIds.length} proposta(s) excluída(s) com sucesso`);
       setSelectedIds([]);
       queryClient.invalidateQueries({ queryKey: ['proposals'] });
     } catch (error) {
       console.error('Error deleting proposals:', error);
-      toast.error('Erro ao excluir votações');
+      toast.error('Erro ao excluir propostas');
     } finally {
       setIsDeleting(false);
     }
@@ -121,11 +121,11 @@ export default function Votacoes() {
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold">Propostas e Votações</h1>
+            <h1 className="text-3xl font-bold">Propostas</h1>
             <p className="text-muted-foreground mt-1">
               {isTeam 
-                ? "Gerencie propostas coletivas e acompanhe votações"
-                : "Veja as propostas e registre sua aprovação ou rejeição"}
+                ? "Gerencie propostas coletivas e acompanhe respostas"
+                : "Veja as propostas e registre sua resposta"}
             </p>
           </div>
           <div className="flex gap-2">

@@ -117,7 +117,7 @@ export default function NovaPropostaVotacao() {
           action: 'generate_proposal',
           context: {
             prompt: aiPrompt,
-            projectContext: 'Sistema de gestão de hospedagens RIOS - votações para melhorias e decisões relacionadas aos imóveis'
+            projectContext: 'Sistema de gestão de hospedagens RIOS - propostas para melhorias e decisões relacionadas aos imóveis'
           }
         }
       });
@@ -239,7 +239,7 @@ export default function NovaPropostaVotacao() {
       });
 
       toast({
-        title: "Votação criada!",
+        title: "Proposta criada!",
         description: `${values.target_audience === 'owners' ? 'Os proprietários' : 'A equipe'} foi notificada.`,
       });
 
@@ -247,7 +247,7 @@ export default function NovaPropostaVotacao() {
     } catch (error: any) {
       console.error('Error creating proposal:', error);
       toast({
-        title: "Erro ao criar votação",
+        title: "Erro ao criar proposta",
         description: error.message,
         variant: "destructive",
       });
@@ -307,7 +307,7 @@ export default function NovaPropostaVotacao() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Nova Votação</CardTitle>
+            <CardTitle>Nova Proposta</CardTitle>
           </CardHeader>
           <CardContent>
             <Form {...form}>
@@ -506,7 +506,7 @@ export default function NovaPropostaVotacao() {
                   name="options"
                   render={() => (
                     <FormItem>
-                      <FormLabel>Opções de votação *</FormLabel>
+                      <FormLabel>Opções de resposta *</FormLabel>
                       <div className="space-y-3">
                         <div className="flex gap-2">
                           <Input
@@ -585,7 +585,7 @@ export default function NovaPropostaVotacao() {
                     disabled={isSubmitting}
                     className="flex-1"
                   >
-                    {isSubmitting ? "Criando..." : "Criar Votação"}
+                    {isSubmitting ? "Criando..." : "Criar Proposta"}
                   </Button>
                 </div>
               </form>
