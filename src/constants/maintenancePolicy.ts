@@ -21,7 +21,6 @@ export const MAINTENANCE_POLICY_HTML = `
   <li><b>Ecossistema RIOS:</b> cada imóvel impacta a imagem de todos. Negligências prejudicam o próprio resultado e o dos demais.</li>
   <li><b>Pós-execução:</b> toda manutenção executada gera <b>cobrança</b> conforme regras já publicadas abaixo neste Portal (contestação em até 7 dias, pagamento/offset, etc.).</li>
 </ol>
-<p>Ao clicar em "Li e entendi", você registra seu aceite desta política.</p>
 `;
 
 export const MAINTENANCE_POLICY_TEXT = `Política de Manutenção — Vigente em 01/01/2026
