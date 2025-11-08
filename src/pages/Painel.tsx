@@ -10,7 +10,6 @@ import { useNavigate } from "react-router-dom";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { AlertBanner } from "@/components/AlertBanner";
 import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
-import { EnablePushNative } from "@/components/EnablePushNative";
 import { VotacoesPendentes } from "@/components/VotacoesPendentes";
 
 export default function Painel() {
@@ -330,11 +329,6 @@ export default function Painel() {
             </CardContent>
           </Card>
           </div>
-        </div>
-
-        {/* Notificações Push */}
-        <div className="mt-8">
-          <EnablePushNative />
         </div>
       </main>
     </div>
