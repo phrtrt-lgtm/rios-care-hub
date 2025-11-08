@@ -175,8 +175,18 @@ export default function CobrancaDetalhes() {
     const { data: messagesData, error } = await supabase
       .from('charge_messages')
       .select(`
-        *,
-        profiles!charge_messages_author_id_fkey(name, photo_url, role)
+        id,
+        charge_id,
+        author_id,
+        body,
+        is_internal,
+        created_at,
+        profiles!charge_messages_author_id_fkey (
+          id,
+          name,
+          photo_url,
+          role
+        )
       `)
       .eq('charge_id', id)
       .order('created_at', { ascending: true });
@@ -205,7 +215,7 @@ export default function CobrancaDetalhes() {
           
           return {
             ...msg,
-            profiles: Array.isArray(msg.profiles) ? msg.profiles[0] : msg.profiles,
+            profiles: msg.profiles || null,
             attachments: attachments || []
           };
         })
