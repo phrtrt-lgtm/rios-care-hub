@@ -111,15 +111,51 @@ const handler = async (req: Request): Promise<Response> => {
           console.error("Push notification error (non-critical):", pushError);
         }
 
-        // Notify team
+        // Notify team - filter by ticket type permissions
         if (adminEmails.length > 0 && adminEmails[0] !== "" && teamTemplate) {
-          await resend.emails.send({
-            from: "RIOS Suporte <sistema@rioshospedagens.com.br>",
-            reply_to: "rioslagoon@gmail.com",
-            to: adminEmails,
-            subject: renderTemplate(teamTemplate.subject, variables),
-            html: renderTemplate(teamTemplate.body_html, variables),
-          });
+          // Get team members with their roles
+          const { data: teamMembers } = await supabase
+            .from("profiles")
+            .select("id, email, role")
+            .in("role", ["admin", "agent", "maintenance"]);
+
+          // Filter team members based on ticket type visibility
+          const eligibleEmails: string[] = [];
+          
+          for (const member of teamMembers || []) {
+            let canView = false;
+            
+            // Admin can see everything
+            if (member.role === "admin") {
+              canView = true;
+            }
+            // Maintenance can see: duvida, informacao, bloqueio_data, manutencao, cobranca
+            else if (member.role === "maintenance") {
+              canView = ["duvida", "informacao", "bloqueio_data", "manutencao", "cobranca"].includes(ticket.ticket_type);
+            }
+            // Agent can see: duvida, informacao, conversar_hospedes, bloqueio_data
+            else if (member.role === "agent") {
+              canView = ["duvida", "informacao", "conversar_hospedes", "bloqueio_data"].includes(ticket.ticket_type);
+            }
+            
+            if (canView && member.email) {
+              eligibleEmails.push(member.email);
+            }
+          }
+
+          // Only send if there are eligible recipients
+          if (eligibleEmails.length > 0) {
+            await resend.emails.send({
+              from: "RIOS Suporte <sistema@rioshospedagens.com.br>",
+              reply_to: "rioslagoon@gmail.com",
+              to: eligibleEmails,
+              subject: renderTemplate(teamTemplate.subject, variables),
+              html: renderTemplate(teamTemplate.body_html, variables),
+            });
+            console.log(`Team notification sent to ${eligibleEmails.length} eligible members`);
+          } else {
+            console.log("No eligible team members for this ticket type");
+          }
         }
         break;
       }
