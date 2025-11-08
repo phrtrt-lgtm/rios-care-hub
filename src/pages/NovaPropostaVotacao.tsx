@@ -22,21 +22,20 @@ const formSchema = z.object({
   category: z.string().optional(),
   deadline: z.string().min(1, "Prazo é obrigatório"),
   target_audience: z.enum(['owners', 'team'], { required_error: "Selecione o público-alvo" }),
-  owner_ids: z.array(z.string()).min(1, "Selecione pelo menos um proprietário"),
   team_ids: z.array(z.string()).optional(),
-  property_ids: z.array(z.string()).optional(),
+  property_ids: z.array(z.string()).min(1, "Selecione pelo menos uma unidade"),
   options: z.array(z.string()).min(2, "Adicione pelo menos 2 opções"),
 }).refine((data) => {
   if (data.target_audience === 'owners') {
-    return (data.owner_ids?.length ?? 0) > 0;
+    return (data.property_ids?.length ?? 0) > 0;
   }
   if (data.target_audience === 'team') {
     return (data.team_ids?.length ?? 0) > 0;
   }
   return true;
 }, {
-  message: "Selecione pelo menos um participante",
-  path: ["owner_ids"],
+  message: "Selecione pelo menos uma unidade ou membro da equipe",
+  path: ["property_ids"],
 });
 
 export default function NovaPropostaVotacao() {
@@ -56,7 +55,6 @@ export default function NovaPropostaVotacao() {
       category: "",
       deadline: "",
       target_audience: 'owners' as const,
-      owner_ids: [],
       team_ids: [],
       property_ids: [],
       options: [],
@@ -146,9 +144,22 @@ export default function NovaPropostaVotacao() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
 
-      const participantIds = values.target_audience === 'owners' 
-        ? (values.owner_ids || [])
-        : (values.team_ids || []);
+      // Get owner IDs from selected properties
+      let participantIds: string[] = [];
+      
+      if (values.target_audience === 'owners') {
+        const { data: properties, error: propertiesError } = await supabase
+          .from('properties')
+          .select('owner_id')
+          .in('id', values.property_ids || []);
+        
+        if (propertiesError) throw propertiesError;
+        
+        // Get unique owner IDs
+        participantIds = [...new Set(properties?.map(p => p.owner_id) || [])];
+      } else {
+        participantIds = values.team_ids || [];
+      }
 
       // Create proposal
       const { data: proposal, error: proposalError } = await supabase
@@ -242,23 +253,6 @@ export default function NovaPropostaVotacao() {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const toggleOwner = (ownerId: string) => {
-    const current = form.getValues('owner_ids') || [];
-    const updated = current.includes(ownerId)
-      ? current.filter(id => id !== ownerId)
-      : [...current, ownerId];
-    form.setValue('owner_ids', updated);
-  };
-
-  const selectAllOwners = () => {
-    const allOwnerIds = owners?.map(o => o.id) || [];
-    form.setValue('owner_ids', allOwnerIds);
-  };
-
-  const deselectAllOwners = () => {
-    form.setValue('owner_ids', []);
   };
 
   const toggleTeamMember = (memberId: string) => {
@@ -545,42 +539,6 @@ export default function NovaPropostaVotacao() {
                     </FormItem>
                   )}
                 />
-
-                {form.watch('target_audience') === 'owners' && (
-                  <FormField
-                    control={form.control}
-                    name="owner_ids"
-                    render={() => (
-                      <FormItem>
-                        <div className="flex items-center justify-between">
-                          <FormLabel>Proprietários *</FormLabel>
-                          <div className="flex gap-2">
-                            <Button type="button" variant="outline" size="sm" onClick={selectAllOwners}>
-                              Selecionar todos
-                            </Button>
-                            <Button type="button" variant="outline" size="sm" onClick={deselectAllOwners}>
-                              Desselecionar todos
-                            </Button>
-                          </div>
-                        </div>
-                        <div className="border rounded-md p-4 max-h-60 overflow-y-auto space-y-2">
-                          {owners?.map((owner) => (
-                            <div key={owner.id} className="flex items-center space-x-2">
-                              <Checkbox
-                                checked={form.watch('owner_ids')?.includes(owner.id)}
-                                onCheckedChange={() => toggleOwner(owner.id)}
-                              />
-                              <label className="text-sm cursor-pointer flex-1" onClick={() => toggleOwner(owner.id)}>
-                                {owner.name} ({owner.email})
-                              </label>
-                            </div>
-                          ))}
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
 
                 {form.watch('target_audience') === 'team' && (
                   <FormField
