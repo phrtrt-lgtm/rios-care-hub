@@ -102,7 +102,7 @@ const App = () => (
             <Route
               path="/admin/cadastrar-proprietario"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'maintenance']}>
                   <AdminCadastrarProprietario />
                 </ProtectedRoute>
               }
@@ -110,7 +110,7 @@ const App = () => (
             <Route
               path="/admin/cadastrar-faxineira"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'maintenance']}>
                   <AdminCadastrarFaxineira />
                 </ProtectedRoute>
               }
@@ -118,7 +118,7 @@ const App = () => (
             <Route
               path="/admin/cadastrar-usuario"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'maintenance']}>
                   <AdminCadastrarUsuario />
                 </ProtectedRoute>
               }
@@ -305,7 +305,7 @@ const App = () => (
             <Route
               path="/novo-ticket-interno"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'maintenance']}>
                   <NovoTicketInterno />
                 </ProtectedRoute>
               }

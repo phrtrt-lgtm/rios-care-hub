@@ -279,6 +279,16 @@ const Propriedades = () => {
   };
 
   const handleDelete = async (propertyId: string) => {
+    // Only admins can delete
+    if (profile?.role !== 'admin') {
+      toast({
+        title: "Permissão negada",
+        description: "Apenas administradores podem excluir unidades",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!confirm("Tem certeza que deseja excluir esta unidade?")) return;
 
     try {
@@ -544,15 +554,17 @@ const Propriedades = () => {
                       <Pencil className="mr-2 h-3 w-3" />
                       Editar
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => handleDelete(property.id)}
-                      className="flex-1"
-                    >
-                      <Trash2 className="mr-2 h-3 w-3" />
-                      Excluir
-                    </Button>
+                    {profile?.role === 'admin' && (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleDelete(property.id)}
+                        className="flex-1"
+                      >
+                        <Trash2 className="mr-2 h-3 w-3" />
+                        Excluir
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardContent>

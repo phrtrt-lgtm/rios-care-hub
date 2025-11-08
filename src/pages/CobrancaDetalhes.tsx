@@ -600,6 +600,16 @@ export default function CobrancaDetalhes() {
   };
 
   const handleDelete = async () => {
+    // Only admins can delete
+    if (profile?.role !== 'admin') {
+      toast({
+        title: "Permissão negada",
+        description: "Apenas administradores podem excluir cobranças",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setDeleting(true);
       

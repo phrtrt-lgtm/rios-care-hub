@@ -198,6 +198,12 @@ const TodosTickets = () => {
   };
 
   const handleDeleteSelected = async () => {
+    // Only admins can delete
+    if (profile?.role !== 'admin') {
+      toast.error("Apenas administradores podem excluir tickets");
+      return;
+    }
+
     if (selectedTickets.size === 0) return;
 
     if (!confirm(`Tem certeza que deseja excluir ${selectedTickets.size} ticket(s)?`)) {
@@ -286,14 +292,16 @@ const TodosTickets = () => {
                     <SelectItem value="cancelado">Cancelado</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button 
-                  onClick={handleDeleteSelected} 
-                  variant="destructive"
-                  disabled={deleting}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Excluir {selectedTickets.size}
-                </Button>
+                {profile?.role === 'admin' && (
+                  <Button 
+                    onClick={handleDeleteSelected} 
+                    variant="destructive"
+                    disabled={deleting}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Excluir {selectedTickets.size}
+                  </Button>
+                )}
               </>
             )}
             <Button onClick={() => navigate("/propriedades")} variant="outline">

@@ -56,6 +56,12 @@ export default function Votacoes() {
   };
 
   const handleDelete = async () => {
+    // Only admins can delete
+    if (profile?.role !== 'admin') {
+      toast.error("Apenas administradores podem excluir propostas");
+      return;
+    }
+
     if (selectedIds.length === 0) return;
     
     if (!confirm(`Tem certeza que deseja excluir ${selectedIds.length} proposta(s)?`)) {
