@@ -11,6 +11,7 @@ import { AvatarUpload } from "@/components/AvatarUpload";
 import { AlertBanner } from "@/components/AlertBanner";
 import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
 import { EnablePushNative } from "@/components/EnablePushNative";
+import { VotacoesPendentes } from "@/components/VotacoesPendentes";
 
 export default function Painel() {
   const { profile, user, signOut } = useAuth();
@@ -164,6 +165,11 @@ export default function Painel() {
         {/* Alert Banner */}
         <div className="mb-6">
           <AlertBanner />
+        </div>
+
+        {/* Votações Pendentes */}
+        <div className="mb-6">
+          <VotacoesPendentes />
         </div>
 
         {/* Ações Principais - Destaque no Topo */}
