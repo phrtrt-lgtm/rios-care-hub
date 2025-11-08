@@ -9,13 +9,26 @@ import { useAuth } from "@/hooks/useAuth";
 
 export function VotacoesPendentes() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   const { data: pendingProposals, isLoading } = useQuery({
-    queryKey: ['pending-proposals', user?.id],
+    queryKey: ['pending-proposals', user?.id, profile?.role],
     queryFn: async () => {
       if (!user) return [];
 
+      // Para admins, mostrar todas as propostas ativas
+      if (profile?.role === 'admin') {
+        const { data, error } = await supabase
+          .from('proposals')
+          .select('*')
+          .eq('status', 'active')
+          .order('deadline', { ascending: true });
+        
+        if (error) throw error;
+        return data || [];
+      }
+
+      // Para owners, mostrar apenas suas votações pendentes
       const { data, error } = await supabase
         .from('proposals')
         .select(`
