@@ -137,7 +137,7 @@ export default function MinhaCaixa() {
       {/* Content */}
       <main className="container mx-auto px-4 py-6 md:py-8">
         {/* Maintenance Policy Banner */}
-        {user && <OwnerMaintenancePolicyBanner ownerId={user.id} />}
+        <OwnerMaintenancePolicyBanner />
         
         {/* Alert Banner */}
         <div className="mb-6">
