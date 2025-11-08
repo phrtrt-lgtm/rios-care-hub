@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Send, Upload, X, Loader2 } from "lucide-react";
+import { ArrowLeft, Send, Upload, X, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { sanitizeFilename } from "@/lib/storage";
@@ -36,6 +36,8 @@ const NovoTicketMassa = () => {
   const [selectedOwners, setSelectedOwners] = useState<Set<string>>(new Set());
   const [uploading, setUploading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<ReadyAttachment[]>([]);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
@@ -159,6 +161,33 @@ const NovoTicketMassa = () => {
 
   const removeFile = (fileUrl: string) => {
     setUploadedFiles((prev) => prev.filter((f) => f.file_url !== fileUrl));
+  };
+
+  const generateDescription = async () => {
+    if (!aiPrompt.trim()) return;
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-generate-response', {
+        body: { 
+          action: 'generate_ticket',
+          context: {
+            prompt: aiPrompt,
+            projectContext: 'Sistema de gestão de hospedagens RIOS - tickets para proprietários sobre manutenção, dúvidas e informações'
+          }
+        }
+      });
+      
+      if (error) throw error;
+      if (data?.generatedText) {
+        setFormData({ ...formData, description: data.generatedText });
+        setAiPrompt("");
+        toast.success("Descrição gerada! Revise e edite se necessário.");
+      }
+    } catch (error: any) {
+      toast.error("Erro ao gerar descrição: " + error.message);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -319,14 +348,33 @@ const NovoTicketMassa = () => {
 
               <div>
                 <Label htmlFor="description">Descrição *</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Descrição detalhada do ticket..."
-                  rows={6}
-                  required
-                />
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Digite um comando para a IA gerar a descrição..."
+                      value={aiPrompt}
+                      onChange={(e) => setAiPrompt(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), generateDescription())}
+                    />
+                    <Button 
+                      type="button" 
+                      onClick={generateDescription}
+                      disabled={isGenerating || !aiPrompt.trim()}
+                      variant="secondary"
+                    >
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      {isGenerating ? "Gerando..." : "Gerar"}
+                    </Button>
+                  </div>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Descrição detalhada do ticket..."
+                    rows={6}
+                    required
+                  />
+                </div>
               </div>
 
               <div>

@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Loader2, Upload, X } from "lucide-react";
+import { ArrowLeft, Loader2, Upload, X, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -37,6 +37,8 @@ export default function NovoTicket() {
   const [uploadedFiles, setUploadedFiles] = useState<ReadyAttachment[]>([]);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -177,6 +179,33 @@ export default function NovoTicket() {
     setUploadedFiles((prev) => prev.filter((f) => f.file_url !== fileUrl));
   };
 
+  const generateDescription = async () => {
+    if (!aiPrompt.trim()) return;
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-generate-response', {
+        body: { 
+          action: 'generate_ticket',
+          context: {
+            prompt: aiPrompt,
+            projectContext: 'Sistema de gestão de hospedagens RIOS - tickets para proprietários sobre manutenção, dúvidas e informações'
+          }
+        }
+      });
+      
+      if (error) throw error;
+      if (data?.generatedText) {
+        setDescription(data.generatedText);
+        setAiPrompt("");
+        toast.success("Descrição gerada! Revise e edite se necessário.");
+      }
+    } catch (error: any) {
+      toast.error("Erro ao gerar descrição: " + error.message);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -313,14 +342,33 @@ export default function NovoTicket() {
 
               <div className="space-y-2">
                 <Label htmlFor="description">Descrição</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Descreva detalhadamente sua solicitação"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={6}
-                  required
-                />
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Digite um comando para a IA gerar a descrição..."
+                      value={aiPrompt}
+                      onChange={(e) => setAiPrompt(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), generateDescription())}
+                    />
+                    <Button 
+                      type="button" 
+                      onClick={generateDescription}
+                      disabled={isGenerating || !aiPrompt.trim()}
+                      variant="secondary"
+                    >
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      {isGenerating ? "Gerando..." : "Gerar"}
+                    </Button>
+                  </div>
+                  <Textarea
+                    id="description"
+                    placeholder="Descreva detalhadamente sua solicitação"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={6}
+                    required
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">

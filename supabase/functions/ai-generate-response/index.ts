@@ -88,6 +88,36 @@ Diretrizes:
           userPrompt = context.prompt;
           break;
         
+        case 'generate_alert':
+          systemPrompt = `Você é um assistente especializado em criar mensagens profissionais e claras para alertas e comunicações com proprietários de imóveis de hospedagem.
+          
+O contexto do projeto: Sistema de gestão de hospedagens RIOS - comunicação com proprietários e equipe sobre avisos, informações e alertas importantes.
+
+Diretrizes:
+- Escreva em português brasileiro
+- Seja claro, objetivo e profissional
+- Use tom apropriado ao tipo de alerta
+- Use 2-4 parágrafos
+- Seja direto e não prolixo
+- Termine com orientações claras quando necessário`;
+          userPrompt = context.prompt;
+          break;
+        
+        case 'generate_ticket':
+          systemPrompt = `Você é um assistente especializado em criar descrições profissionais e claras para chamados/tickets relacionados a imóveis de hospedagem.
+          
+O contexto do projeto: Sistema de gestão de hospedagens RIOS - criação de tickets para proprietários sobre manutenção, dúvidas, informações e outros assuntos.
+
+Diretrizes:
+- Escreva em português brasileiro
+- Seja claro, objetivo e profissional
+- Foque no problema/assunto e na solução/ação esperada
+- Use 2-4 parágrafos
+- Não use jargão técnico desnecessário
+- Seja específico sobre o que está sendo comunicado`;
+          userPrompt = context.prompt;
+          break;
+        
         default:
           throw new Error('Invalid action');
       }
