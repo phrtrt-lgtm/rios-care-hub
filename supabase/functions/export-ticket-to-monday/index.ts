@@ -115,9 +115,11 @@ Deno.serve(async (req) => {
       columnValues[colOwner] = ticket.owner.name;
     }
 
-    // Unit
+    // Unit - handle case where property might be null
     if (ticket.property?.name) {
       columnValues[colUnit] = ticket.property.name;
+    } else if (ticket.property_id === null) {
+      columnValues[colUnit] = 'Sem unidade';
     }
 
     // Title
@@ -207,17 +209,17 @@ Deno.serve(async (req) => {
             continue;
           }
 
-          // Convert to base64
+          // Convert to ArrayBuffer for upload
           const arrayBuffer = await fileData.arrayBuffer();
-          const bytes = new Uint8Array(arrayBuffer);
-          const base64 = btoa(String.fromCharCode(...bytes));
-
-          // Upload to Monday
-          const formData = new FormData();
-          formData.append('query', `mutation add_file($file: File!) { add_file_to_column (item_id: ${mondayItemId}, column_id: "${colAttachments}", file: $file) { id } }`);
           
-          const blob = new Blob([fileData], { type: attachment.mime_type || 'application/octet-stream' });
-          formData.append('variables[file]', blob, attachment.file_name || 'attachment');
+          // Upload to Monday using multipart form
+          const formData = new FormData();
+          
+          const fileBlob = new Blob([arrayBuffer], { type: attachment.mime_type || 'application/octet-stream' });
+          const fileName = attachment.file_name || `attachment-${attachment.id}`;
+          
+          formData.append('query', `mutation { add_file_to_column(item_id: ${mondayItemId}, column_id: "${colAttachments}", file: $file) { id } }`);
+          formData.append('variables[file]', fileBlob, fileName);
 
           const uploadResponse = await fetch('https://api.monday.com/v2/file', {
             method: 'POST',
