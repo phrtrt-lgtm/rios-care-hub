@@ -193,15 +193,29 @@ export default function Painel() {
               Gerenciar Cobranças
             </Button>
 
-            <Button 
-              size="lg" 
-              className="h-20 text-base font-semibold"
-              onClick={() => navigate("/novo-alerta")}
-              variant="secondary"
-            >
-              <Bell className="mr-3 h-6 w-6" />
-              Criar Alerta
-            </Button>
+            {profile?.role === "admin" && (
+              <>
+                <Button 
+                  size="lg" 
+                  className="h-20 text-base font-semibold"
+                  onClick={() => navigate("/novo-alerta")}
+                  variant="secondary"
+                >
+                  <Bell className="mr-3 h-6 w-6" />
+                  Criar Alerta
+                </Button>
+
+                <Button 
+                  size="lg" 
+                  className="h-20 text-base font-semibold"
+                  onClick={() => navigate("/nova-proposta-votacao")}
+                  variant="secondary"
+                >
+                  <Vote className="mr-3 h-6 w-6" />
+                  Criar Proposta
+                </Button>
+              </>
+            )}
 
             <Button 
               size="lg" 
@@ -211,16 +225,6 @@ export default function Painel() {
             >
               <Ticket className="mr-3 h-6 w-6" />
               Criar Tickets
-            </Button>
-
-            <Button 
-              size="lg" 
-              className="h-20 text-base font-semibold"
-              onClick={() => navigate("/nova-proposta-votacao")}
-              variant="secondary"
-            >
-              <Vote className="mr-3 h-6 w-6" />
-              Criar Proposta
             </Button>
           </div>
         </div>
