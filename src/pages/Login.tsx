@@ -27,7 +27,7 @@ export default function Login() {
         navigate("/minha-caixa");
       } else if (profile.role === 'cleaner') {
         navigate("/faxineira");
-      } else if (profile.role === 'agent' || profile.role === 'admin') {
+      } else if (profile.role === 'agent' || profile.role === 'admin' || profile.role === 'maintenance') {
         navigate("/painel");
       }
     }
