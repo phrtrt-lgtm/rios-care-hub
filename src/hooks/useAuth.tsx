@@ -35,40 +35,59 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     console.log('[useAuth] Initializing');
     let isMounted = true;
+    let loadingTimeout: NodeJS.Timeout;
+
+    // Garantir que o loading nunca fique travado
+    const ensureLoadingEnds = () => {
+      loadingTimeout = setTimeout(() => {
+        if (isMounted) {
+          console.warn('[useAuth] Loading timeout - forcing completion');
+          setLoading(false);
+        }
+      }, 5000); // 5 segundos máximo
+    };
+
+    ensureLoadingEnds();
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         if (!isMounted) return;
         
         console.log('[useAuth] Auth state changed:', event, !!session);
+        clearTimeout(loadingTimeout);
+        
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
           console.log('[useAuth] Fetching profile for user:', session.user.id);
-          try {
-            const { data, error } = await supabase
-              .from("profiles")
-              .select("*")
-              .eq("id", session.user.id)
-              .single();
-            
-            if (error) {
-              console.error('[useAuth] Error fetching profile:', error);
+          
+          // Usar setTimeout para evitar deadlock
+          setTimeout(async () => {
+            try {
+              const { data, error } = await supabase
+                .from("profiles")
+                .select("*")
+                .eq("id", session.user.id)
+                .single();
+              
+              if (error) {
+                console.error('[useAuth] Error fetching profile:', error);
+              }
+              
+              console.log('[useAuth] Profile data:', data);
+              if (isMounted) {
+                setProfile(data);
+                setLoading(false);
+              }
+            } catch (error) {
+              console.error('[useAuth] Exception fetching profile:', error);
+              if (isMounted) {
+                setLoading(false);
+              }
             }
-            
-            console.log('[useAuth] Profile data:', data);
-            if (isMounted) {
-              setProfile(data);
-              setLoading(false);
-            }
-          } catch (error) {
-            console.error('[useAuth] Exception fetching profile:', error);
-            if (isMounted) {
-              setLoading(false);
-            }
-          }
+          }, 0);
         } else {
           if (isMounted) {
             setProfile(null);
@@ -138,6 +157,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     return () => {
       isMounted = false;
+      clearTimeout(loadingTimeout);
       subscription.unsubscribe();
     };
   }, []);
