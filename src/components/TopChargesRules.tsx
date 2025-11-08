@@ -31,7 +31,7 @@ export default function TopChargesRules() {
           </div>
           <div className="flex flex-wrap gap-2">
             <a href="/manutencoes"
-               className="px-4 py-2 rounded-xl font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">Ver minhas manutenções</a>
+               className="px-4 py-2 rounded-xl font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">Histórico de Manutenções</a>
             <a 
               href="#regras-completas"
               onClick={handleOpenRules}
