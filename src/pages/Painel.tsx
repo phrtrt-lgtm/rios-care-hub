@@ -197,6 +197,7 @@ export default function Painel() {
               size="lg" 
               className="h-20 text-base font-semibold"
               onClick={() => navigate("/novo-alerta")}
+              variant="secondary"
             >
               <Bell className="mr-3 h-6 w-6" />
               Criar Alerta
@@ -206,6 +207,7 @@ export default function Painel() {
               size="lg" 
               className="h-20 text-base font-semibold"
               onClick={() => navigate("/novo-ticket-massa")}
+              variant="secondary"
             >
               <Ticket className="mr-3 h-6 w-6" />
               Criar Tickets
@@ -215,6 +217,7 @@ export default function Painel() {
               size="lg" 
               className="h-20 text-base font-semibold"
               onClick={() => navigate("/nova-proposta-votacao")}
+              variant="secondary"
             >
               <Vote className="mr-3 h-6 w-6" />
               Criar Proposta
