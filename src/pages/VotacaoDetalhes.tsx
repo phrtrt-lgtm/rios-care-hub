@@ -1,17 +1,18 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase as supabaseClient } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, CheckCircle2, XCircle, Upload } from "lucide-react";
+import { ArrowLeft, CheckCircle2, XCircle, Upload, Paperclip, Download } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+
 
 export default function VotacaoDetalhes() {
   const { id } = useParams();
@@ -28,7 +29,7 @@ export default function VotacaoDetalhes() {
   const { data: proposal, isLoading } = useQuery({
     queryKey: ['proposal', id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('proposals')
         .select(`
           *,
@@ -64,7 +65,7 @@ export default function VotacaoDetalhes() {
       // Fetch owner details separately if team member
       if (data.proposal_responses && isTeam) {
         const ownerIds = data.proposal_responses.map((r: any) => r.owner_id);
-        const { data: profiles } = await supabase
+        const { data: profiles } = await supabaseClient
           .from('profiles')
           .select('id, name, email')
           .in('id', ownerIds);
@@ -99,7 +100,7 @@ export default function VotacaoDetalhes() {
         const fileExt = file.name.split('.').pop();
         const filePath = `proposals/${id}/${profile?.id}-${Date.now()}.${fileExt}`;
         
-        const { error: uploadError } = await supabase.storage
+        const { error: uploadError } = await supabaseClient.storage
           .from('attachments')
           .upload(filePath, file);
 
@@ -109,7 +110,7 @@ export default function VotacaoDetalhes() {
 
       if (myResponse) {
         // Update existing response
-        const { error } = await supabase
+        const { error } = await supabaseClient
           .from('proposal_responses')
           .update({
             selected_option_id: selectedOption,
@@ -122,7 +123,7 @@ export default function VotacaoDetalhes() {
         if (error) throw error;
       } else {
         // Create new response (shouldn't happen but just in case)
-        const { error } = await supabase
+        const { error } = await supabaseClient
           .from('proposal_responses')
           .insert([{
             proposal_id: id as string,
@@ -240,15 +241,37 @@ export default function VotacaoDetalhes() {
                 <div className="space-y-2">
                   {responses.filter((r: any) => r.selected_option_id).map((response: any) => {
                     const selectedOpt = options.find((o: any) => o.id === response.selected_option_id);
+                    const handleDownload = async () => {
+                      if (!response.attachment_path) return;
+                      const { data } = await supabaseClient.storage
+                        .from('attachments')
+                        .createSignedUrl(response.attachment_path, 60);
+                      if (data?.signedUrl) {
+                        window.open(data.signedUrl, '_blank');
+                      }
+                    };
+                    
                     return (
-                      <div key={response.id} className="flex items-center justify-between p-3 border rounded-md">
-                        <div>
+                      <div key={response.id} className="p-3 border rounded-md space-y-2">
+                        <div className="flex items-center justify-between">
                           <p className="font-medium">{response.profiles?.name}</p>
-                          {response.note && (
-                            <p className="text-sm text-muted-foreground mt-1">{response.note}</p>
-                          )}
+                          <Badge variant="secondary">{selectedOpt?.option_text}</Badge>
                         </div>
-                        <Badge variant="secondary">{selectedOpt?.option_text}</Badge>
+                        {response.note && (
+                          <p className="text-sm text-muted-foreground">{response.note}</p>
+                        )}
+                        {response.attachment_path && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleDownload}
+                            className="gap-2 h-auto p-2"
+                          >
+                            <Paperclip className="h-4 w-4" />
+                            <span className="text-sm">Ver anexo</span>
+                            <Download className="h-3 w-3" />
+                          </Button>
+                        )}
                       </div>
                     );
                   })}
