@@ -11,7 +11,6 @@ import { AlertBanner } from "@/components/AlertBanner";
 import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
 import { NotificationButton } from "@/components/NotificationButton";
 import TopChargesRules from "@/components/TopChargesRules";
-import { EnablePushNative } from "@/components/EnablePushNative";
 import { VotacoesPendentes } from "@/components/VotacoesPendentes";
 import { supabase } from "@/integrations/supabase/client";
 import OwnerMaintenancePolicyBanner from "@/components/OwnerMaintenancePolicyBanner";
@@ -147,11 +146,6 @@ export default function MinhaCaixa() {
         {/* Top Charges Rules Section */}
         <div className="mb-6">
           <TopChargesRules />
-        </div>
-
-        {/* Notificações Push */}
-        <div className="mb-6">
-          <EnablePushNative />
         </div>
 
         {/* Votações Pendentes */}
