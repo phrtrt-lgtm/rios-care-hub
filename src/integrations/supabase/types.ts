@@ -797,6 +797,27 @@ export type Database = {
           },
         ]
       }
+      maintenance_policy_acceptances: {
+        Row: {
+          accepted_at: string
+          id: string
+          owner_id: string
+          policy_version: string
+        }
+        Insert: {
+          accepted_at?: string
+          id?: string
+          owner_id: string
+          policy_version: string
+        }
+        Update: {
+          accepted_at?: string
+          id?: string
+          owner_id?: string
+          policy_version?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -1259,8 +1280,12 @@ export type Database = {
           created_at: string
           created_by: string
           description: string
+          essential: boolean | null
           first_response_at: string | null
           id: string
+          kind: string | null
+          owner_action_due_at: string | null
+          owner_decision: string | null
           owner_id: string
           priority: Database["public"]["Enums"]["ticket_priority"]
           property_id: string | null
@@ -1277,8 +1302,12 @@ export type Database = {
           created_at?: string
           created_by: string
           description: string
+          essential?: boolean | null
           first_response_at?: string | null
           id?: string
+          kind?: string | null
+          owner_action_due_at?: string | null
+          owner_decision?: string | null
           owner_id: string
           priority?: Database["public"]["Enums"]["ticket_priority"]
           property_id?: string | null
@@ -1295,8 +1324,12 @@ export type Database = {
           created_at?: string
           created_by?: string
           description?: string
+          essential?: boolean | null
           first_response_at?: string | null
           id?: string
+          kind?: string | null
+          owner_action_due_at?: string | null
+          owner_decision?: string | null
           owner_id?: string
           priority?: Database["public"]["Enums"]["ticket_priority"]
           property_id?: string | null
