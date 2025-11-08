@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { AlertBanner } from "@/components/AlertBanner";
@@ -7,11 +7,14 @@ import { AlertBanner } from "@/components/AlertBanner";
 const Index = () => {
   const { user, profile, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
+    // Só redireciona se estiver na rota raiz "/"
+    if (location.pathname !== "/") return;
+    
     console.log('[Index] State:', { loading, hasUser: !!user, hasProfile: !!profile, role: profile?.role });
     
-    // Só redireciona se não estiver carregando
     if (!loading && !user) {
       console.log('[Index] No user, redirecting to login');
       navigate("/login", { replace: true });
@@ -28,7 +31,7 @@ const Index = () => {
         navigate("/painel", { replace: true });
       }
     }
-  }, [user, profile, loading, navigate]);
+  }, [user, profile, loading, navigate, location]);
 
   return (
     <div>
