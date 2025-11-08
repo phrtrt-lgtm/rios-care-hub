@@ -9,17 +9,26 @@ const Index = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log('[Index] State:', { loading, hasUser: !!user, hasProfile: !!profile, role: profile?.role });
+    
     if (!loading) {
       if (!user) {
+        console.log('[Index] No user, redirecting to login');
         navigate("/login");
       } else if (profile) {
+        console.log('[Index] Profile found:', profile.role);
         if (profile.role === 'pending_owner' && profile.status === 'pending') {
+          console.log('[Index] Redirecting to aguardando-aprovacao');
           navigate("/aguardando-aprovacao");
         } else if (profile.role === 'owner') {
+          console.log('[Index] Redirecting to minha-caixa');
           navigate("/minha-caixa");
         } else if (profile.role === 'agent' || profile.role === 'admin' || profile.role === 'maintenance') {
+          console.log('[Index] Redirecting to painel');
           navigate("/painel");
         }
+      } else {
+        console.log('[Index] User exists but no profile yet');
       }
     }
   }, [user, profile, loading, navigate]);

@@ -33,9 +33,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log('[useAuth] Initializing');
     let isMounted = true;
 
     const initAuth = async () => {
+      console.log('[useAuth] Starting initAuth');
       // Check if user should be logged out (browser was closed and "remember me" was not checked)
       const rememberMe = localStorage.getItem("rememberMe");
       const tempSession = sessionStorage.getItem("tempSession");
@@ -43,6 +45,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (!rememberMe && !tempSession) {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
+          console.log('[useAuth] No remember me, signing out');
           await supabase.auth.signOut();
           setLoading(false);
           return;
@@ -50,25 +53,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       // Check for existing session
+      console.log('[useAuth] Checking for existing session');
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!isMounted) return;
       
+      console.log('[useAuth] Session found:', !!session);
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
+        console.log('[useAuth] Fetching profile for user:', session.user.id);
         const { data } = await supabase
           .from("profiles")
           .select("*")
           .eq("id", session.user.id)
           .single();
         
+        console.log('[useAuth] Profile data:', data);
         if (isMounted) {
           setProfile(data);
           setLoading(false);
         }
       } else {
+        console.log('[useAuth] No session, setting loading false');
         setLoading(false);
       }
     };
