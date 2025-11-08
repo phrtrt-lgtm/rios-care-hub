@@ -9,23 +9,22 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Send, X, Plus } from "lucide-react";
+import { ArrowLeft, X, Plus, Sparkles, Upload, FileIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { buildStorageKey } from "@/lib/storage";
 
 const formSchema = z.object({
   title: z.string().min(5, "Título deve ter no mínimo 5 caracteres"),
   description: z.string().min(10, "Descrição deve ter no mínimo 10 caracteres"),
-  amount_cents: z.string().optional(),
   category: z.string().optional(),
   deadline: z.string().min(1, "Prazo é obrigatório"),
-  property_id: z.string().optional(),
   target_audience: z.enum(['owners', 'team'], { required_error: "Selecione o público-alvo" }),
   owner_ids: z.array(z.string()).optional(),
   team_ids: z.array(z.string()).optional(),
+  property_ids: z.array(z.string()).optional(),
   options: z.array(z.string()).min(2, "Adicione pelo menos 2 opções"),
 });
 
@@ -34,19 +33,21 @@ export default function NovaPropostaVotacao() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newOption, setNewOption] = useState("");
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [attachments, setAttachments] = useState<File[]>([]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: "",
       description: "",
-      amount_cents: "",
       category: "",
       deadline: "",
-      property_id: "",
       target_audience: 'owners' as const,
       owner_ids: [],
       team_ids: [],
+      property_ids: [],
       options: [],
     },
   });
@@ -97,6 +98,37 @@ export default function NovaPropostaVotacao() {
     },
   });
 
+  const generateDescription = async () => {
+    if (!aiPrompt.trim()) return;
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-generate-response', {
+        body: { 
+          action: 'generate_proposal',
+          context: {
+            prompt: aiPrompt,
+            projectContext: 'Sistema de gestão de hospedagens RIOS - votações para melhorias e decisões relacionadas aos imóveis'
+          }
+        }
+      });
+      
+      if (error) throw error;
+      if (data?.generatedText) {
+        form.setValue('description', data.generatedText);
+        setAiPrompt("");
+        toast({ title: "Descrição gerada!", description: "Revise e edite se necessário." });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Erro ao gerar descrição",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
     try {
@@ -113,18 +145,42 @@ export default function NovaPropostaVotacao() {
         .insert({
           title: values.title,
           description: values.description,
-          amount_cents: values.amount_cents ? parseInt(values.amount_cents) * 100 : null,
           category: values.category || null,
           deadline: values.deadline,
-          property_id: values.property_id || null,
           target_audience: values.target_audience,
           created_by: user.id,
           required_approvals: participantIds.length,
+          has_attachments: attachments.length > 0,
         })
         .select()
         .single();
 
       if (proposalError) throw proposalError;
+
+      // Upload attachments
+      if (attachments.length > 0) {
+        for (const file of attachments) {
+          const filePath = `proposals/${proposal.id}/${Date.now()}-${file.name}`;
+          const { error: uploadError } = await supabase.storage
+            .from('proposals')
+            .upload(filePath, file);
+
+          if (uploadError) throw uploadError;
+
+          const { error: attachmentError } = await supabase
+            .from('proposal_attachments')
+            .insert({
+              proposal_id: proposal.id,
+              file_path: filePath,
+              file_name: file.name,
+              file_type: file.type,
+              file_size: file.size,
+              created_by: user.id,
+            });
+
+          if (attachmentError) throw attachmentError;
+        }
+      }
 
       // Create options
       const optionsData = values.options.map((text, index) => ({
@@ -190,6 +246,23 @@ export default function NovaPropostaVotacao() {
       ? current.filter(id => id !== memberId)
       : [...current, memberId];
     form.setValue('team_ids', updated);
+  };
+
+  const toggleProperty = (propertyId: string) => {
+    const current = form.getValues('property_ids') || [];
+    const updated = current.includes(propertyId)
+      ? current.filter(id => id !== propertyId)
+      : [...current, propertyId];
+    form.setValue('property_ids', updated);
+  };
+
+  const selectAllProperties = () => {
+    const allIds = properties?.map(p => p.id) || [];
+    form.setValue('property_ids', allIds);
+  };
+
+  const deselectAllProperties = () => {
+    form.setValue('property_ids', []);
   };
 
   const addOption = () => {
@@ -269,38 +342,38 @@ export default function NovaPropostaVotacao() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Descrição *</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Descreva os detalhes da proposta..."
-                          className="min-h-[100px]"
-                          {...field}
-                        />
-                      </FormControl>
+                      <div className="space-y-2">
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="Digite um comando para a IA gerar a descrição..."
+                            value={aiPrompt}
+                            onChange={(e) => setAiPrompt(e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), generateDescription())}
+                          />
+                          <Button 
+                            type="button" 
+                            onClick={generateDescription}
+                            disabled={isGenerating || !aiPrompt.trim()}
+                            variant="secondary"
+                          >
+                            <Sparkles className="h-4 w-4 mr-2" />
+                            {isGenerating ? "Gerando..." : "Gerar"}
+                          </Button>
+                        </div>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Descreva os detalhes da proposta..."
+                            className="min-h-[100px]"
+                            {...field}
+                          />
+                        </FormControl>
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="amount_cents"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Valor (R$)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="0.00"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
                   <FormField
                     control={form.control}
                     name="category"
@@ -314,9 +387,7 @@ export default function NovaPropostaVotacao() {
                       </FormItem>
                     )}
                   />
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="deadline"
@@ -330,31 +401,84 @@ export default function NovaPropostaVotacao() {
                       </FormItem>
                     )}
                   />
+                </div>
 
-                  <FormField
-                    control={form.control}
-                    name="property_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Imóvel (opcional)</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Todos os imóveis" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {properties?.map((property) => (
-                              <SelectItem key={property.id} value={property.id}>
-                                {property.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <FormField
+                  control={form.control}
+                  name="property_ids"
+                  render={() => (
+                    <FormItem>
+                      <div className="flex items-center justify-between">
+                        <FormLabel>Unidades</FormLabel>
+                        <div className="flex gap-2">
+                          <Button type="button" variant="outline" size="sm" onClick={selectAllProperties}>
+                            Selecionar todas
+                          </Button>
+                          <Button type="button" variant="outline" size="sm" onClick={deselectAllProperties}>
+                            Desselecionar todas
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="border rounded-md p-4 max-h-60 overflow-y-auto space-y-2">
+                        {properties?.map((property) => (
+                          <div key={property.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              checked={form.watch('property_ids')?.includes(property.id)}
+                              onCheckedChange={() => toggleProperty(property.id)}
+                            />
+                            <label className="text-sm cursor-pointer flex-1" onClick={() => toggleProperty(property.id)}>
+                              {property.name}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="space-y-3">
+                  <FormLabel>Anexos</FormLabel>
+                  <div className="flex gap-2">
+                    <Input
+                      type="file"
+                      multiple
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files || []);
+                        setAttachments(prev => [...prev, ...files]);
+                      }}
+                      className="hidden"
+                      id="file-upload"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => document.getElementById('file-upload')?.click()}
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Adicionar arquivos
+                    </Button>
+                  </div>
+                  {attachments.length > 0 && (
+                    <div className="border rounded-md p-3 space-y-2">
+                      {attachments.map((file, index) => (
+                        <div key={index} className="flex items-center justify-between bg-muted p-2 rounded">
+                          <div className="flex items-center gap-2">
+                            <FileIcon className="h-4 w-4" />
+                            <span className="text-sm">{file.name}</span>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setAttachments(prev => prev.filter((_, i) => i !== index))}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <FormField
@@ -467,14 +591,7 @@ export default function NovaPropostaVotacao() {
                     disabled={isSubmitting}
                     className="flex-1"
                   >
-                    {isSubmitting ? (
-                      "Criando..."
-                    ) : (
-                      <>
-                        <Send className="mr-2 h-4 w-4" />
-                        Criar Votação
-                      </>
-                    )}
+                    {isSubmitting ? "Criando..." : "Criar Votação"}
                   </Button>
                 </div>
               </form>

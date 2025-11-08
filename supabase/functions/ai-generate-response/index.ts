@@ -1,3 +1,4 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -7,7 +8,9 @@ const corsHeaders = {
 };
 
 interface GenerateRequest {
-  templateKey: string;
+  templateKey?: string;
+  action?: string;
+  context?: any;
   ticketId?: string;
   chargeId?: string;
   customInstructions?: string;
@@ -57,7 +60,84 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { templateKey, ticketId, chargeId, customInstructions }: GenerateRequest = await req.json();
+    const { templateKey, action, context, ticketId, chargeId, customInstructions }: GenerateRequest = await req.json();
+
+    // Handle new action-based requests
+    if (action) {
+      const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+      
+      if (!LOVABLE_API_KEY) {
+        throw new Error('LOVABLE_API_KEY not configured');
+      }
+
+      let systemPrompt = '';
+      let userPrompt = '';
+
+      switch (action) {
+        case 'generate_proposal':
+          systemPrompt = `Você é um assistente especializado em criar descrições profissionais e claras para votações e propostas relacionadas a melhorias em imóveis de hospedagem.
+          
+O contexto do projeto: ${context.projectContext}
+
+Diretrizes:
+- Escreva em português brasileiro
+- Seja claro, objetivo e profissional
+- Foque nos benefícios e justificativas
+- Use 2-4 parágrafos
+- Não use jargão técnico desnecessário`;
+          userPrompt = context.prompt;
+          break;
+        
+        default:
+          throw new Error('Invalid action');
+      }
+
+      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+        }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          return new Response(
+            JSON.stringify({ error: 'Limite de requisições excedido. Tente novamente em alguns instantes.' }),
+            { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        if (response.status === 402) {
+          return new Response(
+            JSON.stringify({ error: 'Créditos insuficientes. Por favor, adicione créditos ao workspace.' }),
+            { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        const errorText = await response.text();
+        console.error('AI gateway error:', response.status, errorText);
+        throw new Error('AI gateway error');
+      }
+
+      const data = await response.json();
+      const generatedText = data.choices?.[0]?.message?.content;
+
+      return new Response(
+        JSON.stringify({ generatedText }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Original template-based logic
+    if (!templateKey) {
+      throw new Error('templateKey or action required');
+    }
 
     // Get AI settings
     const { data: aiSettings } = await supabaseClient
@@ -96,7 +176,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Build context
-    let context = "";
+    let contextStr = "";
 
     if (ticketId) {
       const { data: ticket } = await supabaseClient
@@ -124,7 +204,7 @@ const handler = async (req: Request): Promise<Response> => {
       ).join('\n') || '';
 
       if (ticket) {
-        context = `
+        contextStr = `
 CONTEXTO DA EMPRESA:
 A RIOS é uma empresa de Operação e Gestão de Hospedagens que administra imóveis de aluguel por temporada. Oferecemos gestão completa de propriedades, incluindo:
 - Gestão de reservas e check-in/check-out
@@ -168,7 +248,7 @@ ${messagesHistory}
           currency: charge.currency || "BRL",
         }).format(charge.amount_cents / 100);
 
-        context = `
+        contextStr = `
 CONTEXTO DA COBRANÇA:
 - ID: ${charge.id}
 - Título: ${charge.title}
@@ -191,7 +271,7 @@ ${aiSettings.style_guide ? `GUIA DE ESTILO:\n${aiSettings.style_guide}\n` : ""}
 
 ${aiSettings.guardrails ? `REGRAS DE SEGURANÇA:\n${aiSettings.guardrails}\n` : ""}`;
 
-    const userPrompt = `${context}
+    const userPrompt = `${contextStr}
 
 ${customInstructions ? `INSTRUÇÕES DO ATENDENTE:\n${customInstructions}\n\n` : ''}${template.template_prompt}
 
