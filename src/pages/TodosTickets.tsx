@@ -45,6 +45,7 @@ const TodosTickets = () => {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [selectedTickets, setSelectedTickets] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   useEffect(() => {
     if (!user || !['admin', 'agent'].includes(profile?.role || '')) {
@@ -223,6 +224,29 @@ const TodosTickets = () => {
     }
   };
 
+  const handleBulkStatusUpdate = async (newStatus: 'novo' | 'em_analise' | 'em_execucao' | 'aguardando_info' | 'concluido' | 'cancelado') => {
+    if (selectedTickets.size === 0) return;
+
+    setUpdatingStatus(true);
+    try {
+      const { error } = await supabase
+        .from('tickets')
+        .update({ status: newStatus })
+        .in('id', Array.from(selectedTickets));
+
+      if (error) throw error;
+
+      toast.success(`Status de ${selectedTickets.size} ticket(s) atualizado com sucesso`);
+      setSelectedTickets(new Set());
+      await fetchTickets();
+    } catch (error) {
+      console.error('Erro ao atualizar status:', error);
+      toast.error('Erro ao atualizar status dos tickets');
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -248,14 +272,29 @@ const TodosTickets = () => {
           </div>
           <div className="flex gap-2">
             {selectedTickets.size > 0 && (
-              <Button 
-                onClick={handleDeleteSelected} 
-                variant="destructive"
-                disabled={deleting}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Excluir {selectedTickets.size}
-              </Button>
+              <>
+                <Select onValueChange={(value) => handleBulkStatusUpdate(value as any)} disabled={updatingStatus}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Alterar Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="novo">Novo</SelectItem>
+                    <SelectItem value="em_analise">Em Análise</SelectItem>
+                    <SelectItem value="em_execucao">Em Execução</SelectItem>
+                    <SelectItem value="aguardando_info">Aguardando Info</SelectItem>
+                    <SelectItem value="concluido">Concluído</SelectItem>
+                    <SelectItem value="cancelado">Cancelado</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button 
+                  onClick={handleDeleteSelected} 
+                  variant="destructive"
+                  disabled={deleting}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Excluir {selectedTickets.size}
+                </Button>
+              </>
             )}
             <Button onClick={() => navigate("/propriedades")} variant="outline">
               <Building2 className="mr-2 h-4 w-4" />
