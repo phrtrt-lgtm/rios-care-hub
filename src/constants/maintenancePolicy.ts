@@ -17,7 +17,7 @@ export const MAINTENANCE_POLICY_HTML = `
       <li><b>Delegar à gestão</b> para executarmos.</li>
     </ul>
   </li>
-  <li><b>Impacto em desempenho:</b> avaliações negativas derrubam posição e renda; uma avaliação ruim pode reduzir receita mensal em > R$ 500. Por isso, itens <b>essenciais</b> podem ser feitos imediatamente para proteger o desempenho do ecossistema.</li>
+  <li><b>Impacto em desempenho — VOCÊ é o maior prejudicado:</b> pela nossa experiência, avaliações negativas <b>derrubam drasticamente</b> o desempenho do imóvel. Uma única avaliação ruim pode reduzir a receita mensal em <b>mais de R$ 500</b>, prejudicar sua posição nas plataformas e afastar hóspedes. O proprietário que não resolve itens essenciais ou estruturais rapidamente é o maior prejudicado. Por isso, itens <b>essenciais</b> podem ser executados <b>imediatamente</b> pela gestão para proteger <b>sua renda e desempenho</b>.</li>
   <li><b>Ecossistema RIOS:</b> cada imóvel impacta a imagem de todos. Negligências prejudicam o próprio resultado e o dos demais.</li>
   <li><b>Pós-execução:</b> toda manutenção executada gera <b>cobrança</b> conforme regras já publicadas abaixo neste Portal (contestação em até 7 dias, pagamento/offset, etc.).</li>
 </ol>
