@@ -531,6 +531,45 @@ export default function TicketDetalhes() {
                   )}
                 </div>
               </div>
+              {isTeamMember && (
+                <Select
+                  value={ticket.status}
+                  onValueChange={async (newStatus: 'novo' | 'em_analise' | 'em_execucao' | 'aguardando_info' | 'concluido' | 'cancelado') => {
+                    try {
+                      const { error } = await supabase
+                        .from('tickets')
+                        .update({ status: newStatus })
+                        .eq('id', id);
+
+                      if (error) throw error;
+
+                      setTicket({ ...ticket, status: newStatus });
+                      toast({
+                        title: "Status atualizado",
+                        description: "O status do ticket foi alterado com sucesso.",
+                      });
+                    } catch (error: any) {
+                      toast({
+                        title: "Erro ao atualizar status",
+                        description: error.message,
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Mudar status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="novo">Novo</SelectItem>
+                    <SelectItem value="em_analise">Em Análise</SelectItem>
+                    <SelectItem value="em_execucao">Em Execução</SelectItem>
+                    <SelectItem value="aguardando_info">Aguardando Info</SelectItem>
+                    <SelectItem value="concluido">Concluído</SelectItem>
+                    <SelectItem value="cancelado">Cancelado</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </CardHeader>
         </Card>
