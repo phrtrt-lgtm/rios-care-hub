@@ -48,19 +48,19 @@ serve(async (req) => {
     let totalSent = 0;
 
     for (const proposal of proposals || []) {
-      // Get owners who haven't responded yet
+      // Get owners who haven't responded yet (no selected_option_id)
       const { data: pendingResponses, error: responsesError } = await supabase
         .from('proposal_responses')
         .select(`
           owner_id,
-          approved,
+          selected_option_id,
           profiles!proposal_responses_owner_id_fkey (
             name,
             email
           )
         `)
         .eq('proposal_id', proposal.id)
-        .is('approved', null);
+        .is('selected_option_id', null);
 
       if (responsesError) {
         console.error('Error fetching pending responses:', responsesError);

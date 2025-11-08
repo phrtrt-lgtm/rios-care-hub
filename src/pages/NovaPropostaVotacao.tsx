@@ -12,8 +12,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft, Send, X, Plus } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const formSchema = z.object({
   title: z.string().min(5, "Título deve ter no mínimo 5 caracteres"),
@@ -22,13 +23,17 @@ const formSchema = z.object({
   category: z.string().optional(),
   deadline: z.string().min(1, "Prazo é obrigatório"),
   property_id: z.string().optional(),
-  owner_ids: z.array(z.string()).min(1, "Selecione pelo menos um proprietário"),
+  target_audience: z.enum(['owners', 'team'], { required_error: "Selecione o público-alvo" }),
+  owner_ids: z.array(z.string()).optional(),
+  team_ids: z.array(z.string()).optional(),
+  options: z.array(z.string()).min(2, "Adicione pelo menos 2 opções"),
 });
 
 export default function NovaPropostaVotacao() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [newOption, setNewOption] = useState("");
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -39,7 +44,10 @@ export default function NovaPropostaVotacao() {
       category: "",
       deadline: "",
       property_id: "",
+      target_audience: 'owners' as const,
       owner_ids: [],
+      team_ids: [],
+      options: [],
     },
   });
 
@@ -73,11 +81,31 @@ export default function NovaPropostaVotacao() {
     },
   });
 
+  // Fetch team members
+  const { data: teamMembers } = useQuery({
+    queryKey: ['team-members'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, name, email')
+        .in('role', ['admin', 'maintenance', 'agent'])
+        .eq('status', 'active')
+        .order('name');
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
+
+      const participantIds = values.target_audience === 'owners' 
+        ? (values.owner_ids || [])
+        : (values.team_ids || []);
 
       // Create proposal
       const { data: proposal, error: proposalError } = await supabase
@@ -89,19 +117,34 @@ export default function NovaPropostaVotacao() {
           category: values.category || null,
           deadline: values.deadline,
           property_id: values.property_id || null,
+          target_audience: values.target_audience,
           created_by: user.id,
-          required_approvals: values.owner_ids.length,
+          required_approvals: participantIds.length,
         })
         .select()
         .single();
 
       if (proposalError) throw proposalError;
 
-      // Create responses for each owner
-      const responses = values.owner_ids.map(owner_id => ({
+      // Create options
+      const optionsData = values.options.map((text, index) => ({
         proposal_id: proposal.id,
-        owner_id,
-        approved: null,
+        option_text: text,
+        order_index: index,
+      }));
+
+      const { error: optionsError } = await supabase
+        .from('proposal_options')
+        .insert(optionsData);
+
+      if (optionsError) throw optionsError;
+
+      // Create responses for each participant  
+      const responses = participantIds.map(userId => ({
+        proposal_id: proposal.id,
+        owner_id: userId,
+        approved: null as any,
+        is_visible_to_owner: values.target_audience === 'owners',
       }));
 
       const { error: responsesError } = await supabase
@@ -116,15 +159,15 @@ export default function NovaPropostaVotacao() {
       });
 
       toast({
-        title: "Proposta criada!",
-        description: "Os proprietários foram notificados.",
+        title: "Votação criada!",
+        description: `${values.target_audience === 'owners' ? 'Os proprietários' : 'A equipe'} foi notificada.`,
       });
 
       navigate('/votacoes');
     } catch (error: any) {
       console.error('Error creating proposal:', error);
       toast({
-        title: "Erro ao criar proposta",
+        title: "Erro ao criar votação",
         description: error.message,
         variant: "destructive",
       });
@@ -134,11 +177,31 @@ export default function NovaPropostaVotacao() {
   };
 
   const toggleOwner = (ownerId: string) => {
-    const current = form.getValues('owner_ids');
+    const current = form.getValues('owner_ids') || [];
     const updated = current.includes(ownerId)
       ? current.filter(id => id !== ownerId)
       : [...current, ownerId];
     form.setValue('owner_ids', updated);
+  };
+
+  const toggleTeamMember = (memberId: string) => {
+    const current = form.getValues('team_ids') || [];
+    const updated = current.includes(memberId)
+      ? current.filter(id => id !== memberId)
+      : [...current, memberId];
+    form.setValue('team_ids', updated);
+  };
+
+  const addOption = () => {
+    if (!newOption.trim()) return;
+    const current = form.getValues('options') || [];
+    form.setValue('options', [...current, newOption.trim()]);
+    setNewOption("");
+  };
+
+  const removeOption = (index: number) => {
+    const current = form.getValues('options') || [];
+    form.setValue('options', current.filter((_, i) => i !== index));
   };
 
   return (
@@ -155,11 +218,37 @@ export default function NovaPropostaVotacao() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Nova Proposta para Votação</CardTitle>
+            <CardTitle>Nova Votação</CardTitle>
           </CardHeader>
           <CardContent>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="target_audience"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Público-alvo *</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          className="flex gap-4"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="owners" id="owners" />
+                            <label htmlFor="owners" className="cursor-pointer">Proprietários</label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="team" id="team" />
+                            <label htmlFor="team" className="cursor-pointer">Equipe</label>
+                          </div>
+                        </RadioGroup>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="title"
@@ -270,27 +359,99 @@ export default function NovaPropostaVotacao() {
 
                 <FormField
                   control={form.control}
-                  name="owner_ids"
+                  name="options"
                   render={() => (
                     <FormItem>
-                      <FormLabel>Proprietários *</FormLabel>
-                      <div className="border rounded-md p-4 max-h-60 overflow-y-auto space-y-2">
-                        {owners?.map((owner) => (
-                          <div key={owner.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              checked={form.watch('owner_ids').includes(owner.id)}
-                              onCheckedChange={() => toggleOwner(owner.id)}
-                            />
-                            <label className="text-sm cursor-pointer" onClick={() => toggleOwner(owner.id)}>
-                              {owner.name} ({owner.email})
-                            </label>
-                          </div>
-                        ))}
+                      <FormLabel>Opções de votação *</FormLabel>
+                      <div className="space-y-3">
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="Digite uma opção..."
+                            value={newOption}
+                            onChange={(e) => setNewOption(e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addOption())}
+                          />
+                          <Button type="button" onClick={addOption} size="icon">
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div className="border rounded-md p-3 space-y-2 min-h-[100px]">
+                          {form.watch('options')?.map((option, index) => (
+                            <div key={index} className="flex items-center justify-between bg-muted p-2 rounded">
+                              <span className="text-sm">{option}</span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeOption(index)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                          {!form.watch('options')?.length && (
+                            <p className="text-sm text-muted-foreground text-center py-4">
+                              Adicione pelo menos 2 opções
+                            </p>
+                          )}
+                        </div>
                       </div>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
+                {form.watch('target_audience') === 'owners' && (
+                  <FormField
+                    control={form.control}
+                    name="owner_ids"
+                    render={() => (
+                      <FormItem>
+                        <FormLabel>Proprietários *</FormLabel>
+                        <div className="border rounded-md p-4 max-h-60 overflow-y-auto space-y-2">
+                          {owners?.map((owner) => (
+                            <div key={owner.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                checked={form.watch('owner_ids')?.includes(owner.id)}
+                                onCheckedChange={() => toggleOwner(owner.id)}
+                              />
+                              <label className="text-sm cursor-pointer" onClick={() => toggleOwner(owner.id)}>
+                                {owner.name} ({owner.email})
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {form.watch('target_audience') === 'team' && (
+                  <FormField
+                    control={form.control}
+                    name="team_ids"
+                    render={() => (
+                      <FormItem>
+                        <FormLabel>Membros da equipe *</FormLabel>
+                        <div className="border rounded-md p-4 max-h-60 overflow-y-auto space-y-2">
+                          {teamMembers?.map((member) => (
+                            <div key={member.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                checked={form.watch('team_ids')?.includes(member.id)}
+                                onCheckedChange={() => toggleTeamMember(member.id)}
+                              />
+                              <label className="text-sm cursor-pointer" onClick={() => toggleTeamMember(member.id)}>
+                                {member.name} ({member.email})
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 <div className="flex gap-4">
                   <Button
@@ -311,7 +472,7 @@ export default function NovaPropostaVotacao() {
                     ) : (
                       <>
                         <Send className="mr-2 h-4 w-4" />
-                        Criar Proposta
+                        Criar Votação
                       </>
                     )}
                   </Button>

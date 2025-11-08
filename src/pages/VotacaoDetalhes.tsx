@@ -11,6 +11,7 @@ import { ArrowLeft, CheckCircle2, XCircle, Upload } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 export default function VotacaoDetalhes() {
   const { id } = useParams();
@@ -20,6 +21,7 @@ export default function VotacaoDetalhes() {
   const queryClient = useQueryClient();
   const [note, setNote] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [selectedOption, setSelectedOption] = useState<string>("");
 
   const isTeam = profile?.role && ['admin', 'maintenance'].includes(profile.role);
 
@@ -37,6 +39,8 @@ export default function VotacaoDetalhes() {
             note,
             attachment_path,
             responded_at,
+            selected_option_id,
+            is_visible_to_owner,
             profiles!proposal_responses_owner_id_fkey (
               name,
               email
@@ -46,6 +50,11 @@ export default function VotacaoDetalhes() {
             id,
             file_name,
             file_path
+          ),
+          proposal_options (
+            id,
+            option_text,
+            order_index
           )
         `)
         .eq('id', id)
@@ -61,7 +70,11 @@ export default function VotacaoDetalhes() {
   );
 
   const respondMutation = useMutation({
-    mutationFn: async ({ approved }: { approved: boolean }) => {
+    mutationFn: async () => {
+      if (!selectedOption) {
+        throw new Error('Selecione uma opção');
+      }
+
       let attachmentPath = null;
 
       // Upload file if provided
@@ -82,7 +95,7 @@ export default function VotacaoDetalhes() {
         const { error } = await supabase
           .from('proposal_responses')
           .update({
-            approved,
+            selected_option_id: selectedOption,
             note: note || null,
             attachment_path: attachmentPath,
             responded_at: new Date().toISOString(),
@@ -94,13 +107,14 @@ export default function VotacaoDetalhes() {
         // Create new response (shouldn't happen but just in case)
         const { error } = await supabase
           .from('proposal_responses')
-          .insert({
-            proposal_id: id,
-            owner_id: profile?.id,
-            approved,
+          .insert([{
+            proposal_id: id as string,
+            owner_id: profile?.id as string,
+            selected_option_id: selectedOption,
             note: note || null,
             attachment_path: attachmentPath,
-          });
+            approved: null as any,
+          }]);
 
         if (error) throw error;
       }
@@ -113,6 +127,7 @@ export default function VotacaoDetalhes() {
       });
       setNote("");
       setFile(null);
+      setSelectedOption("");
     },
     onError: (error: any) => {
       toast({
@@ -132,9 +147,11 @@ export default function VotacaoDetalhes() {
   }
 
   const responses = proposal.proposal_responses || [];
-  const approved = responses.filter((r: any) => r.approved === true).length;
-  const rejected = responses.filter((r: any) => r.approved === false).length;
-  const pending = responses.filter((r: any) => r.approved === null).length;
+  const options = proposal.proposal_options || [];
+  const optionVotes = options.map((opt: any) => ({
+    ...opt,
+    votes: responses.filter((r: any) => r.selected_option_id === opt.id).length,
+  }));
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
@@ -186,19 +203,16 @@ export default function VotacaoDetalhes() {
             </div>
 
             <div>
-              <h3 className="font-semibold mb-3">Status das Respostas</h3>
-              <div className="flex gap-6 text-sm">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-green-600" />
-                  <span>Aprovaram: <strong>{approved}</strong></span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <XCircle className="h-5 w-5 text-red-600" />
-                  <span>Rejeitaram: <strong>{rejected}</strong></span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="h-5 w-5 text-yellow-600">⏱</span>
-                  <span>Pendentes: <strong>{pending}</strong></span>
+              <h3 className="font-semibold mb-3">Resultado da Votação</h3>
+              <div className="space-y-2">
+                {optionVotes.map((option: any) => (
+                  <div key={option.id} className="flex items-center justify-between p-3 border rounded-md">
+                    <span>{option.option_text}</span>
+                    <Badge variant="secondary">{option.votes} voto{option.votes !== 1 && 's'}</Badge>
+                  </div>
+                ))}
+                <div className="flex gap-2 text-sm text-muted-foreground mt-3">
+                  <span>Total de respondentes: {responses.filter((r: any) => r.selected_option_id).length}/{responses.length}</span>
                 </div>
               </div>
             </div>
@@ -207,37 +221,48 @@ export default function VotacaoDetalhes() {
               <div>
                 <h3 className="font-semibold mb-3">Respostas Individuais</h3>
                 <div className="space-y-2">
-                  {responses.map((response: any) => (
-                    <div key={response.id} className="flex items-center justify-between p-3 border rounded-md">
-                      <div>
-                        <p className="font-medium">{response.profiles?.name}</p>
-                        {response.note && (
-                          <p className="text-sm text-muted-foreground mt-1">{response.note}</p>
-                        )}
+                  {responses.filter((r: any) => r.selected_option_id).map((response: any) => {
+                    const selectedOpt = options.find((o: any) => o.id === response.selected_option_id);
+                    return (
+                      <div key={response.id} className="flex items-center justify-between p-3 border rounded-md">
+                        <div>
+                          <p className="font-medium">{response.profiles?.name}</p>
+                          {response.note && (
+                            <p className="text-sm text-muted-foreground mt-1">{response.note}</p>
+                          )}
+                        </div>
+                        <Badge variant="secondary">{selectedOpt?.option_text}</Badge>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {response.approved === true && (
-                          <Badge className="bg-green-600">Aprovou</Badge>
-                        )}
-                        {response.approved === false && (
-                          <Badge variant="destructive">Rejeitou</Badge>
-                        )}
-                        {response.approved === null && (
-                          <Badge variant="secondary">Pendente</Badge>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
 
-            {!isTeam && myResponse && (
+            {!isTeam && myResponse && myResponse.is_visible_to_owner && (
               <Card className="bg-muted/50">
                 <CardContent className="pt-6">
                   <h3 className="font-semibold mb-4">Sua Resposta</h3>
                   
                   <div className="space-y-4">
+                    <div>
+                      <Label>Escolha sua opção *</Label>
+                      <RadioGroup
+                        value={selectedOption}
+                        onValueChange={setSelectedOption}
+                        className="mt-2 space-y-2"
+                      >
+                        {options.map((option: any) => (
+                          <div key={option.id} className="flex items-center space-x-2">
+                            <RadioGroupItem value={option.id} id={option.id} />
+                            <label htmlFor={option.id} className="cursor-pointer flex-1">
+                              {option.option_text}
+                            </label>
+                          </div>
+                        ))}
+                      </RadioGroup>
+                    </div>
+
                     <div>
                       <Label>Observação (opcional)</Label>
                       <Textarea
@@ -257,25 +282,13 @@ export default function VotacaoDetalhes() {
                       />
                     </div>
 
-                    <div className="flex gap-3">
-                      <Button
-                        onClick={() => respondMutation.mutate({ approved: true })}
-                        disabled={respondMutation.isPending}
-                        className="flex-1 bg-green-600 hover:bg-green-700"
-                      >
-                        <CheckCircle2 className="mr-2 h-4 w-4" />
-                        Aprovar
-                      </Button>
-                      <Button
-                        onClick={() => respondMutation.mutate({ approved: false })}
-                        disabled={respondMutation.isPending}
-                        variant="destructive"
-                        className="flex-1"
-                      >
-                        <XCircle className="mr-2 h-4 w-4" />
-                        Rejeitar
-                      </Button>
-                    </div>
+                    <Button
+                      onClick={() => respondMutation.mutate()}
+                      disabled={respondMutation.isPending || !selectedOption}
+                      className="w-full"
+                    >
+                      {respondMutation.isPending ? "Enviando..." : "Enviar Resposta"}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>

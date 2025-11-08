@@ -928,36 +928,74 @@ export type Database = {
           },
         ]
       }
+      proposal_options: {
+        Row: {
+          created_at: string
+          id: string
+          option_text: string
+          order_index: number
+          proposal_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          option_text: string
+          order_index?: number
+          proposal_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          option_text?: string
+          order_index?: number
+          proposal_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_options_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposal_responses: {
         Row: {
           approved: boolean
           attachment_path: string | null
           created_at: string
           id: string
+          is_visible_to_owner: boolean
           note: string | null
           owner_id: string
           proposal_id: string
           responded_at: string
+          selected_option_id: string | null
         }
         Insert: {
           approved: boolean
           attachment_path?: string | null
           created_at?: string
           id?: string
+          is_visible_to_owner?: boolean
           note?: string | null
           owner_id: string
           proposal_id: string
           responded_at?: string
+          selected_option_id?: string | null
         }
         Update: {
           approved?: boolean
           attachment_path?: string | null
           created_at?: string
           id?: string
+          is_visible_to_owner?: boolean
           note?: string | null
           owner_id?: string
           proposal_id?: string
           responded_at?: string
+          selected_option_id?: string | null
         }
         Relationships: [
           {
@@ -965,6 +1003,13 @@ export type Database = {
             columns: ["proposal_id"]
             isOneToOne: false
             referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposal_responses_selected_option_id_fkey"
+            columns: ["selected_option_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_options"
             referencedColumns: ["id"]
           },
         ]
@@ -983,6 +1028,7 @@ export type Database = {
           property_id: string | null
           required_approvals: number | null
           status: string
+          target_audience: string
           title: string
           updated_at: string
         }
@@ -999,6 +1045,7 @@ export type Database = {
           property_id?: string | null
           required_approvals?: number | null
           status?: string
+          target_audience?: string
           title: string
           updated_at?: string
         }
@@ -1015,6 +1062,7 @@ export type Database = {
           property_id?: string | null
           required_approvals?: number | null
           status?: string
+          target_audience?: string
           title?: string
           updated_at?: string
         }
