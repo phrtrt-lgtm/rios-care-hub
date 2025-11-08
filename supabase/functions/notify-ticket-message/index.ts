@@ -87,7 +87,7 @@ const handler = async (req: Request): Promise<Response> => {
       // Owner sent message, notify team - filter by ticket type permissions
       const template = await getTemplate(supabase, "ticket_message_team");
       
-      if (adminEmails.length > 0 && adminEmails[0] !== "" && template) {
+      if (template) {
         // Get team members with their roles
         const { data: teamMembers } = await supabase
           .from("profiles")
