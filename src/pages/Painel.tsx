@@ -81,6 +81,17 @@ export default function Painel() {
                 </>
               )}
               
+              {profile?.role === "maintenance" && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate("/admin/vistorias")}
+                  title="Vistorias de Faxina"
+                >
+                  <Sparkles className="h-5 w-5" />
+                </Button>
+              )}
+              
               <Dialog>
                 <DialogTrigger asChild>
                   <Button 
@@ -195,7 +206,7 @@ export default function Painel() {
               </Button>
             )}
 
-            {profile?.role === "admin" && (
+            {(profile?.role === "admin" || profile?.role === "maintenance") && (
               <>
                 <Button 
                   size="lg" 
@@ -300,7 +311,7 @@ export default function Painel() {
         <div>
           <h3 className="mb-4 text-xl font-semibold">Outras Ações</h3>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {profile?.role === "admin" && (
+          {(profile?.role === "admin" || profile?.role === "maintenance") && (
             <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/admin/cadastrar-usuario")}>
               <CardHeader>
                 <CardTitle>Cadastrar Usuário</CardTitle>
@@ -317,7 +328,7 @@ export default function Painel() {
             </Card>
           )}
 
-          {profile?.role === "admin" && (
+          {(profile?.role === "admin" || profile?.role === "maintenance") && (
             <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/aprovacoes")}>
               <CardHeader>
                 <CardTitle>Aprovações Pendentes</CardTitle>
