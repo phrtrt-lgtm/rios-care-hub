@@ -36,101 +36,94 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     console.log('[useAuth] Initializing');
     let isMounted = true;
 
-    const initAuth = async () => {
-      try {
-        console.log('[useAuth] Starting initAuth');
-        // Check if user should be logged out (browser was closed and "remember me" was not checked)
-        const rememberMe = localStorage.getItem("rememberMe");
-        const tempSession = sessionStorage.getItem("tempSession");
-        
-        if (!rememberMe && !tempSession) {
-          try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-              console.log('[useAuth] No remember me, signing out');
-              await supabase.auth.signOut();
-              if (isMounted) setLoading(false);
-              return;
-            }
-          } catch (error) {
-            console.error('[useAuth] Error checking session for remember me:', error);
-          }
-        }
-
-        // Check for existing session with timeout
-        console.log('[useAuth] Checking for existing session');
-        const sessionPromise = supabase.auth.getSession();
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Session check timeout')), 5000)
-        );
-        
-        const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as any;
-        
-        if (!isMounted) return;
-        
-        console.log('[useAuth] Session found:', !!session);
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          console.log('[useAuth] Fetching profile for user:', session.user.id);
-          const { data, error } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", session.user.id)
-            .single();
-          
-          if (error) {
-            console.error('[useAuth] Error fetching profile:', error);
-          }
-          
-          console.log('[useAuth] Profile data:', data);
-          if (isMounted) {
-            setProfile(data);
-            setLoading(false);
-          }
-        } else {
-          console.log('[useAuth] No session, setting loading false');
-          if (isMounted) setLoading(false);
-        }
-      } catch (error) {
-        console.error('[useAuth] Error in initAuth:', error);
-        if (isMounted) {
-          setSession(null);
-          setUser(null);
-          setProfile(null);
-          setLoading(false);
-        }
-      }
-    };
-
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!isMounted) return;
         
+        console.log('[useAuth] Auth state changed:', event, !!session);
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          const { data } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", session.user.id)
-            .single();
-          
-          if (isMounted) {
-            setProfile(data);
+          console.log('[useAuth] Fetching profile for user:', session.user.id);
+          try {
+            const { data, error } = await supabase
+              .from("profiles")
+              .select("*")
+              .eq("id", session.user.id)
+              .single();
+            
+            if (error) {
+              console.error('[useAuth] Error fetching profile:', error);
+            }
+            
+            console.log('[useAuth] Profile data:', data);
+            if (isMounted) {
+              setProfile(data);
+            }
+          } catch (error) {
+            console.error('[useAuth] Exception fetching profile:', error);
           }
         } else {
           setProfile(null);
         }
         
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     );
 
-    initAuth();
+    // Initialize session - only once
+    const initSession = async () => {
+      try {
+        console.log('[useAuth] Getting initial session');
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('[useAuth] Error getting session:', error);
+          if (isMounted) {
+            setLoading(false);
+          }
+          return;
+        }
+        
+        if (!isMounted) return;
+        
+        console.log('[useAuth] Initial session:', !!session);
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          console.log('[useAuth] Fetching initial profile');
+          try {
+            const { data } = await supabase
+              .from("profiles")
+              .select("*")
+              .eq("id", session.user.id)
+              .single();
+            
+            if (isMounted) {
+              setProfile(data);
+            }
+          } catch (error) {
+            console.error('[useAuth] Error fetching initial profile:', error);
+          }
+        }
+        
+        if (isMounted) {
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('[useAuth] Error in initSession:', error);
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    initSession();
 
     return () => {
       isMounted = false;
