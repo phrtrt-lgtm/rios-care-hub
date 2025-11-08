@@ -218,18 +218,8 @@ Deno.serve(async (req) => {
           const blob = new Blob([uint8Array], { type: attachment.mime_type || 'application/octet-stream' });
           const fileName = attachment.file_name || `file-${attachment.id}`;
           
-          // Monday.com file upload GraphQL mutation
-          const uploadQuery = `mutation ($file: File!) {
-            add_file_to_column (
-              item_id: ${mondayItemId}, 
-              column_id: "${colAttachments}", 
-              file: $file
-            ) {
-              id
-            }
-          }`;
-          
-          formData.append('query', uploadQuery);
+          // Monday.com requires specific format for file uploads
+          formData.append('query', 'mutation add_file($file: File!) { add_file_to_column(item_id: ' + mondayItemId + ', column_id: "' + colAttachments + '", file: $file) { id } }');
           formData.append('variables[file]', blob, fileName);
 
           const uploadResponse = await fetch('https://api.monday.com/v2/file', {
