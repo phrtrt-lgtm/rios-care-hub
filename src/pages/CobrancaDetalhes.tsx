@@ -54,6 +54,15 @@ interface ChargeMessage {
     photo_url: string | null;
     role: string;
   };
+  attachments?: ChargeMessageAttachment[];
+}
+
+interface ChargeMessageAttachment {
+  id: string;
+  file_name: string;
+  file_path: string;
+  file_size: number | null;
+  mime_type: string | null;
 }
 
 interface ChargeAttachment {
@@ -170,8 +179,8 @@ export default function CobrancaDetalhes() {
       .order('created_at', { ascending: true });
 
     if (!error && messagesData) {
-      // Buscar perfis dos autores
-      const messagesWithProfiles = await Promise.all(
+      // Buscar perfis dos autores e anexos
+      const messagesWithProfilesAndAttachments = await Promise.all(
         messagesData.map(async (msg) => {
           const { data: profile } = await supabase
             .from('profiles')
@@ -179,14 +188,21 @@ export default function CobrancaDetalhes() {
             .eq('id', msg.author_id)
             .single();
           
+          // Buscar anexos da mensagem
+          const { data: attachments } = await supabase
+            .from('charge_message_attachments')
+            .select('*')
+            .eq('message_id', msg.id);
+          
           return {
             ...msg,
-            profiles: profile || { name: 'Desconhecido', photo_url: null, role: 'owner' }
+            profiles: profile || { name: 'Desconhecido', photo_url: null, role: 'owner' },
+            attachments: attachments || []
           };
         })
       );
       
-      setMessages(messagesWithProfiles);
+      setMessages(messagesWithProfilesAndAttachments);
     }
   };
 
@@ -254,10 +270,23 @@ export default function CobrancaDetalhes() {
       setSending(true);
       setUploading(true);
 
-      // Upload de anexos primeiro
-      const uploadedAttachments = [];
+      // Criar mensagem primeiro
+      const { data: messageData, error: messageError } = await supabase
+        .from('charge_messages')
+        .insert({
+          charge_id: id,
+          author_id: user?.id,
+          body: newMessage || '(anexos)',
+          is_internal: false
+        })
+        .select()
+        .single();
+
+      if (messageError) throw messageError;
+
+      // Upload de anexos e associação com a mensagem
       for (const file of selectedFiles) {
-        const filePath = `charges/${id}/${Date.now()}_${file.name}`;
+        const filePath = `charges/${id}/messages/${Date.now()}_${file.name}`;
         
         const { error: uploadError } = await supabase.storage
           .from('attachments')
@@ -265,40 +294,24 @@ export default function CobrancaDetalhes() {
 
         if (uploadError) throw uploadError;
 
-        const { data: attachmentData, error: attachmentError } = await supabase
-          .from('charge_attachments')
+        const { error: attachmentError } = await supabase
+          .from('charge_message_attachments')
           .insert({
+            message_id: messageData.id,
             charge_id: id,
             file_name: file.name,
             file_path: filePath,
             file_size: file.size,
             mime_type: file.type,
             created_by: user?.id
-          })
-          .select()
-          .single();
-
-        if (attachmentError) throw attachmentError;
-        uploadedAttachments.push(attachmentData);
-      }
-
-      // Enviar mensagem
-      if (newMessage.trim()) {
-        const { error } = await supabase
-          .from('charge_messages')
-          .insert({
-            charge_id: id,
-            author_id: user?.id,
-            body: newMessage,
-            is_internal: false
           });
 
-        if (error) throw error;
+        if (attachmentError) throw attachmentError;
       }
 
       setNewMessage("");
       setSelectedFiles([]);
-      await fetchAttachments();
+      await fetchMessages();
       
       toast({
         title: "Mensagem enviada!",
@@ -895,7 +908,51 @@ export default function CobrancaDetalhes() {
                     </div>
                   </div>
                 </div>
-                <p className="text-muted-foreground whitespace-pre-wrap">{message.body}</p>
+                {message.body && message.body !== '(anexos)' && (
+                  <p className="text-muted-foreground whitespace-pre-wrap mb-3">{message.body}</p>
+                )}
+                
+                {/* Galeria de anexos da mensagem */}
+                {message.attachments && message.attachments.length > 0 && (
+                  <div className="mt-3">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                      {message.attachments.map((attachment) => {
+                        const isImage = attachment.mime_type?.startsWith('image/');
+                        const attachmentUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/attachments/${attachment.file_path}`;
+                        
+                        return (
+                          <div key={attachment.id} className="relative aspect-square rounded-lg overflow-hidden border bg-muted group">
+                            {isImage ? (
+                              <>
+                                <img 
+                                  src={attachmentUrl}
+                                  alt={attachment.file_name}
+                                  className="w-full h-full object-cover cursor-pointer transition-transform group-hover:scale-105"
+                                  onClick={() => setSelectedImage({ url: attachmentUrl, name: attachment.file_name })}
+                                />
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                  <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    onClick={() => setSelectedImage({ url: attachmentUrl, name: attachment.file_name })}
+                                    className="h-8 w-8 p-0"
+                                  >
+                                    <ZoomIn className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </>
+                            ) : (
+                              <div className="w-full h-full flex flex-col items-center justify-center p-2 cursor-pointer hover:bg-accent">
+                                <FileText className="h-8 w-8 text-muted-foreground mb-1" />
+                                <span className="text-xs text-center truncate w-full px-1">{attachment.file_name}</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}
