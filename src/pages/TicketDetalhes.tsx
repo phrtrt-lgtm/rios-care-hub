@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Send, Paperclip, Loader2, Sparkles, FileText, ChevronDown, X, Download, ZoomIn } from "lucide-react";
+import { ArrowLeft, Send, Paperclip, Loader2, Sparkles, FileText, ChevronDown, X, Download, ZoomIn, Upload } from "lucide-react";
 import { AttachmentBubble } from "@/components/AttachmentBubble";
 import { MediaGallery } from "@/components/MediaGallery";
 import { LoadingScreen } from "@/components/LoadingScreen";
@@ -81,8 +81,9 @@ export default function TicketDetalhes() {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryStartIndex, setGalleryStartIndex] = useState(0);
   const [allMediaItems, setAllMediaItems] = useState<Attachment[]>([]);
+  const [exportingToMonday, setExportingToMonday] = useState(false);
 
-  const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent';
+  const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance';
   const canUpdate = ticket?.status !== 'concluido' && ticket?.status !== 'cancelado';
 
   useEffect(() => {
@@ -506,14 +507,87 @@ export default function TicketDetalhes() {
       .slice(0, 2);
   };
 
+  const exportToMonday = async () => {
+    if (!id) return;
+
+    setExportingToMonday(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase.functions.invoke('export-ticket-to-monday', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        },
+        body: { ticketId: id }
+      });
+
+      if (error) throw error;
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      toast({
+        title: "Ticket exportado!",
+        description: data?.mondayUrl 
+          ? "Ticket criado no Monday.com com sucesso!" 
+          : "Ticket exportado para o Monday.",
+      });
+
+      // Log columns found for user to configure
+      if (data?.columnsFound) {
+        console.log('Colunas disponíveis no Monday:', data.columnsFound);
+        console.log('Configure os IDs das colunas nos secrets do Supabase:');
+        data.columnsFound.forEach((col: any) => {
+          console.log(`- ${col.title} (${col.type}): MONDAY_COL_${col.title.toUpperCase().replace(/ /g, '_')} = "${col.id}"`);
+        });
+      }
+
+      if (data?.mondayUrl) {
+        window.open(data.mondayUrl, '_blank');
+      }
+    } catch (error: any) {
+      console.error('Error exporting to Monday:', error);
+      toast({
+        title: "Erro ao exportar",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setExportingToMonday(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       <header className="border-b bg-card/50 backdrop-blur-sm">
-        <div className="container mx-auto flex h-16 items-center px-4">
+        <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Voltar
           </Button>
+          
+          {isTeamMember && (
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={exportToMonday}
+              disabled={exportingToMonday}
+            >
+              {exportingToMonday ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Exportando...
+                </>
+              ) : (
+                <>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Exportar para Monday
+                </>
+              )}
+            </Button>
+          )}
         </div>
       </header>
 
