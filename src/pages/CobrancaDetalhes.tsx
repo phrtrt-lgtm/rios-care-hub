@@ -181,7 +181,19 @@ export default function CobrancaDetalhes() {
       .eq('charge_id', id)
       .order('created_at', { ascending: true });
 
-    if (!error && messagesData) {
+    if (error) {
+      console.error('Erro ao buscar mensagens:', error);
+      toast({
+        title: "Erro ao carregar mensagens",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (messagesData) {
+      console.log('Mensagens carregadas:', messagesData);
+      
       // Buscar anexos de cada mensagem
       const messagesWithAttachments = await Promise.all(
         messagesData.map(async (msg) => {
@@ -199,6 +211,7 @@ export default function CobrancaDetalhes() {
         })
       );
       
+      console.log('Mensagens com anexos:', messagesWithAttachments);
       setMessages(messagesWithAttachments);
     }
   };

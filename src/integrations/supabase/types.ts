@@ -541,6 +541,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "charge_messages_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "charge_messages_charge_id_fkey"
             columns: ["charge_id"]
             isOneToOne: false
