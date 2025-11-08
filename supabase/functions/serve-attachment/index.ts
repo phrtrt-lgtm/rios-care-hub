@@ -61,8 +61,20 @@ serve(async (req) => {
       });
     }
 
-    // Get attachment metadata
-    const { data: attachment, error: attachmentError } = await supabase
+    // Check user profile first
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent';
+
+    // Try to get attachment from charge_attachments first
+    let attachment: any = null;
+    let ownerId: string | null = null;
+
+    const { data: chargeAttachment } = await supabase
       .from("charge_attachments")
       .select(`
         *,
@@ -73,7 +85,38 @@ serve(async (req) => {
       .eq("id", attachmentId)
       .single();
 
-    if (attachmentError || !attachment) {
+    if (chargeAttachment) {
+      attachment = chargeAttachment;
+      ownerId = chargeAttachment.charges.owner_id;
+    } else {
+      // Try charge_message_attachments
+      const { data: messageAttachment } = await supabase
+        .from("charge_message_attachments")
+        .select(`
+          *,
+          charge_messages!inner(
+            charge_id
+          )
+        `)
+        .eq("id", attachmentId)
+        .single();
+
+      if (messageAttachment) {
+        // Get the charge to check owner
+        const { data: charge } = await supabase
+          .from("charges")
+          .select("owner_id")
+          .eq("id", messageAttachment.charge_messages.charge_id)
+          .single();
+
+        if (charge) {
+          attachment = messageAttachment;
+          ownerId = charge.owner_id;
+        }
+      }
+    }
+
+    if (!attachment) {
       return new Response(JSON.stringify({ error: "Attachment not found" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -81,14 +124,7 @@ serve(async (req) => {
     }
 
     // Check permission: user is owner OR team member
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent';
-    const isOwner = attachment.charges.owner_id === user.id;
+    const isOwner = ownerId === user.id;
 
     if (!isTeamMember && !isOwner) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
