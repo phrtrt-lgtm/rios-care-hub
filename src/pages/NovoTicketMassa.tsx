@@ -13,6 +13,7 @@ import { ArrowLeft, Send, Upload, X, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { sanitizeFilename } from "@/lib/storage";
+import { VoiceToTextInput } from "@/components/VoiceToTextInput";
 
 interface Owner {
   id: string;
@@ -351,10 +352,14 @@ const NovoTicketMassa = () => {
                 <div className="space-y-2">
                   <div className="flex gap-2">
                     <Input
-                      placeholder="Digite um comando para a IA gerar a descrição..."
+                      placeholder="Digite ou grave um comando para a IA gerar a descrição..."
                       value={aiPrompt}
                       onChange={(e) => setAiPrompt(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), generateDescription())}
+                    />
+                    <VoiceToTextInput
+                      onTranscript={(text) => setAiPrompt(text)}
+                      disabled={isGenerating}
                     />
                     <Button 
                       type="button" 

@@ -15,6 +15,7 @@ import { ArrowLeft, X, Plus, Sparkles, Upload, FileIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { buildStorageKey } from "@/lib/storage";
+import { VoiceToTextInput } from "@/components/VoiceToTextInput";
 
 const formSchema = z.object({
   title: z.string().min(5, "Título deve ter no mínimo 5 caracteres"),
@@ -360,10 +361,14 @@ export default function NovaPropostaVotacao() {
                       <div className="space-y-2">
                         <div className="flex gap-2">
                           <Input
-                            placeholder="Digite um comando para a IA gerar a descrição..."
+                            placeholder="Digite ou grave um comando para a IA gerar a descrição..."
                             value={aiPrompt}
                             onChange={(e) => setAiPrompt(e.target.value)}
                             onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), generateDescription())}
+                          />
+                          <VoiceToTextInput
+                            onTranscript={(text) => setAiPrompt(text)}
+                            disabled={isGenerating}
                           />
                           <Button 
                             type="button" 
