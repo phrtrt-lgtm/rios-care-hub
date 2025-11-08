@@ -157,6 +157,19 @@ Deno.serve(async (req) => {
       .update({ updated_at: new Date().toISOString() })
       .eq('id', ticketId)
 
+    // Envia notificação
+    try {
+      await supabase.functions.invoke('notify-ticket-message', {
+        body: {
+          messageId: messageData.id,
+          ticketId: ticketId
+        }
+      })
+      console.log(`📧 Notification sent for message ${messageData.id}`)
+    } catch (notifyError) {
+      console.error('⚠️ Notification error (non-critical):', notifyError)
+    }
+
     console.log(`✅ Created message ${messageData.id} with ${insertedAttachments.length} attachments for ticket ${ticketId}`)
 
     return new Response(JSON.stringify({
