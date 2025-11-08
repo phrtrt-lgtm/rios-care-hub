@@ -263,7 +263,7 @@ Deno.serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         mondayItemId,
-        mondayUrl: `https://rios.monday.com/boards/${boardId}/pulses/${mondayItemId}`,
+        mondayUrl: `https://phrtrts-team.monday.com/boards/${boardId}/pulses/${mondayItemId}`,
         columnsFound: columnsData?.data?.boards?.[0]?.columns
       }),
       { 
