@@ -85,17 +85,31 @@ const handler = async (req: Request): Promise<Response> => {
         });
       }
     } else {
-      // Owner sent message, notify team
+      // Owner sent message, notify team - only maintenance and admin can see charges
       const template = await getTemplate(supabase, "charge_message_team");
       
       if (adminEmails.length > 0 && adminEmails[0] !== "" && template) {
-        await resend.emails.send({
-          from: "RIOS <sistema@rioshospedagens.com.br>",
-          reply_to: "rioslagoon@gmail.com",
-          to: adminEmails,
-          subject: renderTemplate(template.subject, variables),
-          html: renderTemplate(template.body_html, variables),
-        });
+        // Get team members with their roles - only maintenance and admin can see charges
+        const { data: teamMembers } = await supabase
+          .from("profiles")
+          .select("id, email, role")
+          .in("role", ["admin", "maintenance"]);
+
+        const eligibleEmails = (teamMembers || [])
+          .filter(m => m.email)
+          .map(m => m.email);
+
+        // Only send if there are eligible recipients
+        if (eligibleEmails.length > 0) {
+          await resend.emails.send({
+            from: "RIOS <sistema@rioshospedagens.com.br>",
+            reply_to: "rioslagoon@gmail.com",
+            to: eligibleEmails,
+            subject: renderTemplate(template.subject, variables),
+            html: renderTemplate(template.body_html, variables),
+          });
+          console.log(`Charge message notification sent to ${eligibleEmails.length} team members`);
+        }
       }
     }
 
