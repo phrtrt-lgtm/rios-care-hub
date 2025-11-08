@@ -92,32 +92,16 @@ Deno.serve(async (req) => {
     const columnsData = await columnsResponse.json();
     console.log('Monday board columns:', JSON.stringify(columnsData?.data?.boards?.[0]?.columns, null, 2));
 
-    // Get column IDs from environment or use defaults
-    const colTicketType = Deno.env.get('MONDAY_COL_TICKET_TYPE') || 'tipo_do_chamado';
+    // Get column IDs from environment or use defaults from Monday board logs
     const colDate = Deno.env.get('MONDAY_COL_TICKET_DATE') || 'data';
-    const colOwner = Deno.env.get('MONDAY_COL_OWNER') || 'proprietario';
-    const colUnit = Deno.env.get('MONDAY_COL_TICKET_UNIT') || 'unidade';
-    const colTitle = Deno.env.get('MONDAY_COL_TICKET_TITLE') || 'titulo';
-    const colDescription = Deno.env.get('MONDAY_COL_DESCRIPTION') || 'descricao';
-    const colAttachments = Deno.env.get('MONDAY_COL_TICKET_ATTACHMENTS') || 'arquivos';
-
-    // Prepare ticket type mapping
-    const ticketTypeMap: Record<string, string> = {
-      'duvida': 'Dúvida',
-      'informacao': 'Informação',
-      'conversar_hospedes': 'Conversar com Hóspedes',
-      'bloqueio_data': 'Bloqueio de Data',
-      'manutencao': 'Manutenção',
-      'cobranca': 'Cobrança'
-    };
+    const colOwner = Deno.env.get('MONDAY_COL_TICKET_OWNER') || 'text_mkxg7kvy'; // Proprietário
+    const colUnit = Deno.env.get('MONDAY_COL_TICKET_UNIT') || 'text_mkxghmwg'; // Unidade
+    const colTitle = Deno.env.get('MONDAY_COL_TICKET_TITLE') || 'text_mkxgmm85'; // Título
+    const colDescription = Deno.env.get('MONDAY_COL_TICKET_DESCRIPTION') || 'text_mkxg9nq'; // Descrição
+    const colAttachments = Deno.env.get('MONDAY_COL_TICKET_ATTACHMENTS') || 'file_mkxg8wzx'; // Arquivos
 
     // Build column values
     const columnValues: Record<string, any> = {};
-    
-    // Ticket type
-    if (ticket.ticket_type) {
-      columnValues[colTicketType] = ticketTypeMap[ticket.ticket_type] || ticket.ticket_type;
-    }
 
     // Date
     if (ticket.created_at) {
