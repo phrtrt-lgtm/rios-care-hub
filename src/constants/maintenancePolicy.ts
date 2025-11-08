@@ -1,57 +1,41 @@
 export const MAINTENANCE_POLICY_VERSION = "2026-01-01";
 
 export const MAINTENANCE_POLICY_HTML = `
-<h2 style="margin:0 0 16px 0; color: #1f2937;">🏠 Política de Manutenção — Vigente em 01/01/2026</h2>
+<h2 style="margin:0 0 8px 0; font-size: 16px; color: #1f2937;">🏠 Política de Manutenção — Vigente em 01/01/2026</h2>
 
-<p style="margin-bottom: 16px; font-size: 15px; line-height: 1.6;">Para garantir <b>qualidade, segurança e desempenho</b> nas plataformas, a manutenção preventiva e corretiva passa a seguir estas regras:</p>
+<p style="margin-bottom: 8px; font-size: 13px; line-height: 1.5;">Para garantir qualidade, segurança e desempenho nas plataformas, a manutenção preventiva e corretiva passa a seguir estas regras:</p>
 
-<div style="background: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
-  <h3 style="margin: 0 0 12px 0; font-size: 16px; color: #1f2937;">💬 Chamados de Manutenção</h3>
-  <p style="margin: 0; line-height: 1.6;">Tanto o <b>proprietário</b> quanto a <b>gestão</b> podem abrir chamados identificando problemas na unidade. Ao abrir, detalharemos evidências (fotos/vídeos) e impacto operacional. <b>Dentro dos chamados</b>, poderemos conversar, responder dúvidas, enviar anexos e você receberá <b>notificações por e-mail</b> de cada atualização.</p>
+<div style="background: #f9fafb; padding: 8px; border-radius: 6px; margin-bottom: 8px;">
+  <p style="margin: 0 0 4px 0; font-size: 13px; font-weight: bold;">💬 Chamados de Manutenção</p>
+  <p style="margin: 0; font-size: 12px; line-height: 1.4;">Tanto o <b>proprietário</b> quanto a <b>gestão</b> podem abrir chamados. Dentro deles, poderemos conversar, enviar anexos e você receberá <b>notificações por e-mail</b>.</p>
 </div>
 
-<div style="background: #fef3c7; padding: 16px; border-radius: 8px; margin-bottom: 16px; border-left: 4px solid #f59e0b;">
-  <h3 style="margin: 0 0 12px 0; font-size: 16px; color: #92400e;">⚡ Classificação dos Itens</h3>
-  
-  <div style="margin-bottom: 12px;">
-    <p style="margin: 0 0 8px 0; font-weight: bold; color: #dc2626;">🚨 Essencial (atendimento imediato)</p>
-    <p style="margin: 0; line-height: 1.6; font-size: 14px;">Geladeira, fogão, micro-ondas, água quente/chuveiro, energia, infiltração grave, fechadura/portas, piscina não utilizável (em imóveis com piscina), e itens cuja falha <b>inviabilize a estadia</b>. Podem ser executados <b>de imediato</b> pela gestão, sobretudo em check-in no mesmo dia.</p>
-  </div>
-  
-  <div>
-    <p style="margin: 0 0 8px 0; font-weight: bold; color: #2563eb;">🔧 Estrutural (pode aguardar entre estadias)</p>
-    <p style="margin: 0; line-height: 1.6; font-size: 14px;">Piso danificado, tomadas/placas, reforma/ajustes de mobília, troca de cama/colchão, pintura etc. Abriremos chamado e você decide o encaminhamento.</p>
-  </div>
+<div style="background: #fef3c7; padding: 8px; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #f59e0b;">
+  <p style="margin: 0 0 6px 0; font-size: 13px; font-weight: bold; color: #92400e;">⚡ Classificação</p>
+  <p style="margin: 0 0 4px 0; font-size: 12px; font-weight: bold; color: #dc2626;">🚨 Essencial (atendimento imediato)</p>
+  <p style="margin: 0 0 6px 0; font-size: 12px; line-height: 1.4;">Geladeira, fogão, micro-ondas, água quente, energia, infiltração grave, fechadura, piscina não utilizável. Podem ser executados <b>de imediato</b> pela gestão.</p>
+  <p style="margin: 0 0 4px 0; font-size: 12px; font-weight: bold; color: #2563eb;">🔧 Estrutural (pode aguardar)</p>
+  <p style="margin: 0; font-size: 12px; line-height: 1.4;">Piso, tomadas, mobília, cama, pintura etc. Abriremos chamado e você decide.</p>
 </div>
 
-<div style="background: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
-  <h3 style="margin: 0 0 12px 0; font-size: 16px; color: #1f2937;">⏱️ Decisão do Proprietário (7 dias corridos)</h3>
-  <p style="margin: 0 0 12px 0; line-height: 1.6;">Para itens estruturais, você escolhe entre:</p>
-  <ul style="margin: 0; padding-left: 20px; line-height: 1.8;">
-    <li><b>✅ Assumir a execução</b> (informando prazo e fornecedor); ou</li>
-    <li><b>🤝 Delegar à gestão</b> para executarmos.</li>
-  </ul>
+<div style="background: #f9fafb; padding: 8px; border-radius: 6px; margin-bottom: 8px;">
+  <p style="margin: 0 0 4px 0; font-size: 13px; font-weight: bold;">⏱️ Decisão (7 dias corridos)</p>
+  <p style="margin: 0; font-size: 12px; line-height: 1.4;">Para itens estruturais: <b>✅ Assumir execução</b> (informar prazo/fornecedor) ou <b>🤝 Delegar à gestão</b>.</p>
 </div>
 
-<div style="background: #fee2e2; padding: 16px; border-radius: 8px; margin-bottom: 16px; border-left: 4px solid #dc2626;">
-  <h3 style="margin: 0 0 12px 0; font-size: 16px; color: #991b1b;">⚠️ VOCÊ é o Maior Prejudicado</h3>
-  <p style="margin: 0; line-height: 1.6;"><b>Pela nossa experiência:</b> avaliações negativas <b>derrubam drasticamente</b> o desempenho do imóvel. Uma única avaliação ruim pode:</p>
-  <ul style="margin: 8px 0 0 0; padding-left: 20px; line-height: 1.8;">
-    <li>📉 Reduzir a receita mensal em <b>mais de R$ 500</b></li>
-    <li>📊 Prejudicar sua posição nas plataformas</li>
-    <li>🚫 Afastar hóspedes</li>
-  </ul>
-  <p style="margin: 12px 0 0 0; line-height: 1.6; font-weight: bold;">O proprietário que não resolve itens essenciais ou estruturais rapidamente é o maior prejudicado. Por isso, itens essenciais podem ser executados imediatamente pela gestão para proteger sua renda e desempenho.</p>
+<div style="background: #fee2e2; padding: 8px; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #dc2626;">
+  <p style="margin: 0 0 4px 0; font-size: 13px; font-weight: bold; color: #991b1b;">⚠️ VOCÊ é o Maior Prejudicado</p>
+  <p style="margin: 0; font-size: 12px; line-height: 1.4;">Avaliações negativas <b>derrubam drasticamente</b> o desempenho. Uma avaliação ruim pode reduzir receita em <b>+R$ 500/mês</b>, prejudicar posição nas plataformas e afastar hóspedes. Itens essenciais podem ser executados imediatamente para proteger <b>sua renda</b>.</p>
 </div>
 
-<div style="background: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
-  <h3 style="margin: 0 0 12px 0; font-size: 16px; color: #1f2937;">🌟 Ecossistema RIOS</h3>
-  <p style="margin: 0; line-height: 1.6;">Cada imóvel impacta a imagem de todos. Negligências prejudicam o próprio resultado e o dos demais proprietários.</p>
+<div style="background: #f9fafb; padding: 8px; border-radius: 6px; margin-bottom: 8px;">
+  <p style="margin: 0 0 4px 0; font-size: 13px; font-weight: bold;">🌟 Ecossistema RIOS</p>
+  <p style="margin: 0; font-size: 12px; line-height: 1.4;">Cada imóvel impacta todos. Negligências prejudicam seu resultado e dos demais.</p>
 </div>
 
-<div style="background: #f9fafb; padding: 16px; border-radius: 8px;">
-  <h3 style="margin: 0 0 12px 0; font-size: 16px; color: #1f2937;">💰 Pós-Execução</h3>
-  <p style="margin: 0; line-height: 1.6;">Toda manutenção executada gera <b>cobrança</b> conforme regras já publicadas abaixo neste Portal (contestação em até 7 dias, pagamento/offset, etc.).</p>
+<div style="background: #f9fafb; padding: 8px; border-radius: 6px;">
+  <p style="margin: 0 0 4px 0; font-size: 13px; font-weight: bold;">💰 Pós-Execução</p>
+  <p style="margin: 0; font-size: 12px; line-height: 1.4;">Toda manutenção gera <b>cobrança</b> conforme regras publicadas (contestação 7 dias, pagamento/offset).</p>
 </div>
 `;
 
