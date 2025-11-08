@@ -36,6 +36,7 @@ export const TicketList = () => {
   const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("abertos");
+  const [ticketTypeFilter, setTicketTypeFilter] = useState("todos");
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -43,7 +44,7 @@ export const TicketList = () => {
     if (user) {
       fetchTickets();
     }
-  }, [user, activeTab]);
+  }, [user, activeTab, ticketTypeFilter]);
 
   const fetchTickets = async () => {
     setLoading(true);
@@ -57,6 +58,10 @@ export const TicketList = () => {
       query = query.in("status", ["novo", "em_analise", "aguardando_info", "em_execucao"]);
     } else {
       query = query.in("status", ["concluido", "cancelado"]);
+    }
+
+    if (ticketTypeFilter !== "todos") {
+      query = query.eq("ticket_type", ticketTypeFilter as any);
     }
 
     const { data, error } = await query;
@@ -95,80 +100,92 @@ export const TicketList = () => {
   }
 
   return (
-    <Tabs value={activeTab} onValueChange={setActiveTab}>
-      <TabsList className="mb-6">
-        <TabsTrigger value="abertos">Abertos</TabsTrigger>
-        <TabsTrigger value="fechados">Fechados</TabsTrigger>
-      </TabsList>
+    <div className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="mb-4">
+          <TabsTrigger value="abertos">Abertos</TabsTrigger>
+          <TabsTrigger value="fechados">Fechados</TabsTrigger>
+        </TabsList>
+      </Tabs>
 
-      <TabsContent value={activeTab}>
-        {tickets.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <p className="text-muted-foreground">
-                Nenhum ticket {activeTab === "abertos" ? "aberto" : "fechado"} encontrado
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid gap-4">
-            {tickets.map((ticket) => (
-              <Card
-                key={ticket.id}
-                className="cursor-pointer transition-all hover:shadow-lg"
-                onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
-              >
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <CardTitle className="text-lg">{ticket.subject}</CardTitle>
-                      <div className="flex flex-wrap gap-2">
-                        <TicketBadges ticket={ticket} />
-                        <Badge variant="outline" className="text-xs">
-                          {typeLabels[ticket.ticket_type]}
-                        </Badge>
-                        <Badge variant={getPriorityColor(ticket.priority)} className="text-xs">
-                          {ticket.priority === "urgente" ? "Urgente" : "Normal"}
-                        </Badge>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <Badge className={`${getStatusColor(ticket.status)} text-white`}>
-                        {statusLabels[ticket.status]}
+      <Tabs value={ticketTypeFilter} onValueChange={setTicketTypeFilter}>
+        <TabsList className="mb-6 flex-wrap h-auto">
+          <TabsTrigger value="todos">Todos</TabsTrigger>
+          <TabsTrigger value="manutencao">Manutenção</TabsTrigger>
+          <TabsTrigger value="bloqueio_data">Bloqueio de Datas</TabsTrigger>
+          <TabsTrigger value="duvida">Dúvida/Info</TabsTrigger>
+          <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
+          <TabsTrigger value="outros">Outros</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {tickets.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <p className="text-muted-foreground">
+              Nenhum ticket {activeTab === "abertos" ? "aberto" : "fechado"} encontrado
+              {ticketTypeFilter !== "todos" && ` na categoria ${typeLabels[ticketTypeFilter]}`}
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4">
+          {tickets.map((ticket) => (
+            <Card
+              key={ticket.id}
+              className="cursor-pointer transition-all hover:shadow-lg"
+              onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
+            >
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <CardTitle className="text-lg">{ticket.subject}</CardTitle>
+                    <div className="flex flex-wrap gap-2">
+                      <TicketBadges ticket={ticket} />
+                      <Badge variant="outline" className="text-xs">
+                        {typeLabels[ticket.ticket_type]}
                       </Badge>
-                      {ticket.sla_due_at && !ticket.first_response_at && (
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Clock className="h-3 w-3" />
-                          {formatDistanceToNow(new Date(ticket.sla_due_at), {
-                            locale: ptBR,
-                            addSuffix: true,
-                          })}
-                        </div>
-                      )}
+                      <Badge variant={getPriorityColor(ticket.priority)} className="text-xs">
+                        {ticket.priority === "urgente" ? "Urgente" : "Normal"}
+                      </Badge>
                     </div>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="line-clamp-2 text-sm text-muted-foreground">
-                    {ticket.description}
+                  <div className="flex flex-col items-end gap-2">
+                    <Badge className={`${getStatusColor(ticket.status)} text-white`}>
+                      {statusLabels[ticket.status]}
+                    </Badge>
+                    {ticket.sla_due_at && !ticket.first_response_at && (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Clock className="h-3 w-3" />
+                        {formatDistanceToNow(new Date(ticket.sla_due_at), {
+                          locale: ptBR,
+                          addSuffix: true,
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="line-clamp-2 text-sm text-muted-foreground">
+                  {ticket.description}
+                </p>
+                {ticket.properties && (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Propriedade: {ticket.properties.name}
                   </p>
-                  {ticket.properties && (
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      Propriedade: {ticket.properties.name}
-                    </p>
-                  )}
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Criado {formatDistanceToNow(new Date(ticket.created_at), {
-                      locale: ptBR,
-                      addSuffix: true,
-                    })}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </TabsContent>
-    </Tabs>
+                )}
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Criado {formatDistanceToNow(new Date(ticket.created_at), {
+                    locale: ptBR,
+                    addSuffix: true,
+                  })}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
   );
 };
