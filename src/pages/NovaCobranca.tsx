@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Loader2, Paperclip, X } from "lucide-react";
+import { ArrowLeft, Loader2, Paperclip, X, Sparkles } from "lucide-react";
+import { VoiceToTextInput } from "@/components/VoiceToTextInput";
 import { useToast } from "@/hooks/use-toast";
 
 interface Owner {
@@ -32,6 +33,8 @@ export default function NovaCobranca() {
   const [owners, setOwners] = useState<Owner[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [attachments, setAttachments] = useState<File[]>([]);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
   const [formData, setFormData] = useState({
     owner_id: "",
     property_id: "",
@@ -93,6 +96,39 @@ export default function NovaCobranca() {
 
   const removeAttachment = (index: number) => {
     setAttachments(attachments.filter((_, i) => i !== index));
+  };
+
+  const generateDescription = async () => {
+    if (!aiPrompt.trim()) {
+      toast({ title: "Digite um prompt para gerar a descrição", variant: "destructive" });
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-generate-response', {
+        body: { 
+          prompt: aiPrompt,
+          context: `Gerar descrição de cobrança. Título: ${formData.title || 'N/A'}`
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.response) {
+        setFormData({ ...formData, description: data.response });
+        setAiPrompt("");
+        toast({ title: "Descrição gerada com sucesso!" });
+      }
+    } catch (error: any) {
+      toast({ 
+        title: "Erro ao gerar descrição", 
+        description: error.message,
+        variant: "destructive" 
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -243,13 +279,39 @@ export default function NovaCobranca() {
 
               <div className="space-y-2">
                 <Label htmlFor="description">Descrição</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Detalhes da cobrança"
-                  rows={3}
-                />
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Digite um prompt para gerar a descrição com IA"
+                      value={aiPrompt}
+                      onChange={(e) => setAiPrompt(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), generateDescription())}
+                      disabled={isGenerating}
+                    />
+                    <Button
+                      type="button"
+                      onClick={generateDescription}
+                      disabled={isGenerating || !aiPrompt.trim()}
+                      variant="secondary"
+                    >
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      {isGenerating ? "Gerando..." : "Gerar"}
+                    </Button>
+                  </div>
+                  <div className="flex gap-2">
+                    <Textarea
+                      id="description"
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      placeholder="Detalhes da cobrança"
+                      rows={3}
+                      className="flex-1"
+                    />
+                    <VoiceToTextInput
+                      onTranscript={(text) => setFormData({ ...formData, description: formData.description + (formData.description ? ' ' : '') + text })}
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
