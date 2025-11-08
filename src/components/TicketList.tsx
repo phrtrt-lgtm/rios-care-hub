@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { TicketBadges } from "@/components/TicketBadges";
 
 const statusLabels: Record<string, string> = {
   novo: "Novo",
@@ -48,7 +49,7 @@ export const TicketList = () => {
     setLoading(true);
     let query = supabase
       .from("tickets")
-      .select("*, properties(name)")
+      .select("*, properties(name), kind, essential, owner_decision, owner_action_due_at")
       .eq("owner_id", user?.id)
       .order("created_at", { ascending: false });
 
@@ -121,7 +122,8 @@ export const TicketList = () => {
                   <div className="flex items-start justify-between">
                     <div className="space-y-1">
                       <CardTitle className="text-lg">{ticket.subject}</CardTitle>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
+                        <TicketBadges ticket={ticket} />
                         <Badge variant="outline" className="text-xs">
                           {typeLabels[ticket.ticket_type]}
                         </Badge>

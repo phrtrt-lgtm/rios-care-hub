@@ -14,6 +14,7 @@ import TopChargesRules from "@/components/TopChargesRules";
 import { EnablePushNative } from "@/components/EnablePushNative";
 import { VotacoesPendentes } from "@/components/VotacoesPendentes";
 import { supabase } from "@/integrations/supabase/client";
+import OwnerMaintenancePolicyBanner from "@/components/OwnerMaintenancePolicyBanner";
 
 
 export default function MinhaCaixa() {
@@ -135,6 +136,9 @@ export default function MinhaCaixa() {
 
       {/* Content */}
       <main className="container mx-auto px-4 py-6 md:py-8">
+        {/* Maintenance Policy Banner */}
+        {user && <OwnerMaintenancePolicyBanner ownerId={user.id} />}
+        
         {/* Alert Banner */}
         <div className="mb-6">
           <AlertBanner />
