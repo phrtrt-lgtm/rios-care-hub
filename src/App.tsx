@@ -43,6 +43,7 @@ import VistoriaDetalhes from "./pages/VistoriaDetalhes";
 import Votacoes from "./pages/Votacoes";
 import NovaPropostaVotacao from "./pages/NovaPropostaVotacao";
 import VotacaoDetalhes from "./pages/VotacaoDetalhes";
+import NovoTicketInterno from "./pages/NovoTicketInterno";
 
 const queryClient = new QueryClient();
 
@@ -298,6 +299,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['owner', 'agent', 'admin', 'maintenance']}>
                   <VotacaoDetalhes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/novo-ticket-interno"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <NovoTicketInterno />
                 </ProtectedRoute>
               }
             />

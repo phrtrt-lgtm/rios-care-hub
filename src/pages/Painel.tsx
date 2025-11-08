@@ -200,6 +200,16 @@ export default function Painel() {
                 <Button 
                   size="lg" 
                   className="h-20 text-base font-semibold"
+                  onClick={() => navigate("/novo-ticket-interno")}
+                  variant="secondary"
+                >
+                  <Users className="mr-3 h-6 w-6" />
+                  Ticket para Equipe
+                </Button>
+
+                <Button 
+                  size="lg" 
+                  className="h-20 text-base font-semibold"
                   onClick={() => navigate("/novo-alerta")}
                   variant="secondary"
                 >
