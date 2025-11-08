@@ -332,7 +332,17 @@ ORIENTAÇÕES PARA RESPOSTA:
 
 ${aiSettings.style_guide ? `GUIA DE ESTILO:\n${aiSettings.style_guide}\n` : ""}
 
-${aiSettings.guardrails ? `REGRAS DE SEGURANÇA:\n${aiSettings.guardrails}\n` : ""}`;
+${aiSettings.guardrails ? `REGRAS DE SEGURANÇA:\n${aiSettings.guardrails}\n` : ""}
+
+${chargeId ? `
+⚠️ CONTEXTO CRÍTICO SOBRE COBRANÇAS:
+Você está respondendo EM NOME DA RIOS (a empresa de gestão).
+A RIOS está COBRANDO o proprietário por serviços/despesas.
+O proprietário NÃO está cobrando a RIOS.
+NÃO pergunte "qual o motivo da sua cobrança?" - você JÁ SABE o motivo.
+NÃO trate o proprietário como se ele estivesse nos cobrando.
+LEMBRE-SE: Nós (RIOS) estamos cobrando ELE (proprietário).
+` : ''}`;
 
     const userPrompt = `${contextStr}
 
@@ -343,7 +353,9 @@ IMPORTANTE:
 - Use o contexto da RIOS e do histórico da conversa
 - Mantenha 2-4 parágrafos no máximo
 - Não invente informações que não estão no contexto
+${chargeId ? '- NUNCA pergunte "qual o motivo da sua cobrança" - você está respondendo pela RIOS que está cobrando o proprietário\n- Explique o motivo DA NOSSA cobrança se for questionado' : ''}
 - Assine como "— Equipe RIOS"`;
+
 
     // Call Lovable AI
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
