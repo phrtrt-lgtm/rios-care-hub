@@ -209,17 +209,28 @@ Deno.serve(async (req) => {
             continue;
           }
 
-          // Convert to ArrayBuffer for upload
+          // Get file as array buffer
           const arrayBuffer = await fileData.arrayBuffer();
+          const uint8Array = new Uint8Array(arrayBuffer);
           
-          // Upload to Monday using multipart form
+          // Create form data for Monday upload
           const formData = new FormData();
+          const blob = new Blob([uint8Array], { type: attachment.mime_type || 'application/octet-stream' });
+          const fileName = attachment.file_name || `file-${attachment.id}`;
           
-          const fileBlob = new Blob([arrayBuffer], { type: attachment.mime_type || 'application/octet-stream' });
-          const fileName = attachment.file_name || `attachment-${attachment.id}`;
+          // Monday.com file upload GraphQL mutation
+          const uploadQuery = `mutation ($file: File!) {
+            add_file_to_column (
+              item_id: ${mondayItemId}, 
+              column_id: "${colAttachments}", 
+              file: $file
+            ) {
+              id
+            }
+          }`;
           
-          formData.append('query', `mutation { add_file_to_column(item_id: ${mondayItemId}, column_id: "${colAttachments}", file: $file) { id } }`);
-          formData.append('variables[file]', fileBlob, fileName);
+          formData.append('query', uploadQuery);
+          formData.append('variables[file]', blob, fileName);
 
           const uploadResponse = await fetch('https://api.monday.com/v2/file', {
             method: 'POST',
@@ -229,10 +240,16 @@ Deno.serve(async (req) => {
             body: formData,
           });
 
+          if (!uploadResponse.ok) {
+            const errorText = await uploadResponse.text();
+            console.error(`Monday upload failed for ${fileName}:`, errorText);
+            continue;
+          }
+
           const uploadResult = await uploadResponse.json();
-          console.log(`Uploaded ${attachment.file_name}:`, uploadResult);
+          console.log(`Successfully uploaded ${fileName}:`, uploadResult);
         } catch (e) {
-          console.error('Error uploading file to Monday:', e);
+          console.error(`Error uploading file to Monday:`, e);
         }
       }
     }
