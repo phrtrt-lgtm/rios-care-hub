@@ -58,6 +58,8 @@ const handler = async (req: Request): Promise<Response> => {
         const ownerTemplate = await getTemplate(supabase, ownerTemplateKey);
         const teamTemplate = await getTemplate(supabase, "ticket_created_team");
 
+        const portalUrl = Deno.env.get("PORTAL_URL") || "https://ktzfovzwayfqczytmhno.lovableproject.com";
+        
         const variables = {
           owner_name: ticket.profiles.name,
           owner_email: ticket.profiles.email,
@@ -72,6 +74,7 @@ const handler = async (req: Request): Promise<Response> => {
           property_address: ticket.properties?.address || "",
           sla_time: ticket.priority === "urgente" ? "6 horas" : "24 horas",
           created_date: new Date().toLocaleString("pt-BR"),
+          ticket_url: `${portalUrl}/ticket-detalhes/${ticket.id}`,
         };
 
         // Send notification based on who created the ticket

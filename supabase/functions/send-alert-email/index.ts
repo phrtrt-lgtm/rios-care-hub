@@ -63,6 +63,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const typeInfo = typeMap[alert.type] || typeMap.info
+    const portalUrl = Deno.env.get("PORTAL_URL") || "https://ktzfovzwayfqczytmhno.lovableproject.com";
     
     const template = await getTemplate(supabase, "alert_created");
 
@@ -85,6 +86,7 @@ const handler = async (req: Request): Promise<Response> => {
         ? new Date(alert.expires_at).toLocaleString('pt-BR')
         : "",
       created_date: new Date(alert.created_at).toLocaleString('pt-BR'),
+      portal_url: portalUrl,
     };
     
     let emailsSent = 0
