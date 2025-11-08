@@ -15,7 +15,7 @@ export const MAINTENANCE_POLICY_HTML = `
   <p style="margin: 0 0 4px 0; font-size: 12px; font-weight: bold; color: #dc2626;">🚨 Essencial (atendimento imediato)</p>
   <p style="margin: 0 0 6px 0; font-size: 12px; line-height: 1.4;">Geladeira, fogão, micro-ondas, água quente, energia, infiltração grave, fechadura, piscina não utilizável. Podem ser executados <b>de imediato</b> pela gestão.</p>
   <p style="margin: 0 0 4px 0; font-size: 12px; font-weight: bold; color: #2563eb;">🔧 Estrutural (pode aguardar)</p>
-  <p style="margin: 0; font-size: 12px; line-height: 1.4;">Piso, tomadas, mobília, cama, pintura etc. Abriremos chamado e você decide.</p>
+  <p style="margin: 0; font-size: 12px; line-height: 1.4;">Piso, mobília, pintura etc. Abriremos chamado e você decide.</p>
 </div>
 
 <div style="background: #f9fafb; padding: 8px; border-radius: 6px; margin-bottom: 8px;">
@@ -41,5 +41,5 @@ export const MAINTENANCE_POLICY_HTML = `
 
 export const MAINTENANCE_POLICY_TEXT = `Política de Manutenção — Vigente em 01/01/2026
 Essencial (atendimento imediato): itens que inviabilizam a estadia (geladeira, fogão, micro-ondas, água quente, energia, fechadura/portas, piscina inutilizável, infiltração grave). Podem ser executados de imediato pela gestão, sobretudo em check-in no mesmo dia.
-Estrutural (pode aguardar entre estadias): piso/tomadas/reformas/cama/pintura etc. Abriremos chamado e você terá 7 dias para decidir: assumir a execução (com prazo e fornecedor) ou delegar à gestão.
+Estrutural (pode aguardar entre estadias): piso/reformas/pintura etc. Abriremos chamado e você terá 7 dias para decidir: assumir a execução (com prazo e fornecedor) ou delegar à gestão.
 Avaliações negativas derrubam a renda; protegemos o desempenho do ecossistema. Após execução, a manutenção vira cobrança conforme regras já publicadas (contestação 7 dias, pagamento/offset). Ao aceitar, você registra ciência desta política (versão 2026-01-01).`;
