@@ -37,47 +37,70 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     let isMounted = true;
 
     const initAuth = async () => {
-      console.log('[useAuth] Starting initAuth');
-      // Check if user should be logged out (browser was closed and "remember me" was not checked)
-      const rememberMe = localStorage.getItem("rememberMe");
-      const tempSession = sessionStorage.getItem("tempSession");
-      
-      if (!rememberMe && !tempSession) {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          console.log('[useAuth] No remember me, signing out');
-          await supabase.auth.signOut();
-          setLoading(false);
-          return;
-        }
-      }
-
-      // Check for existing session
-      console.log('[useAuth] Checking for existing session');
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!isMounted) return;
-      
-      console.log('[useAuth] Session found:', !!session);
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        console.log('[useAuth] Fetching profile for user:', session.user.id);
-        const { data } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", session.user.id)
-          .single();
+      try {
+        console.log('[useAuth] Starting initAuth');
+        // Check if user should be logged out (browser was closed and "remember me" was not checked)
+        const rememberMe = localStorage.getItem("rememberMe");
+        const tempSession = sessionStorage.getItem("tempSession");
         
-        console.log('[useAuth] Profile data:', data);
+        if (!rememberMe && !tempSession) {
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+              console.log('[useAuth] No remember me, signing out');
+              await supabase.auth.signOut();
+              if (isMounted) setLoading(false);
+              return;
+            }
+          } catch (error) {
+            console.error('[useAuth] Error checking session for remember me:', error);
+          }
+        }
+
+        // Check for existing session with timeout
+        console.log('[useAuth] Checking for existing session');
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Session check timeout')), 5000)
+        );
+        
+        const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as any;
+        
+        if (!isMounted) return;
+        
+        console.log('[useAuth] Session found:', !!session);
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          console.log('[useAuth] Fetching profile for user:', session.user.id);
+          const { data, error } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", session.user.id)
+            .single();
+          
+          if (error) {
+            console.error('[useAuth] Error fetching profile:', error);
+          }
+          
+          console.log('[useAuth] Profile data:', data);
+          if (isMounted) {
+            setProfile(data);
+            setLoading(false);
+          }
+        } else {
+          console.log('[useAuth] No session, setting loading false');
+          if (isMounted) setLoading(false);
+        }
+      } catch (error) {
+        console.error('[useAuth] Error in initAuth:', error);
         if (isMounted) {
-          setProfile(data);
+          setSession(null);
+          setUser(null);
+          setProfile(null);
           setLoading(false);
         }
-      } else {
-        console.log('[useAuth] No session, setting loading false');
-        setLoading(false);
       }
     };
 
