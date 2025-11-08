@@ -174,35 +174,32 @@ export default function CobrancaDetalhes() {
   const fetchMessages = async () => {
     const { data: messagesData, error } = await supabase
       .from('charge_messages')
-      .select('*')
+      .select(`
+        *,
+        profiles!charge_messages_author_id_fkey(name, photo_url, role)
+      `)
       .eq('charge_id', id)
       .order('created_at', { ascending: true });
 
     if (!error && messagesData) {
-      // Buscar perfis dos autores e anexos
-      const messagesWithProfilesAndAttachments = await Promise.all(
+      // Buscar anexos de cada mensagem
+      const messagesWithAttachments = await Promise.all(
         messagesData.map(async (msg) => {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('name, photo_url, role')
-            .eq('id', msg.author_id)
-            .single();
-          
-          // Buscar anexos da mensagem
           const { data: attachments } = await supabase
             .from('charge_message_attachments')
             .select('*')
-            .eq('message_id', msg.id);
+            .eq('message_id', msg.id)
+            .order('created_at', { ascending: true });
           
           return {
             ...msg,
-            profiles: profile || { name: 'Desconhecido', photo_url: null, role: 'owner' },
+            profiles: Array.isArray(msg.profiles) ? msg.profiles[0] : msg.profiles,
             attachments: attachments || []
           };
         })
       );
       
-      setMessages(messagesWithProfilesAndAttachments);
+      setMessages(messagesWithAttachments);
     }
   };
 
@@ -312,6 +309,18 @@ export default function CobrancaDetalhes() {
       setNewMessage("");
       setSelectedFiles([]);
       await fetchMessages();
+      
+      // Enviar notificação
+      try {
+        await supabase.functions.invoke('notify-charge-message', {
+          body: {
+            messageId: messageData.id,
+            chargeId: id
+          }
+        });
+      } catch (notifyError) {
+        console.error('Erro ao enviar notificação:', notifyError);
+      }
       
       toast({
         title: "Mensagem enviada!",
@@ -912,19 +921,20 @@ export default function CobrancaDetalhes() {
                   <p className="text-muted-foreground whitespace-pre-wrap mb-3">{message.body}</p>
                 )}
                 
-                {/* Galeria de anexos da mensagem */}
+                 {/* Galeria de anexos da mensagem */}
                 {message.attachments && message.attachments.length > 0 && (
                   <div className="mt-3">
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                       {message.attachments.map((attachment) => {
                         const isImage = attachment.mime_type?.startsWith('image/');
-                        const attachmentUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/attachments/${attachment.file_path}`;
+                        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+                        const attachmentUrl = `${supabaseUrl}/functions/v1/serve-attachment/${attachment.id}/file`;
                         
                         return (
                           <div key={attachment.id} className="relative aspect-square rounded-lg overflow-hidden border bg-muted group">
                             {isImage ? (
                               <>
-                                <img 
+                                <AuthenticatedImage
                                   src={attachmentUrl}
                                   alt={attachment.file_name}
                                   className="w-full h-full object-cover cursor-pointer transition-transform group-hover:scale-105"
@@ -942,7 +952,10 @@ export default function CobrancaDetalhes() {
                                 </div>
                               </>
                             ) : (
-                              <div className="w-full h-full flex flex-col items-center justify-center p-2 cursor-pointer hover:bg-accent">
+                              <div 
+                                className="w-full h-full flex flex-col items-center justify-center p-2 cursor-pointer hover:bg-accent"
+                                onClick={() => window.open(attachmentUrl, '_blank')}
+                              >
                                 <FileText className="h-8 w-8 text-muted-foreground mb-1" />
                                 <span className="text-xs text-center truncate w-full px-1">{attachment.file_name}</span>
                               </div>
