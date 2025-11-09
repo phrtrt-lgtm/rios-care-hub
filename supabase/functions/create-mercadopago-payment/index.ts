@@ -149,6 +149,7 @@ const handler = async (req: Request): Promise<Response> => {
       headers: {
         'Authorization': `Bearer ${mercadoPagoToken}`,
         'Content-Type': 'application/json',
+        'X-Idempotency-Key': chargeId, // Usar o ID da cobrança como chave de idempotência
       },
       body: JSON.stringify(pixPaymentPayload),
     });
@@ -159,7 +160,8 @@ const handler = async (req: Request): Promise<Response> => {
       pixQrCode = pixData.point_of_interaction?.transaction_data?.qr_code;
       pixQrCodeBase64 = pixData.point_of_interaction?.transaction_data?.qr_code_base64;
     } else {
-      console.error('Error creating PIX payment:', await pixResponse.text());
+      const errorText = await pixResponse.text();
+      console.error('Error creating PIX payment:', errorText);
     }
 
     // Atualizar cobrança com o link de pagamento e QR code
