@@ -137,16 +137,31 @@ export default function AdminGerenciarUsuarios() {
     if (!userToDelete) return;
 
     try {
-      // Delete from auth.users (will cascade to profiles)
-      const { error } = await supabase.auth.admin.deleteUser(userToDelete.id);
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-user`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify({ userId: userToDelete.id }),
+        }
+      );
 
-      if (error) throw error;
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao deletar usuário');
+      }
 
       toast.success("Usuário deletado com sucesso!");
       fetchUsers();
     } catch (error: any) {
       console.error("Error deleting user:", error);
-      toast.error("Erro ao deletar usuário");
+      toast.error(error.message || "Erro ao deletar usuário");
     } finally {
       setDeleteDialogOpen(false);
       setUserToDelete(null);
