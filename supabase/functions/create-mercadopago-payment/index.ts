@@ -32,12 +32,7 @@ const handler = async (req: Request): Promise<Response> => {
       .select(`
         *,
         properties (
-          name,
-          profiles (
-            name,
-            email,
-            phone
-          )
+          name
         )
       `)
       .eq('id', chargeId)
@@ -46,6 +41,18 @@ const handler = async (req: Request): Promise<Response> => {
     if (chargeError || !charge) {
       console.error('Charge not found:', chargeError);
       throw new Error('Cobrança não encontrada');
+    }
+
+    // Buscar dados do proprietário separadamente
+    const { data: owner, error: ownerError } = await supabase
+      .from('profiles')
+      .select('name, email, phone')
+      .eq('id', charge.owner_id)
+      .single();
+
+    if (ownerError || !owner) {
+      console.error('Owner not found:', ownerError);
+      throw new Error('Proprietário não encontrado');
     }
 
     // Verificar se já existe um payment_link
@@ -61,10 +68,10 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const property = charge.properties;
-    const owner = property?.profiles;
 
-    // Calcular valor total (valor devido + contribuição da gestão)
-    const totalAmount = charge.due_amount + (charge.management_contribution || 0);
+    // Calcular valor total em centavos e converter para reais
+    const totalAmountCents = charge.amount_cents;
+    const totalAmount = totalAmountCents / 100;
 
     // Criar preferência de pagamento no Mercado Pago
     const preferencePayload = {
@@ -78,11 +85,11 @@ const handler = async (req: Request): Promise<Response> => {
         }
       ],
       payer: {
-        name: owner?.name || '',
-        email: owner?.email || '',
+        name: owner.name || '',
+        email: owner.email || '',
         phone: {
-          area_code: owner?.phone?.substring(0, 2) || '',
-          number: owner?.phone?.substring(2) || '',
+          area_code: owner.phone?.substring(0, 2) || '',
+          number: owner.phone?.substring(2) || '',
         }
       },
       back_urls: {
