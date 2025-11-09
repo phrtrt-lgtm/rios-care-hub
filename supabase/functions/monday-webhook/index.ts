@@ -101,6 +101,13 @@ serve(async (req) => {
 
     console.log("Monday item data:", JSON.stringify(item, null, 2));
 
+    // Log all columns for debugging
+    console.log("=== ALL MONDAY COLUMNS ===");
+    item.column_values.forEach((col: any) => {
+      console.log(`Column ID: ${col.id}, Type: ${col.type}, Text: ${col.text}, Value: ${col.value}`);
+    });
+    console.log("=========================");
+
     // Map Monday columns to charge fields
     const getColumnValue = (columnId: string) => {
       const column = item.column_values.find((col: any) => col.id === columnId);
@@ -133,18 +140,27 @@ serve(async (req) => {
     // Extract charge data using the actual column IDs from your Monday board
     // The title will be the Monday item name
     const description = getColumnValue("long_text_mkx3tx1b");
-    const managementContribution = parseInt(getColumnValue("numeric__1") || "0") * 100; // Second numeric column - management contribution
+    
+    // Try to find numeric columns - Monday usually has numeric__1 for the second numeric column
+    const totalAmount = parseFloat(getColumnValue("numeric_mkx355en") || "0");
+    const managementContributionValue = parseFloat(getColumnValue("numeric__1") || "0");
+    
+    console.log("Total amount from Monday:", totalAmount);
+    console.log("Management contribution from Monday:", managementContributionValue);
+    
     const chargeData = {
       title: item.name || `Cobrança - ${propertyName}`,
       description: description || null,
-      amount_cents: parseInt(getColumnValue("numeric_mkx355en") || "0") * 100, // Convert to cents
-      management_contribution_cents: managementContribution,
+      amount_cents: Math.round(totalAmount * 100), // Convert to cents
+      management_contribution_cents: Math.round(managementContributionValue * 100), // Convert to cents
       due_date: getColumnValue("data") || null,
       owner_id: property.owner_id,
       property_id: property.id,
       currency: "BRL",
       status: "draft",
     };
+    
+    console.log("Charge data to insert:", JSON.stringify(chargeData, null, 2));
 
     // Create the charge
     const { data: charge, error: chargeError } = await supabase
