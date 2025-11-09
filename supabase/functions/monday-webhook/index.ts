@@ -141,9 +141,9 @@ serve(async (req) => {
     // The title will be the Monday item name
     const description = getColumnValue("long_text_mkx3tx1b");
     
-    // Try to find numeric columns - Monday usually has numeric__1 for the second numeric column
-    const totalAmount = parseFloat(getColumnValue("numeric_mkx355en") || "0");
-    const managementContributionValue = parseFloat(getColumnValue("numeric__1") || "0");
+    // Numeric columns from Monday board
+    const totalAmount = parseFloat(getColumnValue("numeric_mkx355en") || "0"); // Total value column
+    const managementContributionValue = parseFloat(getColumnValue("numeric_mkxgn45q") || "0"); // Management contribution column
     
     console.log("Total amount from Monday:", totalAmount);
     console.log("Management contribution from Monday:", managementContributionValue);
