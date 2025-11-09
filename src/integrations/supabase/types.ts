@@ -618,10 +618,13 @@ export type Database = {
           id: string
           maintenance_date: string | null
           management_contribution_cents: number
+          mercadopago_payment_id: string | null
+          mercadopago_preference_id: string | null
           owner_id: string
           owner_note: string | null
           owner_proof_path: string | null
           paid_at: string | null
+          payment_link: string | null
           payment_link_url: string | null
           property_id: string | null
           reminder_24h_sent: boolean | null
@@ -647,10 +650,13 @@ export type Database = {
           id?: string
           maintenance_date?: string | null
           management_contribution_cents?: number
+          mercadopago_payment_id?: string | null
+          mercadopago_preference_id?: string | null
           owner_id: string
           owner_note?: string | null
           owner_proof_path?: string | null
           paid_at?: string | null
+          payment_link?: string | null
           payment_link_url?: string | null
           property_id?: string | null
           reminder_24h_sent?: boolean | null
@@ -676,10 +682,13 @@ export type Database = {
           id?: string
           maintenance_date?: string | null
           management_contribution_cents?: number
+          mercadopago_payment_id?: string | null
+          mercadopago_preference_id?: string | null
           owner_id?: string
           owner_note?: string | null
           owner_proof_path?: string | null
           paid_at?: string | null
+          payment_link?: string | null
           payment_link_url?: string | null
           property_id?: string | null
           reminder_24h_sent?: boolean | null

@@ -3,6 +3,12 @@ project_id = "ktzfovzwayfqczytmhno"
 [functions.notify-ticket]
 verify_jwt = false
 
+[functions.create-mercadopago-payment]
+verify_jwt = true
+
+[functions.mercadopago-webhook]
+verify_jwt = false
+
 [functions.ai-assistant]
 verify_jwt = true
 
