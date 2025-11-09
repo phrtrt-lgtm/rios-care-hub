@@ -177,6 +177,19 @@ serve(async (req) => {
 
     console.log("Created charge:", charge.id);
 
+    // Generate Mercado Pago payment link automatically
+    try {
+      await supabase.functions.invoke('create-mercadopago-payment', {
+        body: { 
+          chargeId: charge.id 
+        }
+      });
+      console.log("Mercado Pago payment link generated");
+    } catch (mpError) {
+      console.error("Error generating Mercado Pago payment link:", mpError);
+      // Don't fail the whole webhook if payment link generation fails
+    }
+
     // Send email notification
     try {
       await supabase.functions.invoke('send-charge-email', {
