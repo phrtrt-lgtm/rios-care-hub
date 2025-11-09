@@ -16,6 +16,7 @@ import Painel from "./pages/Painel";
 import Aprovacoes from "./pages/Aprovacoes";
 import AdminCadastrarProprietario from "./pages/AdminCadastrarProprietario";
 import AdminCadastrarFaxineira from "./pages/AdminCadastrarFaxineira";
+import AdminCadastrarEquipe from "./pages/AdminCadastrarEquipe";
 import NotFound from "./pages/NotFound";
 import TicketDetalhes from "./pages/TicketDetalhes";
 import NovaCobranca from "./pages/NovaCobranca";
@@ -111,6 +112,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['admin', 'maintenance']}>
                   <AdminCadastrarFaxineira />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/cadastrar-equipe"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminCadastrarEquipe />
                 </ProtectedRoute>
               }
             />

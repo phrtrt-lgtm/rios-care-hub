@@ -328,6 +328,23 @@ export default function Painel() {
             </Card>
           )}
 
+          {profile?.role === "admin" && (
+            <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/admin/cadastrar-equipe")}>
+              <CardHeader>
+                <CardTitle>Cadastrar Equipe</CardTitle>
+                <CardDescription>
+                  Adicionar atendente ou manutenção
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button variant="outline" className="w-full">
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Novo Membro
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
           {(profile?.role === "admin" || profile?.role === "maintenance") && (
             <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/aprovacoes")}>
               <CardHeader>
