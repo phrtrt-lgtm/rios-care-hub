@@ -162,7 +162,11 @@ export default function ConfiguracaoEmail() {
       charge_created: {
         charge_title: "Reposição de toalha danificada",
         charge_description: "Substituição de toalha de banho danificada durante a estadia. Valor referente ao custo de reposição do item.",
+        total_amount: "R$ 129,90",
+        management_contribution: "R$ 40,00",
+        due_amount: "R$ 89,90",
         charge_amount: "R$ 89,90",
+        maintenance_date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toLocaleDateString("pt-BR"),
         due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString("pt-BR"),
         property_name: "Apto 301 - Edifício Vista Mar",
         charge_url: `${baseUrl}/minhas-cobrancas`,
@@ -187,13 +191,21 @@ export default function ConfiguracaoEmail() {
       },
       charge_reminder: {
         charge_title: "Reposição de toalha danificada",
+        total_amount: "R$ 129,90",
+        management_contribution: "R$ 40,00",
+        due_amount: "R$ 89,90",
         charge_amount: "R$ 89,90",
+        maintenance_date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toLocaleDateString("pt-BR"),
         due_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toLocaleDateString("pt-BR"),
         charge_url: `${baseUrl}/minhas-cobrancas`,
       },
       charge_overdue: {
         charge_title: "Reposição de toalha danificada",
+        total_amount: "R$ 129,90",
+        management_contribution: "R$ 40,00",
+        due_amount: "R$ 89,90",
         charge_amount: "R$ 89,90",
+        maintenance_date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toLocaleDateString("pt-BR"),
         due_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toLocaleDateString("pt-BR"),
         charge_url: `${baseUrl}/minhas-cobrancas`,
       },
@@ -472,16 +484,11 @@ export default function ConfiguracaoEmail() {
                   <div>
                     <span className="text-sm font-medium">Variáveis: </span>
                     <div className="flex flex-wrap gap-1 mt-1">
-                      {template.available_variables.slice(0, 5).map((variable) => (
+                      {template.available_variables.map((variable) => (
                         <Badge key={variable} variant="secondary" className="text-xs">
                           {`{{${variable}}}`}
                         </Badge>
                       ))}
-                      {template.available_variables.length > 5 && (
-                        <Badge variant="secondary" className="text-xs">
-                          +{template.available_variables.length - 5} mais
-                        </Badge>
-                      )}
                     </div>
                   </div>
                 </div>
