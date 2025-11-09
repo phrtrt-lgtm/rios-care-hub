@@ -158,7 +158,7 @@ serve(async (req) => {
       owner_id: property.owner_id,
       property_id: property.id,
       currency: "BRL",
-      status: "draft",
+      status: "sent",
     };
     
     console.log("Charge data to insert:", JSON.stringify(chargeData, null, 2));
