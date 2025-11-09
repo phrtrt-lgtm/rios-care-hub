@@ -32,6 +32,7 @@ interface Charge {
   maintenance_date: string | null;
   status: string;
   payment_link_url: string | null;
+  payment_link: string | null;
   created_at: string;
   owner_id: string;
   property_id: string | null;
@@ -107,6 +108,7 @@ export default function CobrancaDetalhes() {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryStartIndex, setGalleryStartIndex] = useState(0);
   const [downloadingAll, setDownloadingAll] = useState(false);
+  const [generatingPaymentLink, setGeneratingPaymentLink] = useState(false);
 
   const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent';
 
@@ -600,6 +602,34 @@ export default function CobrancaDetalhes() {
     return attachment.mime_type?.startsWith('video/') || false;
   };
 
+  const handleGeneratePaymentLink = async () => {
+    try {
+      setGeneratingPaymentLink(true);
+      
+      const { data, error } = await supabase.functions.invoke('create-mercadopago-payment', {
+        body: { chargeId: id }
+      });
+
+      if (error) throw error;
+
+      // Atualizar charge local
+      await fetchChargeData();
+
+      toast({
+        title: "Link de pagamento criado!",
+        description: "O link foi criado e já está disponível na cobrança",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao gerar link",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingPaymentLink(false);
+    }
+  };
+
   const handleDelete = async () => {
     // Only admins can delete
     if (profile?.role !== 'admin') {
@@ -742,6 +772,70 @@ export default function CobrancaDetalhes() {
             </div>
           </CardHeader>
           <CardContent>
+            {charge.description && (
+              <p className="text-muted-foreground mb-4">{charge.description}</p>
+            )}
+
+            {/* Link de Pagamento */}
+            {isTeamMember && charge.status !== 'paid' && charge.status !== 'cancelled' && (
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
+                <div className="flex items-start gap-3">
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-green-900 dark:text-green-100 mb-1">
+                      💳 Link de Pagamento Mercado Pago
+                    </h4>
+                    <p className="text-sm text-green-700 dark:text-green-300 mb-3">
+                      {charge.payment_link 
+                        ? "Link gerado! O proprietário pode pagar com cartão de crédito, débito ou PIX através do Mercado Pago."
+                        : "Gere um link de pagamento para que o proprietário possa pagar online com cartão de crédito ou PIX."}
+                    </p>
+                    {charge.payment_link ? (
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => {
+                            window.open(charge.payment_link!, '_blank');
+                          }}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          🔗 Abrir Link de Pagamento
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            navigator.clipboard.writeText(charge.payment_link!);
+                            toast({
+                              title: "Link copiado!",
+                              description: "O link foi copiado para a área de transferência",
+                            });
+                          }}
+                        >
+                          📋 Copiar Link
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        onClick={handleGeneratePaymentLink}
+                        disabled={generatingPaymentLink}
+                        className="bg-green-600 hover:bg-green-700"
+                        size="sm"
+                      >
+                        {generatingPaymentLink ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Gerando link...
+                          </>
+                        ) : (
+                          '🔗 Gerar Link de Pagamento'
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {attachments.length > 0 && (
               <div className="border-t pt-6 mt-6">
