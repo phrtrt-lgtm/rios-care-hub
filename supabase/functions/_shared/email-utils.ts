@@ -9,6 +9,10 @@ export interface ChargeEmailData {
   ownerName: string;
   chargeTitle: string;
   amountBRL: string;
+  totalAmount?: string;
+  managementContribution?: string;
+  dueAmount?: string;
+  maintenanceDate?: string;
   dueDate: string;
   paymentLink?: string;
   description?: string;
@@ -21,6 +25,10 @@ export function generateChargeEmailHTML(data: ChargeEmailData): string {
     ownerName,
     chargeTitle,
     amountBRL,
+    totalAmount,
+    managementContribution,
+    dueAmount,
+    maintenanceDate,
     dueDate,
     paymentLink,
     description,
@@ -52,7 +60,10 @@ export function generateChargeEmailHTML(data: ChargeEmailData): string {
       
       <div style="background-color: #f8f9fa; border-left: 4px solid #667eea; padding: 20px; margin: 0 0 24px 0; border-radius: 4px;">
         <p style="margin: 0 0 12px 0; color: #1a1a1a;"><strong>Descrição:</strong> ${chargeTitle}</p>
-        <p style="margin: 0 0 12px 0; color: #1a1a1a; font-size: 18px;"><strong>Valor:</strong> <span style="color: #667eea; font-size: 24px; font-weight: 600;">${amountBRL}</span></p>
+        ${maintenanceDate ? `<p style="margin: 0 0 12px 0; color: #2563eb;"><strong>📅 Data da Manutenção:</strong> ${maintenanceDate}</p>` : ''}
+        ${totalAmount ? `<p style="margin: 0 0 8px 0; color: #4a4a4a;"><strong>Total:</strong> ${totalAmount}</p>` : ''}
+        ${managementContribution ? `<p style="margin: 0 0 8px 0; color: #4a4a4a;"><strong>Aporte de Gestão:</strong> ${managementContribution}</p>` : ''}
+        <p style="margin: 0 0 12px 0; color: #1a1a1a; font-size: 18px;"><strong>Valor Devido:</strong> <span style="color: #667eea; font-size: 24px; font-weight: 600;">${dueAmount || amountBRL}</span></p>
         <p style="margin: 0; color: #1a1a1a;"><strong>Vencimento:</strong> ${dueDate}</p>
       </div>
       

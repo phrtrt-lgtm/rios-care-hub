@@ -52,13 +52,27 @@ const handler = async (req: Request): Promise<Response> => {
       ? await supabaseClient.from("properties").select("name, address").eq("id", charge.property_id).single()
       : { data: null };
 
-    const amountBRL = new Intl.NumberFormat("pt-BR", {
+    const totalAmountBRL = new Intl.NumberFormat("pt-BR", {
       style: "currency",
       currency: charge.currency || "BRL",
     }).format(charge.amount_cents / 100);
 
+    const managementContributionBRL = new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: charge.currency || "BRL",
+    }).format((charge.management_contribution_cents || 0) / 100);
+
+    const dueAmountBRL = new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: charge.currency || "BRL",
+    }).format((charge.amount_cents - (charge.management_contribution_cents || 0)) / 100);
+
     const formattedDueDate = charge.due_date
       ? new Intl.DateTimeFormat("pt-BR").format(new Date(charge.due_date))
+      : "";
+
+    const formattedMaintenanceDate = charge.maintenance_date
+      ? new Intl.DateTimeFormat("pt-BR").format(new Date(charge.maintenance_date))
       : "";
 
     const portalUrl = Deno.env.get("PORTAL_URL") || "https://ktzfovzwayfqczytmhno.lovableproject.com";
@@ -98,7 +112,11 @@ const handler = async (req: Request): Promise<Response> => {
       charge_id: charge.id,
       charge_title: charge.title,
       charge_description: charge.description || "",
-      charge_amount: amountBRL,
+      charge_amount: totalAmountBRL, // Total amount
+      total_amount: totalAmountBRL, // Total amount (alias)
+      management_contribution: managementContributionBRL, // Management contribution
+      due_amount: dueAmountBRL, // Amount owner needs to pay (total - management)
+      maintenance_date: formattedMaintenanceDate, // Date of maintenance
       charge_due_date: formattedDueDate,
       due_date: formattedDueDate,
       payment_link: charge.payment_link_url || "",
@@ -132,15 +150,15 @@ const handler = async (req: Request): Promise<Response> => {
       switch (type) {
         case "charge_created":
           pushTitle = "Nova Cobrança 💰";
-          pushBody = `${charge.title} - ${amountBRL} (Vence ${formattedDueDate})`;
+          pushBody = `${charge.title} - ${dueAmountBRL} (Vence ${formattedDueDate})`;
           break;
         case "charge_reminder":
           pushTitle = "Lembrete de Cobrança ⏰";
-          pushBody = `${charge.title} vence em breve - ${amountBRL}`;
+          pushBody = `${charge.title} vence em breve - ${dueAmountBRL}`;
           break;
         case "charge_overdue":
           pushTitle = "Cobrança Vencida ⚠️";
-          pushBody = `${charge.title} - ${amountBRL} está vencida`;
+          pushBody = `${charge.title} - ${dueAmountBRL} está vencida`;
           break;
       }
 
