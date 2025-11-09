@@ -153,7 +153,8 @@ serve(async (req) => {
       description: description || null,
       amount_cents: Math.round(totalAmount * 100), // Convert to cents
       management_contribution_cents: Math.round(managementContributionValue * 100), // Convert to cents
-      due_date: getColumnValue("data") || null,
+      due_date: getColumnValue("due_date") || null,
+      maintenance_date: getColumnValue("data") || null, // Date when the issue/maintenance occurred
       owner_id: property.owner_id,
       property_id: property.id,
       currency: "BRL",

@@ -29,6 +29,7 @@ interface Charge {
   management_contribution_cents: number;
   currency: string;
   due_date: string | null;
+  maintenance_date: string | null;
   status: string;
   payment_link_url: string | null;
   created_at: string;
@@ -713,6 +714,12 @@ export default function CobrancaDetalhes() {
                   <Badge variant="default" className="text-base">
                     Devido: {formatCurrency(charge.amount_cents - (charge.management_contribution_cents || 0), charge.currency)}
                   </Badge>
+                  {charge.maintenance_date && (
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                      <Calendar className="h-3 w-3 mr-1" />
+                      Data: {format(new Date(charge.maintenance_date), "dd/MM/yyyy", { locale: ptBR })}
+                    </Badge>
+                  )}
                   {charge.due_date && (
                     <Badge variant="secondary">
                       <Calendar className="h-3 w-3 mr-1" />

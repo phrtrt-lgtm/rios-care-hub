@@ -19,6 +19,7 @@ interface Charge {
   management_contribution_cents: number;
   currency: string;
   due_date: string | null;
+  maintenance_date: string | null;
   status: string;
   payment_link_url: string | null;
   created_at: string;
@@ -230,6 +231,12 @@ const MinhasCobrancas = () => {
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Calendar className="h-4 w-4" />
                         Venc: {format(new Date(charge.due_date), "dd/MM/yyyy", { locale: ptBR })}
+                      </div>
+                    )}
+                    {charge.maintenance_date && (
+                      <div className="flex items-center gap-2 text-sm text-blue-600">
+                        <Calendar className="h-4 w-4" />
+                        Data: {format(new Date(charge.maintenance_date), "dd/MM/yyyy", { locale: ptBR })}
                       </div>
                     )}
                   </div>
