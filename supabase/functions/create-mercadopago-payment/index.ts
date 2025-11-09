@@ -128,12 +128,48 @@ const handler = async (req: Request): Promise<Response> => {
 
     const paymentLink = mpData.init_point; // Link de pagamento
 
-    // Atualizar cobrança com o link de pagamento
+    // Buscar detalhes do pagamento PIX para obter QR code
+    let pixQrCode = null;
+    let pixQrCodeBase64 = null;
+
+    // Criar pagamento PIX para gerar QR code
+    const pixPaymentPayload = {
+      transaction_amount: totalAmount,
+      description: charge.title || 'Cobrança de Manutenção',
+      payment_method_id: 'pix',
+      payer: {
+        email: owner.email || 'noreply@example.com',
+      },
+      external_reference: chargeId,
+      notification_url: `${supabaseUrl}/functions/v1/mercadopago-webhook`,
+    };
+
+    const pixResponse = await fetch('https://api.mercadopago.com/v1/payments', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${mercadoPagoToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(pixPaymentPayload),
+    });
+
+    if (pixResponse.ok) {
+      const pixData = await pixResponse.json();
+      console.log('PIX payment created:', pixData);
+      pixQrCode = pixData.point_of_interaction?.transaction_data?.qr_code;
+      pixQrCodeBase64 = pixData.point_of_interaction?.transaction_data?.qr_code_base64;
+    } else {
+      console.error('Error creating PIX payment:', await pixResponse.text());
+    }
+
+    // Atualizar cobrança com o link de pagamento e QR code
     const { error: updateError } = await supabase
       .from('charges')
       .update({ 
         payment_link: paymentLink,
         mercadopago_preference_id: mpData.id,
+        pix_qr_code: pixQrCode,
+        pix_qr_code_base64: pixQrCodeBase64,
       })
       .eq('id', chargeId);
 

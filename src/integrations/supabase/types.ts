@@ -626,6 +626,8 @@ export type Database = {
           paid_at: string | null
           payment_link: string | null
           payment_link_url: string | null
+          pix_qr_code: string | null
+          pix_qr_code_base64: string | null
           property_id: string | null
           reminder_24h_sent: boolean | null
           reminder_48h_sent: boolean | null
@@ -658,6 +660,8 @@ export type Database = {
           paid_at?: string | null
           payment_link?: string | null
           payment_link_url?: string | null
+          pix_qr_code?: string | null
+          pix_qr_code_base64?: string | null
           property_id?: string | null
           reminder_24h_sent?: boolean | null
           reminder_48h_sent?: boolean | null
@@ -690,6 +694,8 @@ export type Database = {
           paid_at?: string | null
           payment_link?: string | null
           payment_link_url?: string | null
+          pix_qr_code?: string | null
+          pix_qr_code_base64?: string | null
           property_id?: string | null
           reminder_24h_sent?: boolean | null
           reminder_48h_sent?: boolean | null

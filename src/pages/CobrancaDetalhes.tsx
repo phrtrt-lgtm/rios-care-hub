@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Send, Calendar, DollarSign, Paperclip, Download, Eye, FileText, Image as ImageIcon, Trash2, Sparkles, ChevronDown, X, ZoomIn, Play, Video, Loader2 } from "lucide-react";
+import { ArrowLeft, Send, Calendar, DollarSign, Paperclip, Download, Eye, FileText, Image as ImageIcon, Trash2, Sparkles, ChevronDown, X, ZoomIn, Play, Video, Loader2, Copy, CreditCard } from "lucide-react";
 import { VoiceToTextInput } from "@/components/VoiceToTextInput";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { Label } from "@/components/ui/label";
@@ -33,6 +33,8 @@ interface Charge {
   status: string;
   payment_link_url: string | null;
   payment_link: string | null;
+  pix_qr_code?: string | null;
+  pix_qr_code_base64?: string | null;
   created_at: string;
   owner_id: string;
   property_id: string | null;
@@ -840,7 +842,7 @@ export default function CobrancaDetalhes() {
             {/* Link de Pagamento - Para Proprietário */}
             {!isTeamMember && charge.payment_link && charge.status !== 'paid' && charge.status !== 'cancelled' && (
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
-                <div className="flex items-start gap-3">
+                <div className="flex flex-col lg:flex-row items-start gap-4">
                   <div className="flex-1">
                     <h4 className="font-semibold text-green-900 dark:text-green-100 mb-1">
                       💳 Pagar com Mercado Pago
@@ -874,6 +876,39 @@ export default function CobrancaDetalhes() {
                       </Button>
                     </div>
                   </div>
+                  
+                  {/* QR Code PIX */}
+                  {charge.pix_qr_code_base64 && (
+                    <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border-2 border-dashed border-green-300 dark:border-green-700">
+                      <div className="flex flex-col items-center gap-3">
+                        <p className="text-sm font-medium text-green-900 dark:text-green-100 text-center">
+                          ou escaneie o QR Code PIX
+                        </p>
+                        <img 
+                          src={`data:image/png;base64,${charge.pix_qr_code_base64}`}
+                          alt="QR Code PIX"
+                          className="w-40 h-40 border-2 border-gray-200 dark:border-gray-700 rounded"
+                        />
+                        {charge.pix_qr_code && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              navigator.clipboard.writeText(charge.pix_qr_code!);
+                              toast({
+                                title: "Código PIX copiado!",
+                                description: "Cole no seu aplicativo de pagamento",
+                              });
+                            }}
+                            className="w-full"
+                          >
+                            <Copy className="mr-2 h-4 w-4" />
+                            Copiar código PIX
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
