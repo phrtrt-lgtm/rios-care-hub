@@ -776,7 +776,7 @@ export default function CobrancaDetalhes() {
               <p className="text-muted-foreground mb-4">{charge.description}</p>
             )}
 
-            {/* Link de Pagamento */}
+            {/* Link de Pagamento - Para Admin/Agent */}
             {isTeamMember && charge.status !== 'paid' && charge.status !== 'cancelled' && (
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
                 <div className="flex items-start gap-3">
@@ -832,6 +832,47 @@ export default function CobrancaDetalhes() {
                         )}
                       </Button>
                     )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Link de Pagamento - Para Proprietário */}
+            {!isTeamMember && charge.payment_link && charge.status !== 'paid' && charge.status !== 'cancelled' && (
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
+                <div className="flex items-start gap-3">
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-green-900 dark:text-green-100 mb-1">
+                      💳 Pagar com Mercado Pago
+                    </h4>
+                    <p className="text-sm text-green-700 dark:text-green-300 mb-3">
+                      Você pode pagar esta cobrança com cartão de crédito, débito ou PIX através do Mercado Pago de forma segura.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Button
+                        variant="default"
+                        size="default"
+                        onClick={() => {
+                          window.open(charge.payment_link!, '_blank');
+                        }}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        💰 Pagar Agora
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="default"
+                        onClick={() => {
+                          navigator.clipboard.writeText(charge.payment_link!);
+                          toast({
+                            title: "Link copiado!",
+                            description: "Você pode compartilhar este link ou acessá-lo depois",
+                          });
+                        }}
+                      >
+                        📋 Copiar Link
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
