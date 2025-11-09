@@ -312,11 +312,11 @@ export default function Painel() {
           <h3 className="mb-4 text-xl font-semibold">Outras Ações</h3>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {(profile?.role === "admin" || profile?.role === "maintenance") && (
-            <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/admin/cadastrar-usuario")}>
+            <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/admin/cadastrar-proprietario")}>
               <CardHeader>
-                <CardTitle>Cadastrar Usuário</CardTitle>
+                <CardTitle>Cadastrar Proprietário</CardTitle>
                 <CardDescription>
-                  Criar nova conta no sistema
+                  Criar nova conta pendente de aprovação
                 </CardDescription>
               </CardHeader>
               <CardContent>
