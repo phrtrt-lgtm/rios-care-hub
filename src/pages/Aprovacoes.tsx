@@ -44,6 +44,21 @@ export default function Aprovacoes() {
 
       if (error) throw error;
 
+      // If approved, send welcome email
+      if (approved) {
+        try {
+          await supabase.functions.invoke("notify-ticket", {
+            body: {
+              type: "approval_approved",
+              userId: userId,
+            },
+          });
+          console.log("Approval email sent");
+        } catch (emailError) {
+          console.error("Error sending approval email (non-critical):", emailError);
+        }
+      }
+
       toast.success(
         approved ? "Usuário aprovado com sucesso!" : "Cadastro recusado"
       );
