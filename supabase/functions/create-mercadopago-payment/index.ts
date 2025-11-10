@@ -79,13 +79,14 @@ const handler = async (req: Request): Promise<Response> => {
       console.error('Error fetching payments:', paymentsError);
     }
 
-    // Calcular valor devido (total - pagamentos já feitos)
+    // Calcular valor devido (total - aporte - pagamentos já feitos)
     const totalPaidCents = payments?.reduce((sum, p) => sum + p.amount_cents, 0) || 0;
-    const dueAmountCents = charge.amount_cents - totalPaidCents;
+    const dueAmountCents = charge.amount_cents - charge.management_contribution_cents - totalPaidCents;
     const dueAmount = dueAmountCents / 100;
 
     console.log('Charge amount calculation:', {
       totalAmountCents: charge.amount_cents,
+      managementContributionCents: charge.management_contribution_cents,
       totalPaidCents,
       dueAmountCents,
       dueAmount
