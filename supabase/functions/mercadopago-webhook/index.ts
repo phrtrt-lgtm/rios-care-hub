@@ -46,15 +46,21 @@ const handler = async (req: Request): Promise<Response> => {
       const payment = await paymentResponse.json();
       console.log('Payment details:', payment);
 
-      const chargeId = payment.external_reference;
+      const externalRef = payment.external_reference;
       const status = payment.status; // approved, pending, rejected, etc.
+      const isGroupPayment = payment.metadata?.is_group_payment === true;
+      const chargeIds = payment.metadata?.charge_ids || [];
 
-      if (!chargeId) {
+      if (!externalRef) {
         console.log('No external_reference in payment');
         return new Response('OK', { status: 200 });
       }
 
-      // Mapear status do Mercado Pago para status da cobrança
+      console.log('Processing payment:', paymentId, 'Status:', status);
+      console.log('Is group payment:', isGroupPayment);
+      console.log('Charge IDs from metadata:', chargeIds);
+
+      // Mapear status do Mercado Pago
       let chargeStatus: string | null = null;
       if (status === 'approved') {
         chargeStatus = 'paid';
@@ -67,6 +73,41 @@ const handler = async (req: Request): Promise<Response> => {
         console.log(`Payment status '${status}' not mapped to charge status, skipping update`);
         return new Response('OK', { status: 200 });
       }
+
+      // Handle group payment
+      if (isGroupPayment && chargeIds.length > 0) {
+        console.log('Processing group payment for charges:', chargeIds);
+
+        // Update all charges in the group
+        const updatePromises = chargeIds.map(async (chargeId: string) => {
+          const updateData: any = {
+            status: chargeStatus,
+            updated_at: new Date().toISOString(),
+          };
+
+          if (status === 'approved') {
+            updateData.paid_at = new Date().toISOString();
+          }
+
+          const { error: updateError } = await supabase
+            .from('charges')
+            .update(updateData)
+            .eq('id', chargeId);
+
+          if (updateError) {
+            console.error(`Error updating charge ${chargeId}:`, updateError);
+          } else {
+            console.log(`Charge ${chargeId} updated to status:`, chargeStatus);
+          }
+        });
+
+        await Promise.all(updatePromises);
+        console.log('All charges in group payment updated');
+        return new Response('OK', { status: 200 });
+      }
+
+      // Single charge payment (existing logic)
+      const chargeId = externalRef;
 
       // Atualizar cobrança
       const updateData: any = {

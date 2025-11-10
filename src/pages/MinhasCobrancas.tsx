@@ -6,10 +6,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowLeft, Calendar, FileText, Image, Video, Paperclip } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ArrowLeft, Calendar, FileText, Paperclip, QrCode } from "lucide-react";
 import { AuthenticatedImage, AuthenticatedVideo } from "@/components/AuthenticatedMedia";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
+import { formatBRL } from "@/lib/format";
 
 interface Charge {
   id: string;
@@ -47,6 +50,14 @@ const MinhasCobrancas = () => {
   const navigate = useNavigate();
   const [charges, setCharges] = useState<Charge[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedCharges, setSelectedCharges] = useState<string[]>([]);
+  const [generatingPayment, setGeneratingPayment] = useState(false);
+  const [groupPayment, setGroupPayment] = useState<{
+    payment_link: string;
+    pix_qr_code: string;
+    pix_qr_code_base64: string;
+    total_amount: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!user || profile?.role !== 'owner') {
@@ -143,6 +154,47 @@ const MinhasCobrancas = () => {
     return attachment.mime_type?.startsWith('video/') || false;
   };
 
+  const toggleChargeSelection = (chargeId: string) => {
+    setSelectedCharges(prev => 
+      prev.includes(chargeId) 
+        ? prev.filter(id => id !== chargeId)
+        : [...prev, chargeId]
+    );
+  };
+
+  const handleGenerateGroupPayment = async () => {
+    try {
+      setGeneratingPayment(true);
+      
+      const { data, error } = await supabase.functions.invoke('create-group-payment', {
+        body: { chargeIds: selectedCharges }
+      });
+
+      if (error) throw error;
+
+      setGroupPayment({
+        payment_link: data.payment_link,
+        pix_qr_code: data.pix_qr_code,
+        pix_qr_code_base64: data.pix_qr_code_base64,
+        total_amount: data.total_amount
+      });
+
+      toast.success('Pagamento agrupado gerado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao gerar pagamento:', error);
+      toast.error('Erro ao gerar pagamento agrupado');
+    } finally {
+      setGeneratingPayment(false);
+    }
+  };
+
+  const selectedChargesData = charges.filter(c => selectedCharges.includes(c.id));
+  const totalDue = selectedChargesData.reduce((sum, charge) => 
+    sum + (charge.amount_cents - (charge.management_contribution_cents || 0)), 0
+  );
+
+  const openChargesCount = charges.filter(c => c.status === 'sent' || c.status === 'overdue').length;
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -168,6 +220,77 @@ const MinhasCobrancas = () => {
           <p className="text-muted-foreground">Visualize todas as suas cobranças</p>
         </div>
 
+        {/* Painel de Pagamento Agrupado */}
+        {openChargesCount > 0 && (
+          <Card className="mb-6 border-primary/20 bg-primary/5">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <QrCode className="h-5 w-5" />
+                Pagamento Agrupado
+              </CardTitle>
+              <CardDescription>
+                Selecione múltiplas cobranças em aberto para pagar todas de uma vez
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {selectedCharges.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-background rounded-lg border">
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedCharges.length} {selectedCharges.length === 1 ? 'cobrança selecionada' : 'cobranças selecionadas'}
+                      </p>
+                      <p className="text-2xl font-bold text-foreground">
+                        {formatBRL(totalDue)}
+                      </p>
+                    </div>
+                    <Button 
+                      onClick={handleGenerateGroupPayment}
+                      disabled={generatingPayment}
+                      size="lg"
+                    >
+                      {generatingPayment ? 'Gerando...' : 'Gerar Pagamento'}
+                    </Button>
+                  </div>
+
+                  {groupPayment && (
+                    <div className="p-4 bg-background rounded-lg border space-y-4">
+                      <div className="text-center">
+                        <h3 className="font-semibold mb-2">QR Code PIX</h3>
+                        <div className="flex justify-center">
+                          <img 
+                            src={groupPayment.pix_qr_code_base64} 
+                            alt="QR Code PIX" 
+                            className="w-64 h-64"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Button 
+                          className="w-full" 
+                          variant="outline"
+                          onClick={() => {
+                            navigator.clipboard.writeText(groupPayment.pix_qr_code);
+                            toast.success('Código PIX copiado!');
+                          }}
+                        >
+                          Copiar código PIX
+                        </Button>
+                        <Button 
+                          className="w-full"
+                          onClick={() => window.open(groupPayment.payment_link, '_blank')}
+                        >
+                          Abrir link de pagamento
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {charges.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
@@ -180,17 +303,35 @@ const MinhasCobrancas = () => {
           </Card>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {charges.map((charge) => (
-              <Card 
-                key={charge.id}
-                className="group cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02]"
-                onClick={() => navigate(`/cobranca/${charge.id}`)}
-              >
-                <CardHeader>
-                  <div className="flex items-start justify-between mb-2">
-                    <CardTitle className="text-lg line-clamp-2">{charge.title}</CardTitle>
-                    {getStatusBadge(charge.status)}
-                  </div>
+            {charges.map((charge) => {
+              const isOpen = charge.status === 'sent' || charge.status === 'overdue';
+              const isSelected = selectedCharges.includes(charge.id);
+              
+              return (
+                <Card 
+                  key={charge.id}
+                  className={`group transition-all hover:shadow-lg ${isSelected ? 'ring-2 ring-primary' : ''}`}
+                >
+                  <CardHeader>
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-start gap-2 flex-1">
+                        {isOpen && (
+                          <Checkbox 
+                            checked={isSelected}
+                            onCheckedChange={() => toggleChargeSelection(charge.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="mt-1"
+                          />
+                        )}
+                        <CardTitle 
+                          className="text-lg line-clamp-2 cursor-pointer flex-1"
+                          onClick={() => navigate(`/cobranca/${charge.id}`)}
+                        >
+                          {charge.title}
+                        </CardTitle>
+                      </div>
+                      {getStatusBadge(charge.status)}
+                    </div>
                   {charge.property && (
                     <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100 mb-2">
                       📍 {charge.property.name}
@@ -271,7 +412,8 @@ const MinhasCobrancas = () => {
                   )}
                 </CardContent>
               </Card>
-            ))}
+              );
+            })}
           </div>
         )}
       </main>
