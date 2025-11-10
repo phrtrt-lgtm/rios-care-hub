@@ -103,6 +103,24 @@ const handler = async (req: Request): Promise<Response> => {
 
         await Promise.all(updatePromises);
         console.log('All charges in group payment updated');
+        
+        // Send payment confirmation email for each charge
+        if (status === 'approved') {
+          const emailPromises = chargeIds.map(async (chargeId: string) => {
+            try {
+              await supabase.functions.invoke('send-charge-email', {
+                body: {
+                  chargeId,
+                  type: 'charge_paid',
+                },
+              });
+            } catch (emailError) {
+              console.error(`Error sending email for charge ${chargeId}:`, emailError);
+            }
+          });
+          await Promise.all(emailPromises);
+        }
+        
         return new Response('OK', { status: 200 });
       }
 
@@ -131,17 +149,17 @@ const handler = async (req: Request): Promise<Response> => {
 
       console.log(`Charge ${chargeId} updated to status: ${chargeStatus}`);
 
-      // Se foi aprovado, enviar notificação
+      // Se foi aprovado, enviar notificação de pagamento confirmado
       if (status === 'approved') {
         try {
-          await supabase.functions.invoke('notify-charge-message', {
+          await supabase.functions.invoke('send-charge-email', {
             body: {
               chargeId,
-              type: 'payment_received',
+              type: 'charge_paid',
             },
           });
         } catch (notifyError) {
-          console.error('Error sending notification:', notifyError);
+          console.error('Error sending payment confirmation:', notifyError);
         }
       }
     }

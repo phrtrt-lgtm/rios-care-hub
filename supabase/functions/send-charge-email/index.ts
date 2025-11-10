@@ -9,8 +9,9 @@ const corsHeaders = {
 };
 
 interface NotifyRequest {
-  type: "charge_created" | "charge_reminder" | "charge_overdue";
+  type: "charge_created" | "charge_reminder" | "charge_overdue" | "charge_debit_notice" | "charge_paid";
   chargeId: string;
+  diasRestantes?: string;
 }
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
@@ -26,8 +27,8 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { type, chargeId }: NotifyRequest = await req.json();
-    console.log("Email notification request:", { type, chargeId });
+    const { type, chargeId, diasRestantes }: NotifyRequest = await req.json();
+    console.log("Email notification request:", { type, chargeId, diasRestantes });
 
     // Fetch charge data
     const { data: charge, error: chargeError } = await supabaseClient
@@ -94,6 +95,12 @@ const handler = async (req: Request): Promise<Response> => {
       case "charge_overdue":
         templateKey = "charge_overdue";
         break;
+      case "charge_debit_notice":
+        templateKey = "charge_debit_notice";
+        break;
+      case "charge_paid":
+        templateKey = "charge_paid";
+        break;
     }
 
     const template = await getTemplate(supabaseClient, templateKey);
@@ -105,6 +112,10 @@ const handler = async (req: Request): Promise<Response> => {
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const formattedPaidDate = charge.paid_at
+      ? new Intl.DateTimeFormat("pt-BR").format(new Date(charge.paid_at))
+      : "";
 
     const variables = {
       owner_name: charge.owner?.name || "Proprietário",
@@ -119,12 +130,14 @@ const handler = async (req: Request): Promise<Response> => {
       maintenance_date: formattedMaintenanceDate, // Date of maintenance
       charge_due_date: formattedDueDate,
       due_date: formattedDueDate,
+      paid_date: formattedPaidDate,
       payment_link: charge.payment_link_url || "",
       contest_deadline: contestDeadline,
       portal_url: chargeUrl,
       charge_url: chargeUrl,
       property_name: property?.name || "",
       property_address: property?.address || "",
+      dias_restantes: diasRestantes || "",
     };
 
     const { error: emailError } = await resend.emails.send({
@@ -159,6 +172,14 @@ const handler = async (req: Request): Promise<Response> => {
         case "charge_overdue":
           pushTitle = "Cobrança Vencida ⚠️";
           pushBody = `${charge.title} - ${dueAmountBRL} está vencida`;
+          break;
+        case "charge_debit_notice":
+          pushTitle = "Aviso de Débito em Reserva ⚠️";
+          pushBody = `${charge.title} - ${dueAmountBRL} será debitado`;
+          break;
+        case "charge_paid":
+          pushTitle = "Pagamento Confirmado ✅";
+          pushBody = `${charge.title} - ${dueAmountBRL} foi confirmado`;
           break;
       }
 
