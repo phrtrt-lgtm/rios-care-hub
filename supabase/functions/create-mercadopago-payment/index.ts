@@ -84,6 +84,13 @@ const handler = async (req: Request): Promise<Response> => {
     const dueAmountCents = charge.amount_cents - totalPaidCents;
     const dueAmount = dueAmountCents / 100;
 
+    console.log('Charge amount calculation:', {
+      totalAmountCents: charge.amount_cents,
+      totalPaidCents,
+      dueAmountCents,
+      dueAmount
+    });
+
     // Verificar se há valor devido
     if (dueAmountCents <= 0) {
       console.log('No amount due for this charge');
