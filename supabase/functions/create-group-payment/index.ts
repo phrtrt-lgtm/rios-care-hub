@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { v4 as uuidv4 } from 'https://esm.sh/uuid@9.0.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -148,11 +149,13 @@ serve(async (req) => {
 
     console.log('Creating PIX payment:', JSON.stringify(pixPaymentData, null, 2));
 
+    const idempotencyKey = uuidv4();
     const pixResponse = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${mercadoPagoToken}`,
         'Content-Type': 'application/json',
+        'X-Idempotency-Key': idempotencyKey,
       },
       body: JSON.stringify(pixPaymentData),
     });
