@@ -55,11 +55,17 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       // Mapear status do Mercado Pago para status da cobrança
-      let chargeStatus = 'pending';
+      let chargeStatus: string | null = null;
       if (status === 'approved') {
         chargeStatus = 'paid';
       } else if (status === 'rejected' || status === 'cancelled') {
         chargeStatus = 'cancelled';
+      }
+
+      // Só atualizar se temos um status válido
+      if (!chargeStatus) {
+        console.log(`Payment status '${status}' not mapped to charge status, skipping update`);
+        return new Response('OK', { status: 200 });
       }
 
       // Atualizar cobrança
@@ -70,7 +76,6 @@ const handler = async (req: Request): Promise<Response> => {
 
       if (status === 'approved') {
         updateData.paid_at = new Date().toISOString();
-        updateData.payment_method = payment.payment_method_id || 'mercadopago';
       }
 
       const { error: updateError } = await supabase
