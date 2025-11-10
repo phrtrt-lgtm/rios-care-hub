@@ -140,10 +140,25 @@ const handler = async (req: Request): Promise<Response> => {
       dias_restantes: diasRestantes || "",
     };
 
+    // Build recipient list
+    const recipients = [charge.owner?.email];
+
+    // For paid notifications, also send to admins and maintenance team
+    if (type === "charge_paid") {
+      const { data: teamMembers } = await supabaseClient
+        .from("profiles")
+        .select("email")
+        .in("role", ["admin", "maintenance"]);
+
+      if (teamMembers) {
+        recipients.push(...teamMembers.map(m => m.email));
+      }
+    }
+
     const { error: emailError } = await resend.emails.send({
       from: "RIOS <sistema@rioshospedagens.com.br>",
       reply_to: "rioslagoon@gmail.com",
-      to: [charge.owner?.email],
+      to: recipients,
       subject: renderTemplate(template.subject, variables),
       html: renderTemplate(template.body_html, variables),
     });
