@@ -69,9 +69,32 @@ const handler = async (req: Request): Promise<Response> => {
 
     const property = charge.properties;
 
-    // Calcular valor total em centavos e converter para reais
-    const totalAmountCents = charge.amount_cents;
-    const totalAmount = totalAmountCents / 100;
+    // Buscar pagamentos já feitos para calcular o valor devido
+    const { data: payments, error: paymentsError } = await supabase
+      .from('charge_payments')
+      .select('amount_cents')
+      .eq('charge_id', chargeId);
+
+    if (paymentsError) {
+      console.error('Error fetching payments:', paymentsError);
+    }
+
+    // Calcular valor devido (total - pagamentos já feitos)
+    const totalPaidCents = payments?.reduce((sum, p) => sum + p.amount_cents, 0) || 0;
+    const dueAmountCents = charge.amount_cents - totalPaidCents;
+    const dueAmount = dueAmountCents / 100;
+
+    // Verificar se há valor devido
+    if (dueAmountCents <= 0) {
+      console.log('No amount due for this charge');
+      return new Response(
+        JSON.stringify({ error: 'Não há valor devido para esta cobrança' }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
 
     // Criar preferência de pagamento no Mercado Pago
     const preferencePayload = {
@@ -81,7 +104,7 @@ const handler = async (req: Request): Promise<Response> => {
           description: charge.description || '',
           quantity: 1,
           currency_id: 'BRL',
-          unit_price: totalAmount,
+          unit_price: dueAmount,
         }
       ],
       payer: {
@@ -134,7 +157,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Criar pagamento PIX para gerar QR code
     const pixPaymentPayload = {
-      transaction_amount: totalAmount,
+      transaction_amount: dueAmount,
       description: charge.title || 'Cobrança de Manutenção',
       payment_method_id: 'pix',
       payer: {
