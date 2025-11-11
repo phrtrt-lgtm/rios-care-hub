@@ -22,6 +22,8 @@ const Index = () => {
       navigate("/aguardando-aprovacao", { replace: true });
     } else if (profile.role === 'owner') {
       navigate("/minha-caixa", { replace: true });
+    } else if (profile.role === 'cleaner') {
+      navigate("/faxineira", { replace: true });
     } else if (profile.role === 'agent' || profile.role === 'admin' || profile.role === 'maintenance') {
       navigate("/painel", { replace: true });
     }
