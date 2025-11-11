@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Loader2, Paperclip, X, Sparkles } from "lucide-react";
 import { VoiceToTextInput } from "@/components/VoiceToTextInput";
 import { useToast } from "@/hooks/use-toast";
+import { CHARGE_CATEGORY_OPTIONS } from "@/constants/chargeCategories";
 
 interface Owner {
   id: string;
@@ -40,6 +41,7 @@ export default function NovaCobranca() {
     property_id: "",
     title: "",
     description: "",
+    category: "",
     amount_cents: "",
     management_contribution_cents: "",
     due_date: "",
@@ -134,10 +136,10 @@ export default function NovaCobranca() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.owner_id || !formData.title || !formData.amount_cents) {
+    if (!formData.owner_id || !formData.title || !formData.amount_cents || !formData.category) {
       toast({
         title: "Campos obrigatórios",
-        description: "Preencha todos os campos obrigatórios",
+        description: "Preencha todos os campos obrigatórios (proprietário, título, categoria e valor)",
         variant: "destructive",
       });
       return;
@@ -153,7 +155,8 @@ export default function NovaCobranca() {
           owner_id: formData.owner_id,
           property_id: formData.property_id || null,
           title: formData.title,
-          description: formData.description,
+          description: formData.description || null,
+          category: formData.category || null,
           amount_cents: parseInt(formData.amount_cents) * 100, // Convert to cents
           management_contribution_cents: formData.management_contribution_cents ? parseInt(formData.management_contribution_cents) * 100 : 0,
           due_date: formData.due_date || null,
@@ -267,12 +270,31 @@ export default function NovaCobranca() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="category">Categoria do Serviço *</Label>
+                <Select 
+                  value={formData.category} 
+                  onValueChange={(value) => setFormData({ ...formData, category: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CHARGE_CATEGORY_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="title">Título *</Label>
                 <Input
                   id="title"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="Ex: Aluguel Janeiro 2024"
+                  placeholder="Ex: Troca de torneira da pia"
                   required
                 />
               </div>

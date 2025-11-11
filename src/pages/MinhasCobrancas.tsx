@@ -5,19 +5,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ArrowLeft, Calendar, FileText, Paperclip, QrCode } from "lucide-react";
 import { AuthenticatedImage, AuthenticatedVideo } from "@/components/AuthenticatedMedia";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { formatBRL } from "@/lib/format";
+import { CHARGE_CATEGORIES } from "@/constants/chargeCategories";
 
 interface Charge {
   id: string;
   title: string;
   description: string | null;
+  category: string | null;
   amount_cents: number;
   management_contribution_cents: number;
   currency: string;
@@ -332,9 +334,14 @@ const MinhasCobrancas = () => {
                       </div>
                       {getStatusBadge(charge.status)}
                     </div>
-                  {charge.property && (
+                   {charge.property && (
                     <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100 mb-2">
                       📍 {charge.property.name}
+                    </Badge>
+                  )}
+                  {charge.category && (
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 mb-2 ml-2">
+                      🔧 {CHARGE_CATEGORIES[charge.category as keyof typeof CHARGE_CATEGORIES]}
                     </Badge>
                   )}
                   {charge.description && (

@@ -139,7 +139,21 @@ serve(async (req) => {
 
     // Extract charge data using the actual column IDs from your Monday board
     // The title will be the Monday item name
-    const description = getColumnValue("long_text_mkx3tx1b");
+    
+    // Get category from Label column (you'll need to configure this column ID)
+    const categoryLabel = getColumnValue("label") || getColumnValue("labels");
+    
+    // Map Monday label to category key
+    const categoryMapping: Record<string, string> = {
+      'Hidráulica': 'hidraulica',
+      'Elétrica': 'eletrica',
+      'Marcenaria': 'marcenaria',
+      'Itens': 'itens',
+      'Estrutural': 'estrutural',
+      'Refrigeração': 'refrigeracao',
+    };
+    
+    const category = categoryLabel ? categoryMapping[categoryLabel] || null : null;
     
     // Numeric columns from Monday board
     const totalAmount = parseFloat(getColumnValue("numeric_mkx355en") || "0"); // Total value column
@@ -150,7 +164,8 @@ serve(async (req) => {
     
     const chargeData = {
       title: item.name || `Cobrança - ${propertyName}`,
-      description: description || null,
+      description: null, // Removed description as per business rules
+      category: category,
       amount_cents: Math.round(totalAmount * 100), // Convert to cents
       management_contribution_cents: Math.round(managementContributionValue * 100), // Convert to cents
       due_date: getColumnValue("due_date") || null,

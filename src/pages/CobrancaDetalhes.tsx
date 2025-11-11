@@ -20,11 +20,13 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import JSZip from "jszip";
+import { CHARGE_CATEGORIES } from "@/constants/chargeCategories";
 
 interface Charge {
   id: string;
   title: string;
   description: string | null;
+  category: string | null;
   amount_cents: number;
   management_contribution_cents: number;
   currency: string;
@@ -727,11 +729,18 @@ export default function CobrancaDetalhes() {
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <CardTitle className="text-2xl mb-2">{charge.title}</CardTitle>
-                {charge.property && (
-                  <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100 mb-3">
-                    📍 {charge.property.name}
-                  </Badge>
-                )}
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {charge.property && (
+                    <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100">
+                      📍 {charge.property.name}
+                    </Badge>
+                  )}
+                  {charge.category && (
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100">
+                      🔧 {CHARGE_CATEGORIES[charge.category as keyof typeof CHARGE_CATEGORIES]}
+                    </Badge>
+                  )}
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {getStatusBadge(charge.status)}
                   <Badge variant="outline" className="text-base">

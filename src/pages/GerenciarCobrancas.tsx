@@ -18,6 +18,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
+import { CHARGE_CATEGORIES, CHARGE_CATEGORY_OPTIONS } from "@/constants/chargeCategories";
 
 const statusUpdateSchema = z.object({
   status: z.enum(['draft', 'sent', 'paid', 'overdue', 'cancelled']),
@@ -28,6 +29,7 @@ interface Charge {
   id: string;
   title: string;
   description: string | null;
+  category: string | null;
   amount_cents: number;
   management_contribution_cents: number;
   currency: string;
@@ -69,6 +71,7 @@ const GerenciarCobrancas = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [editingCharge, setEditingCharge] = useState<Charge | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -89,7 +92,7 @@ const GerenciarCobrancas = () => {
 
   useEffect(() => {
     filterCharges();
-  }, [searchTerm, statusFilter, charges]);
+  }, [searchTerm, statusFilter, categoryFilter, charges]);
 
   const fetchCharges = async () => {
     try {
@@ -161,6 +164,10 @@ const GerenciarCobrancas = () => {
 
     if (statusFilter !== 'all') {
       filtered = filtered.filter(charge => charge.status === statusFilter);
+    }
+
+    if (categoryFilter !== 'all') {
+      filtered = filtered.filter(charge => charge.category === categoryFilter);
     }
 
     setFilteredCharges(filtered);
@@ -354,7 +361,7 @@ const GerenciarCobrancas = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-3">
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -375,6 +382,19 @@ const GerenciarCobrancas = () => {
                   <SelectItem value="paid">Paga</SelectItem>
                   <SelectItem value="overdue">Vencida</SelectItem>
                   <SelectItem value="cancelled">Cancelada</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as Categorias</SelectItem>
+                  {CHARGE_CATEGORY_OPTIONS.map(option => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -430,6 +450,11 @@ const GerenciarCobrancas = () => {
                       {charge.property && (
                         <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100 mb-2">
                           📍 {charge.property.name}
+                        </Badge>
+                      )}
+                      {charge.category && (
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 mb-2 ml-2">
+                          🔧 {CHARGE_CATEGORIES[charge.category as keyof typeof CHARGE_CATEGORIES]}
                         </Badge>
                       )}
                       {charge.description && (
