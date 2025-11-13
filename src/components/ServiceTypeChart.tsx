@@ -14,24 +14,26 @@ interface ServiceTypeChartProps {
 
 const TERRA_COLOR = 'hsl(var(--rios-terra))';
 
-export const ServiceTypeChart = ({ data }: ServiceTypeChartProps) => {
-  if (!data || data.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Gastos por Tipo de Serviço</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">Nenhum dado disponível</p>
-        </CardContent>
-      </Card>
-    );
-  }
+const SERVICE_TYPES = [
+  'Estrutural',
+  'Hidráulica',
+  'Elétrica',
+  'Marcenaria',
+  'Itens',
+  'Refrigeração'
+];
 
-  const chartData = data.map(item => ({
-    name: item.service_type || 'Sem classificação',
-    value: item.total_amount / 100,
-    count: item.charge_count,
+export const ServiceTypeChart = ({ data }: ServiceTypeChartProps) => {
+  // Criar um map dos dados recebidos
+  const dataMap = new Map(
+    data.map(item => [item.service_type, { value: item.total_amount / 100, count: item.charge_count }])
+  );
+
+  // Criar chartData com todos os tipos, na ordem definida
+  const chartData = SERVICE_TYPES.map(type => ({
+    name: type,
+    value: dataMap.get(type)?.value || 0,
+    count: dataMap.get(type)?.count || 0,
   }));
 
   return (
