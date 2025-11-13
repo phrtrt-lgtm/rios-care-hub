@@ -588,6 +588,79 @@ export default function CobrancaDetalhes() {
     }
   };
 
+  const downloadMessageAttachments = async (messageAttachments: ChargeMessageAttachment[], messageName: string) => {
+    try {
+      if (messageAttachments.length === 0) return;
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("Sessão não encontrada");
+      }
+
+      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+      const zip = new JSZip();
+      let successCount = 0;
+      
+      for (let i = 0; i < messageAttachments.length; i++) {
+        const attachment = messageAttachments[i];
+        
+        try {
+          const downloadUrl = `${SUPABASE_URL}/functions/v1/serve-attachment/${attachment.id}`;
+          
+          const response = await fetch(downloadUrl, {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+          });
+          
+          if (response.ok) {
+            const blob = await response.blob();
+            zip.file(attachment.file_name, blob);
+            successCount++;
+          }
+        } catch (error) {
+          console.error(`❌ Erro ao processar arquivo ${i + 1}:`, error);
+        }
+      }
+
+      if (successCount === 0) {
+        toast({
+          title: "Erro ao baixar",
+          description: "Nenhum arquivo pôde ser processado",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const zipBlob = await zip.generateAsync({ 
+        type: 'blob',
+        compression: "DEFLATE",
+        compressionOptions: { level: 6 }
+      });
+      
+      const url = URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${messageName}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Download concluído!",
+        description: `${successCount} arquivo(s) baixado(s)`,
+      });
+    } catch (error: any) {
+      console.error('❌ Erro geral:', error);
+      toast({
+        title: "Erro ao baixar anexos",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const getFileIcon = (mimeType: string) => {
     if (mimeType.startsWith('image/')) {
       return <ImageIcon className="h-8 w-8 text-primary" />;
@@ -1142,7 +1215,26 @@ export default function CobrancaDetalhes() {
                 
                  {/* Galeria de anexos da mensagem */}
                 {message.attachments && message.attachments.length > 0 && (
-                  <div className="mt-3">
+                  <div className="mt-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs text-muted-foreground font-medium">
+                        Anexos ({message.attachments.length})
+                      </div>
+                      {message.attachments.length > 1 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => downloadMessageAttachments(
+                            message.attachments!,
+                            `anexos-${format(new Date(message.created_at), "dd-MM-yyyy-HH-mm")}`
+                          )}
+                        >
+                          <Download className="h-3 w-3 mr-1" />
+                          Baixar todos
+                        </Button>
+                      )}
+                    </div>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                       {message.attachments.map((attachment) => {
                         const isImage = attachment.mime_type?.startsWith('image/');

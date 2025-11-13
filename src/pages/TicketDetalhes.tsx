@@ -276,6 +276,77 @@ export default function TicketDetalhes() {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  const downloadMessageAttachments = async (messageAttachments: Attachment[], messageName: string) => {
+    try {
+      if (messageAttachments.length === 0) return;
+      
+      const zip = new JSZip();
+      let successCount = 0;
+      
+      for (let i = 0; i < messageAttachments.length; i++) {
+        const attachment = messageAttachments[i];
+        
+        try {
+          const url = new URL(attachment.file_url);
+          const pathParts = url.pathname.split('/object/public/');
+          
+          if (pathParts.length === 2) {
+            const [bucket, ...fileParts] = pathParts[1].split('/');
+            const filePath = fileParts.join('/');
+            
+            const { data, error } = await supabase.storage
+              .from(bucket)
+              .download(filePath);
+            
+            if (error) {
+              console.error(`❌ Erro no arquivo:`, error);
+              continue;
+            }
+            
+            if (data) {
+              const fileName = attachment.file_name || `arquivo-${i + 1}`;
+              zip.file(fileName, data);
+              successCount++;
+            }
+          }
+        } catch (error) {
+          console.error(`❌ Erro ao processar arquivo ${i + 1}:`, error);
+        }
+      }
+
+      if (successCount === 0) {
+        toast({
+          title: "Erro ao baixar",
+          description: "Nenhum arquivo pôde ser processado",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${messageName}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Download concluído!",
+        description: `${successCount} arquivo(s) baixado(s)`,
+      });
+    } catch (error: any) {
+      console.error('❌ Erro geral:', error);
+      toast({
+        title: "Erro ao baixar anexos",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const downloadAllAttachments = async () => {
     if (downloadingAll) return;
     
@@ -692,8 +763,24 @@ export default function TicketDetalhes() {
                 )}
                 {message.attachments && message.attachments.length > 0 && (
                   <div className="mt-3 space-y-2">
-                    <div className="text-xs text-muted-foreground font-medium">
-                      Anexos ({message.attachments.length})
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs text-muted-foreground font-medium">
+                        Anexos ({message.attachments.length})
+                      </div>
+                      {message.attachments.length > 1 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => downloadMessageAttachments(
+                            message.attachments!,
+                            `anexos-${format(new Date(message.created_at), "dd-MM-yyyy-HH-mm")}`
+                          )}
+                        >
+                          <Download className="h-3 w-3 mr-1" />
+                          Baixar todos
+                        </Button>
+                      )}
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                       {message.attachments.map((attachment) => (
