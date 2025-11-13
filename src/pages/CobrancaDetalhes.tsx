@@ -1016,7 +1016,7 @@ export default function CobrancaDetalhes() {
                 {attachments.some(a => isImageFile(a)) && (
                   <div className="mb-6">
                     <h4 className="text-sm font-medium text-muted-foreground mb-3">Imagens</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
                       {attachments
                         .filter(a => isImageFile(a))
                         .map((attachment, idx) => {
@@ -1026,7 +1026,7 @@ export default function CobrancaDetalhes() {
                           return (
                              <div 
                                key={attachment.id} 
-                               className="group relative aspect-square rounded-lg overflow-hidden border bg-muted cursor-pointer"
+                               className="group relative aspect-square rounded-md overflow-hidden border bg-muted cursor-pointer"
                                onClick={() => {
                                  setGalleryStartIndex(mediaIndex);
                                  setGalleryOpen(true);
@@ -1037,32 +1037,32 @@ export default function CobrancaDetalhes() {
                                  alt={attachment.file_name}
                                  className="w-full h-full object-cover transition-transform group-hover:scale-105"
                                />
-                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
-                                <Button
-                                  size="sm"
-                                  variant="secondary"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setGalleryStartIndex(mediaIndex);
-                                    setGalleryOpen(true);
-                                  }}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <ZoomIn className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="secondary"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    downloadAttachment(attachment.id, attachment.file_name);
-                                  }}
-                                  disabled={sending}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <Download className="h-4 w-4" />
-                                </Button>
-                              </div>
+                               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
+                                 <Button
+                                   size="sm"
+                                   variant="secondary"
+                                   onClick={(e) => {
+                                     e.stopPropagation();
+                                     setGalleryStartIndex(mediaIndex);
+                                     setGalleryOpen(true);
+                                   }}
+                                   className="h-7 w-7 p-0"
+                                 >
+                                   <ZoomIn className="h-3.5 w-3.5" />
+                                 </Button>
+                                 <Button
+                                   size="sm"
+                                   variant="secondary"
+                                   onClick={(e) => {
+                                     e.stopPropagation();
+                                     downloadAttachment(attachment.id, attachment.file_name);
+                                   }}
+                                   disabled={sending}
+                                   className="h-7 w-7 p-0"
+                                 >
+                                   <Download className="h-3.5 w-3.5" />
+                                 </Button>
+                               </div>
                             </div>
                           );
                         })}
@@ -1074,7 +1074,7 @@ export default function CobrancaDetalhes() {
                 {attachments.some(a => isVideoFile(a)) && (
                   <div className="mb-6">
                     <h4 className="text-sm font-medium text-muted-foreground mb-3">Vídeos</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
                       {attachments
                         .filter(a => isVideoFile(a))
                         .map((attachment) => {
@@ -1085,7 +1085,7 @@ export default function CobrancaDetalhes() {
                           return (
                             <div 
                               key={attachment.id} 
-                              className="group relative aspect-square rounded-lg overflow-hidden border bg-muted cursor-pointer"
+                              className="group relative aspect-square rounded-md overflow-hidden border bg-muted cursor-pointer"
                               onClick={() => {
                                 setGalleryStartIndex(mediaIndex);
                                 setGalleryOpen(true);
@@ -1099,10 +1099,10 @@ export default function CobrancaDetalhes() {
                                 />
                               ) : (
                                 <div className="w-full h-full bg-muted flex items-center justify-center">
-                                  <Video className="h-12 w-12 text-muted-foreground" />
+                                  <Video className="h-8 w-8 text-muted-foreground" />
                                 </div>
                               )}
-                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
                                 <Button
                                   size="sm"
                                   variant="secondary"
@@ -1111,9 +1111,9 @@ export default function CobrancaDetalhes() {
                                     setGalleryStartIndex(mediaIndex);
                                     setGalleryOpen(true);
                                   }}
-                                  className="h-8 w-8 p-0"
+                                  className="h-7 w-7 p-0"
                                 >
-                                  <Play className="h-4 w-4" />
+                                  <Play className="h-3.5 w-3.5" />
                                 </Button>
                                 <Button
                                   size="sm"
@@ -1123,9 +1123,9 @@ export default function CobrancaDetalhes() {
                                     downloadAttachment(attachment.id, attachment.file_name);
                                   }}
                                   disabled={sending}
-                                  className="h-8 w-8 p-0"
+                                  className="h-7 w-7 p-0"
                                 >
-                                  <Download className="h-4 w-4" />
+                                  <Download className="h-3.5 w-3.5" />
                                 </Button>
                               </div>
                             </div>
@@ -1139,21 +1139,21 @@ export default function CobrancaDetalhes() {
                 {attachments.some(a => !isImageFile(a) && !isVideoFile(a)) && (
                   <div>
                     <h4 className="text-sm font-medium text-muted-foreground mb-3">Outros Arquivos</h4>
-                    <div className="space-y-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       {attachments
                         .filter(a => !isImageFile(a) && !isVideoFile(a))
                         .map((attachment) => (
                           <div
                             key={attachment.id}
-                            className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent transition-colors"
+                            className="flex items-center gap-2 p-2 rounded-md border bg-card hover:bg-accent transition-colors"
                           >
                             {getFileIcon(attachment.mime_type || '')}
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-foreground truncate">
+                              <p className="text-xs font-medium text-foreground truncate">
                                 {attachment.file_name}
                               </p>
                               {attachment.file_size && (
-                                <p className="text-xs text-muted-foreground">
+                                <p className="text-[10px] text-muted-foreground">
                                   {(attachment.file_size / 1024).toFixed(1)} KB
                                 </p>
                               )}
@@ -1163,8 +1163,9 @@ export default function CobrancaDetalhes() {
                               variant="ghost"
                               onClick={() => downloadAttachment(attachment.id, attachment.file_name)}
                               disabled={sending}
+                              className="h-7 w-7 p-0"
                             >
-                              <Download className="h-4 w-4" />
+                              <Download className="h-3.5 w-3.5" />
                             </Button>
                           </div>
                         ))}
