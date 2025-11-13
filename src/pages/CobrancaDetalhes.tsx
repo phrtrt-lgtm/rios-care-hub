@@ -1080,59 +1080,80 @@ export default function CobrancaDetalhes() {
                 {attachments.some(a => isVideoFile(a)) && (
                   <div className="mb-6">
                     <h4 className="text-sm font-medium text-muted-foreground mb-3">Vídeos</h4>
-                    <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                       {attachments
                         .filter(a => isVideoFile(a))
                         .map((attachment) => {
                           const previewUrl = getAttachmentUrl(attachment);
                           const posterUrl = attachment.poster_path ? getPosterUrl(attachment) : undefined;
                           const mediaIndex = allMediaItems.findIndex(item => item.file_url === previewUrl);
+                          const duration = attachment.duration_sec;
+                          
+                          // Format duration (seconds to mm:ss)
+                          const formatDuration = (seconds: number | null | undefined) => {
+                            if (!seconds) return '00:00';
+                            const mins = Math.floor(seconds / 60);
+                            const secs = Math.floor(seconds % 60);
+                            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                          };
                           
                           return (
                             <div 
                               key={attachment.id} 
-                              className="group relative aspect-square rounded-md overflow-hidden border bg-muted cursor-pointer"
+                              className="group relative rounded-lg overflow-hidden border bg-muted cursor-pointer hover:shadow-lg transition-shadow"
                               onClick={() => {
                                 setGalleryStartIndex(mediaIndex);
                                 setGalleryOpen(true);
                               }}
                             >
-                              {posterUrl ? (
-                                <AuthenticatedImage 
-                                  src={posterUrl}
-                                  alt={attachment.file_name}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <div className="w-full h-full bg-muted flex items-center justify-center">
-                                  <Video className="h-8 w-8 text-muted-foreground" />
+                              <div className="relative aspect-video">
+                                {posterUrl ? (
+                                  <AuthenticatedImage 
+                                    src={posterUrl}
+                                    alt={attachment.file_name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full bg-muted flex items-center justify-center">
+                                    <Video className="h-12 w-12 text-muted-foreground" />
+                                  </div>
+                                )}
+                                
+                                {/* Duration badge */}
+                                <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded">
+                                  {formatDuration(duration)}
                                 </div>
-                              )}
-                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
-                                <Button
-                                  size="sm"
-                                  variant="secondary"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setGalleryStartIndex(mediaIndex);
-                                    setGalleryOpen(true);
-                                  }}
-                                  className="h-7 w-7 p-0"
-                                >
-                                  <Play className="h-3.5 w-3.5" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="secondary"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    downloadAttachment(attachment.id, attachment.file_name);
-                                  }}
-                                  disabled={sending}
-                                  className="h-7 w-7 p-0"
-                                >
-                                  <Download className="h-3.5 w-3.5" />
-                                </Button>
+                                
+                                {/* Play button overlay */}
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors">
+                                  <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Play className="h-6 w-6 text-primary ml-1" fill="currentColor" />
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {/* Video info */}
+                              <div className="p-2 bg-card">
+                                <p className="text-xs font-medium truncate" title={attachment.file_name}>
+                                  {attachment.file_name}
+                                </p>
+                                <div className="flex items-center justify-between mt-1">
+                                  <span className="text-xs text-muted-foreground">
+                                    {(attachment.file_size / 1024 / 1024).toFixed(1)} MB
+                                  </span>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      downloadAttachment(attachment.id, attachment.file_name);
+                                    }}
+                                    disabled={sending}
+                                    className="h-6 w-6 p-0"
+                                  >
+                                    <Download className="h-3 w-3" />
+                                  </Button>
+                                </div>
                               </div>
                             </div>
                           );
