@@ -12,13 +12,7 @@ interface ServiceTypeChartProps {
   data: ServiceTypeData[];
 }
 
-const COLORS = [
-  'hsl(var(--chart-1))',
-  'hsl(var(--chart-2))',
-  'hsl(var(--chart-3))',
-  'hsl(var(--chart-4))',
-  'hsl(var(--chart-5))',
-];
+const TERRA_COLOR = 'hsl(var(--rios-terra))';
 
 export const ServiceTypeChart = ({ data }: ServiceTypeChartProps) => {
   if (!data || data.length === 0) {
@@ -46,7 +40,7 @@ export const ServiceTypeChart = ({ data }: ServiceTypeChartProps) => {
         <CardTitle>Gastos por Tipo de Serviço</CardTitle>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer width="100%" height={250}>
           <BarChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
             <XAxis 
@@ -85,11 +79,7 @@ export const ServiceTypeChart = ({ data }: ServiceTypeChartProps) => {
                 return null;
               }}
             />
-            <Bar dataKey="value" radius={[8, 8, 0, 0]}>
-              {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </Bar>
+            <Bar dataKey="value" radius={[8, 8, 0, 0]} fill={TERRA_COLOR} />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useMaintenances, useMaintenanceSummary, useMaintenanceCharts } from "@/hooks/useMaintenances";
 import { MaintenanceSummaryCards } from "@/components/MaintenanceSummaryCards";
 import { MaintenanceCharts } from "@/components/MaintenanceCharts";
-import { ServiceTypePieChart } from "@/components/ServiceTypePieChart";
+import { ServiceTypeChart } from "@/components/ServiceTypeChart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -149,7 +149,7 @@ export default function Manutencoes() {
 
       {/* Gráfico de Pizza de Tipos de Serviço */}
       {serviceTypeData.length > 0 && (
-        <ServiceTypePieChart data={serviceTypeData} />
+        <ServiceTypeChart data={serviceTypeData} />
       )}
 
       {/* Gráficos */}
