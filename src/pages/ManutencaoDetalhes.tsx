@@ -4,8 +4,9 @@ import { MaintenancePaymentForm } from "@/components/MaintenancePaymentForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { formatBRL, formatDateTime, formatDate } from "@/lib/format";
-import { ArrowLeft, Download, Loader2 } from "lucide-react";
+import { ArrowLeft, Download, Loader2, FileText, Calendar, DollarSign, Info } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { AttachmentBubble } from "@/components/AttachmentBubble";
 import { MediaGallery } from "@/components/MediaGallery";
@@ -295,7 +296,7 @@ export default function ManutencaoDetalhes() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
-            <History className="h-4 w-4" />
+            <Info className="h-4 w-4" />
             Informações da Cobrança
           </CardTitle>
         </CardHeader>
