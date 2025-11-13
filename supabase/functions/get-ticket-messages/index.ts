@@ -7,33 +7,26 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
-    }
-
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     
-    // Create client with user's token for auth validation
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: {
-          Authorization: authHeader
-        }
-      }
-    })
+    // Create client with service role to bypass RLS
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
     
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
+    // Get user from JWT (gateway already validated it)
+    const authHeader = req.headers.get('Authorization')
+    const token = authHeader?.replace('Bearer ', '')
+    
+    if (!token) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
+    
+    // Decode JWT to get user ID
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    const userId = payload.sub
 
     const { ticketId } = await req.json()
 
@@ -48,18 +41,12 @@ Deno.serve(async (req) => {
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
-      .eq('id', user.id)
+      .eq('id', userId)
       .single()
 
-    console.log(`👤 User ${user.id} has role: ${profile?.role}`)
+    console.log(`👤 User ${userId} has role: ${profile?.role}`)
 
     const isTeam = profile?.role === 'admin' || profile?.role === 'agent'
-
-    // Seta contexto de sessão para RLS
-    await supabase.rpc('set_session_context', {
-      p_role: profile?.role || 'owner',
-      p_owner_id: user.id
-    })
 
     console.log(`🔍 Searching for ticket ${ticketId}`)
 
@@ -82,7 +69,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    if (!isTeam && ticket.owner_id !== user.id) {
+    if (!isTeam && ticket.owner_id !== userId) {
       return new Response(JSON.stringify({ error: 'Forbidden' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
