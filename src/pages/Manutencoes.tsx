@@ -115,37 +115,6 @@ export default function Manutencoes() {
       {/* Cards resumo */}
       <MaintenanceSummaryCards summary={summary || null} />
 
-      {/* Próximos pagamentos */}
-      {summary?.nextPayments && summary.nextPayments.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <CalendarIcon className="h-4 w-4" />
-              Próximos Pagamentos (30 dias)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {summary.nextPayments.map((payment: any) => (
-                <div
-                  key={payment.id}
-                  className="flex items-center justify-between border rounded-lg p-3 hover:bg-accent cursor-pointer transition-colors"
-                  onClick={() => navigate(`/manutencao/${payment.id}`)}
-                >
-                  <div className="flex-1 truncate">
-                    <div className="font-medium">{payment.title}</div>
-                  </div>
-                  <div className="text-sm text-muted-foreground mx-4">
-                    {formatDate(payment.due_at)}
-                  </div>
-                  <div className="font-medium">{formatBRL(payment.cost_total_cents)}</div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Gráficos */}
       <MaintenanceCharts charts={charts} serviceTypeData={serviceTypeData} />
 
