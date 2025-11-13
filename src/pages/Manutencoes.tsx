@@ -112,12 +112,6 @@ export default function Manutencoes() {
         )}
       </div>
 
-      {/* Cards resumo */}
-      <MaintenanceSummaryCards summary={summary || null} />
-
-      {/* Gráficos */}
-      <MaintenanceCharts charts={charts} serviceTypeData={serviceTypeData} />
-
       {/* Filtros */}
       <Card>
         <CardContent className="pt-6">
@@ -271,6 +265,12 @@ export default function Manutencoes() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Cards resumo */}
+      <MaintenanceSummaryCards summary={summary || null} />
+
+      {/* Gráficos */}
+      <MaintenanceCharts charts={charts} serviceTypeData={serviceTypeData} />
     </div>
   );
 }
