@@ -1,8 +1,5 @@
 project_id = "ktzfovzwayfqczytmhno"
 
-[functions.get-ticket-messages]
-verify_jwt = true
-
 [functions.notify-ticket]
 verify_jwt = false
 
