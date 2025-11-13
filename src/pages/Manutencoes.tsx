@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { useMaintenances, useMaintenanceSummary } from "@/hooks/useMaintenances";
+import { useMaintenances, useMaintenanceSummary, useMaintenanceCharts } from "@/hooks/useMaintenances";
 import { MaintenanceSummaryCards } from "@/components/MaintenanceSummaryCards";
-import { ServiceTypeChart } from "@/components/ServiceTypeChart";
+import { MaintenanceCharts } from "@/components/MaintenanceCharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +34,7 @@ export default function Manutencoes() {
     status: activeFilters.status || undefined,
     search: activeFilters.search || undefined,
   });
+  const { data: charts } = useMaintenanceCharts(ownerId, year);
 
   useEffect(() => {
     if (user) {
@@ -145,10 +146,8 @@ export default function Manutencoes() {
         </Card>
       )}
 
-      {/* Gráfico de Tipos de Serviço */}
-      {serviceTypeData.length > 0 && (
-        <ServiceTypeChart data={serviceTypeData} />
-      )}
+      {/* Gráficos */}
+      <MaintenanceCharts charts={charts} serviceTypeData={serviceTypeData} />
 
       {/* Filtros */}
       <Card>

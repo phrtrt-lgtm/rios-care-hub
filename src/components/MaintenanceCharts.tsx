@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatBRL } from "@/lib/format";
+import { ServiceTypeChart } from "@/components/ServiceTypeChart";
 import {
   BarChart,
   Bar,
@@ -16,19 +17,26 @@ import {
   Legend,
 } from "recharts";
 
+interface ServiceTypeData {
+  service_type: string;
+  total_amount: number;
+  charge_count: number;
+}
+
 interface MaintenanceChartsProps {
   charts: {
     monthly: Array<{ month: number; total_cents: number }>;
     pie: Array<{ name: string; value: number }>;
     line: Array<{ month: number; ytd_cents: number }>;
   } | null;
+  serviceTypeData: ServiceTypeData[];
 }
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', 'hsl(var(--accent))'];
 
 const MONTH_NAMES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
-export function MaintenanceCharts({ charts }: MaintenanceChartsProps) {
+export function MaintenanceCharts({ charts, serviceTypeData }: MaintenanceChartsProps) {
   if (!charts) return null;
 
   const monthlyData = charts.monthly.map(m => ({
@@ -160,6 +168,11 @@ export function MaintenanceCharts({ charts }: MaintenanceChartsProps) {
           </ResponsiveContainer>
         </CardContent>
       </Card>
+
+      {/* Gráfico de Tipos de Serviço */}
+      {serviceTypeData && serviceTypeData.length > 0 && (
+        <ServiceTypeChart data={serviceTypeData} />
+      )}
     </div>
   );
 }
