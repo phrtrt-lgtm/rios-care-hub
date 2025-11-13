@@ -41,8 +41,8 @@ export const ServiceTypeChart = ({ data }: ServiceTypeChartProps) => {
       <CardHeader>
         <CardTitle>Gastos por Tipo de Serviço</CardTitle>
       </CardHeader>
-      <CardContent>
-        <ResponsiveContainer width="100%" height={250}>
+      <CardContent className="pb-2">
+        <ResponsiveContainer width="100%" height={280}>
           <BarChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
             <XAxis 
