@@ -92,6 +92,23 @@ export default function ManutencaoDetalhes() {
               <div className="font-medium">{maintenance.property?.name || '-'}</div>
             </div>
 
+            {maintenance.service_type && (
+              <div>
+                <div className="text-sm text-muted-foreground">Tipo de Serviço</div>
+                <div className="font-medium">{maintenance.service_type}</div>
+              </div>
+            )}
+
+            {maintenance.maintenance_date && (
+              <div>
+                <div className="text-sm text-muted-foreground">Data do Serviço</div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  <span className="font-medium">{formatDate(maintenance.maintenance_date)}</span>
+                </div>
+              </div>
+            )}
+
             {maintenance.category && (
               <div>
                 <div className="text-sm text-muted-foreground">Categoria</div>
