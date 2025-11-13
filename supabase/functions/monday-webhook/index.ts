@@ -140,7 +140,26 @@ serve(async (req) => {
     // Extract charge data using the actual column IDs from your Monday board
     // The title will be the Monday item name
     
-    // Get category from Label column (you'll need to configure this column ID)
+    // Get service type from Label column - automatically reads from Monday
+    // Find the label column by type
+    const labelColumn = item.column_values.find((col: any) => col.type === "label");
+    
+    let serviceType = null;
+    if (labelColumn && labelColumn.value) {
+      try {
+        const labelValue = JSON.parse(labelColumn.value);
+        // Get the first label text if it exists
+        if (labelValue && labelValue.labels && labelValue.labels.length > 0) {
+          serviceType = labelValue.labels[0].text;
+        }
+      } catch (e) {
+        console.log("Could not parse label value:", e);
+      }
+    }
+    
+    console.log("Service type from Monday label:", serviceType);
+    
+    // Also get category from text if available
     const categoryLabel = getColumnValue("label") || getColumnValue("labels");
     
     // Map Monday label to category key
@@ -166,6 +185,7 @@ serve(async (req) => {
       title: item.name || `Cobrança - ${propertyName}`,
       description: null, // Removed description as per business rules
       category: category,
+      service_type: serviceType, // Store the service type from Monday label
       amount_cents: Math.round(totalAmount * 100), // Convert to cents
       management_contribution_cents: Math.round(managementContributionValue * 100), // Convert to cents
       due_date: getColumnValue("due_date") || null,
