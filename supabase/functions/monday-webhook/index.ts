@@ -140,24 +140,18 @@ serve(async (req) => {
     // Extract charge data using the actual column IDs from your Monday board
     // The title will be the Monday item name
     
-    // Get service type from Label column - automatically reads from Monday
-    // Find the label column by type
-    const labelColumn = item.column_values.find((col: any) => col.type === "label");
+    // Get service type from status column (color_mkxkavj2 in Monday)
+    // Find the status column that contains the service type
+    const statusColumn = item.column_values.find((col: any) => 
+      col.id === "color_mkxkavj2" || (col.type === "status" && col.text && col.text !== "Enviar ao Proprietário")
+    );
     
     let serviceType = null;
-    if (labelColumn && labelColumn.value) {
-      try {
-        const labelValue = JSON.parse(labelColumn.value);
-        // Get the first label text if it exists
-        if (labelValue && labelValue.labels && labelValue.labels.length > 0) {
-          serviceType = labelValue.labels[0].text;
-        }
-      } catch (e) {
-        console.log("Could not parse label value:", e);
-      }
+    if (statusColumn && statusColumn.text) {
+      serviceType = statusColumn.text; // Use the text value directly (e.g., "Marcenaria", "Hidráulica")
     }
     
-    console.log("Service type from Monday label:", serviceType);
+    console.log("Service type from Monday status column:", serviceType);
     
     // Also get category from text if available
     const categoryLabel = getColumnValue("label") || getColumnValue("labels");
