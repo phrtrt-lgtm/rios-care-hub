@@ -204,6 +204,23 @@ export default function ManutencaoDetalhes() {
                   {payment.note && (
                     <div className="text-sm text-muted-foreground mt-2">{payment.note}</div>
                   )}
+                  {payment.attachments && payment.attachments.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      {payment.attachments.map((attachment: any) => (
+                        <div key={attachment.id}>
+                          <a
+                            href={`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/authenticated/maintenance-payment-proofs/${attachment.file_path}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-primary hover:underline flex items-center gap-1"
+                          >
+                            <FileText className="h-3 w-3" />
+                            {attachment.file_name}
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   {payment.proof_file_url && (
                     <div className="mt-2">
                       <a

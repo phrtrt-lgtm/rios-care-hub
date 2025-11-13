@@ -32,6 +32,7 @@ export interface PaymentFormData {
   payment_date?: string;
   method?: string;
   applies_to?: 'total' | 'owner_share' | 'management_share';
+  proof_file?: File | null;
   proof_file_url?: string | null;
   note?: string | null;
 }
@@ -110,10 +111,13 @@ export const useMaintenance = (id?: string) => {
 
       if (error) throw error;
 
-      // Fetch payments from charge_payments
+      // Fetch payments from charge_payments with attachments
       const { data: payments } = await supabase
         .from("charge_payments")
-        .select("*")
+        .select(`
+          *,
+          attachments:maintenance_payment_attachments(*)
+        `)
         .eq("charge_id", id)
         .order("payment_date", { ascending: false });
 
@@ -259,6 +263,23 @@ export const useAddPayment = () => {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) throw new Error('Não autenticado');
 
+      // Upload do comprovante se fornecido
+      let proofPath: string | null = null;
+      if (data.proof_file) {
+        const fileExt = data.proof_file.name.split('.').pop();
+        const fileName = `${user.user.id}/${Date.now()}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('maintenance-payment-proofs')
+          .upload(fileName, data.proof_file);
+
+        if (uploadError) {
+          console.error('Error uploading proof:', uploadError);
+        } else {
+          proofPath = fileName;
+        }
+      }
+
       // Inserir pagamento em charge_payments
       const { data: payment, error: payError } = await supabase
         .from("charge_payments")
@@ -268,7 +289,7 @@ export const useAddPayment = () => {
           payment_date: data.payment_date || new Date().toISOString(),
           method: data.method || 'pix',
           applies_to: data.applies_to || 'total',
-          proof_file_url: data.proof_file_url || null,
+          proof_file_url: null,
           note: data.note || null,
           created_by: user.user.id,
         })
@@ -276,6 +297,20 @@ export const useAddPayment = () => {
         .single();
 
       if (payError) throw payError;
+
+      // Criar registro de anexo se houver arquivo
+      if (proofPath && payment) {
+        await supabase
+          .from("maintenance_payment_attachments")
+          .insert({
+            payment_id: payment.id,
+            file_name: data.proof_file!.name,
+            file_path: proofPath,
+            file_size: data.proof_file!.size,
+            mime_type: data.proof_file!.type,
+            created_by: user.user.id,
+          });
+      }
 
       // Verificar se já está totalmente pago
       const { data: charge } = await supabase
