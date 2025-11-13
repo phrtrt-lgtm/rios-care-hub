@@ -1080,7 +1080,7 @@ export default function CobrancaDetalhes() {
                 {attachments.some(a => isVideoFile(a)) && (
                   <div className="mb-6">
                     <h4 className="text-sm font-medium text-muted-foreground mb-3">Vídeos</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
                       {attachments
                         .filter(a => isVideoFile(a))
                         .map((attachment) => {
@@ -1130,23 +1130,23 @@ export default function CobrancaDetalhes() {
                               </div>
                               
                               {/* Video info */}
-                              <div className="p-2 bg-card">
+                              <div className="p-1.5 bg-card">
                                 <p className="text-xs font-medium truncate" title={attachment.file_name}>
                                   {attachment.file_name}
                                 </p>
-                                <div className="flex items-center justify-between mt-1">
-                                  <span className="text-xs text-muted-foreground">
+                                <div className="flex items-center justify-between mt-0.5">
+                                  <span className="text-[10px] text-muted-foreground">
                                     {formatFileSize(attachment.file_size)}
                                   </span>
                                   <Button
                                     size="sm"
                                     variant="ghost"
+                                    className="h-6 w-6 p-0"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       downloadAttachment(attachment.id, attachment.file_name);
                                     }}
                                     disabled={sending}
-                                    className="h-6 w-6 p-0"
                                   >
                                     <Download className="h-3 w-3" />
                                   </Button>
