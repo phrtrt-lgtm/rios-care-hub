@@ -58,7 +58,7 @@ const handler = async (req: Request): Promise<Response> => {
         const ownerTemplate = await getTemplate(supabase, ownerTemplateKey);
         const teamTemplate = await getTemplate(supabase, "ticket_created_team");
 
-        const portalUrl = Deno.env.get("PORTAL_URL") || "https://ktzfovzwayfqczytmhno.lovableproject.com";
+        const portalUrl = Deno.env.get("PORTAL_URL") || "https://portal.rioshospedagens.com.br";
         
         const variables = {
           owner_name: ticket.profiles.name,
