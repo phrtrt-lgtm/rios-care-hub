@@ -144,10 +144,7 @@ export default function TicketDetalhes() {
       if (!session) return;
 
       const { data, error } = await supabase.functions.invoke('get-ticket-messages', {
-        body: { ticketId: id },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`
-        }
+        body: { ticketId: id }
       });
 
       if (error) throw error;
