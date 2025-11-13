@@ -220,7 +220,7 @@ export default function Manutencoes() {
                     <tr
                       key={m.id}
                       className="border-t hover:bg-accent cursor-pointer transition-colors"
-                      onClick={() => navigate(`/manutencao/${m.id}`)}
+                      onClick={() => navigate(`/cobranca/${m.id}`)}
                     >
                       <td className="p-3">{formatDateTime(m.created_at)}</td>
                       <td className="p-3">{m.property?.name || '-'}</td>
