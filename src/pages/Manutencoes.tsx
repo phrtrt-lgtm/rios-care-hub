@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { useMaintenances, useMaintenanceSummary, useMaintenanceCharts } from "@/hooks/useMaintenances";
+import { useMaintenances, useMaintenanceSummary } from "@/hooks/useMaintenances";
 import { MaintenanceSummaryCards } from "@/components/MaintenanceSummaryCards";
-import { MaintenanceCharts } from "@/components/MaintenanceCharts";
 import { ServiceTypeChart } from "@/components/ServiceTypeChart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,7 +13,6 @@ import { CalendarIcon, Plus, Filter } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect } from "react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts";
 
 export default function Manutencoes() {
   const { profile, user } = useAuth();
@@ -36,7 +34,6 @@ export default function Manutencoes() {
     status: activeFilters.status || undefined,
     search: activeFilters.search || undefined,
   });
-  const { data: charts } = useMaintenanceCharts(ownerId, year);
 
   useEffect(() => {
     if (user) {
@@ -148,81 +145,10 @@ export default function Manutencoes() {
         </Card>
       )}
 
-      {/* Gráficos */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {charts && (
-          <>
-            {/* Barras mensais */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Gasto Mensal</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={250}>
-                  <BarChart data={charts.monthly.map(m => ({ ...m, monthName: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'][m.month - 1] }))}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                    <XAxis dataKey="monthName" className="text-xs" />
-                    <YAxis tickFormatter={(v) => formatBRL(v)} className="text-xs" />
-                    <Tooltip formatter={(v: number) => formatBRL(v)} />
-                    <Bar dataKey="total_cents" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            {/* Pizza por responsável */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Por Responsável</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={250}>
-                  <PieChart>
-                    <Pie
-                      data={charts.pie.map(p => ({ ...p, name: { owner: 'Proprietário', management: 'Gestão', split: 'Dividido' }[p.name] || p.name }))}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      label={(entry) => `${entry.name}: ${formatBRL(entry.value)}`}
-                      labelLine={false}
-                    >
-                      {charts.pie.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={['hsl(var(--primary))', 'hsl(var(--secondary))', 'hsl(var(--accent))'][index % 3]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(v: number) => formatBRL(v)} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            {/* Linha acumulada YTD */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Acumulado no Ano</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={250}>
-                  <LineChart data={charts.line.map(l => ({ ...l, monthName: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'][l.month - 1] }))}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                    <XAxis dataKey="monthName" className="text-xs" />
-                    <YAxis tickFormatter={(v) => formatBRL(v)} className="text-xs" />
-                    <Tooltip formatter={(v: number) => formatBRL(v)} />
-                    <Line type="monotone" dataKey="ytd_cents" stroke="hsl(var(--secondary))" strokeWidth={2} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </>
-        )}
-
-        {/* Gráfico de Tipos de Serviço */}
-        {serviceTypeData.length > 0 && (
-          <ServiceTypeChart data={serviceTypeData} />
-        )}
-      </div>
+      {/* Gráfico de Tipos de Serviço */}
+      {serviceTypeData.length > 0 && (
+        <ServiceTypeChart data={serviceTypeData} />
+      )}
 
       {/* Filtros */}
       <Card>
@@ -377,9 +303,6 @@ export default function Manutencoes() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Gráficos */}
-      <MaintenanceCharts charts={charts || null} />
     </div>
   );
 }
