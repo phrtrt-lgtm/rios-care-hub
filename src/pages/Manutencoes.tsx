@@ -3,22 +3,28 @@ import { useAuth } from "@/hooks/useAuth";
 import { useMaintenances, useMaintenanceSummary, useMaintenanceCharts } from "@/hooks/useMaintenances";
 import { MaintenanceSummaryCards } from "@/components/MaintenanceSummaryCards";
 import { MaintenanceCharts } from "@/components/MaintenanceCharts";
+import { ServiceTypePieChart } from "@/components/ServiceTypePieChart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatBRL, formatDateTime, formatDate } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
-import { CalendarIcon, Plus } from "lucide-react";
+import { CalendarIcon, Plus, Filter } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
 
 export default function Manutencoes() {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const navigate = useNavigate();
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [status, setStatus] = useState<string>("");
   const [search, setSearch] = useState<string>("");
-  const [activeFilters, setActiveFilters] = useState({ status: "", search: "" });
+  const [serviceTypeFilter, setServiceTypeFilter] = useState<string>("");
+  const [activeFilters, setActiveFilters] = useState({ status: "", search: "", serviceType: "" });
+  const [serviceTypeData, setServiceTypeData] = useState<any[]>([]);
+  const [serviceTypes, setServiceTypes] = useState<string[]>([]);
 
   const isOwner = profile?.role === 'owner';
   const ownerId = isOwner ? profile?.id : undefined;
@@ -31,8 +37,48 @@ export default function Manutencoes() {
   });
   const { data: charts } = useMaintenanceCharts(ownerId, year);
 
+  useEffect(() => {
+    if (user) {
+      fetchServiceTypeData();
+    }
+  }, [user, year]);
+
+  const fetchServiceTypeData = async () => {
+    try {
+      const query = supabase
+        .from('charges')
+        .select('service_type, amount_cents')
+        .not('service_type', 'is', null) as any;
+
+      if (ownerId) {
+        query.eq('owner_id', ownerId);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      // Group by service type and calculate totals
+      const grouped = (data || []).reduce((acc: any, charge: any) => {
+        const type = charge.service_type || 'Outros';
+        if (!acc[type]) {
+          acc[type] = { service_type: type, total_amount: 0, charge_count: 0 };
+        }
+        acc[type].total_amount += charge.amount_cents;
+        acc[type].charge_count += 1;
+        return acc;
+      }, {});
+
+      const groupedData = Object.values(grouped);
+      setServiceTypeData(groupedData);
+      setServiceTypes(groupedData.map((d: any) => d.service_type));
+    } catch (error) {
+      console.error('Erro ao carregar dados de tipo de serviço:', error);
+    }
+  };
+
   const handleFilter = () => {
-    setActiveFilters({ status, search });
+    setActiveFilters({ status, search, serviceType: serviceTypeFilter });
   };
 
   const getStatusBadge = (status: string) => {
@@ -101,6 +147,14 @@ export default function Manutencoes() {
         </Card>
       )}
 
+      {/* Gráfico de Pizza de Tipos de Serviço */}
+      {serviceTypeData.length > 0 && (
+        <ServiceTypePieChart data={serviceTypeData} />
+      )}
+
+      {/* Gráficos */}
+      {charts && <MaintenanceCharts charts={charts} />}
+
       {/* Filtros */}
       <Card>
         <CardContent className="pt-6">
@@ -138,6 +192,28 @@ export default function Manutencoes() {
                 </SelectContent>
               </Select>
             </div>
+
+            {serviceTypes.length > 0 && (
+              <div className="space-y-2 w-48">
+                <label className="text-sm font-medium flex items-center gap-1">
+                  <Filter className="h-3 w-3" />
+                  Tipo de Serviço
+                </label>
+                <Select value={serviceTypeFilter || "all"} onValueChange={(v) => setServiceTypeFilter(v === "all" ? "" : v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os tipos</SelectItem>
+                    {serviceTypes.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="space-y-2 flex-1 min-w-[200px]">
               <label className="text-sm font-medium">Buscar</label>
@@ -183,7 +259,9 @@ export default function Manutencoes() {
                     </td>
                   </tr>
                 ) : maintenances && maintenances.length > 0 ? (
-                  maintenances.map((m: any) => (
+                  maintenances
+                    .filter((m: any) => !activeFilters.serviceType || m.service_type === activeFilters.serviceType)
+                    .map((m: any) => (
                     <tr
                       key={m.id}
                       className="border-t hover:bg-accent cursor-pointer transition-colors"
@@ -195,6 +273,9 @@ export default function Manutencoes() {
                         <div className="font-medium">{m.title}</div>
                         {m.category && (
                           <div className="text-xs text-muted-foreground">{m.category}</div>
+                        )}
+                        {m.service_type && (
+                          <div className="text-xs text-purple-600">🏷️ {m.service_type}</div>
                         )}
                       </td>
                       <td className="p-3 text-right font-medium">
