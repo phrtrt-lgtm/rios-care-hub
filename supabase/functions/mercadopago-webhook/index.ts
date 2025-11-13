@@ -74,12 +74,49 @@ const handler = async (req: Request): Promise<Response> => {
         return new Response('OK', { status: 200 });
       }
 
+      // Buscar receipt URL do MercadoPago se o pagamento foi aprovado
+      let receiptUrl: string | null = null;
+      if (status === 'approved') {
+        try {
+          const receiptResponse = await fetch(
+            `https://api.mercadopago.com/v1/payments/${paymentId}`,
+            {
+              headers: {
+                'Authorization': `Bearer ${mercadoPagoToken}`,
+              },
+            }
+          );
+          
+          if (receiptResponse.ok) {
+            const receiptData = await receiptResponse.json();
+            // MercadoPago fornece URL do comprovante em point_of_interaction.transaction_data.ticket_url
+            receiptUrl = receiptData.point_of_interaction?.transaction_data?.ticket_url || null;
+            console.log('Receipt URL:', receiptUrl);
+          }
+        } catch (receiptError) {
+          console.error('Error fetching receipt:', receiptError);
+          // Continuar mesmo se falhar
+        }
+      }
+
       // Handle group payment
       if (isGroupPayment && chargeIds.length > 0) {
         console.log('Processing group payment for charges:', chargeIds);
 
-        // Update all charges in the group
+        // Update all charges in the group and create payment records
         const updatePromises = chargeIds.map(async (chargeId: string) => {
+          // Buscar informações da charge para calcular o valor correto
+          const { data: charge, error: chargeError } = await supabase
+            .from('charges')
+            .select('amount_cents, owner_id, management_contribution_cents')
+            .eq('id', chargeId)
+            .single();
+
+          if (chargeError || !charge) {
+            console.error(`Error fetching charge ${chargeId}:`, chargeError);
+            return;
+          }
+
           const updateData: any = {
             status: chargeStatus,
             updated_at: new Date().toISOString(),
@@ -98,6 +135,30 @@ const handler = async (req: Request): Promise<Response> => {
             console.error(`Error updating charge ${chargeId}:`, updateError);
           } else {
             console.log(`Charge ${chargeId} updated to status:`, chargeStatus);
+          }
+
+          // Criar registro de pagamento se foi aprovado
+          if (status === 'approved') {
+            const paymentRecord = {
+              charge_id: chargeId,
+              amount_cents: charge.amount_cents - (charge.management_contribution_cents || 0),
+              payment_date: new Date().toISOString(),
+              method: 'mercadopago',
+              applies_to: 'total',
+              note: `Pagamento MercadoPago ID: ${paymentId}`,
+              proof_file_url: receiptUrl,
+              created_by: charge.owner_id,
+            };
+
+            const { error: paymentError } = await supabase
+              .from('charge_payments')
+              .insert(paymentRecord);
+
+            if (paymentError) {
+              console.error(`Error creating payment record for charge ${chargeId}:`, paymentError);
+            } else {
+              console.log(`Payment record created for charge ${chargeId}`);
+            }
           }
         });
 
@@ -127,6 +188,18 @@ const handler = async (req: Request): Promise<Response> => {
       // Single charge payment (existing logic)
       const chargeId = externalRef;
 
+      // Buscar informações da charge
+      const { data: charge, error: chargeError } = await supabase
+        .from('charges')
+        .select('amount_cents, owner_id, management_contribution_cents')
+        .eq('id', chargeId)
+        .single();
+
+      if (chargeError || !charge) {
+        console.error('Error fetching charge:', chargeError);
+        throw new Error('Erro ao buscar cobrança');
+      }
+
       // Atualizar cobrança
       const updateData: any = {
         status: chargeStatus,
@@ -149,8 +222,30 @@ const handler = async (req: Request): Promise<Response> => {
 
       console.log(`Charge ${chargeId} updated to status: ${chargeStatus}`);
 
-      // Se foi aprovado, enviar notificação de pagamento confirmado
+      // Criar registro de pagamento se foi aprovado
       if (status === 'approved') {
+        const paymentRecord = {
+          charge_id: chargeId,
+          amount_cents: charge.amount_cents - (charge.management_contribution_cents || 0),
+          payment_date: new Date().toISOString(),
+          method: 'mercadopago',
+          applies_to: 'total',
+          note: `Pagamento MercadoPago ID: ${paymentId}`,
+          proof_file_url: receiptUrl,
+          created_by: charge.owner_id,
+        };
+
+        const { error: paymentError } = await supabase
+          .from('charge_payments')
+          .insert(paymentRecord);
+
+        if (paymentError) {
+          console.error('Error creating payment record:', paymentError);
+        } else {
+          console.log('Payment record created successfully');
+        }
+
+        // Enviar notificação de pagamento confirmado
         try {
           await supabase.functions.invoke('send-charge-email', {
             body: {
