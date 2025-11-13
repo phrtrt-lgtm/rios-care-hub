@@ -22,7 +22,7 @@ interface Charge {
   title: string;
   description: string | null;
   category: string | null;
-  service_type: string | null;
+  service_type?: string | null;
   amount_cents: number;
   management_contribution_cents: number;
   currency: string;
@@ -129,12 +129,12 @@ const MinhasCobrancas = () => {
         .from('charges')
         .select('service_type, amount_cents')
         .eq('owner_id', user!.id)
-        .not('service_type', 'is', null);
+        .not('service_type', 'is', null) as any;
 
       if (error) throw error;
 
       // Group by service type and calculate totals
-      const grouped = (data || []).reduce((acc: any, charge) => {
+      const grouped = (data || []).reduce((acc: any, charge: any) => {
         const type = charge.service_type || 'Outros';
         if (!acc[type]) {
           acc[type] = { service_type: type, total_amount: 0, charge_count: 0 };

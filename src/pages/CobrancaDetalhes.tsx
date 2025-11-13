@@ -27,6 +27,7 @@ interface Charge {
   title: string;
   description: string | null;
   category: string | null;
+  service_type?: string | null;
   amount_cents: number;
   management_contribution_cents: number;
   currency: string;
@@ -811,6 +812,11 @@ export default function CobrancaDetalhes() {
                   {charge.category && (
                     <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100">
                       🔧 {CHARGE_CATEGORIES[charge.category as keyof typeof CHARGE_CATEGORIES]}
+                    </Badge>
+                  )}
+                  {charge.service_type && (
+                    <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100">
+                      🏷️ {charge.service_type}
                     </Badge>
                   )}
                 </div>
