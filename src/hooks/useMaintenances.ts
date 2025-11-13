@@ -111,13 +111,10 @@ export const useMaintenance = (id?: string) => {
 
       if (error) throw error;
 
-      // Fetch payments from charge_payments with attachments
+      // Fetch payments from charge_payments
       const { data: payments } = await supabase
         .from("charge_payments")
-        .select(`
-          *,
-          attachments:maintenance_payment_attachments(*)
-        `)
+        .select("*")
         .eq("charge_id", id)
         .order("payment_date", { ascending: false });
 
@@ -281,7 +278,7 @@ export const useAddPayment = () => {
       }
 
       // Inserir pagamento em charge_payments
-      const { data: payment, error: payError } = await supabase
+      const { error: payError } = await supabase
         .from("charge_payments")
         .insert({
           charge_id: data.maintenance_id,
@@ -289,28 +286,12 @@ export const useAddPayment = () => {
           payment_date: data.payment_date || new Date().toISOString(),
           method: data.method || 'pix',
           applies_to: data.applies_to || 'total',
-          proof_file_url: null,
+          proof_file_url: proofPath,
           note: data.note || null,
           created_by: user.user.id,
-        })
-        .select()
-        .single();
+        });
 
       if (payError) throw payError;
-
-      // Criar registro de anexo se houver arquivo
-      if (proofPath && payment) {
-        await supabase
-          .from("maintenance_payment_attachments")
-          .insert({
-            payment_id: payment.id,
-            file_name: data.proof_file!.name,
-            file_path: proofPath,
-            file_size: data.proof_file!.size,
-            mime_type: data.proof_file!.type,
-            created_by: user.user.id,
-          });
-      }
 
       // Verificar se já está totalmente pago
       const { data: charge } = await supabase
@@ -333,7 +314,7 @@ export const useAddPayment = () => {
           .eq("id", data.maintenance_id);
       }
 
-      return payment;
+      return { success: true };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["maintenances"] });

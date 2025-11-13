@@ -4,16 +4,25 @@ import { MaintenancePaymentForm } from "@/components/MaintenancePaymentForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { formatBRL, formatDateTime, formatDate } from "@/lib/format";
-import { ArrowLeft, Calendar, DollarSign, FileText, History } from "lucide-react";
+import { ArrowLeft, Download, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { AttachmentBubble } from "@/components/AttachmentBubble";
+import { MediaGallery } from "@/components/MediaGallery";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import JSZip from "jszip";
+import { useState } from "react";
 
 export default function ManutencaoDetalhes() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { profile } = useAuth();
   const { data: maintenance, isLoading } = useMaintenance(id);
+  const { toast } = useToast();
+  const [downloadingAll, setDownloadingAll] = useState(false);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryStartIndex, setGalleryStartIndex] = useState(0);
 
   if (isLoading) {
     return (
