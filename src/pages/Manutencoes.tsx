@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { useMaintenances, useMaintenanceSummary, useMaintenanceCharts } from "@/hooks/useMaintenances";
-import { MaintenanceSummaryCards } from "@/components/MaintenanceSummaryCards";
+import { useMaintenances, useMaintenanceCharts } from "@/hooks/useMaintenances";
 import { MaintenanceCharts } from "@/components/MaintenanceCharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,7 +27,6 @@ export default function Manutencoes() {
   const isOwner = profile?.role === 'owner';
   const ownerId = isOwner ? profile?.id : undefined;
 
-  const { data: summary } = useMaintenanceSummary(ownerId, year);
   const { data: maintenances, isLoading } = useMaintenances({
     ownerId,
     status: activeFilters.status || undefined,
@@ -265,9 +263,6 @@ export default function Manutencoes() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Cards resumo */}
-      <MaintenanceSummaryCards summary={summary || null} />
 
       {/* Gráficos */}
       <MaintenanceCharts charts={charts} serviceTypeData={serviceTypeData} />
