@@ -114,12 +114,23 @@ export const useMaintenance = (id?: string) => {
       // Fetch payments from charge_payments with attachments
       const { data: payments } = await supabase
         .from("charge_payments")
-        .select(`
-          *,
-          attachments:maintenance_payment_attachments(*)
-        `)
+        .select("*")
         .eq("charge_id", id)
         .order("payment_date", { ascending: false });
+
+      // Buscar anexos dos pagamentos separadamente
+      if (payments && payments.length > 0) {
+        const paymentIds = payments.map(p => p.id);
+        const { data: attachments } = await supabase
+          .from("maintenance_payment_attachments")
+          .select("*")
+          .in("payment_id", paymentIds);
+
+        // Associar anexos aos pagamentos
+        payments.forEach((payment: any) => {
+          payment.attachments = attachments?.filter(a => a.payment_id === payment.id) || [];
+        });
+      }
 
       // Fetch attachments
       const { data: attachments } = await supabase
