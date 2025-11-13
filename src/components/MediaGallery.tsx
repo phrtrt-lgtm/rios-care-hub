@@ -89,8 +89,8 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange }: MediaG
   if (!currentItem) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[100vw] max-h-[100vh] w-full h-full p-0 bg-black/95 border-none overflow-hidden">
+    <Dialog open={open} onOpenChange={onOpenChange} modal={true}>
+      <DialogContent className="max-w-[100vw] max-h-[100vh] w-full h-full p-0 bg-black/95 border-none overflow-hidden" onInteractOutside={(e) => e.preventDefault()}>
         <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
           {/* Botão Fechar */}
           <Button
