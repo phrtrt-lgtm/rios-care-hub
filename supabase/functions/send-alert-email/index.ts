@@ -63,7 +63,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const typeInfo = typeMap[alert.type] || typeMap.info
-    const portalUrl = Deno.env.get("PORTAL_URL") || "https://ktzfovzwayfqczytmhno.lovableproject.com";
+    const portalUrl = Deno.env.get("PORTAL_URL") || "https://portal.rioshospedagens.com.br";
     
     const template = await getTemplate(supabase, "alert_created");
 

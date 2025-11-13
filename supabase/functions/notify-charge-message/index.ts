@@ -56,7 +56,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     const isTeamMessage = ["admin", "agent"].includes(message.author.role);
     
-    const portalUrl = Deno.env.get("PORTAL_URL") || "https://ktzfovzwayfqczytmhno.lovableproject.com";
+    const portalUrl = Deno.env.get("PORTAL_URL") || "https://portal.rioshospedagens.com.br";
     const chargeUrl = `${portalUrl}/cobranca-detalhes/${chargeId}`;
 
     const variables = {

@@ -45,7 +45,7 @@ serve(async (req) => {
     }
 
     const mailFrom = Deno.env.get('MAIL_FROM') || 'noreply@resend.dev';
-    const portalUrl = Deno.env.get("PORTAL_URL") || "https://ktzfovzwayfqczytmhno.lovableproject.com";
+    const portalUrl = Deno.env.get("PORTAL_URL") || "https://portal.rioshospedagens.com.br";
     let totalSent = 0;
 
     for (const proposal of proposals || []) {

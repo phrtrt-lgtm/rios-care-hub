@@ -57,7 +57,7 @@ const handler = async (req: Request): Promise<Response> => {
       .eq("property_id", propertyId)
       .single();
 
-    const portalUrl = Deno.env.get("PORTAL_URL") || "https://ktzfovzwayfqczytmhno.lovableproject.com";
+    const portalUrl = Deno.env.get("PORTAL_URL") || "https://portal.rioshospedagens.com.br";
     const inspectionUrl = `${portalUrl}/admin/vistorias/${inspection.id}`;
 
     // 1) Send email to team/admins
