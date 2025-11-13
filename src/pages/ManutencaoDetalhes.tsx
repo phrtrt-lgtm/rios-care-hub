@@ -33,7 +33,34 @@ export default function ManutencaoDetalhes() {
 
   const isTeam = profile?.role === 'admin' || profile?.role === 'agent';
   const totalPaid = maintenance.payments?.reduce((sum: number, p: any) => sum + p.amount_cents, 0) || 0;
-  const remaining = (maintenance.amount_cents || 0) - totalPaid;
+  
+  // Calcular quanto o proprietário deve baseado no cost_responsible
+  const calculateOwnerDue = () => {
+    const total = maintenance.amount_cents || 0;
+    if (maintenance.cost_responsible === 'owner') return total;
+    if (maintenance.cost_responsible === 'management') return 0;
+    if (maintenance.cost_responsible === 'split') {
+      const ownerPercent = maintenance.split_owner_percent || 50;
+      return Math.round((total * ownerPercent) / 100);
+    }
+    return total;
+  };
+  
+  // Calcular contribuição da gestão
+  const calculateManagementContribution = () => {
+    const total = maintenance.amount_cents || 0;
+    if (maintenance.cost_responsible === 'owner') return 0;
+    if (maintenance.cost_responsible === 'management') return total;
+    if (maintenance.cost_responsible === 'split') {
+      const managementPercent = 100 - (maintenance.split_owner_percent || 50);
+      return Math.round((total * managementPercent) / 100);
+    }
+    return 0;
+  };
+  
+  const ownerDue = calculateOwnerDue();
+  const managementContribution = calculateManagementContribution();
+  const remaining = ownerDue - totalPaid;
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, any> = {
@@ -131,17 +158,17 @@ export default function ManutencaoDetalhes() {
               <div className="text-2xl font-bold">{formatBRL(maintenance.amount_cents)}</div>
             </div>
 
-            {maintenance.management_contribution_cents > 0 && (
+            {managementContribution > 0 && (
               <div>
-                <div className="text-sm text-muted-foreground">Aporte da Gestão</div>
-                <div className="text-xl font-semibold text-green-600">- {formatBRL(maintenance.management_contribution_cents)}</div>
+                <div className="text-sm text-muted-foreground">Contribuição da Gestão</div>
+                <div className="text-xl font-semibold text-green-600">- {formatBRL(managementContribution)}</div>
               </div>
             )}
 
             <div>
-              <div className="text-sm text-muted-foreground">Valor Devido</div>
+              <div className="text-sm text-muted-foreground">Valor Devido (Proprietário)</div>
               <div className="text-2xl font-bold text-primary">
-                {formatBRL(maintenance.amount_cents - (maintenance.management_contribution_cents || 0))}
+                {formatBRL(ownerDue)}
               </div>
             </div>
 
