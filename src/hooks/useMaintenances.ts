@@ -111,26 +111,12 @@ export const useMaintenance = (id?: string) => {
 
       if (error) throw error;
 
-      // Fetch payments from charge_payments with attachments
+      // Fetch payments from charge_payments
       const { data: payments } = await supabase
         .from("charge_payments")
         .select("*")
         .eq("charge_id", id)
         .order("payment_date", { ascending: false });
-
-      // Buscar anexos dos pagamentos separadamente
-      if (payments && payments.length > 0) {
-        const paymentIds = payments.map(p => p.id);
-        const { data: attachments } = await supabase
-          .from("maintenance_payment_attachments")
-          .select("*")
-          .in("payment_id", paymentIds);
-
-        // Associar anexos aos pagamentos
-        payments.forEach((payment: any) => {
-          payment.attachments = attachments?.filter(a => a.payment_id === payment.id) || [];
-        });
-      }
 
       // Fetch attachments
       const { data: attachments } = await supabase
@@ -300,7 +286,7 @@ export const useAddPayment = () => {
           payment_date: data.payment_date || new Date().toISOString(),
           method: data.method || 'pix',
           applies_to: data.applies_to || 'total',
-          proof_file_url: null,
+          proof_file_url: proofPath ? `maintenance-payment-proofs/${proofPath}` : null,
           note: data.note || null,
           created_by: user.user.id,
         })
@@ -308,20 +294,6 @@ export const useAddPayment = () => {
         .single();
 
       if (payError) throw payError;
-
-      // Criar registro de anexo se houver arquivo
-      if (proofPath && payment) {
-        await supabase
-          .from("maintenance_payment_attachments")
-          .insert({
-            payment_id: payment.id,
-            file_name: data.proof_file!.name,
-            file_path: proofPath,
-            file_size: data.proof_file!.size,
-            mime_type: data.proof_file!.type,
-            created_by: user.user.id,
-          });
-      }
 
       // Verificar se já está totalmente pago
       const { data: charge } = await supabase
