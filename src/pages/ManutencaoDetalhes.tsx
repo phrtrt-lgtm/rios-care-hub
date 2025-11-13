@@ -34,33 +34,15 @@ export default function ManutencaoDetalhes() {
   const isTeam = profile?.role === 'admin' || profile?.role === 'agent';
   const totalPaid = maintenance.payments?.reduce((sum: number, p: any) => sum + p.amount_cents, 0) || 0;
   
-  // Calcular quanto o proprietário deve baseado no cost_responsible
-  const calculateOwnerDue = () => {
-    const total = maintenance.amount_cents || 0;
-    if (maintenance.cost_responsible === 'owner') return total;
-    if (maintenance.cost_responsible === 'management') return 0;
-    if (maintenance.cost_responsible === 'split') {
-      const ownerPercent = maintenance.split_owner_percent || 50;
-      return Math.round((total * ownerPercent) / 100);
-    }
-    return total;
-  };
-  
-  // Calcular contribuição da gestão
-  const calculateManagementContribution = () => {
-    const total = maintenance.amount_cents || 0;
-    if (maintenance.cost_responsible === 'owner') return 0;
-    if (maintenance.cost_responsible === 'management') return total;
-    if (maintenance.cost_responsible === 'split') {
-      const managementPercent = 100 - (maintenance.split_owner_percent || 50);
-      return Math.round((total * managementPercent) / 100);
-    }
-    return 0;
-  };
-  
-  const ownerDue = calculateOwnerDue();
-  const managementContribution = calculateManagementContribution();
+  // Usar management_contribution_cents diretamente
+  const total = maintenance.amount_cents || 0;
+  const managementContribution = maintenance.management_contribution_cents || 0;
+  const ownerDue = total - managementContribution;
   const remaining = ownerDue - totalPaid;
+  
+  // Calcular percentuais
+  const managementPercent = total > 0 ? Math.round((managementContribution / total) * 100) : 0;
+  const ownerPercent = 100 - managementPercent;
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, any> = {
@@ -74,11 +56,10 @@ export default function ManutencaoDetalhes() {
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
-  const getResponsibleLabel = (responsible: string, percent?: number | null) => {
-    if (responsible === 'owner') return 'Proprietário (100%)';
-    if (responsible === 'management') return 'Gestão (100%)';
-    if (responsible === 'split') return `Dividido - Proprietário: ${percent}% | Gestão: ${100 - (percent || 0)}%`;
-    return responsible;
+  const getResponsibleLabel = () => {
+    if (managementContribution === 0) return 'Proprietário (100%)';
+    if (ownerDue === 0) return 'Gestão (100%)';
+    return `Dividido - Proprietário: ${ownerPercent}% | Gestão: ${managementPercent}%`;
   };
 
   return (
@@ -175,7 +156,7 @@ export default function ManutencaoDetalhes() {
             <div>
               <div className="text-sm text-muted-foreground">Responsável pelo Custo</div>
               <div className="font-medium text-sm">
-                {getResponsibleLabel(maintenance.cost_responsible, maintenance.split_owner_percent)}
+                {getResponsibleLabel()}
               </div>
             </div>
 
