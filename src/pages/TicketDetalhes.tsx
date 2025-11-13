@@ -634,7 +634,16 @@ export default function TicketDetalhes() {
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       <header className="border-b bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              navigate(-1);
+            }}
+            className="relative z-10"
+          >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Voltar
           </Button>
