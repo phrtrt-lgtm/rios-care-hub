@@ -1087,14 +1087,16 @@ export default function CobrancaDetalhes() {
                           const previewUrl = getAttachmentUrl(attachment);
                           const posterUrl = attachment.poster_path ? getPosterUrl(attachment) : undefined;
                           const mediaIndex = allMediaItems.findIndex(item => item.file_url === previewUrl);
-                          const duration = attachment.duration_sec;
                           
-                          // Format duration (seconds to mm:ss)
-                          const formatDuration = (seconds: number | null | undefined) => {
-                            if (!seconds) return '00:00';
-                            const mins = Math.floor(seconds / 60);
-                            const secs = Math.floor(seconds % 60);
-                            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                          // Format file size
+                          const formatFileSize = (bytes: number | null | undefined) => {
+                            if (!bytes) return '0 MB';
+                            const mb = bytes / (1024 * 1024);
+                            if (mb < 1) {
+                              const kb = bytes / 1024;
+                              return `${kb.toFixed(0)} KB`;
+                            }
+                            return `${mb.toFixed(1)} MB`;
                           };
                           
                           return (
@@ -1106,7 +1108,7 @@ export default function CobrancaDetalhes() {
                                 setGalleryOpen(true);
                               }}
                             >
-                              <div className="relative aspect-video">
+                              <div className="relative aspect-video bg-gradient-to-br from-muted to-muted-foreground/20">
                                 {posterUrl ? (
                                   <AuthenticatedImage 
                                     src={posterUrl}
@@ -1114,15 +1116,10 @@ export default function CobrancaDetalhes() {
                                     className="w-full h-full object-cover"
                                   />
                                 ) : (
-                                  <div className="w-full h-full bg-muted flex items-center justify-center">
-                                    <Video className="h-12 w-12 text-muted-foreground" />
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <Video className="h-12 w-12 text-muted-foreground/60" />
                                   </div>
                                 )}
-                                
-                                {/* Duration badge */}
-                                <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded">
-                                  {formatDuration(duration)}
-                                </div>
                                 
                                 {/* Play button overlay */}
                                 <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors">
@@ -1139,7 +1136,7 @@ export default function CobrancaDetalhes() {
                                 </p>
                                 <div className="flex items-center justify-between mt-1">
                                   <span className="text-xs text-muted-foreground">
-                                    {(attachment.file_size / 1024 / 1024).toFixed(1)} MB
+                                    {formatFileSize(attachment.file_size)}
                                   </span>
                                   <Button
                                     size="sm"

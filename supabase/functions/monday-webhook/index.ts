@@ -311,7 +311,7 @@ serve(async (req) => {
             console.log("File uploaded successfully:", uploadData.path);
 
             // Save attachment metadata
-            const { data: newAttachment, error: attachmentError } = await supabase
+            const { error: attachmentError } = await supabase
               .from("charge_attachments")
               .insert({
                 charge_id: charge.id,
@@ -322,37 +322,12 @@ serve(async (req) => {
                 created_by: charge.owner_id,
                 source: 'monday',
                 monday_asset_id: String(asset.id),
-              })
-              .select()
-              .single();
+              });
 
             if (attachmentError) {
               console.error("Error creating attachment record:", attachmentError);
             } else {
               console.log("Saved attachment metadata:", asset.name);
-              
-              // If it's a video, process it to extract metadata
-              if (mimeType.startsWith('video/')) {
-                console.log("Processing video:", asset.name);
-                try {
-                  const processResponse = await fetch(`${SUPABASE_URL}/functions/v1/process-video`, {
-                    method: "POST",
-                    headers: {
-                      "Content-Type": "application/json",
-                      "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-                    },
-                    body: JSON.stringify({ attachmentId: newAttachment.id }),
-                  });
-                  
-                  if (!processResponse.ok) {
-                    console.error("Error processing video:", await processResponse.text());
-                  } else {
-                    console.log("Video processed successfully:", asset.name);
-                  }
-                } catch (error) {
-                  console.error("Error calling process-video function:", error);
-                }
-              }
             }
         } catch (error) {
           console.error("Error processing attachment:", asset.name, error);
