@@ -7,19 +7,22 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowLeft, Calendar, FileText, Paperclip, QrCode } from "lucide-react";
+import { ArrowLeft, Calendar, FileText, Paperclip, QrCode, Filter } from "lucide-react";
 import { AuthenticatedImage, AuthenticatedVideo } from "@/components/AuthenticatedMedia";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { formatBRL } from "@/lib/format";
 import { CHARGE_CATEGORIES } from "@/constants/chargeCategories";
+import { ServiceTypeChart } from "@/components/ServiceTypeChart";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Charge {
   id: string;
   title: string;
   description: string | null;
   category: string | null;
+  service_type: string | null;
   amount_cents: number;
   management_contribution_cents: number;
   currency: string;
@@ -54,6 +57,8 @@ const MinhasCobrancas = () => {
   const [loading, setLoading] = useState(true);
   const [selectedCharges, setSelectedCharges] = useState<string[]>([]);
   const [generatingPayment, setGeneratingPayment] = useState(false);
+  const [serviceTypeFilter, setServiceTypeFilter] = useState<string>("all");
+  const [serviceTypeData, setServiceTypeData] = useState<any[]>([]);
   const [groupPayment, setGroupPayment] = useState<{
     payment_link: string;
     pix_qr_code: string;
@@ -67,6 +72,7 @@ const MinhasCobrancas = () => {
       return;
     }
     fetchCharges();
+    fetchServiceTypeData();
   }, [user, profile, navigate]);
 
   const fetchCharges = async () => {
@@ -114,6 +120,33 @@ const MinhasCobrancas = () => {
       console.error('Erro ao carregar cobranças:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchServiceTypeData = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('charges')
+        .select('service_type, amount_cents')
+        .eq('owner_id', user!.id)
+        .not('service_type', 'is', null);
+
+      if (error) throw error;
+
+      // Group by service type and calculate totals
+      const grouped = (data || []).reduce((acc: any, charge) => {
+        const type = charge.service_type || 'Outros';
+        if (!acc[type]) {
+          acc[type] = { service_type: type, total_amount: 0, charge_count: 0 };
+        }
+        acc[type].total_amount += charge.amount_cents;
+        acc[type].charge_count += 1;
+        return acc;
+      }, {});
+
+      setServiceTypeData(Object.values(grouped));
+    } catch (error) {
+      console.error('Erro ao carregar dados de tipo de serviço:', error);
     }
   };
 
@@ -196,6 +229,14 @@ const MinhasCobrancas = () => {
   );
 
   const openChargesCount = charges.filter(c => c.status === 'sent' || c.status === 'overdue').length;
+  
+  // Filter charges by service type
+  const filteredCharges = serviceTypeFilter === "all" 
+    ? charges 
+    : charges.filter(c => c.service_type === serviceTypeFilter);
+
+  // Get unique service types for filter
+  const serviceTypes = Array.from(new Set(charges.map(c => c.service_type).filter(Boolean)));
 
   if (loading) {
     return (
@@ -293,19 +334,57 @@ const MinhasCobrancas = () => {
           </Card>
         )}
 
-        {charges.length === 0 ? (
+        {/* Gráfico de Gastos por Tipo de Serviço */}
+        {serviceTypeData.length > 0 && (
+          <div className="mb-6">
+            <ServiceTypeChart data={serviceTypeData} />
+          </div>
+        )}
+
+        {/* Filtro por Tipo de Serviço */}
+        {serviceTypes.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Filter className="h-5 w-5" />
+                Filtrar por Tipo de Serviço
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Select value={serviceTypeFilter} onValueChange={setServiceTypeFilter}>
+                <SelectTrigger className="w-full md:w-64">
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os tipos</SelectItem>
+                  {serviceTypes.map((type) => (
+                    <SelectItem key={type} value={type as string}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </CardContent>
+          </Card>
+        )}
+
+        {filteredCharges.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
               <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-semibold text-foreground">Nenhuma cobrança encontrada</h3>
+              <h3 className="mt-4 text-lg font-semibold text-foreground">
+                {charges.length === 0 ? 'Nenhuma cobrança encontrada' : 'Nenhuma cobrança com este filtro'}
+              </h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                Você não possui cobranças no momento.
+                {charges.length === 0 
+                  ? 'Você não possui cobranças no momento.' 
+                  : 'Tente selecionar outro tipo de serviço.'}
               </p>
             </CardContent>
           </Card>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {charges.map((charge) => {
+            {filteredCharges.map((charge) => {
               const isOpen = charge.status === 'sent' || charge.status === 'overdue';
               const isSelected = selectedCharges.includes(charge.id);
               
