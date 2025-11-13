@@ -350,16 +350,43 @@ export const useMaintenanceCharts = (ownerId?: string, year?: number, propertyId
       });
 
       // Pizza por responsável
-      const pieData: Record<string, number> = {};
+      const pieData: Record<string, number> = {
+        owner: 0,
+        management: 0,
+        split: 0,
+      };
+      
       data.forEach(m => {
-        const key = m.cost_responsible || 'owner';
-        pieData[key] = (pieData[key] || 0) + (m.amount_cents || 0);
+        const totalCents = m.amount_cents || 0;
+        const managementCents = m.management_contribution_cents || 0;
+        const ownerCents = totalCents - managementCents;
+        
+        // Sempre adiciona o aporte da gestão se existir
+        if (managementCents > 0) {
+          pieData.management += managementCents;
+        }
+        
+        // Adiciona o valor do proprietário baseado no cost_responsible
+        if (m.cost_responsible === 'owner') {
+          pieData.owner += ownerCents;
+        } else if (m.cost_responsible === 'management') {
+          // Se a gestão é responsável, nada vai para o proprietário
+          // O valor já foi adicionado ao management acima
+        } else if (m.cost_responsible === 'split') {
+          pieData.split += ownerCents;
+        } else {
+          // Padrão: adiciona ao owner
+          pieData.owner += ownerCents;
+        }
       });
 
-      const pie = Object.entries(pieData).map(([name, value]) => ({
-        name,
-        value,
-      }));
+      // Filtrar apenas valores maiores que zero
+      const pie = Object.entries(pieData)
+        .filter(([_, value]) => value > 0)
+        .map(([name, value]) => ({
+          name,
+          value,
+        }));
 
       // Linha acumulada
       const line = monthly.map((m, idx) => ({
