@@ -18,7 +18,9 @@ export function AttachmentBubble({
   size_bytes,
   onPreview
 }: AttachmentBubbleProps) {
-  const isImage = file_type?.startsWith('image/');
+  // TIFF files are not supported by browsers, treat as downloads
+  const isTiff = file_type === 'image/tiff' || file_type === 'image/tif';
+  const isImage = file_type?.startsWith('image/') && !isTiff;
   const isPDF = file_type === 'application/pdf';
   
   const formatSize = (bytes?: number) => {
