@@ -30,21 +30,21 @@ export default function TopChargesRules() {
               compensado em reservas futuras.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2 items-stretch">
-            <a href="/minhas-cobrancas"
-               className="flex-1 min-w-[200px] px-4 py-2 rounded-xl font-medium bg-white text-secondary hover:bg-white/90 transition-colors flex items-center justify-center gap-2">
-              <Receipt className="h-5 w-5" />
-              Minhas Cobranças
-            </a>
+          <div className="flex flex-col gap-2 w-full md:w-auto md:min-w-[280px]">
             <a href="/manutencoes"
-               className="flex-1 min-w-[200px] px-6 py-3 rounded-xl font-semibold bg-gradient-to-r from-primary to-primary/80 text-primary-foreground hover:from-primary/90 hover:to-primary/70 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
+               className="w-full px-6 py-3 rounded-xl font-semibold bg-gradient-to-r from-primary to-primary/80 text-primary-foreground hover:from-primary/90 hover:to-primary/70 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
               <BarChart3 className="h-5 w-5" />
               Relatório de Cobranças/Manutenções
+            </a>
+            <a href="/minhas-cobrancas"
+               className="w-full px-4 py-2 rounded-xl font-medium bg-white text-secondary hover:bg-white/90 transition-colors flex items-center justify-center gap-2">
+              <Receipt className="h-5 w-5" />
+              Minhas Cobranças
             </a>
             <a 
               href="#regras-completas"
               onClick={handleOpenRules}
-              className="flex-1 min-w-[200px] px-4 py-2 rounded-xl font-medium bg-white text-secondary hover:bg-white/90 transition-colors cursor-pointer flex items-center justify-center gap-2"
+              className="w-full px-4 py-2 rounded-xl font-medium bg-white text-secondary hover:bg-white/90 transition-colors cursor-pointer flex items-center justify-center gap-2"
             >
               <FileText className="h-5 w-5" />
               Regras completas
