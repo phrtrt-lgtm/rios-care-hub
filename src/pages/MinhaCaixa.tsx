@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Plus, LogOut, DollarSign, BarChart3, ClipboardCheck } from "lucide-react";
+import { Plus, LogOut, DollarSign, BarChart3, ClipboardCheck, Ticket, FileText } from "lucide-react";
 import { TicketList } from "@/components/TicketList";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -76,6 +76,33 @@ export default function MinhaCaixa() {
             
             {/* Botões de ação */}
             <div className="flex items-center gap-2 md:gap-4">
+              <Button 
+                onClick={() => navigate("/minhas-cobrancas")} 
+                variant="ghost"
+                size="sm"
+              >
+                <DollarSign className="h-4 w-4 md:mr-2" />
+                <span className="hidden md:inline">Cobranças</span>
+              </Button>
+
+              <Button 
+                onClick={() => navigate("/meus-chamados")} 
+                variant="ghost"
+                size="sm"
+              >
+                <Ticket className="h-4 w-4 md:mr-2" />
+                <span className="hidden md:inline">Chamados</span>
+              </Button>
+
+              <Button 
+                onClick={() => navigate("/novo-ticket")} 
+                variant="ghost"
+                size="sm"
+              >
+                <Plus className="h-4 w-4 md:mr-2" />
+                <span className="hidden md:inline">Novo</span>
+              </Button>
+              
               {hasInspectionAccess && (
                 <Button 
                   onClick={() => navigate("/vistorias")} 
