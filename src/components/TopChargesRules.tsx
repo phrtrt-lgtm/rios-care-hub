@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { BarChart3 } from "lucide-react";
+import { BarChart3, Receipt, FileText } from "lucide-react";
 
 
 export default function TopChargesRules() {
@@ -32,17 +32,21 @@ export default function TopChargesRules() {
           </div>
           <div className="flex flex-wrap gap-2 items-stretch">
             <a href="/minhas-cobrancas"
-               className="px-4 py-2 rounded-xl font-medium bg-white text-secondary hover:bg-white/90 transition-colors flex items-center">Minhas Cobranças</a>
+               className="flex-1 min-w-[200px] px-4 py-2 rounded-xl font-medium bg-white text-secondary hover:bg-white/90 transition-colors flex items-center justify-center gap-2">
+              <Receipt className="h-5 w-5" />
+              Minhas Cobranças
+            </a>
             <a href="/manutencoes"
-               className="px-6 py-3 rounded-xl font-semibold bg-gradient-to-r from-primary to-primary/80 text-primary-foreground hover:from-primary/90 hover:to-primary/70 transition-all shadow-lg hover:shadow-xl flex items-center gap-2">
+               className="flex-1 min-w-[200px] px-6 py-3 rounded-xl font-semibold bg-gradient-to-r from-primary to-primary/80 text-primary-foreground hover:from-primary/90 hover:to-primary/70 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
               <BarChart3 className="h-5 w-5" />
               Relatório de Cobranças/Manutenções
             </a>
             <a 
               href="#regras-completas"
               onClick={handleOpenRules}
-              className="px-4 py-2 rounded-xl font-medium bg-white text-secondary hover:bg-white/90 transition-colors cursor-pointer flex items-center"
+              className="flex-1 min-w-[200px] px-4 py-2 rounded-xl font-medium bg-white text-secondary hover:bg-white/90 transition-colors cursor-pointer flex items-center justify-center gap-2"
             >
+              <FileText className="h-5 w-5" />
               Regras completas
             </a>
           </div>
