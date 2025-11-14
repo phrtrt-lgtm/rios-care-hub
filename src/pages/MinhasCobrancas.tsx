@@ -379,11 +379,42 @@ const MinhasCobrancas = () => {
                   )}
                 </div>
               ) : (
-                <div className="text-center py-8 px-4 bg-background/50 rounded-xl border-2 border-dashed">
-                  <QrCode className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
-                  <p className="text-sm text-muted-foreground">
-                    Selecione as cobranças que deseja pagar usando os checkboxes ao lado
-                  </p>
+                <div className="space-y-4">
+                  <div className="text-center py-4 px-4 bg-background/50 rounded-xl border-2 border-dashed">
+                    <QrCode className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
+                    <p className="text-sm text-muted-foreground">
+                      Selecione as cobranças que deseja pagar usando os checkboxes ao lado
+                    </p>
+                  </div>
+
+                  {/* Preview das opções de pagamento */}
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    {/* Mini Card PIX */}
+                    <div className="p-4 bg-gradient-to-br from-green-50/80 to-background rounded-lg border-2 border-green-200/50 hover:border-green-300/70 transition-all">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="p-1.5 rounded bg-green-100">
+                          <Zap className="h-4 w-4 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-sm">PIX Instantâneo</p>
+                          <p className="text-xs text-muted-foreground">Aprovação imediata</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Mini Card Cartão */}
+                    <div className="p-4 bg-gradient-to-br from-blue-50/80 to-background rounded-lg border-2 border-blue-200/50 hover:border-blue-300/70 transition-all">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="p-1.5 rounded bg-blue-100">
+                          <CreditCard className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-sm">Cartão de Crédito</p>
+                          <p className="text-xs text-muted-foreground">Parcele em até 12x</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </CardContent>
