@@ -160,24 +160,6 @@ export default function MinhaCaixa() {
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button 
-              onClick={() => navigate("/manutencoes")} 
-              variant="outline"
-              size="sm"
-              className="w-full sm:w-auto"
-            >
-              <BarChart3 className="mr-2 h-4 w-4" />
-              Relatório de Gastos
-            </Button>
-            <Button 
-              onClick={() => navigate("/minhas-cobrancas")} 
-              variant="outline"
-              size="sm"
-              className="w-full sm:w-auto"
-            >
-              <DollarSign className="mr-2 h-4 w-4" />
-              Minhas Cobranças
-            </Button>
-            <Button 
               onClick={() => navigate("/novo-ticket")}
               size="sm"
               className="w-full sm:w-auto"
