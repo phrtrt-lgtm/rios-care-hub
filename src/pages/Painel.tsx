@@ -48,18 +48,15 @@ export default function Painel() {
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur-sm">
-        <div className="container mx-auto px-4">
-          <div className="flex h-16 items-center justify-between gap-3">
-            {/* Logo e Título */}
-            <div className="flex items-center gap-2 md:gap-4 min-w-0">
-              <img src="/logo.png" alt="RIOS" className="h-6 md:h-8 flex-shrink-0" />
-              <h1 className="text-base md:text-xl font-semibold truncate">
-                Painel <span className="hidden sm:inline">Administrativo</span>
-              </h1>
-            </div>
-            
-            {/* Perfil e Ações */}
-            <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
+        <div className="container mx-auto px-4 py-3">
+          {/* Logo centralizada */}
+          <div className="flex justify-center mb-3">
+            <img src="/logo.png" alt="RIOS" className="h-8 object-contain" />
+          </div>
+          
+          {/* Botões de navegação e avatar */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
               {profile?.role === "admin" && (
                 <>
                   <Button
@@ -91,67 +88,65 @@ export default function Painel() {
                   <Sparkles className="h-5 w-5" />
                 </Button>
               )}
-              
-              <Dialog>
-                <DialogTrigger asChild>
-                  <div className="flex items-center gap-2 bg-orange-700 hover:bg-orange-800 text-white px-3 py-2 rounded-lg cursor-pointer transition-colors">
-                    <div className="w-8 h-8 rounded-full overflow-hidden bg-white/20 flex-shrink-0">
-                      {photoUrl ? (
-                        <img src={photoUrl} alt={profile?.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-white font-semibold text-sm">
-                          {profile?.name?.charAt(0).toUpperCase()}
-                        </div>
-                      )}
-                    </div>
-                    <span className="text-sm font-medium hidden md:inline">{profile?.name}</span>
-                  </div>
-                </DialogTrigger>
-                <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Meu Perfil</DialogTitle>
-                    </DialogHeader>
-                    <div className="py-4">
-                      {user && profile && (
-                        <AvatarUpload
-                          userId={user.id}
-                          currentPhotoUrl={photoUrl}
-                          userName={profile.name}
-                          onUploadComplete={(url) => setPhotoUrl(url)}
-                        />
-                      )}
-                      <div className="mt-6 space-y-4">
-                        <div>
-                          <span className="text-sm font-medium">Nome:</span>
-                          <p className="text-muted-foreground">{profile?.name}</p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium">Email:</span>
-                          <p className="text-muted-foreground">{profile?.email}</p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium">Função:</span>
-                          <p className="text-muted-foreground">
-                            {profile?.role === "admin" 
-                              ? "Administrador" 
-                              : profile?.role === "maintenance" 
-                              ? "Manutenção" 
-                              : "Atendente"}
-                          </p>
-                        </div>
-                        <div className="pt-4 border-t">
-                          <ChangePasswordDialog />
-                        </div>
-                      </div>
-                    </div>
-                </DialogContent>
-              </Dialog>
-              
-              <Button variant="outline" size="sm" onClick={signOut}>
-                <LogOut className="h-4 w-4 md:mr-2" />
-                <span className="hidden md:inline">Sair</span>
-              </Button>
             </div>
+            
+            <Dialog>
+              <DialogTrigger asChild>
+                <div className="flex items-center gap-2 bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/90 text-white px-3 py-2 rounded-lg cursor-pointer transition-colors">
+                  {photoUrl ? (
+                    <img 
+                      src={photoUrl} 
+                      alt={profile?.name || "User"} 
+                      className="h-8 w-8 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-medium">
+                      {profile?.name?.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <span className="text-sm font-medium hidden sm:inline">{profile?.name}</span>
+                </div>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Meu Perfil</DialogTitle>
+                </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <AvatarUpload 
+                      userId={user?.id || ''}
+                      currentPhotoUrl={photoUrl}
+                      userName={profile?.name || 'User'}
+                      onUploadComplete={(url) => setPhotoUrl(url)}
+                    />
+                  
+                  <div>
+                    <label className="text-sm font-medium">Nome</label>
+                    <p className="text-base mt-1">{profile?.name}</p>
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium">Email</label>
+                    <p className="text-base mt-1">{profile?.email}</p>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium">Telefone</label>
+                    <p className="text-base mt-1">{profile?.phone || "Não informado"}</p>
+                  </div>
+                  
+                  <ChangePasswordDialog />
+                  
+                  <Button 
+                    variant="destructive"
+                    onClick={signOut}
+                    className="w-full"
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Sair
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
       </header>
