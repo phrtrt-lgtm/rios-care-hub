@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Clock } from "lucide-react";
+import { Clock, Building2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -50,7 +50,7 @@ export const TicketList = () => {
     setLoading(true);
     let query = supabase
       .from("tickets")
-      .select("*, properties(name), kind, essential, owner_decision, owner_action_due_at")
+      .select("*, properties(name, cover_photo_url), kind, essential, owner_decision, owner_action_due_at")
       .eq("owner_id", user?.id)
       .order("created_at", { ascending: false });
 
@@ -129,59 +129,93 @@ export const TicketList = () => {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid gap-3">
           {tickets.map((ticket) => (
             <Card
               key={ticket.id}
-              className="cursor-pointer transition-all hover:shadow-lg"
+              className="cursor-pointer transition-all hover:shadow-md hover:border-primary/20 overflow-hidden group"
               onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
             >
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <CardTitle className="text-lg">{ticket.subject}</CardTitle>
-                    <div className="flex flex-wrap gap-2">
-                      <TicketBadges ticket={ticket} />
-                      <Badge variant="outline" className="text-xs">
-                        {typeLabels[ticket.ticket_type]}
-                      </Badge>
-                      <Badge variant={getPriorityColor(ticket.priority)} className="text-xs">
-                        {ticket.priority === "urgente" ? "Urgente" : "Normal"}
-                      </Badge>
+              <div className="flex">
+                {/* Thumbnail da Propriedade */}
+                <div className="relative w-24 md:w-32 flex-shrink-0 bg-muted">
+                  {ticket.properties?.cover_photo_url ? (
+                    <img 
+                      src={ticket.properties.cover_photo_url} 
+                      alt={ticket.properties.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-secondary/20 to-secondary/5">
+                      <Building2 className="h-8 w-8 text-muted-foreground/40" />
                     </div>
-                  </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <Badge className={`${getStatusColor(ticket.status)} text-white`}>
+                  )}
+                  {/* Status Badge sobreposto */}
+                  <div className="absolute top-2 left-2">
+                    <Badge className={`${getStatusColor(ticket.status)} text-white text-xs shadow-lg`}>
                       {statusLabels[ticket.status]}
                     </Badge>
+                  </div>
+                </div>
+
+                {/* Conteúdo */}
+                <div className="flex-1 p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 space-y-2">
+                      {/* Título */}
+                      <h3 className="font-semibold text-base leading-tight line-clamp-1 group-hover:text-primary transition-colors">
+                        {ticket.subject}
+                      </h3>
+                      
+                      {/* Badges */}
+                      <div className="flex flex-wrap gap-1.5">
+                        <TicketBadges ticket={ticket} />
+                        <Badge variant="outline" className="text-xs bg-background">
+                          {typeLabels[ticket.ticket_type]}
+                        </Badge>
+                        <Badge variant={getPriorityColor(ticket.priority)} className="text-xs">
+                          {ticket.priority === "urgente" ? "Urgente" : "Normal"}
+                        </Badge>
+                      </div>
+
+                      {/* Descrição */}
+                      <p className="line-clamp-2 text-sm text-muted-foreground leading-relaxed">
+                        {ticket.description}
+                      </p>
+
+                      {/* Info Footer */}
+                      <div className="flex flex-wrap gap-3 text-xs text-muted-foreground pt-1">
+                        {ticket.properties && (
+                          <span className="flex items-center gap-1">
+                            <Building2 className="h-3 w-3" />
+                            {ticket.properties.name}
+                          </span>
+                        )}
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          Criado {formatDistanceToNow(new Date(ticket.created_at), {
+                            locale: ptBR,
+                            addSuffix: true,
+                          })}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* SLA Indicator */}
                     {ticket.sla_due_at && !ticket.first_response_at && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1 text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded-md">
                         <Clock className="h-3 w-3" />
-                        {formatDistanceToNow(new Date(ticket.sla_due_at), {
-                          locale: ptBR,
-                          addSuffix: true,
-                        })}
+                        <span className="hidden md:inline">
+                          {formatDistanceToNow(new Date(ticket.sla_due_at), {
+                            locale: ptBR,
+                            addSuffix: true,
+                          })}
+                        </span>
                       </div>
                     )}
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <p className="line-clamp-2 text-sm text-muted-foreground">
-                  {ticket.description}
-                </p>
-                {ticket.properties && (
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Propriedade: {ticket.properties.name}
-                  </p>
-                )}
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Criado {formatDistanceToNow(new Date(ticket.created_at), {
-                    locale: ptBR,
-                    addSuffix: true,
-                  })}
-                </p>
-              </CardContent>
+              </div>
             </Card>
           ))}
         </div>
