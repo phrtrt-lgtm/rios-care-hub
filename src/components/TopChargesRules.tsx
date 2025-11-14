@@ -25,9 +25,7 @@ export default function TopChargesRules() {
           <div className="max-w-3xl">
             <h2 className="text-xl md:text-2xl font-semibold">Área de Cobranças</h2>
             <p className="mt-2 text-sm md:text-base opacity-95">
-              Cada cobrança mostra o valor total do serviço, o aporte da gestão (quando houver) e o valor devido.
-              Você tem 7 dias para contestar ou anexar o comprovante. Sem resposta, o valor será
-              compensado em reservas futuras.
+              Acompanhe cobranças com valor total, aporte da gestão e valor devido. Pague via Mercado Pago, selecione várias cobranças de uma vez e parcele em até 12x com juros. Você tem 7 dias para contestar ou anexar comprovante. No relatório, acesse anexos dos serviços, histórico completo, separação por tipo de serviço e gráfico de gastos mensais.
             </p>
           </div>
           <div className="flex flex-col gap-2 w-full md:w-auto md:min-w-[280px]">
