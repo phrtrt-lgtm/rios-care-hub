@@ -632,6 +632,7 @@ export type Database = {
           reminder_24h_sent: boolean | null
           reminder_48h_sent: boolean | null
           reminder_day_sent: boolean | null
+          service_type: string | null
           split_owner_percent: number | null
           status: string
           ticket_id: string | null
@@ -666,6 +667,7 @@ export type Database = {
           reminder_24h_sent?: boolean | null
           reminder_48h_sent?: boolean | null
           reminder_day_sent?: boolean | null
+          service_type?: string | null
           split_owner_percent?: number | null
           status?: string
           ticket_id?: string | null
@@ -700,6 +702,7 @@ export type Database = {
           reminder_24h_sent?: boolean | null
           reminder_48h_sent?: boolean | null
           reminder_day_sent?: boolean | null
+          service_type?: string | null
           split_owner_percent?: number | null
           status?: string
           ticket_id?: string | null
@@ -880,6 +883,47 @@ export type Database = {
           },
         ]
       }
+      maintenance_payment_attachments: {
+        Row: {
+          created_at: string
+          created_by: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          payment_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          payment_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          payment_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maintenance_payment_attachments_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "charge_payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       maintenance_policy_acceptances: {
         Row: {
           accepted_at: string
@@ -898,6 +942,42 @@ export type Database = {
           id?: string
           owner_id?: string
           policy_version?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          owner_id: string
+          read: boolean
+          reference_id: string | null
+          reference_url: string | null
+          title: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          owner_id: string
+          read?: boolean
+          reference_id?: string | null
+          reference_url?: string | null
+          title: string
+          type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          owner_id?: string
+          read?: boolean
+          reference_id?: string | null
+          reference_url?: string | null
+          title?: string
+          type?: string
         }
         Relationships: []
       }

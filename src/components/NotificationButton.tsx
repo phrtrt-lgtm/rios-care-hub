@@ -1,224 +1,217 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { Bell, BellOff, Loader2 } from "lucide-react";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { supabase } from "@/integrations/supabase/client";
+import { Bell, Ticket, DollarSign, Wrench, Vote, AlertCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding)
-    .replace(/-/g, "+")
-    .replace(/_/g, "/");
-
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: string;
+  reference_id: string | null;
+  reference_url: string | null;
+  read: boolean;
+  created_at: string;
 }
 
+const getNotificationIcon = (type: string) => {
+  switch (type) {
+    case "ticket":
+      return <Ticket className="h-4 w-4" />;
+    case "charge":
+      return <DollarSign className="h-4 w-4" />;
+    case "maintenance":
+      return <Wrench className="h-4 w-4" />;
+    case "vote":
+      return <Vote className="h-4 w-4" />;
+    case "alert":
+      return <AlertCircle className="h-4 w-4" />;
+    default:
+      return <Bell className="h-4 w-4" />;
+  }
+};
+
 export function NotificationButton() {
-  const [loading, setLoading] = useState(false);
-  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
 
-  const checkSubscription = async () => {
-    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-      return false;
-    }
+  useEffect(() => {
+    fetchNotifications();
 
-    try {
-      const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
-      setIsSubscribed(!!subscription);
-      return !!subscription;
-    } catch (error) {
-      console.error("Error checking subscription:", error);
-      return false;
-    }
-  };
-
-  const enablePush = async () => {
-    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-      toast.error("Notificações push não são suportadas neste navegador");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const permission = await Notification.requestPermission();
-      if (permission !== "granted") {
-        toast.error("Permissão de notificação negada");
-        setLoading(false);
-        return;
-      }
-
-      const registration = await navigator.serviceWorker.register("/sw.js");
-      await navigator.serviceWorker.ready;
-
-      const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
-      if (!vapidPublicKey) {
-        toast.error("Chave VAPID não configurada");
-        setLoading(false);
-        return;
-      }
-
-      const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: applicationServerKey as unknown as BufferSource,
-      });
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error("Você precisa estar logado");
-        setLoading(false);
-        return;
-      }
-
-      const { error } = await supabase.functions.invoke("push-subscribe", {
-        body: {
-          endpoint: subscription.endpoint,
-          keys: subscription.toJSON().keys,
-          userAgent: navigator.userAgent,
+    // Realtime subscription
+    const channel = supabase
+      .channel("notifications-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "notifications",
         },
-      });
+        () => {
+          fetchNotifications();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data, error } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("owner_id", session.user.id)
+        .order("created_at", { ascending: false })
+        .limit(20);
 
       if (error) throw error;
 
-      toast.success("Notificações ativadas com sucesso!");
-      setIsSubscribed(true);
-      setOpen(false);
-
-      await supabase.functions.invoke("send-push", {
-        body: {
-          ownerId: session.user.id,
-          payload: {
-            title: "Notificações ativadas! 🔔",
-            body: "Você receberá alertas de tickets e cobranças aqui também.",
-            url: "/",
-          },
-        },
-      });
-    } catch (error: any) {
-      console.error("Error enabling push:", error);
-      toast.error("Erro ao ativar notificações: " + error.message);
-    } finally {
-      setLoading(false);
+      setNotifications(data || []);
+      setUnreadCount(data?.filter((n) => !n.read).length || 0);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
     }
   };
 
-  const disablePush = async () => {
-    setLoading(true);
-
+  const markAsRead = async (notificationId: string) => {
     try {
-      const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
+      await supabase
+        .from("notifications")
+        .update({ read: true })
+        .eq("id", notificationId);
 
-      if (subscription) {
-        await subscription.unsubscribe();
-
-        const { error } = await supabase.functions.invoke("push-unsubscribe", {
-          body: {
-            endpoint: subscription.endpoint,
-          },
-        });
-
-        if (error) throw error;
-
-        toast.success("Notificações desativadas");
-        setIsSubscribed(false);
-        setOpen(false);
-      }
-    } catch (error: any) {
-      console.error("Error disabling push:", error);
-      toast.error("Erro ao desativar notificações: " + error.message);
-    } finally {
-      setLoading(false);
+      fetchNotifications();
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
     }
   };
 
-  useEffect(() => {
-    checkSubscription();
-  }, []);
+  const markAllAsRead = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      await supabase
+        .from("notifications")
+        .update({ read: true })
+        .eq("owner_id", session.user.id)
+        .eq("read", false);
+
+      fetchNotifications();
+    } catch (error) {
+      console.error("Error marking all as read:", error);
+    }
+  };
+
+  const handleNotificationClick = (notification: Notification) => {
+    markAsRead(notification.id);
+    
+    if (notification.reference_url) {
+      navigate(notification.reference_url);
+      setOpen(false);
+    }
+  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative h-10 w-10 rounded-full hover:bg-muted"
+        >
           <Bell className="h-5 w-5" />
-          {isSubscribed && (
-            <span className="absolute top-1 right-1 h-2 w-2 bg-green-500 rounded-full" />
+          {unreadCount > 0 && (
+            <Badge 
+              variant="destructive" 
+              className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+            >
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </Badge>
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80" align="end">
-        <div className="space-y-4">
-          <div>
-            <h4 className="font-medium flex items-center gap-2">
-              <Bell className="h-4 w-4" />
-              Notificações Push
-            </h4>
-            <p className="text-sm text-muted-foreground mt-1">
-              Receba alertas instantâneos de tickets e cobranças
-            </p>
-          </div>
-
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              {isSubscribed
-                ? "✅ Notificações ativas"
-                : "Ative para receber alertas em tempo real"}
-            </p>
-
-            {!isSubscribed ? (
-              <Button onClick={enablePush} disabled={loading} className="w-full">
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Ativando...
-                  </>
-                ) : (
-                  <>
-                    <Bell className="mr-2 h-4 w-4" />
-                    Ativar notificações
-                  </>
-                )}
-              </Button>
-            ) : (
-              <Button
-                onClick={disablePush}
-                disabled={loading}
-                variant="outline"
-                className="w-full"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Desativando...
-                  </>
-                ) : (
-                  <>
-                    <BellOff className="mr-2 h-4 w-4" />
-                    Desativar notificações
-                  </>
-                )}
-              </Button>
-            )}
-
-            <p className="text-xs text-muted-foreground">
-              💡 Dica: No celular, adicione este site à tela inicial para melhor experiência
-            </p>
-          </div>
+      <PopoverContent className="w-96 p-0" align="end">
+        <div className="flex items-center justify-between border-b p-4">
+          <h3 className="font-semibold">Notificações</h3>
+          {unreadCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={markAllAsRead}
+              className="text-xs"
+            >
+              Marcar todas como lidas
+            </Button>
+          )}
         </div>
+        
+        <ScrollArea className="h-[400px]">
+          {notifications.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+              <Bell className="h-12 w-12 mb-3 opacity-20" />
+              <p className="text-sm">Nenhuma notificação</p>
+            </div>
+          ) : (
+            <div className="divide-y">
+              {notifications.map((notification) => (
+                <button
+                  key={notification.id}
+                  onClick={() => handleNotificationClick(notification)}
+                  className={`w-full text-left p-4 hover:bg-muted/50 transition-colors ${
+                    !notification.read ? "bg-muted/30" : ""
+                  }`}
+                >
+                  <div className="flex gap-3">
+                    <div className={`mt-1 ${!notification.read ? "text-primary" : "text-muted-foreground"}`}>
+                      {getNotificationIcon(notification.type)}
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className={`text-sm font-medium leading-tight ${
+                          !notification.read ? "text-foreground" : "text-muted-foreground"
+                        }`}>
+                          {notification.title}
+                        </p>
+                        {!notification.read && (
+                          <span className="h-2 w-2 rounded-full bg-primary flex-shrink-0 mt-1" />
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground line-clamp-2">
+                        {notification.message}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(new Date(notification.created_at), {
+                          addSuffix: true,
+                          locale: ptBR,
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </ScrollArea>
       </PopoverContent>
     </Popover>
   );
