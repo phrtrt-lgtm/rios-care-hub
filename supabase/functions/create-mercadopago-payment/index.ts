@@ -123,6 +123,10 @@ const handler = async (req: Request): Promise<Response> => {
           number: owner.phone?.substring(2) || '',
         }
       },
+      payment_methods: {
+        installments: 12, // Permite parcelamento em até 12x
+        default_installments: 1,
+      },
       back_urls: {
         success: `${Deno.env.get('SUPABASE_URL')?.replace('supabase.co', 'lovable.app')}/minhas-cobrancas`,
         failure: `${Deno.env.get('SUPABASE_URL')?.replace('supabase.co', 'lovable.app')}/minhas-cobrancas`,
@@ -131,7 +135,7 @@ const handler = async (req: Request): Promise<Response> => {
       auto_return: 'approved',
       external_reference: chargeId,
       notification_url: `${supabaseUrl}/functions/v1/mercadopago-webhook`,
-      statement_descriptor: 'MANUTENCAO',
+      statement_descriptor: 'RIOS Gestao',
       expires: true,
       expiration_date_from: new Date().toISOString(),
       expiration_date_to: new Date(charge.due_date).toISOString(),
