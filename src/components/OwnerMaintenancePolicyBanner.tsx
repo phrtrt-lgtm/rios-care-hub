@@ -8,7 +8,7 @@ export default function OwnerMaintenancePolicyBanner() {
       <CardHeader>
         <div className="flex items-start gap-3">
           <AlertCircle className="h-6 w-6 text-yellow-600 flex-shrink-0 mt-1" />
-          <CardTitle className="text-lg">Política de Manutenção (vigente 01/01/2026)</CardTitle>
+          <CardTitle className="text-lg">Política de Manutenção</CardTitle>
         </div>
       </CardHeader>
       <CardContent>

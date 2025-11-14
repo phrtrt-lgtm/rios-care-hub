@@ -1,7 +1,7 @@
 export const MAINTENANCE_POLICY_VERSION = "2026-01-01";
 
 export const MAINTENANCE_POLICY_HTML = `
-<h2 style="margin:0 0 8px 0; font-size: 16px; color: #1f2937;">🏠 Política de Manutenção — Vigente em 01/01/2026</h2>
+<h2 style="margin:0 0 8px 0; font-size: 16px; color: #1f2937;">🏠 Política de Manutenção</h2>
 
 <p style="margin-bottom: 8px; font-size: 13px; line-height: 1.5;">Para garantir qualidade, segurança e desempenho nas plataformas, a manutenção preventiva e corretiva passa a seguir estas regras:</p>
 
@@ -39,7 +39,7 @@ export const MAINTENANCE_POLICY_HTML = `
 </div>
 `;
 
-export const MAINTENANCE_POLICY_TEXT = `Política de Manutenção — Vigente em 01/01/2026
+export const MAINTENANCE_POLICY_TEXT = `Política de Manutenção
 Essencial (atendimento imediato): itens que inviabilizam a estadia (geladeira, fogão, micro-ondas, água quente, energia, fechadura/portas, piscina inutilizável, infiltração grave). Podem ser executados de imediato pela gestão, sobretudo em check-in no mesmo dia.
 Estrutural (pode aguardar entre estadias): piso/reformas/pintura etc. Abriremos chamado para você decidir: assumir a execução (com prazo e fornecedor) ou delegar à gestão.
 Avaliações negativas derrubam a renda; protegemos o desempenho do ecossistema. Após execução, a manutenção vira cobrança conforme regras já publicadas (contestação 7 dias, pagamento/offset). Ao aceitar, você registra ciência desta política (versão 2026-01-01).`;
