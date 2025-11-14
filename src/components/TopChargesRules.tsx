@@ -22,7 +22,7 @@ export default function TopChargesRules() {
       <div className="w-full rounded-2xl p-5 md:p-6 mb-4 bg-gradient-to-br from-secondary to-secondary/80 text-secondary-foreground">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="max-w-3xl">
-            <h2 className="text-xl md:text-2xl font-semibold">Como funcionam as cobranças de manutenção</h2>
+            <h2 className="text-xl md:text-2xl font-semibold">Área de Cobranças</h2>
             <p className="mt-2 text-sm md:text-base opacity-95">
               Cada cobrança mostra o valor total do serviço, o aporte da gestão (quando houver) e o valor devido.
               Você tem 7 dias para contestar ou anexar o comprovante. Sem resposta, o valor será
