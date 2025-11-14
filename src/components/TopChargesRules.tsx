@@ -30,6 +30,8 @@ export default function TopChargesRules() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <a href="/minha-caixa"
+               className="px-4 py-2 rounded-xl font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">Minhas Cobranças</a>
             <a href="/manutencoes"
                className="px-4 py-2 rounded-xl font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">Histórico de Manutenções</a>
             <a 
