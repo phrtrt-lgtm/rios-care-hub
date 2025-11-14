@@ -225,69 +225,119 @@ const MinhasCobrancas = () => {
 
         {/* Painel de Pagamento Agrupado */}
         {openChargesCount > 0 && (
-          <Card className="mb-6 border-primary/20 bg-primary/5">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <QrCode className="h-5 w-5" />
-                Pagamento Agrupado
-              </CardTitle>
-              <CardDescription>
-                Selecione múltiplas cobranças em aberto para pagar todas de uma vez
-              </CardDescription>
+          <Card className="mb-6 border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-background shadow-lg animate-fade-in">
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <QrCode className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl">Pagamento Agrupado</CardTitle>
+                  <CardDescription className="mt-1">
+                    Selecione múltiplas cobranças e pague tudo de uma vez com Mercado Pago
+                  </CardDescription>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {selectedCharges.length > 0 && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-background rounded-lg border">
-                    <div>
-                      <p className="text-sm text-muted-foreground">
+              {selectedCharges.length > 0 ? (
+                <div className="space-y-4 animate-scale-in">
+                  {/* Resumo da seleção */}
+                  <div className="flex items-center justify-between p-4 bg-background rounded-xl border-2 border-primary/20 shadow-sm">
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground font-medium">
                         {selectedCharges.length} {selectedCharges.length === 1 ? 'cobrança selecionada' : 'cobranças selecionadas'}
                       </p>
-                      <p className="text-2xl font-bold text-foreground">
+                      <p className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
                         {formatBRL(totalDue)}
                       </p>
+                      <p className="text-xs text-muted-foreground">Parcele em até 12x com Mercado Pago</p>
                     </div>
                     <Button 
                       onClick={handleGenerateGroupPayment}
                       disabled={generatingPayment}
                       size="lg"
+                      className="shadow-lg hover:shadow-xl transition-shadow"
                     >
-                      {generatingPayment ? 'Gerando...' : 'Gerar Pagamento'}
+                      {generatingPayment ? (
+                        <div className="flex items-center gap-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                          Gerando...
+                        </div>
+                      ) : (
+                        'Gerar Pagamento'
+                      )}
                     </Button>
                   </div>
 
-                  {groupPayment && (
-                    <div className="p-4 bg-background rounded-lg border space-y-4">
-                      <div className="text-center">
-                        <h3 className="font-semibold mb-2">QR Code PIX</h3>
-                        <div className="flex justify-center">
-                          <img 
-                            src={groupPayment.pix_qr_code_base64} 
-                            alt="QR Code PIX" 
-                            className="w-64 h-64"
-                          />
+                  {/* Loading state com logo */}
+                  {generatingPayment && (
+                    <div className="p-8 bg-background rounded-xl border flex flex-col items-center justify-center space-y-4 animate-fade-in">
+                      <div className="relative">
+                        <img 
+                          src="/logo.png" 
+                          alt="Logo RIOS" 
+                          className="h-16 w-16 animate-pulse"
+                        />
+                        <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+                      </div>
+                      <p className="text-sm text-muted-foreground animate-pulse">Gerando seu pagamento agrupado...</p>
+                    </div>
+                  )}
+
+                  {/* QR Code e opções de pagamento */}
+                  {groupPayment && !generatingPayment && (
+                    <div className="p-6 bg-background rounded-xl border space-y-6 animate-scale-in shadow-sm">
+                      <div className="text-center space-y-4">
+                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-full border border-green-200">
+                          <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
+                          <span className="text-sm font-medium">Pagamento gerado com sucesso!</span>
+                        </div>
+                        
+                        <div>
+                          <h3 className="font-semibold text-lg mb-3">Pague com PIX</h3>
+                          <div className="flex justify-center">
+                            <div className="p-4 bg-white rounded-xl border-2 border-primary/20 shadow-lg">
+                              <img 
+                                src={groupPayment.pix_qr_code_base64} 
+                                alt="QR Code PIX" 
+                                className="w-64 h-64 animate-scale-in"
+                              />
+                            </div>
+                          </div>
                         </div>
                       </div>
-                      <div className="space-y-2">
+                      
+                      <div className="grid gap-3">
                         <Button 
-                          className="w-full" 
+                          className="w-full shadow hover:shadow-lg transition-shadow" 
                           variant="outline"
+                          size="lg"
                           onClick={() => {
                             navigator.clipboard.writeText(groupPayment.pix_qr_code);
-                            toast.success('Código PIX copiado!');
+                            toast.success('Código PIX copiado para área de transferência!');
                           }}
                         >
+                          <Paperclip className="h-4 w-4 mr-2" />
                           Copiar código PIX
                         </Button>
                         <Button 
-                          className="w-full"
+                          className="w-full shadow-lg hover:shadow-xl transition-shadow bg-gradient-to-r from-primary to-primary/80"
+                          size="lg"
                           onClick={() => window.open(groupPayment.payment_link, '_blank')}
                         >
-                          Abrir link de pagamento
+                          Pagar com Mercado Pago
                         </Button>
                       </div>
                     </div>
                   )}
+                </div>
+              ) : (
+                <div className="text-center py-8 px-4 bg-background/50 rounded-xl border-2 border-dashed">
+                  <QrCode className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
+                  <p className="text-sm text-muted-foreground">
+                    Selecione as cobranças que deseja pagar usando os checkboxes ao lado
+                  </p>
                 </div>
               )}
             </CardContent>
