@@ -798,73 +798,103 @@ export default function CobrancaDetalhes() {
       </header>
 
       <main className="container mx-auto px-4 py-8 max-w-4xl">
-        <Card className="mb-6">
-          <CardHeader>
-            <div className="flex items-start justify-between">
+        <Card className="mb-6 overflow-hidden">
+          <CardHeader className="space-y-6">
+            {/* Título e Status */}
+            <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
                 <CardTitle className="text-2xl mb-2">{charge.title}</CardTitle>
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {charge.property && (
-                    <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100">
-                      📍 {charge.property.name}
-                    </Badge>
-                  )}
-                  {charge.category && (
-                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100">
-                      🔧 {CHARGE_CATEGORIES[charge.category as keyof typeof CHARGE_CATEGORIES]}
-                    </Badge>
-                  )}
-                  {charge.service_type && (
-                    <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100">
-                      🏷️ {charge.service_type}
-                    </Badge>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {getStatusBadge(charge.status)}
-                  <Badge variant="outline" className="text-base">
-                    <DollarSign className="h-4 w-4 mr-1" />
-                    Total: {formatCurrency(charge.amount_cents, charge.currency)}
-                  </Badge>
-                  {charge.management_contribution_cents > 0 && (
-                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-base">
-                      Aporte: {formatCurrency(charge.management_contribution_cents, charge.currency)}
-                    </Badge>
-                  )}
-                  <Badge variant="default" className="text-base">
-                    Devido: {formatCurrency(charge.amount_cents - (charge.management_contribution_cents || 0), charge.currency)}
-                  </Badge>
-                  {charge.maintenance_date && (
-                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                      <Calendar className="h-3 w-3 mr-1" />
-                      Data: {format(new Date(charge.maintenance_date), "dd/MM/yyyy", { locale: ptBR })}
-                    </Badge>
-                  )}
-                  {charge.due_date && (
-                    <Badge variant="secondary">
-                      <Calendar className="h-3 w-3 mr-1" />
-                      Venc: {format(new Date(charge.due_date), "dd/MM/yyyy", { locale: ptBR })}
-                    </Badge>
-                  )}
-                </div>
+                {charge.description && (
+                  <p className="text-sm text-muted-foreground leading-relaxed mt-2">{charge.description}</p>
+                )}
               </div>
-              {isTeamMember && (
-                <Button 
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => setDeleteDialogOpen(true)}
-                  className="ml-4"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Excluir
-                </Button>
+              <div className="flex items-center gap-2">
+                {getStatusBadge(charge.status)}
+                {isTeamMember && (
+                  <Button 
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setDeleteDialogOpen(true)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Excluir
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Categorização */}
+            <div className="flex flex-wrap gap-2">
+              {charge.property && (
+                <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100">
+                  📍 {charge.property.name}
+                </Badge>
+              )}
+              {charge.category && (
+                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100">
+                  {CHARGE_CATEGORIES[charge.category as keyof typeof CHARGE_CATEGORIES]}
+                </Badge>
+              )}
+              {charge.service_type && (
+                <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100">
+                  🏷️ {charge.service_type}
+                </Badge>
               )}
             </div>
+
+            {/* Valores - Grid responsivo */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-muted/30 rounded-lg border">
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground font-medium">Valor Total</p>
+                <p className="text-lg font-semibold text-foreground">
+                  {formatCurrency(charge.amount_cents, charge.currency)}
+                </p>
+              </div>
+              {charge.management_contribution_cents > 0 && (
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground font-medium">Aporte Gestão</p>
+                  <p className="text-lg font-semibold text-green-600">
+                    - {formatCurrency(charge.management_contribution_cents, charge.currency)}
+                  </p>
+                </div>
+              )}
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground font-medium">Valor Devido</p>
+                <p className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                  {formatCurrency(charge.amount_cents - (charge.management_contribution_cents || 0), charge.currency)}
+                </p>
+              </div>
+            </div>
+
+            {/* Datas */}
+            {(charge.maintenance_date || charge.due_date) && (
+              <div className="flex flex-wrap gap-3">
+                {charge.maintenance_date && (
+                  <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-md border border-blue-200">
+                    <Calendar className="h-4 w-4 text-blue-600" />
+                    <div className="flex flex-col">
+                      <span className="text-xs text-blue-600 font-medium">Data do Serviço</span>
+                      <span className="text-sm font-semibold text-blue-700">
+                        {format(new Date(charge.maintenance_date), "dd/MM/yyyy", { locale: ptBR })}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {charge.due_date && (
+                  <div className="flex items-center gap-2 px-3 py-2 bg-red-50 rounded-md border border-red-200">
+                    <Calendar className="h-4 w-4 text-red-600" />
+                    <div className="flex flex-col">
+                      <span className="text-xs text-red-600 font-medium">Vencimento</span>
+                      <span className="text-sm font-semibold text-red-700">
+                        {format(new Date(charge.due_date), "dd/MM/yyyy", { locale: ptBR })}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </CardHeader>
           <CardContent>
-            {charge.description && (
-              <p className="text-muted-foreground mb-4">{charge.description}</p>
-            )}
 
             {/* Link de Pagamento - Para Admin/Agent */}
             {isTeamMember && charge.status !== 'paid' && charge.status !== 'cancelled' && (
