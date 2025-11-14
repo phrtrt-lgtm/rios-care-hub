@@ -957,78 +957,124 @@ export default function CobrancaDetalhes() {
               </div>
             )}
 
-            {/* Link de Pagamento - Para Proprietário */}
+            {/* Opções de Pagamento - Para Proprietário */}
             {!isTeamMember && charge.payment_link && charge.status !== 'paid' && charge.status !== 'cancelled' && (
-              <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
-                <div className="flex flex-col lg:flex-row items-start gap-4">
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-green-900 dark:text-green-100 mb-1">
-                      💳 Pagar com Mercado Pago
-                    </h4>
-                    <p className="text-sm text-green-700 dark:text-green-300 mb-3">
-                      Você pode pagar esta cobrança com cartão de crédito, débito ou PIX através do Mercado Pago de forma segura.
-                    </p>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <Button
-                        variant="default"
-                        size="default"
-                        onClick={() => {
-                          window.open(charge.payment_link!, '_blank');
-                        }}
-                        className="bg-green-600 hover:bg-green-700"
-                      >
-                        💰 Pagar Agora
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="default"
-                        onClick={() => {
-                          navigator.clipboard.writeText(charge.payment_link!);
-                          toast({
-                            title: "Link copiado!",
-                            description: "Você pode compartilhar este link ou acessá-lo depois",
-                          });
-                        }}
-                      >
-                        📋 Copiar Link
-                      </Button>
+              <Card className="mb-6 border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-background shadow-lg animate-fade-in overflow-hidden">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <CreditCard className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl">Opções de Pagamento</CardTitle>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Escolha a melhor forma de pagar - PIX instantâneo ou parcele em até 12x
+                      </p>
                     </div>
                   </div>
-                  
-                  {/* QR Code PIX */}
-                  {charge.pix_qr_code_base64 && (
-                    <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border-2 border-dashed border-green-300 dark:border-green-700">
-                      <div className="flex flex-col items-center gap-3">
-                        <p className="text-sm font-medium text-green-900 dark:text-green-100 text-center">
-                          ou escaneie o QR Code PIX
-                        </p>
-                        <img 
-                          src={`data:image/png;base64,${charge.pix_qr_code_base64}`}
-                          alt="QR Code PIX"
-                          className="w-40 h-40 border-2 border-gray-200 dark:border-gray-700 rounded"
-                        />
-                        {charge.pix_qr_code && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              navigator.clipboard.writeText(charge.pix_qr_code!);
-                              toast({
-                                title: "Código PIX copiado!",
-                                description: "Cole no seu aplicativo de pagamento",
-                              });
-                            }}
-                            className="w-full"
-                          >
-                            <Copy className="mr-2 h-4 w-4" />
-                            Copiar código PIX
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Grid de opções de pagamento */}
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {/* Opção 1: PIX Instantâneo */}
+                    {charge.pix_qr_code_base64 && (
+                      <Card className="border-2 border-primary/20 hover:border-primary/40 transition-colors">
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="p-2 rounded-lg bg-green-50">
+                              <svg className="h-5 w-5 text-green-600" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M13 3L4 14h7l-1 7 9-11h-7l1-7z"/>
+                              </svg>
+                            </div>
+                            <div>
+                              <CardTitle className="text-lg">PIX Instantâneo</CardTitle>
+                              <p className="text-xs text-muted-foreground">À vista - Aprovação imediata</p>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <div className="flex justify-center p-3 bg-white rounded-lg border">
+                            <img 
+                              src={`data:image/png;base64,${charge.pix_qr_code_base64}`}
+                              alt="QR Code PIX" 
+                              className="w-48 h-48"
+                            />
+                          </div>
+                          {charge.pix_qr_code && (
+                            <Button 
+                              className="w-full" 
+                              variant="outline"
+                              onClick={() => {
+                                navigator.clipboard.writeText(charge.pix_qr_code!);
+                                toast({ title: "Código PIX copiado!" });
+                              }}
+                            >
+                              <Copy className="h-4 w-4 mr-2" />
+                              Copiar código PIX
+                            </Button>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Opção 2: Cartão com Parcelamento */}
+                    <Card className="border-2 border-blue-200 hover:border-blue-300 transition-colors bg-gradient-to-br from-blue-50/50 to-background">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="p-2 rounded-lg bg-blue-50">
+                            <CreditCard className="h-5 w-5 text-blue-600" />
+                          </div>
+                          <div>
+                            <CardTitle className="text-lg">Cartão de Crédito</CardTitle>
+                            <p className="text-xs text-muted-foreground">Parcele em até 12x com juros</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 mt-2">
+                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                            Todos os cartões
+                          </Badge>
+                          <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                            Débito e Crédito
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="p-4 bg-white rounded-lg border-2 border-dashed border-blue-200 space-y-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Valor devido:</span>
+                            <span className="font-bold text-lg">{formatCurrency(charge.amount_cents - (charge.management_contribution_cents || 0), charge.currency)}</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground space-y-1">
+                            <p>• Parcele em até 12x no cartão</p>
+                            <p>• Aceita todos os principais cartões</p>
+                            <p>• Pagamento seguro pelo Mercado Pago</p>
+                          </div>
+                        </div>
+                        <Button 
+                          className="w-full shadow-lg hover:shadow-xl transition-shadow bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600"
+                          size="lg"
+                          onClick={() => window.open(charge.payment_link!, '_blank')}
+                        >
+                          <CreditCard className="h-4 w-4 mr-2" />
+                          Pagar com Mercado Pago
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            navigator.clipboard.writeText(charge.payment_link!);
+                            toast({ title: "Link copiado!", description: "Você pode acessá-lo depois" });
+                          }}
+                          className="w-full"
+                        >
+                          <Copy className="mr-2 h-4 w-4" />
+                          Copiar link de pagamento
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </CardContent>
+              </Card>
             )}
 
             {attachments.length > 0 && (
