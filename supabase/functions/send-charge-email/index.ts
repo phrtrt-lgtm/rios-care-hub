@@ -170,40 +170,65 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Email sent successfully");
 
+    // Prepare notification data
+    let notificationTitle = "";
+    let notificationMessage = "";
+    let notificationType = "charge";
+    
+    switch (type) {
+      case "charge_created":
+        notificationTitle = "Nova Cobrança";
+        notificationMessage = `${charge.title} - ${dueAmountBRL} (Vence ${formattedDueDate})`;
+        break;
+      case "charge_reminder":
+        notificationTitle = "Lembrete de Cobrança";
+        notificationMessage = `${charge.title} vence em breve - ${dueAmountBRL}`;
+        break;
+      case "charge_overdue":
+        notificationTitle = "Cobrança Vencida";
+        notificationMessage = `${charge.title} - ${dueAmountBRL} está vencida`;
+        break;
+      case "charge_debit_notice":
+        notificationTitle = "Aviso de Débito em Reserva";
+        notificationMessage = `${charge.title} - ${dueAmountBRL} será debitado`;
+        break;
+      case "charge_paid":
+        notificationTitle = "Pagamento Confirmado";
+        notificationMessage = `${charge.title} - ${dueAmountBRL} foi confirmado`;
+        break;
+    }
+
+    // Create notification in database
+    try {
+      const { error: notificationError } = await supabaseClient
+        .from("notifications")
+        .insert({
+          owner_id: charge.owner.id,
+          title: notificationTitle,
+          message: notificationMessage,
+          type: notificationType,
+          reference_id: chargeId,
+          reference_url: `/cobranca-detalhes/${chargeId}`,
+          read: false,
+        });
+
+      if (notificationError) {
+        console.error("Notification creation error (non-critical):", notificationError);
+      } else {
+        console.log("Notification created successfully");
+      }
+    } catch (notificationError) {
+      console.error("Notification creation error (non-critical):", notificationError);
+    }
+
     // Send push notification to owner
     try {
-      let pushTitle = "";
-      let pushBody = "";
-      
-      switch (type) {
-        case "charge_created":
-          pushTitle = "Nova Cobrança 💰";
-          pushBody = `${charge.title} - ${dueAmountBRL} (Vence ${formattedDueDate})`;
-          break;
-        case "charge_reminder":
-          pushTitle = "Lembrete de Cobrança ⏰";
-          pushBody = `${charge.title} vence em breve - ${dueAmountBRL}`;
-          break;
-        case "charge_overdue":
-          pushTitle = "Cobrança Vencida ⚠️";
-          pushBody = `${charge.title} - ${dueAmountBRL} está vencida`;
-          break;
-        case "charge_debit_notice":
-          pushTitle = "Aviso de Débito em Reserva ⚠️";
-          pushBody = `${charge.title} - ${dueAmountBRL} será debitado`;
-          break;
-        case "charge_paid":
-          pushTitle = "Pagamento Confirmado ✅";
-          pushBody = `${charge.title} - ${dueAmountBRL} foi confirmado`;
-          break;
-      }
-
       await supabaseClient.functions.invoke("send-push", {
         body: {
           ownerId: charge.owner.id,
           payload: {
-            title: pushTitle,
-            body: pushBody,
+            title: notificationTitle,
+            body: notificationMessage,
             url: `/cobranca-detalhes/${chargeId}`,
             tag: `charge_${chargeId}`,
           },
