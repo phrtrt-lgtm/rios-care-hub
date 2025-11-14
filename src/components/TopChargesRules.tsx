@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { BarChart3 } from "lucide-react";
 
 
 export default function TopChargesRules() {
@@ -29,15 +30,18 @@ export default function TopChargesRules() {
               compensado em reservas futuras.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 items-stretch">
             <a href="/minhas-cobrancas"
-               className="px-4 py-2 rounded-xl font-medium bg-white text-secondary hover:bg-white/90 transition-colors">Minhas Cobranças</a>
+               className="px-4 py-2 rounded-xl font-medium bg-white text-secondary hover:bg-white/90 transition-colors flex items-center">Minhas Cobranças</a>
             <a href="/manutencoes"
-               className="px-4 py-2 rounded-xl font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">Histórico de Manutenções</a>
+               className="px-6 py-3 rounded-xl font-semibold bg-gradient-to-r from-primary to-primary/80 text-primary-foreground hover:from-primary/90 hover:to-primary/70 transition-all shadow-lg hover:shadow-xl flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              Relatório de Cobranças/Manutenções
+            </a>
             <a 
               href="#regras-completas"
               onClick={handleOpenRules}
-              className="px-4 py-2 rounded-xl font-medium bg-white text-secondary hover:bg-white/90 transition-colors cursor-pointer"
+              className="px-4 py-2 rounded-xl font-medium bg-white text-secondary hover:bg-white/90 transition-colors cursor-pointer flex items-center"
             >
               Regras completas
             </a>
