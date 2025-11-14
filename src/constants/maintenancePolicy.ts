@@ -35,11 +35,11 @@ export const MAINTENANCE_POLICY_HTML = `
 
 <div style="background: #f9fafb; padding: 8px; border-radius: 6px;">
   <p style="margin: 0 0 4px 0; font-size: 13px; font-weight: bold;">💰 Pós-Execução</p>
-  <p style="margin: 0; font-size: 12px; line-height: 1.4;">Toda manutenção finalizada vai para a <b>área de cobranças</b>, onde será gerada uma cobrança conforme regras publicadas (contestação 7 dias, pagamento/offset).</p>
+  <p style="margin: 0; font-size: 12px; line-height: 1.4;">As manutenções feitas pela gestão vão para a <b>área de cobranças</b>, onde será gerada uma cobrança conforme regras publicadas (contestação 7 dias, pagamento/offset).</p>
 </div>
 `;
 
 export const MAINTENANCE_POLICY_TEXT = `Política de Manutenção
 Essencial (atendimento imediato): itens que inviabilizam a estadia (geladeira, fogão, micro-ondas, água quente, energia, fechadura/portas, piscina inutilizável, infiltração grave). Podem ser executados de imediato pela gestão, sobretudo em check-in no mesmo dia.
 Estrutural (pode aguardar entre estadias): piso/reformas/pintura etc. Abriremos chamado para você decidir: assumir a execução (com prazo e fornecedor) ou delegar à gestão.
-Avaliações negativas derrubam a renda; protegemos o desempenho do ecossistema. Após execução, a manutenção finalizada vai para a área de cobranças, gerando cobrança conforme regras já publicadas (contestação 7 dias, pagamento/offset). Ao aceitar, você registra ciência desta política (versão 2026-01-01).`;
+Avaliações negativas derrubam a renda; protegemos o desempenho do ecossistema. As manutenções feitas pela gestão vão para a área de cobranças, gerando cobrança conforme regras já publicadas (contestação 7 dias, pagamento/offset). Ao aceitar, você registra ciência desta política (versão 2026-01-01).`;
