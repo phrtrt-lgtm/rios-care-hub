@@ -6,12 +6,15 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
-import { Bell, Ticket, DollarSign, Wrench, Vote, AlertCircle } from "lucide-react";
+import { Bell, Ticket, DollarSign, Wrench, Vote, AlertCircle, BellRing } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { PushNotifications } from '@capacitor/push-notifications';
+import { Capacitor } from '@capacitor/core';
+import { toast } from "sonner";
 
 interface Notification {
   id: string;
@@ -45,10 +48,14 @@ export function NotificationButton() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
+  const [isPushEnabled, setIsPushEnabled] = useState(false);
+  const [enablingPush, setEnablingPush] = useState(false);
   const navigate = useNavigate();
+  const isNative = Capacitor.isNativePlatform();
 
   useEffect(() => {
     fetchNotifications();
+    checkPushPermissions();
 
     // Realtime subscription
     const channel = supabase
@@ -70,6 +77,89 @@ export function NotificationButton() {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  const checkPushPermissions = async () => {
+    if (!isNative) return;
+    
+    try {
+      const permStatus = await PushNotifications.checkPermissions();
+      setIsPushEnabled(permStatus.receive === 'granted');
+    } catch (error) {
+      console.error("Error checking push permissions:", error);
+    }
+  };
+
+  const enablePushNotifications = async () => {
+    if (!isNative) {
+      toast.info("Use o app Android/iOS para ativar notificações push");
+      return;
+    }
+
+    setEnablingPush(true);
+
+    try {
+      let permStatus = await PushNotifications.checkPermissions();
+
+      if (permStatus.receive === 'prompt') {
+        permStatus = await PushNotifications.requestPermissions();
+      }
+
+      if (permStatus.receive !== 'granted') {
+        toast.error('Permissão de notificação negada');
+        setEnablingPush(false);
+        return;
+      }
+
+      await PushNotifications.register();
+
+      await PushNotifications.addListener('registration', async (token) => {
+        console.log('Push registration success, token: ' + token.value);
+
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          toast.error("Você precisa estar logado");
+          return;
+        }
+
+        const fcmEndpoint = `https://fcm.googleapis.com/fcm/send/${token.value}`;
+        const { error } = await supabase
+          .from('push_subscriptions')
+          .upsert(
+            {
+              owner_id: session.user.id,
+              endpoint: fcmEndpoint,
+              p256dh: 'native',
+              auth: 'native',
+              user_agent: navigator.userAgent,
+              is_active: true,
+            },
+            {
+              onConflict: 'owner_id,endpoint',
+            }
+          );
+
+        if (error) {
+          console.error('Error saving token:', error);
+          toast.error('Erro ao salvar token de notificação');
+          return;
+        }
+
+        toast.success("Notificações push ativadas!");
+        setIsPushEnabled(true);
+        setEnablingPush(false);
+      });
+
+      await PushNotifications.addListener('registrationError', (error) => {
+        console.error('Error on registration: ' + JSON.stringify(error));
+        toast.error('Erro ao registrar notificações');
+        setEnablingPush(false);
+      });
+    } catch (error) {
+      console.error("Error enabling push:", error);
+      toast.error("Erro ao ativar notificações push");
+      setEnablingPush(false);
+    }
+  };
 
   const fetchNotifications = async () => {
     try {
@@ -153,16 +243,30 @@ export function NotificationButton() {
       <PopoverContent className="w-96 p-0" align="end">
         <div className="flex items-center justify-between border-b p-4">
           <h3 className="font-semibold">Notificações</h3>
-          {unreadCount > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={markAllAsRead}
-              className="text-xs"
-            >
-              Marcar todas como lidas
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {!isPushEnabled && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={enablePushNotifications}
+                disabled={enablingPush}
+                className="text-xs"
+              >
+                <BellRing className="h-3 w-3 mr-1" />
+                {enablingPush ? "Ativando..." : "Ativar Push"}
+              </Button>
+            )}
+            {unreadCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={markAllAsRead}
+                className="text-xs"
+              >
+                Marcar todas como lidas
+              </Button>
+            )}
+          </div>
         </div>
         
         <ScrollArea className="h-[400px]">
