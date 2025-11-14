@@ -19,7 +19,7 @@ export const MAINTENANCE_POLICY_HTML = `
 </div>
 
 <div style="background: #f9fafb; padding: 8px; border-radius: 6px; margin-bottom: 8px;">
-  <p style="margin: 0 0 4px 0; font-size: 13px; font-weight: bold;">⏱️ Decisão (7 dias corridos)</p>
+  <p style="margin: 0 0 4px 0; font-size: 13px; font-weight: bold;">⏱️ Decisão</p>
   <p style="margin: 0; font-size: 12px; line-height: 1.4;">Para itens estruturais: <b>✅ Assumir execução</b> (informar prazo/fornecedor) ou <b>🤝 Delegar à gestão</b>.</p>
 </div>
 
@@ -41,5 +41,5 @@ export const MAINTENANCE_POLICY_HTML = `
 
 export const MAINTENANCE_POLICY_TEXT = `Política de Manutenção — Vigente em 01/01/2026
 Essencial (atendimento imediato): itens que inviabilizam a estadia (geladeira, fogão, micro-ondas, água quente, energia, fechadura/portas, piscina inutilizável, infiltração grave). Podem ser executados de imediato pela gestão, sobretudo em check-in no mesmo dia.
-Estrutural (pode aguardar entre estadias): piso/reformas/pintura etc. Abriremos chamado e você terá 7 dias para decidir: assumir a execução (com prazo e fornecedor) ou delegar à gestão.
+Estrutural (pode aguardar entre estadias): piso/reformas/pintura etc. Abriremos chamado para você decidir: assumir a execução (com prazo e fornecedor) ou delegar à gestão.
 Avaliações negativas derrubam a renda; protegemos o desempenho do ecossistema. Após execução, a manutenção vira cobrança conforme regras já publicadas (contestação 7 dias, pagamento/offset). Ao aceitar, você registra ciência desta política (versão 2026-01-01).`;
