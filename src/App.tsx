@@ -45,6 +45,7 @@ import Votacoes from "./pages/Votacoes";
 import NovaPropostaVotacao from "./pages/NovaPropostaVotacao";
 import VotacaoDetalhes from "./pages/VotacaoDetalhes";
 import NovoTicketInterno from "./pages/NovoTicketInterno";
+import MeusChamados from "./pages/MeusChamados";
 
 const queryClient = new QueryClient();
 
@@ -81,6 +82,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['owner']}>
                   <NovoTicket />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/meus-chamados"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <MeusChamados />
                 </ProtectedRoute>
               }
             />
