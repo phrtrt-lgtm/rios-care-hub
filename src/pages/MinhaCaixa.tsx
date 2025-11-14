@@ -114,9 +114,18 @@ export default function MinhaCaixa() {
               
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button variant="ghost" size="sm" className="hidden md:inline-flex">
-                    {profile?.name}
-                  </Button>
+                  <div className="flex items-center gap-2 bg-orange-700 hover:bg-orange-800 text-white px-3 py-2 rounded-lg cursor-pointer transition-colors">
+                    <div className="w-8 h-8 rounded-full overflow-hidden bg-white/20 flex-shrink-0">
+                      {photoUrl ? (
+                        <img src={photoUrl} alt={profile?.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-white font-semibold text-sm">
+                          {profile?.name?.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-sm font-medium hidden md:inline">{profile?.name}</span>
+                  </div>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
@@ -155,15 +164,6 @@ export default function MinhaCaixa() {
           </div>
         </div>
       </header>
-
-      {/* Sub-header */}
-      <div className="bg-gradient-to-r from-primary/5 via-orange-100/30 to-primary/5 border-b">
-        <div className="container mx-auto px-4 py-3">
-          <h2 className="text-sm md:text-base font-semibold text-center text-orange-700 tracking-wide uppercase">
-            Central de Propriedades e Gestão
-          </h2>
-        </div>
-      </div>
 
       {/* Content */}
       <main className="container mx-auto px-4 py-6 md:py-8">
