@@ -102,12 +102,17 @@ serve(async (req) => {
         name: owner.name,
         email: owner.email,
       },
+      payment_methods: {
+        installments: 12, // Permite parcelamento em até 12x
+        default_installments: 1,
+      },
       metadata: {
         charge_ids: chargeIds,
         is_group_payment: true,
       },
       external_reference: `group_${chargeIds.join('_')}`,
       notification_url: `${supabaseUrl}/functions/v1/mercadopago-webhook`,
+      statement_descriptor: 'RIOS Gestao', // Nome que aparece na fatura do cartão
     };
 
     console.log('Creating Mercado Pago preference:', JSON.stringify(preferenceData, null, 2));

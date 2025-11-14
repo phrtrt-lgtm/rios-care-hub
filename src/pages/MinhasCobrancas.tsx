@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowLeft, Calendar, FileText, Paperclip, QrCode, Building2, DollarSign, Tag } from "lucide-react";
+import { ArrowLeft, Calendar, FileText, Paperclip, QrCode, Building2, DollarSign, Tag, CreditCard, Zap } from "lucide-react";
 import { AuthenticatedImage, AuthenticatedVideo } from "@/components/AuthenticatedMedia";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -285,49 +285,95 @@ const MinhasCobrancas = () => {
                     </div>
                   )}
 
-                  {/* QR Code e opções de pagamento */}
+                  {/* Opções de pagamento */}
                   {groupPayment && !generatingPayment && (
-                    <div className="p-6 bg-background rounded-xl border space-y-6 animate-scale-in shadow-sm">
-                      <div className="text-center space-y-4">
-                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-full border border-green-200">
-                          <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
-                          <span className="text-sm font-medium">Pagamento gerado com sucesso!</span>
-                        </div>
-                        
-                        <div>
-                          <h3 className="font-semibold text-lg mb-3">Pague com PIX</h3>
-                          <div className="flex justify-center">
-                            <div className="p-4 bg-white rounded-xl border-2 border-primary/20 shadow-lg">
+                    <div className="space-y-4 animate-scale-in">
+                      {/* Indicador de sucesso */}
+                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-full border border-green-200 mx-auto">
+                        <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
+                        <span className="text-sm font-medium">Opções de pagamento geradas!</span>
+                      </div>
+
+                      {/* Grid de opções de pagamento */}
+                      <div className="grid md:grid-cols-2 gap-4">
+                        {/* Opção 1: PIX Instantâneo */}
+                        <Card className="border-2 border-primary/20 hover:border-primary/40 transition-colors">
+                          <CardHeader className="pb-3">
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className="p-2 rounded-lg bg-green-50">
+                                <Zap className="h-5 w-5 text-green-600" />
+                              </div>
+                              <div>
+                                <CardTitle className="text-lg">PIX Instantâneo</CardTitle>
+                                <CardDescription className="text-xs">À vista - Aprovação imediata</CardDescription>
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                            <div className="flex justify-center p-3 bg-white rounded-lg border">
                               <img 
                                 src={groupPayment.pix_qr_code_base64} 
                                 alt="QR Code PIX" 
-                                className="w-64 h-64 animate-scale-in"
+                                className="w-48 h-48"
                               />
                             </div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="grid gap-3">
-                        <Button 
-                          className="w-full shadow hover:shadow-lg transition-shadow" 
-                          variant="outline"
-                          size="lg"
-                          onClick={() => {
-                            navigator.clipboard.writeText(groupPayment.pix_qr_code);
-                            toast.success('Código PIX copiado para área de transferência!');
-                          }}
-                        >
-                          <Paperclip className="h-4 w-4 mr-2" />
-                          Copiar código PIX
-                        </Button>
-                        <Button 
-                          className="w-full shadow-lg hover:shadow-xl transition-shadow bg-gradient-to-r from-primary to-primary/80"
-                          size="lg"
-                          onClick={() => window.open(groupPayment.payment_link, '_blank')}
-                        >
-                          Pagar com Mercado Pago
-                        </Button>
+                            <Button 
+                              className="w-full" 
+                              variant="outline"
+                              onClick={() => {
+                                navigator.clipboard.writeText(groupPayment.pix_qr_code);
+                                toast.success('Código PIX copiado!');
+                              }}
+                            >
+                              <Paperclip className="h-4 w-4 mr-2" />
+                              Copiar código PIX
+                            </Button>
+                          </CardContent>
+                        </Card>
+
+                        {/* Opção 2: Cartão com Parcelamento */}
+                        <Card className="border-2 border-blue-200 hover:border-blue-300 transition-colors bg-gradient-to-br from-blue-50/50 to-background">
+                          <CardHeader className="pb-3">
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className="p-2 rounded-lg bg-blue-50">
+                                <CreditCard className="h-5 w-5 text-blue-600" />
+                              </div>
+                              <div>
+                                <CardTitle className="text-lg">Cartão de Crédito</CardTitle>
+                                <CardDescription className="text-xs">Parcele em até 12x com juros</CardDescription>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 mt-2">
+                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                Todos os cartões
+                              </Badge>
+                              <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                                Débito e Crédito
+                              </Badge>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                            <div className="p-4 bg-white rounded-lg border-2 border-dashed border-blue-200 space-y-2">
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">Valor total:</span>
+                                <span className="font-bold text-lg">{formatBRL(totalDue)}</span>
+                              </div>
+                              <div className="text-xs text-muted-foreground space-y-1">
+                                <p>• Parcele em até 12x no cartão</p>
+                                <p>• Aceita todos os principais cartões</p>
+                                <p>• Pagamento seguro pelo Mercado Pago</p>
+                              </div>
+                            </div>
+                            <Button 
+                              className="w-full shadow-lg hover:shadow-xl transition-shadow bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600"
+                              size="lg"
+                              onClick={() => window.open(groupPayment.payment_link, '_blank')}
+                            >
+                              <CreditCard className="h-4 w-4 mr-2" />
+                              Pagar com Mercado Pago
+                            </Button>
+                          </CardContent>
+                        </Card>
                       </div>
                     </div>
                   )}
