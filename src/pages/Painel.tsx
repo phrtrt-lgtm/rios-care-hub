@@ -94,25 +94,18 @@ export default function Painel() {
               
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="flex items-center gap-2 max-w-[140px] md:max-w-none"
-                  >
-                    <Badge variant="secondary" className="text-xs hidden sm:flex">
-                      {profile?.role === "admin" 
-                        ? "Admin" 
-                        : profile?.role === "maintenance" 
-                        ? "Manutenção" 
-                        : "Atendente"}
-                    </Badge>
-                    <span className="truncate text-xs md:text-sm">
-                      {profile?.name && profile.name.length > 12 
-                        ? `${profile.name.substring(0, 12)}...` 
-                        : profile?.name
-                      }
-                    </span>
-                  </Button>
+                  <div className="flex items-center gap-2 bg-orange-700 hover:bg-orange-800 text-white px-3 py-2 rounded-lg cursor-pointer transition-colors">
+                    <div className="w-8 h-8 rounded-full overflow-hidden bg-white/20 flex-shrink-0">
+                      {photoUrl ? (
+                        <img src={photoUrl} alt={profile?.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-white font-semibold text-sm">
+                          {profile?.name?.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-sm font-medium hidden md:inline">{profile?.name}</span>
+                  </div>
                 </DialogTrigger>
                 <DialogContent>
                     <DialogHeader>
