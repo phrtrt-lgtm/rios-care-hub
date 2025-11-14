@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowLeft, Calendar, FileText, Paperclip, QrCode } from "lucide-react";
+import { ArrowLeft, Calendar, FileText, Paperclip, QrCode, Building2, DollarSign, Tag } from "lucide-react";
 import { AuthenticatedImage, AuthenticatedVideo } from "@/components/AuthenticatedMedia";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -307,126 +307,123 @@ const MinhasCobrancas = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="space-y-3">
             {charges.map((charge) => {
               const isOpen = charge.status === 'sent' || charge.status === 'overdue';
               const isSelected = selectedCharges.includes(charge.id);
+              const ownerDue = charge.amount_cents - charge.management_contribution_cents;
               
               return (
                 <Card 
                   key={charge.id}
-                  className={`group transition-all hover:shadow-lg ${isSelected ? 'ring-2 ring-primary' : ''}`}
+                  className={`transition-all hover:shadow-md hover:border-primary/20 overflow-hidden group ${isSelected ? 'ring-2 ring-primary' : ''}`}
                 >
-                  <CardHeader>
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-start gap-2 flex-1">
-                        {isOpen && (
-                          <Checkbox 
-                            checked={isSelected}
-                            onCheckedChange={() => toggleChargeSelection(charge.id)}
-                            onClick={(e) => e.stopPropagation()}
-                            className="mt-1"
-                          />
-                        )}
-                        <CardTitle 
-                          className="text-lg line-clamp-2 cursor-pointer flex-1"
-                          onClick={() => navigate(`/cobranca/${charge.id}`)}
-                        >
-                          {charge.title}
-                        </CardTitle>
+                  <div className="flex">
+                    {/* Checkbox lateral (se aplicável) */}
+                    {isOpen && (
+                      <div className="flex items-center justify-center w-12 bg-muted/30 border-r">
+                        <Checkbox 
+                          checked={isSelected}
+                          onCheckedChange={() => toggleChargeSelection(charge.id)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
                       </div>
-                      {getStatusBadge(charge.status)}
-                    </div>
-                   {charge.property && (
-                    <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100 mb-2">
-                      📍 {charge.property.name}
-                    </Badge>
-                  )}
-                   {charge.category && (
-                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 mb-2 ml-2">
-                      🔧 {CHARGE_CATEGORIES[charge.category as keyof typeof CHARGE_CATEGORIES]}
-                    </Badge>
-                  )}
-                  {charge.service_type && (
-                    <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100 mb-2 ml-2">
-                      🏷️ {charge.service_type}
-                    </Badge>
-                  )}
-                  {charge.description && (
-                    <CardDescription className="line-clamp-2">
-                      {charge.description}
-                    </CardDescription>
-                  )}
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Valor e Data */}
-                  <div className="space-y-2">
-                    <div className="space-y-1">
-                      <div className="flex items-baseline justify-between">
-                        <span className="text-sm text-muted-foreground">Valor Total:</span>
-                        <span className="text-lg font-semibold text-foreground">
-                          {formatCurrency(charge.amount_cents, charge.currency)}
-                        </span>
-                      </div>
-                      {charge.management_contribution_cents > 0 && (
-                        <div className="flex items-baseline justify-between">
-                          <span className="text-sm text-muted-foreground">Aporte Gestão:</span>
-                          <span className="text-lg font-semibold text-green-600">
-                            - {formatCurrency(charge.management_contribution_cents, charge.currency)}
-                          </span>
+                    )}
+
+                    {/* Conteúdo principal */}
+                    <div 
+                      className="flex-1 p-4 cursor-pointer"
+                      onClick={() => navigate(`/cobranca/${charge.id}`)}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 space-y-2">
+                          {/* Título e Status */}
+                          <div className="flex items-start justify-between gap-2">
+                            <h3 className="font-semibold text-base leading-tight group-hover:text-primary transition-colors flex-1">
+                              {charge.title}
+                            </h3>
+                            {getStatusBadge(charge.status)}
+                          </div>
+
+                          {/* Badges de informação */}
+                          <div className="flex flex-wrap gap-1.5">
+                            {charge.property && (
+                              <Badge variant="outline" className="text-xs bg-background">
+                                <Building2 className="h-3 w-3 mr-1" />
+                                {charge.property.name}
+                              </Badge>
+                            )}
+                            {charge.category && (
+                              <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                {CHARGE_CATEGORIES[charge.category as keyof typeof CHARGE_CATEGORIES]}
+                              </Badge>
+                            )}
+                            {charge.service_type && (
+                              <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                                <Tag className="h-3 w-3 mr-1" />
+                                {charge.service_type}
+                              </Badge>
+                            )}
+                          </div>
+
+                          {/* Descrição */}
+                          {charge.description && (
+                            <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+                              {charge.description}
+                            </p>
+                          )}
+
+                          {/* Footer com valores e datas */}
+                          <div className="flex flex-wrap gap-4 pt-1">
+                            <div className="space-y-0.5">
+                              <div className="flex items-baseline gap-2">
+                                <span className="text-xs text-muted-foreground">Valor Total:</span>
+                                <span className="text-sm font-semibold text-foreground">
+                                  {formatCurrency(charge.amount_cents, charge.currency)}
+                                </span>
+                              </div>
+                              {charge.management_contribution_cents > 0 && (
+                                <div className="flex items-baseline gap-2">
+                                  <span className="text-xs text-muted-foreground">Aporte Gestão:</span>
+                                  <span className="text-sm font-semibold text-green-600">
+                                    - {formatCurrency(charge.management_contribution_cents, charge.currency)}
+                                  </span>
+                                </div>
+                              )}
+                              <div className="flex items-baseline gap-2">
+                                <span className="text-xs text-muted-foreground">Valor Devido:</span>
+                                <span className="text-base font-bold text-primary">
+                                  {formatCurrency(ownerDue, charge.currency)}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="space-y-0.5 text-xs text-muted-foreground">
+                              {charge.due_date && (
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  Venc: {format(new Date(charge.due_date), "dd/MM/yyyy", { locale: ptBR })}
+                                </div>
+                              )}
+                              {charge.maintenance_date && (
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  Data: {format(new Date(charge.maintenance_date), "dd/MM/yyyy", { locale: ptBR })}
+                                </div>
+                              )}
+                              {charge.attachments && charge.attachments.length > 0 && (
+                                <div className="flex items-center gap-1 text-blue-600">
+                                  <Paperclip className="h-3 w-3" />
+                                  +{charge.attachments.length} anexo{charge.attachments.length > 1 ? 's' : ''}
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      )}
-                      <div className="flex items-baseline justify-between border-t pt-1">
-                        <span className="text-sm font-medium">Valor Devido:</span>
-                        <span className="text-xl font-bold text-foreground">
-                          {formatCurrency(charge.amount_cents - (charge.management_contribution_cents || 0), charge.currency)}
-                        </span>
                       </div>
                     </div>
-                    {charge.due_date && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Calendar className="h-4 w-4" />
-                        Venc: {format(new Date(charge.due_date), "dd/MM/yyyy", { locale: ptBR })}
-                      </div>
-                    )}
-                    {charge.maintenance_date && (
-                      <div className="flex items-center gap-2 text-sm text-blue-600">
-                        <Calendar className="h-4 w-4" />
-                        Data: {format(new Date(charge.maintenance_date), "dd/MM/yyyy", { locale: ptBR })}
-                      </div>
-                    )}
                   </div>
-
-                  {/* Contador de Anexos */}
-                  {charge.attachments && charge.attachments.length > 0 && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground border-t pt-4">
-                      <Paperclip className="h-4 w-4" />
-                      <span>+{charge.attachments.length} {charge.attachments.length === 1 ? 'anexo' : 'anexos'}</span>
-                    </div>
-                  )}
-
-                  {/* Contador de Mensagens */}
-                  {charge._count && charge._count.messages > 0 && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground border-t pt-4">
-                      <Avatar className="h-6 w-6">
-                        <AvatarFallback className="text-xs">
-                          {charge._count.messages}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span>{charge._count.messages} {charge._count.messages === 1 ? 'mensagem' : 'mensagens'}</span>
-                    </div>
-                  )}
-
-                  {/* Link de Pagamento */}
-                  {charge.payment_link_url && charge.status !== 'paid' && charge.status !== 'cancelled' && (
-                    <div className="border-t pt-4">
-                      <Badge variant="outline" className="w-full justify-center">
-                        Link de pagamento disponível
-                      </Badge>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                </Card>
               );
             })}
           </div>
