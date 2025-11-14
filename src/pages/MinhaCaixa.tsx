@@ -64,14 +64,10 @@ export default function MinhaCaixa() {
       {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-3">
-          <div className="flex flex-col gap-3 md:flex-row md:h-16 md:items-center md:justify-between">
-            {/* Logo e Título */}
+          <div className="flex items-center justify-between gap-3 h-16">
+            {/* Logo */}
             <div className="flex items-center gap-2 md:gap-4">
               <img src="/logo.png" alt="RIOS" className="h-6 md:h-8" />
-              <div>
-                <h1 className="text-lg md:text-xl font-semibold">Minha Caixa</h1>
-                <p className="text-xs text-muted-foreground md:hidden">{profile?.name}</p>
-              </div>
             </div>
             
             {/* Botões de ação */}
@@ -159,6 +155,15 @@ export default function MinhaCaixa() {
           </div>
         </div>
       </header>
+
+      {/* Sub-header */}
+      <div className="bg-gradient-to-r from-primary/5 via-orange-100/30 to-primary/5 border-b">
+        <div className="container mx-auto px-4 py-6">
+          <h1 className="text-2xl md:text-3xl font-bold text-center text-orange-700">
+            Central de Propriedades e Gestão
+          </h1>
+        </div>
+      </div>
 
       {/* Content */}
       <main className="container mx-auto px-4 py-6 md:py-8">
