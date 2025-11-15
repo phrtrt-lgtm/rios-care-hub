@@ -13,42 +13,46 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     
-    // Create admin client
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Get the authorization header from the request
+    // Get the authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       throw new Error('No authorization header');
     }
 
-    // Extract user ID from JWT token
-    const token = authHeader.replace('Bearer ', '');
-    const parts = token.split('.');
-    if (parts.length !== 3) {
-      throw new Error('Invalid token format');
-    }
+    // Create client with user's token to get user info
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    // Get authenticated user
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     
-    const payload = JSON.parse(atob(parts[1]));
-    const requestingUserId = payload.sub;
-
-    if (!requestingUserId) {
-      throw new Error('No user ID in token');
+    if (userError || !user) {
+      console.error('Auth error:', userError);
+      throw new Error('Unauthorized');
     }
 
-    // Check if the requesting user is an admin using service role
+    console.log('Authenticated user:', user.id);
+
+    // Create admin client for privileged operations
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Check if requesting user is admin using admin client
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('role')
-      .eq('id', requestingUserId)
+      .eq('id', user.id)
       .single();
+
+    console.log('User profile:', profile);
 
     if (profileError || profile?.role !== 'admin') {
       throw new Error('User must be an admin to delete users');
     }
 
-    // Get the user ID to delete from the request body
+    // Get the user ID to delete from request body
     const { userId } = await req.json();
     
     if (!userId) {
@@ -66,7 +70,12 @@ Deno.serve(async (req) => {
       throw new Error('Cannot delete admin users');
     }
 
-    // Delete the user using admin client
+    console.log('Deleting user profile and related data for:', userId);
+
+    // Delete related data first (profile will be deleted via cascade)
+    // The profile has ON DELETE CASCADE relationships with auth.users
+    
+    // Delete the user using admin client - this will cascade delete the profile
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
 
     if (deleteError) {
