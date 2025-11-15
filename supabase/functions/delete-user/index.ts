@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
-    // Create client with service role for admin operations
+    // Create admin client
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     // Get the authorization header from the request
@@ -23,24 +23,25 @@ Deno.serve(async (req) => {
       throw new Error('No authorization header');
     }
 
-    // Create client with user's token to verify permissions
-    const supabaseClient = createClient(
-      supabaseUrl,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
+    // Extract user ID from JWT token
+    const token = authHeader.replace('Bearer ', '');
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      throw new Error('Invalid token format');
+    }
+    
+    const payload = JSON.parse(atob(parts[1]));
+    const requestingUserId = payload.sub;
 
-    // Verify the user is authenticated
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
-    if (userError || !user) {
-      throw new Error('Unauthorized');
+    if (!requestingUserId) {
+      throw new Error('No user ID in token');
     }
 
-    // Check if the user is an admin
-    const { data: profile, error: profileError } = await supabaseClient
+    // Check if the requesting user is an admin using service role
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('role')
-      .eq('id', user.id)
+      .eq('id', requestingUserId)
       .single();
 
     if (profileError || profile?.role !== 'admin') {
