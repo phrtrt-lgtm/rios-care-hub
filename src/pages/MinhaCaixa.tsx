@@ -103,7 +103,10 @@ export default function MinhaCaixa() {
               )}
             </div>
 
-            <Dialog>
+            <div className="flex items-center gap-2">
+              <NotificationButton />
+              
+              <Dialog>
               <DialogTrigger asChild>
                 <div className="flex items-center gap-2 bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/90 text-white px-3 py-2 rounded-lg cursor-pointer transition-colors">
                   {photoUrl ? (
@@ -160,6 +163,7 @@ export default function MinhaCaixa() {
                 </div>
               </DialogContent>
             </Dialog>
+            </div>
           </div>
         </div>
       </header>
