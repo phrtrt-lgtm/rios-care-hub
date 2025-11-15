@@ -64,15 +64,11 @@ export default function MinhaCaixa() {
       {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-3">
-          {/* Logo centralizada */}
-          <div className="flex justify-center mb-3">
-            <img src="/logo.png" alt="RIOS" className="h-8 object-contain" />
-          </div>
-          
-          {/* Botões de navegação e avatar */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Button 
+            <div className="flex items-center gap-3">
+              <img src="/logo.png" alt="RIOS" className="h-6 object-contain" />
+              
+              <Button
                 onClick={() => navigate("/minhas-cobrancas")} 
                 variant="ghost"
                 size="icon"
