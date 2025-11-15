@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.create-cleaner]
 verify_jwt = true
+
+[functions.delete-user]
+verify_jwt = true
