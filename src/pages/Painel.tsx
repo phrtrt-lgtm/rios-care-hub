@@ -312,6 +312,23 @@ export default function Painel() {
             </Card>
           )}
 
+          {(profile?.role === "admin" || profile?.role === "maintenance") && (
+            <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/admin/cadastrar-faxineira")}>
+              <CardHeader>
+                <CardTitle>Cadastrar Faxineira</CardTitle>
+                <CardDescription>
+                  Criar nova conta de faxineira
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button variant="outline" className="w-full">
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Nova Faxineira
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
           {profile?.role === "admin" && (
             <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/admin/cadastrar-equipe")}>
               <CardHeader>
