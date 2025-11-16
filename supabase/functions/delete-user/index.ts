@@ -13,6 +13,7 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     
     // Get the authorization header
     const authHeader = req.headers.get('Authorization');
@@ -20,22 +21,23 @@ Deno.serve(async (req) => {
       throw new Error('No authorization header');
     }
 
-    // Extract and decode JWT to get user ID
+    // Create client with Auth context
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: { Authorization: authHeader },
+      },
+    });
+
+    // Extract token and get user
     const token = authHeader.replace('Bearer ', '');
-    const parts = token.split('.');
-    if (parts.length !== 3) {
-      throw new Error('Invalid token format');
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
+    
+    if (userError || !user) {
+      console.error('Auth error:', userError);
+      throw new Error('Unauthorized');
     }
 
-    // Decode the payload (middle part of JWT)
-    const payload = JSON.parse(atob(parts[1]));
-    const requestingUserId = payload.sub;
-
-    if (!requestingUserId) {
-      throw new Error('No user ID in token');
-    }
-
-    console.log('Requesting user ID:', requestingUserId);
+    console.log('Authenticated user:', user.id);
 
     // Create admin client for privileged operations
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
@@ -44,10 +46,10 @@ Deno.serve(async (req) => {
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('role')
-      .eq('id', requestingUserId)
+      .eq('id', user.id)
       .single();
 
-    console.log('Requesting user profile:', profile);
+    console.log('User profile:', profile);
 
     if (profileError || profile?.role !== 'admin') {
       throw new Error('User must be an admin to delete users');
