@@ -73,16 +73,33 @@ Deno.serve(async (req) => {
       throw new Error('Cannot delete admin users');
     }
 
-    console.log('Deleting user profile and related data for:', userId);
+    console.log('Deleting user and related data for:', userId);
 
-    // Delete related data first (profile will be deleted via cascade)
-    // The profile has ON DELETE CASCADE relationships with auth.users
+    // First, remove any foreign key references to this user
+    // Update properties where this user is assigned as cleaner
+    await supabaseAdmin
+      .from('properties')
+      .update({ assigned_cleaner_id: null })
+      .eq('assigned_cleaner_id', userId);
+
+    // Update properties where this user is the owner
+    // Note: This might need different handling depending on business logic
+    // For now, we'll just log if there are any
+    const { data: ownedProperties } = await supabaseAdmin
+      .from('properties')
+      .select('id')
+      .eq('owner_id', userId);
+
+    if (ownedProperties && ownedProperties.length > 0) {
+      console.log(`Warning: User owns ${ownedProperties.length} properties. These will be cascade deleted.`);
+    }
     
     // Delete the user using admin client - this will cascade delete the profile
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
 
     if (deleteError) {
-      throw deleteError;
+      console.error('Database error deleting user:', deleteError);
+      throw new Error('Database error deleting user');
     }
 
     return new Response(
