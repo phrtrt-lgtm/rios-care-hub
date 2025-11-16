@@ -13,7 +13,6 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     
     // Get the authorization header
     const authHeader = req.headers.get('Authorization');
@@ -21,20 +20,22 @@ Deno.serve(async (req) => {
       throw new Error('No authorization header');
     }
 
-    // Create client with user's token to get user info
-    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
-    });
-
-    // Get authenticated user
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
-    
-    if (userError || !user) {
-      console.error('Auth error:', userError);
-      throw new Error('Unauthorized');
+    // Extract and decode JWT to get user ID
+    const token = authHeader.replace('Bearer ', '');
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      throw new Error('Invalid token format');
     }
 
-    console.log('Authenticated user:', user.id);
+    // Decode the payload (middle part of JWT)
+    const payload = JSON.parse(atob(parts[1]));
+    const requestingUserId = payload.sub;
+
+    if (!requestingUserId) {
+      throw new Error('No user ID in token');
+    }
+
+    console.log('Requesting user ID:', requestingUserId);
 
     // Create admin client for privileged operations
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
@@ -43,10 +44,10 @@ Deno.serve(async (req) => {
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('role')
-      .eq('id', user.id)
+      .eq('id', requestingUserId)
       .single();
 
-    console.log('User profile:', profile);
+    console.log('Requesting user profile:', profile);
 
     if (profileError || profile?.role !== 'admin') {
       throw new Error('User must be an admin to delete users');
