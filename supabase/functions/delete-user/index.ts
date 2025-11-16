@@ -77,22 +77,31 @@ Deno.serve(async (req) => {
 
     // First, remove any foreign key references to this user
     // Update properties where this user is assigned as cleaner
-    await supabaseAdmin
+    const { error: cleanerUpdateError } = await supabaseAdmin
       .from('properties')
       .update({ assigned_cleaner_id: null })
       .eq('assigned_cleaner_id', userId);
 
-    // Update properties where this user is the owner
-    // Note: This might need different handling depending on business logic
-    // For now, we'll just log if there are any
-    const { data: ownedProperties } = await supabaseAdmin
+    if (cleanerUpdateError) {
+      console.error('Error updating properties cleaner:', cleanerUpdateError);
+      throw new Error('Failed to update properties');
+    }
+
+    // Check for properties owned by this user
+    const { data: ownedProperties, error: ownedError } = await supabaseAdmin
       .from('properties')
       .select('id')
       .eq('owner_id', userId);
 
+    if (ownedError) {
+      console.error('Error checking owned properties:', ownedError);
+    }
+
     if (ownedProperties && ownedProperties.length > 0) {
       console.log(`Warning: User owns ${ownedProperties.length} properties. These will be cascade deleted.`);
     }
+
+    console.log('All FK references cleared. Proceeding with user deletion...');
     
     // Delete the user using admin client - this will cascade delete the profile
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
