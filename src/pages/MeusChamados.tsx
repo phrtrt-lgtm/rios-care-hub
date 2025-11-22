@@ -170,8 +170,9 @@ export default function MeusChamados() {
                   onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
                 >
                   <div className="flex">
-                    {/* Thumbnail da Propriedade */}
-                    <div className="relative w-24 md:w-32 flex-shrink-0 bg-muted">
+                  {/* Thumbnail da Propriedade */}
+                  <div className="w-24 md:w-32 flex-shrink-0 relative">
+                    <AspectRatio ratio={16 / 9} className="bg-muted rounded overflow-hidden">
                       {ticket.properties?.cover_photo_url ? (
                         <img 
                           src={ticket.properties.cover_photo_url} 
@@ -183,6 +184,7 @@ export default function MeusChamados() {
                           <Building2 className="h-8 w-8 text-muted-foreground/40" />
                         </div>
                       )}
+                    </AspectRatio>
                       {/* Status Badge sobreposto */}
                       <div className="absolute top-2 left-2">
                         <Badge className={`${getStatusColor(ticket.status)} text-white text-xs shadow-lg`}>
