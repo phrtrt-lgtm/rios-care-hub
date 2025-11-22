@@ -75,7 +75,7 @@ serve(async (req) => {
       );
     }
 
-    // Create user
+    // Try to create user
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
@@ -86,39 +86,99 @@ serve(async (req) => {
       },
     });
 
-    if (createError) {
+    let userId: string;
+
+    // If user already exists, check if it's a rejected profile that can be reactivated
+    if (createError && createError.message.includes("already been registered")) {
+      console.log("User already exists, checking if can be reactivated...");
+      
+      // Find the existing profile by email
+      const { data: existingProfile, error: profileError } = await supabaseAdmin
+        .from("profiles")
+        .select("id, status, role")
+        .eq("email", email)
+        .single();
+
+      if (profileError || !existingProfile) {
+        console.error("Error finding existing profile:", profileError);
+        throw new Error("Email já cadastrado no sistema");
+      }
+
+      // Check if profile was rejected and can be reactivated
+      if (existingProfile.status === "rejected") {
+        console.log("Reactivating rejected profile:", existingProfile.id);
+        
+        // Update the existing profile back to pending
+        const { error: reactivateError } = await supabaseAdmin
+          .from("profiles")
+          .update({
+            role: "pending_owner",
+            status: "pending",
+            name,
+            phone,
+          })
+          .eq("id", existingProfile.id);
+
+        if (reactivateError) {
+          console.error("Error reactivating profile:", reactivateError);
+          throw reactivateError;
+        }
+
+        // Update auth user password
+        const { error: passwordError } = await supabaseAdmin.auth.admin.updateUserById(
+          existingProfile.id,
+          {
+            password,
+            user_metadata: { name, phone },
+          }
+        );
+
+        if (passwordError) {
+          console.error("Error updating user password:", passwordError);
+          throw passwordError;
+        }
+
+        userId = existingProfile.id;
+        console.log("Profile reactivated successfully:", userId);
+      } else {
+        // Profile exists but is not rejected (pending or approved)
+        throw new Error("Email já cadastrado e aguardando aprovação ou já aprovado");
+      }
+    } else if (createError) {
       console.error("Error creating user:", createError);
       throw createError;
+    } else {
+      if (!newUser.user) {
+        throw new Error("Erro ao criar usuário");
+      }
+
+      userId = newUser.user.id;
+
+      // Update profile to pending_owner role and pending status
+      const { error: profileUpdateError } = await supabaseAdmin
+        .from("profiles")
+        .update({
+          role: "pending_owner",
+          status: "pending",
+          name,
+          phone,
+        })
+        .eq("id", userId);
+
+      if (profileUpdateError) {
+        console.error("Error updating profile:", profileUpdateError);
+        throw profileUpdateError;
+      }
+
+      console.log("Owner created successfully with pending status:", userId);
     }
-
-    if (!newUser.user) {
-      throw new Error("Erro ao criar usuário");
-    }
-
-    // Update profile to pending_owner role and pending status
-    const { error: profileUpdateError } = await supabaseAdmin
-      .from("profiles")
-      .update({
-        role: "pending_owner",
-        status: "pending",
-        name,
-        phone,
-      })
-      .eq("id", newUser.user.id);
-
-    if (profileUpdateError) {
-      console.error("Error updating profile:", profileUpdateError);
-      throw profileUpdateError;
-    }
-
-    console.log("Owner created successfully with pending status:", newUser.user.id);
 
     // Send notification for approval request
     try {
       await supabaseAdmin.functions.invoke("notify-ticket", {
         body: {
           type: "approval_request",
-          userId: newUser.user.id,
+          userId: userId,
           data: {
             name,
             email,
@@ -133,8 +193,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true,
-        user_id: newUser.user.id,
-        email: newUser.user.email,
+        user_id: userId,
+        email: email,
       }),
       {
         status: 200,
