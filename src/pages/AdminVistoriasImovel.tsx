@@ -7,6 +7,7 @@ import { formatDateTime } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { Headphones, Paperclip } from 'lucide-react';
 
 interface Property {
@@ -123,14 +124,16 @@ export default function AdminVistoriasImovel() {
       </div>
 
       <Card className="p-4 flex items-center gap-4">
-        <div className="w-24 h-16 bg-muted rounded overflow-hidden flex-shrink-0">
-          {property.cover_photo_url ? (
-            <img src={property.cover_photo_url} alt={property.name} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
-              Sem foto
-            </div>
-          )}
+        <div className="w-32 flex-shrink-0">
+          <AspectRatio ratio={16 / 9} className="bg-muted rounded overflow-hidden">
+            {property.cover_photo_url ? (
+              <img src={property.cover_photo_url} alt={property.name} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
+                Sem foto
+              </div>
+            )}
+          </AspectRatio>
         </div>
         <div>
           <h3 className="font-medium">{property.name}</h3>

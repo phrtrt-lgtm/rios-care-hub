@@ -8,8 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { ArrowLeft, Building2, Plus, Pencil, Trash2, Upload, X, Image } from "lucide-react";
+import { ArrowLeft, Building2, Plus, Pencil, Trash2, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { PropertyPhotoUpload } from "@/components/PropertyPhotoUpload";
 
 interface Property {
   id: string;
@@ -59,8 +60,6 @@ const Propriedades = () => {
     assigned_cleaner_id: "",
     owner_phone: ""
   });
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user || !['admin', 'agent'].includes(profile?.role || '')) {
@@ -193,47 +192,7 @@ const Propriedades = () => {
     }
   };
 
-  const handlePhotoUpload = async (propertyId: string, file: File) => {
-    setUploadingPhoto(true);
-    try {
-      const fileExt = file.name.split('.').pop();
-      const filePath = `${propertyId}/${Date.now()}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('property-photos')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('property-photos')
-        .getPublicUrl(filePath);
-
-      const { error: updateError } = await supabase
-        .from('properties')
-        .update({ cover_photo_url: publicUrl })
-        .eq('id', propertyId);
-
-      if (updateError) throw updateError;
-
-      toast({
-        title: "Foto atualizada!",
-        description: "A foto de capa foi atualizada com sucesso."
-      });
-
-      fetchData();
-    } catch (error: any) {
-      toast({
-        title: "Erro ao fazer upload",
-        description: error.message,
-        variant: "destructive"
-      });
-    } finally {
-      setUploadingPhoto(false);
-    }
-  };
-
-  const handleRemovePhoto = async (propertyId: string, photoUrl: string | null) => {
+  const handlePhotoRemove = async (propertyId: string, photoUrl: string | null) => {
     if (!photoUrl) return;
 
     try {
@@ -317,7 +276,6 @@ const Propriedades = () => {
   const resetForm = () => {
     setFormData({ name: "", address: "", owner_id: "", assigned_cleaner_id: "", owner_phone: "" });
     setEditingProperty(null);
-    setPhotoPreview(null);
   };
 
   const handleDialogChange = (open: boolean) => {
@@ -455,65 +413,26 @@ const Propriedades = () => {
           {properties.map((property) => (
             <Card key={property.id}>
               <CardHeader className="pb-3">
-                {/* Foto de capa */}
-                <div className="relative w-full h-40 mb-3 bg-muted rounded-lg overflow-hidden group">
-                  {property.cover_photo_url ? (
-                    <>
-                      <img 
-                        src={property.cover_photo_url} 
-                        alt={property.name}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                        <label className="cursor-pointer">
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) handlePhotoUpload(property.id, file);
-                            }}
-                            disabled={uploadingPhoto}
-                          />
-                          <Button size="sm" variant="secondary" asChild>
-                            <span>
-                              <Upload className="h-4 w-4 mr-2" />
-                              Alterar
-                            </span>
-                          </Button>
-                        </label>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleRemovePhoto(property.id, property.cover_photo_url)}
-                        >
-                          <X className="h-4 w-4 mr-2" />
-                          Remover
-                        </Button>
-                      </div>
-                    </>
-                  ) : (
-                    <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-muted/80 transition-colors">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handlePhotoUpload(property.id, file);
-                        }}
-                        disabled={uploadingPhoto}
-                      />
-                      <Image className="h-8 w-8 text-muted-foreground mb-2" />
-                      <span className="text-xs text-muted-foreground">
-                        {uploadingPhoto ? "Enviando..." : "Adicionar foto"}
-                      </span>
-                    </label>
-                  )}
-                </div>
+                <PropertyPhotoUpload
+                  propertyId={property.id}
+                  currentPhotoUrl={property.cover_photo_url}
+                  propertyName={property.name}
+                  onUploadComplete={() => fetchData()}
+                />
+                
+                {property.cover_photo_url && (
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => handlePhotoRemove(property.id, property.cover_photo_url)}
+                    className="w-full"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Remover Foto
+                  </Button>
+                )}
 
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between mt-3">
                   <div className="flex-1">
                     <CardTitle className="flex items-center gap-2">
                       <Building2 className="h-5 w-5" />

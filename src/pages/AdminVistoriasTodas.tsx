@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { ArrowLeft, Calendar, Search, Building2, User } from "lucide-react";
 import { formatDateTime } from "@/lib/format";
 
@@ -168,18 +169,20 @@ export default function AdminVistoriasTodas() {
               <CardHeader className="pb-3">
                 <div className="flex items-start gap-4">
                   {/* Foto do imóvel */}
-                  <div className="h-20 w-28 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
-                    {inspection.property.cover_photo_url ? (
-                      <img
-                        src={inspection.property.cover_photo_url}
-                        alt={inspection.property.name}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center">
-                        <Building2 className="h-8 w-8 text-muted-foreground" />
-                      </div>
-                    )}
+                  <div className="w-32 flex-shrink-0">
+                    <AspectRatio ratio={16 / 9} className="bg-muted rounded-lg overflow-hidden">
+                      {inspection.property.cover_photo_url ? (
+                        <img
+                          src={inspection.property.cover_photo_url}
+                          alt={inspection.property.name}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center">
+                          <Building2 className="h-8 w-8 text-muted-foreground" />
+                        </div>
+                      )}
+                    </AspectRatio>
                   </div>
 
                   {/* Informações */}
