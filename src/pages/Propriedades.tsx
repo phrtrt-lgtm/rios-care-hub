@@ -35,6 +35,7 @@ interface Owner {
   id: string;
   name: string;
   email: string;
+  phone: string | null;
 }
 
 interface Cleaner {
@@ -57,8 +58,7 @@ const Propriedades = () => {
     name: "",
     address: "",
     owner_id: "",
-    assigned_cleaner_id: "",
-    owner_phone: ""
+    assigned_cleaner_id: ""
   });
 
   useEffect(() => {
@@ -76,7 +76,7 @@ const Propriedades = () => {
       // Fetch owners
       const { data: ownersData, error: ownersError } = await supabase
         .from('profiles')
-        .select('id, name, email')
+        .select('id, name, email, phone')
         .eq('role', 'owner')
         .eq('status', 'approved')
         .order('name');
@@ -139,6 +139,10 @@ const Propriedades = () => {
     }
 
     try {
+      // Buscar telefone do proprietário selecionado
+      const selectedOwner = owners.find(o => o.id === formData.owner_id);
+      const ownerPhone = selectedOwner?.phone || null;
+
       if (editingProperty) {
         // Update existing property
         const updateData = {
@@ -146,7 +150,7 @@ const Propriedades = () => {
           address: formData.address || null,
           owner_id: formData.owner_id,
           assigned_cleaner_id: formData.assigned_cleaner_id || null,
-          owner_phone: formData.owner_phone || null
+          owner_phone: ownerPhone
         };
         
         const { error } = await supabase
@@ -169,7 +173,7 @@ const Propriedades = () => {
             address: formData.address || null,
             owner_id: formData.owner_id,
             assigned_cleaner_id: formData.assigned_cleaner_id || null,
-            owner_phone: formData.owner_phone || null
+            owner_phone: ownerPhone
           });
 
         if (error) throw error;
@@ -231,8 +235,7 @@ const Propriedades = () => {
       name: property.name,
       address: property.address || "",
       owner_id: property.owner_id,
-      assigned_cleaner_id: property.assigned_cleaner_id || "",
-      owner_phone: property.owner_phone || ""
+      assigned_cleaner_id: property.assigned_cleaner_id || ""
     });
     setDialogOpen(true);
   };
@@ -274,7 +277,7 @@ const Propriedades = () => {
   };
 
   const resetForm = () => {
-    setFormData({ name: "", address: "", owner_id: "", assigned_cleaner_id: "", owner_phone: "" });
+    setFormData({ name: "", address: "", owner_id: "", assigned_cleaner_id: "" });
     setEditingProperty(null);
   };
 
@@ -354,15 +357,6 @@ const Propriedades = () => {
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="owner_phone">Telefone do Proprietário</Label>
-                    <Input
-                      id="owner_phone"
-                      value={formData.owner_phone}
-                      onChange={(e) => setFormData({ ...formData, owner_phone: e.target.value })}
-                      placeholder="Ex: (22) 99999-9999"
-                    />
                   </div>
                   <div>
                     <Label htmlFor="assigned_cleaner_id">Faxineira Responsável</Label>
