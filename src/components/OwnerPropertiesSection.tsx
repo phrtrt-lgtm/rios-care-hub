@@ -98,13 +98,6 @@ export const OwnerPropertiesSection = () => {
 
   return (
     <div className="mb-6">
-      <div className="mb-4">
-        <h3 className="text-xl md:text-2xl font-bold text-foreground">Minhas Unidades</h3>
-        <p className="text-sm text-muted-foreground mt-1">
-          Suas propriedades gerenciadas pela RIOS
-        </p>
-      </div>
-
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {properties.map((property) => (
           <Card 
