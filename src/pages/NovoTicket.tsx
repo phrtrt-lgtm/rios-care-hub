@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +44,7 @@ export default function NovoTicket() {
   const [isGenerating, setIsGenerating] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Fetch properties based on user role
@@ -70,13 +71,19 @@ export default function NovoTicket() {
       
       if (!error && data) {
         setProperties(data as any);
+        
+        // Pre-select property from URL parameter
+        const propertyParam = searchParams.get('property');
+        if (propertyParam && data.some(p => p.id === propertyParam)) {
+          setPropertyId(propertyParam);
+        }
       }
     };
     
     if (user?.id) {
       fetchProperties();
     }
-  }, [user?.id]);
+  }, [user?.id, searchParams]);
 
   const uploadOne = async (file: File): Promise<ReadyAttachment> => {
     const session = await supabase.auth.getSession();
