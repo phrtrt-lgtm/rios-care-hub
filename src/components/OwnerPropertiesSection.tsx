@@ -105,48 +105,50 @@ export const OwnerPropertiesSection = () => {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {properties.map((property) => (
           <Card 
             key={property.id}
             className="overflow-hidden hover:shadow-md transition-all duration-300 hover:border-primary/20"
           >
             <CardHeader className="p-3 space-y-2">
-              {property.cover_photo_url ? (
-                <AspectRatio ratio={16 / 9} className="bg-muted rounded-md overflow-hidden">
-                  <img
-                    src={property.cover_photo_url}
-                    alt={property.name}
-                    className="w-full h-full object-cover"
-                  />
-                </AspectRatio>
-              ) : (
-                <AspectRatio ratio={16 / 9} className="bg-gradient-to-br from-primary/10 to-secondary/10 rounded-md flex items-center justify-center">
-                  <Building2 className="h-10 w-10 text-muted-foreground" />
-                </AspectRatio>
-              )}
+              <div className="w-full max-w-[280px] mx-auto">
+                {property.cover_photo_url ? (
+                  <AspectRatio ratio={16 / 9} className="bg-muted rounded-md overflow-hidden">
+                    <img
+                      src={property.cover_photo_url}
+                      alt={property.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </AspectRatio>
+                ) : (
+                  <AspectRatio ratio={16 / 9} className="bg-gradient-to-br from-primary/10 to-secondary/10 rounded-md flex items-center justify-center">
+                    <Building2 className="h-8 w-8 text-muted-foreground" />
+                  </AspectRatio>
+                )}
+              </div>
               
               <div>
-                <CardTitle className="flex items-center gap-1.5 text-base">
+                <CardTitle className="flex items-center gap-2 text-base">
                   <Building2 className="h-4 w-4 text-primary" />
                   {property.name}
                 </CardTitle>
                 {property.address && (
-                  <p className="text-xs text-muted-foreground mt-1.5 flex items-start gap-1">
-                    <MapPin className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-muted-foreground mt-1.5 flex items-start gap-1">
+                    <MapPin className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
                     <span>{property.address}</span>
                   </p>
                 )}
               </div>
             </CardHeader>
             
-            <CardContent className="p-3 pt-0 space-y-1.5">
+            <CardContent className="p-3 pt-0 space-y-2">
               <Button
                 onClick={() => navigate(`/novo-ticket?property=${property.id}`)}
-                className="w-full h-8 text-xs"
+                className="w-full"
                 size="sm"
               >
-                <Plus className="h-3 w-3 mr-1.5" />
+                <Plus className="h-4 w-4 mr-2" />
                 Novo Chamado
               </Button>
               
@@ -154,10 +156,10 @@ export const OwnerPropertiesSection = () => {
                 <Button
                   onClick={() => navigate(`/vistorias?property=${property.id}`)}
                   variant="outline"
-                  className="w-full h-8 text-xs"
+                  className="w-full"
                   size="sm"
                 >
-                  <ClipboardCheck className="h-3 w-3 mr-1.5" />
+                  <ClipboardCheck className="h-4 w-4 mr-2" />
                   Ver Vistorias
                 </Button>
               )}
