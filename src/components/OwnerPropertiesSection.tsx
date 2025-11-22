@@ -97,23 +97,23 @@ export const OwnerPropertiesSection = () => {
   }
 
   return (
-    <div className="mb-8">
-      <div className="mb-6">
-        <h3 className="text-2xl md:text-3xl font-bold text-foreground">Minhas Unidades</h3>
-        <p className="text-sm md:text-base text-muted-foreground mt-1">
+    <div className="mb-6">
+      <div className="mb-4">
+        <h3 className="text-xl md:text-2xl font-bold text-foreground">Minhas Unidades</h3>
+        <p className="text-sm text-muted-foreground mt-1">
           Suas propriedades gerenciadas pela RIOS
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {properties.map((property) => (
           <Card 
             key={property.id}
-            className="overflow-hidden hover:shadow-lg transition-all duration-300 border-2 hover:border-primary/20"
+            className="overflow-hidden hover:shadow-md transition-all duration-300 hover:border-primary/20"
           >
-            <CardHeader className="pb-3 space-y-3">
+            <CardHeader className="p-3 space-y-2">
               {property.cover_photo_url ? (
-                <AspectRatio ratio={16 / 9} className="bg-muted rounded-lg overflow-hidden">
+                <AspectRatio ratio={16 / 9} className="bg-muted rounded-md overflow-hidden">
                   <img
                     src={property.cover_photo_url}
                     alt={property.name}
@@ -121,32 +121,32 @@ export const OwnerPropertiesSection = () => {
                   />
                 </AspectRatio>
               ) : (
-                <AspectRatio ratio={16 / 9} className="bg-gradient-to-br from-primary/10 to-secondary/10 rounded-lg flex items-center justify-center">
-                  <Building2 className="h-12 w-12 text-muted-foreground" />
+                <AspectRatio ratio={16 / 9} className="bg-gradient-to-br from-primary/10 to-secondary/10 rounded-md flex items-center justify-center">
+                  <Building2 className="h-10 w-10 text-muted-foreground" />
                 </AspectRatio>
               )}
               
               <div>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Building2 className="h-5 w-5 text-primary" />
+                <CardTitle className="flex items-center gap-1.5 text-base">
+                  <Building2 className="h-4 w-4 text-primary" />
                   {property.name}
                 </CardTitle>
                 {property.address && (
-                  <p className="text-sm text-muted-foreground mt-2 flex items-start gap-1">
-                    <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-muted-foreground mt-1.5 flex items-start gap-1">
+                    <MapPin className="h-3 w-3 mt-0.5 flex-shrink-0" />
                     <span>{property.address}</span>
                   </p>
                 )}
               </div>
             </CardHeader>
             
-            <CardContent className="space-y-2">
+            <CardContent className="p-3 pt-0 space-y-1.5">
               <Button
                 onClick={() => navigate(`/novo-ticket?property=${property.id}`)}
-                className="w-full"
+                className="w-full h-8 text-xs"
                 size="sm"
               >
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="h-3 w-3 mr-1.5" />
                 Novo Chamado
               </Button>
               
@@ -154,10 +154,10 @@ export const OwnerPropertiesSection = () => {
                 <Button
                   onClick={() => navigate(`/vistorias?property=${property.id}`)}
                   variant="outline"
-                  className="w-full"
+                  className="w-full h-8 text-xs"
                   size="sm"
                 >
-                  <ClipboardCheck className="h-4 w-4 mr-2" />
+                  <ClipboardCheck className="h-3 w-3 mr-1.5" />
                   Ver Vistorias
                 </Button>
               )}
