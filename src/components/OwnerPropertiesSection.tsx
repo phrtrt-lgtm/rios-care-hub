@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
-import { Building2, ClipboardCheck, Plus, MapPin } from "lucide-react";
+import { Building2, ClipboardCheck, Plus, MapPin, FileText } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface Property {
@@ -156,6 +156,16 @@ export const OwnerPropertiesSection = () => {
                   Ver Vistorias
                 </Button>
               )}
+
+              <Button
+                onClick={() => navigate(`/manutencoes?property=${property.id}`)}
+                variant="secondary"
+                className="w-full text-xs sm:text-sm h-8 sm:h-9"
+                size="sm"
+              >
+                <FileText className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                Manutenções
+              </Button>
             </CardContent>
           </Card>
         ))}
