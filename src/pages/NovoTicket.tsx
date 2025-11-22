@@ -71,12 +71,6 @@ export default function NovoTicket() {
       
       if (!error && data) {
         setProperties(data as any);
-        
-        // Pre-select property from URL parameter
-        const propertyParam = searchParams.get('property');
-        if (propertyParam && data.some(p => p.id === propertyParam)) {
-          setPropertyId(propertyParam);
-        }
       }
     };
     
@@ -84,6 +78,17 @@ export default function NovoTicket() {
       fetchProperties();
     }
   }, [user?.id, searchParams]);
+
+  // Pre-select property from URL parameter after properties are loaded
+  useEffect(() => {
+    const propertyParam = searchParams.get('property');
+    if (propertyParam && properties.length > 0) {
+      const propertyExists = properties.some(p => p.id === propertyParam);
+      if (propertyExists) {
+        setPropertyId(propertyParam);
+      }
+    }
+  }, [properties, searchParams]);
 
   const uploadOne = async (file: File): Promise<ReadyAttachment> => {
     const session = await supabase.auth.getSession();
