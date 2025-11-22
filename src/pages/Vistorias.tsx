@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,6 +27,7 @@ interface Inspection {
 export default function Vistorias() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [inspections, setInspections] = useState<Inspection[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -36,17 +37,26 @@ export default function Vistorias() {
       return;
     }
     fetchInspections();
-  }, [user, navigate]);
+  }, [user, navigate, searchParams]);
 
   const fetchInspections = async () => {
     try {
       setLoading(true);
       
+      const propertyParam = searchParams.get('property');
+      
       // Buscar propriedades do usuário
-      const { data: properties, error: propError } = await supabase
+      let propertiesQuery = supabase
         .from('properties')
         .select('id')
         .eq('owner_id', user!.id);
+      
+      // Se houver parâmetro de propriedade, filtrar apenas ela
+      if (propertyParam) {
+        propertiesQuery = propertiesQuery.eq('id', propertyParam);
+      }
+      
+      const { data: properties, error: propError } = await propertiesQuery;
 
       if (propError) throw propError;
 

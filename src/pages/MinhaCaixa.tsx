@@ -14,6 +14,7 @@ import TopChargesRules from "@/components/TopChargesRules";
 import { VotacoesPendentes } from "@/components/VotacoesPendentes";
 import { supabase } from "@/integrations/supabase/client";
 import OwnerMaintenancePolicyBanner from "@/components/OwnerMaintenancePolicyBanner";
+import { OwnerPropertiesSection } from "@/components/OwnerPropertiesSection";
 
 
 export default function MinhaCaixa() {
@@ -172,6 +173,9 @@ export default function MinhaCaixa() {
       <main className="container mx-auto px-4 py-6 md:py-8">
         {/* Propostas Pendentes - Prioridade no topo */}
         <VotacoesPendentes />
+
+        {/* Owner Properties Section */}
+        <OwnerPropertiesSection />
 
         {/* Maintenance Policy Banner */}
         <OwnerMaintenancePolicyBanner />
