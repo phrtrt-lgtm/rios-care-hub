@@ -9,13 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { formatBRL, formatDateTime, formatDate } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { CalendarIcon, Plus, Filter } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect } from "react";
 
 export default function Manutencoes() {
   const { profile, user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [status, setStatus] = useState<string>("");
   const [search, setSearch] = useState<string>("");
@@ -26,29 +27,35 @@ export default function Manutencoes() {
 
   const isOwner = profile?.role === 'owner';
   const ownerId = isOwner ? profile?.id : undefined;
+  const propertyId = searchParams.get('property') || undefined;
 
   const { data: maintenances, isLoading } = useMaintenances({
     ownerId,
+    propertyId,
     status: activeFilters.status || undefined,
     search: activeFilters.search || undefined,
   });
-  const { data: charts } = useMaintenanceCharts(ownerId, year);
+  const { data: charts } = useMaintenanceCharts(ownerId, year, propertyId);
 
   useEffect(() => {
     if (user) {
       fetchServiceTypeData();
     }
-  }, [user, year]);
+  }, [user, year, propertyId]);
 
   const fetchServiceTypeData = async () => {
     try {
-      const query = supabase
+      let query = supabase
         .from('charges')
         .select('service_type, amount_cents')
         .not('service_type', 'is', null) as any;
 
       if (ownerId) {
-        query.eq('owner_id', ownerId);
+        query = query.eq('owner_id', ownerId);
+      }
+
+      if (propertyId) {
+        query = query.eq('property_id', propertyId);
       }
 
       const { data, error } = await query;
