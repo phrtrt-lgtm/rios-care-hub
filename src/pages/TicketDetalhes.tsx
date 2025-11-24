@@ -765,7 +765,7 @@ export default function TicketDetalhes() {
                   </div>
                 </div>
                 {message.body && (
-                  <p className="text-muted-foreground whitespace-pre-wrap">{message.body}</p>
+                  <p className="text-rios-dark-blue whitespace-pre-wrap">{message.body}</p>
                 )}
                 {message.attachments && message.attachments.length > 0 && (
                   <div className="mt-3 space-y-2">

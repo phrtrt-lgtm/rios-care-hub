@@ -30,6 +30,7 @@ interface Ticket {
     id: string;
     name: string;
     address: string | null;
+    cover_photo_url: string | null;
   } | null;
 }
 
@@ -93,7 +94,7 @@ const TodosTickets = () => {
           if (ticket.property_id) {
             const { data } = await supabase
               .from('properties')
-              .select('id, name, address')
+              .select('id, name, address, cover_photo_url')
               .eq('id', ticket.property_id)
               .single();
             propertyData = data;
@@ -432,7 +433,16 @@ const TodosTickets = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                      {ticket.property?.cover_photo_url && (
+                        <img 
+                          src={ticket.property.cover_photo_url} 
+                          alt={ticket.property.name}
+                          className="h-12 w-12 rounded-md object-cover"
+                        />
+                      )}
+                      {!ticket.property?.cover_photo_url && (
+                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                      )}
                       <div>
                         <p className="text-sm font-medium text-foreground">
                           {ticket.property?.name || 'Sem unidade'}
