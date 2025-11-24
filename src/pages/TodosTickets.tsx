@@ -21,6 +21,7 @@ interface Ticket {
   priority: string;
   ticket_type: string;
   created_at: string;
+  sla_due_at: string | null;
   owner: {
     id: string;
     name: string;
@@ -82,6 +83,7 @@ const TodosTickets = () => {
           priority,
           ticket_type,
           created_at,
+          sla_due_at,
           owner_id,
           property_id
         `)
@@ -173,6 +175,14 @@ const TodosTickets = () => {
       filtered = filtered.filter(ticket => ticket.ticket_type === typeFilter);
     }
 
+    // Sort by SLA due date - tickets closest to expiring first
+    filtered.sort((a, b) => {
+      if (!a.sla_due_at && !b.sla_due_at) return 0;
+      if (!a.sla_due_at) return 1;
+      if (!b.sla_due_at) return -1;
+      return new Date(a.sla_due_at).getTime() - new Date(b.sla_due_at).getTime();
+    });
+
     setFilteredTickets(filtered);
   };
 
@@ -217,6 +227,25 @@ const TodosTickets = () => {
 
     const config = typeConfig[type as keyof typeof typeConfig] || { label: type, variant: 'outline' as const };
     return <Badge variant={config.variant}>{config.label}</Badge>;
+  };
+
+  const getTimeUntilSLA = (slaDueAt: string | null) => {
+    if (!slaDueAt) return null;
+    
+    const now = new Date();
+    const due = new Date(slaDueAt);
+    const diff = due.getTime() - now.getTime();
+    
+    if (diff < 0) return { text: 'Expirado', isUrgent: true };
+    
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (hours < 1) return { text: `${minutes}min`, isUrgent: true };
+    if (hours < 24) return { text: `${hours}h`, isUrgent: hours < 3 };
+    
+    const days = Math.floor(hours / 24);
+    return { text: `${days}d`, isUrgent: false };
   };
 
   const toggleTicketSelection = (ticketId: string) => {
@@ -432,124 +461,109 @@ const TodosTickets = () => {
               </CardContent>
             </Card>
           ) : (
-            filteredTickets.map((ticket) => (
-              <Card 
-                key={ticket.id} 
-                className={`transition-all hover:shadow-lg ${isTicketOpen(ticket.status) ? 'border-l-4 border-l-blue-500' : 'border-l-4 border-l-gray-400 bg-muted/30'}`}
-              >
-                <CardContent className="p-6">
-                  <div className="flex gap-4">
-                    {/* Checkbox */}
-                    <div className="flex items-start pt-1">
-                      <Checkbox
-                        checked={selectedTickets.has(ticket.id)}
-                        onCheckedChange={() => toggleTicketSelection(ticket.id)}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    </div>
-
-                    {/* Property Image */}
-                    <div 
-                      className="cursor-pointer"
-                      onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
-                    >
-                      {ticket.property?.cover_photo_url ? (
-                        <img 
-                          src={ticket.property.cover_photo_url} 
-                          alt={ticket.property.name}
-                          className="h-20 w-20 rounded-lg object-cover shadow-sm"
+            filteredTickets.map((ticket) => {
+              const slaInfo = getTimeUntilSLA(ticket.sla_due_at);
+              
+              return (
+                <Card 
+                  key={ticket.id} 
+                  className="transition-all hover:shadow-lg"
+                >
+                  <CardContent className="p-6">
+                    <div className="flex gap-6">
+                      {/* Checkbox */}
+                      <div className="flex items-start pt-1">
+                        <Checkbox
+                          checked={selectedTickets.has(ticket.id)}
+                          onCheckedChange={() => toggleTicketSelection(ticket.id)}
+                          onClick={(e) => e.stopPropagation()}
                         />
-                      ) : (
-                        <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-muted">
-                          <Building2 className="h-8 w-8 text-muted-foreground" />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Main Content */}
-                    <div 
-                      className="flex flex-1 cursor-pointer flex-col gap-2"
-                      onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
-                    >
-                      {/* Title and Status */}
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-foreground mb-1">
-                            {ticket.subject}
-                          </h3>
-                          <p className="text-sm text-muted-foreground line-clamp-2">
-                            {ticket.description}
-                          </p>
-                        </div>
-                        <div className="flex flex-wrap gap-2 justify-end">
-                          {getStatusBadge(ticket.status)}
-                          {getPriorityBadge(ticket.priority)}
-                          {getTicketTypeBadge(ticket.ticket_type)}
-                        </div>
                       </div>
 
-                      {/* Info Grid */}
-                      <div className="grid grid-cols-3 gap-4 mt-2 text-sm">
-                        {/* Owner */}
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                          <div className="min-w-0">
-                            <p className="font-medium text-foreground truncate">{ticket.owner.name}</p>
-                            <p className="text-xs text-muted-foreground truncate">{ticket.owner.email}</p>
+                      {/* Property Image + Name */}
+                      <div 
+                        className="cursor-pointer flex flex-col items-center gap-2 min-w-[140px]"
+                        onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
+                      >
+                        {ticket.property?.cover_photo_url ? (
+                          <img 
+                            src={ticket.property.cover_photo_url} 
+                            alt={ticket.property.name}
+                            className="h-32 w-32 rounded-lg object-cover shadow-md"
+                          />
+                        ) : (
+                          <div className="flex h-32 w-32 items-center justify-center rounded-lg bg-muted">
+                            <Building2 className="h-12 w-12 text-muted-foreground" />
                           </div>
+                        )}
+                        <p className="text-sm font-semibold text-foreground text-center">
+                          {ticket.property?.name || 'Sem unidade'}
+                        </p>
+                      </div>
+
+                      {/* Main Content */}
+                      <div 
+                        className="flex flex-1 cursor-pointer flex-col gap-3"
+                        onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
+                      >
+                        {/* Status and Type */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {getStatusBadge(ticket.status)}
+                          <span className="text-muted-foreground">|</span>
+                          {getTicketTypeBadge(ticket.ticket_type)}
                         </div>
 
-                        {/* Property */}
-                        <div className="flex items-center gap-2">
-                          <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                          <div className="min-w-0">
-                            <p className="font-medium text-foreground truncate">
-                              {ticket.property?.name || 'Sem unidade'}
+                        {/* Title */}
+                        <h3 className="text-xl font-bold text-foreground">
+                          {ticket.subject}
+                        </h3>
+
+                        {/* Last Message */}
+                        {ticket.messages?.last_message && (
+                          <div className="rounded-md bg-muted/30 p-3 border border-border">
+                            <p className="text-xs font-medium text-muted-foreground mb-1">
+                              Última mensagem de {ticket.messages.last_message.author_name}:
                             </p>
-                            {ticket.property?.address && (
-                              <p className="text-xs text-muted-foreground truncate">{ticket.property.address}</p>
-                            )}
+                            <p className="text-sm text-foreground line-clamp-2">
+                              {ticket.messages.last_message.body}
+                            </p>
                           </div>
+                        )}
+                      </div>
+
+                      {/* Right Side Info */}
+                      <div className="flex flex-col gap-3 min-w-[200px] text-right">
+                        {/* Owner */}
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Proprietário</p>
+                          <p className="text-sm font-medium text-foreground">{ticket.owner.name}</p>
                         </div>
 
                         {/* Created Date */}
-                        <div className="text-right">
-                          <p className="text-xs text-muted-foreground">
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Ticket criado em:</p>
+                          <p className="text-sm font-medium text-foreground">
                             {format(new Date(ticket.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                           </p>
                         </div>
-                      </div>
 
-                      {/* Messages Info */}
-                      {ticket.messages && ticket.messages.count > 0 && (
-                        <div className="mt-3 rounded-md bg-muted/50 p-3 border border-border">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-medium text-muted-foreground">
-                              {ticket.messages.count} {ticket.messages.count === 1 ? 'mensagem' : 'mensagens'}
-                            </span>
-                            {ticket.messages.last_message && (
-                              <span className="text-xs text-muted-foreground">
-                                {format(new Date(ticket.messages.last_message.created_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
-                              </span>
-                            )}
+                        {/* SLA Countdown */}
+                        {slaInfo && (
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">
+                              {ticket.priority === 'urgente' ? 'Urgente' : 'Normal'}
+                            </p>
+                            <p className={`text-lg font-bold ${slaInfo.isUrgent ? 'text-red-600' : 'text-foreground'}`}>
+                              {slaInfo.text}
+                            </p>
                           </div>
-                          {ticket.messages.last_message && (
-                            <div>
-                              <p className="text-xs font-medium text-foreground mb-1">
-                                {ticket.messages.last_message.author_name}:
-                              </p>
-                              <p className="text-xs text-muted-foreground line-clamp-2">
-                                {ticket.messages.last_message.body}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+                  </CardContent>
+                </Card>
+              );
+            })
           )}
         </div>
       </div>
