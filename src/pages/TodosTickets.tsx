@@ -184,8 +184,16 @@ const TodosTickets = () => {
       filtered = filtered.filter(ticket => ticket.ticket_type === typeFilter);
     }
 
-    // Sort by SLA due date - tickets closest to expiring first
+    // Sort: open tickets by SLA (closest to expiring first), closed tickets at the end
     filtered.sort((a, b) => {
+      const aIsOpen = isTicketOpen(a.status);
+      const bIsOpen = isTicketOpen(b.status);
+      
+      // If one is closed and other is open, open comes first
+      if (aIsOpen && !bIsOpen) return -1;
+      if (!aIsOpen && bIsOpen) return 1;
+      
+      // Both open or both closed - sort by SLA
       if (!a.sla_due_at && !b.sla_due_at) return 0;
       if (!a.sla_due_at) return 1;
       if (!b.sla_due_at) return -1;
@@ -469,7 +477,8 @@ const TodosTickets = () => {
             </Card>
           ) : (
             filteredTickets.map((ticket) => {
-              const slaInfo = getTimeUntilSLA(ticket.sla_due_at);
+              const ticketIsOpen = isTicketOpen(ticket.status);
+              const slaInfo = ticketIsOpen ? getTimeUntilSLA(ticket.sla_due_at) : null;
               
               return (
                 <Card 
