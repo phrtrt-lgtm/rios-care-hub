@@ -2,14 +2,13 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Plus, Building2, Clock } from "lucide-react";
+import { ArrowLeft, Plus, Building2, Clock, MessageSquare } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TicketBadges } from "@/components/TicketBadges";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { supabase } from "@/integrations/supabase/client";
-import { formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LoadingScreen } from "@/components/LoadingScreen";
 
@@ -41,6 +40,16 @@ export default function MeusChamados() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("abertos");
   const [ticketTypeFilter, setTicketTypeFilter] = useState("todos");
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Update current time every minute for live countdown
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -52,9 +61,8 @@ export default function MeusChamados() {
     setLoading(true);
     let query = supabase
       .from("tickets")
-      .select("*, properties(name, cover_photo_url), kind, essential, owner_decision, owner_action_due_at")
-      .eq("owner_id", user?.id)
-      .order("created_at", { ascending: false });
+      .select("*, properties(name, cover_photo_url), kind, essential, owner_decision, owner_action_due_at, sla_due_at")
+      .eq("owner_id", user?.id);
 
     if (activeTab === "abertos") {
       query = query.in("status", ["novo", "em_analise", "aguardando_info", "em_execucao"]);
@@ -69,7 +77,40 @@ export default function MeusChamados() {
     const { data, error } = await query;
 
     if (!error && data) {
-      setTickets(data);
+      // Fetch last message for each ticket
+      const ticketsWithMessages = await Promise.all(
+        data.map(async (ticket) => {
+          const { data: messages } = await supabase
+            .from("ticket_messages")
+            .select("body, created_at")
+            .eq("ticket_id", ticket.id)
+            .order("created_at", { ascending: false })
+            .limit(1);
+          
+          return {
+            ...ticket,
+            lastMessage: messages?.[0] || null,
+          };
+        })
+      );
+
+      // Sort: open tickets by SLA (closest to expiring first), closed tickets at the end
+      ticketsWithMessages.sort((a, b) => {
+        const aIsOpen = ["novo", "em_analise", "aguardando_info", "em_execucao"].includes(a.status);
+        const bIsOpen = ["novo", "em_analise", "aguardando_info", "em_execucao"].includes(b.status);
+        
+        // If one is closed and other is open, open comes first
+        if (aIsOpen && !bIsOpen) return -1;
+        if (!aIsOpen && bIsOpen) return 1;
+        
+        // Both open or both closed - sort by SLA
+        if (!a.sla_due_at && !b.sla_due_at) return 0;
+        if (!a.sla_due_at) return 1;
+        if (!b.sla_due_at) return -1;
+        return new Date(a.sla_due_at).getTime() - new Date(b.sla_due_at).getTime();
+      });
+
+      setTickets(ticketsWithMessages);
     }
     setLoading(false);
   };
@@ -95,6 +136,29 @@ export default function MeusChamados() {
 
   const getPriorityColor = (priority: string) => {
     return priority === "urgente" ? "destructive" : "secondary";
+  };
+
+  const getTimeUntilSLA = (slaDueAt: string | null) => {
+    if (!slaDueAt) return null;
+    
+    const now = currentTime.getTime();
+    const slaTime = new Date(slaDueAt).getTime();
+    const diffMs = slaTime - now;
+    
+    if (diffMs < 0) {
+      return { expired: true, text: "SLA Expirado", hours: 0, minutes: 0 };
+    }
+    
+    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    
+    return {
+      expired: false,
+      text: `${hours}h ${minutes}m`,
+      hours,
+      minutes,
+      isUrgent: hours < 2
+    };
   };
 
   if (loading) {
@@ -164,83 +228,121 @@ export default function MeusChamados() {
             </Card>
           ) : (
             <div className="grid gap-3">
-              {tickets.map((ticket) => (
-                <Card
-                  key={ticket.id}
-                  className="cursor-pointer transition-all hover:shadow-md hover:border-primary/20 overflow-hidden group"
-                  onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
-                >
-                  <div className="flex">
-                  {/* Thumbnail da Propriedade */}
-                  <div className="w-24 md:w-32 flex-shrink-0 relative">
-                    <AspectRatio ratio={16 / 9} className="bg-muted rounded overflow-hidden">
-                      {ticket.properties?.cover_photo_url ? (
-                        <img 
-                          src={ticket.properties.cover_photo_url} 
-                          alt={ticket.properties.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-secondary/20 to-secondary/5">
-                          <Building2 className="h-8 w-8 text-muted-foreground/40" />
+              {tickets.map((ticket) => {
+                const ticketIsOpen = ["novo", "em_analise", "aguardando_info", "em_execucao"].includes(ticket.status);
+                const slaInfo = ticketIsOpen ? getTimeUntilSLA(ticket.sla_due_at) : null;
+                
+                return (
+                  <Card
+                    key={ticket.id}
+                    className="cursor-pointer transition-all hover:shadow-md hover:border-primary/20 overflow-hidden group"
+                    onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
+                  >
+                    <div className="flex gap-4 p-4">
+                      {/* Left side - Property Photo and Info */}
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="w-32 h-32 flex-shrink-0 relative rounded-lg overflow-hidden bg-muted">
+                          {ticket.properties?.cover_photo_url ? (
+                            <img 
+                              src={ticket.properties.cover_photo_url} 
+                              alt={ticket.properties.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-secondary/20 to-secondary/5">
+                              <Building2 className="h-12 w-12 text-muted-foreground/40" />
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </AspectRatio>
-                      {/* Status Badge sobreposto */}
-                      <div className="absolute top-2 left-2">
-                        <Badge className={`${getStatusColor(ticket.status)} text-white text-xs shadow-lg`}>
-                          {statusLabels[ticket.status]}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    {/* Conteúdo */}
-                    <div className="flex-1 p-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 space-y-2">
-                          {/* Título */}
-                          <h3 className="font-semibold text-base leading-tight line-clamp-1 group-hover:text-primary transition-colors">
-                            {ticket.subject}
-                          </h3>
-                          
-                          {/* Badges */}
-                          <div className="flex flex-wrap gap-1.5">
-                            <TicketBadges ticket={ticket} />
-                            <Badge variant="outline" className="text-xs bg-background">
-                              {typeLabels[ticket.ticket_type]}
-                            </Badge>
-                            <Badge variant={getPriorityColor(ticket.priority)} className="text-xs">
-                              {ticket.priority === "urgente" ? "Urgente" : "Normal"}
-                            </Badge>
-                          </div>
-
-                          {/* Descrição */}
-                          <p className="line-clamp-2 text-sm text-muted-foreground leading-relaxed">
-                            {ticket.description}
+                        {ticket.properties && (
+                          <p className="text-xs text-center font-medium text-muted-foreground line-clamp-2 w-32">
+                            {ticket.properties.name}
                           </p>
+                        )}
+                      </div>
 
-                          {/* Info Footer */}
-                          <div className="flex flex-wrap gap-3 text-xs text-muted-foreground pt-1">
-                            {ticket.properties && (
-                              <span className="flex items-center gap-1">
-                                <Building2 className="h-3 w-3" />
-                                {ticket.properties.name}
-                              </span>
-                            )}
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              Criado {formatDistanceToNow(new Date(ticket.created_at), {
-                                locale: ptBR,
-                                addSuffix: true,
-                              })}
-                            </span>
-                          </div>
+                      {/* Center - Main Content */}
+                      <div className="flex-1 min-w-0 space-y-3">
+                        {/* Top badges */}
+                        <div className="flex flex-wrap gap-2 items-center">
+                          <Badge className={`${getStatusColor(ticket.status)} text-white`}>
+                            {statusLabels[ticket.status]}
+                          </Badge>
+                          <Badge variant="outline" className="bg-background">
+                            {typeLabels[ticket.ticket_type]}
+                          </Badge>
+                          <Badge variant={getPriorityColor(ticket.priority)}>
+                            {ticket.priority === "urgente" ? "Urgente" : "Normal"}
+                          </Badge>
+                          <TicketBadges ticket={ticket} />
                         </div>
+
+                        {/* Subject */}
+                        <h3 className="font-bold text-lg leading-tight group-hover:text-primary transition-colors">
+                          {ticket.subject}
+                        </h3>
+
+                        {/* Last Message */}
+                        {ticket.lastMessage && (
+                          <div className="bg-muted/50 rounded-md p-3 border border-border/50">
+                            <div className="flex items-start gap-2 mb-1">
+                              <MessageSquare className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                              <span className="text-xs text-muted-foreground">
+                                Última mensagem {formatDistanceToNow(new Date(ticket.lastMessage.created_at), {
+                                  locale: ptBR,
+                                  addSuffix: true,
+                                })}
+                              </span>
+                            </div>
+                            <p className="text-sm line-clamp-2 pl-6">
+                              {ticket.lastMessage.body}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Right side - Metadata */}
+                      <div className="flex flex-col items-end justify-between gap-2 min-w-[140px]">
+                        <div className="text-right space-y-1">
+                          <p className="text-xs text-muted-foreground">
+                            Criado em
+                          </p>
+                          <p className="text-sm font-medium">
+                            {format(new Date(ticket.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {format(new Date(ticket.created_at), "HH:mm", { locale: ptBR })}
+                          </p>
+                        </div>
+
+                        {/* SLA Countdown */}
+                        {slaInfo && (
+                          <div className={`text-right px-3 py-2 rounded-md ${
+                            slaInfo.expired 
+                              ? "bg-destructive/10 border border-destructive" 
+                              : slaInfo.isUrgent
+                              ? "bg-orange-500/10 border border-orange-500"
+                              : "bg-primary/10 border border-primary/20"
+                          }`}>
+                            <p className="text-xs text-muted-foreground mb-0.5">
+                              {slaInfo.expired ? "SLA" : "Expira em"}
+                            </p>
+                            <p className={`text-lg font-bold ${
+                              slaInfo.expired 
+                                ? "text-destructive" 
+                                : slaInfo.isUrgent
+                                ? "text-orange-600"
+                                : "text-primary"
+                            }`}>
+                              {slaInfo.expired ? "EXPIRADO" : slaInfo.text}
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                );
+              })}
             </div>
           )}
         </div>
