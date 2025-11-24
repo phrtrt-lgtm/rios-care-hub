@@ -32,6 +32,14 @@ interface Ticket {
     address: string | null;
     cover_photo_url: string | null;
   } | null;
+  messages?: {
+    count: number;
+    last_message?: {
+      body: string;
+      created_at: string;
+      author_name: string;
+    };
+  };
 }
 
 const TodosTickets = () => {
@@ -100,10 +108,36 @@ const TodosTickets = () => {
             propertyData = data;
           }
 
+          // Fetch message count and last message
+          const { count: messageCount } = await supabase
+            .from('ticket_messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('ticket_id', ticket.id);
+
+          const { data: lastMessageData } = await supabase
+            .from('ticket_messages')
+            .select(`
+              body,
+              created_at,
+              author:profiles!ticket_messages_author_id_fkey(name)
+            `)
+            .eq('ticket_id', ticket.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+
           return {
             ...ticket,
             owner: ownerData || { id: ticket.owner_id, name: 'N/A', email: 'N/A' },
-            property: propertyData
+            property: propertyData,
+            messages: {
+              count: messageCount || 0,
+              last_message: lastMessageData ? {
+                body: lastMessageData.body,
+                created_at: lastMessageData.created_at,
+                author_name: (lastMessageData.author as any)?.name || 'N/A'
+              } : undefined
+            }
           };
         })
       );
@@ -144,15 +178,20 @@ const TodosTickets = () => {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      novo: { label: 'Novo', variant: 'default' as const },
-      em_andamento: { label: 'Em Andamento', variant: 'secondary' as const },
-      aguardando_resposta: { label: 'Aguardando', variant: 'outline' as const },
-      concluido: { label: 'Concluído', variant: 'default' as const },
-      cancelado: { label: 'Cancelado', variant: 'destructive' as const }
+      novo: { label: 'Novo', className: 'bg-blue-500 text-white hover:bg-blue-600' },
+      em_analise: { label: 'Em Análise', className: 'bg-yellow-500 text-white hover:bg-yellow-600' },
+      em_execucao: { label: 'Em Execução', className: 'bg-orange-500 text-white hover:bg-orange-600' },
+      aguardando_info: { label: 'Aguardando Info', className: 'bg-purple-500 text-white hover:bg-purple-600' },
+      concluido: { label: 'Concluído', className: 'bg-green-500 text-white hover:bg-green-600' },
+      cancelado: { label: 'Cancelado', className: 'bg-red-500 text-white hover:bg-red-600' }
     };
 
-    const config = statusConfig[status as keyof typeof statusConfig] || { label: status, variant: 'outline' as const };
-    return <Badge variant={config.variant}>{config.label}</Badge>;
+    const config = statusConfig[status as keyof typeof statusConfig] || { label: status, className: 'bg-gray-500 text-white' };
+    return <Badge className={config.className}>{config.label}</Badge>;
+  };
+
+  const isTicketOpen = (status: string) => {
+    return !['concluido', 'cancelado'].includes(status);
   };
 
   const getPriorityBadge = (priority: string) => {
@@ -396,66 +435,116 @@ const TodosTickets = () => {
             filteredTickets.map((ticket) => (
               <Card 
                 key={ticket.id} 
-                className="transition-all hover:shadow-md"
+                className={`transition-all hover:shadow-lg ${isTicketOpen(ticket.status) ? 'border-l-4 border-l-blue-500' : 'border-l-4 border-l-gray-400 bg-muted/30'}`}
               >
-                <CardHeader>
-                  <div className="flex items-start gap-4">
-                    <Checkbox
-                      checked={selectedTickets.has(ticket.id)}
-                      onCheckedChange={() => toggleTicketSelection(ticket.id)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
+                <CardContent className="p-6">
+                  <div className="flex gap-4">
+                    {/* Checkbox */}
+                    <div className="flex items-start pt-1">
+                      <Checkbox
+                        checked={selectedTickets.has(ticket.id)}
+                        onCheckedChange={() => toggleTicketSelection(ticket.id)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
+
+                    {/* Property Image */}
                     <div 
-                      className="flex flex-1 cursor-pointer items-start justify-between"
+                      className="cursor-pointer"
                       onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
                     >
-                    <div className="flex-1">
-                      <CardTitle className="mb-2">{ticket.subject}</CardTitle>
-                      <CardDescription className="line-clamp-2">
-                        {ticket.description}
-                      </CardDescription>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      {getStatusBadge(ticket.status)}
-                      {getPriorityBadge(ticket.priority)}
-                      {getTicketTypeBadge(ticket.ticket_type)}
-                    </div>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-4 md:grid-cols-3">
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{ticket.owner.name}</p>
-                        <p className="text-xs text-muted-foreground">{ticket.owner.email}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {ticket.property?.cover_photo_url && (
+                      {ticket.property?.cover_photo_url ? (
                         <img 
                           src={ticket.property.cover_photo_url} 
                           alt={ticket.property.name}
-                          className="h-12 w-12 rounded-md object-cover"
+                          className="h-20 w-20 rounded-lg object-cover shadow-sm"
                         />
+                      ) : (
+                        <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-muted">
+                          <Building2 className="h-8 w-8 text-muted-foreground" />
+                        </div>
                       )}
-                      {!ticket.property?.cover_photo_url && (
-                        <Building2 className="h-4 w-4 text-muted-foreground" />
-                      )}
-                      <div>
-                        <p className="text-sm font-medium text-foreground">
-                          {ticket.property?.name || 'Sem unidade'}
-                        </p>
-                        {ticket.property?.address && (
-                          <p className="text-xs text-muted-foreground">{ticket.property.address}</p>
-                        )}
-                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground">
-                        Criado em {format(new Date(ticket.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                      </p>
+
+                    {/* Main Content */}
+                    <div 
+                      className="flex flex-1 cursor-pointer flex-col gap-2"
+                      onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
+                    >
+                      {/* Title and Status */}
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <h3 className="text-lg font-semibold text-foreground mb-1">
+                            {ticket.subject}
+                          </h3>
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {ticket.description}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2 justify-end">
+                          {getStatusBadge(ticket.status)}
+                          {getPriorityBadge(ticket.priority)}
+                          {getTicketTypeBadge(ticket.ticket_type)}
+                        </div>
+                      </div>
+
+                      {/* Info Grid */}
+                      <div className="grid grid-cols-3 gap-4 mt-2 text-sm">
+                        {/* Owner */}
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <div className="min-w-0">
+                            <p className="font-medium text-foreground truncate">{ticket.owner.name}</p>
+                            <p className="text-xs text-muted-foreground truncate">{ticket.owner.email}</p>
+                          </div>
+                        </div>
+
+                        {/* Property */}
+                        <div className="flex items-center gap-2">
+                          <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <div className="min-w-0">
+                            <p className="font-medium text-foreground truncate">
+                              {ticket.property?.name || 'Sem unidade'}
+                            </p>
+                            {ticket.property?.address && (
+                              <p className="text-xs text-muted-foreground truncate">{ticket.property.address}</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Created Date */}
+                        <div className="text-right">
+                          <p className="text-xs text-muted-foreground">
+                            {format(new Date(ticket.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Messages Info */}
+                      {ticket.messages && ticket.messages.count > 0 && (
+                        <div className="mt-3 rounded-md bg-muted/50 p-3 border border-border">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-medium text-muted-foreground">
+                              {ticket.messages.count} {ticket.messages.count === 1 ? 'mensagem' : 'mensagens'}
+                            </span>
+                            {ticket.messages.last_message && (
+                              <span className="text-xs text-muted-foreground">
+                                {format(new Date(ticket.messages.last_message.created_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
+                              </span>
+                            )}
+                          </div>
+                          {ticket.messages.last_message && (
+                            <div>
+                              <p className="text-xs font-medium text-foreground mb-1">
+                                {ticket.messages.last_message.author_name}:
+                              </p>
+                              <p className="text-xs text-muted-foreground line-clamp-2">
+                                {ticket.messages.last_message.body}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
