@@ -56,6 +56,7 @@ const TodosTickets = () => {
   const [selectedTickets, setSelectedTickets] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
     if (!user || !['admin', 'agent'].includes(profile?.role || '')) {
@@ -68,6 +69,14 @@ const TodosTickets = () => {
   useEffect(() => {
     filterTickets();
   }, [searchTerm, statusFilter, priorityFilter, typeFilter, tickets]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, []);
 
   const fetchTickets = async () => {
     try {
@@ -232,20 +241,18 @@ const TodosTickets = () => {
   const getTimeUntilSLA = (slaDueAt: string | null) => {
     if (!slaDueAt) return null;
     
-    const now = new Date();
     const due = new Date(slaDueAt);
-    const diff = due.getTime() - now.getTime();
+    const diff = due.getTime() - currentTime.getTime();
     
     if (diff < 0) return { text: 'Expirado', isUrgent: true };
     
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     
-    if (hours < 1) return { text: `${minutes}min`, isUrgent: true };
-    if (hours < 24) return { text: `${hours}h`, isUrgent: hours < 3 };
-    
-    const days = Math.floor(hours / 24);
-    return { text: `${days}d`, isUrgent: false };
+    return { 
+      text: `${hours}h ${minutes}min`, 
+      isUrgent: hours < 3 
+    };
   };
 
   const toggleTicketSelection = (ticketId: string) => {
@@ -471,15 +478,6 @@ const TodosTickets = () => {
                 >
                   <CardContent className="p-6">
                     <div className="flex gap-6">
-                      {/* Checkbox */}
-                      <div className="flex items-start pt-1">
-                        <Checkbox
-                          checked={selectedTickets.has(ticket.id)}
-                          onCheckedChange={() => toggleTicketSelection(ticket.id)}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      </div>
-
                       {/* Property Image + Name */}
                       <div 
                         className="cursor-pointer flex flex-col items-center gap-2 min-w-[140px]"
@@ -531,16 +529,25 @@ const TodosTickets = () => {
                         )}
                       </div>
 
-                      {/* Right Side Info */}
-                      <div className="flex flex-col gap-3 min-w-[200px] text-right">
+                      {/* Right Side Info + Checkbox */}
+                      <div className="flex flex-col gap-3 min-w-[200px]">
+                        {/* Checkbox */}
+                        <div className="flex justify-end">
+                          <Checkbox
+                            checked={selectedTickets.has(ticket.id)}
+                            onCheckedChange={() => toggleTicketSelection(ticket.id)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
+
                         {/* Owner */}
-                        <div>
+                        <div className="text-right">
                           <p className="text-xs text-muted-foreground mb-1">Proprietário</p>
                           <p className="text-sm font-medium text-foreground">{ticket.owner.name}</p>
                         </div>
 
                         {/* Created Date */}
-                        <div>
+                        <div className="text-right">
                           <p className="text-xs text-muted-foreground mb-1">Ticket criado em:</p>
                           <p className="text-sm font-medium text-foreground">
                             {format(new Date(ticket.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
@@ -549,9 +556,9 @@ const TodosTickets = () => {
 
                         {/* SLA Countdown */}
                         {slaInfo && (
-                          <div>
+                          <div className="text-right">
                             <p className="text-xs text-muted-foreground mb-1">
-                              {ticket.priority === 'urgente' ? 'Urgente' : 'Normal'}
+                              Contagem regressiva pra resposta ({ticket.priority === 'urgente' ? 'urgente' : 'normal'}):
                             </p>
                             <p className={`text-lg font-bold ${slaInfo.isUrgent ? 'text-red-600' : 'text-foreground'}`}>
                               {slaInfo.text}
