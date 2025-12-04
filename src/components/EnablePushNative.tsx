@@ -16,7 +16,12 @@ import { Capacitor } from '@capacitor/core';
 export function EnablePushNative() {
   const [loading, setLoading] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
-  const isNative = Capacitor.isNativePlatform();
+  
+  // More robust native detection
+  const platform = Capacitor.getPlatform();
+  const isNative = Capacitor.isNativePlatform() || platform === 'android' || platform === 'ios';
+  
+  console.log('EnablePushNative - platform:', platform, 'isNative:', isNative);
 
   useEffect(() => {
     if (isNative) {

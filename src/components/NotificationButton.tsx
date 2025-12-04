@@ -51,7 +51,12 @@ export function NotificationButton() {
   const [isPushEnabled, setIsPushEnabled] = useState(false);
   const [enablingPush, setEnablingPush] = useState(false);
   const navigate = useNavigate();
-  const isNative = Capacitor.isNativePlatform();
+  
+  // More robust native detection
+  const platform = Capacitor.getPlatform();
+  const isNative = Capacitor.isNativePlatform() || platform === 'android' || platform === 'ios';
+  
+  console.log('Capacitor platform:', platform, 'isNative:', isNative);
 
   useEffect(() => {
     fetchNotifications();
