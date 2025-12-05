@@ -1,59 +1,65 @@
 import React, { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useMediaCache } from "@/hooks/useMediaCache";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface AuthenticatedImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   src: string;
 }
 
-export const AuthenticatedImage = ({ src, alt, ...props }: AuthenticatedImageProps) => {
-  const [imageSrc, setImageSrc] = useState<string>("");
+export const AuthenticatedImage = ({ src, alt, className, ...props }: AuthenticatedImageProps) => {
+  const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const { loadMedia, getCachedUrl } = useMediaCache();
 
   useEffect(() => {
-    const loadImage = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
+    let cancelled = false;
+
+    const load = async () => {
+      setLoading(true);
+      setError(false);
+
+      // Check cache first
+      const cached = getCachedUrl(src);
+      if (cached) {
+        if (!cancelled) {
+          setImageSrc(cached);
           setLoading(false);
-          return;
         }
+        return;
+      }
 
-        const response = await fetch(src, {
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-        });
-
-        if (response.ok) {
-          const blob = await response.blob();
-          const objectUrl = URL.createObjectURL(blob);
-          setImageSrc(objectUrl);
+      const blobUrl = await loadMedia(src);
+      if (!cancelled) {
+        if (blobUrl) {
+          setImageSrc(blobUrl);
+        } else {
+          setError(true);
         }
-      } catch (error) {
-        console.error("Error loading image:", error);
-      } finally {
         setLoading(false);
       }
     };
 
-    loadImage();
+    load();
 
     return () => {
-      if (imageSrc) {
-        URL.revokeObjectURL(imageSrc);
-      }
+      cancelled = true;
     };
-  }, [src]);
+  }, [src, loadMedia, getCachedUrl]);
 
   if (loading) {
-    return <div className="w-full h-full flex items-center justify-center bg-muted animate-pulse" />;
+    return <Skeleton className={className || "w-full h-full"} />;
   }
 
-  if (!imageSrc) {
-    return <div className="w-full h-full flex items-center justify-center bg-muted text-muted-foreground">Erro ao carregar</div>;
+  if (error || !imageSrc) {
+    return (
+      <div className={`flex items-center justify-center bg-muted text-muted-foreground text-sm ${className || 'w-full h-full'}`}>
+        Erro ao carregar
+      </div>
+    );
   }
 
-  return <img src={imageSrc} alt={alt} {...props} />;
+  return <img src={imageSrc} alt={alt} className={className} {...props} />;
 };
 
 interface AuthenticatedVideoProps extends React.VideoHTMLAttributes<HTMLVideoElement> {
@@ -61,69 +67,74 @@ interface AuthenticatedVideoProps extends React.VideoHTMLAttributes<HTMLVideoEle
   posterSrc?: string;
 }
 
-export const AuthenticatedVideo = ({ src, posterSrc, ...props }: AuthenticatedVideoProps) => {
-  const [videoBlobUrl, setVideoBlobUrl] = useState<string>("");
-  const [posterBlobUrl, setPosterBlobUrl] = useState<string>("");
+export const AuthenticatedVideo = ({ src, posterSrc, className, ...props }: AuthenticatedVideoProps) => {
+  const [videoBlobUrl, setVideoBlobUrl] = useState<string | null>(null);
+  const [posterBlobUrl, setPosterBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const { loadMedia, getCachedUrl } = useMediaCache();
 
   useEffect(() => {
-    const loadVideoAndPoster = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          setLoading(false);
-          return;
+    let cancelled = false;
+
+    const load = async () => {
+      setLoading(true);
+      setError(false);
+
+      // Check video cache first
+      const cachedVideo = getCachedUrl(src);
+      if (cachedVideo) {
+        if (!cancelled) {
+          setVideoBlobUrl(cachedVideo);
         }
-
-        // Load video
-        const videoResponse = await fetch(src, {
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-        });
-
-        if (videoResponse.ok) {
-          const videoBlob = await videoResponse.blob();
-          const videoObjectUrl = URL.createObjectURL(videoBlob);
-          setVideoBlobUrl(videoObjectUrl);
-        }
-
-        // Load poster if available
-        if (posterSrc) {
-          const posterResponse = await fetch(posterSrc, {
-            headers: {
-              'Authorization': `Bearer ${session.access_token}`,
-            },
-          });
-
-          if (posterResponse.ok) {
-            const posterBlob = await posterResponse.blob();
-            const posterObjectUrl = URL.createObjectURL(posterBlob);
-            setPosterBlobUrl(posterObjectUrl);
+      } else {
+        const videoUrl = await loadMedia(src);
+        if (!cancelled) {
+          if (videoUrl) {
+            setVideoBlobUrl(videoUrl);
+          } else {
+            setError(true);
           }
         }
+      }
 
-        setLoading(false);
-      } catch (error) {
-        console.error("Error loading video:", error);
+      // Load poster if available
+      if (posterSrc) {
+        const cachedPoster = getCachedUrl(posterSrc);
+        if (cachedPoster) {
+          if (!cancelled) {
+            setPosterBlobUrl(cachedPoster);
+          }
+        } else {
+          const posterUrl = await loadMedia(posterSrc);
+          if (!cancelled && posterUrl) {
+            setPosterBlobUrl(posterUrl);
+          }
+        }
+      }
+
+      if (!cancelled) {
         setLoading(false);
       }
     };
 
-    loadVideoAndPoster();
+    load();
 
     return () => {
-      if (videoBlobUrl) URL.revokeObjectURL(videoBlobUrl);
-      if (posterBlobUrl) URL.revokeObjectURL(posterBlobUrl);
+      cancelled = true;
     };
-  }, [src, posterSrc]);
+  }, [src, posterSrc, loadMedia, getCachedUrl]);
 
   if (loading) {
-    return <div className="w-full h-full flex items-center justify-center bg-muted animate-pulse" />;
+    return <Skeleton className={className || "w-full h-48"} />;
   }
 
-  if (!videoBlobUrl) {
-    return <div className="w-full h-full flex items-center justify-center bg-muted text-muted-foreground">Erro ao carregar vídeo</div>;
+  if (error || !videoBlobUrl) {
+    return (
+      <div className={`flex items-center justify-center bg-muted text-muted-foreground text-sm ${className || 'w-full h-48'}`}>
+        Erro ao carregar vídeo
+      </div>
+    );
   }
 
   return (
@@ -131,6 +142,7 @@ export const AuthenticatedVideo = ({ src, posterSrc, ...props }: AuthenticatedVi
       {...props}
       poster={posterBlobUrl || undefined}
       src={videoBlobUrl}
+      className={className}
     />
   );
 };
