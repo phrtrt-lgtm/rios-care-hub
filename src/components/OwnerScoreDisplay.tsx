@@ -149,12 +149,11 @@ export const OwnerScoreDisplay = () => {
             {/* Por que manter alto */}
             <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
               <p className="text-xs font-medium text-primary mb-1.5">Por que manter um score alto?</p>
-              <ul className="text-xs text-muted-foreground space-y-1">
-                <li>• Maior confiança da equipe ao negociar condições especiais</li>
-                <li>• Possibilidade de aportes mais generosos em manutenções</li>
-                <li>• Prioridade no atendimento de solicitações</li>
-                <li>• Histórico positivo facilita acordos futuros</li>
-              </ul>
+              <p className="text-xs text-muted-foreground">
+                Proprietários com score mais alto recebem <strong>aportes maiores</strong> da gestão 
+                nas manutenções. Isso significa que você paga menos do próprio bolso. 
+                Quanto melhor seu histórico de pagamentos, maior a economia!
+              </p>
             </div>
             
             {/* Como ganhar pontos */}
@@ -279,12 +278,11 @@ export const OwnerScoreDisplay = () => {
               {/* Por que manter alto */}
               <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
                 <p className="text-xs font-medium text-primary mb-1.5">Por que manter um score alto?</p>
-                <ul className="text-xs text-muted-foreground space-y-1">
-                  <li>• Maior confiança da equipe ao negociar condições especiais</li>
-                  <li>• Possibilidade de aportes mais generosos em manutenções</li>
-                  <li>• Prioridade no atendimento de solicitações</li>
-                  <li>• Histórico positivo facilita acordos futuros</li>
-                </ul>
+                <p className="text-xs text-muted-foreground">
+                  Proprietários com score mais alto recebem <strong>aportes maiores</strong> da gestão 
+                  nas manutenções. Isso significa que você paga menos do próprio bolso. 
+                  Quanto melhor seu histórico de pagamentos, maior a economia!
+                </p>
               </div>
               
               {/* Como ganhar pontos */}
