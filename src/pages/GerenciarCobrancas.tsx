@@ -287,7 +287,8 @@ const GerenciarCobrancas = () => {
       sent: { label: 'Enviada', variant: 'default' as const },
       paid: { label: 'Paga', variant: 'default' as const },
       overdue: { label: 'Vencida', variant: 'destructive' as const },
-      cancelled: { label: 'Cancelada', variant: 'outline' as const }
+      cancelled: { label: 'Cancelada', variant: 'outline' as const },
+      debited: { label: 'Debitado em Reserva', variant: 'destructive' as const }
     };
 
     const config = statusConfig[status as keyof typeof statusConfig] || { label: status, variant: 'outline' as const };

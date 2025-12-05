@@ -6,6 +6,100 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Calculate score change based on payment timing
+async function updateOwnerScore(
+  supabase: any,
+  ownerId: string,
+  chargeId: string,
+  dueDate: string | null,
+  paidAt: string
+) {
+  if (!dueDate) {
+    console.log('No due date for charge, skipping score update');
+    return;
+  }
+
+  const paidDate = new Date(paidAt);
+  const dueDateObj = new Date(dueDate);
+  const diffDays = Math.floor((dueDateObj.getTime() - paidDate.getTime()) / (1000 * 60 * 60 * 24));
+
+  let reason: string;
+  let pointsChange: number;
+
+  if (diffDays >= 2) {
+    // Paid 2+ days early
+    reason = 'early_payment';
+    pointsChange = 5;
+  } else if (diffDays >= 0) {
+    // Paid on time (0-1 days before due)
+    reason = 'on_time_payment';
+    pointsChange = 1;
+  } else {
+    // Paid late (after due date)
+    reason = 'late_payment';
+    pointsChange = -15;
+  }
+
+  console.log(`Score update: ${reason}, points: ${pointsChange}, diffDays: ${diffDays}`);
+
+  // Get current score
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('payment_score')
+    .eq('id', ownerId)
+    .single();
+
+  if (profileError) {
+    console.error('Error fetching profile for score:', profileError);
+    return;
+  }
+
+  const currentScore = profile?.payment_score ?? 50;
+  const newScore = Math.max(0, Math.min(100, currentScore + pointsChange));
+
+  // Check if score already recorded for this charge
+  const { data: existingScore } = await supabase
+    .from('owner_payment_scores')
+    .select('id')
+    .eq('charge_id', chargeId)
+    .single();
+
+  if (existingScore) {
+    console.log('Score already recorded for this charge, skipping');
+    return;
+  }
+
+  // Record score history
+  const { error: historyError } = await supabase
+    .from('owner_payment_scores')
+    .insert({
+      owner_id: ownerId,
+      charge_id: chargeId,
+      score_before: currentScore,
+      score_after: newScore,
+      points_change: pointsChange,
+      reason,
+    });
+
+  if (historyError) {
+    console.error('Error recording score history:', historyError);
+    return;
+  }
+
+  // Update profile score
+  const { error: updateError } = await supabase
+    .from('profiles')
+    .update({ payment_score: newScore })
+    .eq('id', ownerId);
+
+  if (updateError) {
+    console.error('Error updating profile score:', updateError);
+    return;
+  }
+
+  console.log(`Score updated: ${currentScore} -> ${newScore} (${reason})`);
+}
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -99,6 +193,8 @@ const handler = async (req: Request): Promise<Response> => {
         }
       }
 
+      const paidAt = new Date().toISOString();
+
       // Handle group payment
       if (isGroupPayment && chargeIds.length > 0) {
         console.log('Processing group payment for charges:', chargeIds);
@@ -108,7 +204,7 @@ const handler = async (req: Request): Promise<Response> => {
           // Buscar informações da charge para calcular o valor correto
           const { data: charge, error: chargeError } = await supabase
             .from('charges')
-            .select('amount_cents, owner_id, management_contribution_cents')
+            .select('amount_cents, owner_id, management_contribution_cents, due_date')
             .eq('id', chargeId)
             .single();
 
@@ -123,7 +219,7 @@ const handler = async (req: Request): Promise<Response> => {
           };
 
           if (status === 'approved') {
-            updateData.paid_at = new Date().toISOString();
+            updateData.paid_at = paidAt;
           }
 
           const { error: updateError } = await supabase
@@ -142,7 +238,7 @@ const handler = async (req: Request): Promise<Response> => {
             const paymentRecord = {
               charge_id: chargeId,
               amount_cents: charge.amount_cents - (charge.management_contribution_cents || 0),
-              payment_date: new Date().toISOString(),
+              payment_date: paidAt,
               method: 'mercadopago',
               applies_to: 'total',
               note: `Pagamento MercadoPago ID: ${paymentId}`,
@@ -159,6 +255,9 @@ const handler = async (req: Request): Promise<Response> => {
             } else {
               console.log(`Payment record created for charge ${chargeId}`);
             }
+
+            // Update owner score
+            await updateOwnerScore(supabase, charge.owner_id, chargeId, charge.due_date, paidAt);
           }
         });
 
@@ -191,7 +290,7 @@ const handler = async (req: Request): Promise<Response> => {
       // Buscar informações da charge
       const { data: charge, error: chargeError } = await supabase
         .from('charges')
-        .select('amount_cents, owner_id, management_contribution_cents')
+        .select('amount_cents, owner_id, management_contribution_cents, due_date')
         .eq('id', chargeId)
         .single();
 
@@ -207,7 +306,7 @@ const handler = async (req: Request): Promise<Response> => {
       };
 
       if (status === 'approved') {
-        updateData.paid_at = new Date().toISOString();
+        updateData.paid_at = paidAt;
       }
 
       const { error: updateError } = await supabase
@@ -227,7 +326,7 @@ const handler = async (req: Request): Promise<Response> => {
         const paymentRecord = {
           charge_id: chargeId,
           amount_cents: charge.amount_cents - (charge.management_contribution_cents || 0),
-          payment_date: new Date().toISOString(),
+          payment_date: paidAt,
           method: 'mercadopago',
           applies_to: 'total',
           note: `Pagamento MercadoPago ID: ${paymentId}`,
@@ -244,6 +343,9 @@ const handler = async (req: Request): Promise<Response> => {
         } else {
           console.log('Payment record created successfully');
         }
+
+        // Update owner score
+        await updateOwnerScore(supabase, charge.owner_id, chargeId, charge.due_date, paidAt);
 
         // Enviar notificação de pagamento confirmado
         try {
