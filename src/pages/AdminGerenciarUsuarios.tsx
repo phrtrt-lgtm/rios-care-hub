@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Search, UserCheck, UserX, Trash2, Mail, Shield } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ArrowLeft, Search, UserCheck, UserX, Trash2, CheckSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { LoadingScreen } from "@/components/LoadingScreen";
@@ -32,6 +33,8 @@ type UserProfile = {
   created_at: string;
 };
 
+type BulkAction = "approve" | "reject" | "delete" | null;
+
 export default function AdminGerenciarUsuarios() {
   const { profile } = useAuth();
   const navigate = useNavigate();
@@ -43,6 +46,12 @@ export default function AdminGerenciarUsuarios() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
+  
+  // Bulk selection state
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
+  const [bulkActionDialogOpen, setBulkActionDialogOpen] = useState(false);
+  const [bulkAction, setBulkAction] = useState<BulkAction>(null);
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -51,6 +60,11 @@ export default function AdminGerenciarUsuarios() {
   useEffect(() => {
     filterUsers();
   }, [users, searchTerm, roleFilter, statusFilter]);
+
+  // Clear selection when filters change
+  useEffect(() => {
+    setSelectedUsers(new Set());
+  }, [searchTerm, roleFilter, statusFilter]);
 
   const fetchUsers = async () => {
     try {
@@ -72,7 +86,6 @@ export default function AdminGerenciarUsuarios() {
   const filterUsers = () => {
     let filtered = [...users];
 
-    // Search filter
     if (searchTerm) {
       filtered = filtered.filter(
         (user) =>
@@ -81,12 +94,10 @@ export default function AdminGerenciarUsuarios() {
       );
     }
 
-    // Role filter
     if (roleFilter !== "all") {
       filtered = filtered.filter((user) => user.role === roleFilter);
     }
 
-    // Status filter
     if (statusFilter !== "all") {
       filtered = filtered.filter((user) => user.status === statusFilter);
     }
@@ -160,6 +171,158 @@ export default function AdminGerenciarUsuarios() {
     }
   };
 
+  // Bulk selection handlers
+  const toggleUserSelection = (userId: string) => {
+    const newSelection = new Set(selectedUsers);
+    if (newSelection.has(userId)) {
+      newSelection.delete(userId);
+    } else {
+      newSelection.add(userId);
+    }
+    setSelectedUsers(newSelection);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedUsers.size === filteredUsers.filter(u => u.role !== "admin").length) {
+      setSelectedUsers(new Set());
+    } else {
+      const nonAdminIds = filteredUsers
+        .filter(u => u.role !== "admin")
+        .map(u => u.id);
+      setSelectedUsers(new Set(nonAdminIds));
+    }
+  };
+
+  const getSelectedUsers = () => {
+    return filteredUsers.filter(u => selectedUsers.has(u.id));
+  };
+
+  const openBulkActionDialog = (action: BulkAction) => {
+    setBulkAction(action);
+    setBulkActionDialogOpen(true);
+  };
+
+  const executeBulkAction = async () => {
+    if (!bulkAction || selectedUsers.size === 0) return;
+
+    setBulkActionLoading(true);
+    const selectedUserIds = Array.from(selectedUsers);
+    let successCount = 0;
+    let errorCount = 0;
+
+    try {
+      if (bulkAction === "approve") {
+        // Only approve pending owners
+        const usersToApprove = getSelectedUsers().filter(
+          u => u.status === "pending" && u.role === "pending_owner"
+        );
+        
+        for (const user of usersToApprove) {
+          const { error } = await supabase
+            .from("profiles")
+            .update({ status: "approved", role: "owner" })
+            .eq("id", user.id);
+          
+          if (error) {
+            errorCount++;
+            console.error(`Error approving user ${user.id}:`, error);
+          } else {
+            successCount++;
+          }
+        }
+        
+        if (successCount > 0) {
+          toast.success(`${successCount} usuário(s) aprovado(s) com sucesso!`);
+        }
+        if (errorCount > 0) {
+          toast.error(`Erro ao aprovar ${errorCount} usuário(s)`);
+        }
+        if (usersToApprove.length === 0) {
+          toast.info("Nenhum usuário pendente selecionado para aprovar");
+        }
+      } else if (bulkAction === "reject") {
+        // Reject selected users (except admins)
+        const usersToReject = getSelectedUsers().filter(u => u.role !== "admin");
+        
+        for (const user of usersToReject) {
+          const { error } = await supabase
+            .from("profiles")
+            .update({ status: "rejected" })
+            .eq("id", user.id);
+          
+          if (error) {
+            errorCount++;
+            console.error(`Error rejecting user ${user.id}:`, error);
+          } else {
+            successCount++;
+          }
+        }
+        
+        if (successCount > 0) {
+          toast.success(`${successCount} usuário(s) recusado(s)`);
+        }
+        if (errorCount > 0) {
+          toast.error(`Erro ao recusar ${errorCount} usuário(s)`);
+        }
+      } else if (bulkAction === "delete") {
+        // Delete selected users (except admins)
+        const usersToDelete = getSelectedUsers().filter(u => u.role !== "admin");
+        
+        for (const user of usersToDelete) {
+          try {
+            const { data, error } = await supabase.functions.invoke('delete-user', {
+              body: { userId: user.id }
+            });
+            
+            if (error || data?.error) {
+              errorCount++;
+              console.error(`Error deleting user ${user.id}:`, error || data?.error);
+            } else {
+              successCount++;
+            }
+          } catch (err) {
+            errorCount++;
+            console.error(`Error deleting user ${user.id}:`, err);
+          }
+        }
+        
+        if (successCount > 0) {
+          toast.success(`${successCount} usuário(s) deletado(s) com sucesso!`);
+        }
+        if (errorCount > 0) {
+          toast.error(`Erro ao deletar ${errorCount} usuário(s)`);
+        }
+      }
+
+      fetchUsers();
+      setSelectedUsers(new Set());
+    } catch (error: any) {
+      console.error("Bulk action error:", error);
+      toast.error("Erro ao executar ação em massa");
+    } finally {
+      setBulkActionLoading(false);
+      setBulkActionDialogOpen(false);
+      setBulkAction(null);
+    }
+  };
+
+  const getBulkActionDescription = () => {
+    const count = selectedUsers.size;
+    switch (bulkAction) {
+      case "approve":
+        const pendingCount = getSelectedUsers().filter(
+          u => u.status === "pending" && u.role === "pending_owner"
+        ).length;
+        return `Você vai aprovar ${pendingCount} usuário(s) pendente(s). Os demais selecionados serão ignorados.`;
+      case "reject":
+        return `Você vai recusar ${count} usuário(s) selecionado(s).`;
+      case "delete":
+        return `Você vai deletar ${count} usuário(s) selecionado(s). Esta ação não pode ser desfeita.`;
+      default:
+        return "";
+    }
+  };
+
   const getRoleBadge = (role: string) => {
     const roleMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
       admin: { label: "Admin", variant: "destructive" },
@@ -197,6 +360,10 @@ export default function AdminGerenciarUsuarios() {
     return <LoadingScreen message="Carregando usuários..." />;
   }
 
+  const nonAdminFilteredUsers = filteredUsers.filter(u => u.role !== "admin");
+  const allNonAdminsSelected = nonAdminFilteredUsers.length > 0 && 
+    selectedUsers.size === nonAdminFilteredUsers.length;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       <header className="border-b bg-card/50 backdrop-blur-sm">
@@ -209,6 +376,56 @@ export default function AdminGerenciarUsuarios() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
+        {/* Bulk Actions Bar */}
+        {selectedUsers.size > 0 && (
+          <Card className="mb-4 border-primary/50 bg-primary/5">
+            <CardContent className="flex flex-wrap items-center justify-between gap-4 py-4">
+              <div className="flex items-center gap-2">
+                <CheckSquare className="h-5 w-5 text-primary" />
+                <span className="font-medium">
+                  {selectedUsers.size} usuário(s) selecionado(s)
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => openBulkActionDialog("approve")}
+                  className="gap-2"
+                >
+                  <UserCheck className="h-4 w-4" />
+                  Aprovar Selecionados
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => openBulkActionDialog("reject")}
+                  className="gap-2"
+                >
+                  <UserX className="h-4 w-4" />
+                  Recusar Selecionados
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => openBulkActionDialog("delete")}
+                  className="gap-2 text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Excluir Selecionados
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setSelectedUsers(new Set())}
+                >
+                  Limpar Seleção
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <Card className="mb-6">
           <CardHeader>
             <CardTitle>Filtros</CardTitle>
@@ -259,6 +476,13 @@ export default function AdminGerenciarUsuarios() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-12">
+                      <Checkbox
+                        checked={allNonAdminsSelected}
+                        onCheckedChange={toggleSelectAll}
+                        aria-label="Selecionar todos"
+                      />
+                    </TableHead>
                     <TableHead>Nome</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Telefone</TableHead>
@@ -271,13 +495,25 @@ export default function AdminGerenciarUsuarios() {
                 <TableBody>
                   {filteredUsers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center text-muted-foreground">
                         Nenhum usuário encontrado
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredUsers.map((user) => (
-                      <TableRow key={user.id}>
+                      <TableRow 
+                        key={user.id}
+                        className={selectedUsers.has(user.id) ? "bg-primary/5" : ""}
+                      >
+                        <TableCell>
+                          {user.role !== "admin" && (
+                            <Checkbox
+                              checked={selectedUsers.has(user.id)}
+                              onCheckedChange={() => toggleUserSelection(user.id)}
+                              aria-label={`Selecionar ${user.name}`}
+                            />
+                          )}
+                        </TableCell>
                         <TableCell className="font-medium">{user.name}</TableCell>
                         <TableCell>{user.email}</TableCell>
                         <TableCell>{user.phone || "-"}</TableCell>
@@ -330,6 +566,7 @@ export default function AdminGerenciarUsuarios() {
         </Card>
       </main>
 
+      {/* Single Delete Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -343,6 +580,32 @@ export default function AdminGerenciarUsuarios() {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Deletar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Action Dialog */}
+      <AlertDialog open={bulkActionDialogOpen} onOpenChange={setBulkActionDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {bulkAction === "approve" && "Aprovar usuários em massa"}
+              {bulkAction === "reject" && "Recusar usuários em massa"}
+              {bulkAction === "delete" && "Excluir usuários em massa"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {getBulkActionDescription()}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkActionLoading}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={executeBulkAction} 
+              disabled={bulkActionLoading}
+              className={bulkAction === "delete" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
+            >
+              {bulkActionLoading ? "Processando..." : "Confirmar"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
