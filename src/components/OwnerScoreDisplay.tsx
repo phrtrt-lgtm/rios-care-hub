@@ -150,9 +150,10 @@ export const OwnerScoreDisplay = () => {
             <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
               <p className="text-xs font-medium text-primary mb-1.5">Por que manter um score alto?</p>
               <p className="text-xs text-muted-foreground">
-                Proprietários com score mais alto recebem <strong>aportes maiores</strong> da gestão 
-                nas manutenções. Isso significa que você paga menos do próprio bolso. 
-                Quanto melhor seu histórico de pagamentos, maior a economia!
+                Seu score é usado como <strong>referência</strong> pela equipe ao definir os aportes nas manutenções. 
+                Proprietários com histórico de pagamentos em dia tendem a receber contribuições mais generosas, 
+                economizando mais. Um score baixo não impede aportes, mas um score alto demonstra confiança 
+                e facilita condições melhores.
               </p>
             </div>
             
@@ -279,9 +280,10 @@ export const OwnerScoreDisplay = () => {
               <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
                 <p className="text-xs font-medium text-primary mb-1.5">Por que manter um score alto?</p>
                 <p className="text-xs text-muted-foreground">
-                  Proprietários com score mais alto recebem <strong>aportes maiores</strong> da gestão 
-                  nas manutenções. Isso significa que você paga menos do próprio bolso. 
-                  Quanto melhor seu histórico de pagamentos, maior a economia!
+                  Seu score é usado como <strong>referência</strong> pela equipe ao definir os aportes nas manutenções. 
+                  Proprietários com histórico de pagamentos em dia tendem a receber contribuições mais generosas, 
+                  economizando mais. Um score baixo não impede aportes, mas um score alto demonstra confiança 
+                  e facilita condições melhores.
                 </p>
               </div>
               
