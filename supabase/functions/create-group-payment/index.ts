@@ -135,50 +135,55 @@ serve(async (req) => {
     const preference = await mpResponse.json();
     console.log('Mercado Pago preference created:', preference.id);
 
-    // Create PIX payment
-    const pixPaymentData = {
-      transaction_amount: totalDueAmountCents / 100,
-      description: `Pagamento Agrupado - ${charges.length} cobrança${charges.length > 1 ? 's' : ''}`,
-      payment_method_id: 'pix',
-      payer: {
-        email: owner.email,
-        first_name: owner.name,
-      },
-      metadata: {
-        charge_ids: chargeIds,
-        is_group_payment: true,
-      },
-      external_reference: `group_${chargeIds.join('_')}`,
-      notification_url: `${supabaseUrl}/functions/v1/mercadopago-webhook`,
-    };
+    // Try to create PIX payment (optional - may fail if account doesn't have PIX key configured)
+    let qrCode = '';
+    let qrCodeBase64 = '';
+    
+    try {
+      const pixPaymentData = {
+        transaction_amount: totalDueAmountCents / 100,
+        description: `Pagamento Agrupado - ${charges.length} cobrança${charges.length > 1 ? 's' : ''}`,
+        payment_method_id: 'pix',
+        payer: {
+          email: owner.email,
+          first_name: owner.name,
+        },
+        metadata: {
+          charge_ids: chargeIds,
+          is_group_payment: true,
+        },
+        external_reference: `group_${chargeIds.join('_')}`,
+        notification_url: `${supabaseUrl}/functions/v1/mercadopago-webhook`,
+      };
 
-    console.log('Creating PIX payment:', JSON.stringify(pixPaymentData, null, 2));
+      console.log('Creating PIX payment:', JSON.stringify(pixPaymentData, null, 2));
 
-    const idempotencyKey = uuidv4();
-    const pixResponse = await fetch('https://api.mercadopago.com/v1/payments', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${mercadoPagoToken}`,
-        'Content-Type': 'application/json',
-        'X-Idempotency-Key': idempotencyKey,
-      },
-      body: JSON.stringify(pixPaymentData),
-    });
+      const idempotencyKey = uuidv4();
+      const pixResponse = await fetch('https://api.mercadopago.com/v1/payments', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${mercadoPagoToken}`,
+          'Content-Type': 'application/json',
+          'X-Idempotency-Key': idempotencyKey,
+        },
+        body: JSON.stringify(pixPaymentData),
+      });
 
-    if (!pixResponse.ok) {
-      const errorText = await pixResponse.text();
-      console.error('PIX payment error:', errorText);
-      throw new Error(`Erro ao criar pagamento PIX: ${errorText}`);
+      if (pixResponse.ok) {
+        const pixPayment = await pixResponse.json();
+        console.log('PIX payment created:', pixPayment.id);
+        qrCode = pixPayment.point_of_interaction?.transaction_data?.qr_code || '';
+        qrCodeBase64 = pixPayment.point_of_interaction?.transaction_data?.qr_code_base64 || '';
+      } else {
+        const errorText = await pixResponse.text();
+        console.warn('PIX payment failed (continuing without PIX):', errorText);
+      }
+    } catch (pixError) {
+      console.warn('PIX payment error (continuing without PIX):', pixError);
     }
 
-    const pixPayment = await pixResponse.json();
-    console.log('PIX payment created:', pixPayment.id);
-
-    const qrCode = pixPayment.point_of_interaction?.transaction_data?.qr_code || '';
-    const qrCodeBase64 = pixPayment.point_of_interaction?.transaction_data?.qr_code_base64 || '';
-
     console.log('Group payment created successfully');
-    console.log('QR Code length:', qrCode.length);
+    console.log('QR Code available:', !!qrCode);
     console.log('QR Code Base64 available:', !!qrCodeBase64);
 
     return new Response(

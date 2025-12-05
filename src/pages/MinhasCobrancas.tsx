@@ -296,41 +296,43 @@ const MinhasCobrancas = () => {
                       </div>
 
                       {/* Grid de opções de pagamento */}
-                      <div className="grid md:grid-cols-2 gap-4">
-                        {/* Opção 1: PIX Instantâneo */}
-                        <Card className="border-2 border-primary/20 hover:border-primary/40 transition-colors">
-                          <CardHeader className="pb-3">
-                            <div className="flex items-center gap-2 mb-2">
-                              <div className="p-2 rounded-lg bg-green-50">
-                                <Zap className="h-5 w-5 text-green-600" />
+                      <div className={`grid gap-4 ${groupPayment.pix_qr_code ? 'md:grid-cols-2' : 'md:grid-cols-1 max-w-md mx-auto'}`}>
+                        {/* Opção 1: PIX Instantâneo - só mostra se disponível */}
+                        {groupPayment.pix_qr_code && (
+                          <Card className="border-2 border-primary/20 hover:border-primary/40 transition-colors">
+                            <CardHeader className="pb-3">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="p-2 rounded-lg bg-green-50">
+                                  <Zap className="h-5 w-5 text-green-600" />
+                                </div>
+                                <div>
+                                  <CardTitle className="text-lg">PIX Instantâneo</CardTitle>
+                                  <CardDescription className="text-xs">À vista - Aprovação imediata</CardDescription>
+                                </div>
                               </div>
-                              <div>
-                                <CardTitle className="text-lg">PIX Instantâneo</CardTitle>
-                                <CardDescription className="text-xs">À vista - Aprovação imediata</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                              <div className="flex justify-center p-3 bg-white rounded-lg border">
+                                <img 
+                                  src={groupPayment.pix_qr_code_base64} 
+                                  alt="QR Code PIX" 
+                                  className="w-48 h-48"
+                                />
                               </div>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="space-y-3">
-                            <div className="flex justify-center p-3 bg-white rounded-lg border">
-                              <img 
-                                src={groupPayment.pix_qr_code_base64} 
-                                alt="QR Code PIX" 
-                                className="w-48 h-48"
-                              />
-                            </div>
-                            <Button 
-                              className="w-full" 
-                              variant="outline"
-                              onClick={() => {
-                                navigator.clipboard.writeText(groupPayment.pix_qr_code);
-                                toast.success('Código PIX copiado!');
-                              }}
-                            >
-                              <Paperclip className="h-4 w-4 mr-2" />
-                              Copiar código PIX
-                            </Button>
-                          </CardContent>
-                        </Card>
+                              <Button 
+                                className="w-full" 
+                                variant="outline"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(groupPayment.pix_qr_code);
+                                  toast.success('Código PIX copiado!');
+                                }}
+                              >
+                                <Paperclip className="h-4 w-4 mr-2" />
+                                Copiar código PIX
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        )}
 
                         {/* Opção 2: Cartão com Parcelamento */}
                         <Card className="border-2 border-blue-200 hover:border-blue-300 transition-colors bg-gradient-to-br from-blue-50/50 to-background">
