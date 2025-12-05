@@ -114,6 +114,7 @@ export default function CobrancaDetalhes() {
   const [galleryStartIndex, setGalleryStartIndex] = useState(0);
   const [downloadingAll, setDownloadingAll] = useState(false);
   const [generatingPaymentLink, setGeneratingPaymentLink] = useState(false);
+  const [debitingReserve, setDebitingReserve] = useState(false);
 
   const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent';
 
@@ -708,6 +709,37 @@ export default function CobrancaDetalhes() {
     }
   };
 
+  const handleDebitReserve = async () => {
+    if (!confirm("Confirma debitar esta cobrança da reserva do proprietário? Isso aplicará -30 pontos no score.")) {
+      return;
+    }
+
+    try {
+      setDebitingReserve(true);
+      
+      const { data, error } = await supabase.functions.invoke('debit-reserve', {
+        body: { chargeId: id }
+      });
+
+      if (error) throw error;
+
+      await fetchChargeData();
+
+      toast({
+        title: "Débito em reserva registrado!",
+        description: `Score do proprietário foi atualizado (${data.scoreChange} pontos)`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao debitar",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setDebitingReserve(false);
+    }
+  };
+
   const handleDelete = async () => {
     // Only admins can delete
     if (profile?.role !== 'admin') {
@@ -754,7 +786,8 @@ export default function CobrancaDetalhes() {
       sent: { label: 'Enviada', variant: 'default' as const },
       paid: { label: 'Paga', variant: 'default' as const },
       overdue: { label: 'Vencida', variant: 'destructive' as const },
-      cancelled: { label: 'Cancelada', variant: 'outline' as const }
+      cancelled: { label: 'Cancelada', variant: 'outline' as const },
+      debited: { label: 'Debitado em Reserva', variant: 'destructive' as const }
     };
 
     const config = statusConfig[status as keyof typeof statusConfig] || { label: status, variant: 'outline' as const };
@@ -808,8 +841,24 @@ export default function CobrancaDetalhes() {
                   <p className="text-sm text-muted-foreground leading-relaxed mt-2">{charge.description}</p>
                 )}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 {getStatusBadge(charge.status)}
+                {isTeamMember && charge.status !== 'paid' && charge.status !== 'debited' && charge.status !== 'cancelled' && (
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDebitReserve}
+                    disabled={debitingReserve}
+                    className="border-red-300 text-red-600 hover:bg-red-50"
+                  >
+                    {debitingReserve ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <DollarSign className="h-4 w-4 mr-2" />
+                    )}
+                    Debitar em Reserva
+                  </Button>
+                )}
                 {isTeamMember && (
                   <Button 
                     variant="destructive"
