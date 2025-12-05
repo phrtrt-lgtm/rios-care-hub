@@ -1,6 +1,8 @@
-import { FileIcon, ImageIcon, FileTextIcon, Download, Eye } from "lucide-react";
+import { FileIcon, FileTextIcon, Download, Eye, Play } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
+import { useMediaCache, generateVideoThumbnail } from "@/hooks/useMediaCache";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface AttachmentBubbleProps {
   id: string;
@@ -18,9 +20,14 @@ export function AttachmentBubble({
   size_bytes,
   onPreview
 }: AttachmentBubbleProps) {
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const { loadMedia, getCachedUrl } = useMediaCache();
+
   // TIFF files are not supported by browsers, treat as downloads
   const isTiff = file_type === 'image/tiff' || file_type === 'image/tif';
   const isImage = file_type?.startsWith('image/') && !isTiff;
+  const isVideo = file_type?.startsWith('video/');
   const isPDF = file_type === 'application/pdf';
   
   const formatSize = (bytes?: number) => {
@@ -30,21 +37,92 @@ export function AttachmentBubble({
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  if (isImage) {
+  // Load thumbnail for images and videos
+  useEffect(() => {
+    if (!isImage && !isVideo) {
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadThumbnail = async () => {
+      // Check cache first
+      const cached = getCachedUrl(file_url);
+      if (cached) {
+        if (isVideo) {
+          const thumb = await generateVideoThumbnail(cached);
+          if (!cancelled) {
+            setThumbnailUrl(thumb || null);
+            setLoading(false);
+          }
+        } else {
+          if (!cancelled) {
+            setThumbnailUrl(cached);
+            setLoading(false);
+          }
+        }
+        return;
+      }
+
+      // Load the media
+      const blobUrl = await loadMedia(file_url);
+      if (cancelled || !blobUrl) {
+        if (!cancelled) setLoading(false);
+        return;
+      }
+
+      if (isVideo) {
+        const thumb = await generateVideoThumbnail(blobUrl);
+        if (!cancelled) {
+          setThumbnailUrl(thumb || null);
+          setLoading(false);
+        }
+      } else {
+        if (!cancelled) {
+          setThumbnailUrl(blobUrl);
+          setLoading(false);
+        }
+      }
+    };
+
+    loadThumbnail();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [file_url, isImage, isVideo, loadMedia, getCachedUrl]);
+
+  if (isImage || isVideo) {
     return (
       <div className="relative group">
         <div 
-          onClick={() => onPreview?.(file_url, file_name || 'Imagem')}
+          onClick={() => onPreview?.(file_url, file_name || (isVideo ? 'Vídeo' : 'Imagem'))}
           className="cursor-pointer relative overflow-hidden rounded-lg border border-border hover:border-primary transition-colors"
         >
-          <img 
-            src={file_url} 
-            alt={file_name || 'Anexo'} 
-            className="w-full h-32 object-cover"
-            loading="lazy"
-          />
+          {loading ? (
+            <Skeleton className="w-full h-32" />
+          ) : thumbnailUrl ? (
+            <img 
+              src={thumbnailUrl} 
+              alt={file_name || 'Anexo'} 
+              className="w-full h-32 object-cover"
+            />
+          ) : (
+            <div className="w-full h-32 bg-muted flex items-center justify-center">
+              {isVideo ? (
+                <Play className="h-8 w-8 text-muted-foreground" />
+              ) : (
+                <FileIcon className="h-8 w-8 text-muted-foreground" />
+              )}
+            </div>
+          )}
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
-            <Eye className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+            {isVideo ? (
+              <Play className="h-8 w-8 text-white opacity-70 group-hover:opacity-100 transition-opacity" fill="white" />
+            ) : (
+              <Eye className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+            )}
           </div>
         </div>
         {file_name && (
