@@ -88,7 +88,7 @@ export const useOwnerScore = (ownerId?: string) => {
         }
       });
 
-      const currentScore = profile?.payment_score ?? 80;
+      const currentScore = profile?.payment_score ?? 50;
       const { stars, label } = getStarsFromScore(currentScore);
 
       return {
@@ -122,7 +122,7 @@ export const useUpdateOwnerScore = () => {
 
     if (profileError) throw profileError;
 
-    const currentScore = profile?.payment_score ?? 80;
+    const currentScore = profile?.payment_score ?? 50;
     
     // Calculate points change
     let pointsChange = 0;
