@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -11,8 +11,9 @@ import { ArrowLeft, Send, Calendar, DollarSign, Paperclip, Download, Eye, FileTe
 import { VoiceToTextInput } from "@/components/VoiceToTextInput";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { Label } from "@/components/ui/label";
-import { AuthenticatedImage, AuthenticatedVideo } from "@/components/AuthenticatedMedia";
+import { AuthenticatedImage, AuthenticatedVideo, VideoThumbnail } from "@/components/AuthenticatedMedia";
 import { MediaGallery } from "@/components/MediaGallery";
+import { preloadMediaUrls } from "@/hooks/useMediaCache";
 import { AttachmentBubble } from "@/components/AttachmentBubble";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -256,6 +257,10 @@ export default function CobrancaDetalhes() {
         }));
       
       setAllMediaItems(mediaItems);
+      
+      // Preload all media URLs for faster gallery experience
+      const urlsToPreload = mediaItems.map(item => item.file_url);
+      preloadMediaUrls(urlsToPreload);
     }
   };
 
@@ -1233,26 +1238,11 @@ export default function CobrancaDetalhes() {
                                 setGalleryOpen(true);
                               }}
                             >
-                              <div className="relative aspect-video bg-gradient-to-br from-muted to-muted-foreground/20">
-                                {posterUrl ? (
-                                  <AuthenticatedImage 
-                                    src={posterUrl}
-                                    alt={attachment.file_name}
-                                    className="w-full h-full object-cover"
-                                  />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center">
-                                    <Video className="h-12 w-12 text-muted-foreground/60" />
-                                  </div>
-                                )}
-                                
-                                {/* Play button overlay */}
-                                <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors">
-                                  <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Play className="h-6 w-6 text-primary ml-1" fill="currentColor" />
-                                  </div>
-                                </div>
-                              </div>
+                              <VideoThumbnail
+                                src={previewUrl}
+                                posterSrc={posterUrl}
+                                className="aspect-video"
+                              />
                               
                               {/* Video info */}
                               <div className="p-1.5 bg-card">

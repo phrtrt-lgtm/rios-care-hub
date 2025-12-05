@@ -13,6 +13,26 @@ const loadingPromises = new Map<string, Promise<string | null>>();
 // Cache expiration time (30 minutes)
 const CACHE_EXPIRATION = 30 * 60 * 1000;
 
+// Get cached session token
+let cachedToken: string | null = null;
+let tokenTimestamp = 0;
+const TOKEN_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+const getAccessToken = async (): Promise<string | null> => {
+  const now = Date.now();
+  if (cachedToken && now - tokenTimestamp < TOKEN_CACHE_DURATION) {
+    return cachedToken;
+  }
+  
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.access_token) {
+    cachedToken = session.access_token;
+    tokenTimestamp = now;
+    return cachedToken;
+  }
+  return null;
+};
+
 export const useMediaCache = () => {
   const [loadedUrls, setLoadedUrls] = useState<Set<string>>(new Set());
   const mountedRef = useRef(true);
@@ -22,11 +42,6 @@ export const useMediaCache = () => {
     return () => {
       mountedRef.current = false;
     };
-  }, []);
-
-  const getAccessToken = useCallback(async (): Promise<string | null> => {
-    const { data: { session } } = await supabase.auth.getSession();
-    return session?.access_token || null;
   }, []);
 
   const getCachedUrl = useCallback((src: string): string | null => {
@@ -62,7 +77,10 @@ export const useMediaCache = () => {
     const loadPromise = (async () => {
       try {
         const token = await getAccessToken();
-        if (!token) return null;
+        if (!token) {
+          console.warn("No auth token available for media loading");
+          return null;
+        }
 
         const response = await fetch(src, {
           headers: {
@@ -70,7 +88,10 @@ export const useMediaCache = () => {
           },
         });
 
-        if (!response.ok) return null;
+        if (!response.ok) {
+          console.warn(`Failed to load media: ${response.status} ${response.statusText}`);
+          return null;
+        }
 
         const blob = await response.blob();
         const blobUrl = URL.createObjectURL(blob);
@@ -96,11 +117,20 @@ export const useMediaCache = () => {
 
     loadingPromises.set(src, loadPromise);
     return loadPromise;
-  }, [getAccessToken, getCachedUrl]);
+  }, [getCachedUrl]);
 
   const preloadMedia = useCallback(async (urls: string[]) => {
-    // Load all URLs in parallel
-    await Promise.all(urls.map(url => loadMedia(url)));
+    // Load all URLs in parallel with concurrency limit
+    const CONCURRENCY_LIMIT = 4;
+    const results: (string | null)[] = [];
+    
+    for (let i = 0; i < urls.length; i += CONCURRENCY_LIMIT) {
+      const batch = urls.slice(i, i + CONCURRENCY_LIMIT);
+      const batchResults = await Promise.all(batch.map(url => loadMedia(url)));
+      results.push(...batchResults);
+    }
+    
+    return results;
   }, [loadMedia]);
 
   const isLoaded = useCallback((src: string): boolean => {
@@ -158,4 +188,37 @@ export const generateVideoThumbnail = (videoUrl: string): Promise<string | null>
     video.src = videoUrl;
     video.load();
   });
+};
+
+// Export a preload function for use outside of React components
+export const preloadMediaUrls = async (urls: string[]): Promise<void> => {
+  const token = await getAccessToken();
+  if (!token) return;
+  
+  const CONCURRENCY_LIMIT = 4;
+  
+  for (let i = 0; i < urls.length; i += CONCURRENCY_LIMIT) {
+    const batch = urls.slice(i, i + CONCURRENCY_LIMIT);
+    await Promise.all(batch.map(async (src) => {
+      // Skip if already cached
+      const cached = mediaCache.get(src);
+      if (cached && Date.now() - cached.timestamp < CACHE_EXPIRATION) {
+        return;
+      }
+      
+      try {
+        const response = await fetch(src, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        
+        if (response.ok) {
+          const blob = await response.blob();
+          const blobUrl = URL.createObjectURL(blob);
+          mediaCache.set(src, { blobUrl, timestamp: Date.now() });
+        }
+      } catch (error) {
+        console.error("Preload error:", error);
+      }
+    }));
+  }
 };
