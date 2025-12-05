@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Star, TrendingUp, TrendingDown, Minus, Info, ChevronDown, ChevronUp, Gift, Clock, AlertTriangle, Zap } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Star, TrendingUp, TrendingDown, Minus, Info, ChevronDown, ChevronUp, Gift, Clock, AlertTriangle, Zap, DollarSign } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useOwnerScore } from "@/hooks/useOwnerScore";
 import { useAuth } from "@/hooks/useAuth";
@@ -70,6 +71,7 @@ export const OwnerScoreDisplay = () => {
   const { user } = useAuth();
   const { data: scoreData, isLoading } = useOwnerScore(user?.id);
   const [showInfo, setShowInfo] = useState(false);
+  const navigate = useNavigate();
 
   if (isLoading) {
     return (
@@ -240,6 +242,16 @@ export const OwnerScoreDisplay = () => {
               </div>
             </CollapsibleContent>
           </Collapsible>
+
+          {/* Link para cobranças */}
+          <Button
+            variant="outline"
+            className="w-full mt-2"
+            onClick={() => navigate("/minhas-cobrancas")}
+          >
+            <DollarSign className="h-4 w-4 mr-2" />
+            Ver Minhas Cobranças
+          </Button>
         </CardContent>
       </Card>
     );
@@ -490,6 +502,16 @@ export const OwnerScoreDisplay = () => {
             </div>
           </div>
         )}
+
+        {/* Link para cobranças */}
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={() => navigate("/minhas-cobrancas")}
+        >
+          <DollarSign className="h-4 w-4 mr-2" />
+          Ver Minhas Cobranças
+        </Button>
       </CardContent>
     </Card>
   );
