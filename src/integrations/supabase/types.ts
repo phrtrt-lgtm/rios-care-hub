@@ -981,12 +981,61 @@ export type Database = {
         }
         Relationships: []
       }
+      owner_payment_scores: {
+        Row: {
+          charge_id: string | null
+          created_at: string
+          id: string
+          owner_id: string
+          points_change: number
+          reason: string
+          score_after: number
+          score_before: number
+        }
+        Insert: {
+          charge_id?: string | null
+          created_at?: string
+          id?: string
+          owner_id: string
+          points_change: number
+          reason: string
+          score_after: number
+          score_before: number
+        }
+        Update: {
+          charge_id?: string | null
+          created_at?: string
+          id?: string
+          owner_id?: string
+          points_change?: number
+          reason?: string
+          score_after?: number
+          score_before?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_payment_scores_charge_id_fkey"
+            columns: ["charge_id"]
+            isOneToOne: false
+            referencedRelation: "charges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_payment_scores_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
           email: string
           id: string
           name: string
+          payment_score: number
           phone: string | null
           photo_url: string | null
           role: Database["public"]["Enums"]["app_role"]
@@ -998,6 +1047,7 @@ export type Database = {
           email: string
           id: string
           name: string
+          payment_score?: number
           phone?: string | null
           photo_url?: string | null
           role?: Database["public"]["Enums"]["app_role"]
@@ -1009,6 +1059,7 @@ export type Database = {
           email?: string
           id?: string
           name?: string
+          payment_score?: number
           phone?: string | null
           photo_url?: string | null
           role?: Database["public"]["Enums"]["app_role"]

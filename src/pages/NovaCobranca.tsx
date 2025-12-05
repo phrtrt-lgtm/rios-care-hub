@@ -12,6 +12,7 @@ import { ArrowLeft, Loader2, Paperclip, X, Sparkles } from "lucide-react";
 import { VoiceToTextInput } from "@/components/VoiceToTextInput";
 import { useToast } from "@/hooks/use-toast";
 import { CHARGE_CATEGORY_OPTIONS } from "@/constants/chargeCategories";
+import { OwnerScoreCard } from "@/components/OwnerScoreCard";
 
 interface Owner {
   id: string;
@@ -248,6 +249,14 @@ export default function NovaCobranca() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Score Card - aparece quando um proprietário é selecionado */}
+              {formData.owner_id && (
+                <OwnerScoreCard 
+                  ownerId={formData.owner_id} 
+                  ownerName={owners.find(o => o.id === formData.owner_id)?.name}
+                />
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="property_id">Unidade</Label>

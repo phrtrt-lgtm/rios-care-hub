@@ -2,10 +2,9 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Plus, LogOut, DollarSign, BarChart3, ClipboardCheck, Ticket, FileText } from "lucide-react";
+import { Plus, LogOut, DollarSign, ClipboardCheck, Ticket } from "lucide-react";
 import { TicketList } from "@/components/TicketList";
 import { AvatarUpload } from "@/components/AvatarUpload";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertBanner } from "@/components/AlertBanner";
 import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
@@ -15,6 +14,7 @@ import { VotacoesPendentes } from "@/components/VotacoesPendentes";
 import { supabase } from "@/integrations/supabase/client";
 import OwnerMaintenancePolicyBanner from "@/components/OwnerMaintenancePolicyBanner";
 import { OwnerPropertiesSection } from "@/components/OwnerPropertiesSection";
+import { OwnerScoreDisplay } from "@/components/OwnerScoreDisplay";
 
 
 export default function MinhaCaixa() {
@@ -173,6 +173,11 @@ export default function MinhaCaixa() {
       <main className="container mx-auto px-4 py-6 md:py-8">
         {/* Propostas Pendentes - Prioridade no topo */}
         <VotacoesPendentes />
+
+        {/* Score de Pagamentos */}
+        <div className="mb-6">
+          <OwnerScoreDisplay />
+        </div>
 
         {/* Owner Properties Section */}
         <OwnerPropertiesSection />
