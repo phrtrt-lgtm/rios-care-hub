@@ -8,12 +8,13 @@ import { Separator } from "@/components/ui/separator";
 import { formatBRL, formatDateTime, formatDate } from "@/lib/format";
 import { ArrowLeft, Download, Loader2, FileText, Calendar, DollarSign, Info } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { AttachmentBubble } from "@/components/AttachmentBubble";
+import { MediaThumbnail } from "@/components/MediaThumbnail";
 import { MediaGallery } from "@/components/MediaGallery";
+import { preloadMediaUrls } from "@/hooks/useMediaCache";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import JSZip from "jszip";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function ManutencaoDetalhes() {
   const { id } = useParams();
@@ -24,6 +25,18 @@ export default function ManutencaoDetalhes() {
   const [downloadingAll, setDownloadingAll] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryStartIndex, setGalleryStartIndex] = useState(0);
+
+  // Preload attachments when maintenance loads
+  useEffect(() => {
+    if (maintenance?.attachments && maintenance.attachments.length > 0) {
+      const mediaUrls = maintenance.attachments
+        .filter((a: any) => a.file_type?.startsWith('image/') || a.file_type?.startsWith('video/'))
+        .map((a: any) => a.file_url);
+      if (mediaUrls.length > 0) {
+        preloadMediaUrls(mediaUrls);
+      }
+    }
+  }, [maintenance]);
 
   if (isLoading) {
     return (
@@ -271,23 +284,68 @@ export default function ManutencaoDetalhes() {
             <CardTitle className="text-base">Anexos</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              {maintenance.attachments.map((attachment: any) => (
-                <div key={attachment.id} className="flex items-center justify-between border rounded-lg p-3">
-                  <div>
-                    <div className="font-medium">{attachment.file_name || 'Anexo'}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {attachment.size_bytes ? `${(attachment.size_bytes / 1024).toFixed(1)} KB` : ''}
+            {(() => {
+              const mediaAttachments = maintenance.attachments.filter(
+                (a: any) => a.file_type?.startsWith('image/') || a.file_type?.startsWith('video/')
+              );
+              const otherAttachments = maintenance.attachments.filter(
+                (a: any) => !a.file_type?.startsWith('image/') && !a.file_type?.startsWith('video/')
+              );
+              
+              return (
+                <div className="space-y-4">
+                  {mediaAttachments.length > 0 && (
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                      {mediaAttachments.map((attachment: any, idx: number) => (
+                        <MediaThumbnail
+                          key={attachment.id}
+                          src={attachment.file_url}
+                          fileType={attachment.file_type}
+                          fileName={attachment.file_name}
+                          size="lg"
+                          onClick={() => {
+                            setGalleryStartIndex(idx);
+                            setGalleryOpen(true);
+                          }}
+                        />
+                      ))}
                     </div>
-                  </div>
-                  <Button variant="outline" size="sm" asChild>
-                    <a href={attachment.file_url} target="_blank" rel="noopener noreferrer">
-                      Ver
-                    </a>
-                  </Button>
+                  )}
+                  {otherAttachments.length > 0 && (
+                    <div className="space-y-2">
+                      {otherAttachments.map((attachment: any) => (
+                        <div key={attachment.id} className="flex items-center justify-between border rounded-lg p-3">
+                          <div>
+                            <div className="font-medium">{attachment.file_name || 'Anexo'}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {attachment.size_bytes ? `${(attachment.size_bytes / 1024).toFixed(1)} KB` : ''}
+                            </div>
+                          </div>
+                          <Button variant="outline" size="sm" asChild>
+                            <a href={attachment.file_url} target="_blank" rel="noopener noreferrer">
+                              Ver
+                            </a>
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  <MediaGallery
+                    items={mediaAttachments.map((a: any) => ({
+                      id: a.id,
+                      file_url: a.file_url,
+                      file_name: a.file_name,
+                      file_type: a.file_type,
+                      size_bytes: a.size_bytes
+                    }))}
+                    initialIndex={galleryStartIndex}
+                    open={galleryOpen}
+                    onOpenChange={setGalleryOpen}
+                  />
                 </div>
-              ))}
-            </div>
+              );
+            })()}
           </CardContent>
         </Card>
       )}

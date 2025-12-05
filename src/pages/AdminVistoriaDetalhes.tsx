@@ -6,6 +6,9 @@ import { LoadingScreen } from '@/components/LoadingScreen';
 import { formatDateTime } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { MediaThumbnail } from '@/components/MediaThumbnail';
+import { MediaGallery } from '@/components/MediaGallery';
+import { preloadMediaUrls } from '@/hooks/useMediaCache';
 
 interface Inspection {
   id: string;
@@ -40,6 +43,8 @@ export default function AdminVistoriaDetalhes() {
   const [property, setProperty] = useState<Property | null>(null);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryStartIndex, setGalleryStartIndex] = useState(0);
 
   useEffect(() => {
     if (!authLoading) {
@@ -82,12 +87,34 @@ export default function AdminVistoriaDetalhes() {
           .order('created_at');
 
         if (attachError) throw attachError;
-        setAttachments(attachData || []);
+        const attachmentsList = attachData || [];
+        setAttachments(attachmentsList);
+
+        // Preload all media
+        const mediaUrls = attachmentsList
+          .filter(a => a.file_type?.startsWith('image/') || a.file_type?.startsWith('video/'))
+          .map(a => a.file_url);
+        if (mediaUrls.length > 0) {
+          preloadMediaUrls(mediaUrls);
+        }
       }
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const imageAttachments = attachments.filter(a => a.file_type?.startsWith('image/'));
+  const videoAttachments = attachments.filter(a => a.file_type?.startsWith('video/'));
+  const audioAttachments = attachments.filter(a => a.file_type?.startsWith('audio/'));
+  const mediaAttachments = [...imageAttachments, ...videoAttachments];
+
+  const handleMediaClick = (attachment: Attachment) => {
+    const index = mediaAttachments.findIndex(a => a.id === attachment.id);
+    if (index !== -1) {
+      setGalleryStartIndex(index);
+      setGalleryOpen(true);
     }
   };
 
@@ -129,10 +156,10 @@ export default function AdminVistoriaDetalhes() {
             </span>
           </div>
 
-          {attachments.filter(a => a.file_type?.startsWith('audio/')).length > 0 && (
+          {audioAttachments.length > 0 && (
             <div className="space-y-3">
               <span className="font-semibold">Áudios:</span>
-              {attachments.filter(a => a.file_type?.startsWith('audio/')).map((audio, idx) => (
+              {audioAttachments.map((audio, idx) => (
                 <div key={audio.id} className="space-y-1">
                   <div className="text-sm text-muted-foreground">Áudio {idx + 1}</div>
                   <audio controls src={audio.file_url} className="w-full" />
@@ -168,32 +195,48 @@ export default function AdminVistoriaDetalhes() {
         {attachments.length === 0 ? (
           <div className="text-sm text-muted-foreground">Nenhum anexo.</div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {attachments.map((attachment) => (
-              <a
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+            {mediaAttachments.map((attachment) => (
+              <MediaThumbnail
                 key={attachment.id}
-                href={attachment.file_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block group"
-              >
-                {attachment.file_type?.startsWith('image/') ? (
-                  <img
-                    src={attachment.file_url}
-                    alt={attachment.file_name || 'Anexo'}
-                    className="w-full h-32 object-cover rounded group-hover:opacity-90 transition"
-                  />
-                ) : (
-                  <div className="w-full h-32 rounded bg-muted flex flex-col items-center justify-center text-xs group-hover:bg-muted/80 transition">
+                src={attachment.file_url}
+                fileType={attachment.file_type}
+                fileName={attachment.file_name}
+                size="lg"
+                onClick={() => handleMediaClick(attachment)}
+              />
+            ))}
+            {attachments
+              .filter(a => !a.file_type?.startsWith('image/') && !a.file_type?.startsWith('video/') && !a.file_type?.startsWith('audio/'))
+              .map((attachment) => (
+                <a
+                  key={attachment.id}
+                  href={attachment.file_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block group"
+                >
+                  <div className="w-full h-24 rounded bg-muted flex flex-col items-center justify-center text-xs group-hover:bg-muted/80 transition">
                     <span className="text-muted-foreground">{attachment.file_type || 'arquivo'}</span>
                     <span className="mt-1">Abrir</span>
                   </div>
-                )}
-              </a>
-            ))}
+                </a>
+              ))}
           </div>
         )}
       </Card>
+
+      <MediaGallery
+        items={mediaAttachments.map(a => ({
+          id: a.id,
+          file_url: a.file_url,
+          file_name: a.file_name,
+          file_type: a.file_type
+        }))}
+        initialIndex={galleryStartIndex}
+        open={galleryOpen}
+        onOpenChange={setGalleryOpen}
+      />
     </div>
   );
 }
