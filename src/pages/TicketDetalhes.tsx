@@ -15,6 +15,7 @@ import { ArrowLeft, Send, Paperclip, Loader2, Sparkles, FileText, ChevronDown, X
 import { AttachmentBubble } from "@/components/AttachmentBubble";
 import { MediaGallery } from "@/components/MediaGallery";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { preloadMediaUrls } from "@/hooks/useMediaCache";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -152,14 +153,21 @@ export default function TicketDetalhes() {
       
       // Coletar todos os anexos de mídia para a galeria
       const mediaItems: Attachment[] = [];
+      const allUrls: string[] = [];
       (data || []).forEach((msg: Message) => {
         msg.attachments?.forEach((att) => {
+          allUrls.push(att.file_url);
           if (att.file_type?.startsWith('image/') || att.file_type?.startsWith('video/')) {
             mediaItems.push(att);
           }
         });
       });
       setAllMediaItems(mediaItems);
+      
+      // Preload all media URLs for faster display
+      if (allUrls.length > 0) {
+        preloadMediaUrls(allUrls);
+      }
     } catch (error: any) {
       console.error('Error fetching messages:', error);
       toast({

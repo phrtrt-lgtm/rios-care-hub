@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Calendar, User } from "lucide-react";
 import { formatDateTime } from "@/lib/format";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { MediaThumbnail } from "@/components/MediaThumbnail";
+import { MediaGallery } from "@/components/MediaGallery";
+import { preloadMediaUrls } from "@/hooks/useMediaCache";
 
 interface Inspection {
   id: string;
@@ -37,6 +40,8 @@ export default function VistoriaDetalhes() {
   const [inspection, setInspection] = useState<Inspection | null>(null);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryStartIndex, setGalleryStartIndex] = useState(0);
 
   useEffect(() => {
     if (!user) {
@@ -88,12 +93,34 @@ export default function VistoriaDetalhes() {
         .select("*")
         .eq("inspection_id", id!);
 
-      setAttachments(attachmentsData || []);
+      const attachmentsList = attachmentsData || [];
+      setAttachments(attachmentsList);
+
+      // Preload all media
+      const mediaUrls = attachmentsList
+        .filter(a => a.file_type?.startsWith('image/') || a.file_type?.startsWith('video/'))
+        .map(a => a.file_url);
+      if (mediaUrls.length > 0) {
+        preloadMediaUrls(mediaUrls);
+      }
     } catch (error) {
       console.error("Erro ao carregar vistoria:", error);
       navigate("/vistorias");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const imageAttachments = attachments.filter(a => a.file_type?.startsWith('image/'));
+  const videoAttachments = attachments.filter(a => a.file_type?.startsWith('video/'));
+  const audioAttachments = attachments.filter(a => a.file_type?.startsWith('audio/'));
+  const mediaAttachments = [...imageAttachments, ...videoAttachments];
+
+  const handleMediaClick = (attachment: Attachment) => {
+    const index = mediaAttachments.findIndex(a => a.id === attachment.id);
+    if (index !== -1) {
+      setGalleryStartIndex(index);
+      setGalleryOpen(true);
     }
   };
 
@@ -152,10 +179,10 @@ export default function VistoriaDetalhes() {
               </span>
             </div>
 
-            {attachments.filter(a => a.file_type?.startsWith('audio/')).length > 0 && (
+            {audioAttachments.length > 0 && (
               <div className="space-y-3">
                 <span className="font-semibold">Áudios:</span>
-                {attachments.filter(a => a.file_type?.startsWith('audio/')).map((audio, idx) => (
+                {audioAttachments.map((audio, idx) => (
                   <div key={audio.id} className="space-y-1">
                     <div className="text-sm text-muted-foreground">Áudio {idx + 1}</div>
                     <audio controls src={audio.file_url} className="w-full" />
@@ -173,26 +200,38 @@ export default function VistoriaDetalhes() {
               </div>
             )}
 
-            {attachments.filter(a => a.file_type?.startsWith('image/')).length > 0 && (
+            {mediaAttachments.length > 0 && (
               <div className="space-y-2">
-                <span className="font-semibold">Fotos:</span>
-                <div className="grid grid-cols-2 gap-2">
-                  {attachments
-                    .filter(a => a.file_type?.startsWith('image/'))
-                    .map((img) => (
-                      <img
-                        key={img.id}
-                        src={img.file_url}
-                        alt={img.file_name || 'Foto da vistoria'}
-                        className="w-full h-48 object-cover rounded"
-                      />
-                    ))}
+                <span className="font-semibold">Fotos e Vídeos:</span>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                  {mediaAttachments.map((media) => (
+                    <MediaThumbnail
+                      key={media.id}
+                      src={media.file_url}
+                      fileType={media.file_type}
+                      fileName={media.file_name}
+                      size="lg"
+                      onClick={() => handleMediaClick(media)}
+                    />
+                  ))}
                 </div>
               </div>
             )}
           </CardContent>
         </Card>
       </main>
+
+      <MediaGallery
+        items={mediaAttachments.map(a => ({
+          id: a.id,
+          file_url: a.file_url,
+          file_name: a.file_name,
+          file_type: a.file_type
+        }))}
+        initialIndex={galleryStartIndex}
+        open={galleryOpen}
+        onOpenChange={setGalleryOpen}
+      />
     </div>
   );
 }
