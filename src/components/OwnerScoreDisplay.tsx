@@ -92,24 +92,141 @@ export const OwnerScoreDisplay = () => {
 
   if (!scoreData) return null;
 
-  // Only show after 3+ charges
+  // Show intro version for new users (less than 3 charges)
   if (scoreData.totalCharges < 3) {
     return (
-      <Card className="bg-gradient-to-br from-muted/50 to-muted/30 border-muted">
-        <CardContent className="py-4">
-          <div className="flex items-center gap-3">
+      <Card className="bg-gradient-to-br from-primary/5 via-background to-primary/10 border-primary/20 overflow-hidden">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg font-medium flex items-center gap-2">
+              <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
+              Score de Pagamentos
+            </CardTitle>
+            <div className="bg-primary/20 text-primary text-xs font-medium px-2.5 py-1 rounded-full">
+              Novo!
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Progress indicator */}
+          <div className="bg-muted/50 rounded-lg p-3 flex items-center gap-3">
             <div className="flex gap-0.5">
               {[1, 2, 3, 4, 5].map((i) => (
                 <Star
                   key={i}
-                  size={16}
+                  size={18}
                   className="fill-muted text-muted-foreground/30"
                 />
               ))}
             </div>
-            <p className="text-sm text-muted-foreground">
-              Seu score será calculado após 3 cobranças ({scoreData.totalCharges}/3)
+            <div>
+              <p className="text-sm font-medium">Seu score será ativado em breve</p>
+              <p className="text-xs text-muted-foreground">
+                {scoreData.totalCharges}/3 cobranças para começar a calcular
+              </p>
+            </div>
+          </div>
+
+          {/* Importante saber */}
+          <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
+            <p className="text-sm font-medium text-amber-600 flex items-center gap-2 mb-1">
+              <Info className="h-4 w-4" />
+              Importante saber
             </p>
+            <p className="text-sm text-muted-foreground">
+              Como você está iniciando, é essencial entender como funciona o sistema de pontuação 
+              para começar com o pé direito!
+            </p>
+          </div>
+
+          {/* Explicação completa */}
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Todos os proprietários começam com <strong>50 pontos</strong>. Seu score reflete seu histórico de pagamentos 
+              e é usado pela equipe como referência ao definir condições e aportes em manutenções.
+            </p>
+
+            {/* Por que manter alto */}
+            <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
+              <p className="text-xs font-medium text-primary mb-1.5">Por que manter um score alto?</p>
+              <ul className="text-xs text-muted-foreground space-y-1">
+                <li>• Maior confiança da equipe ao negociar condições especiais</li>
+                <li>• Possibilidade de aportes mais generosos em manutenções</li>
+                <li>• Prioridade no atendimento de solicitações</li>
+                <li>• Histórico positivo facilita acordos futuros</li>
+              </ul>
+            </div>
+            
+            {/* Como ganhar pontos */}
+            <div>
+              <p className="text-xs font-medium text-emerald-600 mb-2">Como ganhar pontos:</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex items-start gap-2 bg-emerald-500/10 rounded-lg p-2.5">
+                  <Gift className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs font-medium text-emerald-600">Pagamento Antecipado</p>
+                    <p className="text-xs text-muted-foreground">+5 pontos (2+ dias antes)</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-2 bg-blue-500/10 rounded-lg p-2.5">
+                  <Clock className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs font-medium text-blue-600">Pagamento em Dia</p>
+                    <p className="text-xs text-muted-foreground">+1 ponto</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Como perder pontos */}
+            <div>
+              <p className="text-xs font-medium text-red-600 mb-2">Como perder pontos:</p>
+              <div className="grid grid-cols-1 gap-2">
+                <div className="flex items-start gap-2 bg-orange-500/10 rounded-lg p-2.5">
+                  <AlertTriangle className="h-4 w-4 text-orange-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs font-medium text-orange-600">Pagamento Atrasado (-15 pontos)</p>
+                    <p className="text-xs text-muted-foreground">
+                      Quando o pagamento é feito após o vencimento mas antes do débito automático.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-2 bg-red-500/10 rounded-lg p-2.5">
+                  <Zap className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs font-medium text-red-600">Débito em Reserva (-30 pontos)</p>
+                    <p className="text-xs text-muted-foreground">
+                      Quando o valor é descontado das suas reservas futuras. Penalidade mais severa.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Níveis */}
+            <div className="pt-2 border-t">
+              <p className="text-xs font-medium mb-2">Níveis de classificação:</p>
+              <div className="flex flex-wrap gap-2">
+                <span className="text-xs bg-emerald-500/20 text-emerald-600 px-2 py-0.5 rounded">90-100: Excelente ★★★★★</span>
+                <span className="text-xs bg-blue-500/20 text-blue-600 px-2 py-0.5 rounded">75-89: Muito Bom ★★★★</span>
+                <span className="text-xs bg-yellow-500/20 text-yellow-600 px-2 py-0.5 rounded">60-74: Bom ★★★</span>
+                <span className="text-xs bg-orange-500/20 text-orange-600 px-2 py-0.5 rounded">40-59: Regular ★★</span>
+                <span className="text-xs bg-red-500/20 text-red-600 px-2 py-0.5 rounded">0-39: Atenção ★</span>
+              </div>
+            </div>
+
+            {/* Dica inicial */}
+            <div className="flex items-start gap-2 text-xs bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2.5">
+              <Gift className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium text-emerald-600">Comece bem!</p>
+                <p className="text-muted-foreground">
+                  Pague suas próximas cobranças com antecedência e já comece a construir um excelente histórico!
+                </p>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
