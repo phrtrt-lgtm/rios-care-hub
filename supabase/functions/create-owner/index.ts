@@ -15,9 +15,8 @@ serve(async (req) => {
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
 
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !SUPABASE_ANON_KEY) {
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       throw new Error("Missing environment variables");
     }
 
@@ -30,13 +29,12 @@ serve(async (req) => {
       );
     }
 
-    // Create user client with the JWT to verify the user
-    const supabaseUser = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { headers: { Authorization: authHeader } }
-    });
-    
-    // Get user from the token
-    const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
+    // Create admin client for privileged operations
+    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Extract token from header and verify JWT
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
     
     if (userError || !user) {
       console.error("User verification error:", userError);
@@ -47,9 +45,6 @@ serve(async (req) => {
     }
 
     console.log("User authenticated:", user.id);
-    
-    // Create admin client for privileged operations
-    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // Check if user is admin
     const { data: profile, error: profileError } = await supabaseAdmin
