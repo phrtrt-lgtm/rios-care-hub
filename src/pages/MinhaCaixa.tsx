@@ -174,13 +174,13 @@ export default function MinhaCaixa() {
         {/* Propostas Pendentes - Prioridade no topo */}
         <VotacoesPendentes />
 
-        {/* Score de Pagamentos */}
+        {/* Owner Properties Section */}
+        <OwnerPropertiesSection />
+
+        {/* Score de Pagamentos - abaixo das unidades */}
         <div className="mb-6">
           <OwnerScoreDisplay />
         </div>
-
-        {/* Owner Properties Section */}
-        <OwnerPropertiesSection />
 
         {/* Maintenance Policy Banner */}
         <OwnerMaintenancePolicyBanner />

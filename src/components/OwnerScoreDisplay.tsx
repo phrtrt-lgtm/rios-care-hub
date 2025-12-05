@@ -1,8 +1,11 @@
-import { Star, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { useState } from "react";
+import { Star, TrendingUp, TrendingDown, Minus, Info, ChevronDown, ChevronUp, Gift, Clock, AlertTriangle, Zap } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useOwnerScore } from "@/hooks/useOwnerScore";
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   LineChart,
   Line,
@@ -66,6 +69,7 @@ const getReasonIcon = (pointsChange: number) => {
 export const OwnerScoreDisplay = () => {
   const { user } = useAuth();
   const { data: scoreData, isLoading } = useOwnerScore(user?.id);
+  const [showInfo, setShowInfo] = useState(false);
 
   if (isLoading) {
     return (
@@ -104,7 +108,7 @@ export const OwnerScoreDisplay = () => {
               ))}
             </div>
             <p className="text-sm text-muted-foreground">
-              Seu score será calculado após 3 cobranças
+              Seu score será calculado após 3 cobranças ({scoreData.totalCharges}/3)
             </p>
           </div>
         </CardContent>
@@ -124,12 +128,86 @@ export const OwnerScoreDisplay = () => {
   return (
     <Card className="bg-gradient-to-br from-primary/5 via-background to-primary/10 border-primary/20 overflow-hidden">
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-medium flex items-center gap-2">
-          <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
-          Meu Score de Pagamentos
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg font-medium flex items-center gap-2">
+            <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
+            Meu Score de Pagamentos
+          </CardTitle>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowInfo(!showInfo)}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <Info className="h-4 w-4 mr-1" />
+            {showInfo ? "Fechar" : "Como funciona?"}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Explicação do sistema */}
+        <Collapsible open={showInfo} onOpenChange={setShowInfo}>
+          <CollapsibleContent>
+            <div className="bg-muted/50 rounded-lg p-4 mb-4 space-y-3">
+              <h4 className="font-medium text-sm flex items-center gap-2">
+                <Info className="h-4 w-4 text-primary" />
+                Como funciona o Score de Pagamentos
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                Seu score reflete seu histórico de pagamentos e pode influenciar benefícios futuros.
+                Mantenha um bom score para aproveitar condições especiais!
+              </p>
+              
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <div className="flex items-start gap-2 bg-emerald-500/10 rounded-lg p-2.5">
+                  <Gift className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs font-medium text-emerald-600">Pagamento Antecipado</p>
+                    <p className="text-xs text-muted-foreground">+5 pontos (2+ dias antes)</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-2 bg-blue-500/10 rounded-lg p-2.5">
+                  <Clock className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs font-medium text-blue-600">Pagamento em Dia</p>
+                    <p className="text-xs text-muted-foreground">+1 ponto</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-2 bg-orange-500/10 rounded-lg p-2.5">
+                  <AlertTriangle className="h-4 w-4 text-orange-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs font-medium text-orange-600">Pagamento Atrasado</p>
+                    <p className="text-xs text-muted-foreground">-15 pontos</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-2 bg-red-500/10 rounded-lg p-2.5">
+                  <Zap className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs font-medium text-red-600">Débito em Reserva</p>
+                    <p className="text-xs text-muted-foreground">-30 pontos</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t">
+                <p className="text-xs text-muted-foreground">
+                  <strong>Níveis de classificação:</strong>
+                </p>
+                <div className="flex flex-wrap gap-2 mt-1.5">
+                  <span className="text-xs bg-emerald-500/20 text-emerald-600 px-2 py-0.5 rounded">90-100: Excelente ★★★★★</span>
+                  <span className="text-xs bg-blue-500/20 text-blue-600 px-2 py-0.5 rounded">75-89: Muito Bom ★★★★</span>
+                  <span className="text-xs bg-yellow-500/20 text-yellow-600 px-2 py-0.5 rounded">60-74: Bom ★★★</span>
+                  <span className="text-xs bg-orange-500/20 text-orange-600 px-2 py-0.5 rounded">40-59: Regular ★★</span>
+                  <span className="text-xs bg-red-500/20 text-red-600 px-2 py-0.5 rounded">0-39: Atenção ★</span>
+                </div>
+              </div>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+
         {/* Score principal com estrelas */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -234,6 +312,19 @@ export const OwnerScoreDisplay = () => {
                   </span>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Dica de bônus */}
+        {scoreData.currentScore < 90 && (
+          <div className="flex items-start gap-2 text-xs bg-primary/5 border border-primary/10 rounded-lg p-2.5">
+            <Gift className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+            <div>
+              <p className="font-medium text-primary">Dica para aumentar seu score</p>
+              <p className="text-muted-foreground">
+                Pague suas cobranças com 2 ou mais dias de antecedência para ganhar +5 pontos por pagamento!
+              </p>
             </div>
           </div>
         )}
