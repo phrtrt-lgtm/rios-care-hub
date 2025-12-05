@@ -407,9 +407,11 @@ export const OwnerScoreDisplay = () => {
 
           {/* Mini stats */}
           <div className="text-right text-sm space-y-0.5">
-            <div className="text-emerald-500">
-              {scoreData.paidEarly + scoreData.paidOnTime} em dia
-            </div>
+            {(scoreData.paidEarly + scoreData.paidOnTime) > 0 && (
+              <div className="text-emerald-500">
+                {scoreData.paidEarly + scoreData.paidOnTime} em dia
+              </div>
+            )}
             {scoreData.paidLate > 0 && (
               <div className="text-orange-500">{scoreData.paidLate} atrasados</div>
             )}
