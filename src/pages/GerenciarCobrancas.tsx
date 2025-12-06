@@ -8,20 +8,25 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowLeft, DollarSign, Calendar, User, Paperclip, Search, Filter, Pencil, Trash2, Video, Image } from "lucide-react";
+import { ArrowLeft, DollarSign, Calendar, User, Paperclip, Search, Filter, Pencil, Trash2, Video, Image, AlertCircle } from "lucide-react";
 import { AuthenticatedImage } from "@/components/AuthenticatedMedia";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { CHARGE_CATEGORIES, CHARGE_CATEGORY_OPTIONS } from "@/constants/chargeCategories";
+import { useUpdateOwnerScore } from "@/hooks/useOwnerScore";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+// Payment status options that affect owner score
+type PaymentStatus = 'paid_early' | 'paid_on_time' | 'paid_late' | 'debited';
 
 const statusUpdateSchema = z.object({
-  status: z.enum(['draft', 'sent', 'paid', 'overdue', 'cancelled']),
+  status: z.enum(['draft', 'sent', 'paid', 'paid_early', 'paid_on_time', 'paid_late', 'overdue', 'cancelled', 'debited']),
   payment_link_url: z.string().url().optional().or(z.literal(''))
 });
 
@@ -66,6 +71,7 @@ const GerenciarCobrancas = () => {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { updateScore } = useUpdateOwnerScore();
   const [charges, setCharges] = useState<Charge[]>([]);
   const [filteredCharges, setFilteredCharges] = useState<Charge[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,6 +87,7 @@ const GerenciarCobrancas = () => {
   const [selectedCharges, setSelectedCharges] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [updatingScore, setUpdatingScore] = useState(false);
 
   useEffect(() => {
     if (!user || !['admin', 'agent'].includes(profile?.role || '')) {
@@ -187,21 +194,75 @@ const GerenciarCobrancas = () => {
 
     try {
       const validated = statusUpdateSchema.parse(formData);
+      setUpdatingScore(true);
+
+      // Map payment statuses to database status and score reason
+      let dbStatus = validated.status;
+      let scoreReason: "early_payment" | "on_time_payment" | "late_payment" | "reserve_debit" | null = null;
+      let paidAt: string | null = null;
+      let debitedAt: string | null = null;
+
+      switch (validated.status) {
+        case 'paid_early':
+          dbStatus = 'paid';
+          scoreReason = 'early_payment';
+          paidAt = new Date().toISOString();
+          break;
+        case 'paid_on_time':
+          dbStatus = 'paid';
+          scoreReason = 'on_time_payment';
+          paidAt = new Date().toISOString();
+          break;
+        case 'paid_late':
+          dbStatus = 'paid';
+          scoreReason = 'late_payment';
+          paidAt = new Date().toISOString();
+          break;
+        case 'debited':
+          dbStatus = 'debited';
+          scoreReason = 'reserve_debit';
+          debitedAt = new Date().toISOString();
+          break;
+      }
+
+      // Update charge status
+      const updateData: any = {
+        status: dbStatus,
+        payment_link_url: validated.payment_link_url || null
+      };
+      
+      if (paidAt) updateData.paid_at = paidAt;
+      if (debitedAt) updateData.debited_at = debitedAt;
 
       const { error } = await supabase
         .from('charges')
-        .update({
-          status: validated.status,
-          payment_link_url: validated.payment_link_url || null
-        })
+        .update(updateData)
         .eq('id', editingCharge!.id);
 
       if (error) throw error;
 
-      toast({
-        title: "Status atualizado!",
-        description: "O status da cobrança foi atualizado com sucesso."
-      });
+      // Update owner score if applicable
+      if (scoreReason && editingCharge) {
+        try {
+          await updateScore(editingCharge.owner_id, editingCharge.id, scoreReason);
+          toast({
+            title: "Status e pontuação atualizados!",
+            description: `O status foi atualizado e a pontuação do proprietário foi ${scoreReason.includes('payment') && !scoreReason.includes('late') ? 'aumentada' : 'reduzida'}.`
+          });
+        } catch (scoreError) {
+          console.error('Erro ao atualizar pontuação:', scoreError);
+          toast({
+            title: "Status atualizado!",
+            description: "O status foi atualizado, mas houve um erro ao atualizar a pontuação.",
+            variant: "destructive"
+          });
+        }
+      } else {
+        toast({
+          title: "Status atualizado!",
+          description: "O status da cobrança foi atualizado com sucesso."
+        });
+      }
 
       setDialogOpen(false);
       setEditingCharge(null);
@@ -220,6 +281,8 @@ const GerenciarCobrancas = () => {
           variant: "destructive"
         });
       }
+    } finally {
+      setUpdatingScore(false);
     }
   };
 
@@ -282,17 +345,32 @@ const GerenciarCobrancas = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      draft: { label: 'Rascunho', variant: 'secondary' as const },
-      sent: { label: 'Enviada', variant: 'default' as const },
-      paid: { label: 'Paga', variant: 'default' as const },
-      overdue: { label: 'Vencida', variant: 'destructive' as const },
-      cancelled: { label: 'Cancelada', variant: 'outline' as const },
-      debited: { label: 'Debitado em Reserva', variant: 'destructive' as const }
+    const statusConfig: Record<string, { label: string; variant: "secondary" | "default" | "destructive" | "outline"; className?: string }> = {
+      draft: { label: 'Rascunho', variant: 'secondary' },
+      sent: { label: 'Enviada', variant: 'default' },
+      paid: { label: 'Paga', variant: 'default', className: 'bg-green-500' },
+      overdue: { label: 'Vencida', variant: 'destructive' },
+      cancelled: { label: 'Cancelada', variant: 'outline' },
+      debited: { label: 'Débito em Reserva', variant: 'destructive', className: 'bg-red-700' }
     };
 
-    const config = statusConfig[status as keyof typeof statusConfig] || { label: status, variant: 'outline' as const };
-    return <Badge variant={config.variant}>{config.label}</Badge>;
+    const config = statusConfig[status] || { label: status, variant: 'outline' as const };
+    return <Badge variant={config.variant} className={config.className}>{config.label}</Badge>;
+  };
+
+  const getScoreImpactInfo = (status: string) => {
+    switch (status) {
+      case 'paid_early':
+        return { points: '+5', color: 'text-green-600', description: 'Pago com antecedência (2+ dias antes)' };
+      case 'paid_on_time':
+        return { points: '+1', color: 'text-blue-600', description: 'Pago no prazo' };
+      case 'paid_late':
+        return { points: '-15', color: 'text-orange-600', description: 'Pago com atraso' };
+      case 'debited':
+        return { points: '-30', color: 'text-red-600', description: 'Debitado da reserva' };
+      default:
+        return null;
+    }
   };
 
   const formatCurrency = (cents: number, currency: string) => {
@@ -560,9 +638,12 @@ const GerenciarCobrancas = () => {
 
         {/* Dialog de Edição */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent>
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Atualizar Status da Cobrança</DialogTitle>
+              <DialogDescription>
+                Selecione o novo status. Status de pagamento afetam a pontuação do proprietário.
+              </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit}>
               <div className="space-y-4 py-4">
@@ -575,12 +656,52 @@ const GerenciarCobrancas = () => {
                     <SelectContent>
                       <SelectItem value="draft">Rascunho</SelectItem>
                       <SelectItem value="sent">Enviada</SelectItem>
-                      <SelectItem value="paid">Paga</SelectItem>
                       <SelectItem value="overdue">Vencida</SelectItem>
                       <SelectItem value="cancelled">Cancelada</SelectItem>
+                      <SelectItem value="paid" disabled className="opacity-50">
+                        ── Status de Pagamento ──
+                      </SelectItem>
+                      <SelectItem value="paid_early">
+                        <span className="flex items-center gap-2">
+                          ✅ Pago em até 2 dias
+                          <Badge variant="outline" className="text-green-600 border-green-600 text-xs">+5 pts</Badge>
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="paid_on_time">
+                        <span className="flex items-center gap-2">
+                          ✅ Pago até o vencimento
+                          <Badge variant="outline" className="text-blue-600 border-blue-600 text-xs">+1 pt</Badge>
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="paid_late">
+                        <span className="flex items-center gap-2">
+                          ⚠️ Pago com atraso
+                          <Badge variant="outline" className="text-orange-600 border-orange-600 text-xs">-15 pts</Badge>
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="debited">
+                        <span className="flex items-center gap-2">
+                          🔴 Débito em Reserva
+                          <Badge variant="outline" className="text-red-600 border-red-600 text-xs">-30 pts</Badge>
+                        </span>
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Score impact alert */}
+                {getScoreImpactInfo(formData.status) && (
+                  <Alert className={`border-2 ${formData.status.includes('paid') && !formData.status.includes('late') ? 'border-green-200 bg-green-50' : 'border-orange-200 bg-orange-50'}`}>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription className="flex flex-col gap-1">
+                      <span className="font-medium">{getScoreImpactInfo(formData.status)?.description}</span>
+                      <span className={`font-bold ${getScoreImpactInfo(formData.status)?.color}`}>
+                        Impacto na pontuação: {getScoreImpactInfo(formData.status)?.points} pontos
+                      </span>
+                    </AlertDescription>
+                  </Alert>
+                )}
+
                 <div>
                   <Label htmlFor="payment_link">Link de Pagamento</Label>
                   <Input
@@ -592,10 +713,12 @@ const GerenciarCobrancas = () => {
                 </div>
               </div>
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} disabled={updatingScore}>
                   Cancelar
                 </Button>
-                <Button type="submit">Salvar</Button>
+                <Button type="submit" disabled={updatingScore}>
+                  {updatingScore ? "Salvando..." : "Salvar"}
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>
