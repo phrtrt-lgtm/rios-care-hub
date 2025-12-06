@@ -49,6 +49,7 @@ import MeusChamados from "./pages/MeusChamados";
 import AdminProfissionais from "./pages/AdminProfissionais";
 import AdminManutencoesKanban from "./pages/AdminManutencoesKanban";
 import NovaManutencao from "./pages/NovaManutencao";
+import AdminManutencoesConluidas from "./pages/AdminManutencoesConluidas";
 
 const queryClient = new QueryClient();
 
@@ -352,6 +353,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['admin', 'maintenance']}>
                   <NovaManutencao />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/manutencoes-concluidas"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'maintenance']}>
+                  <AdminManutencoesConluidas />
                 </ProtectedRoute>
               }
             />
