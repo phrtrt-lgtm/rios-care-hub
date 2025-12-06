@@ -201,17 +201,6 @@ export default function Painel() {
             {(profile?.role === "admin" || profile?.role === "maintenance") && (
               <Button 
                 size="lg" 
-                className="h-20 text-base font-semibold bg-purple-600 hover:bg-purple-700"
-                onClick={() => navigate("/admin/manutencoes")}
-              >
-                <Wrench className="mr-3 h-6 w-6" />
-                Quadro Manutenções
-              </Button>
-            )}
-
-            {(profile?.role === "admin" || profile?.role === "maintenance") && (
-              <Button 
-                size="lg" 
                 className="h-20 text-base font-semibold"
                 onClick={() => navigate("/admin/nova-manutencao")}
                 variant="outline"
