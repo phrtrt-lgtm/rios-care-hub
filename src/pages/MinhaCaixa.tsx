@@ -16,6 +16,7 @@ import OwnerMaintenancePolicyBanner from "@/components/OwnerMaintenancePolicyBan
 import { OwnerPropertiesSection } from "@/components/OwnerPropertiesSection";
 import { OwnerScoreDisplay } from "@/components/OwnerScoreDisplay";
 import { MaintenanceKanbanPreview } from "@/components/MaintenanceKanbanPreview";
+import { OwnerMaintenanceProgress } from "@/components/OwnerMaintenanceProgress";
 
 
 export default function MinhaCaixa() {
@@ -181,6 +182,9 @@ export default function MinhaCaixa() {
             <MaintenanceKanbanPreview />
           </div>
         )}
+
+        {/* Owner Maintenance Progress - for owners */}
+        {profile?.role === "owner" && <OwnerMaintenanceProgress />}
 
         {/* Owner Properties Section */}
         <OwnerPropertiesSection />
