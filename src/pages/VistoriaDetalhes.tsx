@@ -4,8 +4,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Calendar, User } from "lucide-react";
-import { formatDateTime } from "@/lib/format";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Calendar, User, Headphones, FileText, CheckCircle2, AlertTriangle, Building2 } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { MediaThumbnail } from "@/components/MediaThumbnail";
 import { MediaGallery } from "@/components/MediaGallery";
@@ -124,6 +126,12 @@ export default function VistoriaDetalhes() {
     }
   };
 
+  // Check if transcript contains AI summary indicators
+  const hasSummary = inspection?.transcript?.includes('✅') || 
+                     inspection?.transcript?.includes('🔧') || 
+                     inspection?.transcript?.includes('💧') || 
+                     inspection?.transcript?.includes('⚡');
+
   if (loading) {
     return <LoadingScreen />;
   }
@@ -132,9 +140,11 @@ export default function VistoriaDetalhes() {
     return null;
   }
 
+  const isOk = inspection.notes === 'OK';
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
-      <header className="border-b bg-card/50 backdrop-blur-sm">
+      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4">
           <div className="flex h-16 items-center gap-4">
             <Button variant="ghost" size="icon" onClick={() => navigate("/vistorias")}>
@@ -142,68 +152,112 @@ export default function VistoriaDetalhes() {
             </Button>
             <div className="flex-1">
               <h1 className="text-xl font-semibold">Detalhes da Vistoria</h1>
+              <p className="text-sm text-muted-foreground">{inspection.property.name}</p>
             </div>
+            <Badge 
+              variant={isOk ? "secondary" : "destructive"}
+              className={isOk ? "bg-green-500/20 text-green-700 dark:text-green-400" : ""}
+            >
+              {isOk ? <CheckCircle2 className="h-4 w-4 mr-1" /> : <AlertTriangle className="h-4 w-4 mr-1" />}
+              {inspection.notes || '—'}
+            </Badge>
           </div>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-6 max-w-3xl">
-        <Card>
-          <CardContent className="p-6 space-y-4">
-            <div>
-              <span className="font-semibold">Imóvel:</span>
-              <p className="text-lg">{inspection.property.name}</p>
-            </div>
-
-            <div>
-              <span className="font-semibold">Data:</span>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Calendar className="h-4 w-4" />
-                {formatDateTime(inspection.created_at)}
-              </div>
-            </div>
-
-            <div>
-              <span className="font-semibold">Faxineira:</span>
-              <div className="flex items-center gap-2">
-                <User className="h-4 w-4" />
-                {inspection.cleaner_name || "-"}
-                {inspection.cleaner_phone && <span className="text-muted-foreground"> ({inspection.cleaner_phone})</span>}
-              </div>
-            </div>
-
-            <div>
-              <span className="font-semibold">Status:</span>{' '}
-              <span className={`font-bold ${inspection.notes === 'OK' ? 'text-green-600' : 'text-red-600'}`}>
-                {inspection.notes || '-'}
-              </span>
-            </div>
-
-            {audioAttachments.length > 0 && (
-              <div className="space-y-3">
-                <span className="font-semibold">Áudios:</span>
-                {audioAttachments.map((audio, idx) => (
-                  <div key={audio.id} className="space-y-1">
-                    <div className="text-sm text-muted-foreground">Áudio {idx + 1}</div>
-                    <audio controls src={audio.file_url} className="w-full" />
+        <div className="space-y-6">
+          {/* Property & Date Info */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-4">
+                <div className="w-20 h-14 rounded overflow-hidden bg-muted flex-shrink-0">
+                  {inspection.property.cover_photo_url ? (
+                    <img 
+                      src={inspection.property.cover_photo_url} 
+                      alt={inspection.property.name} 
+                      className="w-full h-full object-cover" 
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Building2 className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <h3 className="font-semibold">{inspection.property.name}</h3>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                    <Calendar className="h-4 w-4" />
+                    {format(new Date(inspection.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                   </div>
-                ))}
-              </div>
-            )}
-
-            {inspection.transcript && (
-              <div className="space-y-2">
-                <span className="font-semibold">Resumo / Transcrição:</span>
-                <div className="whitespace-pre-wrap text-sm bg-muted p-3 rounded">
-                  {inspection.transcript}
                 </div>
               </div>
-            )}
 
-            {mediaAttachments.length > 0 && (
-              <div className="space-y-2">
-                <span className="font-semibold">Fotos e Vídeos:</span>
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+              {inspection.cleaner_name && (
+                <div className="flex items-center gap-2 mt-4 pt-4 border-t text-sm">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span>{inspection.cleaner_name}</span>
+                  {inspection.cleaner_phone && (
+                    <span className="text-muted-foreground">({inspection.cleaner_phone})</span>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Audio Section */}
+          {audioAttachments.length > 0 && (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <Headphones className="h-5 w-5 text-primary" />
+                  <h3 className="font-semibold">Áudios Gravados</h3>
+                  <Badge variant="secondary">{audioAttachments.length}</Badge>
+                </div>
+                <div className="space-y-3">
+                  {audioAttachments.map((audio, idx) => (
+                    <div key={audio.id} className="bg-muted/50 rounded-lg p-3">
+                      <div className="text-sm text-muted-foreground mb-2">Áudio {idx + 1}</div>
+                      <audio controls src={audio.file_url} className="w-full" />
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Transcript/Summary Section */}
+          {inspection.transcript && (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <FileText className="h-5 w-5 text-primary" />
+                  <h3 className="font-semibold">
+                    {hasSummary ? 'Resumo e Análise' : 'Transcrição'}
+                  </h3>
+                </div>
+                <div className={`whitespace-pre-wrap text-sm rounded-lg p-4 ${
+                  hasSummary 
+                    ? isOk 
+                      ? 'bg-green-500/10 border border-green-500/30' 
+                      : 'bg-destructive/10 border border-destructive/30'
+                    : 'bg-muted'
+                }`}>
+                  {inspection.transcript}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Media Gallery */}
+          {mediaAttachments.length > 0 && (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <h3 className="font-semibold">Fotos e Vídeos</h3>
+                  <Badge variant="secondary">{mediaAttachments.length}</Badge>
+                </div>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                   {mediaAttachments.map((media) => (
                     <MediaThumbnail
                       key={media.id}
@@ -215,10 +269,10 @@ export default function VistoriaDetalhes() {
                     />
                   ))}
                 </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </main>
 
       <MediaGallery

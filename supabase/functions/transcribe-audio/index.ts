@@ -36,6 +36,59 @@ function processBase64Chunks(base64String: string, chunkSize = 32768) {
   return result;
 }
 
+// Generate AI summary from transcript
+async function generateSummary(transcript: string): Promise<string> {
+  const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+  if (!openAIApiKey || !transcript || transcript.trim().length < 10) {
+    return '';
+  }
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: `Somos uma empresa de aluguel de temporada e esse é um audio transcrito de uma vistoria de faxineira. 
+Prepare de forma prática e direta quais são os problemas encontrados e os profissionais ou soluções para o problema.
+
+Formato de resposta:
+- Se não houver problemas, responda apenas: "✅ Sem problemas identificados"
+- Se houver problemas, liste cada um com:
+  • Problema: descrição breve
+  • Solução: profissional ou ação recomendada
+
+Seja objetivo e direto. Não repita informações. Use emojis para categorizar (🔧 manutenção, 🧹 limpeza, ⚡ elétrica, 💧 hidráulica, etc).`
+          },
+          {
+            role: 'user',
+            content: `Transcrição do áudio da vistoria:\n\n${transcript}`
+          }
+        ],
+        max_tokens: 500,
+        temperature: 0.3,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('OpenAI API error for summary:', response.status);
+      return '';
+    }
+
+    const result = await response.json();
+    return result.choices?.[0]?.message?.content?.trim() || '';
+  } catch (error) {
+    console.error('Error generating summary:', error);
+    return '';
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -77,10 +130,19 @@ serve(async (req) => {
     }
 
     const result = await response.json();
-    console.log('Transcription successful, text length:', result.text?.length || 0);
+    const transcriptText = result.text || '';
+    console.log('Transcription successful, text length:', transcriptText.length);
+
+    // Generate AI summary
+    console.log('Generating AI summary...');
+    const summary = await generateSummary(transcriptText);
+    console.log('Summary generated, length:', summary.length);
 
     return new Response(
-      JSON.stringify({ text: result.text }),
+      JSON.stringify({ 
+        text: transcriptText,
+        summary: summary 
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
