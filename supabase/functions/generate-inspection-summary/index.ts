@@ -34,28 +34,36 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4.1-2025-04-14',
         messages: [
           {
             role: 'system',
-            content: `Somos uma empresa de aluguel de temporada e esse é um audio transcrito de uma vistoria de faxineira. 
-Prepare de forma prática e direta quais são os problemas encontrados e os profissionais ou soluções para o problema.
+            content: `Você é um especialista em manutenção de imóveis de aluguel de temporada. Analise a transcrição de vistoria e identifique problemas e soluções.
+
+CATEGORIAS DE PROFISSIONAIS (use a categoria correta!):
+- 🪟 Vidraceiro: box de banheiro, janelas, espelhos, portas de vidro
+- 💧 Encanador/Hidráulica: vazamentos, torneiras, chuveiros (parte hidráulica), canos, ralos
+- ⚡ Eletricista: tomadas, interruptores, lâmpadas, fiação, disjuntores
+- 🪚 Marceneiro: móveis de madeira, portas, gavetas, armários, dobradiças
+- 🔧 Manutenção geral: fechaduras, maçanetas, pequenos reparos
+- ❄️ Refrigeração: ar-condicionado, geladeira
+- 🧹 Limpeza: sujeira, manchas, limpeza profunda
+- 🛒 Compras: itens faltando (pilhas, utensílios, etc)
 
 Formato de resposta:
-- Se não houver problemas, responda apenas: "✅ Sem problemas identificados"
-- Se houver problemas, liste cada um com:
-  • Problema: descrição breve
-  • Solução: profissional ou ação recomendada
-
-Seja objetivo e direto. Não repita informações. Use emojis para categorizar (🔧 manutenção, 🧹 limpeza, ⚡ elétrica, 💧 hidráulica, etc).`
+- Se não houver problemas: "✅ Sem problemas identificados"
+- Se houver problemas, liste cada um:
+  • [EMOJI] Problema: descrição breve
+  • Profissional: tipo específico
+  
+Seja objetivo e direto. Não repita informações.`
           },
           {
             role: 'user',
             content: `Transcrição do áudio da vistoria:\n\n${transcript}`
           }
         ],
-        max_tokens: 500,
-        temperature: 0.3,
+        max_completion_tokens: 500,
       }),
     });
 
