@@ -40,11 +40,10 @@ type KanbanColumn = {
   bgColor: string;
 };
 
-// Kanban columns (without Concluído - has dedicated page)
+// Kanban columns (only Pendente and Agendado for preview)
 const columns: KanbanColumn[] = [
   { key: "pendente", title: "Pendente", color: "text-yellow-600", bgColor: "bg-yellow-50 dark:bg-yellow-950/30" },
   { key: "agendado", title: "Agendado", color: "text-blue-600", bgColor: "bg-blue-50 dark:bg-blue-950/30" },
-  { key: "em_execucao", title: "Em Execução", color: "text-purple-600", bgColor: "bg-purple-50 dark:bg-purple-950/30" },
 ];
 
 const MAX_ITEMS_PER_COLUMN = 2;
@@ -307,7 +306,7 @@ export function MaintenanceKanbanPreview() {
             <p className="text-sm">Nenhuma manutenção no momento</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             {columns.map((column) => {
               const columnTickets = getTicketsForColumn(column.key);
               const displayTickets = columnTickets.slice(0, MAX_ITEMS_PER_COLUMN);
