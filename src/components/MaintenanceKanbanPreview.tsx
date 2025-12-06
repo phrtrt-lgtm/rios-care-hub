@@ -22,6 +22,7 @@ type MaintenanceTicket = {
   created_at: string;
   scheduled_at: string | null;
   service_provider_id: string | null;
+  cost_responsible: string | null;
   property: { name: string } | null;
   service_provider: { id: string; name: string; phone: string | null } | null;
 };
@@ -61,6 +62,7 @@ export function MaintenanceKanbanPreview() {
     scheduled_at: "",
     service_provider_id: "",
     observation: "",
+    cost_responsible: "owner" as "owner" | "pm" | "guest",
   });
 
   useEffect(() => {
@@ -79,6 +81,7 @@ export function MaintenanceKanbanPreview() {
           created_at,
           scheduled_at,
           service_provider_id,
+          cost_responsible,
           property:properties(name),
           service_provider:service_providers(id, name, phone)
         `)
@@ -143,6 +146,7 @@ export function MaintenanceKanbanPreview() {
         : "",
       service_provider_id: ticket.service_provider_id || "",
       observation: "",
+      cost_responsible: (ticket.cost_responsible as "owner" | "pm" | "guest") || "owner",
     });
     setScheduleDialogOpen(true);
   };
@@ -158,6 +162,7 @@ export function MaintenanceKanbanPreview() {
         .update({
           scheduled_at: scheduleData.scheduled_at || null,
           service_provider_id: scheduleData.service_provider_id || null,
+          cost_responsible: scheduleData.cost_responsible,
         })
         .eq("id", selectedTicket.id);
 
@@ -464,6 +469,30 @@ export function MaintenanceKanbanPreview() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Responsável pelo custo</Label>
+                <Select
+                  value={scheduleData.cost_responsible}
+                  onValueChange={(value: "owner" | "pm" | "guest") =>
+                    setScheduleData((prev) => ({ ...prev, cost_responsible: value }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="owner">Proprietário</SelectItem>
+                    <SelectItem value="pm">Gestão</SelectItem>
+                    <SelectItem value="guest">Hóspede (invisível pro proprietário)</SelectItem>
+                  </SelectContent>
+                </Select>
+                {scheduleData.cost_responsible === "guest" && (
+                  <p className="text-xs text-orange-600 dark:text-orange-400">
+                    ⚠️ Manutenções de hóspede não aparecem para o proprietário
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
