@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { format, isSameDay } from 'date-fns';
+import { format, isSameDay, parseISO, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
@@ -27,10 +27,23 @@ export function InspectionCalendar({
 }: InspectionCalendarProps) {
   const [month, setMonth] = useState<Date>(new Date());
 
+  // Set initial month to the most recent inspection date
+  useEffect(() => {
+    if (inspectionDates.length > 0) {
+      // Sort to find most recent
+      const sortedDates = [...inspectionDates].sort((a, b) => 
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+      const mostRecentDate = parseISO(sortedDates[0].date);
+      setMonth(mostRecentDate);
+    }
+  }, [inspectionDates]);
+
   const dateMap = useMemo(() => {
     const map = new Map<string, InspectionDate>();
     inspectionDates.forEach(item => {
-      const dateKey = format(new Date(item.date), 'yyyy-MM-dd');
+      // Use parseISO for consistent parsing
+      const dateKey = format(parseISO(item.date), 'yyyy-MM-dd');
       const existing = map.get(dateKey);
       if (existing) {
         existing.count += item.count;
@@ -47,7 +60,8 @@ export function InspectionCalendar({
     const withoutProblems: Date[] = [];
 
     dateMap.forEach((item, dateKey) => {
-      const date = new Date(dateKey);
+      // Parse date properly to avoid timezone issues
+      const date = startOfDay(parseISO(dateKey));
       if (item.hasProblems) {
         withProblems.push(date);
       } else {
