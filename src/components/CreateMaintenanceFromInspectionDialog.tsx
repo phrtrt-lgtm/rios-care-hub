@@ -56,22 +56,19 @@ export function CreateMaintenanceFromInspectionDialog({
   const [aiPrompt, setAiPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Pre-populate description from transcript summary
-  useEffect(() => {
-    if (transcriptSummary && open) {
-      setDescription(transcriptSummary);
-    }
-  }, [transcriptSummary, open]);
-
-  // Reset form when dialog opens
+  // Reset form and pre-populate description when dialog opens
   useEffect(() => {
     if (open) {
       setSubject('');
+      setDescription(transcriptSummary || '');
       setPriority('normal');
       setCostResponsible('owner');
       setGuestCheckoutDate('');
       setSelectedAttachments([]);
+      setAiPrompt('');
     }
+    // Only run when dialog opens, not when transcriptSummary changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const mediaAttachments = attachments.filter(a => 
