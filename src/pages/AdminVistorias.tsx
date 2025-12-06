@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { InspectionCalendar } from '@/components/InspectionCalendar';
 import { Settings, List, Search, ArrowLeft, Building2, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
-import { format, isSameDay } from 'date-fns';
+import { format, isSameDay, parseISO, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 interface Property {
@@ -148,9 +148,11 @@ export default function AdminVistorias() {
   // Get inspections for selected date
   const selectedDateInspections = useMemo(() => {
     if (!selectedDate) return [];
-    return allInspections.filter(insp => 
-      isSameDay(new Date(insp.created_at), selectedDate)
-    );
+    const selectedDayStart = startOfDay(selectedDate);
+    return allInspections.filter(insp => {
+      const inspDate = startOfDay(parseISO(insp.created_at));
+      return isSameDay(inspDate, selectedDayStart);
+    });
   }, [allInspections, selectedDate]);
 
   if (authLoading || loading) {
