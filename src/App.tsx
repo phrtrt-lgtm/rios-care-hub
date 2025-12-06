@@ -48,6 +48,7 @@ import NovoTicketInterno from "./pages/NovoTicketInterno";
 import MeusChamados from "./pages/MeusChamados";
 import AdminProfissionais from "./pages/AdminProfissionais";
 import AdminManutencoesKanban from "./pages/AdminManutencoesKanban";
+import NovaManutencao from "./pages/NovaManutencao";
 
 const queryClient = new QueryClient();
 
@@ -343,6 +344,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['admin', 'maintenance']}>
                   <AdminManutencoesKanban />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/nova-manutencao"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'maintenance']}>
+                  <NovaManutencao />
                 </ProtectedRoute>
               }
             />
