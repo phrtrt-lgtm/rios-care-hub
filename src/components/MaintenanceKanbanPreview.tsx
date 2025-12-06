@@ -242,19 +242,10 @@ export function MaintenanceKanbanPreview() {
     }
   };
 
-  const moveToCompleted = async (ticket: MaintenanceTicket, e: React.MouseEvent) => {
+  const goToKanbanForComplete = (ticket: MaintenanceTicket, e: React.MouseEvent) => {
     e.stopPropagation();
-    try {
-      const { error } = await supabase
-        .from("tickets")
-        .update({ status: "concluido" })
-        .eq("id", ticket.id);
-      if (error) throw error;
-      toast.success("Manutenção concluída!");
-      fetchMaintenanceTickets();
-    } catch (error) {
-      toast.error("Erro ao atualizar");
-    }
+    // Navigate to full Kanban board for completion flow
+    navigate("/admin/manutencoes");
   };
 
   const totalPending = tickets.filter(
@@ -394,7 +385,7 @@ export function MaintenanceKanbanPreview() {
                               <Button
                                 size="sm"
                                 className="flex-1 text-[10px] h-6 px-1 bg-green-600 hover:bg-green-700"
-                                onClick={(e) => moveToCompleted(ticket, e)}
+                                onClick={(e) => goToKanbanForComplete(ticket, e)}
                               >
                                 Concluir
                               </Button>
