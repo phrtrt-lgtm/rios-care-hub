@@ -5,7 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 interface AudioRecorderProps {
-  onAudioReady: (file: File, transcript: string, transcribing: boolean) => void;
+  onAudioReady: (file: File, transcript: string, summary: string, transcribing: boolean) => void;
 }
 
 export default function AudioRecorder({ onAudioReady }: AudioRecorderProps) {
@@ -15,7 +15,7 @@ export default function AudioRecorder({ onAudioReady }: AudioRecorderProps) {
   const chunksRef = useRef<BlobPart[]>([]);
   const { toast } = useToast();
 
-  const transcribeAudio = async (audioBlob: Blob): Promise<string> => {
+  const transcribeAudio = async (audioBlob: Blob): Promise<{ text: string; summary: string }> => {
     try {
       // Convert blob to base64
       const reader = new FileReader();
@@ -46,10 +46,13 @@ export default function AudioRecorder({ onAudioReady }: AudioRecorderProps) {
       }
 
       console.log('Transcription result:', data);
-      return data.text || '';
+      return { 
+        text: data.text || '', 
+        summary: data.summary || '' 
+      };
     } catch (error) {
       console.error('Error transcribing audio:', error);
-      return '';
+      return { text: '', summary: '' };
     }
   };
 
@@ -72,14 +75,14 @@ export default function AudioRecorder({ onAudioReady }: AudioRecorderProps) {
         const file = new File([blob], `audio_${Date.now()}.m4a`, { type: 'audio/mp4' });
         
         // Envia o arquivo imediatamente, transcrição em background
-        onAudioReady(file, '', true);
+        onAudioReady(file, '', '', true);
         
         // Inicia transcrição em background (silenciosamente)
         setTranscribing(true);
-        const transcribedText = await transcribeAudio(blob);
+        const { text, summary } = await transcribeAudio(blob);
         
-        // Atualiza com a transcrição quando pronta
-        onAudioReady(file, transcribedText, false);
+        // Atualiza com a transcrição e resumo quando prontos
+        onAudioReady(file, text, summary, false);
         setTranscribing(false);
         
         stream.getTracks().forEach(track => track.stop());

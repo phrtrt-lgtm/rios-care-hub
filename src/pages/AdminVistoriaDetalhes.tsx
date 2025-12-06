@@ -11,7 +11,7 @@ import { MediaThumbnail } from '@/components/MediaThumbnail';
 import { MediaGallery } from '@/components/MediaGallery';
 import { CreateMaintenanceFromInspectionDialog } from '@/components/CreateMaintenanceFromInspectionDialog';
 import { preloadMediaUrls } from '@/hooks/useMediaCache';
-import { ArrowLeft, Calendar, User, CheckCircle2, AlertTriangle, Headphones, FileText, Building2, Wrench, Plus } from 'lucide-react';
+import { ArrowLeft, Calendar, User, CheckCircle2, AlertTriangle, Headphones, FileText, Building2, Wrench, Plus, Sparkles } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -23,6 +23,7 @@ interface Inspection {
   cleaner_phone?: string;
   notes?: string;
   transcript?: string;
+  transcript_summary?: string;
   audio_url?: string;
   monday_item_id?: string;
 }
@@ -126,9 +127,8 @@ export default function AdminVistoriaDetalhes() {
     }
   };
 
-  // Parse transcript for summary section (text before the first "|" is the summary)
-  const parsedTranscript = inspection?.transcript || '';
-  const hasSummary = parsedTranscript.includes('✅') || parsedTranscript.includes('🔧') || parsedTranscript.includes('💧') || parsedTranscript.includes('⚡');
+  // Get the AI summary for passing to maintenance dialog
+  const transcriptSummaryForDialog = inspection?.transcript_summary || inspection?.transcript || '';
 
   if (authLoading || loading) {
     return <LoadingScreen />;
@@ -223,22 +223,27 @@ export default function AdminVistoriaDetalhes() {
             </Card>
           )}
 
-          {/* Transcript/Summary Section */}
+          {/* AI Summary Section - Show first if available */}
+          {inspection.transcript_summary && (
+            <Card className="p-4 border-purple-500/30 bg-gradient-to-br from-purple-500/10 to-blue-500/10">
+              <div className="flex items-center gap-2 mb-4">
+                <Sparkles className="h-5 w-5 text-purple-600" />
+                <h3 className="font-semibold text-purple-700 dark:text-purple-300">Análise da IA</h3>
+              </div>
+              <div className="whitespace-pre-wrap text-sm">
+                {inspection.transcript_summary}
+              </div>
+            </Card>
+          )}
+
+          {/* Transcript Section */}
           {inspection.transcript && (
             <Card className="p-4">
               <div className="flex items-center gap-2 mb-4">
                 <FileText className="h-5 w-5 text-primary" />
-                <h3 className="font-semibold">
-                  {hasSummary ? 'Resumo e Análise' : 'Transcrição'}
-                </h3>
+                <h3 className="font-semibold">Transcrição do Áudio</h3>
               </div>
-              <div className={`whitespace-pre-wrap text-sm rounded-lg p-4 ${
-                hasSummary 
-                  ? inspection.notes === 'OK' 
-                    ? 'bg-green-500/10 border border-green-500/30' 
-                    : 'bg-destructive/10 border border-destructive/30'
-                  : 'bg-muted'
-              }`}>
+              <div className="whitespace-pre-wrap text-sm bg-muted rounded-lg p-4">
                 {inspection.transcript}
               </div>
             </Card>
@@ -335,7 +340,7 @@ export default function AdminVistoriaDetalhes() {
         ownerId={property.owner_id}
         inspectionId={inspection.id}
         attachments={attachments}
-        transcriptSummary={inspection.transcript}
+        transcriptSummary={transcriptSummaryForDialog}
       />
     </div>
   );

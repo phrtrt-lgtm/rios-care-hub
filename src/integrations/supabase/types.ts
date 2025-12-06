@@ -782,6 +782,7 @@ export type Database = {
           notes: string | null
           property_id: string
           transcript: string | null
+          transcript_summary: string | null
         }
         Insert: {
           audio_url?: string | null
@@ -793,6 +794,7 @@ export type Database = {
           notes?: string | null
           property_id: string
           transcript?: string | null
+          transcript_summary?: string | null
         }
         Update: {
           audio_url?: string | null
@@ -804,6 +806,7 @@ export type Database = {
           notes?: string | null
           property_id?: string
           transcript?: string | null
+          transcript_summary?: string | null
         }
         Relationships: [
           {
