@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Paperclip, Loader2, Trash2, CheckCircle2, XCircle, Camera, Video, Mic } from 'lucide-react';
+import { Loader2, Trash2, CheckCircle2, XCircle, Camera, Video, Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import AudioRecorder from '@/components/AudioRecorder';
 import AudioPlayer from '@/components/AudioPlayer';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,52 +14,19 @@ interface CleanerInspectionFormProps {
   onBack: () => void;
 }
 
+interface UploadedFile {
+  file: File;
+  url: string;
+  uploading: boolean;
+  error?: string;
+}
+
 export default function CleanerInspectionForm({ propertyId, propertyName, onBack }: CleanerInspectionFormProps) {
   const navigate = useNavigate();
   const [inspectionStatus, setInspectionStatus] = useState<'OK' | 'NÃO' | ''>('');
-  const [files, setFiles] = useState<File[]>([]);
-  const [audioFiles, setAudioFiles] = useState<Array<{ file: File; transcript: string; transcribing: boolean }>>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [audioFiles, setAudioFiles] = useState<Array<{ file: File; url: string; transcript: string; transcribing: boolean; uploading: boolean }>>([]);
   const [sending, setSending] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<string>('');
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const selectedFiles = Array.from(e.target.files);
-      
-      // Validar tamanho de cada arquivo (max 50MB)
-      const maxSize = 50 * 1024 * 1024; // 50MB
-      const oversizedFiles = selectedFiles.filter(f => f.size > maxSize);
-      
-      if (oversizedFiles.length > 0) {
-        toast.error(`Arquivos muito grandes (máx 50MB): ${oversizedFiles.map(f => f.name).join(', ')}`);
-        e.target.value = ''; // Limpar input
-        return;
-      }
-      
-      setFiles(selectedFiles);
-    }
-  };
-
-  const handleAudioReady = (file: File, transcriptText: string, transcribing: boolean) => {
-    setAudioFiles(prev => {
-      // Se está transcrevendo, adiciona novo áudio
-      if (transcribing) {
-        return [...prev, { file, transcript: transcriptText, transcribing }];
-      }
-      // Se não está transcrevendo, atualiza o áudio existente com a transcrição
-      const index = prev.findIndex(a => a.file.name === file.name && a.file.size === file.size);
-      if (index !== -1) {
-        const updated = [...prev];
-        updated[index] = { ...updated[index], transcript: transcriptText, transcribing: false };
-        return updated;
-      }
-      return prev;
-    });
-  };
-
-  const handleDeleteAudio = (index: number) => {
-    setAudioFiles(prev => prev.filter((_, i) => i !== index));
-  };
 
   const uploadFile = async (file: File): Promise<string> => {
     const fileExt = file.name.split('.').pop();
@@ -80,21 +46,123 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
     return publicUrl;
   };
 
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    
+    const selectedFiles = Array.from(e.target.files);
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    const oversizedFiles = selectedFiles.filter(f => f.size > maxSize);
+    
+    if (oversizedFiles.length > 0) {
+      toast.error(`Arquivos muito grandes (máx 50MB): ${oversizedFiles.map(f => f.name).join(', ')}`);
+      e.target.value = '';
+      return;
+    }
+
+    // Add files with uploading state
+    const newFiles: UploadedFile[] = selectedFiles.map(file => ({
+      file,
+      url: '',
+      uploading: true,
+    }));
+    
+    setUploadedFiles(prev => [...prev, ...newFiles]);
+    e.target.value = '';
+
+    // Upload each file progressively
+    for (let i = 0; i < selectedFiles.length; i++) {
+      const file = selectedFiles[i];
+      try {
+        const url = await uploadFile(file);
+        setUploadedFiles(prev => 
+          prev.map(f => 
+            f.file === file ? { ...f, url, uploading: false } : f
+          )
+        );
+      } catch (error: any) {
+        console.error('Upload error:', error);
+        setUploadedFiles(prev => 
+          prev.map(f => 
+            f.file === file ? { ...f, uploading: false, error: error.message } : f
+          )
+        );
+        toast.error(`Erro no upload de ${file.name}`);
+      }
+    }
+  };
+
+  const handleRemoveFile = (file: File) => {
+    setUploadedFiles(prev => prev.filter(f => f.file !== file));
+  };
+
+  const handleAudioReady = async (file: File, transcriptText: string, transcribing: boolean) => {
+    if (transcribing) {
+      // Audio is being transcribed, add with uploading state and start upload
+      const newAudio = { file, url: '', transcript: transcriptText, transcribing, uploading: true };
+      setAudioFiles(prev => [...prev, newAudio]);
+      
+      // Start upload immediately
+      try {
+        const url = await uploadFile(file);
+        setAudioFiles(prev => 
+          prev.map(a => 
+            a.file === file ? { ...a, url, uploading: false } : a
+          )
+        );
+      } catch (error: any) {
+        console.error('Audio upload error:', error);
+        toast.error(`Erro no upload do áudio`);
+        setAudioFiles(prev => 
+          prev.map(a => 
+            a.file === file ? { ...a, uploading: false } : a
+          )
+        );
+      }
+    } else {
+      // Transcription finished, update transcript
+      setAudioFiles(prev => 
+        prev.map(a => 
+          a.file.name === file.name && a.file.size === file.size 
+            ? { ...a, transcript: transcriptText, transcribing: false } 
+            : a
+        )
+      );
+    }
+  };
+
+  const handleDeleteAudio = (index: number) => {
+    setAudioFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async () => {
     if (!inspectionStatus) {
       toast.error('Selecione o status da vistoria (OK ou NÃO)');
       return;
     }
 
-    // Verificar se há uploads pendentes
-    const hasUploading = audioFiles.some(a => a.transcribing);
-    if (hasUploading) {
-      toast.error('Aguarde o upload dos áudios terminar');
+    // Check for pending operations
+    const hasPendingUploads = uploadedFiles.some(f => f.uploading) || audioFiles.some(a => a.uploading);
+    const hasPendingTranscriptions = audioFiles.some(a => a.transcribing);
+    
+    if (hasPendingUploads) {
+      toast.error('Aguarde o upload dos arquivos terminar');
+      return;
+    }
+    
+    if (hasPendingTranscriptions) {
+      toast.error('Aguarde a transcrição dos áudios terminar');
       return;
     }
 
-    // Validar tamanho total
-    const totalSize = [...files, ...audioFiles.map(a => a.file)].reduce((sum, f) => sum + f.size, 0);
+    // Check for upload errors
+    const filesWithErrors = uploadedFiles.filter(f => f.error);
+    if (filesWithErrors.length > 0) {
+      toast.error('Remova os arquivos com erro antes de enviar');
+      return;
+    }
+
+    // Validate total size
+    const totalSize = [...uploadedFiles.map(f => f.file), ...audioFiles.map(a => a.file)].reduce((sum, f) => sum + f.size, 0);
     const maxTotalSize = 100 * 1024 * 1024; // 100MB total
     
     if (totalSize > maxTotalSize) {
@@ -103,53 +171,38 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
     }
 
     setSending(true);
-    setUploadProgress('Iniciando...');
     
     try {
-      console.log('Iniciando upload de arquivos...');
-      const attachments: Array<{
-        file_url: string;
-        file_name: string;
-        file_type: string;
-        size_bytes: number;
-      }> = [];
+      // Build attachments array from already uploaded files
+      const attachments = uploadedFiles
+        .filter(f => f.url && !f.error)
+        .map(f => ({
+          file_url: f.url,
+          file_name: f.file.name,
+          file_type: f.file.type,
+          size_bytes: f.file.size,
+        }));
 
-      // Upload attachments
-      let fileIndex = 0;
-      for (const file of files) {
-        fileIndex++;
-        setUploadProgress(`Upload ${fileIndex}/${files.length + audioFiles.length}: ${file.name}`);
-        console.log('Fazendo upload de arquivo:', file.name);
-        const url = await uploadFile(file);
-        attachments.push({
-          file_url: url,
-          file_name: file.name,
-          file_type: file.type,
-          size_bytes: file.size,
-        });
-      }
-
-      // Upload audio files and add to attachments
-      const audioData: Array<{ audio_url: string; transcript: string }> = [];
-      for (const { file, transcript } of audioFiles) {
-        fileIndex++;
-        setUploadProgress(`Upload ${fileIndex}/${files.length + audioFiles.length}: ${file.name}`);
-        console.log('Fazendo upload de áudio:', file.name);
-        const url = await uploadFile(file);
-        audioData.push({ audio_url: url, transcript });
-        
-        // Adicionar áudio aos anexos para enviar ao Monday
-        attachments.push({
-          file_url: url,
-          file_name: file.name,
-          file_type: file.type,
-          size_bytes: file.size,
-        });
-      }
-
-      setUploadProgress('Criando vistoria...');
-      console.log('Uploads concluídos. Criando vistoria...');
+      // Build audio data and add audio files to attachments
+      const audioData = audioFiles
+        .filter(a => a.url)
+        .map(a => ({ 
+          audio_url: a.url, 
+          transcript: a.transcript 
+        }));
       
+      // Add audio files to attachments
+      audioFiles
+        .filter(a => a.url)
+        .forEach(a => {
+          attachments.push({
+            file_url: a.url,
+            file_name: a.file.name,
+            file_type: a.file.type,
+            size_bytes: a.file.size,
+          });
+        });
+
       // Get user info
       const { data: { user } } = await supabase.auth.getUser();
       
@@ -159,12 +212,8 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
         .eq('id', user?.id)
         .single();
 
-      // Call edge function to create inspection with timeout
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout: A requisição demorou muito')), 30000)
-      );
-
-      const inspectionPromise = supabase.functions.invoke('create-inspection', {
+      // Call edge function to create inspection
+      const { data, error } = await supabase.functions.invoke('create-inspection', {
         body: {
           property_id: propertyId,
           cleaner_name: profile?.name,
@@ -175,30 +224,27 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
         },
       });
 
-      const { data, error } = await Promise.race([
-        inspectionPromise,
-        timeoutPromise
-      ]) as any;
-
-      console.log('Resposta da edge function:', { data, error });
-
       if (error) throw error;
       if (!data?.ok) throw new Error(data?.error || 'Falha no envio');
 
       toast.success('Vistoria enviada com sucesso!');
       setInspectionStatus('');
-      setFiles([]);
+      setUploadedFiles([]);
       setAudioFiles([]);
-      setUploadProgress('');
       onBack();
     } catch (error: any) {
-      console.error('Erro completo ao enviar vistoria:', error);
+      console.error('Erro ao enviar vistoria:', error);
       toast.error('Erro ao enviar vistoria: ' + (error.message || 'Erro desconhecido'));
     } finally {
       setSending(false);
-      setUploadProgress('');
     }
   };
+
+  const isUploading = uploadedFiles.some(f => f.uploading) || audioFiles.some(a => a.uploading);
+  const isTranscribing = audioFiles.some(a => a.transcribing);
+  const hasErrors = uploadedFiles.some(f => f.error);
+  const uploadedCount = uploadedFiles.filter(f => f.url && !f.error).length;
+  const totalFilesCount = uploadedFiles.length;
 
   return (
     <div className="space-y-6 pb-6">
@@ -277,15 +323,24 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
                   <div className="flex items-center gap-2 mb-2">
                     <Mic className="h-4 w-4 text-primary" />
                     <span className="text-sm font-medium">Áudio {index + 1}</span>
-                    {audio.transcribing && (
-                      <span className="text-xs text-muted-foreground ml-auto">Carregando...</span>
+                    {audio.uploading && (
+                      <span className="text-xs text-muted-foreground ml-auto flex items-center gap-1">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        Enviando...
+                      </span>
+                    )}
+                    {audio.transcribing && !audio.uploading && (
+                      <span className="text-xs text-muted-foreground ml-auto">Transcrevendo...</span>
+                    )}
+                    {!audio.uploading && !audio.transcribing && audio.url && (
+                      <CheckCircle2 className="h-4 w-4 text-green-600 ml-auto" />
                     )}
                   </div>
                   <AudioPlayer file={audio.file} />
-                  {audio.transcribing && (
+                  {(audio.uploading || audio.transcribing) && (
                     <div className="mt-2">
                       <div className="h-1.5 w-full bg-muted-foreground/20 rounded-full overflow-hidden">
-                        <div className="h-full bg-primary rounded-full animate-pulse" style={{ width: '75%' }} />
+                        <div className="h-full bg-primary rounded-full animate-pulse" style={{ width: audio.uploading ? '50%' : '75%' }} />
                       </div>
                     </div>
                   )}
@@ -296,7 +351,7 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
                   size="sm"
                   onClick={() => handleDeleteAudio(index)}
                   className="text-destructive hover:text-destructive shrink-0"
-                  disabled={audio.transcribing}
+                  disabled={audio.uploading || audio.transcribing}
                 >
                   <Trash2 className="h-5 w-5" />
                 </Button>
@@ -341,26 +396,82 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
           className="sr-only"
         />
         
-        {files.length > 0 && (
+        {uploadedFiles.length > 0 && (
           <div className="space-y-2">
             <p className="text-base font-semibold flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
-              {files.length} arquivo(s) selecionado(s)
+              {isUploading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  Enviando {uploadedCount}/{totalFilesCount} arquivos...
+                </>
+              ) : hasErrors ? (
+                <>
+                  <XCircle className="h-4 w-4 text-red-600" />
+                  {uploadedCount} de {totalFilesCount} arquivo(s) enviado(s)
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  {uploadedFiles.length} arquivo(s) prontos
+                </>
+              )}
             </p>
             <div className="grid grid-cols-3 gap-2">
-              {files.map((file, index) => (
-                <div key={index} className="relative aspect-square rounded-lg overflow-hidden border-2 border-primary">
-                  {file.type.startsWith('image/') ? (
+              {uploadedFiles.map((uploadedFile, index) => (
+                <div 
+                  key={index} 
+                  className={`relative aspect-square rounded-lg overflow-hidden border-2 ${
+                    uploadedFile.error 
+                      ? 'border-red-500' 
+                      : uploadedFile.uploading 
+                        ? 'border-primary/50' 
+                        : 'border-green-500'
+                  }`}
+                >
+                  {uploadedFile.file.type.startsWith('image/') ? (
                     <img 
-                      src={URL.createObjectURL(file)} 
+                      src={URL.createObjectURL(uploadedFile.file)} 
                       alt={`Preview ${index + 1}`}
-                      className="w-full h-full object-cover"
+                      className={`w-full h-full object-cover ${uploadedFile.uploading ? 'opacity-50' : ''}`}
                     />
                   ) : (
-                    <div className="w-full h-full bg-muted flex items-center justify-center">
+                    <div className={`w-full h-full bg-muted flex items-center justify-center ${uploadedFile.uploading ? 'opacity-50' : ''}`}>
                       <Video className="h-8 w-8 text-primary" />
                     </div>
                   )}
+                  
+                  {/* Upload indicator overlay */}
+                  {uploadedFile.uploading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-background/50">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    </div>
+                  )}
+                  
+                  {/* Success indicator */}
+                  {!uploadedFile.uploading && !uploadedFile.error && (
+                    <div className="absolute top-1 right-1">
+                      <CheckCircle2 className="h-5 w-5 text-green-600 bg-background rounded-full" />
+                    </div>
+                  )}
+                  
+                  {/* Error indicator */}
+                  {uploadedFile.error && (
+                    <div className="absolute top-1 right-1">
+                      <XCircle className="h-5 w-5 text-red-600 bg-background rounded-full" />
+                    </div>
+                  )}
+                  
+                  {/* Remove button */}
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    className="absolute bottom-1 right-1 h-6 w-6"
+                    onClick={() => handleRemoveFile(uploadedFile.file)}
+                    disabled={uploadedFile.uploading}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
                 </div>
               ))}
             </div>
@@ -370,17 +481,17 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
 
       <Button 
         onClick={handleSubmit} 
-        disabled={sending || audioFiles.some(a => a.transcribing)} 
+        disabled={sending || isUploading || isTranscribing || hasErrors} 
         size="lg"
         className="w-full text-lg font-bold"
       >
         {sending && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-        {audioFiles.some(a => a.transcribing) ? 'Carregando áudios...' : sending ? (uploadProgress || 'Enviando...') : 'Enviar vistoria'}
+        {isUploading ? 'Enviando arquivos...' : isTranscribing ? 'Transcrevendo áudios...' : sending ? 'Finalizando...' : 'Enviar vistoria'}
       </Button>
       
-      {files.length > 0 && (
+      {uploadedFiles.length > 0 && (
         <p className="text-sm text-muted-foreground text-center">
-          Tamanho total: {(files.reduce((sum, f) => sum + f.size, 0) / (1024 * 1024)).toFixed(1)} MB
+          Tamanho total: {(uploadedFiles.reduce((sum, f) => sum + f.file.size, 0) / (1024 * 1024)).toFixed(1)} MB
         </p>
       )}
     </div>
