@@ -2,9 +2,11 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -79,12 +81,14 @@ const KANBAN_COLUMNS = [
 const AdminManutencoesKanban = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [search, setSearch] = useState("");
   const [selectedTicket, setSelectedTicket] = useState<MaintenanceTicket | null>(null);
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [scheduleData, setScheduleData] = useState({
     scheduled_at: "",
     service_provider_id: "",
+    observation: "",
   });
 
   // Fetch maintenance tickets
@@ -131,12 +135,53 @@ const AdminManutencoesKanban = () => {
 
   // Update ticket mutation
   const updateMutation = useMutation({
-    mutationFn: async (data: { id: string; scheduled_at?: string | null; service_provider_id?: string | null; status?: TicketStatus }) => {
+    mutationFn: async (data: { 
+      id: string; 
+      scheduled_at?: string | null; 
+      service_provider_id?: string | null; 
+      status?: TicketStatus;
+      observation?: string;
+    }) => {
+      const { observation, ...updateData } = data;
+      
+      // Update ticket
       const { error } = await supabase
         .from("tickets")
-        .update(data)
+        .update(updateData)
         .eq("id", data.id);
       if (error) throw error;
+
+      // If scheduling with observation, create ticket message
+      if ((data.scheduled_at || data.service_provider_id) && user) {
+        const provider = providers?.find(p => p.id === data.service_provider_id);
+        let messageBody = "📅 **Manutenção agendada**\n\n";
+        
+        if (data.scheduled_at) {
+          const formattedDate = format(new Date(data.scheduled_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+          messageBody += `**Data/Hora:** ${formattedDate}\n`;
+        }
+        
+        if (provider) {
+          messageBody += `**Profissional:** ${provider.name}`;
+          if (provider.phone) {
+            messageBody += ` (${provider.phone})`;
+          }
+          messageBody += "\n";
+        }
+        
+        if (observation) {
+          messageBody += `\n**Observação:** ${observation}`;
+        }
+
+        await supabase
+          .from("ticket_messages")
+          .insert({
+            ticket_id: data.id,
+            author_id: user.id,
+            body: messageBody,
+            is_internal: false,
+          });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["maintenance-tickets-kanban"] });
@@ -198,6 +243,7 @@ const AdminManutencoesKanban = () => {
         ? format(new Date(ticket.scheduled_at), "yyyy-MM-dd'T'HH:mm")
         : "",
       service_provider_id: ticket.service_provider_id || "",
+      observation: "",
     });
     setScheduleDialogOpen(true);
   };
@@ -209,6 +255,7 @@ const AdminManutencoesKanban = () => {
       id: selectedTicket.id,
       scheduled_at: scheduleData.scheduled_at || null,
       service_provider_id: scheduleData.service_provider_id || null,
+      observation: scheduleData.observation,
     });
   };
 
@@ -463,6 +510,19 @@ const AdminManutencoesKanban = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="observation">Observação (opcional)</Label>
+                  <Textarea
+                    id="observation"
+                    placeholder="Adicione informações relevantes sobre a visita..."
+                    value={scheduleData.observation}
+                    onChange={(e) =>
+                      setScheduleData((prev) => ({ ...prev, observation: e.target.value }))
+                    }
+                    rows={3}
+                  />
                 </div>
 
                 <div className="flex gap-2 pt-4">
