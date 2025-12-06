@@ -117,6 +117,24 @@ Diretrizes:
 - Seja específico sobre o que está sendo comunicado`;
           userPrompt = context.prompt;
           break;
+
+        case 'generate_maintenance':
+          systemPrompt = `Você é um assistente especializado em criar descrições técnicas e detalhadas para chamados de manutenção em imóveis de hospedagem.
+
+${context.propertyContext ? `${context.propertyContext}\n` : ''}
+${context.projectContext || 'Sistema de gestão de hospedagens RIOS - registro de manutenção preventiva ou corretiva em unidades de aluguel por temporada.'}
+
+Diretrizes:
+- Escreva em português brasileiro
+- Seja técnico mas acessível
+- Descreva o problema de forma clara e objetiva
+- Inclua localização exata quando possível
+- Mencione sintomas observados
+- Indique urgência se aplicável
+- Use 2-3 parágrafos
+- Foque no que precisa ser resolvido`;
+          userPrompt = context.prompt;
+          break;
         
         default:
           throw new Error('Invalid action');

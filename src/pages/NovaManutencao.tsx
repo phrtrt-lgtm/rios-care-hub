@@ -320,10 +320,7 @@ export default function NovaManutencao() {
               </div>
 
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="description">Descrição *</Label>
-                  <VoiceToTextInput onTranscript={setDescription} />
-                </div>
+                <Label htmlFor="description">Descrição *</Label>
                 <Textarea
                   id="description"
                   placeholder="Descreva o problema encontrado..."
@@ -349,6 +346,7 @@ export default function NovaManutencao() {
                       }
                     }}
                   />
+                  <VoiceToTextInput onTranscript={(text) => setAiPrompt(prev => prev ? `${prev} ${text}` : text)} />
                   <Button
                     type="button"
                     onClick={generateDescription}
