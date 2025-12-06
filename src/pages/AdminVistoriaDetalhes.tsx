@@ -11,9 +11,10 @@ import { MediaThumbnail } from '@/components/MediaThumbnail';
 import { MediaGallery } from '@/components/MediaGallery';
 import { CreateMaintenanceFromInspectionDialog } from '@/components/CreateMaintenanceFromInspectionDialog';
 import { preloadMediaUrls } from '@/hooks/useMediaCache';
-import { ArrowLeft, Calendar, User, CheckCircle2, AlertTriangle, Headphones, FileText, Building2, Wrench, Plus, Sparkles } from 'lucide-react';
+import { ArrowLeft, Calendar, User, CheckCircle2, AlertTriangle, Headphones, FileText, Building2, Wrench, Plus, Sparkles, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { toast } from 'sonner';
 
 interface Inspection {
   id: string;
@@ -54,6 +55,7 @@ export default function AdminVistoriaDetalhes() {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryStartIndex, setGalleryStartIndex] = useState(0);
   const [maintenanceDialogOpen, setMaintenanceDialogOpen] = useState(false);
+  const [generatingSummary, setGeneratingSummary] = useState(false);
 
   useEffect(() => {
     if (!authLoading) {
@@ -114,6 +116,35 @@ export default function AdminVistoriaDetalhes() {
     }
   };
 
+  const generateAISummary = async () => {
+    if (!inspection?.transcript) return;
+    
+    setGeneratingSummary(true);
+    try {
+      const response = await supabase.functions.invoke('generate-inspection-summary', {
+        body: { 
+          inspectionId: inspection.id,
+          transcript: inspection.transcript 
+        }
+      });
+
+      if (response.error) throw response.error;
+      
+      const summary = response.data?.summary;
+      if (summary) {
+        setInspection(prev => prev ? { ...prev, transcript_summary: summary } : null);
+        toast.success('Resumo gerado com sucesso!');
+      } else {
+        toast.error('Não foi possível gerar o resumo');
+      }
+    } catch (error) {
+      console.error('Error generating summary:', error);
+      toast.error('Erro ao gerar resumo');
+    } finally {
+      setGeneratingSummary(false);
+    }
+  };
+
   const imageAttachments = attachments.filter(a => a.file_type?.startsWith('image/'));
   const videoAttachments = attachments.filter(a => a.file_type?.startsWith('video/'));
   const audioAttachments = attachments.filter(a => a.file_type?.startsWith('audio/'));
@@ -129,6 +160,9 @@ export default function AdminVistoriaDetalhes() {
 
   // Get the AI summary for passing to maintenance dialog
   const transcriptSummaryForDialog = inspection?.transcript_summary || inspection?.transcript || '';
+  
+  // Show generate button if there's transcript but no summary
+  const canGenerateSummary = inspection?.transcript && !inspection?.transcript_summary;
 
   if (authLoading || loading) {
     return <LoadingScreen />;
@@ -232,6 +266,39 @@ export default function AdminVistoriaDetalhes() {
               </div>
               <div className="whitespace-pre-wrap text-sm">
                 {inspection.transcript_summary}
+              </div>
+            </Card>
+          )}
+
+          {/* Generate AI Summary Button - Show if transcript exists but no summary */}
+          {canGenerateSummary && (
+            <Card className="p-4 border-purple-500/30 bg-gradient-to-br from-purple-500/5 to-blue-500/5">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-purple-600" />
+                  <div>
+                    <h3 className="font-semibold text-purple-700 dark:text-purple-300">Análise da IA</h3>
+                    <p className="text-sm text-muted-foreground">Gere um resumo automático da transcrição</p>
+                  </div>
+                </div>
+                <Button 
+                  onClick={generateAISummary}
+                  disabled={generatingSummary}
+                  variant="outline"
+                  className="gap-2 border-purple-500/50 text-purple-700 hover:bg-purple-500/10"
+                >
+                  {generatingSummary ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Gerando...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4" />
+                      Gerar Resumo IA
+                    </>
+                  )}
+                </Button>
               </div>
             </Card>
           )}

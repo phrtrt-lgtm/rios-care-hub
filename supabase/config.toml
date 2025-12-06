@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.debit-reserve]
 verify_jwt = true
+
+[functions.generate-inspection-summary]
+verify_jwt = true
