@@ -8,14 +8,23 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { InspectionCalendar } from '@/components/InspectionCalendar';
-import { Settings, List, Search, ArrowLeft, Building2, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Settings, List, Search, ArrowLeft, Building2, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 import { format, isSameDay } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface Property {
   id: string;
   name: string;
   address: string;
   cover_photo_url?: string;
+}
+
+interface Inspection {
+  id: string;
+  property_id: string;
+  notes: string;
+  created_at: string;
+  property?: Property;
 }
 
 interface InspectionCount {
@@ -34,6 +43,7 @@ export default function AdminVistorias() {
   const navigate = useNavigate();
   const { profile, loading: authLoading } = useAuth();
   const [properties, setProperties] = useState<Property[]>([]);
+  const [allInspections, setAllInspections] = useState<Inspection[]>([]);
   const [inspectionCounts, setInspectionCounts] = useState<Map<string, InspectionCount>>(new Map());
   const [inspectionDates, setInspectionDates] = useState<InspectionDate[]>([]);
   const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
@@ -84,6 +94,14 @@ export default function AdminVistorias() {
 
       if (inspError) throw inspError;
 
+      // Store all inspections with property reference
+      const propsMap = new Map((propsData || []).map(p => [p.id, p]));
+      const inspectionsWithProperty = (inspections || []).map(insp => ({
+        ...insp,
+        property: propsMap.get(insp.property_id)
+      }));
+      setAllInspections(inspectionsWithProperty);
+
       // Calculate counts per property
       const counts = new Map<string, InspectionCount>();
       const dateAggregates = new Map<string, { count: number; hasProblems: boolean }>();
@@ -127,14 +145,13 @@ export default function AdminVistorias() {
     setSelectedDate(prev => prev && isSameDay(prev, date) ? undefined : date);
   };
 
-  // Filter by selected date
-  const displayProperties = useMemo(() => {
-    if (!selectedDate) return filteredProperties;
-    
-    // We'd need to filter by inspections on that date - for now show all
-    // This would require keeping track of which properties have inspections on selected date
-    return filteredProperties;
-  }, [filteredProperties, selectedDate]);
+  // Get inspections for selected date
+  const selectedDateInspections = useMemo(() => {
+    if (!selectedDate) return [];
+    return allInspections.filter(insp => 
+      isSameDay(new Date(insp.created_at), selectedDate)
+    );
+  }, [allInspections, selectedDate]);
 
   if (authLoading || loading) {
     return <LoadingScreen />;
@@ -192,7 +209,7 @@ export default function AdminVistorias() {
               />
             </div>
 
-            {displayProperties.length === 0 ? (
+            {filteredProperties.length === 0 ? (
               <Card className="p-12 text-center">
                 <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <p className="text-muted-foreground">
@@ -201,7 +218,7 @@ export default function AdminVistorias() {
               </Card>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                {displayProperties.map((property) => {
+                {filteredProperties.map((property) => {
                   const counts = inspectionCounts.get(property.id);
                   return (
                     <Card
@@ -254,12 +271,65 @@ export default function AdminVistorias() {
           </div>
 
           {/* Calendar Sidebar */}
-          <div className="lg:sticky lg:top-24 lg:self-start">
+          <div className="lg:sticky lg:top-24 lg:self-start space-y-4">
             <InspectionCalendar
               inspectionDates={inspectionDates}
               onDateSelect={handleDateSelect}
               selectedDate={selectedDate}
             />
+
+            {/* Selected Date Inspections List */}
+            {selectedDate && (
+              <Card className="p-4">
+                <h3 className="font-semibold text-sm mb-3">
+                  Vistorias de {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}
+                </h3>
+                {selectedDateInspections.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Nenhuma vistoria neste dia
+                  </p>
+                ) : (
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                    {selectedDateInspections.map((insp) => (
+                      <div
+                        key={insp.id}
+                        className="flex items-center gap-3 p-2 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors"
+                        onClick={() => navigate(`/admin/vistorias/${insp.id}`)}
+                      >
+                        <div className="w-10 h-10 rounded-lg bg-muted overflow-hidden flex-shrink-0">
+                          {insp.property?.cover_photo_url ? (
+                            <img
+                              src={insp.property.cover_photo_url}
+                              alt={insp.property.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Building2 className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">
+                            {insp.property?.name || 'Imóvel não encontrado'}
+                          </p>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Clock className="h-3 w-3" />
+                            {format(new Date(insp.created_at), 'HH:mm')}
+                          </div>
+                        </div>
+                        <Badge 
+                          variant={insp.notes === 'OK' ? 'secondary' : 'destructive'}
+                          className={insp.notes === 'OK' ? 'bg-green-500/20 text-green-700' : ''}
+                        >
+                          {insp.notes === 'OK' ? 'OK' : 'Problema'}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
+            )}
           </div>
         </div>
       </main>
