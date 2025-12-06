@@ -1352,6 +1352,39 @@ export type Database = {
           },
         ]
       }
+      service_providers: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          phone: string | null
+          specialty: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          phone?: string | null
+          specialty?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          specialty?: string[] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       system_config: {
         Row: {
           id: string
@@ -1503,6 +1536,8 @@ export type Database = {
           owner_id: string
           priority: Database["public"]["Enums"]["ticket_priority"]
           property_id: string | null
+          scheduled_at: string | null
+          service_provider_id: string | null
           sla_due_at: string | null
           status: Database["public"]["Enums"]["ticket_status"]
           subject: string
@@ -1525,6 +1560,8 @@ export type Database = {
           owner_id: string
           priority?: Database["public"]["Enums"]["ticket_priority"]
           property_id?: string | null
+          scheduled_at?: string | null
+          service_provider_id?: string | null
           sla_due_at?: string | null
           status?: Database["public"]["Enums"]["ticket_status"]
           subject: string
@@ -1547,6 +1584,8 @@ export type Database = {
           owner_id?: string
           priority?: Database["public"]["Enums"]["ticket_priority"]
           property_id?: string | null
+          scheduled_at?: string | null
+          service_provider_id?: string | null
           sla_due_at?: string | null
           status?: Database["public"]["Enums"]["ticket_status"]
           subject?: string
@@ -1580,6 +1619,13 @@ export type Database = {
             columns: ["property_id"]
             isOneToOne: false
             referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_service_provider_id_fkey"
+            columns: ["service_provider_id"]
+            isOneToOne: false
+            referencedRelation: "service_providers"
             referencedColumns: ["id"]
           },
         ]
