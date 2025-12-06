@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import OwnerMaintenancePolicyBanner from "@/components/OwnerMaintenancePolicyBanner";
 import { OwnerPropertiesSection } from "@/components/OwnerPropertiesSection";
 import { OwnerScoreDisplay } from "@/components/OwnerScoreDisplay";
+import { MaintenanceKanbanPreview } from "@/components/MaintenanceKanbanPreview";
 
 
 export default function MinhaCaixa() {
@@ -173,6 +174,13 @@ export default function MinhaCaixa() {
       <main className="container mx-auto px-4 py-6 md:py-8">
         {/* Propostas Pendentes - Prioridade no topo */}
         <VotacoesPendentes />
+
+        {/* Kanban de Manutenções - visível para equipe */}
+        {(profile?.role === "admin" || profile?.role === "maintenance" || profile?.role === "agent") && (
+          <div className="mb-6">
+            <MaintenanceKanbanPreview />
+          </div>
+        )}
 
         {/* Owner Properties Section */}
         <OwnerPropertiesSection />
