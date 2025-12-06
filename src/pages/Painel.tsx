@@ -174,85 +174,93 @@ export default function Painel() {
           </div>
         )}
 
-        {/* Ações Principais */}
+        {/* Ações de Criar */}
+        {(profile?.role === "admin" || profile?.role === "maintenance" || profile?.role === "agent") && (
+          <div className="mb-8">
+            <h3 className="mb-4 text-lg font-semibold">Criar Novo</h3>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+              {(profile?.role === "admin" || profile?.role === "maintenance") && (
+                <Button 
+                  size="lg" 
+                  className="h-16 text-sm font-semibold justify-start px-4"
+                  onClick={() => navigate("/admin/nova-manutencao")}
+                  variant="outline"
+                >
+                  <Wrench className="mr-3 h-5 w-5 text-orange-500" />
+                  Nova Manutenção
+                </Button>
+              )}
+
+              <Button 
+                size="lg" 
+                className="h-16 text-sm font-semibold justify-start px-4"
+                onClick={() => navigate("/novo-ticket-massa")}
+                variant="outline"
+              >
+                <Ticket className="mr-3 h-5 w-5 text-blue-500" />
+                Novo Ticket
+              </Button>
+
+              {(profile?.role === "admin" || profile?.role === "maintenance") && (
+                <>
+                  <Button 
+                    size="lg" 
+                    className="h-16 text-sm font-semibold justify-start px-4"
+                    onClick={() => navigate("/novo-ticket-interno")}
+                    variant="outline"
+                  >
+                    <Users className="mr-3 h-5 w-5 text-purple-500" />
+                    Ticket Equipe
+                  </Button>
+
+                  <Button 
+                    size="lg" 
+                    className="h-16 text-sm font-semibold justify-start px-4"
+                    onClick={() => navigate("/novo-alerta")}
+                    variant="outline"
+                  >
+                    <Bell className="mr-3 h-5 w-5 text-yellow-500" />
+                    Novo Alerta
+                  </Button>
+
+                  <Button 
+                    size="lg" 
+                    className="h-16 text-sm font-semibold justify-start px-4"
+                    onClick={() => navigate("/nova-proposta-votacao")}
+                    variant="outline"
+                  >
+                    <Vote className="mr-3 h-5 w-5 text-green-500" />
+                    Nova Proposta
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Ações de Gerenciar */}
         <div className="mb-8">
-          <h3 className="mb-4 text-lg font-semibold">Ações Rápidas</h3>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <h3 className="mb-4 text-lg font-semibold">Gerenciar</h3>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <Button 
               size="lg" 
-              className="h-20 text-base font-semibold"
+              className="h-16 text-sm font-semibold"
               onClick={() => navigate("/todos-tickets")}
             >
-              <Ticket className="mr-3 h-6 w-6" />
+              <Ticket className="mr-3 h-5 w-5" />
               Ver Todos os Tickets
             </Button>
             
             {(profile?.role === "admin" || profile?.role === "maintenance") && (
               <Button 
                 size="lg" 
-                className="h-20 text-base font-semibold"
+                className="h-16 text-sm font-semibold"
                 onClick={() => navigate("/gerenciar-cobrancas")}
               >
-                <DollarSign className="mr-3 h-6 w-6" />
+                <DollarSign className="mr-3 h-5 w-5" />
                 Gerenciar Cobranças
               </Button>
             )}
-
-            {(profile?.role === "admin" || profile?.role === "maintenance") && (
-              <Button 
-                size="lg" 
-                className="h-20 text-base font-semibold"
-                onClick={() => navigate("/admin/nova-manutencao")}
-                variant="outline"
-              >
-                <Plus className="mr-3 h-6 w-6" />
-                Nova Manutenção
-              </Button>
-            )}
-
-            {(profile?.role === "admin" || profile?.role === "maintenance") && (
-              <>
-                <Button 
-                  size="lg" 
-                  className="h-20 text-base font-semibold"
-                  onClick={() => navigate("/novo-ticket-interno")}
-                  variant="secondary"
-                >
-                  <Users className="mr-3 h-6 w-6" />
-                  Ticket para Equipe
-                </Button>
-
-                <Button 
-                  size="lg" 
-                  className="h-20 text-base font-semibold"
-                  onClick={() => navigate("/novo-alerta")}
-                  variant="secondary"
-                >
-                  <Bell className="mr-3 h-6 w-6" />
-                  Criar Alerta
-                </Button>
-
-                <Button 
-                  size="lg" 
-                  className="h-20 text-base font-semibold"
-                  onClick={() => navigate("/nova-proposta-votacao")}
-                  variant="secondary"
-                >
-                  <Vote className="mr-3 h-6 w-6" />
-                  Criar Proposta
-                </Button>
-              </>
-            )}
-
-            <Button 
-              size="lg" 
-              className="h-20 text-base font-semibold"
-              onClick={() => navigate("/novo-ticket-massa")}
-              variant="secondary"
-            >
-              <Ticket className="mr-3 h-6 w-6" />
-              Criar Tickets
-            </Button>
           </div>
         </div>
 
