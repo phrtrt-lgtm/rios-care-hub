@@ -46,6 +46,8 @@ import NovaPropostaVotacao from "./pages/NovaPropostaVotacao";
 import VotacaoDetalhes from "./pages/VotacaoDetalhes";
 import NovoTicketInterno from "./pages/NovoTicketInterno";
 import MeusChamados from "./pages/MeusChamados";
+import AdminProfissionais from "./pages/AdminProfissionais";
+import AdminManutencoesKanban from "./pages/AdminManutencoesKanban";
 
 const queryClient = new QueryClient();
 
@@ -325,6 +327,22 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['admin', 'maintenance']}>
                   <NovoTicketInterno />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/profissionais"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'maintenance']}>
+                  <AdminProfissionais />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/manutencoes"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'maintenance']}>
+                  <AdminManutencoesKanban />
                 </ProtectedRoute>
               }
             />
