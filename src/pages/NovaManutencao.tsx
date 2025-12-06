@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Loader2, Upload, X, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Loader2, Upload, X, AlertTriangle, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -43,6 +43,8 @@ export default function NovaManutencao() {
   const [loading, setLoading] = useState(false);
   const [costResponsible, setCostResponsible] = useState<'owner' | 'management' | 'split' | 'guest'>('owner');
   const [splitOwnerPercent, setSplitOwnerPercent] = useState<number | null>(50);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -146,6 +148,37 @@ export default function NovaManutencao() {
 
   const removeFile = (fileUrl: string) => {
     setUploadedFiles((prev) => prev.filter((f) => f.file_url !== fileUrl));
+  };
+
+  const generateDescription = async () => {
+    if (!aiPrompt.trim()) return;
+    setIsGenerating(true);
+    try {
+      const selectedProperty = properties.find(p => p.id === propertyId);
+      const propertyContext = selectedProperty ? `Unidade: ${selectedProperty.name}` : '';
+      
+      const { data, error } = await supabase.functions.invoke('ai-generate-response', {
+        body: { 
+          action: 'generate_maintenance',
+          context: {
+            prompt: aiPrompt,
+            propertyContext,
+            projectContext: 'Sistema de gestão de hospedagens RIOS - registro de manutenção preventiva ou corretiva em unidades de aluguel por temporada. Descreva o problema de forma clara e objetiva, incluindo localização exata, sintomas observados e urgência se aplicável.'
+          }
+        }
+      });
+      
+      if (error) throw error;
+      if (data?.generatedText) {
+        setDescription(data.generatedText);
+        setAiPrompt("");
+        toast.success("Descrição gerada! Revise e edite se necessário.");
+      }
+    } catch (error: any) {
+      toast.error("Erro ao gerar descrição: " + error.message);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -299,6 +332,39 @@ export default function NovaManutencao() {
                   rows={4}
                   required
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="aiPrompt">Gerar com IA (opcional)</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="aiPrompt"
+                    value={aiPrompt}
+                    onChange={(e) => setAiPrompt(e.target.value)}
+                    placeholder="Ex: torneira vazando no banheiro da suíte"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        generateDescription();
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    onClick={generateDescription}
+                    disabled={isGenerating || !aiPrompt.trim()}
+                    variant="secondary"
+                  >
+                    {isGenerating ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Descreva brevemente o problema e a IA gerará uma descrição detalhada
+                </p>
               </div>
 
               <div className="space-y-3">
