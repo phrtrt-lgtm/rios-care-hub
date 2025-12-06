@@ -270,11 +270,15 @@ export default function NovaManutencao() {
     }
   };
 
+  const handleGoBack = () => {
+    navigate("/admin/manutencoes");
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       <header className="border-b bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto flex h-16 items-center gap-4 px-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/admin/manutencoes")}>
+          <Button variant="ghost" size="icon" type="button" onClick={handleGoBack}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h1 className="text-xl font-semibold">Nova Manutenção</h1>
