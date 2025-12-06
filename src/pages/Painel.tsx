@@ -210,6 +210,18 @@ export default function Painel() {
             )}
 
             {(profile?.role === "admin" || profile?.role === "maintenance") && (
+              <Button 
+                size="lg" 
+                className="h-20 text-base font-semibold"
+                onClick={() => navigate("/admin/nova-manutencao")}
+                variant="outline"
+              >
+                <Plus className="mr-3 h-6 w-6" />
+                Nova Manutenção
+              </Button>
+            )}
+
+            {(profile?.role === "admin" || profile?.role === "maintenance") && (
               <>
                 <Button 
                   size="lg" 
