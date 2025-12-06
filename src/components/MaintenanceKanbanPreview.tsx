@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Wrench, ArrowRight, User, Calendar, ChevronRight } from "lucide-react";
+import { Wrench, ArrowRight, User, Calendar, ChevronRight, ChevronLeft } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -222,6 +222,21 @@ export function MaintenanceKanbanPreview() {
     }
   };
 
+  const moveBackToScheduled = async (ticket: MaintenanceTicket, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const { error } = await supabase
+        .from("tickets")
+        .update({ status: "em_analise" })
+        .eq("id", ticket.id);
+      if (error) throw error;
+      toast.success("Voltou para agendado!");
+      fetchMaintenanceTickets();
+    } catch (error) {
+      toast.error("Erro ao atualizar");
+    }
+  };
+
   const moveToCompleted = async (ticket: MaintenanceTicket, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
@@ -361,13 +376,24 @@ export function MaintenanceKanbanPreview() {
                             </>
                           )}
                           {column.key === "em_execucao" && (
-                            <Button
-                              size="sm"
-                              className="flex-1 text-[10px] h-6 px-1 bg-green-600 hover:bg-green-700"
-                              onClick={(e) => moveToCompleted(ticket, e)}
-                            >
-                              Concluir
-                            </Button>
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-[10px] h-6 px-2"
+                                onClick={(e) => moveBackToScheduled(ticket, e)}
+                                title="Voltar para agendado"
+                              >
+                                <ChevronLeft className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                className="flex-1 text-[10px] h-6 px-1 bg-green-600 hover:bg-green-700"
+                                onClick={(e) => moveToCompleted(ticket, e)}
+                              >
+                                Concluir
+                              </Button>
+                            </>
                           )}
                         </div>
                       </div>

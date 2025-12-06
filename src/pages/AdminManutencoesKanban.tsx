@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, Search, Phone, Calendar, Clock, Building, User, ChevronRight, Wrench } from "lucide-react";
+import { ArrowLeft, Search, Phone, Calendar, Clock, Building, User, ChevronRight, ChevronLeft, Wrench } from "lucide-react";
 
 type TicketStatus = "novo" | "em_analise" | "aguardando_info" | "em_execucao" | "concluido" | "cancelado";
 
@@ -267,6 +267,10 @@ const AdminManutencoesKanban = () => {
     updateMutation.mutate({ id: ticket.id, status: "concluido" });
   };
 
+  const moveBackToScheduled = (ticket: MaintenanceTicket) => {
+    updateMutation.mutate({ id: ticket.id, status: "em_analise" });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 p-4 md:p-6">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -440,16 +444,30 @@ const AdminManutencoesKanban = () => {
                               </>
                             )}
                             {column.id === "em_execucao" && (
-                              <Button
-                                size="sm"
-                                className="flex-1 text-xs h-7 bg-green-600 hover:bg-green-700"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  moveToCompleted(ticket);
-                                }}
-                              >
-                                Concluir
-                              </Button>
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-xs h-7"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    moveBackToScheduled(ticket);
+                                  }}
+                                  title="Voltar para agendado"
+                                >
+                                  <ChevronLeft className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  className="flex-1 text-xs h-7 bg-green-600 hover:bg-green-700"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    moveToCompleted(ticket);
+                                  }}
+                                >
+                                  Concluir
+                                </Button>
+                              </>
                             )}
                           </div>
                         </CardContent>
