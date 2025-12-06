@@ -12,6 +12,7 @@ import { AlertBanner } from "@/components/AlertBanner";
 import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
 import { VotacoesPendentes } from "@/components/VotacoesPendentes";
 import { MaintenanceKanbanPreview } from "@/components/MaintenanceKanbanPreview";
+import { GuestChargeReminders } from "@/components/GuestChargeReminders";
 
 export default function Painel() {
   const { profile, user, signOut } = useAuth();
@@ -166,6 +167,13 @@ export default function Painel() {
         <div className="mb-6">
           <VotacoesPendentes />
         </div>
+
+        {/* Guest Charge Reminders - visible to team */}
+        {(profile?.role === "admin" || profile?.role === "maintenance" || profile?.role === "agent") && (
+          <div className="mb-6">
+            <GuestChargeReminders />
+          </div>
+        )}
 
         {/* Kanban de Manutenções - visível para toda a equipe */}
         {(profile?.role === "admin" || profile?.role === "maintenance" || profile?.role === "agent") && (

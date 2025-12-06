@@ -9,8 +9,9 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { MediaThumbnail } from '@/components/MediaThumbnail';
 import { MediaGallery } from '@/components/MediaGallery';
+import { CreateMaintenanceFromInspectionDialog } from '@/components/CreateMaintenanceFromInspectionDialog';
 import { preloadMediaUrls } from '@/hooks/useMediaCache';
-import { ArrowLeft, Calendar, User, CheckCircle2, AlertTriangle, Headphones, FileText, Building2, Wrench } from 'lucide-react';
+import { ArrowLeft, Calendar, User, CheckCircle2, AlertTriangle, Headphones, FileText, Building2, Wrench, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -31,6 +32,7 @@ interface Property {
   name: string;
   address: string;
   cover_photo_url?: string;
+  owner_id: string;
 }
 
 interface Attachment {
@@ -50,6 +52,7 @@ export default function AdminVistoriaDetalhes() {
   const [loading, setLoading] = useState(true);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryStartIndex, setGalleryStartIndex] = useState(0);
+  const [maintenanceDialogOpen, setMaintenanceDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!authLoading) {
@@ -77,7 +80,7 @@ export default function AdminVistoriaDetalhes() {
       if (inspData) {
         const { data: propData, error: propError } = await supabase
           .from('properties')
-          .select('id, name, address, cover_photo_url')
+          .select('id, name, address, cover_photo_url, owner_id')
           .eq('id', inspData.property_id)
           .single();
 
@@ -289,21 +292,21 @@ export default function AdminVistoriaDetalhes() {
             </Card>
           )}
 
-          {/* Create Maintenance Button */}
+          {/* Create Maintenance Section - Always show for inspections with problems */}
           {inspection.notes === 'NÃO' && (
             <Card className="p-4 border-destructive/50 bg-destructive/5">
-              <div className="flex items-center justify-between gap-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                   <h3 className="font-semibold text-destructive">Problemas Identificados</h3>
                   <p className="text-sm text-muted-foreground">
-                    Crie um chamado de manutenção para resolver os problemas encontrados
+                    Crie manutenções para resolver os problemas encontrados. Você pode selecionar quais anexos importar.
                   </p>
                 </div>
                 <Button 
-                  onClick={() => navigate(`/admin/nova-manutencao?property=${property.id}&from_inspection=${inspection.id}`)}
-                  className="gap-2"
+                  onClick={() => setMaintenanceDialogOpen(true)}
+                  className="gap-2 w-full sm:w-auto"
                 >
-                  <Wrench className="h-4 w-4" />
+                  <Plus className="h-4 w-4" />
                   Nova Manutenção
                 </Button>
               </div>
@@ -322,6 +325,17 @@ export default function AdminVistoriaDetalhes() {
         initialIndex={galleryStartIndex}
         open={galleryOpen}
         onOpenChange={setGalleryOpen}
+      />
+
+      <CreateMaintenanceFromInspectionDialog
+        open={maintenanceDialogOpen}
+        onOpenChange={setMaintenanceDialogOpen}
+        propertyId={property.id}
+        propertyName={property.name}
+        ownerId={property.owner_id}
+        inspectionId={inspection.id}
+        attachments={attachments}
+        transcriptSummary={inspection.transcript}
       />
     </div>
   );
