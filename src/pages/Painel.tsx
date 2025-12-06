@@ -184,9 +184,8 @@ export default function Painel() {
                   size="lg" 
                   className="h-16 text-sm font-semibold justify-start px-4"
                   onClick={() => navigate("/admin/nova-manutencao")}
-                  variant="outline"
                 >
-                  <Wrench className="mr-3 h-5 w-5 text-orange-500" />
+                  <Wrench className="mr-3 h-5 w-5" />
                   Nova Manutenção
                 </Button>
               )}
@@ -195,9 +194,8 @@ export default function Painel() {
                 size="lg" 
                 className="h-16 text-sm font-semibold justify-start px-4"
                 onClick={() => navigate("/novo-ticket-massa")}
-                variant="outline"
               >
-                <Ticket className="mr-3 h-5 w-5 text-blue-500" />
+                <Ticket className="mr-3 h-5 w-5" />
                 Novo Ticket
               </Button>
 
@@ -207,19 +205,17 @@ export default function Painel() {
                     size="lg" 
                     className="h-16 text-sm font-semibold justify-start px-4"
                     onClick={() => navigate("/novo-ticket-interno")}
-                    variant="outline"
                   >
-                    <Users className="mr-3 h-5 w-5 text-purple-500" />
-                    Ticket Equipe
+                    <Users className="mr-3 h-5 w-5" />
+                    Novo Ticket Equipe
                   </Button>
 
                   <Button 
                     size="lg" 
                     className="h-16 text-sm font-semibold justify-start px-4"
                     onClick={() => navigate("/novo-alerta")}
-                    variant="outline"
                   >
-                    <Bell className="mr-3 h-5 w-5 text-yellow-500" />
+                    <Bell className="mr-3 h-5 w-5" />
                     Novo Alerta
                   </Button>
 
@@ -227,9 +223,8 @@ export default function Painel() {
                     size="lg" 
                     className="h-16 text-sm font-semibold justify-start px-4"
                     onClick={() => navigate("/nova-proposta-votacao")}
-                    variant="outline"
                   >
-                    <Vote className="mr-3 h-5 w-5 text-green-500" />
+                    <Vote className="mr-3 h-5 w-5" />
                     Nova Proposta
                   </Button>
                 </>
