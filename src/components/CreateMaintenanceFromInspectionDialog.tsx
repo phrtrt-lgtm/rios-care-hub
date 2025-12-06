@@ -8,10 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, AlertTriangle, Sparkles, ImageIcon, Video, FileAudio } from 'lucide-react';
+import { Loader2, AlertTriangle, Sparkles, ImageIcon, Video, FileAudio, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { VoiceToTextInput } from '@/components/VoiceToTextInput';
 import { format } from 'date-fns';
@@ -360,9 +359,9 @@ export function CreateMaintenanceFromInspectionDialog({
                         </div>
                       )}
                       <div className={`absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center ${
-                        isSelected ? 'bg-primary text-primary-foreground' : 'bg-background/80'
+                        isSelected ? 'bg-primary text-primary-foreground' : 'bg-background/80 border border-muted-foreground/30'
                       }`}>
-                        <Checkbox checked={isSelected} className="pointer-events-none" />
+                        {isSelected && <Check className="h-3 w-3" />}
                       </div>
                     </div>
                   );
