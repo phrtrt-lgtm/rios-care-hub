@@ -31,20 +31,20 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange }: MediaG
   const isVideo = currentItem?.file_type?.startsWith('video/');
   const isImage = currentItem?.file_type?.startsWith('image/');
 
-  // Reset index when dialog opens
+  // Memoize items URLs to avoid unnecessary re-renders
+  const itemUrls = useMemo(() => items.map(item => item.file_url), [items]);
+
+  // Reset index when dialog opens - use a ref to track previous open state
   useEffect(() => {
     if (open) {
       setCurrentIndex(initialIndex);
+      // Preload all items when gallery opens
+      if (itemUrls.length > 0) {
+        preloadMedia(itemUrls);
+      }
     }
-  }, [initialIndex, open]);
-
-  // Preload all items when gallery opens
-  useEffect(() => {
-    if (open && items.length > 0) {
-      const urls = items.map(item => item.file_url);
-      preloadMedia(urls);
-    }
-  }, [open, items, preloadMedia]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   // Load current item
   useEffect(() => {
@@ -78,7 +78,7 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange }: MediaG
     };
   }, [open, currentItem, loadMedia, getCachedUrl]);
 
-  // Preload adjacent items
+  // Preload adjacent items when index changes
   useEffect(() => {
     if (!open || items.length <= 1) return;
 
@@ -93,7 +93,8 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange }: MediaG
     if (adjacentUrls.length > 0) {
       preloadMedia(adjacentUrls);
     }
-  }, [open, currentIndex, items, preloadMedia]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, currentIndex]);
 
   const goToPrevious = useCallback(() => {
     setCurrentIndex((prev) => (prev > 0 ? prev - 1 : items.length - 1));
