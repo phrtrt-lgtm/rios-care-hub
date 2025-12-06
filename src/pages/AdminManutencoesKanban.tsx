@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, Search, Phone, Calendar, Clock, Building, User, ChevronRight, ChevronLeft, Wrench } from "lucide-react";
+import { ArrowLeft, Search, Phone, Calendar, Clock, Building, User, ChevronRight, ChevronLeft, Wrench, Plus } from "lucide-react";
 
 type TicketStatus = "novo" | "em_analise" | "aguardando_info" | "em_execucao" | "concluido" | "cancelado";
 
@@ -299,6 +299,10 @@ const AdminManutencoesKanban = () => {
               Organize e acompanhe todas as manutenções
             </p>
           </div>
+          <Button onClick={() => navigate("/admin/nova-manutencao")}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nova Manutenção
+          </Button>
           <Button variant="outline" onClick={() => navigate("/admin/profissionais")}>
             <User className="h-4 w-4 mr-2" />
             Profissionais
