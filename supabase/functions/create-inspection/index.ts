@@ -18,6 +18,7 @@ interface InspectionPayload {
   audio_data?: Array<{
     audio_url: string;
     transcript: string;
+    summary?: string;
   }>;
   attachments?: Array<{
     file_url: string;
@@ -51,6 +52,13 @@ serve(async (req) => {
       const text = a.transcript?.trim() || '(sem transcrição)';
       return `Áudio ${audioNum}: ${text}`;
     }).join(' | ') || '';
+    
+    // Combinar todos os resumos da IA
+    const transcriptSummary = payload.audio_data
+      ?.filter(a => a.summary?.trim())
+      .map(a => a.summary?.trim())
+      .join('\n\n') || '';
+    
     const firstAudioUrl = payload.audio_data?.[0]?.audio_url;
 
     // 1) Create inspection record
@@ -62,6 +70,7 @@ serve(async (req) => {
         cleaner_phone: payload.cleaner_phone,
         notes: payload.notes,
         transcript,
+        transcript_summary: transcriptSummary,
         audio_url: firstAudioUrl,
       })
       .select()
@@ -130,6 +139,7 @@ serve(async (req) => {
           cleanerName: payload.cleaner_name || 'Faxineira',
           status: payload.notes || '',
           transcript: transcript || '',
+          transcriptSummary: transcriptSummary || '',
           attachments: payload.attachments || [],
           audioUrl: firstAudioUrl,
         });
@@ -179,6 +189,7 @@ async function createMondayItem({
   cleanerName,
   status,
   transcript,
+  transcriptSummary,
   attachments,
   audioUrl,
 }: {
@@ -188,6 +199,7 @@ async function createMondayItem({
   cleanerName: string;
   status: string;
   transcript: string;
+  transcriptSummary: string;
   attachments: Array<{ file_url: string; file_name?: string }>;
   audioUrl?: string;
 }) {
@@ -209,7 +221,11 @@ async function createMondayItem({
   columnValues[colDate] = inspectionDate;
   columnValues[colCleaner] = cleanerName;
   columnValues[colStatus] = status;
-  columnValues[colTranscript] = transcript.slice(0, 9500);
+  // Include both transcript and AI summary
+  const fullTranscript = transcriptSummary 
+    ? `📋 RESUMO IA:\n${transcriptSummary}\n\n📝 TRANSCRIÇÃO:\n${transcript}` 
+    : transcript;
+  columnValues[colTranscript] = fullTranscript.slice(0, 9500);
   
   console.log('Monday column values:', JSON.stringify(columnValues, null, 2));
 

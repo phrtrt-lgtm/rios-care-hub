@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Trash2, CheckCircle2, XCircle, Camera, Video, Mic } from 'lucide-react';
+import { Loader2, Trash2, CheckCircle2, XCircle, Camera, Video, Mic, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import AudioRecorder from '@/components/AudioRecorder';
 import AudioPlayer from '@/components/AudioPlayer';
@@ -21,11 +21,20 @@ interface UploadedFile {
   error?: string;
 }
 
+interface AudioFile {
+  file: File;
+  url: string;
+  transcript: string;
+  summary: string;
+  transcribing: boolean;
+  uploading: boolean;
+}
+
 export default function CleanerInspectionForm({ propertyId, propertyName, onBack }: CleanerInspectionFormProps) {
   const navigate = useNavigate();
   const [inspectionStatus, setInspectionStatus] = useState<'OK' | 'NÃO' | ''>('');
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
-  const [audioFiles, setAudioFiles] = useState<Array<{ file: File; url: string; transcript: string; transcribing: boolean; uploading: boolean }>>([]);
+  const [audioFiles, setAudioFiles] = useState<AudioFile[]>([]);
   const [sending, setSending] = useState(false);
 
   const uploadFile = async (file: File): Promise<string> => {
@@ -95,10 +104,17 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
     setUploadedFiles(prev => prev.filter(f => f.file !== file));
   };
 
-  const handleAudioReady = async (file: File, transcriptText: string, transcribing: boolean) => {
+  const handleAudioReady = async (file: File, transcriptText: string, summaryText: string, transcribing: boolean) => {
     if (transcribing) {
       // Audio is being transcribed, add with uploading state and start upload
-      const newAudio = { file, url: '', transcript: transcriptText, transcribing, uploading: true };
+      const newAudio: AudioFile = { 
+        file, 
+        url: '', 
+        transcript: transcriptText, 
+        summary: summaryText,
+        transcribing, 
+        uploading: true 
+      };
       setAudioFiles(prev => [...prev, newAudio]);
       
       // Start upload immediately
@@ -119,11 +135,11 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
         );
       }
     } else {
-      // Transcription finished, update transcript
+      // Transcription finished, update transcript and summary
       setAudioFiles(prev => 
         prev.map(a => 
           a.file.name === file.name && a.file.size === file.size 
-            ? { ...a, transcript: transcriptText, transcribing: false } 
+            ? { ...a, transcript: transcriptText, summary: summaryText, transcribing: false } 
             : a
         )
       );
@@ -183,12 +199,13 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
           size_bytes: f.file.size,
         }));
 
-      // Build audio data and add audio files to attachments
+      // Build audio data with transcript AND summary
       const audioData = audioFiles
         .filter(a => a.url)
         .map(a => ({ 
           audio_url: a.url, 
-          transcript: a.transcript 
+          transcript: a.transcript,
+          summary: a.summary,
         }));
       
       // Add audio files to attachments
@@ -245,6 +262,12 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
   const hasErrors = uploadedFiles.some(f => f.error);
   const uploadedCount = uploadedFiles.filter(f => f.url && !f.error).length;
   const totalFilesCount = uploadedFiles.length;
+  
+  // Get combined summary from all audio files
+  const combinedSummary = audioFiles
+    .filter(a => a.summary && !a.transcribing)
+    .map(a => a.summary)
+    .join('\n\n');
 
   return (
     <div className="space-y-6 pb-6">
@@ -330,7 +353,10 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
                       </span>
                     )}
                     {audio.transcribing && !audio.uploading && (
-                      <span className="text-xs text-muted-foreground ml-auto">Transcrevendo...</span>
+                      <span className="text-xs text-muted-foreground ml-auto flex items-center gap-1">
+                        <Sparkles className="h-3 w-3 animate-pulse" />
+                        Analisando IA...
+                      </span>
                     )}
                     {!audio.uploading && !audio.transcribing && audio.url && (
                       <CheckCircle2 className="h-4 w-4 text-green-600 ml-auto" />
@@ -357,6 +383,19 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
                 </Button>
               </div>
             ))}
+          </div>
+        )}
+        
+        {/* AI Summary Section */}
+        {combinedSummary && (
+          <div className="mt-4 p-4 bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/20 rounded-xl">
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles className="h-5 w-5 text-purple-600" />
+              <span className="font-semibold text-purple-700 dark:text-purple-300">Análise da IA</span>
+            </div>
+            <div className="text-sm whitespace-pre-wrap">
+              {combinedSummary}
+            </div>
           </div>
         )}
       </div>
@@ -486,7 +525,7 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
         className="w-full text-lg font-bold"
       >
         {sending && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-        {isUploading ? 'Enviando arquivos...' : isTranscribing ? 'Transcrevendo áudios...' : sending ? 'Finalizando...' : 'Enviar vistoria'}
+        {isUploading ? 'Enviando arquivos...' : isTranscribing ? 'Analisando com IA...' : sending ? 'Finalizando...' : 'Enviar vistoria'}
       </Button>
       
       {uploadedFiles.length > 0 && (
