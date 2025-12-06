@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -6,9 +6,12 @@ import { LoadingScreen } from '@/components/LoadingScreen';
 import { formatDateTime } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
-import { Headphones, Paperclip } from 'lucide-react';
+import { InspectionCalendar } from '@/components/InspectionCalendar';
+import { Headphones, Paperclip, ArrowLeft, User, Calendar, AlertTriangle, CheckCircle2, Building2, FileText } from 'lucide-react';
+import { format, isSameDay } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface Property {
   id: string;
@@ -27,16 +30,22 @@ interface Inspection {
   transcript?: string;
 }
 
+interface InspectionDate {
+  date: string;
+  count: number;
+  hasProblems: boolean;
+}
+
 export default function AdminVistoriasImovel() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { profile, loading: authLoading } = useAuth();
   const [property, setProperty] = useState<Property | null>(null);
   const [inspections, setInspections] = useState<Inspection[]>([]);
-  const [filteredInspections, setFilteredInspections] = useState<Inspection[]>([]);
   const [attachmentCounts, setAttachmentCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<"todos" | "ok" | "nao">("todos");
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
 
   useEffect(() => {
     if (!authLoading) {
@@ -47,18 +56,6 @@ export default function AdminVistoriasImovel() {
       fetchData();
     }
   }, [authLoading, profile, id]);
-
-  useEffect(() => {
-    let filtered = inspections;
-    
-    if (statusFilter === "ok") {
-      filtered = filtered.filter((insp) => insp.notes === "OK");
-    } else if (statusFilter === "nao") {
-      filtered = filtered.filter((insp) => insp.notes === "NÃO");
-    }
-    
-    setFilteredInspections(filtered);
-  }, [statusFilter, inspections]);
 
   const fetchData = async () => {
     try {
@@ -104,6 +101,50 @@ export default function AdminVistoriasImovel() {
     }
   };
 
+  // Build calendar data
+  const inspectionDates = useMemo(() => {
+    const dateAggregates = new Map<string, { count: number; hasProblems: boolean }>();
+    
+    inspections.forEach(insp => {
+      const dateKey = format(new Date(insp.created_at), 'yyyy-MM-dd');
+      const existing = dateAggregates.get(dateKey) || { count: 0, hasProblems: false };
+      existing.count++;
+      if (insp.notes === 'NÃO') {
+        existing.hasProblems = true;
+      }
+      dateAggregates.set(dateKey, existing);
+    });
+
+    const datesArray: InspectionDate[] = [];
+    dateAggregates.forEach((value, key) => {
+      datesArray.push({ date: key, ...value });
+    });
+    return datesArray;
+  }, [inspections]);
+
+  // Filter inspections
+  const filteredInspections = useMemo(() => {
+    let filtered = inspections;
+    
+    if (statusFilter === "ok") {
+      filtered = filtered.filter((insp) => insp.notes === "OK");
+    } else if (statusFilter === "nao") {
+      filtered = filtered.filter((insp) => insp.notes === "NÃO");
+    }
+
+    if (selectedDate) {
+      filtered = filtered.filter((insp) => 
+        isSameDay(new Date(insp.created_at), selectedDate)
+      );
+    }
+    
+    return filtered;
+  }, [statusFilter, inspections, selectedDate]);
+
+  const handleDateSelect = (date: Date) => {
+    setSelectedDate(prev => prev && isSameDay(prev, date) ? undefined : date);
+  };
+
   if (authLoading || loading) {
     return <LoadingScreen />;
   }
@@ -116,124 +157,195 @@ export default function AdminVistoriasImovel() {
     );
   }
 
-  return (
-    <div className="container mx-auto p-4 space-y-4">
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" onClick={() => navigate('/admin/vistorias')}>← Voltar</Button>
-        <h1 className="text-2xl font-bold">Vistorias – {property.name}</h1>
-      </div>
+  const okCount = inspections.filter(i => i.notes === 'OK').length;
+  const problemCount = inspections.filter(i => i.notes === 'NÃO').length;
 
-      <Card className="p-4 flex items-center gap-4">
-        <div className="w-32 flex-shrink-0">
-          <AspectRatio ratio={16 / 9} className="bg-muted rounded overflow-hidden">
-            {property.cover_photo_url ? (
-              <img src={property.cover_photo_url} alt={property.name} className="w-full h-full object-cover" />
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+        <div className="container mx-auto px-4">
+          <div className="flex h-16 items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/admin/vistorias')}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="flex-1">
+              <h1 className="text-xl font-semibold line-clamp-1">{property.name}</h1>
+              <p className="text-sm text-muted-foreground">
+                {inspections.length} vistorias registradas
+              </p>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="container mx-auto px-4 py-6">
+        <div className="grid lg:grid-cols-[1fr_320px] gap-6">
+          {/* Main Content */}
+          <div className="space-y-4">
+            {/* Property Card */}
+            <Card className="p-4 flex items-center gap-4">
+              <div className="w-24 flex-shrink-0">
+                <AspectRatio ratio={16 / 9} className="bg-muted rounded overflow-hidden">
+                  {property.cover_photo_url ? (
+                    <img src={property.cover_photo_url} alt={property.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Building2 className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                  )}
+                </AspectRatio>
+              </div>
+              <div className="flex-1">
+                <h3 className="font-medium">{property.name}</h3>
+                <p className="text-sm text-muted-foreground">{property.address || 'Sem endereço'}</p>
+                <div className="flex gap-2 mt-2">
+                  <Badge variant="secondary" className="bg-green-500/20 text-green-700 dark:text-green-400">
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    {okCount} OK
+                  </Badge>
+                  <Badge variant="secondary" className="bg-destructive/20 text-destructive">
+                    <AlertTriangle className="h-3 w-3 mr-1" />
+                    {problemCount} Problemas
+                  </Badge>
+                </div>
+              </div>
+            </Card>
+
+            {/* Filters */}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant={statusFilter === "todos" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setStatusFilter("todos")}
+              >
+                Todos ({inspections.length})
+              </Button>
+              <Button
+                variant={statusFilter === "ok" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setStatusFilter("ok")}
+                className={statusFilter === "ok" ? "bg-green-600 hover:bg-green-700" : ""}
+              >
+                <CheckCircle2 className="h-4 w-4 mr-1" />
+                OK ({okCount})
+              </Button>
+              <Button
+                variant={statusFilter === "nao" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setStatusFilter("nao")}
+                className={statusFilter === "nao" ? "bg-red-600 hover:bg-red-700" : ""}
+              >
+                <AlertTriangle className="h-4 w-4 mr-1" />
+                Problemas ({problemCount})
+              </Button>
+              
+              {selectedDate && (
+                <Badge variant="outline" className="ml-auto">
+                  {format(selectedDate, "dd/MM/yyyy")}
+                  <button 
+                    onClick={() => setSelectedDate(undefined)}
+                    className="ml-2 hover:text-destructive"
+                  >
+                    ×
+                  </button>
+                </Badge>
+              )}
+            </div>
+
+            {/* Inspections List */}
+            {filteredInspections.length === 0 ? (
+              <Card className="p-12 text-center">
+                <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">
+                  {statusFilter !== "todos" || selectedDate
+                    ? 'Nenhuma vistoria encontrada com os filtros selecionados.'
+                    : 'Nenhuma vistoria registrada para este imóvel.'}
+                </p>
+              </Card>
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
-                Sem foto
+              <div className="space-y-3">
+                {filteredInspections.map((inspection) => (
+                  <Card
+                    key={inspection.id}
+                    className="p-4 cursor-pointer hover:shadow-md transition-all hover:border-primary/50"
+                    onClick={() => navigate(`/admin/vistorias/${inspection.id}`)}
+                  >
+                    <div className="flex items-start gap-4">
+                      {/* Status Badge */}
+                      <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${
+                        inspection.notes === 'OK' 
+                          ? 'bg-green-500/20 text-green-600' 
+                          : 'bg-destructive/20 text-destructive'
+                      }`}>
+                        {inspection.notes === 'OK' ? (
+                          <CheckCircle2 className="h-6 w-6" />
+                        ) : (
+                          <AlertTriangle className="h-6 w-6" />
+                        )}
+                      </div>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Calendar className="h-4 w-4" />
+                            {format(new Date(inspection.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          </div>
+                          <Badge variant={inspection.notes === 'OK' ? 'secondary' : 'destructive'}>
+                            {inspection.notes || '—'}
+                          </Badge>
+                        </div>
+
+                        {inspection.cleaner_name && (
+                          <div className="flex items-center gap-2 text-sm mb-2">
+                            <User className="h-4 w-4 text-muted-foreground" />
+                            <span>{inspection.cleaner_name}</span>
+                            {inspection.cleaner_phone && (
+                              <span className="text-muted-foreground">({inspection.cleaner_phone})</span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Preview of transcript */}
+                        {inspection.transcript && (
+                          <p className="text-sm text-muted-foreground line-clamp-2 mt-2">
+                            {inspection.transcript}
+                          </p>
+                        )}
+
+                        {/* Indicators */}
+                        <div className="flex items-center gap-3 mt-2">
+                          {inspection.audio_url && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <Headphones className="h-3 w-3" />
+                              Áudio
+                            </div>
+                          )}
+                          {attachmentCounts[inspection.id] > 0 && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <Paperclip className="h-3 w-3" />
+                              {attachmentCounts[inspection.id]} anexos
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
               </div>
             )}
-          </AspectRatio>
-        </div>
-        <div>
-          <h3 className="font-medium">{property.name}</h3>
-          <p className="text-sm text-muted-foreground">{property.address}</p>
-        </div>
-      </Card>
+          </div>
 
-      {/* Filtros de status */}
-      <div className="flex gap-2">
-        <Button
-          variant={statusFilter === "todos" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setStatusFilter("todos")}
-        >
-          Todos
-        </Button>
-        <Button
-          variant={statusFilter === "ok" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setStatusFilter("ok")}
-          className={statusFilter === "ok" ? "bg-green-600 hover:bg-green-700" : ""}
-        >
-          OK
-        </Button>
-        <Button
-          variant={statusFilter === "nao" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setStatusFilter("nao")}
-          className={statusFilter === "nao" ? "bg-red-600 hover:bg-red-700" : ""}
-        >
-          NÃO
-        </Button>
-      </div>
-
-      {filteredInspections.length === 0 ? (
-        <Card className="p-12 text-center">
-          <p className="text-muted-foreground">
-            {statusFilter !== "todos" 
-              ? `Nenhuma vistoria com status "${statusFilter === "ok" ? "OK" : "NÃO"}" encontrada.`
-              : "Nenhuma vistoria registrada para este imóvel."}
-          </p>
-        </Card>
-      ) : (
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Data da vistoria</TableHead>
-                <TableHead>Faxineira</TableHead>
-                <TableHead>OK OU NÃO</TableHead>
-                <TableHead className="text-center">Áudio</TableHead>
-                <TableHead className="text-center">Anexos</TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredInspections.map((inspection) => (
-                <TableRow key={inspection.id}>
-                  <TableCell>{formatDateTime(inspection.created_at)}</TableCell>
-                  <TableCell className="text-sm">
-                    {inspection.cleaner_name || '-'}
-                    {inspection.cleaner_phone && <span className="text-muted-foreground"> ({inspection.cleaner_phone})</span>}
-                  </TableCell>
-                  <TableCell>
-                    {inspection.notes ? (
-                      <span className={`text-sm font-bold px-2 py-1 rounded ${
-                        inspection.notes === "OK" 
-                          ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" 
-                          : "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
-                      }`}>
-                        {inspection.notes}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {inspection.audio_url ? <Headphones className="h-4 w-4 inline" /> : '—'}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <span className="text-sm flex items-center justify-center gap-1">
-                      <Paperclip className="h-3 w-3" />
-                      {attachmentCounts[inspection.id] || 0}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate(`/admin/vistorias/${inspection.id}`)}
-                    >
-                      Detalhes
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
-      )}
+          {/* Calendar Sidebar */}
+          <div className="lg:sticky lg:top-24 lg:self-start">
+            <InspectionCalendar
+              inspectionDates={inspectionDates}
+              onDateSelect={handleDateSelect}
+              selectedDate={selectedDate}
+            />
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
