@@ -492,16 +492,16 @@ const AdminManutencoesKanban = () => {
                 <div className="space-y-2">
                   <Label htmlFor="provider">Profissional</Label>
                   <Select
-                    value={scheduleData.service_provider_id}
+                    value={scheduleData.service_provider_id || "none"}
                     onValueChange={(value) =>
-                      setScheduleData((prev) => ({ ...prev, service_provider_id: value }))
+                      setScheduleData((prev) => ({ ...prev, service_provider_id: value === "none" ? "" : value }))
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione um profissional" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Nenhum</SelectItem>
+                      <SelectItem value="none">Nenhum</SelectItem>
                       {providers?.map((p) => (
                         <SelectItem key={p.id} value={p.id}>
                           {p.name}
