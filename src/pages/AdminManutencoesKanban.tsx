@@ -27,6 +27,7 @@ interface MaintenanceTicket {
   created_at: string;
   scheduled_at: string | null;
   service_provider_id: string | null;
+  cost_responsible: "owner" | "pm" | "guest" | null;
   property: {
     id: string;
     name: string;
@@ -83,12 +84,14 @@ const AdminManutencoesKanban = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [search, setSearch] = useState("");
+  const [responsibleFilter, setResponsibleFilter] = useState<"all" | "owner" | "pm" | "guest">("all");
   const [selectedTicket, setSelectedTicket] = useState<MaintenanceTicket | null>(null);
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [scheduleData, setScheduleData] = useState({
     scheduled_at: "",
     service_provider_id: "",
     observation: "",
+    cost_responsible: "owner" as "owner" | "pm" | "guest",
   });
 
   // Fetch maintenance tickets
@@ -106,6 +109,7 @@ const AdminManutencoesKanban = () => {
           created_at,
           scheduled_at,
           service_provider_id,
+          cost_responsible,
           property:properties(id, name, cover_photo_url),
           owner:profiles!tickets_owner_id_fkey(id, name),
           service_provider:service_providers(id, name, phone)
@@ -141,6 +145,7 @@ const AdminManutencoesKanban = () => {
       service_provider_id?: string | null; 
       status?: TicketStatus;
       observation?: string;
+      cost_responsible?: "owner" | "pm" | "guest";
     }) => {
       const { observation, ...updateData } = data;
       
@@ -232,9 +237,16 @@ const AdminManutencoesKanban = () => {
         );
       }
 
+      // Apply responsible filter
+      if (responsibleFilter !== "all") {
+        columnTickets = columnTickets.filter(
+          (t) => (t.cost_responsible || "owner") === responsibleFilter
+        );
+      }
+
       return { ...col, tickets: columnTickets };
     });
-  }, [tickets, search]);
+  }, [tickets, search, responsibleFilter]);
 
   const openScheduleDialog = (ticket: MaintenanceTicket) => {
     setSelectedTicket(ticket);
@@ -244,6 +256,7 @@ const AdminManutencoesKanban = () => {
         : "",
       service_provider_id: ticket.service_provider_id || "",
       observation: "",
+      cost_responsible: ticket.cost_responsible || "owner",
     });
     setScheduleDialogOpen(true);
   };
@@ -256,6 +269,7 @@ const AdminManutencoesKanban = () => {
       scheduled_at: scheduleData.scheduled_at || null,
       service_provider_id: scheduleData.service_provider_id || null,
       observation: scheduleData.observation,
+      cost_responsible: scheduleData.cost_responsible,
     });
   };
 
@@ -291,15 +305,28 @@ const AdminManutencoesKanban = () => {
           </Button>
         </div>
 
-        {/* Search */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por unidade, proprietário ou profissional..."
-            className="pl-10"
-          />
+        {/* Filters */}
+        <div className="flex flex-wrap gap-4 items-center">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por unidade, proprietário ou profissional..."
+              className="pl-10"
+            />
+          </div>
+          <Select value={responsibleFilter} onValueChange={(v: any) => setResponsibleFilter(v)}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Responsável" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="owner">Proprietário</SelectItem>
+              <SelectItem value="pm">Gestão</SelectItem>
+              <SelectItem value="guest">Hóspede</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Kanban Board */}
@@ -358,15 +385,26 @@ const AdminManutencoesKanban = () => {
                             </span>
                           </div>
 
-                          {/* Subject */}
                           <p className="text-sm line-clamp-2">{ticket.subject}</p>
 
-                          {/* Priority badge */}
-                          {ticket.priority === "urgente" && (
-                            <Badge variant="destructive" className="text-xs">
-                              Urgente
-                            </Badge>
-                          )}
+                          {/* Cost responsible badge */}
+                          <div className="flex flex-wrap gap-1">
+                            {ticket.cost_responsible === "guest" && (
+                              <Badge variant="outline" className="text-xs bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30">
+                                Hóspede
+                              </Badge>
+                            )}
+                            {ticket.cost_responsible === "pm" && (
+                              <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30">
+                                Gestão
+                              </Badge>
+                            )}
+                            {ticket.priority === "urgente" && (
+                              <Badge variant="destructive" className="text-xs">
+                                Urgente
+                              </Badge>
+                            )}
+                          </div>
 
                           {/* Scheduled info */}
                           {ticket.scheduled_at && (
@@ -528,6 +566,30 @@ const AdminManutencoesKanban = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Responsável pelo custo</Label>
+                  <Select
+                    value={scheduleData.cost_responsible}
+                    onValueChange={(value: "owner" | "pm" | "guest") =>
+                      setScheduleData((prev) => ({ ...prev, cost_responsible: value }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="owner">Proprietário</SelectItem>
+                      <SelectItem value="pm">Gestão</SelectItem>
+                      <SelectItem value="guest">Hóspede (invisível pro proprietário)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {scheduleData.cost_responsible === "guest" && (
+                    <p className="text-xs text-orange-600 dark:text-orange-400">
+                      ⚠️ Manutenções de hóspede não aparecem para o proprietário
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">

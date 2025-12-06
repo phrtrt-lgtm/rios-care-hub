@@ -1524,6 +1524,7 @@ export type Database = {
           assigned_to: string | null
           blocked_dates_end: string | null
           blocked_dates_start: string | null
+          cost_responsible: string | null
           created_at: string
           created_by: string
           description: string
@@ -1548,6 +1549,7 @@ export type Database = {
           assigned_to?: string | null
           blocked_dates_end?: string | null
           blocked_dates_start?: string | null
+          cost_responsible?: string | null
           created_at?: string
           created_by: string
           description: string
@@ -1572,6 +1574,7 @@ export type Database = {
           assigned_to?: string | null
           blocked_dates_end?: string | null
           blocked_dates_start?: string | null
+          cost_responsible?: string | null
           created_at?: string
           created_by?: string
           description?: string
