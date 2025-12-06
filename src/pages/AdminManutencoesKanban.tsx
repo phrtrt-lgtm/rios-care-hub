@@ -54,7 +54,7 @@ interface ServiceProvider {
   specialty: string[] | null;
 }
 
-// Kanban columns mapping
+// Kanban columns mapping (without Concluído - has dedicated page)
 const KANBAN_COLUMNS = [
   { 
     id: "pendente", 
@@ -73,12 +73,6 @@ const KANBAN_COLUMNS = [
     label: "Em Execução", 
     statuses: ["em_execucao"] as TicketStatus[],
     color: "bg-purple-500/10 border-purple-500/30"
-  },
-  { 
-    id: "concluido", 
-    label: "Concluído", 
-    statuses: ["concluido"] as TicketStatus[],
-    color: "bg-green-500/10 border-green-500/30"
   },
 ];
 
@@ -127,6 +121,7 @@ const AdminManutencoesKanban = () => {
         `)
         .eq("ticket_type", "manutencao")
         .neq("status", "cancelado")
+        .neq("status", "concluido")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -369,6 +364,9 @@ const AdminManutencoesKanban = () => {
           <Button onClick={() => navigate("/admin/nova-manutencao")}>
             <Plus className="h-4 w-4 mr-2" />
             Nova Manutenção
+          </Button>
+          <Button variant="secondary" onClick={() => navigate("/admin/manutencoes-concluidas")}>
+            Concluídas
           </Button>
           <Button variant="outline" onClick={() => navigate("/admin/profissionais")}>
             <User className="h-4 w-4 mr-2" />

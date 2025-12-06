@@ -40,11 +40,11 @@ type KanbanColumn = {
   bgColor: string;
 };
 
+// Kanban columns (without Concluído - has dedicated page)
 const columns: KanbanColumn[] = [
   { key: "pendente", title: "Pendente", color: "text-yellow-600", bgColor: "bg-yellow-50 dark:bg-yellow-950/30" },
   { key: "agendado", title: "Agendado", color: "text-blue-600", bgColor: "bg-blue-50 dark:bg-blue-950/30" },
   { key: "em_execucao", title: "Em Execução", color: "text-purple-600", bgColor: "bg-purple-50 dark:bg-purple-950/30" },
-  { key: "concluido", title: "Concluído", color: "text-green-600", bgColor: "bg-green-50 dark:bg-green-950/30" },
 ];
 
 const MAX_ITEMS_PER_COLUMN = 2;
@@ -114,25 +114,25 @@ export function MaintenanceKanbanPreview() {
   };
 
   const getTicketsForColumn = (columnKey: string) => {
+    // Filter out completed tickets - they have their own page
+    const activeTickets = tickets.filter(t => t.status !== "concluido");
+    
     if (columnKey === "pendente") {
-      return tickets.filter(
+      return activeTickets.filter(
         (t) =>
           ["novo", "em_analise", "aguardando_info"].includes(t.status) &&
           !t.scheduled_at
       );
     }
     if (columnKey === "agendado") {
-      return tickets.filter(
+      return activeTickets.filter(
         (t) =>
           t.scheduled_at &&
-          !["em_execucao", "concluido"].includes(t.status)
+          !["em_execucao"].includes(t.status)
       );
     }
     if (columnKey === "em_execucao") {
-      return tickets.filter((t) => t.status === "em_execucao");
-    }
-    if (columnKey === "concluido") {
-      return tickets.filter((t) => t.status === "concluido");
+      return activeTickets.filter((t) => t.status === "em_execucao");
     }
     return [];
   };
@@ -279,15 +279,25 @@ export function MaintenanceKanbanPreview() {
               </Badge>
             )}
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate("/admin/manutencoes")}
-            className="text-purple-600 border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950"
-          >
-            Ver quadro completo
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/admin/manutencoes-concluidas")}
+              className="text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-950"
+            >
+              Concluídas
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/admin/manutencoes")}
+              className="text-purple-600 border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950"
+            >
+              Ver quadro completo
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="pt-0">
