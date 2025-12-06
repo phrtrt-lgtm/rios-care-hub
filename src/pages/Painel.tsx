@@ -182,7 +182,7 @@ export default function Painel() {
               {(profile?.role === "admin" || profile?.role === "maintenance") && (
                 <Button 
                   size="lg" 
-                  className="h-16 text-sm font-semibold justify-start px-4"
+                  className="h-16 text-sm font-semibold justify-start px-4 bg-blue-600 hover:bg-blue-700 text-white"
                   onClick={() => navigate("/admin/nova-manutencao")}
                 >
                   <Wrench className="mr-3 h-5 w-5" />
@@ -192,7 +192,7 @@ export default function Painel() {
 
               <Button 
                 size="lg" 
-                className="h-16 text-sm font-semibold justify-start px-4"
+                className="h-16 text-sm font-semibold justify-start px-4 bg-blue-600 hover:bg-blue-700 text-white"
                 onClick={() => navigate("/novo-ticket-massa")}
               >
                 <Ticket className="mr-3 h-5 w-5" />
@@ -203,7 +203,7 @@ export default function Painel() {
                 <>
                   <Button 
                     size="lg" 
-                    className="h-16 text-sm font-semibold justify-start px-4"
+                    className="h-16 text-sm font-semibold justify-start px-4 bg-blue-600 hover:bg-blue-700 text-white"
                     onClick={() => navigate("/novo-ticket-interno")}
                   >
                     <Users className="mr-3 h-5 w-5" />
@@ -212,7 +212,7 @@ export default function Painel() {
 
                   <Button 
                     size="lg" 
-                    className="h-16 text-sm font-semibold justify-start px-4"
+                    className="h-16 text-sm font-semibold justify-start px-4 bg-blue-600 hover:bg-blue-700 text-white"
                     onClick={() => navigate("/novo-alerta")}
                   >
                     <Bell className="mr-3 h-5 w-5" />
@@ -221,7 +221,7 @@ export default function Painel() {
 
                   <Button 
                     size="lg" 
-                    className="h-16 text-sm font-semibold justify-start px-4"
+                    className="h-16 text-sm font-semibold justify-start px-4 bg-blue-600 hover:bg-blue-700 text-white"
                     onClick={() => navigate("/nova-proposta-votacao")}
                   >
                     <Vote className="mr-3 h-5 w-5" />
