@@ -778,6 +778,7 @@ export type Database = {
           cleaner_phone: string | null
           created_at: string
           id: string
+          internal_only: boolean
           monday_item_id: string | null
           notes: string | null
           property_id: string
@@ -790,6 +791,7 @@ export type Database = {
           cleaner_phone?: string | null
           created_at?: string
           id?: string
+          internal_only?: boolean
           monday_item_id?: string | null
           notes?: string | null
           property_id: string
@@ -802,6 +804,7 @@ export type Database = {
           cleaner_phone?: string | null
           created_at?: string
           id?: string
+          internal_only?: boolean
           monday_item_id?: string | null
           notes?: string | null
           property_id?: string
