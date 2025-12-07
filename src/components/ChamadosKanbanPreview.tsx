@@ -8,6 +8,7 @@ import { Ticket, ArrowRight, Clock, Building, MessageSquare, HelpCircle, DollarS
 import { differenceInHours, differenceInMinutes } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
+import { useChatPreloader } from "@/hooks/useChatPreloader";
 import { MaintenanceChatDialog } from "./MaintenanceChatDialog";
 
 type TicketType = "duvida" | "cobranca" | "bloqueio_data" | "financeiro" | "outros" | "informacao" | "conversar_hospedes" | "melhorias_compras";
@@ -69,6 +70,9 @@ export function ChamadosKanbanPreview() {
 
   const ticketIds = useMemo(() => tickets.map(t => t.id), [tickets]);
   const { unreadCounts, markAsRead } = useUnreadMessages(ticketIds);
+  
+  // Preload chat messages in background for instant opening
+  useChatPreloader(ticketIds);
 
   const openChatDialog = (ticket: OwnerTicket, e: React.MouseEvent) => {
     e.stopPropagation();

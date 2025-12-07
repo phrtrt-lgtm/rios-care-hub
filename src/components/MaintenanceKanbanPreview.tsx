@@ -15,6 +15,7 @@ import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
+import { useChatPreloader } from "@/hooks/useChatPreloader";
 import { MaintenanceChatDialog } from "./MaintenanceChatDialog";
 
 type MaintenanceTicket = {
@@ -68,9 +69,12 @@ export function MaintenanceKanbanPreview() {
   const [chatDialogOpen, setChatDialogOpen] = useState(false);
   const [chatTicket, setChatTicket] = useState<MaintenanceTicket | null>(null);
 
-  // Get ticket IDs for unread message tracking
+  // Get ticket IDs for unread message tracking and preloading
   const ticketIds = useMemo(() => tickets.map(t => t.id), [tickets]);
   const { unreadCounts, markAsRead } = useUnreadMessages(ticketIds);
+  
+  // Preload chat messages in background for instant opening
+  useChatPreloader(ticketIds);
 
   const openChatDialog = (ticket: MaintenanceTicket, e: React.MouseEvent) => {
     e.stopPropagation();
