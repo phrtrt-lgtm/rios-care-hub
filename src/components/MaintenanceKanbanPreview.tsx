@@ -9,11 +9,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Wrench, ArrowRight, User, Calendar, ChevronRight, ChevronLeft } from "lucide-react";
+import { Wrench, ArrowRight, User, Calendar, ChevronRight, ChevronLeft, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { MaintenanceChatDialog } from "./MaintenanceChatDialog";
 
 type MaintenanceTicket = {
   id: string;
@@ -63,6 +64,14 @@ export function MaintenanceKanbanPreview() {
     observation: "",
     cost_responsible: "owner" as "owner" | "pm" | "guest",
   });
+  const [chatDialogOpen, setChatDialogOpen] = useState(false);
+  const [chatTicket, setChatTicket] = useState<MaintenanceTicket | null>(null);
+
+  const openChatDialog = (ticket: MaintenanceTicket, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setChatTicket(ticket);
+    setChatDialogOpen(true);
+  };
 
   useEffect(() => {
     fetchMaintenanceTickets();
@@ -350,6 +359,16 @@ export function MaintenanceKanbanPreview() {
                         
                         {/* Action buttons */}
                         <div className="flex gap-1 mt-2">
+                          {/* Chat button - always visible */}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-[10px] h-6 px-2"
+                            onClick={(e) => openChatDialog(ticket, e)}
+                            title="Mensagens"
+                          >
+                            <MessageSquare className="h-3 w-3" />
+                          </Button>
                           {column.key === "pendente" && (
                             <Button
                               size="sm"
@@ -528,6 +547,15 @@ export function MaintenanceKanbanPreview() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Chat Dialog */}
+      <MaintenanceChatDialog
+        open={chatDialogOpen}
+        onOpenChange={setChatDialogOpen}
+        ticketId={chatTicket?.id || null}
+        ticketSubject={chatTicket?.subject}
+        propertyName={chatTicket?.property?.name}
+      />
     </Card>
   );
 }
