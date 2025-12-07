@@ -13,7 +13,7 @@ import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
 import { VotacoesPendentes } from "@/components/VotacoesPendentes";
 import { MaintenanceKanbanPreview } from "@/components/MaintenanceKanbanPreview";
 import { GuestChargeReminders } from "@/components/GuestChargeReminders";
-
+import { NotificationButton } from "@/components/NotificationButton";
 export default function Painel() {
   const { profile, user, signOut } = useAuth();
   const [photoUrl, setPhotoUrl] = useState(profile?.photo_url);
@@ -88,7 +88,10 @@ export default function Painel() {
               )}
             </div>
             
-            <Dialog>
+            <div className="flex items-center gap-2">
+              <NotificationButton />
+              
+              <Dialog>
               <DialogTrigger asChild>
                 <div className="flex items-center gap-2 bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/90 text-white px-3 py-2 rounded-lg cursor-pointer transition-colors">
                   {photoUrl ? (
@@ -145,6 +148,7 @@ export default function Painel() {
                 </div>
               </DialogContent>
             </Dialog>
+            </div>
           </div>
         </div>
       </header>
