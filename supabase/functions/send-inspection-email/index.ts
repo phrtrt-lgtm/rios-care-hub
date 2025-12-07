@@ -99,6 +99,26 @@ const handler = async (req: Request): Promise<Response> => {
 
           console.log("Team email sent to:", adminEmails.join(", "));
         }
+
+        // Create notification records for team members
+        const { data: teamMembers } = await supabase
+          .from("profiles")
+          .select("id")
+          .in("role", ["admin", "maintenance"]);
+
+        if (teamMembers && teamMembers.length > 0) {
+          const hasProblems = inspection.notes === "NÃO";
+          const notifications = teamMembers.map(member => ({
+            owner_id: member.id,
+            title: hasProblems ? `🔴 Vistoria com Problema` : `Nova Vistoria`,
+            message: `${property?.name || "Imóvel"} - ${inspection.cleaner_name || "Faxineira"}`,
+            type: "maintenance",
+            reference_id: inspectionId,
+            reference_url: `/admin/vistorias/${inspectionId}`,
+          }));
+          await supabase.from("notifications").insert(notifications);
+          console.log(`Created ${notifications.length} notification records for team`);
+        }
       } catch (error) {
         console.error("Error sending team email:", error);
       }
@@ -142,23 +162,17 @@ const handler = async (req: Request): Promise<Response> => {
 
         console.log("Owner email sent to:", ownerProfile.email);
 
-        // Send push notification to owner
-        try {
-          await supabase.functions.invoke("send-push", {
-            body: {
-              ownerId: property.owner_id,
-              payload: {
-                title: "🏠 Nova Vistoria",
-                body: `Vistoria registrada para ${property.name}`,
-                url: `/vistorias/${inspection.id}`,
-                tag: `inspection_${inspection.id}`,
-              },
-            },
-          });
-          console.log("Push notification sent to owner");
-        } catch (pushError) {
-          console.error("Push notification error (non-critical):", pushError);
-        }
+        // Create notification record for owner (triggers push via database trigger)
+        await supabase.from("notifications").insert({
+          owner_id: property.owner_id,
+          title: "Nova Vistoria",
+          message: `Vistoria registrada para ${property.name}`,
+          type: "maintenance",
+          reference_id: inspectionId,
+          reference_url: `/vistorias/${inspectionId}`,
+        });
+        console.log("Notification created for owner");
+
       } catch (error) {
         console.error("Error sending owner email:", error);
       }

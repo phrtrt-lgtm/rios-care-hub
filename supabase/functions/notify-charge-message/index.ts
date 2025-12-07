@@ -35,7 +35,7 @@ const handler = async (req: Request): Promise<Response> => {
       .from("charge_messages")
       .select(`
         *,
-        author:profiles!charge_messages_author_id_fkey(name, email, role)
+        author:profiles!charge_messages_author_id_fkey(id, name, email, role)
       `)
       .eq("id", messageId)
       .single();
@@ -47,14 +47,14 @@ const handler = async (req: Request): Promise<Response> => {
       .from("charges")
       .select(`
         *,
-        owner:profiles!charges_owner_id_fkey(name, email)
+        owner:profiles!charges_owner_id_fkey(id, name, email)
       `)
       .eq("id", chargeId)
       .single();
 
     if (!charge) throw new Error("Charge not found");
 
-    const isTeamMessage = ["admin", "agent"].includes(message.author.role);
+    const isTeamMessage = ["admin", "agent", "maintenance"].includes(message.author.role);
     
     const portalUrl = Deno.env.get("PORTAL_URL") || "https://portal.rioshospedagens.com.br";
     const chargeUrl = `${portalUrl}/cobranca-detalhes/${chargeId}`;
@@ -84,23 +84,34 @@ const handler = async (req: Request): Promise<Response> => {
           html: renderTemplate(template.body_html, variables),
         });
       }
+
+      // Create notification record for owner (this triggers push via database trigger)
+      await supabase.from("notifications").insert({
+        owner_id: charge.owner_id,
+        title: `Nova mensagem em ${charge.title}`,
+        message: `${message.author.name}: ${message.body.substring(0, 100)}${message.body.length > 100 ? '...' : ''}`,
+        type: "charge",
+        reference_id: chargeId,
+        reference_url: `/cobranca-detalhes/${chargeId}`,
+      });
+      console.log("Notification created for owner");
+
     } else {
       // Owner sent message, notify team - only maintenance and admin can see charges
       const template = await getTemplate(supabase, "charge_message_team");
       
-      if (adminEmails.length > 0 && adminEmails[0] !== "" && template) {
+      if (template) {
         // Get team members with their roles - only maintenance and admin can see charges
         const { data: teamMembers } = await supabase
           .from("profiles")
           .select("id, email, role")
           .in("role", ["admin", "maintenance"]);
 
-        const eligibleEmails = (teamMembers || [])
-          .filter(m => m.email)
-          .map(m => m.email);
+        const eligibleMembers = (teamMembers || []).filter(m => m.email);
 
         // Only send if there are eligible recipients
-        if (eligibleEmails.length > 0) {
+        if (eligibleMembers.length > 0) {
+          const eligibleEmails = eligibleMembers.map(m => m.email);
           await resend.emails.send({
             from: "RIOS <sistema@rioshospedagens.com.br>",
             reply_to: "rioslagoon@gmail.com",
@@ -109,34 +120,24 @@ const handler = async (req: Request): Promise<Response> => {
             html: renderTemplate(template.body_html, variables),
           });
           console.log(`Charge message notification sent to ${eligibleEmails.length} team members`);
+
+          // Create notification records for each team member
+          const notifications = eligibleMembers.map(member => ({
+            owner_id: member.id,
+            title: `Nova mensagem em cobrança`,
+            message: `${charge.owner.name}: ${message.body.substring(0, 100)}${message.body.length > 100 ? '...' : ''}`,
+            type: "charge",
+            reference_id: chargeId,
+            reference_url: `/cobranca-detalhes/${chargeId}`,
+          }));
+
+          await supabase.from("notifications").insert(notifications);
+          console.log(`Created ${notifications.length} notification records for team members`);
         }
       }
     }
 
     console.log("Email sent successfully");
-
-    // Send push notification
-    try {
-      if (isTeamMessage) {
-        // Team sent message, notify owner via push
-        await supabase.functions.invoke("send-push", {
-          body: {
-            ownerId: charge.owner_id,
-            payload: {
-              title: `Nova mensagem em ${charge.title}`,
-              body: message.body.substring(0, 100),
-              url: `/cobranca-detalhes/${chargeId}`,
-              tag: `charge_message_${chargeId}`,
-            },
-          },
-        });
-      }
-      console.log("Push notification sent");
-    } catch (pushError) {
-      console.error("Push notification error (non-critical):", pushError);
-      // Don't fail the request if push fails
-    }
-
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,

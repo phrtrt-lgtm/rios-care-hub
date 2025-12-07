@@ -42,7 +42,7 @@ const handler = async (req: Request): Promise<Response> => {
           .from("tickets")
           .select(`
             *,
-            profiles!tickets_owner_id_fkey(name, email),
+            profiles!tickets_owner_id_fkey(id, name, email),
             properties(name, address)
           `)
           .eq("id", ticketId)
@@ -91,26 +91,20 @@ const handler = async (req: Request): Promise<Response> => {
             console.log("Owner notification sent (ticket created by team)");
           }
 
-          // Send push notification to owner
-          try {
-            await supabase.functions.invoke("send-push", {
-              body: {
-                ownerId: ticket.owner_id,
-                payload: {
-                  title: `Novo Ticket: ${ticket.subject}`,
-                  body: `A equipe criou um ticket para você: ${ticket.description.substring(0, 80)}`,
-                  url: `/ticket-detalhes/${ticketId}`,
-                  tag: `ticket_created_${ticketId}`,
-                },
-              },
-            });
-            console.log("Push notification sent to owner");
-          } catch (pushError) {
-            console.error("Push notification error (non-critical):", pushError);
-          }
+          // Create notification record for owner (this triggers push via database trigger)
+          await supabase.from("notifications").insert({
+            owner_id: ticket.owner_id,
+            title: `Novo Ticket: ${ticket.subject}`,
+            message: `A equipe criou um ticket para você: ${ticket.description.substring(0, 80)}${ticket.description.length > 80 ? '...' : ''}`,
+            type: "ticket",
+            reference_id: ticketId,
+            reference_url: `/ticket-detalhes/${ticketId}`,
+          });
+          console.log("Notification created for owner");
+
         } else {
           // Ticket created by owner → Notify TEAM only
-          if (adminEmails.length > 0 && adminEmails[0] !== "" && teamTemplate) {
+          if (teamTemplate) {
             // Get team members with their roles
             const { data: teamMembers } = await supabase
               .from("profiles")
@@ -118,7 +112,7 @@ const handler = async (req: Request): Promise<Response> => {
               .in("role", ["admin", "agent", "maintenance"]);
 
             // Filter team members based on ticket type visibility
-            const eligibleEmails: string[] = [];
+            const eligibleMembers: { id: string; email: string }[] = [];
             
             for (const member of teamMembers || []) {
               let canView = false;
@@ -137,12 +131,13 @@ const handler = async (req: Request): Promise<Response> => {
               }
               
               if (canView && member.email) {
-                eligibleEmails.push(member.email);
+                eligibleMembers.push({ id: member.id, email: member.email });
               }
             }
 
             // Only send if there are eligible recipients
-            if (eligibleEmails.length > 0) {
+            if (eligibleMembers.length > 0) {
+              const eligibleEmails = eligibleMembers.map(m => m.email);
               await resend.emails.send({
                 from: "RIOS Suporte <sistema@rioshospedagens.com.br>",
                 reply_to: "rioslagoon@gmail.com",
@@ -151,28 +146,34 @@ const handler = async (req: Request): Promise<Response> => {
                 html: renderTemplate(teamTemplate.body_html, variables),
               });
               console.log(`Team notification sent to ${eligibleEmails.length} eligible members (ticket created by owner)`);
+
+              // Create notification records for each team member
+              const notifications = eligibleMembers.map(member => ({
+                owner_id: member.id,
+                title: `Novo ticket de ${ticket.profiles.name}`,
+                message: `${ticket.subject}: ${ticket.description.substring(0, 80)}${ticket.description.length > 80 ? '...' : ''}`,
+                type: "ticket",
+                reference_id: ticketId,
+                reference_url: `/ticket-detalhes/${ticketId}`,
+              }));
+
+              await supabase.from("notifications").insert(notifications);
+              console.log(`Created ${notifications.length} notification records for team members`);
             } else {
               console.log("No eligible team members for this ticket type");
             }
           }
 
-          // Send confirmation push to owner
-          try {
-            await supabase.functions.invoke("send-push", {
-              body: {
-                ownerId: ticket.owner_id,
-                payload: {
-                  title: `Ticket Criado: ${ticket.subject}`,
-                  body: `Recebemos seu ticket e responderemos em breve`,
-                  url: `/ticket-detalhes/${ticketId}`,
-                  tag: `ticket_created_${ticketId}`,
-                },
-              },
-            });
-            console.log("Confirmation push notification sent to owner");
-          } catch (pushError) {
-            console.error("Push notification error (non-critical):", pushError);
-          }
+          // Create confirmation notification for owner
+          await supabase.from("notifications").insert({
+            owner_id: ticket.owner_id,
+            title: `Ticket Criado: ${ticket.subject}`,
+            message: `Recebemos seu ticket e responderemos em breve`,
+            type: "ticket",
+            reference_id: ticketId,
+            reference_url: `/ticket-detalhes/${ticketId}`,
+          });
+          console.log("Confirmation notification created for owner");
         }
         break;
       }
@@ -204,6 +205,24 @@ const handler = async (req: Request): Promise<Response> => {
             subject: renderTemplate(template.subject, variables),
             html: renderTemplate(template.body_html, variables),
           });
+        }
+
+        // Create notification for admins
+        const { data: admins } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("role", "admin");
+
+        if (admins && admins.length > 0) {
+          const notifications = admins.map(admin => ({
+            owner_id: admin.id,
+            title: "Nova solicitação de cadastro",
+            message: `${user.name} (${user.email}) solicitou aprovação`,
+            type: "alert",
+            reference_url: "/aprovacoes",
+          }));
+          await supabase.from("notifications").insert(notifications);
+          console.log(`Created ${notifications.length} notification records for admins`);
         }
         break;
       }
@@ -237,23 +256,15 @@ const handler = async (req: Request): Promise<Response> => {
           });
         }
 
-        // Send push notification about approval
-        try {
-          await supabase.functions.invoke("send-push", {
-            body: {
-              ownerId: userId,
-              payload: {
-                title: "Conta Aprovada! ✅",
-                body: "Sua conta foi aprovada! Você já pode acessar o sistema.",
-                url: "/",
-                tag: `approval_${userId}`,
-              },
-            },
-          });
-          console.log("Approval push notification sent");
-        } catch (pushError) {
-          console.error("Push notification error (non-critical):", pushError);
-        }
+        // Create notification for the approved user (triggers push via database trigger)
+        await supabase.from("notifications").insert({
+          owner_id: userId,
+          title: "Conta Aprovada! ✅",
+          message: "Sua conta foi aprovada! Você já pode acessar o sistema.",
+          type: "alert",
+          reference_url: "/",
+        });
+        console.log("Approval notification created for user");
         break;
       }
 
