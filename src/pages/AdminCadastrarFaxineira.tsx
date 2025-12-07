@@ -44,7 +44,12 @@ export default function AdminCadastrarFaxineira() {
       navigate("/painel");
     } catch (error: any) {
       console.error("Erro ao cadastrar faxineira:", error);
-      toast.error(error.message || "Erro ao cadastrar faxineira");
+      const errorMessage = error.message || "";
+      if (errorMessage.includes("already been registered") || errorMessage.includes("email_exists")) {
+        toast.error("Este email já está cadastrado no sistema. Use outro email.");
+      } else {
+        toast.error(errorMessage || "Erro ao cadastrar faxineira");
+      }
     } finally {
       setLoading(false);
     }
