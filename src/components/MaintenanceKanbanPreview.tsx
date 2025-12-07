@@ -288,8 +288,8 @@ export function MaintenanceKanbanPreview() {
   return (
     <Card className="border-2 border-purple-200 dark:border-purple-800">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Wrench className="h-5 w-5 text-purple-600" />
             <CardTitle className="text-lg">Quadro de Manutenções</CardTitle>
             {totalPending > 0 && (
@@ -298,12 +298,12 @@ export function MaintenanceKanbanPreview() {
               </Badge>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <Button
               variant="outline"
               size="sm"
               onClick={() => navigate("/admin/manutencoes-concluidas")}
-              className="text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-950"
+              className="text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-950 flex-1 sm:flex-none"
             >
               Concluídas
             </Button>
@@ -311,10 +311,10 @@ export function MaintenanceKanbanPreview() {
               variant="outline"
               size="sm"
               onClick={() => navigate("/admin/manutencoes")}
-              className="text-purple-600 border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950"
+              className="text-purple-600 border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950 flex-1 sm:flex-none"
             >
-              Ver quadro completo
-              <ArrowRight className="ml-2 h-4 w-4" />
+              Ver completo
+              <ArrowRight className="ml-1 h-4 w-4" />
             </Button>
           </div>
         </div>

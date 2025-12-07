@@ -163,21 +163,16 @@ export function ChamadosKanbanPreview() {
   return (
     <Card className="border-2 border-blue-200 dark:border-blue-800">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Ticket className="h-5 w-5 text-blue-600" />
             <CardTitle className="text-lg">Quadro de Chamados</CardTitle>
-            {totalPending > 0 && (
-              <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
-                {totalPending} pendentes
-              </Badge>
-            )}
           </div>
           <Button
             variant="outline"
             size="sm"
             onClick={() => navigate("/admin/chamados")}
-            className="text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950"
+            className="text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950 w-full sm:w-auto"
           >
             Ver quadro completo
             <ArrowRight className="ml-2 h-4 w-4" />
