@@ -15,9 +15,10 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, Search, Phone, Calendar, Clock, Building, User, ChevronRight, ChevronLeft, Wrench, Plus, Receipt, AlertCircle } from "lucide-react";
+import { ArrowLeft, Search, Phone, Calendar, Clock, Building, User, ChevronRight, ChevronLeft, Wrench, Plus, Receipt, AlertCircle, MessageSquare } from "lucide-react";
 import { CHARGE_CATEGORY_OPTIONS } from "@/constants/chargeCategories";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
 
 type TicketStatus = "novo" | "em_analise" | "aguardando_info" | "em_execucao" | "concluido" | "cancelado";
 
@@ -98,6 +99,14 @@ const AdminManutencoesKanban = () => {
     category: "",
     title: "",
   });
+  const [chatDialogOpen, setChatDialogOpen] = useState(false);
+  const [chatTicket, setChatTicket] = useState<MaintenanceTicket | null>(null);
+
+  const openChatDialog = (ticket: MaintenanceTicket, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setChatTicket(ticket);
+    setChatDialogOpen(true);
+  };
 
   // Fetch maintenance tickets
   const { data: tickets, isLoading } = useQuery({
@@ -511,6 +520,16 @@ const AdminManutencoesKanban = () => {
 
                           {/* Action buttons */}
                           <div className="flex gap-1 pt-1">
+                            {/* Chat button - always visible */}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-xs h-7 px-2"
+                              onClick={(e) => openChatDialog(ticket, e)}
+                              title="Mensagens"
+                            >
+                              <MessageSquare className="h-3 w-3" />
+                            </Button>
                             {column.id === "pendente" && (
                               <Button
                                 size="sm"
@@ -864,6 +883,15 @@ const AdminManutencoesKanban = () => {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Chat Dialog */}
+        <MaintenanceChatDialog
+          open={chatDialogOpen}
+          onOpenChange={setChatDialogOpen}
+          ticketId={chatTicket?.id || null}
+          ticketSubject={chatTicket?.subject}
+          propertyName={chatTicket?.property?.name}
+        />
       </div>
     </div>
   );
