@@ -1,6 +1,15 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
+import { preloadMediaUrls } from "./useMediaCache";
+
+export interface ChatAttachment {
+  id: string;
+  file_url: string;
+  file_name?: string;
+  file_type?: string;
+  size_bytes?: number;
+}
 
 export interface ChatMessage {
   id: string;
@@ -13,6 +22,7 @@ export interface ChatMessage {
     photo_url: string | null;
     role: string;
   } | null;
+  attachments?: ChatAttachment[];
 }
 
 export interface TypingUser {
@@ -26,29 +36,48 @@ export function useMaintenanceChat(ticketId: string | null) {
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
+  const [allMediaItems, setAllMediaItems] = useState<ChatAttachment[]>([]);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch messages
+  // Fetch messages with attachments
   const fetchMessages = useCallback(async () => {
     if (!ticketId) return;
     
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("ticket_messages")
-        .select(`
-          id,
-          body,
-          created_at,
-          is_internal,
-          author:profiles!ticket_messages_author_id_fkey(id, name, photo_url, role)
-        `)
-        .eq("ticket_id", ticketId)
-        .order("created_at", { ascending: true });
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      // Use the edge function to get messages with attachments
+      const { data, error } = await supabase.functions.invoke('get-ticket-messages', {
+        body: { ticketId }
+      });
 
       if (error) throw error;
-      setMessages(data as unknown as ChatMessage[]);
+      
+      const messagesData = data || [];
+      setMessages(messagesData as ChatMessage[]);
+      
+      // Collect all media items for gallery and preload
+      const mediaItems: ChatAttachment[] = [];
+      const allUrls: string[] = [];
+      
+      messagesData.forEach((msg: any) => {
+        msg.attachments?.forEach((att: any) => {
+          allUrls.push(att.file_url);
+          if (att.file_type?.startsWith('image/') || att.file_type?.startsWith('video/')) {
+            mediaItems.push(att);
+          }
+        });
+      });
+      
+      setAllMediaItems(mediaItems);
+      
+      // Preload all media URLs for faster display
+      if (allUrls.length > 0) {
+        preloadMediaUrls(allUrls);
+      }
     } catch (error) {
       console.error("Error fetching messages:", error);
     } finally {
@@ -74,28 +103,10 @@ export function useMaintenanceChat(ticketId: string | null) {
           table: "ticket_messages",
           filter: `ticket_id=eq.${ticketId}`,
         },
-        async (payload) => {
-          console.log("New message received:", payload);
-          // Fetch the complete message with author info
-          const { data: newMessage, error } = await supabase
-            .from("ticket_messages")
-            .select(`
-              id,
-              body,
-              created_at,
-              is_internal,
-              author:profiles!ticket_messages_author_id_fkey(id, name, photo_url, role)
-            `)
-            .eq("id", payload.new.id)
-            .single();
-
-          if (!error && newMessage) {
-            setMessages((prev) => {
-              // Avoid duplicates
-              if (prev.some((m) => m.id === newMessage.id)) return prev;
-              return [...prev, newMessage as unknown as ChatMessage];
-            });
-          }
+        async () => {
+          console.log("New message received, refetching...");
+          // Refetch to get complete message with attachments
+          await fetchMessages();
         }
       )
       .subscribe();
@@ -182,24 +193,39 @@ export function useMaintenanceChat(ticketId: string | null) {
     [ticketId, profile]
   );
 
-  // Send message
+  // Send message with attachments
   const sendMessage = useCallback(
-    async (body: string, isInternal: boolean = false) => {
-      if (!ticketId || !user || !body.trim()) return false;
+    async (
+      body: string, 
+      attachments: Array<{ file_url: string; file_name: string; file_type: string; size_bytes: number; path: string }> = [],
+      isInternal: boolean = false
+    ) => {
+      if (!ticketId || !user) return false;
+      if (!body.trim() && attachments.length === 0) return false;
 
       setSending(true);
       try {
-        const { error } = await supabase.from("ticket_messages").insert({
-          ticket_id: ticketId,
-          author_id: user.id,
-          body: body.trim(),
-          is_internal: isInternal,
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error('Not authenticated');
+
+        const { error } = await supabase.functions.invoke(`create-ticket-message/${ticketId}`, {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`
+          },
+          body: {
+            message: body.trim() || null,
+            attachments,
+            is_internal: isInternal
+          }
         });
 
         if (error) throw error;
 
         // Clear typing indicator
         setTyping(false);
+        
+        // Refetch messages to get the new one with attachments
+        await fetchMessages();
         
         return true;
       } catch (error) {
@@ -209,7 +235,7 @@ export function useMaintenanceChat(ticketId: string | null) {
         setSending(false);
       }
     },
-    [ticketId, user, setTyping]
+    [ticketId, user, setTyping, fetchMessages]
   );
 
   return {
@@ -217,6 +243,7 @@ export function useMaintenanceChat(ticketId: string | null) {
     loading,
     sending,
     typingUsers,
+    allMediaItems,
     sendMessage,
     setTyping,
     refetch: fetchMessages,
