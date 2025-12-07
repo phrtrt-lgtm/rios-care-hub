@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { preloadMediaUrls } from "./useMediaCache";
+import { getCachedMessages, getCachedMedia, setCachedMessages } from "./useChatPreloader";
 
 export interface ChatAttachment {
   id: string;
@@ -41,10 +42,24 @@ export function useMaintenanceChat(ticketId: string | null) {
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch messages with attachments
-  const fetchMessages = useCallback(async () => {
+  const fetchMessages = useCallback(async (skipCache: boolean = false) => {
     if (!ticketId) return;
     
-    setLoading(true);
+    // Check cache first for instant loading
+    if (!skipCache) {
+      const cachedMessages = getCachedMessages(ticketId);
+      const cachedMedia = getCachedMedia(ticketId);
+      if (cachedMessages) {
+        setMessages(cachedMessages);
+        setAllMediaItems(cachedMedia || []);
+        setLoading(false);
+        // Still fetch in background to get latest
+        fetchMessages(true);
+        return;
+      }
+    }
+    
+    setLoading(prev => skipCache ? prev : true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
@@ -56,7 +71,19 @@ export function useMaintenanceChat(ticketId: string | null) {
 
       if (error) throw error;
       
-      const messagesData = data || [];
+      const messagesData = (data || []).map((msg: any) => ({
+        id: msg.id,
+        body: msg.body,
+        created_at: msg.created_at,
+        is_internal: msg.is_internal,
+        author: msg.profiles ? {
+          id: msg.author_id,
+          name: msg.profiles.name,
+          photo_url: msg.profiles.photo_url,
+          role: msg.profiles.role,
+        } : null,
+        attachments: msg.attachments || [],
+      }));
       setMessages(messagesData as ChatMessage[]);
       
       // Collect all media items for gallery and preload
@@ -73,6 +100,9 @@ export function useMaintenanceChat(ticketId: string | null) {
       });
       
       setAllMediaItems(mediaItems);
+      
+      // Update cache
+      setCachedMessages(ticketId, messagesData as ChatMessage[], mediaItems);
       
       // Preload all media URLs for faster display
       if (allUrls.length > 0) {
