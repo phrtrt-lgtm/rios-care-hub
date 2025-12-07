@@ -156,8 +156,46 @@ export function MaintenanceChatDialog({
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleVoiceTranscript = (text: string) => {
-    setNewMessage(prev => prev ? `${prev} ${text}` : text);
+  const handleVoiceTranscript = async (text: string) => {
+    // Automatically generate AI response from voice transcript
+    if (!ticketId) {
+      setNewMessage(prev => prev ? `${prev} ${text}` : text);
+      return;
+    }
+
+    try {
+      setGeneratingAI(true);
+      toast({
+        title: "Gerando resposta...",
+        description: "A IA está criando uma resposta baseada no seu áudio.",
+      });
+      
+      const { data, error } = await supabase.functions.invoke('ai-generate-response', {
+        body: {
+          templateKey: 'ticket_response',
+          ticketId: ticketId,
+          customInstructions: `Baseado nas instruções do atendente: "${text}", gere uma resposta profissional e amigável para o proprietário.`
+        }
+      });
+
+      if (error) throw error;
+
+      setNewMessage(data.text);
+      toast({
+        title: "Resposta gerada!",
+        description: "A IA gerou uma resposta baseada no seu áudio.",
+      });
+    } catch (error: any) {
+      // If AI fails, just use the transcript directly
+      setNewMessage(prev => prev ? `${prev} ${text}` : text);
+      toast({
+        title: "Erro ao gerar resposta",
+        description: "Usando transcrição direta. " + error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingAI(false);
+    }
   };
 
   const generateAIResponse = async () => {
