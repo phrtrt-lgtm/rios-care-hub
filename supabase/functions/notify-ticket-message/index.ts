@@ -35,7 +35,7 @@ const handler = async (req: Request): Promise<Response> => {
       .from("ticket_messages")
       .select(`
         *,
-        author:profiles!ticket_messages_author_id_fkey(name, email, role)
+        author:profiles!ticket_messages_author_id_fkey(id, name, email, role)
       `)
       .eq("id", messageId)
       .single();
@@ -46,14 +46,14 @@ const handler = async (req: Request): Promise<Response> => {
       .from("tickets")
       .select(`
         *,
-        owner:profiles!tickets_owner_id_fkey(name, email)
+        owner:profiles!tickets_owner_id_fkey(id, name, email)
       `)
       .eq("id", ticketId)
       .single();
 
     if (!ticket) throw new Error("Ticket not found");
 
-    const isTeamMessage = ["admin", "agent"].includes(message.author.role);
+    const isTeamMessage = ["admin", "agent", "maintenance"].includes(message.author.role);
 
     const portalUrl = Deno.env.get("PORTAL_URL") || "https://portal.rioshospedagens.com.br";
     const ticketUrl = `${portalUrl}/ticket-detalhes/${ticketId}`;
@@ -83,6 +83,18 @@ const handler = async (req: Request): Promise<Response> => {
           html: renderTemplate(template.body_html, variables),
         });
       }
+
+      // Create notification record for owner (this triggers push via database trigger)
+      await supabase.from("notifications").insert({
+        owner_id: ticket.owner_id,
+        title: `Nova resposta no ticket #${ticket.id.slice(0, 8)}`,
+        message: `${message.author.name}: ${message.body.substring(0, 100)}${message.body.length > 100 ? '...' : ''}`,
+        type: "ticket",
+        reference_id: ticketId,
+        reference_url: `/ticket-detalhes/${ticketId}`,
+      });
+      console.log("Notification created for owner");
+
     } else {
       // Owner sent message, notify team - filter by ticket type permissions
       const template = await getTemplate(supabase, "ticket_message_team");
@@ -95,7 +107,7 @@ const handler = async (req: Request): Promise<Response> => {
           .in("role", ["admin", "agent", "maintenance"]);
 
         // Filter team members based on ticket type visibility
-        const eligibleEmails: string[] = [];
+        const eligibleMembers: { id: string; email: string }[] = [];
         
         for (const member of teamMembers || []) {
           let canView = false;
@@ -114,12 +126,13 @@ const handler = async (req: Request): Promise<Response> => {
           }
           
           if (canView && member.email) {
-            eligibleEmails.push(member.email);
+            eligibleMembers.push({ id: member.id, email: member.email });
           }
         }
 
         // Only send if there are eligible recipients
-        if (eligibleEmails.length > 0) {
+        if (eligibleMembers.length > 0) {
+          const eligibleEmails = eligibleMembers.map(m => m.email);
           await resend.emails.send({
             from: "RIOS Suporte <sistema@rioshospedagens.com.br>",
             reply_to: "rioslagoon@gmail.com",
@@ -128,33 +141,24 @@ const handler = async (req: Request): Promise<Response> => {
             html: renderTemplate(template.body_html, variables),
           });
           console.log(`Team message notification sent to ${eligibleEmails.length} eligible members`);
+
+          // Create notification records for each team member
+          const notifications = eligibleMembers.map(member => ({
+            owner_id: member.id,
+            title: `Nova mensagem no ticket #${ticket.id.slice(0, 8)}`,
+            message: `${ticket.owner.name}: ${message.body.substring(0, 100)}${message.body.length > 100 ? '...' : ''}`,
+            type: "ticket",
+            reference_id: ticketId,
+            reference_url: `/ticket-detalhes/${ticketId}`,
+          }));
+
+          await supabase.from("notifications").insert(notifications);
+          console.log(`Created ${notifications.length} notification records for team members`);
         }
       }
     }
 
     console.log("Email sent successfully");
-
-    // Send push notification
-    try {
-      if (isTeamMessage) {
-        // Team sent message, notify owner via push
-        await supabase.functions.invoke("send-push", {
-          body: {
-            ownerId: ticket.owner_id,
-            payload: {
-              title: `Nova resposta no ticket #${ticket.id.slice(0, 8)}`,
-              body: message.body.substring(0, 100),
-              url: `/ticket-detalhes/${ticketId}`,
-              tag: `ticket_message_${ticketId}`,
-            },
-          },
-        });
-      }
-      console.log("Push notification sent");
-    } catch (pushError) {
-      console.error("Push notification error (non-critical):", pushError);
-    }
-
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
