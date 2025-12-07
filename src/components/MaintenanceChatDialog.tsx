@@ -425,10 +425,12 @@ export function MaintenanceChatDialog({
                   <Paperclip className="h-4 w-4" />
                 </Button>
                 
-                <VoiceToTextInput
-                  onTranscript={handleVoiceTranscript}
-                  disabled={sending}
-                />
+                {isTeamMember && (
+                  <VoiceToTextInput
+                    onTranscript={handleVoiceTranscript}
+                    disabled={sending}
+                  />
+                )}
                 
                 {isTeamMember && (
                   <Button
