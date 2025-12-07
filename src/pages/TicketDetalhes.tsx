@@ -642,12 +642,7 @@ export default function TicketDetalhes() {
           <Button 
             variant="ghost" 
             size="sm" 
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              navigate(-1);
-            }}
-            className="relative z-10"
+            onClick={() => navigate("/")}
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Voltar
