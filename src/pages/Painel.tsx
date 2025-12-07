@@ -12,6 +12,7 @@ import { AlertBanner } from "@/components/AlertBanner";
 import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
 import { VotacoesPendentes } from "@/components/VotacoesPendentes";
 import { MaintenanceKanbanPreview } from "@/components/MaintenanceKanbanPreview";
+import { ChamadosKanbanPreview } from "@/components/ChamadosKanbanPreview";
 import { GuestChargeReminders } from "@/components/GuestChargeReminders";
 import { NotificationButton } from "@/components/NotificationButton";
 export default function Painel() {
@@ -176,6 +177,13 @@ export default function Painel() {
         {(profile?.role === "admin" || profile?.role === "maintenance" || profile?.role === "agent") && (
           <div className="mb-6">
             <GuestChargeReminders />
+          </div>
+        )}
+
+        {/* Kanban de Chamados - visível para toda a equipe */}
+        {(profile?.role === "admin" || profile?.role === "maintenance" || profile?.role === "agent") && (
+          <div className="mb-6">
+            <ChamadosKanbanPreview />
           </div>
         )}
 

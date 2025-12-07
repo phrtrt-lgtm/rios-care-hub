@@ -50,6 +50,7 @@ import AdminProfissionais from "./pages/AdminProfissionais";
 import AdminManutencoesKanban from "./pages/AdminManutencoesKanban";
 import NovaManutencao from "./pages/NovaManutencao";
 import AdminManutencoesConluidas from "./pages/AdminManutencoesConluidas";
+import AdminChamadosKanban from "./pages/AdminChamadosKanban";
 
 const queryClient = new QueryClient();
 
@@ -361,6 +362,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['admin', 'maintenance']}>
                   <AdminManutencoesConluidas />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/chamados"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'maintenance', 'agent']}>
+                  <AdminChamadosKanban />
                 </ProtectedRoute>
               }
             />
