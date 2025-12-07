@@ -296,31 +296,31 @@ export function MaintenanceChatDialog({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="w-[95vw] max-w-lg h-[85vh] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
           {/* Header */}
-          <DialogHeader className="px-4 py-3 border-b flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <div className="flex-1 min-w-0">
-                <DialogTitle className="text-base truncate">
-                  {ticketSubject || "Mensagens"}
-                </DialogTitle>
+          <DialogHeader className="px-4 py-3 pr-12 border-b flex-shrink-0">
+            <div className="flex flex-col gap-1">
+              <DialogTitle className="text-base truncate">
+                {ticketSubject || "Mensagens"}
+              </DialogTitle>
+              <div className="flex items-center justify-between">
                 {propertyName && (
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <Building className="h-3 w-3" />
                     {propertyName}
                   </div>
                 )}
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="text-xs h-auto p-0 text-primary"
+                  onClick={() => {
+                    onOpenChange(false);
+                    navigate(`/ticket-detalhes/${ticketId}`);
+                  }}
+                >
+                  <ExternalLink className="h-3 w-3 mr-1" />
+                  Ver detalhes completos
+                </Button>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs"
-                onClick={() => {
-                  onOpenChange(false);
-                  navigate(`/ticket-detalhes/${ticketId}`);
-                }}
-              >
-                <ExternalLink className="h-3 w-3 mr-1" />
-                Ver completo
-              </Button>
             </div>
           </DialogHeader>
 
