@@ -43,6 +43,7 @@ export default function NovaManutencao() {
   const [loading, setLoading] = useState(false);
   const [costResponsible, setCostResponsible] = useState<'owner' | 'management' | 'split' | 'guest'>('owner');
   const [splitOwnerPercent, setSplitOwnerPercent] = useState<number | null>(50);
+  const [guestCheckoutDate, setGuestCheckoutDate] = useState<string>("");
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const { user, profile } = useAuth();
@@ -218,6 +219,7 @@ export default function NovaManutencao() {
           priority,
           property_id: propertyId,
           cost_responsible: dbCostResponsible,
+          guest_checkout_date: costResponsible === 'guest' && guestCheckoutDate ? guestCheckoutDate : null,
         }])
         .select()
         .single();
@@ -403,12 +405,27 @@ export default function NovaManutencao() {
                 </RadioGroup>
 
                 {costResponsible === 'guest' && (
-                  <Alert className="border-orange-200 bg-orange-50 dark:bg-orange-950/30">
-                    <AlertTriangle className="h-4 w-4 text-orange-500" />
-                    <AlertDescription className="text-orange-700 dark:text-orange-300">
-                      Esta manutenção <strong>não será visível</strong> para o proprietário. Use para problemas causados por hóspedes ou substituições internas.
-                    </AlertDescription>
-                  </Alert>
+                  <div className="space-y-3">
+                    <Alert className="border-orange-200 bg-orange-50 dark:bg-orange-950/30">
+                      <AlertTriangle className="h-4 w-4 text-orange-500" />
+                      <AlertDescription className="text-orange-700 dark:text-orange-300">
+                        Esta manutenção <strong>não será visível</strong> para o proprietário. Use para problemas causados por hóspedes ou substituições internas.
+                      </AlertDescription>
+                    </Alert>
+                    <div className="space-y-2 pl-4 border-l-2 border-orange-300">
+                      <Label htmlFor="guestCheckoutDate">Data de checkout do hóspede *</Label>
+                      <Input
+                        id="guestCheckoutDate"
+                        type="date"
+                        value={guestCheckoutDate}
+                        onChange={(e) => setGuestCheckoutDate(e.target.value)}
+                        required={costResponsible === 'guest'}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        O lembrete de cobrança aparecerá 14 dias após esta data (regra Airbnb)
+                      </p>
+                    </div>
+                  </div>
                 )}
 
                 {costResponsible === 'split' && (
