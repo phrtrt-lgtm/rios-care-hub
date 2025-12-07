@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +14,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { MaintenanceChatDialog } from "./MaintenanceChatDialog";
 
 type MaintenanceTicket = {
@@ -67,10 +68,16 @@ export function MaintenanceKanbanPreview() {
   const [chatDialogOpen, setChatDialogOpen] = useState(false);
   const [chatTicket, setChatTicket] = useState<MaintenanceTicket | null>(null);
 
+  // Get ticket IDs for unread message tracking
+  const ticketIds = useMemo(() => tickets.map(t => t.id), [tickets]);
+  const { unreadCounts, markAsRead } = useUnreadMessages(ticketIds);
+
   const openChatDialog = (ticket: MaintenanceTicket, e: React.MouseEvent) => {
     e.stopPropagation();
     setChatTicket(ticket);
     setChatDialogOpen(true);
+    // Mark as read when opening
+    markAsRead(ticket.id);
   };
 
   useEffect(() => {
@@ -363,11 +370,16 @@ export function MaintenanceKanbanPreview() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="text-[10px] h-6 px-2"
+                            className="text-[10px] h-6 px-2 relative"
                             onClick={(e) => openChatDialog(ticket, e)}
                             title="Mensagens"
                           >
                             <MessageSquare className="h-3 w-3" />
+                            {unreadCounts[ticket.id] > 0 && (
+                              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] rounded-full h-4 min-w-[16px] flex items-center justify-center px-1 font-bold">
+                                {unreadCounts[ticket.id] > 9 ? "9+" : unreadCounts[ticket.id]}
+                              </span>
+                            )}
                           </Button>
                           {column.key === "pendente" && (
                             <Button
