@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -102,12 +103,6 @@ const AdminManutencoesKanban = () => {
   const [chatDialogOpen, setChatDialogOpen] = useState(false);
   const [chatTicket, setChatTicket] = useState<MaintenanceTicket | null>(null);
 
-  const openChatDialog = (ticket: MaintenanceTicket, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setChatTicket(ticket);
-    setChatDialogOpen(true);
-  };
-
   // Fetch maintenance tickets
   const { data: tickets, isLoading } = useQuery({
     queryKey: ["maintenance-tickets-kanban"],
@@ -137,6 +132,18 @@ const AdminManutencoesKanban = () => {
       return data as unknown as MaintenanceTicket[];
     },
   });
+
+  // Get ticket IDs for unread message tracking
+  const ticketIds = useMemo(() => (tickets || []).map(t => t.id), [tickets]);
+  const { unreadCounts, markAsRead } = useUnreadMessages(ticketIds);
+
+  const openChatDialog = (ticket: MaintenanceTicket, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setChatTicket(ticket);
+    setChatDialogOpen(true);
+    // Mark as read when opening
+    markAsRead(ticket.id);
+  };
 
   // Fetch service providers
   const { data: providers } = useQuery({
@@ -524,11 +531,16 @@ const AdminManutencoesKanban = () => {
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="text-xs h-7 px-2"
+                              className="text-xs h-7 px-2 relative"
                               onClick={(e) => openChatDialog(ticket, e)}
                               title="Mensagens"
                             >
                               <MessageSquare className="h-3 w-3" />
+                              {unreadCounts[ticket.id] > 0 && (
+                                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] rounded-full h-4 min-w-[16px] flex items-center justify-center px-1 font-bold">
+                                  {unreadCounts[ticket.id] > 9 ? "9+" : unreadCounts[ticket.id]}
+                                </span>
+                              )}
                             </Button>
                             {column.id === "pendente" && (
                               <Button
