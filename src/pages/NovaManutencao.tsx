@@ -404,6 +404,15 @@ export default function NovaManutencao() {
                   </div>
                 </RadioGroup>
 
+                {costResponsible === 'management' && (
+                  <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950/30">
+                    <AlertTriangle className="h-4 w-4 text-blue-500" />
+                    <AlertDescription className="text-blue-700 dark:text-blue-300">
+                      Esta manutenção <strong>não será visível</strong> para o proprietário. Use para manutenções internas ou de responsabilidade da gestão.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
                 {costResponsible === 'guest' && (
                   <div className="space-y-3">
                     <Alert className="border-orange-200 bg-orange-50 dark:bg-orange-950/30">

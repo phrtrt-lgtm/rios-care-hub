@@ -63,8 +63,8 @@ export default function MeusChamados() {
       .from("tickets")
       .select("*, properties(name, cover_photo_url), kind, essential, owner_decision, owner_action_due_at, sla_due_at, cost_responsible")
       .eq("owner_id", user?.id)
-      // Hide maintenance tickets where guest is responsible (internal only)
-      .or("cost_responsible.is.null,cost_responsible.neq.guest");
+      // Hide maintenance tickets where guest or management is responsible (internal only)
+      .or("cost_responsible.is.null,cost_responsible.eq.owner,cost_responsible.eq.pm,cost_responsible.eq.split");
 
     if (activeTab === "abertos") {
       query = query.in("status", ["novo", "em_analise", "aguardando_info", "em_execucao"]);

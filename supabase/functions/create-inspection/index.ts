@@ -15,6 +15,7 @@ interface InspectionPayload {
   cleaner_name?: string;
   cleaner_phone?: string;
   notes?: string;
+  internal_only?: boolean;
   audio_data?: Array<{
     audio_url: string;
     transcript: string;
@@ -72,6 +73,7 @@ serve(async (req) => {
         transcript,
         transcript_summary: transcriptSummary,
         audio_url: firstAudioUrl,
+        internal_only: payload.internal_only ?? false,
       })
       .select()
       .single();

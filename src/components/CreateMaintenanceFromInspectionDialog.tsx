@@ -48,7 +48,7 @@ export function CreateMaintenanceFromInspectionDialog({
   const [subject, setSubject] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<'normal' | 'urgente'>('normal');
-  const [costResponsible, setCostResponsible] = useState<'owner' | 'guest'>('owner');
+  const [costResponsible, setCostResponsible] = useState<'owner' | 'guest' | 'management'>('owner');
   const [guestCheckoutDate, setGuestCheckoutDate] = useState('');
   const [selectedAttachments, setSelectedAttachments] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -267,13 +267,19 @@ export function CreateMaintenanceFromInspectionDialog({
             <Label>Responsável pelo custo *</Label>
             <RadioGroup 
               value={costResponsible} 
-              onValueChange={(v) => setCostResponsible(v as 'owner' | 'guest')}
-              className="grid grid-cols-2 gap-3"
+              onValueChange={(v) => setCostResponsible(v as 'owner' | 'guest' | 'management')}
+              className="grid grid-cols-3 gap-3"
             >
               <div className="flex items-center space-x-2 border rounded-lg p-3">
                 <RadioGroupItem value="owner" id="cr-owner" />
                 <Label htmlFor="cr-owner" className="font-normal cursor-pointer flex-1">
                   Proprietário
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2 border rounded-lg p-3">
+                <RadioGroupItem value="management" id="cr-management" />
+                <Label htmlFor="cr-management" className="font-normal cursor-pointer flex-1">
+                  Gestão
                 </Label>
               </div>
               <div className="flex items-center space-x-2 border rounded-lg p-3">
@@ -283,6 +289,15 @@ export function CreateMaintenanceFromInspectionDialog({
                 </Label>
               </div>
             </RadioGroup>
+
+            {costResponsible === 'management' && (
+              <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950/30">
+                <AlertTriangle className="h-4 w-4 text-blue-500" />
+                <AlertDescription className="text-blue-700 dark:text-blue-300">
+                  Esta manutenção <strong>não será visível</strong> para o proprietário. Use para manutenções internas ou de responsabilidade da gestão.
+                </AlertDescription>
+              </Alert>
+            )}
 
             {costResponsible === 'guest' && (
               <>

@@ -9,7 +9,8 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { InspectionCalendar } from '@/components/InspectionCalendar';
-import { Headphones, Paperclip, ArrowLeft, User, Calendar, AlertTriangle, CheckCircle2, Building2, FileText } from 'lucide-react';
+import TeamInspectionDialog from '@/components/TeamInspectionDialog';
+import { Headphones, Paperclip, ArrowLeft, User, Calendar, AlertTriangle, CheckCircle2, Building2, FileText, Plus, EyeOff } from 'lucide-react';
 import { format, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -28,6 +29,7 @@ interface Inspection {
   audio_url?: string;
   notes?: string;
   transcript?: string;
+  internal_only?: boolean;
 }
 
 interface InspectionDate {
@@ -46,6 +48,7 @@ export default function AdminVistoriasImovel() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<"todos" | "ok" | "nao">("todos");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+  const [showInspectionDialog, setShowInspectionDialog] = useState(false);
 
   useEffect(() => {
     if (!authLoading) {
@@ -174,9 +177,21 @@ export default function AdminVistoriasImovel() {
                 {inspections.length} vistorias registradas
               </p>
             </div>
+            <Button onClick={() => setShowInspectionDialog(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Vistoria
+            </Button>
           </div>
         </div>
       </header>
+
+      <TeamInspectionDialog
+        open={showInspectionDialog}
+        onOpenChange={setShowInspectionDialog}
+        propertyId={id!}
+        propertyName={property.name}
+        onSuccess={fetchData}
+      />
 
       <main className="container mx-auto px-4 py-6">
         <div className="grid lg:grid-cols-[1fr_320px] gap-6">
@@ -315,6 +330,12 @@ export default function AdminVistoriasImovel() {
 
                         {/* Indicators */}
                         <div className="flex items-center gap-3 mt-2">
+                          {inspection.internal_only && (
+                            <Badge variant="outline" className="text-xs bg-muted">
+                              <EyeOff className="h-3 w-3 mr-1" />
+                              Interna
+                            </Badge>
+                          )}
                           {inspection.audio_url && (
                             <div className="flex items-center gap-1 text-xs text-muted-foreground">
                               <Headphones className="h-3 w-3" />
