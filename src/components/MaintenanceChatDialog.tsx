@@ -5,12 +5,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { useMaintenanceChat, ChatMessage } from "@/hooks/useMaintenanceChat";
+import { useMaintenanceChat, ChatMessage, ChatAttachment } from "@/hooks/useMaintenanceChat";
 import { useAuth } from "@/hooks/useAuth";
+import { AttachmentBubble } from "@/components/AttachmentBubble";
+import { MediaGallery } from "@/components/MediaGallery";
+import { VoiceToTextInput } from "@/components/VoiceToTextInput";
+import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Send, Loader2, MessageSquare, Building, ExternalLink } from "lucide-react";
+import { Send, Loader2, MessageSquare, Building, ExternalLink, Paperclip, X, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 interface MaintenanceChatDialogProps {
   open: boolean;
@@ -28,13 +33,22 @@ export function MaintenanceChatDialog({
   propertyName,
 }: MaintenanceChatDialogProps) {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { messages, loading, sending, typingUsers, sendMessage, setTyping } = useMaintenanceChat(
+  const { toast } = useToast();
+  const { user, profile } = useAuth();
+  const { messages, loading, sending, typingUsers, allMediaItems, sendMessage, setTyping } = useMaintenanceChat(
     open ? ticketId : null
   );
   const [newMessage, setNewMessage] = useState("");
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
+  const [generatingAI, setGeneratingAI] = useState(false);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryStartIndex, setGalleryStartIndex] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance';
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
@@ -51,11 +65,56 @@ export function MaintenanceChatDialog({
   }, [open]);
 
   const handleSend = async () => {
-    if (!newMessage.trim() || sending) return;
-    
-    const success = await sendMessage(newMessage);
-    if (success) {
-      setNewMessage("");
+    if (!newMessage.trim() && selectedFiles.length === 0) return;
+    if (sending) return;
+
+    try {
+      // Upload attachments first
+      const attachments: Array<{ file_url: string; file_name: string; file_type: string; size_bytes: number; path: string }> = [];
+      
+      if (selectedFiles.length > 0) {
+        for (const file of selectedFiles) {
+          setUploadingFiles(prev => new Set(prev).add(file.name));
+          
+          const filePath = `${ticketId}/${Date.now()}_${file.name}`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from('attachments')
+            .upload(filePath, file);
+
+          if (uploadError) throw uploadError;
+
+          const { data: { publicUrl } } = supabase.storage
+            .from('attachments')
+            .getPublicUrl(filePath);
+
+          attachments.push({
+            file_url: publicUrl,
+            file_name: file.name,
+            file_type: file.type,
+            size_bytes: file.size,
+            path: filePath
+          });
+          
+          setUploadingFiles(prev => {
+            const next = new Set(prev);
+            next.delete(file.name);
+            return next;
+          });
+        }
+      }
+
+      const success = await sendMessage(newMessage, attachments);
+      if (success) {
+        setNewMessage("");
+        setSelectedFiles([]);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Erro ao enviar mensagem",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -71,6 +130,76 @@ export function MaintenanceChatDialog({
     setTyping(e.target.value.length > 0);
   };
 
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || event.target.files.length === 0) return;
+    
+    const files = Array.from(event.target.files);
+    const maxSize = 20 * 1024 * 1024; // 20MB
+    
+    const validFiles = files.filter(file => {
+      if (file.size > maxSize) {
+        toast({
+          title: "Arquivo muito grande",
+          description: `${file.name} excede o limite de 20MB`,
+          variant: "destructive",
+        });
+        return false;
+      }
+      return true;
+    });
+    
+    setSelectedFiles(prev => [...prev, ...validFiles]);
+    event.target.value = '';
+  };
+
+  const removeFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleVoiceTranscript = (text: string) => {
+    setNewMessage(prev => prev ? `${prev} ${text}` : text);
+  };
+
+  const generateAIResponse = async () => {
+    if (!ticketId) return;
+
+    try {
+      setGeneratingAI(true);
+      
+      const { data, error } = await supabase.functions.invoke('ai-generate-response', {
+        body: {
+          templateKey: 'ticket_response',
+          ticketId: ticketId,
+          customInstructions: "Responda de forma profissional e amigável"
+        }
+      });
+
+      if (error) throw error;
+
+      setNewMessage(data.text);
+      toast({
+        title: "Resposta gerada!",
+        description: "A IA gerou uma sugestão de resposta.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao gerar resposta",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingAI(false);
+    }
+  };
+
+  const handlePreviewMedia = (url: string, name: string) => {
+    const index = allMediaItems.findIndex(item => item.file_url === url);
+    if (index >= 0) {
+      setGalleryStartIndex(index);
+      setGalleryOpen(true);
+    }
+  };
+
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -80,13 +209,13 @@ export function MaintenanceChatDialog({
       .slice(0, 2);
   };
 
-  const isTeamMember = (role: string) => {
+  const isTeamMemberRole = (role: string) => {
     return ["admin", "agent", "maintenance"].includes(role);
   };
 
   const renderMessage = (message: ChatMessage) => {
     const isOwnMessage = message.author?.id === user?.id;
-    const authorIsTeam = message.author?.role && isTeamMember(message.author.role);
+    const authorIsTeam = message.author?.role && isTeamMemberRole(message.author.role);
 
     return (
       <div
@@ -115,17 +244,38 @@ export function MaintenanceChatDialog({
               {format(new Date(message.created_at), "HH:mm", { locale: ptBR })}
             </span>
           </div>
-          <div
-            className={`rounded-lg px-3 py-2 text-sm ${
-              isOwnMessage
-                ? "bg-primary text-primary-foreground"
-                : authorIsTeam
-                ? "bg-blue-500/10 border border-blue-500/20"
-                : "bg-muted"
-            }`}
-          >
-            <p className="whitespace-pre-wrap break-words">{message.body}</p>
-          </div>
+          
+          {/* Message body */}
+          {message.body && (
+            <div
+              className={`rounded-lg px-3 py-2 text-sm ${
+                isOwnMessage
+                  ? "bg-primary text-primary-foreground"
+                  : authorIsTeam
+                  ? "bg-blue-500/10 border border-blue-500/20"
+                  : "bg-muted"
+              }`}
+            >
+              <p className="whitespace-pre-wrap break-words">{message.body}</p>
+            </div>
+          )}
+          
+          {/* Attachments */}
+          {message.attachments && message.attachments.length > 0 && (
+            <div className={`grid gap-2 mt-2 ${message.attachments.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+              {message.attachments.map((att) => (
+                <AttachmentBubble
+                  key={att.id}
+                  id={att.id}
+                  file_url={att.file_url}
+                  file_name={att.file_name}
+                  file_type={att.file_type}
+                  size_bytes={att.size_bytes}
+                  onPreview={handlePreviewMedia}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -142,112 +292,204 @@ export function MaintenanceChatDialog({
   }, {} as Record<string, ChatMessage[]>);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg h-[80vh] flex flex-col p-0 gap-0">
-        {/* Header */}
-        <DialogHeader className="px-4 py-3 border-b flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex-1 min-w-0">
-              <DialogTitle className="text-base truncate">
-                {ticketSubject || "Mensagens"}
-              </DialogTitle>
-              {propertyName && (
-                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-                  <Building className="h-3 w-3" />
-                  {propertyName}
-                </div>
-              )}
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-lg h-[80vh] flex flex-col p-0 gap-0">
+          {/* Header */}
+          <DialogHeader className="px-4 py-3 border-b flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="flex-1 min-w-0">
+                <DialogTitle className="text-base truncate">
+                  {ticketSubject || "Mensagens"}
+                </DialogTitle>
+                {propertyName && (
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                    <Building className="h-3 w-3" />
+                    {propertyName}
+                  </div>
+                )}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs"
+                onClick={() => {
+                  onOpenChange(false);
+                  navigate(`/ticket-detalhes/${ticketId}`);
+                }}
+              >
+                <ExternalLink className="h-3 w-3 mr-1" />
+                Ver completo
+              </Button>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-xs"
-              onClick={() => {
-                onOpenChange(false);
-                navigate(`/ticket-detalhes/${ticketId}`);
-              }}
-            >
-              <ExternalLink className="h-3 w-3 mr-1" />
-              Ver completo
-            </Button>
-          </div>
-        </DialogHeader>
+          </DialogHeader>
 
-        {/* Messages area */}
-        <ScrollArea className="flex-1 px-4" ref={scrollRef}>
-          {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-              <MessageSquare className="h-8 w-8 mb-2 opacity-50" />
-              <p className="text-sm">Nenhuma mensagem ainda</p>
-              <p className="text-xs">Envie uma mensagem para iniciar a conversa</p>
-            </div>
-          ) : (
-            <div className="py-4 space-y-4">
-              {Object.entries(groupedMessages).map(([date, dayMessages]) => (
-                <div key={date}>
-                  {/* Date separator */}
-                  <div className="flex items-center gap-2 my-4">
-                    <div className="flex-1 h-px bg-border" />
-                    <span className="text-[10px] text-muted-foreground px-2 bg-background">
-                      {format(new Date(date), "dd 'de' MMMM", { locale: ptBR })}
-                    </span>
-                    <div className="flex-1 h-px bg-border" />
+          {/* Messages area */}
+          <ScrollArea className="flex-1 px-4" ref={scrollRef}>
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : messages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                <MessageSquare className="h-8 w-8 mb-2 opacity-50" />
+                <p className="text-sm">Nenhuma mensagem ainda</p>
+                <p className="text-xs">Envie uma mensagem para iniciar a conversa</p>
+              </div>
+            ) : (
+              <div className="py-4 space-y-4">
+                {Object.entries(groupedMessages).map(([date, dayMessages]) => (
+                  <div key={date}>
+                    {/* Date separator */}
+                    <div className="flex items-center gap-2 my-4">
+                      <div className="flex-1 h-px bg-border" />
+                      <span className="text-[10px] text-muted-foreground px-2 bg-background">
+                        {format(new Date(date), "dd 'de' MMMM", { locale: ptBR })}
+                      </span>
+                      <div className="flex-1 h-px bg-border" />
+                    </div>
+                    {/* Messages */}
+                    <div className="space-y-3">
+                      {dayMessages.map(renderMessage)}
+                    </div>
                   </div>
-                  {/* Messages */}
-                  <div className="space-y-3">
-                    {dayMessages.map(renderMessage)}
-                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Typing indicator */}
+            {typingUsers.length > 0 && (
+              <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
+                <div className="flex gap-1">
+                  <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+                <span>
+                  {typingUsers.map((u) => u.name).join(", ")} está digitando...
+                </span>
+              </div>
+            )}
+          </ScrollArea>
+
+          {/* Selected files preview */}
+          {selectedFiles.length > 0 && (
+            <div className="px-3 py-2 border-t flex flex-wrap gap-2">
+              {selectedFiles.map((file, index) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-1.5 bg-muted rounded-md px-2 py-1 text-xs"
+                >
+                  {uploadingFiles.has(file.name) ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Paperclip className="h-3 w-3" />
+                  )}
+                  <span className="truncate max-w-[100px]">{file.name}</span>
+                  <button
+                    onClick={() => removeFile(index)}
+                    className="text-muted-foreground hover:text-foreground"
+                    disabled={uploadingFiles.has(file.name)}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
                 </div>
               ))}
             </div>
           )}
 
-          {/* Typing indicator */}
-          {typingUsers.length > 0 && (
-            <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
-              <div className="flex gap-1">
-                <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+          {/* Input area */}
+          <div className="p-3 border-t flex-shrink-0">
+            <div className="flex gap-2 items-end">
+              {/* File input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                onChange={handleFileSelect}
+                className="hidden"
+                accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx"
+              />
+              
+              {/* Action buttons */}
+              <div className="flex flex-col gap-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={sending}
+                  title="Anexar arquivo"
+                >
+                  <Paperclip className="h-4 w-4" />
+                </Button>
+                
+                <VoiceToTextInput
+                  onTranscript={handleVoiceTranscript}
+                  disabled={sending}
+                />
+                
+                {isTeamMember && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={generateAIResponse}
+                    disabled={sending || generatingAI}
+                    title="Gerar resposta com IA"
+                  >
+                    {generatingAI ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4" />
+                    )}
+                  </Button>
+                )}
               </div>
-              <span>
-                {typingUsers.map((u) => u.name).join(", ")} está digitando...
-              </span>
+              
+              {/* Textarea */}
+              <Textarea
+                ref={textareaRef}
+                value={newMessage}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                placeholder="Digite sua mensagem..."
+                className="min-h-[40px] max-h-[120px] resize-none flex-1"
+                rows={1}
+              />
+              
+              {/* Send button */}
+              <Button
+                onClick={handleSend}
+                disabled={(!newMessage.trim() && selectedFiles.length === 0) || sending || uploadingFiles.size > 0}
+                size="icon"
+                className="flex-shrink-0"
+              >
+                {sending || uploadingFiles.size > 0 ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
             </div>
-          )}
-        </ScrollArea>
-
-        {/* Input area */}
-        <div className="p-3 border-t flex-shrink-0">
-          <div className="flex gap-2">
-            <Textarea
-              ref={textareaRef}
-              value={newMessage}
-              onChange={handleInputChange}
-              onKeyDown={handleKeyDown}
-              placeholder="Digite sua mensagem..."
-              className="min-h-[40px] max-h-[120px] resize-none"
-              rows={1}
-            />
-            <Button
-              onClick={handleSend}
-              disabled={!newMessage.trim() || sending}
-              size="icon"
-              className="flex-shrink-0"
-            >
-              {sending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </Button>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      {/* Media Gallery */}
+      <MediaGallery
+        items={allMediaItems.map(item => ({
+          id: item.id,
+          file_url: item.file_url,
+          file_name: item.file_name,
+          file_type: item.file_type
+        }))}
+        open={galleryOpen}
+        onOpenChange={setGalleryOpen}
+        initialIndex={galleryStartIndex}
+      />
+    </>
   );
 }
