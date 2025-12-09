@@ -247,68 +247,55 @@ export function ChargesKanbanPreview() {
                           <div
                             key={charge.id}
                             onClick={() => navigate(`/cobranca/${charge.id}`)}
-                            className="bg-card rounded px-1.5 py-1 shadow-sm cursor-pointer hover:shadow-md transition-shadow flex items-center gap-1 w-full overflow-hidden"
+                            className="bg-card rounded-lg p-2 shadow-sm cursor-pointer hover:shadow-md transition-shadow w-full"
                           >
-                            {/* Photo */}
-                            {charge.property?.cover_photo_url ? (
-                              <img
-                                src={charge.property.cover_photo_url}
-                                alt=""
-                                className="w-6 h-6 rounded object-cover flex-shrink-0"
-                              />
-                            ) : (
-                              <div className="w-6 h-6 rounded bg-muted flex items-center justify-center flex-shrink-0">
-                                <Building className="h-3 w-3 text-muted-foreground" />
-                              </div>
-                            )}
+                            {/* Owner + Property */}
+                            <p className="font-medium text-xs truncate">
+                              {charge.owner?.name || "Sem prop."}
+                            </p>
+                            <p className="text-muted-foreground text-[10px] truncate">
+                              {charge.title}
+                            </p>
                             
-                            {/* Info */}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1">
-                                <span className="font-medium truncate text-[9px]">
-                                  {charge.owner?.name || "Sem prop."}
+                            {/* Amount + Due date */}
+                            <div className="flex items-center justify-between mt-1">
+                              <span className="font-bold text-green-600 text-sm">
+                                {formatBRL(dueAmount)}
+                              </span>
+                              {dueDateInfo && (
+                                <span className={`text-[10px] ${dueDateInfo.colorClass}`}>
+                                  {dueDateInfo.text}
                                 </span>
-                                <span className="text-muted-foreground truncate text-[8px]">
-                                  {charge.title}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <span className="font-bold text-green-600 text-[9px]">
-                                  {formatBRL(dueAmount)}
-                                </span>
-                                {dueDateInfo && (
-                                  <span className={`text-[8px] ${dueDateInfo.colorClass}`}>
-                                    {dueDateInfo.text}
-                                  </span>
-                                )}
-                              </div>
+                              )}
                             </div>
                             
-                            {/* Actions */}
-                            <div className="flex items-center gap-0.5 flex-shrink-0">
+                            {/* Actions - stacked vertically */}
+                            <div className="flex gap-1 mt-2">
                               <Button
                                 size="sm"
-                                variant="ghost"
-                                className="h-5 w-5 p-0 relative"
+                                variant="outline"
+                                className="flex-1 h-8 text-xs"
                                 onClick={(e) => openChatDialog(charge, e)}
                               >
-                                <MessageSquare className="h-3 w-3" />
+                                <MessageSquare className="h-3.5 w-3.5 mr-1" />
+                                Chat
                                 {(charge._count?.messages || 0) > 0 && (
-                                  <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-[6px] rounded-full h-2.5 w-2.5 flex items-center justify-center font-bold">
-                                    {charge._count?.messages || 0}
-                                  </span>
+                                  <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">
+                                    {charge._count?.messages}
+                                  </Badge>
                                 )}
                               </Button>
                               
                               {isOwner && charge.payment_link_url && (
                                 <Button
                                   size="sm"
-                                  className="text-[8px] h-5 px-1 bg-green-600 hover:bg-green-700"
+                                  className="flex-1 h-8 text-xs bg-green-600 hover:bg-green-700"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     window.open(charge.payment_link_url!, "_blank");
                                   }}
                                 >
+                                  <CreditCard className="h-3.5 w-3.5 mr-1" />
                                   Pagar
                                 </Button>
                               )}

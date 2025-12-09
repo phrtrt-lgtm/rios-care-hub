@@ -208,53 +208,43 @@ export function ChamadosKanbanPreview() {
                           <div
                             key={ticket.id}
                             onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
-                            className="bg-card rounded px-1.5 py-1 shadow-sm cursor-pointer hover:shadow-md transition-shadow flex items-center gap-1 w-full overflow-hidden"
+                            className="bg-card rounded-lg p-2 shadow-sm cursor-pointer hover:shadow-md transition-shadow w-full"
                           >
-                            {/* Photo */}
-                            {ticket.property?.cover_photo_url ? (
-                              <img
-                                src={ticket.property.cover_photo_url}
-                                alt=""
-                                className="w-6 h-6 rounded object-cover flex-shrink-0"
-                              />
-                            ) : (
-                              <div className="w-6 h-6 rounded bg-muted flex items-center justify-center flex-shrink-0">
-                                <Building className="h-3 w-3 text-muted-foreground" />
-                              </div>
-                            )}
-                            
-                            {/* Info */}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1">
-                                <span className="font-medium truncate text-[9px]">
-                                  {ticket.property?.name || "Sem unidade"}
-                                </span>
-                                <span className="text-[8px] px-0.5 bg-muted rounded flex-shrink-0">
-                                  {TICKET_TYPE_ICONS[ticket.ticket_type]}
-                                </span>
-                              </div>
-                              <p className="text-muted-foreground truncate text-[8px]">
-                                {ticket.subject}
+                            {/* Property + Type */}
+                            <div className="flex items-center gap-1">
+                              <p className="font-medium text-xs truncate flex-1">
+                                {ticket.property?.name || "Sem unidade"}
                               </p>
+                              <span className="text-[10px] px-1 py-0.5 bg-muted rounded flex-shrink-0">
+                                {TICKET_TYPE_ICONS[ticket.ticket_type]}
+                              </span>
                             </div>
                             
-                            {/* SLA + Chat */}
-                            <div className="flex items-center gap-0.5 flex-shrink-0">
-                              {slaInfo && (
-                                <span className={`text-[8px] ${slaInfo.colorClass}`}>
-                                  {slaInfo.display}
-                                </span>
-                              )}
+                            {/* Subject */}
+                            <p className="text-muted-foreground text-[10px] truncate mt-0.5">
+                              {ticket.subject}
+                            </p>
+                            
+                            {/* SLA */}
+                            {slaInfo && (
+                              <p className={`text-[10px] mt-1 ${slaInfo.colorClass}`}>
+                                SLA: {slaInfo.display}
+                              </p>
+                            )}
+                            
+                            {/* Actions */}
+                            <div className="mt-2">
                               <Button
                                 size="sm"
-                                variant="ghost"
-                                className="h-5 w-5 p-0"
+                                variant="outline"
+                                className="w-full h-8 text-xs"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   openChatDialog(ticket, e);
                                 }}
                               >
-                                <MessageSquare className="h-3 w-3" />
+                                <MessageSquare className="h-3.5 w-3.5 mr-1" />
+                                Abrir Chat
                               </Button>
                             </div>
                           </div>
