@@ -199,8 +199,8 @@ export function ChamadosKanbanPreview() {
                       {columnTickets.length}
                     </Badge>
                   </div>
-                  <ScrollArea className="h-[200px]">
-                    <div className="space-y-2 pr-2">
+                  <ScrollArea className="h-[180px]">
+                    <div className="space-y-1.5 pr-1">
                       {columnTickets.map((ticket) => {
                         const slaInfo = getSlaInfo(ticket.sla_due_at);
                         
@@ -208,66 +208,57 @@ export function ChamadosKanbanPreview() {
                           <div
                             key={ticket.id}
                             onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
-                            className="bg-card rounded p-2 shadow-sm cursor-pointer hover:shadow-md transition-shadow text-xs"
+                            className="bg-card rounded p-1.5 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
                           >
-                            {/* Property */}
-                            <div className="flex items-center gap-1 mb-1">
+                            {/* Property + Type in one line */}
+                            <div className="flex items-center gap-1 mb-0.5">
                               {ticket.property?.cover_photo_url ? (
                                 <img
                                   src={ticket.property.cover_photo_url}
                                   alt=""
-                                  className="w-5 h-5 rounded object-cover"
+                                  className="w-4 h-4 rounded object-cover flex-shrink-0"
                                 />
                               ) : (
-                                <Building className="h-4 w-4 text-muted-foreground" />
+                                <Building className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                               )}
-                              <span className="font-medium truncate flex-1">
+                              <span className="font-medium truncate text-[10px] flex-1">
                                 {ticket.property?.name || "Sem unidade"}
+                              </span>
+                              <span className="text-[9px] px-1 py-0.5 bg-muted rounded">
+                                {TICKET_TYPE_ICONS[ticket.ticket_type]}
                               </span>
                             </div>
 
-                            {/* Type badge */}
-                            <Badge variant="outline" className="text-[10px] h-4 px-1 gap-0.5 mb-1">
-                              {TICKET_TYPE_ICONS[ticket.ticket_type]}
-                              {TICKET_TYPE_LABELS[ticket.ticket_type]}
-                            </Badge>
-
                             {/* Subject */}
-                            <p className="text-muted-foreground line-clamp-1 text-[10px]">
+                            <p className="text-muted-foreground line-clamp-1 text-[9px]">
                               {ticket.subject}
                             </p>
 
-                            {/* SLA */}
-                            {slaInfo && (
-                              <div className={`flex items-center gap-1 mt-1 text-[10px] ${slaInfo.colorClass}`}>
-                                <Clock className="h-3 w-3" />
-                                {slaInfo.display}
-                              </div>
-                            )}
-                            
-                            {/* Chat button */}
-                            <div className="flex gap-1 mt-2">
+                            {/* SLA + Chat */}
+                            <div className="flex items-center justify-between mt-1">
+                              {slaInfo && (
+                                <span className={`text-[9px] flex items-center gap-0.5 ${slaInfo.colorClass}`}>
+                                  <Clock className="h-2.5 w-2.5" />
+                                  {slaInfo.display}
+                                </span>
+                              )}
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="text-[10px] h-6 px-2 relative flex-1"
-                                onClick={(e) => openChatDialog(ticket, e)}
-                                title="Responder"
+                                className="text-[9px] h-5 px-1 ml-auto"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openChatDialog(ticket, e);
+                                }}
                               >
-                                <MessageSquare className="h-3 w-3 mr-1" />
-                                Responder
-                                {unreadCounts[ticket.id] > 0 && (
-                                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] rounded-full h-4 min-w-[16px] flex items-center justify-center px-1 font-bold">
-                                    {unreadCounts[ticket.id] > 9 ? "9+" : unreadCounts[ticket.id]}
-                                  </span>
-                                )}
+                                <MessageSquare className="h-2.5 w-2.5" />
                               </Button>
                             </div>
                           </div>
                         );
                       })}
                       {columnTickets.length === 0 && (
-                        <p className="text-[10px] text-muted-foreground text-center py-2">
+                        <p className="text-[9px] text-muted-foreground text-center py-2">
                           Nenhum item
                         </p>
                       )}

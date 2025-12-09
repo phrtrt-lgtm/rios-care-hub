@@ -228,8 +228,8 @@ export function ChargesKanbanPreview() {
                       {columnCharges.length}
                     </Badge>
                   </div>
-                  <ScrollArea className="h-[200px]">
-                    <div className="space-y-2 pr-2">
+                  <ScrollArea className="h-[180px]">
+                    <div className="space-y-1.5 pr-1">
                       {columnCharges.map((charge) => {
                         const dueDateInfo = getDueDateInfo(charge.due_date, charge.status);
                         const dueAmount = getDueAmount(charge);
@@ -238,63 +238,55 @@ export function ChargesKanbanPreview() {
                           <div
                             key={charge.id}
                             onClick={() => navigate(`/cobranca/${charge.id}`)}
-                            className="bg-card rounded p-2 shadow-sm cursor-pointer hover:shadow-md transition-shadow text-xs"
+                            className="bg-card rounded p-1.5 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
                           >
-                            {/* Property */}
-                            <div className="flex items-center gap-1 mb-1">
+                            {/* Property + Owner compact */}
+                            <div className="flex items-center gap-1 mb-0.5">
                               {charge.property?.cover_photo_url ? (
                                 <img
                                   src={charge.property.cover_photo_url}
                                   alt=""
-                                  className="w-5 h-5 rounded object-cover"
+                                  className="w-4 h-4 rounded object-cover flex-shrink-0"
                                 />
                               ) : (
-                                <Building className="h-4 w-4 text-muted-foreground" />
+                                <Building className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                               )}
-                              <span className="font-medium truncate flex-1">
+                              <span className="font-medium truncate text-[10px] flex-1">
                                 {charge.property?.name || "Sem unidade"}
                               </span>
                             </div>
 
                             {/* Title */}
-                            <p className="text-muted-foreground line-clamp-1 text-[10px] mb-1">
+                            <p className="text-muted-foreground line-clamp-1 text-[9px]">
                               {charge.title}
                             </p>
 
-                            {/* Service Type */}
-                            {charge.service_type && (
-                              <Badge variant="outline" className="text-[10px] h-4 px-1 mb-1">
-                                {SERVICE_TYPE_LABELS[charge.service_type] || charge.service_type}
-                              </Badge>
-                            )}
-
-                            {/* Amount */}
-                            <div className="flex items-center justify-between mt-1">
-                              <span className="font-bold text-green-600">
+                            {/* Amount + Due date */}
+                            <div className="flex items-center justify-between mt-0.5">
+                              <span className="font-bold text-green-600 text-[10px]">
                                 {formatBRL(dueAmount)}
                               </span>
                               {dueDateInfo && (
-                                <span className={`text-[10px] ${dueDateInfo.colorClass}`}>
+                                <span className={`text-[9px] ${dueDateInfo.colorClass}`}>
                                   {dueDateInfo.text}
                                 </span>
                               )}
                             </div>
 
-                            {/* Actions */}
-                            <div className="flex gap-1 mt-2">
+                            {/* Actions compact */}
+                            <div className="flex gap-0.5 mt-1 items-center">
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="text-[10px] h-6 px-2 relative"
+                                className="text-[9px] h-5 px-1 relative"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   navigate(`/cobranca/${charge.id}`);
                                 }}
-                                title="Ver detalhes / Chat"
                               >
-                                <MessageSquare className="h-3 w-3" />
+                                <MessageSquare className="h-2.5 w-2.5" />
                                 {(charge._count?.messages || 0) > 0 && (
-                                  <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-[8px] rounded-full h-4 min-w-[16px] flex items-center justify-center px-1 font-bold">
+                                  <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-[7px] rounded-full h-3 w-3 flex items-center justify-center font-bold">
                                     {charge._count?.messages || 0}
                                   </span>
                                 )}
@@ -303,28 +295,28 @@ export function ChargesKanbanPreview() {
                               {isOwner && charge.payment_link_url && (
                                 <Button
                                   size="sm"
-                                  className="flex-1 text-[10px] h-6 px-1 bg-green-600 hover:bg-green-700"
+                                  className="flex-1 text-[9px] h-5 px-1 bg-green-600 hover:bg-green-700"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     window.open(charge.payment_link_url!, "_blank");
                                   }}
                                 >
-                                  <CreditCard className="h-3 w-3 mr-1" />
+                                  <CreditCard className="h-2.5 w-2.5 mr-0.5" />
                                   Pagar
                                 </Button>
                               )}
                               
                               {!isOwner && (
-                                <div className="flex-1 text-[10px] text-muted-foreground truncate">
+                                <span className="flex-1 text-[9px] text-muted-foreground truncate">
                                   {charge.owner?.name}
-                                </div>
+                                </span>
                               )}
                             </div>
                           </div>
                         );
                       })}
                       {columnCharges.length === 0 && (
-                        <p className="text-[10px] text-muted-foreground text-center py-2">
+                        <p className="text-[9px] text-muted-foreground text-center py-2">
                           Nenhum item
                         </p>
                       )}
