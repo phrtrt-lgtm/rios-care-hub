@@ -211,7 +211,7 @@ export function VistoriasKanbanPreview() {
         <CardContent className="p-2 pt-0">
           <div className="grid grid-cols-2 gap-2">
             {/* Problemas Column */}
-            <div className="space-y-1">
+            <div className="space-y-1 min-w-0 overflow-hidden">
               <div className="flex items-center gap-1 px-1 mb-1">
                 <AlertTriangle className="h-3 w-3 text-destructive" />
                 <span className="text-[10px] font-medium text-destructive">Problemas</span>
@@ -233,7 +233,7 @@ export function VistoriasKanbanPreview() {
             </div>
 
             {/* OK Column */}
-            <div className="space-y-1">
+            <div className="space-y-1 min-w-0 overflow-hidden">
               <div className="flex items-center gap-1 px-1 mb-1">
                 <CheckCircle2 className="h-3 w-3 text-green-500" />
                 <span className="text-[10px] font-medium text-green-600">OK</span>
