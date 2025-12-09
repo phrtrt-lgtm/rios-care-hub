@@ -229,7 +229,7 @@ export function ChargesKanbanPreview() {
                     </Badge>
                   </div>
                   <ScrollArea className="h-[180px]">
-                    <div className="space-y-1.5 pr-1">
+                    <div className="space-y-1 pr-1">
                       {columnCharges.map((charge) => {
                         const dueDateInfo = getDueDateInfo(charge.due_date, charge.status);
                         const dueAmount = getDueAmount(charge);
@@ -238,55 +238,57 @@ export function ChargesKanbanPreview() {
                           <div
                             key={charge.id}
                             onClick={() => navigate(`/cobranca/${charge.id}`)}
-                            className="bg-card rounded p-1.5 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                            className="bg-card rounded px-1.5 py-1 shadow-sm cursor-pointer hover:shadow-md transition-shadow flex items-center gap-1.5"
                           >
-                            {/* Property + Owner compact */}
-                            <div className="flex items-center gap-1 mb-0.5">
-                              {charge.property?.cover_photo_url ? (
-                                <img
-                                  src={charge.property.cover_photo_url}
-                                  alt=""
-                                  className="w-4 h-4 rounded object-cover flex-shrink-0"
-                                />
-                              ) : (
-                                <Building className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                              )}
-                              <span className="font-medium truncate text-[10px] flex-1">
-                                {charge.property?.name || "Sem unidade"}
-                              </span>
-                            </div>
-
-                            {/* Title */}
-                            <p className="text-muted-foreground line-clamp-1 text-[9px]">
-                              {charge.title}
-                            </p>
-
-                            {/* Amount + Due date */}
-                            <div className="flex items-center justify-between mt-0.5">
-                              <span className="font-bold text-green-600 text-[10px]">
-                                {formatBRL(dueAmount)}
-                              </span>
-                              {dueDateInfo && (
-                                <span className={`text-[9px] ${dueDateInfo.colorClass}`}>
-                                  {dueDateInfo.text}
+                            {/* Photo */}
+                            {charge.property?.cover_photo_url ? (
+                              <img
+                                src={charge.property.cover_photo_url}
+                                alt=""
+                                className="w-6 h-6 rounded object-cover flex-shrink-0"
+                              />
+                            ) : (
+                              <div className="w-6 h-6 rounded bg-muted flex items-center justify-center flex-shrink-0">
+                                <Building className="h-3 w-3 text-muted-foreground" />
+                              </div>
+                            )}
+                            
+                            {/* Info */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1">
+                                <span className="font-medium truncate text-[9px]">
+                                  {charge.owner?.name || "Sem prop."}
                                 </span>
-                              )}
+                                <span className="text-muted-foreground truncate text-[8px]">
+                                  {charge.title}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="font-bold text-green-600 text-[9px]">
+                                  {formatBRL(dueAmount)}
+                                </span>
+                                {dueDateInfo && (
+                                  <span className={`text-[8px] ${dueDateInfo.colorClass}`}>
+                                    {dueDateInfo.text}
+                                  </span>
+                                )}
+                              </div>
                             </div>
-
-                            {/* Actions compact */}
-                            <div className="flex gap-0.5 mt-1 items-center">
+                            
+                            {/* Actions */}
+                            <div className="flex items-center gap-0.5 flex-shrink-0">
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="text-[9px] h-5 px-1 relative"
+                                className="h-5 w-5 p-0 relative"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   navigate(`/cobranca/${charge.id}`);
                                 }}
                               >
-                                <MessageSquare className="h-2.5 w-2.5" />
+                                <MessageSquare className="h-3 w-3" />
                                 {(charge._count?.messages || 0) > 0 && (
-                                  <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-[7px] rounded-full h-3 w-3 flex items-center justify-center font-bold">
+                                  <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-[6px] rounded-full h-2.5 w-2.5 flex items-center justify-center font-bold">
                                     {charge._count?.messages || 0}
                                   </span>
                                 )}
@@ -295,28 +297,21 @@ export function ChargesKanbanPreview() {
                               {isOwner && charge.payment_link_url && (
                                 <Button
                                   size="sm"
-                                  className="flex-1 text-[9px] h-5 px-1 bg-green-600 hover:bg-green-700"
+                                  className="text-[8px] h-5 px-1 bg-green-600 hover:bg-green-700"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     window.open(charge.payment_link_url!, "_blank");
                                   }}
                                 >
-                                  <CreditCard className="h-2.5 w-2.5 mr-0.5" />
                                   Pagar
                                 </Button>
-                              )}
-                              
-                              {!isOwner && (
-                                <span className="flex-1 text-[9px] text-muted-foreground truncate">
-                                  {charge.owner?.name}
-                                </span>
                               )}
                             </div>
                           </div>
                         );
                       })}
                       {columnCharges.length === 0 && (
-                        <p className="text-[9px] text-muted-foreground text-center py-2">
+                        <p className="text-[8px] text-muted-foreground text-center py-2">
                           Nenhum item
                         </p>
                       )}

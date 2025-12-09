@@ -200,7 +200,7 @@ export function ChamadosKanbanPreview() {
                     </Badge>
                   </div>
                   <ScrollArea className="h-[180px]">
-                    <div className="space-y-1.5 pr-1">
+                    <div className="space-y-1 pr-1">
                       {columnTickets.map((ticket) => {
                         const slaInfo = getSlaInfo(ticket.sla_due_at);
                         
@@ -208,57 +208,60 @@ export function ChamadosKanbanPreview() {
                           <div
                             key={ticket.id}
                             onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
-                            className="bg-card rounded p-1.5 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                            className="bg-card rounded px-1.5 py-1 shadow-sm cursor-pointer hover:shadow-md transition-shadow flex items-center gap-1.5"
                           >
-                            {/* Property + Type in one line */}
-                            <div className="flex items-center gap-1 mb-0.5">
-                              {ticket.property?.cover_photo_url ? (
-                                <img
-                                  src={ticket.property.cover_photo_url}
-                                  alt=""
-                                  className="w-4 h-4 rounded object-cover flex-shrink-0"
-                                />
-                              ) : (
-                                <Building className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                              )}
-                              <span className="font-medium truncate text-[10px] flex-1">
-                                {ticket.property?.name || "Sem unidade"}
-                              </span>
-                              <span className="text-[9px] px-1 py-0.5 bg-muted rounded">
-                                {TICKET_TYPE_ICONS[ticket.ticket_type]}
-                              </span>
+                            {/* Photo */}
+                            {ticket.property?.cover_photo_url ? (
+                              <img
+                                src={ticket.property.cover_photo_url}
+                                alt=""
+                                className="w-6 h-6 rounded object-cover flex-shrink-0"
+                              />
+                            ) : (
+                              <div className="w-6 h-6 rounded bg-muted flex items-center justify-center flex-shrink-0">
+                                <Building className="h-3 w-3 text-muted-foreground" />
+                              </div>
+                            )}
+                            
+                            {/* Info */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1">
+                                <span className="font-medium truncate text-[9px]">
+                                  {ticket.property?.name || "Sem unidade"}
+                                </span>
+                                <span className="text-[8px] px-0.5 bg-muted rounded flex-shrink-0">
+                                  {TICKET_TYPE_ICONS[ticket.ticket_type]}
+                                </span>
+                              </div>
+                              <p className="text-muted-foreground truncate text-[8px]">
+                                {ticket.subject}
+                              </p>
                             </div>
-
-                            {/* Subject */}
-                            <p className="text-muted-foreground line-clamp-1 text-[9px]">
-                              {ticket.subject}
-                            </p>
-
+                            
                             {/* SLA + Chat */}
-                            <div className="flex items-center justify-between mt-1">
+                            <div className="flex items-center gap-0.5 flex-shrink-0">
                               {slaInfo && (
-                                <span className={`text-[9px] flex items-center gap-0.5 ${slaInfo.colorClass}`}>
-                                  <Clock className="h-2.5 w-2.5" />
+                                <span className={`text-[8px] ${slaInfo.colorClass}`}>
                                   {slaInfo.display}
                                 </span>
                               )}
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="text-[9px] h-5 px-1 ml-auto"
+                                className="h-5 w-5 p-0"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   openChatDialog(ticket, e);
                                 }}
                               >
-                                <MessageSquare className="h-2.5 w-2.5" />
+                                <MessageSquare className="h-3 w-3" />
                               </Button>
                             </div>
                           </div>
                         );
                       })}
                       {columnTickets.length === 0 && (
-                        <p className="text-[9px] text-muted-foreground text-center py-2">
+                        <p className="text-[8px] text-muted-foreground text-center py-2">
                           Nenhum item
                         </p>
                       )}
