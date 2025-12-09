@@ -11,9 +11,10 @@ import { AvatarUpload } from "@/components/AvatarUpload";
 import { AlertBanner } from "@/components/AlertBanner";
 import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
 import { VotacoesPendentes } from "@/components/VotacoesPendentes";
-import { MaintenanceKanbanPreview } from "@/components/MaintenanceKanbanPreview";
-import { ChamadosKanbanPreview } from "@/components/ChamadosKanbanPreview";
-import { ChargesKanbanPreview } from "@/components/ChargesKanbanPreview";
+import { MaintenanceKanbanPreview } from '@/components/MaintenanceKanbanPreview';
+import { ChamadosKanbanPreview } from '@/components/ChamadosKanbanPreview';
+import { VistoriasKanbanPreview } from '@/components/VistoriasKanbanPreview';
+import { ChargesKanbanPreview } from '@/components/ChargesKanbanPreview';
 import { GuestChargeReminders } from "@/components/GuestChargeReminders";
 import { NotificationButton } from "@/components/NotificationButton";
 export default function Painel() {
@@ -185,6 +186,7 @@ export default function Painel() {
         {(profile?.role === "admin" || profile?.role === "maintenance" || profile?.role === "agent") && (
           <div className="mb-6 grid gap-4 lg:grid-cols-2">
             <ChamadosKanbanPreview />
+            <VistoriasKanbanPreview />
             <MaintenanceKanbanPreview />
             <ChargesKanbanPreview />
           </div>
