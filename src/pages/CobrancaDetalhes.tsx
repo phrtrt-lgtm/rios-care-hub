@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Send, Calendar, DollarSign, Paperclip, Download, Eye, FileText, Image as ImageIcon, Trash2, Sparkles, ChevronDown, X, ZoomIn, Play, Video, Loader2, Copy, CreditCard } from "lucide-react";
+import { ArrowLeft, Send, Calendar, DollarSign, Paperclip, Download, Eye, FileText, Image as ImageIcon, Trash2, Sparkles, ChevronDown, X, ZoomIn, Play, Video, Loader2, Copy, CreditCard, Check } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { VoiceToTextInput } from "@/components/VoiceToTextInput";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { Label } from "@/components/ui/label";
@@ -115,9 +116,9 @@ export default function CobrancaDetalhes() {
   const [galleryStartIndex, setGalleryStartIndex] = useState(0);
   const [downloadingAll, setDownloadingAll] = useState(false);
   const [generatingPaymentLink, setGeneratingPaymentLink] = useState(false);
-  const [debitingReserve, setDebitingReserve] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
-  const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent';
+  const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance';
 
   useEffect(() => {
     fetchChargeData();
@@ -714,34 +715,135 @@ export default function CobrancaDetalhes() {
     }
   };
 
-  const handleDebitReserve = async () => {
-    if (!confirm("Confirma debitar esta cobrança da reserva do proprietário? Isso aplicará -30 pontos no score.")) {
-      return;
-    }
+  // Payment status configuration with score impacts
+  const PAYMENT_STATUSES = {
+    draft: { label: 'Rascunho', scoreChange: 0 },
+    sent: { label: 'Enviada', scoreChange: 0 },
+    pago_antecipado: { label: 'Pago antecipado (+5)', scoreChange: 5 },
+    pago_no_vencimento: { label: 'Pago no vencimento (+1)', scoreChange: 1 },
+    pago_com_atraso: { label: 'Pago com atraso (-15)', scoreChange: -15 },
+    debited: { label: 'Debitado em reserva (-30)', scoreChange: -30 },
+    cancelled: { label: 'Cancelada', scoreChange: 0 },
+  };
 
+  const handleStatusChange = async (newStatus: string) => {
+    if (!charge || newStatus === charge.status) return;
+    
+    const statusConfig = PAYMENT_STATUSES[newStatus as keyof typeof PAYMENT_STATUSES];
+    const oldStatusConfig = PAYMENT_STATUSES[charge.status as keyof typeof PAYMENT_STATUSES];
+    
     try {
-      setDebitingReserve(true);
+      setUpdatingStatus(true);
       
-      const { data, error } = await supabase.functions.invoke('debit-reserve', {
-        body: { chargeId: id }
-      });
-
-      if (error) throw error;
-
+      // Get current profile score
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('payment_score')
+        .eq('id', charge.owner_id)
+        .single();
+      
+      if (profileError) throw profileError;
+      
+      let currentScore = profileData?.payment_score ?? 50;
+      
+      // Check if there's an existing score record for this charge
+      const { data: existingScoreRecord } = await supabase
+        .from('owner_payment_scores')
+        .select('*')
+        .eq('charge_id', id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      // If there was a previous score change for this charge, reverse it first
+      if (existingScoreRecord) {
+        const reversedScore = Math.max(0, Math.min(100, currentScore - existingScoreRecord.points_change));
+        
+        // Record the reversal
+        await supabase.from('owner_payment_scores').insert({
+          owner_id: charge.owner_id,
+          charge_id: id,
+          score_before: currentScore,
+          score_after: reversedScore,
+          points_change: -existingScoreRecord.points_change,
+          reason: `status_reversal_from_${charge.status}`
+        });
+        
+        currentScore = reversedScore;
+        
+        // Update profile with reversed score
+        await supabase
+          .from('profiles')
+          .update({ payment_score: reversedScore })
+          .eq('id', charge.owner_id);
+      }
+      
+      // Apply new score change if applicable
+      const newScoreChange = statusConfig?.scoreChange || 0;
+      if (newScoreChange !== 0) {
+        const newScore = Math.max(0, Math.min(100, currentScore + newScoreChange));
+        
+        // Determine reason based on new status
+        let reason = 'status_change';
+        if (newStatus === 'pago_antecipado') reason = 'early_payment';
+        else if (newStatus === 'pago_no_vencimento') reason = 'on_time_payment';
+        else if (newStatus === 'pago_com_atraso') reason = 'late_payment';
+        else if (newStatus === 'debited') reason = 'reserve_debit';
+        
+        // Record the new score change
+        await supabase.from('owner_payment_scores').insert({
+          owner_id: charge.owner_id,
+          charge_id: id,
+          score_before: currentScore,
+          score_after: newScore,
+          points_change: newScoreChange,
+          reason
+        });
+        
+        // Update profile with new score
+        await supabase
+          .from('profiles')
+          .update({ payment_score: newScore })
+          .eq('id', charge.owner_id);
+      }
+      
+      // Update charge status and paid_at/debited_at timestamps
+      const updateData: any = { status: newStatus };
+      
+      if (['pago_antecipado', 'pago_no_vencimento', 'pago_com_atraso'].includes(newStatus)) {
+        updateData.paid_at = new Date().toISOString();
+        updateData.debited_at = null;
+      } else if (newStatus === 'debited') {
+        updateData.debited_at = new Date().toISOString();
+        updateData.paid_at = null;
+      } else {
+        updateData.paid_at = null;
+        updateData.debited_at = null;
+      }
+      
+      const { error: updateError } = await supabase
+        .from('charges')
+        .update(updateData)
+        .eq('id', id);
+      
+      if (updateError) throw updateError;
+      
       await fetchChargeData();
-
+      
       toast({
-        title: "Débito em reserva registrado!",
-        description: `Score do proprietário foi atualizado (${data.scoreChange} pontos)`,
+        title: "Status atualizado!",
+        description: newScoreChange !== 0 
+          ? `Score do proprietário foi atualizado (${newScoreChange > 0 ? '+' : ''}${newScoreChange} pontos)`
+          : "Status da cobrança atualizado com sucesso",
       });
     } catch (error: any) {
       toast({
-        title: "Erro ao debitar",
+        title: "Erro ao atualizar status",
         description: error.message,
         variant: "destructive",
       });
     } finally {
-      setDebitingReserve(false);
+      setUpdatingStatus(false);
     }
   };
 
@@ -786,16 +888,19 @@ export default function CobrancaDetalhes() {
   };
 
   const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      draft: { label: 'Rascunho', variant: 'secondary' as const },
-      sent: { label: 'Enviada', variant: 'default' as const },
-      paid: { label: 'Paga', variant: 'default' as const },
-      overdue: { label: 'Vencida', variant: 'destructive' as const },
-      cancelled: { label: 'Cancelada', variant: 'outline' as const },
-      debited: { label: 'Debitado em Reserva', variant: 'destructive' as const }
+    const statusConfig: Record<string, { label: string; variant: 'secondary' | 'default' | 'destructive' | 'outline' }> = {
+      draft: { label: 'Rascunho', variant: 'secondary' },
+      sent: { label: 'Enviada', variant: 'default' },
+      paid: { label: 'Paga', variant: 'default' },
+      pago_antecipado: { label: 'Pago antecipado', variant: 'default' },
+      pago_no_vencimento: { label: 'Pago no vencimento', variant: 'default' },
+      pago_com_atraso: { label: 'Pago com atraso', variant: 'destructive' },
+      overdue: { label: 'Vencida', variant: 'destructive' },
+      cancelled: { label: 'Cancelada', variant: 'outline' },
+      debited: { label: 'Debitado em Reserva', variant: 'destructive' }
     };
 
-    const config = statusConfig[status as keyof typeof statusConfig] || { label: status, variant: 'outline' as const };
+    const config = statusConfig[status] || { label: status, variant: 'outline' as const };
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
@@ -828,7 +933,7 @@ export default function CobrancaDetalhes() {
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       <header className="border-b bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto flex h-16 items-center px-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+          <Button variant="ghost" size="sm" onClick={() => navigate(isTeamMember ? '/gerenciar-cobrancas' : '/minhas-cobrancas')}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Voltar
           </Button>
@@ -847,22 +952,34 @@ export default function CobrancaDetalhes() {
                 )}
               </div>
               <div className="flex items-center gap-2 flex-wrap">
-                {getStatusBadge(charge.status)}
-                {isTeamMember && charge.status !== 'paid' && charge.status !== 'debited' && charge.status !== 'cancelled' && (
-                  <Button 
-                    variant="outline"
-                    size="sm"
-                    onClick={handleDebitReserve}
-                    disabled={debitingReserve}
-                    className="border-red-300 text-red-600 hover:bg-red-50"
+                {isTeamMember ? (
+                  <Select 
+                    value={charge.status} 
+                    onValueChange={handleStatusChange}
+                    disabled={updatingStatus}
                   >
-                    {debitingReserve ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <DollarSign className="h-4 w-4 mr-2" />
-                    )}
-                    Debitar em Reserva
-                  </Button>
+                    <SelectTrigger className="w-[220px] h-9">
+                      {updatingStatus ? (
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Atualizando...
+                        </div>
+                      ) : (
+                        <SelectValue />
+                      )}
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="draft">📝 Rascunho</SelectItem>
+                      <SelectItem value="sent">📤 Enviada</SelectItem>
+                      <SelectItem value="pago_antecipado">✅ Pago antecipado (+5 pts)</SelectItem>
+                      <SelectItem value="pago_no_vencimento">✅ Pago no vencimento (+1 pt)</SelectItem>
+                      <SelectItem value="pago_com_atraso">⚠️ Pago com atraso (-15 pts)</SelectItem>
+                      <SelectItem value="debited">🔻 Debitado em reserva (-30 pts)</SelectItem>
+                      <SelectItem value="cancelled">❌ Cancelada</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  getStatusBadge(charge.status)
                 )}
                 {isTeamMember && (
                   <Button 
