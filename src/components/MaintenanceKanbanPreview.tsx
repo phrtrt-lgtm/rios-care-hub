@@ -345,75 +345,75 @@ export function MaintenanceKanbanPreview() {
                         <div
                           key={ticket.id}
                           onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
-                          className="bg-card rounded px-1.5 py-1 shadow-sm cursor-pointer hover:shadow-md transition-shadow w-full overflow-hidden"
+                          className="bg-card rounded-lg p-2 shadow-sm cursor-pointer hover:shadow-md transition-shadow w-full"
                         >
-                          {/* Row 1: Property + Subject + Chat */}
-                          <div className="flex items-center gap-1">
-                            <span className="font-medium truncate text-[9px] flex-1">
-                              {ticket.property?.name || "Sem unidade"}
-                            </span>
-                            <span className="text-muted-foreground truncate text-[8px] flex-1">
-                              {ticket.subject}
-                            </span>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-4 w-4 p-0 relative flex-shrink-0"
-                              onClick={(e) => openChatDialog(ticket, e)}
-                            >
-                              <MessageSquare className="h-3 w-3" />
-                              {unreadCounts[ticket.id] > 0 && (
-                                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[7px] rounded-full h-2.5 w-2.5 flex items-center justify-center font-bold">
-                                  {unreadCounts[ticket.id] > 9 ? "+" : unreadCounts[ticket.id]}
+                          {/* Property name */}
+                          <p className="font-medium text-xs truncate">
+                            {ticket.property?.name || "Sem unidade"}
+                          </p>
+                          
+                          {/* Subject */}
+                          <p className="text-muted-foreground text-[10px] truncate mt-0.5">
+                            {ticket.subject}
+                          </p>
+                          
+                          {/* Schedule info */}
+                          {ticket.scheduled_at && (
+                            <div className="flex items-center gap-1 mt-1 text-blue-600 text-[10px]">
+                              <Calendar className="h-3 w-3" />
+                              {format(new Date(ticket.scheduled_at), "dd/MM HH:mm", { locale: ptBR })}
+                              {ticket.service_provider && (
+                                <span className="text-purple-600 truncate">
+                                  • {ticket.service_provider.name}
                                 </span>
                               )}
-                            </Button>
-                          </div>
+                            </div>
+                          )}
                           
-                          {/* Row 2: Schedule info + Actions */}
-                          <div className="flex items-center gap-1 mt-0.5">
-                            {ticket.scheduled_at && (
-                              <span className="text-blue-600 text-[8px] flex items-center gap-0.5">
-                                <Calendar className="h-2.5 w-2.5" />
-                                {format(new Date(ticket.scheduled_at), "dd/MM HH:mm", { locale: ptBR })}
-                              </span>
+                          {/* Actions - stacked vertically */}
+                          <div className="flex gap-1 mt-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="flex-1 h-8 text-xs"
+                              onClick={(e) => openChatDialog(ticket, e)}
+                            >
+                              <MessageSquare className="h-3.5 w-3.5 mr-1" />
+                              Chat
+                              {unreadCounts[ticket.id] > 0 && (
+                                <Badge variant="destructive" className="ml-1 h-4 px-1 text-[10px]">
+                                  {unreadCounts[ticket.id] > 9 ? "9+" : unreadCounts[ticket.id]}
+                                </Badge>
+                              )}
+                            </Button>
+                            {column.key === "pendente" && (
+                              <Button
+                                size="sm"
+                                className="flex-1 h-8 text-xs"
+                                onClick={(e) => openScheduleDialog(ticket, e)}
+                              >
+                                Agendar
+                              </Button>
                             )}
-                            {ticket.service_provider && (
-                              <span className="text-purple-600 truncate text-[8px]">
-                                {ticket.service_provider.name}
-                              </span>
-                            )}
-                            <div className="flex gap-0.5 ml-auto">
-                              {column.key === "pendente" && (
+                            {column.key === "agendado" && (
+                              <>
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="text-[8px] h-4 px-1"
+                                  className="h-8 text-xs px-2"
                                   onClick={(e) => openScheduleDialog(ticket, e)}
                                 >
-                                  Agendar
+                                  Editar
                                 </Button>
-                              )}
-                              {column.key === "agendado" && (
-                                <>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="text-[8px] h-4 px-1"
-                                    onClick={(e) => openScheduleDialog(ticket, e)}
-                                  >
-                                    Editar
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    className="text-[8px] h-4 px-0.5"
-                                    onClick={(e) => moveToExecution(ticket, e)}
-                                  >
-                                    <ChevronRight className="h-2.5 w-2.5" />
-                                  </Button>
-                                </>
-                              )}
-                            </div>
+                                <Button
+                                  size="sm"
+                                  className="h-8 px-2"
+                                  onClick={(e) => moveToExecution(ticket, e)}
+                                >
+                                  <ChevronRight className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
                           </div>
                         </div>
                       ))}

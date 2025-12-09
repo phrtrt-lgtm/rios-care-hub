@@ -113,56 +113,41 @@ export function VistoriasKanbanPreview() {
     return (
       <div
         key={inspection.id}
-        className="flex items-center gap-1.5 p-1.5 rounded-lg border bg-card hover:bg-accent/50 transition-colors w-full overflow-hidden"
+        className="p-2 rounded-lg border bg-card hover:bg-accent/50 transition-colors w-full"
       >
-        {/* Property Photo */}
-        <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0 bg-muted">
-          {property?.cover_photo_url ? (
-            <img
-              src={property.cover_photo_url}
-              alt={property.name}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <Building2 className="h-3 w-3 text-muted-foreground" />
-            </div>
-          )}
+        {/* Property name */}
+        <p className="text-xs font-medium truncate">{property?.name || 'Imóvel'}</p>
+        
+        {/* Time */}
+        <div className="flex items-center gap-1 text-[10px] text-muted-foreground mt-0.5">
+          <Clock className="h-3 w-3" />
+          {format(new Date(inspection.created_at), "dd/MM HH:mm", { locale: ptBR })}
         </div>
 
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium truncate">{property?.name || 'Imóvel'}</p>
-          <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-            <Clock className="h-2.5 w-2.5" />
-            {format(new Date(inspection.created_at), "dd/MM HH:mm", { locale: ptBR })}
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="flex items-center gap-1 flex-shrink-0">
+        {/* Actions - stacked vertically */}
+        <div className="flex gap-1 mt-2">
           {hasProblem && (
             <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
+              variant="outline"
+              size="sm"
+              className="flex-1 h-8 text-xs text-orange-600 border-orange-300"
               onClick={(e) => {
                 e.stopPropagation();
                 handleNewMaintenance(inspection);
               }}
-              title="Nova Manutenção"
             >
-              <Wrench className="h-3 w-3 text-orange-500" />
+              <Wrench className="h-3.5 w-3.5 mr-1" />
+              Manutenção
             </Button>
           )}
           <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
+            variant="outline"
+            size="sm"
+            className={`h-8 text-xs ${hasProblem ? 'px-2' : 'flex-1'}`}
             onClick={() => navigate(`/admin/vistorias/${inspection.id}`)}
-            title="Ver detalhes"
           >
-            <ChevronRight className="h-3 w-3" />
+            <ChevronRight className="h-4 w-4" />
+            {!hasProblem && <span className="ml-1">Ver</span>}
           </Button>
         </div>
       </div>
