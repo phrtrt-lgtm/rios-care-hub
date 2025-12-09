@@ -285,7 +285,7 @@ export function MaintenanceKanbanPreview() {
   }
 
   return (
-    <Card className="border-2 border-purple-200 dark:border-purple-800">
+    <Card className="border-2 border-purple-200 dark:border-purple-800 overflow-hidden">
       <CardHeader className="pb-3">
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 flex-wrap">
@@ -318,14 +318,14 @@ export function MaintenanceKanbanPreview() {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className="pt-0 overflow-hidden">
         {tickets.length === 0 ? (
           <div className="text-center py-6 text-muted-foreground">
             <Wrench className="h-8 w-8 mx-auto mb-2 opacity-50" />
             <p className="text-sm">Nenhuma manutenção no momento</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-2 overflow-hidden">
+          <div className="grid grid-cols-2 gap-2 w-full max-w-full">
             {columns.map((column) => {
               const columnTickets = getTicketsForColumn(column.key);
 

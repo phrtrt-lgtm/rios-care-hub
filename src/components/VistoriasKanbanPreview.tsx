@@ -190,7 +190,7 @@ export function VistoriasKanbanPreview() {
 
   return (
     <>
-      <Card>
+      <Card className="overflow-hidden">
         <CardHeader className="py-3 px-4">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm flex items-center gap-2">
@@ -208,8 +208,8 @@ export function VistoriasKanbanPreview() {
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="p-2 pt-0">
-          <div className="grid grid-cols-2 gap-2 overflow-hidden">
+        <CardContent className="p-2 pt-0 overflow-hidden">
+          <div className="grid grid-cols-2 gap-2 w-full max-w-full">
             {/* Problemas Column */}
             <div className="space-y-1 min-w-0 overflow-hidden w-full">
               <div className="flex items-center gap-1 px-1 mb-1">
