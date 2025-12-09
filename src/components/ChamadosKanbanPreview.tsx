@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Ticket, ArrowRight, Clock, Building, MessageSquare, HelpCircle, DollarSign, Lock, Info, MessageCircle, ShoppingBag } from "lucide-react";
 import { differenceInHours, differenceInMinutes } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
@@ -57,8 +58,6 @@ const columns: KanbanColumn[] = [
   { key: "novo", title: "Novos", color: "text-blue-600", bgColor: "bg-blue-50 dark:bg-blue-950/30" },
   { key: "em_analise", title: "Em Análise", color: "text-amber-600", bgColor: "bg-amber-50 dark:bg-amber-950/30" },
 ];
-
-const MAX_ITEMS_PER_COLUMN = 2;
 
 export function ChamadosKanbanPreview() {
   const navigate = useNavigate();
@@ -189,8 +188,6 @@ export function ChamadosKanbanPreview() {
           <div className="grid grid-cols-2 gap-3">
             {columns.map((column) => {
               const columnTickets = getTicketsForColumn(column.key);
-              const displayTickets = columnTickets.slice(0, MAX_ITEMS_PER_COLUMN);
-              const hasMore = columnTickets.length > MAX_ITEMS_PER_COLUMN;
 
               return (
                 <div key={column.key} className={`rounded-lg p-2 ${column.bgColor}`}>
@@ -202,83 +199,80 @@ export function ChamadosKanbanPreview() {
                       {columnTickets.length}
                     </Badge>
                   </div>
-                  <div className="space-y-2">
-                    {displayTickets.map((ticket) => {
-                      const slaInfo = getSlaInfo(ticket.sla_due_at);
-                      
-                      return (
-                        <div
-                          key={ticket.id}
-                          onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
-                          className="bg-card rounded p-2 shadow-sm cursor-pointer hover:shadow-md transition-shadow text-xs"
-                        >
-                          {/* Property */}
-                          <div className="flex items-center gap-1 mb-1">
-                            {ticket.property?.cover_photo_url ? (
-                              <img
-                                src={ticket.property.cover_photo_url}
-                                alt=""
-                                className="w-5 h-5 rounded object-cover"
-                              />
-                            ) : (
-                              <Building className="h-4 w-4 text-muted-foreground" />
-                            )}
-                            <span className="font-medium truncate flex-1">
-                              {ticket.property?.name || "Sem unidade"}
-                            </span>
-                          </div>
-
-                          {/* Type badge */}
-                          <Badge variant="outline" className="text-[10px] h-4 px-1 gap-0.5 mb-1">
-                            {TICKET_TYPE_ICONS[ticket.ticket_type]}
-                            {TICKET_TYPE_LABELS[ticket.ticket_type]}
-                          </Badge>
-
-                          {/* Subject */}
-                          <p className="text-muted-foreground line-clamp-1 text-[10px]">
-                            {ticket.subject}
-                          </p>
-
-                          {/* SLA */}
-                          {slaInfo && (
-                            <div className={`flex items-center gap-1 mt-1 text-[10px] ${slaInfo.colorClass}`}>
-                              <Clock className="h-3 w-3" />
-                              {slaInfo.display}
-                            </div>
-                          )}
-                          
-                          {/* Chat button */}
-                          <div className="flex gap-1 mt-2">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="text-[10px] h-6 px-2 relative flex-1"
-                              onClick={(e) => openChatDialog(ticket, e)}
-                              title="Responder"
-                            >
-                              <MessageSquare className="h-3 w-3 mr-1" />
-                              Responder
-                              {unreadCounts[ticket.id] > 0 && (
-                                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] rounded-full h-4 min-w-[16px] flex items-center justify-center px-1 font-bold">
-                                  {unreadCounts[ticket.id] > 9 ? "9+" : unreadCounts[ticket.id]}
-                                </span>
+                  <ScrollArea className="h-[200px]">
+                    <div className="space-y-2 pr-2">
+                      {columnTickets.map((ticket) => {
+                        const slaInfo = getSlaInfo(ticket.sla_due_at);
+                        
+                        return (
+                          <div
+                            key={ticket.id}
+                            onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
+                            className="bg-card rounded p-2 shadow-sm cursor-pointer hover:shadow-md transition-shadow text-xs"
+                          >
+                            {/* Property */}
+                            <div className="flex items-center gap-1 mb-1">
+                              {ticket.property?.cover_photo_url ? (
+                                <img
+                                  src={ticket.property.cover_photo_url}
+                                  alt=""
+                                  className="w-5 h-5 rounded object-cover"
+                                />
+                              ) : (
+                                <Building className="h-4 w-4 text-muted-foreground" />
                               )}
-                            </Button>
+                              <span className="font-medium truncate flex-1">
+                                {ticket.property?.name || "Sem unidade"}
+                              </span>
+                            </div>
+
+                            {/* Type badge */}
+                            <Badge variant="outline" className="text-[10px] h-4 px-1 gap-0.5 mb-1">
+                              {TICKET_TYPE_ICONS[ticket.ticket_type]}
+                              {TICKET_TYPE_LABELS[ticket.ticket_type]}
+                            </Badge>
+
+                            {/* Subject */}
+                            <p className="text-muted-foreground line-clamp-1 text-[10px]">
+                              {ticket.subject}
+                            </p>
+
+                            {/* SLA */}
+                            {slaInfo && (
+                              <div className={`flex items-center gap-1 mt-1 text-[10px] ${slaInfo.colorClass}`}>
+                                <Clock className="h-3 w-3" />
+                                {slaInfo.display}
+                              </div>
+                            )}
+                            
+                            {/* Chat button */}
+                            <div className="flex gap-1 mt-2">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-[10px] h-6 px-2 relative flex-1"
+                                onClick={(e) => openChatDialog(ticket, e)}
+                                title="Responder"
+                              >
+                                <MessageSquare className="h-3 w-3 mr-1" />
+                                Responder
+                                {unreadCounts[ticket.id] > 0 && (
+                                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] rounded-full h-4 min-w-[16px] flex items-center justify-center px-1 font-bold">
+                                    {unreadCounts[ticket.id] > 9 ? "9+" : unreadCounts[ticket.id]}
+                                  </span>
+                                )}
+                              </Button>
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                    {columnTickets.length === 0 && (
-                      <p className="text-[10px] text-muted-foreground text-center py-2">
-                        Nenhum item
-                      </p>
-                    )}
-                    {hasMore && (
-                      <p className="text-[10px] text-center text-muted-foreground">
-                        +{columnTickets.length - MAX_ITEMS_PER_COLUMN} mais
-                      </p>
-                    )}
-                  </div>
+                        );
+                      })}
+                      {columnTickets.length === 0 && (
+                        <p className="text-[10px] text-muted-foreground text-center py-2">
+                          Nenhum item
+                        </p>
+                      )}
+                    </div>
+                  </ScrollArea>
                 </div>
               );
             })}
