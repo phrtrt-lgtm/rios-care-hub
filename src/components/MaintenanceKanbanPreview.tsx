@@ -345,7 +345,7 @@ export function MaintenanceKanbanPreview() {
                         <div
                           key={ticket.id}
                           onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
-                          className="bg-card rounded px-1.5 py-1 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                          className="bg-card rounded px-1.5 py-1 shadow-sm cursor-pointer hover:shadow-md transition-shadow w-full overflow-hidden"
                         >
                           {/* Row 1: Property + Subject + Chat */}
                           <div className="flex items-center gap-1">
