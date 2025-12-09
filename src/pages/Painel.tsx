@@ -181,23 +181,11 @@ export default function Painel() {
           </div>
         )}
 
-        {/* Kanban de Chamados - visível para toda a equipe */}
+        {/* Kanban Boards - 2 columns layout */}
         {(profile?.role === "admin" || profile?.role === "maintenance" || profile?.role === "agent") && (
-          <div className="mb-6">
+          <div className="mb-6 grid gap-4 lg:grid-cols-2">
             <ChamadosKanbanPreview />
-          </div>
-        )}
-
-        {/* Kanban de Manutenções - visível para toda a equipe */}
-        {(profile?.role === "admin" || profile?.role === "maintenance" || profile?.role === "agent") && (
-          <div className="mb-6">
             <MaintenanceKanbanPreview />
-          </div>
-        )}
-
-        {/* Kanban de Cobranças - visível para toda a equipe */}
-        {(profile?.role === "admin" || profile?.role === "maintenance" || profile?.role === "agent") && (
-          <div className="mb-6">
             <ChargesKanbanPreview />
           </div>
         )}
