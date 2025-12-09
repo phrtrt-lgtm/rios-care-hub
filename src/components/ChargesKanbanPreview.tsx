@@ -237,7 +237,7 @@ export function ChargesKanbanPreview() {
                         return (
                           <div
                             key={charge.id}
-                            onClick={() => navigate(`/cobranca-detalhes/${charge.id}`)}
+                            onClick={() => navigate(`/cobranca/${charge.id}`)}
                             className="bg-card rounded p-2 shadow-sm cursor-pointer hover:shadow-md transition-shadow text-xs"
                           >
                             {/* Property */}
@@ -288,7 +288,7 @@ export function ChargesKanbanPreview() {
                                 className="text-[10px] h-6 px-2 relative"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  navigate(`/cobranca-detalhes/${charge.id}`);
+                                  navigate(`/cobranca/${charge.id}`);
                                 }}
                                 title="Ver detalhes / Chat"
                               >
