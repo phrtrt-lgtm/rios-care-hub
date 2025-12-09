@@ -113,7 +113,7 @@ export function VistoriasKanbanPreview() {
     return (
       <div
         key={inspection.id}
-        className="flex items-center gap-1.5 p-1.5 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+        className="flex items-center gap-1.5 p-1.5 rounded-lg border bg-card hover:bg-accent/50 transition-colors w-full overflow-hidden"
       >
         {/* Property Photo */}
         <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0 bg-muted">

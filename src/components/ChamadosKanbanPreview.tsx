@@ -208,7 +208,7 @@ export function ChamadosKanbanPreview() {
                           <div
                             key={ticket.id}
                             onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
-                            className="bg-card rounded px-1.5 py-1 shadow-sm cursor-pointer hover:shadow-md transition-shadow flex items-center gap-1.5"
+                            className="bg-card rounded px-1.5 py-1 shadow-sm cursor-pointer hover:shadow-md transition-shadow flex items-center gap-1 w-full overflow-hidden"
                           >
                             {/* Photo */}
                             {ticket.property?.cover_photo_url ? (
