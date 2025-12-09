@@ -185,12 +185,12 @@ export function ChamadosKanbanPreview() {
             <p className="text-sm">Nenhum chamado pendente</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2 overflow-hidden">
             {columns.map((column) => {
               const columnTickets = getTicketsForColumn(column.key);
 
               return (
-                <div key={column.key} className={`rounded-lg p-2 min-w-0 overflow-hidden ${column.bgColor}`}>
+                <div key={column.key} className={`rounded-lg p-2 min-w-0 overflow-hidden w-full ${column.bgColor}`}>
                   <div className="flex items-center justify-between mb-2">
                     <span className={`text-xs font-semibold ${column.color}`}>
                       {column.title}
