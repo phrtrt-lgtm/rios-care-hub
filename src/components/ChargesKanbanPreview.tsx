@@ -199,7 +199,7 @@ export function ChargesKanbanPreview() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => navigate(isOwner ? "/minhas-cobrancas" : "/admin/gerenciar-cobrancas")}
+            onClick={() => navigate(isOwner ? "/minhas-cobrancas" : "/gerenciar-cobrancas")}
             className="text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-950 w-full sm:w-auto"
           >
             Ver todas
