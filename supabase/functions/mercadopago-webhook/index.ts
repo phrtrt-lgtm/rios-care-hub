@@ -154,19 +154,37 @@ const handler = async (req: Request): Promise<Response> => {
       console.log('Is group payment:', isGroupPayment);
       console.log('Charge IDs from metadata:', chargeIds);
 
-      // Mapear status do Mercado Pago
-      let chargeStatus: string | null = null;
+      // Mapear status do Mercado Pago para status de cobrança
+      // O status final de pagamento será determinado pela data
+      let baseChargeStatus: string | null = null;
       if (status === 'approved') {
-        chargeStatus = 'paid';
+        baseChargeStatus = 'approved'; // Will be refined based on due date later
       } else if (status === 'rejected' || status === 'cancelled') {
-        chargeStatus = 'cancelled';
+        baseChargeStatus = 'cancelled';
       }
 
       // Só atualizar se temos um status válido
-      if (!chargeStatus) {
+      if (!baseChargeStatus) {
         console.log(`Payment status '${status}' not mapped to charge status, skipping update`);
         return new Response('OK', { status: 200 });
       }
+
+      // Helper function to determine final charge status based on payment timing
+      const getPaymentStatus = (dueDate: string | null, paidAt: string): string => {
+        if (!dueDate) return 'pago_no_vencimento'; // Default if no due date
+        
+        const paidDate = new Date(paidAt);
+        const dueDateObj = new Date(dueDate);
+        const diffDays = Math.floor((dueDateObj.getTime() - paidDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (diffDays >= 2) {
+          return 'pago_antecipado'; // Paid 2+ days early
+        } else if (diffDays >= 0) {
+          return 'pago_no_vencimento'; // Paid on time
+        } else {
+          return 'pago_com_atraso'; // Paid late
+        }
+      };
 
       // Buscar receipt URL do MercadoPago se o pagamento foi aprovado
       let receiptUrl: string | null = null;
@@ -213,6 +231,11 @@ const handler = async (req: Request): Promise<Response> => {
             return;
           }
 
+          // Determine the correct payment status based on timing
+          const chargeStatus = status === 'approved' 
+            ? getPaymentStatus(charge.due_date, paidAt)
+            : baseChargeStatus;
+
           const updateData: any = {
             status: chargeStatus,
             updated_at: new Date().toISOString(),
@@ -230,7 +253,7 @@ const handler = async (req: Request): Promise<Response> => {
           if (updateError) {
             console.error(`Error updating charge ${chargeId}:`, updateError);
           } else {
-            console.log(`Charge ${chargeId} updated to status:`, chargeStatus);
+            console.log(`Charge ${chargeId} updated to status: ${chargeStatus}`);
           }
 
           // Criar registro de pagamento se foi aprovado
@@ -298,6 +321,11 @@ const handler = async (req: Request): Promise<Response> => {
         console.error('Error fetching charge:', chargeError);
         throw new Error('Erro ao buscar cobrança');
       }
+
+      // Determine the correct payment status based on timing
+      const chargeStatus = status === 'approved' 
+        ? getPaymentStatus(charge.due_date, paidAt)
+        : baseChargeStatus;
 
       // Atualizar cobrança
       const updateData: any = {
