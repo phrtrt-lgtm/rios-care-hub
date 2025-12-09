@@ -18,6 +18,7 @@ import { format, differenceInDays, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
 import { formatBRL } from "@/lib/format";
+import { ChargeChatDialog } from "./ChargeChatDialog";
 
 type Charge = {
   id: string;
@@ -60,8 +61,16 @@ export function ChargesKanbanPreview() {
   const { profile } = useAuth();
   const [charges, setCharges] = useState<Charge[]>([]);
   const [loading, setLoading] = useState(true);
+  const [chatDialogOpen, setChatDialogOpen] = useState(false);
+  const [chatCharge, setChatCharge] = useState<Charge | null>(null);
 
   const isOwner = profile?.role === "owner";
+
+  const openChatDialog = (charge: Charge, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setChatCharge(charge);
+    setChatDialogOpen(true);
+  };
 
   useEffect(() => {
     fetchCharges();
@@ -281,10 +290,7 @@ export function ChargesKanbanPreview() {
                                 size="sm"
                                 variant="ghost"
                                 className="h-5 w-5 p-0 relative"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  navigate(`/cobranca/${charge.id}`);
-                                }}
+                                onClick={(e) => openChatDialog(charge, e)}
                               >
                                 <MessageSquare className="h-3 w-3" />
                                 {(charge._count?.messages || 0) > 0 && (
@@ -323,6 +329,15 @@ export function ChargesKanbanPreview() {
           </div>
         )}
       </CardContent>
+
+      {/* Chat Dialog */}
+      <ChargeChatDialog
+        open={chatDialogOpen}
+        onOpenChange={setChatDialogOpen}
+        chargeId={chatCharge?.id || null}
+        chargeTitle={chatCharge?.title || ""}
+        propertyName={chatCharge?.property?.name || "Sem unidade"}
+      />
     </Card>
   );
 }
