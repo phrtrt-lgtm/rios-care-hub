@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Wrench, ArrowRight, User, Calendar, ChevronRight, ChevronLeft, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -48,8 +49,6 @@ const columns: KanbanColumn[] = [
   { key: "pendente", title: "Pendente", color: "text-yellow-600", bgColor: "bg-yellow-50 dark:bg-yellow-950/30" },
   { key: "agendado", title: "Agendado", color: "text-blue-600", bgColor: "bg-blue-50 dark:bg-blue-950/30" },
 ];
-
-const MAX_ITEMS_PER_COLUMN = 2;
 
 export function MaintenanceKanbanPreview() {
   const navigate = useNavigate();
@@ -329,8 +328,6 @@ export function MaintenanceKanbanPreview() {
           <div className="grid grid-cols-2 gap-3">
             {columns.map((column) => {
               const columnTickets = getTicketsForColumn(column.key);
-              const displayTickets = columnTickets.slice(0, MAX_ITEMS_PER_COLUMN);
-              const hasMore = columnTickets.length > MAX_ITEMS_PER_COLUMN;
 
               return (
                 <div key={column.key} className={`rounded-lg p-2 ${column.bgColor}`}>
@@ -342,113 +339,110 @@ export function MaintenanceKanbanPreview() {
                       {columnTickets.length}
                     </Badge>
                   </div>
-                  <div className="space-y-2">
-                    {displayTickets.map((ticket) => (
-                      <div
-                        key={ticket.id}
-                        onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
-                        className="bg-card rounded p-2 shadow-sm cursor-pointer hover:shadow-md transition-shadow text-xs"
-                      >
-                        <p className="font-medium line-clamp-1 mb-1">
-                          {ticket.property?.name || "Sem unidade"}
-                        </p>
-                        <p className="text-muted-foreground line-clamp-1 text-[10px]">
-                          {ticket.subject}
-                        </p>
-                        {ticket.scheduled_at && (
-                          <div className="flex items-center gap-1 mt-1 text-[10px] text-blue-600">
-                            <Calendar className="h-3 w-3" />
-                            {format(new Date(ticket.scheduled_at), "dd/MM HH:mm", { locale: ptBR })}
-                          </div>
-                        )}
-                        {ticket.service_provider && (
-                          <div className="flex items-center gap-1 mt-1 text-[10px] text-purple-600">
-                            <User className="h-3 w-3" />
-                            {ticket.service_provider.name}
-                          </div>
-                        )}
-                        
-                        {/* Action buttons */}
-                        <div className="flex gap-1 mt-2">
-                          {/* Chat button - always visible */}
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-[10px] h-6 px-2 relative"
-                            onClick={(e) => openChatDialog(ticket, e)}
-                            title="Mensagens"
-                          >
-                            <MessageSquare className="h-3 w-3" />
-                            {unreadCounts[ticket.id] > 0 && (
-                              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] rounded-full h-4 min-w-[16px] flex items-center justify-center px-1 font-bold">
-                                {unreadCounts[ticket.id] > 9 ? "9+" : unreadCounts[ticket.id]}
-                              </span>
-                            )}
-                          </Button>
-                          {column.key === "pendente" && (
+                  <ScrollArea className="h-[200px]">
+                    <div className="space-y-2 pr-2">
+                      {columnTickets.map((ticket) => (
+                        <div
+                          key={ticket.id}
+                          onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
+                          className="bg-card rounded p-2 shadow-sm cursor-pointer hover:shadow-md transition-shadow text-xs"
+                        >
+                          <p className="font-medium line-clamp-1 mb-1">
+                            {ticket.property?.name || "Sem unidade"}
+                          </p>
+                          <p className="text-muted-foreground line-clamp-1 text-[10px]">
+                            {ticket.subject}
+                          </p>
+                          {ticket.scheduled_at && (
+                            <div className="flex items-center gap-1 mt-1 text-[10px] text-blue-600">
+                              <Calendar className="h-3 w-3" />
+                              {format(new Date(ticket.scheduled_at), "dd/MM HH:mm", { locale: ptBR })}
+                            </div>
+                          )}
+                          {ticket.service_provider && (
+                            <div className="flex items-center gap-1 mt-1 text-[10px] text-purple-600">
+                              <User className="h-3 w-3" />
+                              {ticket.service_provider.name}
+                            </div>
+                          )}
+                          
+                          {/* Action buttons */}
+                          <div className="flex gap-1 mt-2">
+                            {/* Chat button - always visible */}
                             <Button
                               size="sm"
-                              variant="outline"
-                              className="flex-1 text-[10px] h-6 px-1"
-                              onClick={(e) => openScheduleDialog(ticket, e)}
+                              variant="ghost"
+                              className="text-[10px] h-6 px-2 relative"
+                              onClick={(e) => openChatDialog(ticket, e)}
+                              title="Mensagens"
                             >
-                              <Calendar className="h-3 w-3 mr-1" />
-                              Agendar
+                              <MessageSquare className="h-3 w-3" />
+                              {unreadCounts[ticket.id] > 0 && (
+                                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] rounded-full h-4 min-w-[16px] flex items-center justify-center px-1 font-bold">
+                                  {unreadCounts[ticket.id] > 9 ? "9+" : unreadCounts[ticket.id]}
+                                </span>
+                              )}
                             </Button>
-                          )}
-                          {column.key === "agendado" && (
-                            <>
+                            {column.key === "pendente" && (
                               <Button
                                 size="sm"
                                 variant="outline"
                                 className="flex-1 text-[10px] h-6 px-1"
                                 onClick={(e) => openScheduleDialog(ticket, e)}
                               >
-                                Editar
+                                <Calendar className="h-3 w-3 mr-1" />
+                                Agendar
                               </Button>
-                              <Button
-                                size="sm"
-                                className="text-[10px] h-6 px-2"
-                                onClick={(e) => moveToExecution(ticket, e)}
-                              >
-                                <ChevronRight className="h-3 w-3" />
-                              </Button>
-                            </>
-                          )}
-                          {column.key === "em_execucao" && (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="text-[10px] h-6 px-2"
-                                onClick={(e) => moveBackToScheduled(ticket, e)}
-                                title="Voltar para agendado"
-                              >
-                                <ChevronLeft className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                className="flex-1 text-[10px] h-6 px-1 bg-green-600 hover:bg-green-700"
-                                onClick={(e) => goToKanbanForComplete(ticket, e)}
-                              >
-                                Concluir
-                              </Button>
-                            </>
-                          )}
+                            )}
+                            {column.key === "agendado" && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="flex-1 text-[10px] h-6 px-1"
+                                  onClick={(e) => openScheduleDialog(ticket, e)}
+                                >
+                                  Editar
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  className="text-[10px] h-6 px-2"
+                                  onClick={(e) => moveToExecution(ticket, e)}
+                                >
+                                  <ChevronRight className="h-3 w-3" />
+                                </Button>
+                              </>
+                            )}
+                            {column.key === "em_execucao" && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-[10px] h-6 px-2"
+                                  onClick={(e) => moveBackToScheduled(ticket, e)}
+                                  title="Voltar para agendado"
+                                >
+                                  <ChevronLeft className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  className="flex-1 text-[10px] h-6 px-1 bg-green-600 hover:bg-green-700"
+                                  onClick={(e) => goToKanbanForComplete(ticket, e)}
+                                >
+                                  Concluir
+                                </Button>
+                              </>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                    {columnTickets.length === 0 && (
-                      <p className="text-[10px] text-muted-foreground text-center py-2">
-                        Nenhum item
-                      </p>
-                    )}
-                    {hasMore && (
-                      <p className="text-[10px] text-center text-muted-foreground">
-                        +{columnTickets.length - MAX_ITEMS_PER_COLUMN} mais
-                      </p>
-                    )}
-                  </div>
+                      ))}
+                      {columnTickets.length === 0 && (
+                        <p className="text-[10px] text-muted-foreground text-center py-2">
+                          Nenhum item
+                        </p>
+                      )}
+                    </div>
+                  </ScrollArea>
                 </div>
               );
             })}
