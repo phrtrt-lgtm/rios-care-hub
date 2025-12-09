@@ -339,47 +339,53 @@ export function MaintenanceKanbanPreview() {
                       {columnTickets.length}
                     </Badge>
                   </div>
-                  <ScrollArea className="h-[200px]">
-                    <div className="space-y-2 pr-2">
+                  <ScrollArea className="h-[180px]">
+                    <div className="space-y-1.5 pr-1">
                       {columnTickets.map((ticket) => (
                         <div
                           key={ticket.id}
                           onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
-                          className="bg-card rounded p-2 shadow-sm cursor-pointer hover:shadow-md transition-shadow text-xs"
+                          className="bg-card rounded p-1.5 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
                         >
-                          <p className="font-medium line-clamp-1 mb-1">
-                            {ticket.property?.name || "Sem unidade"}
-                          </p>
-                          <p className="text-muted-foreground line-clamp-1 text-[10px]">
+                          {/* Property + Subject compact */}
+                          <div className="flex items-center gap-1 mb-0.5">
+                            <span className="font-medium truncate text-[10px] flex-1">
+                              {ticket.property?.name || "Sem unidade"}
+                            </span>
+                          </div>
+                          <p className="text-muted-foreground line-clamp-1 text-[9px]">
                             {ticket.subject}
                           </p>
-                          {ticket.scheduled_at && (
-                            <div className="flex items-center gap-1 mt-1 text-[10px] text-blue-600">
-                              <Calendar className="h-3 w-3" />
-                              {format(new Date(ticket.scheduled_at), "dd/MM HH:mm", { locale: ptBR })}
-                            </div>
-                          )}
-                          {ticket.service_provider && (
-                            <div className="flex items-center gap-1 mt-1 text-[10px] text-purple-600">
-                              <User className="h-3 w-3" />
-                              {ticket.service_provider.name}
+                          
+                          {/* Schedule + Provider compact */}
+                          {(ticket.scheduled_at || ticket.service_provider) && (
+                            <div className="flex items-center gap-2 mt-0.5 text-[9px]">
+                              {ticket.scheduled_at && (
+                                <span className="text-blue-600 flex items-center gap-0.5">
+                                  <Calendar className="h-2.5 w-2.5" />
+                                  {format(new Date(ticket.scheduled_at), "dd/MM HH:mm", { locale: ptBR })}
+                                </span>
+                              )}
+                              {ticket.service_provider && (
+                                <span className="text-purple-600 truncate">
+                                  {ticket.service_provider.name}
+                                </span>
+                              )}
                             </div>
                           )}
                           
-                          {/* Action buttons */}
-                          <div className="flex gap-1 mt-2">
-                            {/* Chat button - always visible */}
+                          {/* Action buttons compact */}
+                          <div className="flex gap-0.5 mt-1">
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="text-[10px] h-6 px-2 relative"
+                              className="text-[9px] h-5 px-1 relative"
                               onClick={(e) => openChatDialog(ticket, e)}
-                              title="Mensagens"
                             >
-                              <MessageSquare className="h-3 w-3" />
+                              <MessageSquare className="h-2.5 w-2.5" />
                               {unreadCounts[ticket.id] > 0 && (
-                                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] rounded-full h-4 min-w-[16px] flex items-center justify-center px-1 font-bold">
-                                  {unreadCounts[ticket.id] > 9 ? "9+" : unreadCounts[ticket.id]}
+                                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] rounded-full h-3 w-3 flex items-center justify-center font-bold">
+                                  {unreadCounts[ticket.id] > 9 ? "+" : unreadCounts[ticket.id]}
                                 </span>
                               )}
                             </Button>
@@ -387,10 +393,10 @@ export function MaintenanceKanbanPreview() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="flex-1 text-[10px] h-6 px-1"
+                                className="flex-1 text-[9px] h-5 px-1"
                                 onClick={(e) => openScheduleDialog(ticket, e)}
                               >
-                                <Calendar className="h-3 w-3 mr-1" />
+                                <Calendar className="h-2.5 w-2.5 mr-0.5" />
                                 Agendar
                               </Button>
                             )}
@@ -399,17 +405,17 @@ export function MaintenanceKanbanPreview() {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="flex-1 text-[10px] h-6 px-1"
+                                  className="flex-1 text-[9px] h-5 px-1"
                                   onClick={(e) => openScheduleDialog(ticket, e)}
                                 >
                                   Editar
                                 </Button>
                                 <Button
                                   size="sm"
-                                  className="text-[10px] h-6 px-2"
+                                  className="text-[9px] h-5 px-1"
                                   onClick={(e) => moveToExecution(ticket, e)}
                                 >
-                                  <ChevronRight className="h-3 w-3" />
+                                  <ChevronRight className="h-2.5 w-2.5" />
                                 </Button>
                               </>
                             )}
@@ -418,15 +424,14 @@ export function MaintenanceKanbanPreview() {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="text-[10px] h-6 px-2"
+                                  className="text-[9px] h-5 px-1"
                                   onClick={(e) => moveBackToScheduled(ticket, e)}
-                                  title="Voltar para agendado"
                                 >
-                                  <ChevronLeft className="h-3 w-3" />
+                                  <ChevronLeft className="h-2.5 w-2.5" />
                                 </Button>
                                 <Button
                                   size="sm"
-                                  className="flex-1 text-[10px] h-6 px-1 bg-green-600 hover:bg-green-700"
+                                  className="flex-1 text-[9px] h-5 px-1 bg-green-600 hover:bg-green-700"
                                   onClick={(e) => goToKanbanForComplete(ticket, e)}
                                 >
                                   Concluir
@@ -437,7 +442,7 @@ export function MaintenanceKanbanPreview() {
                         </div>
                       ))}
                       {columnTickets.length === 0 && (
-                        <p className="text-[10px] text-muted-foreground text-center py-2">
+                        <p className="text-[9px] text-muted-foreground text-center py-2">
                           Nenhum item
                         </p>
                       )}
