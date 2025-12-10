@@ -14,7 +14,7 @@ import {
   AlertCircle,
   Clock
 } from "lucide-react";
-import { AuthenticatedImage, VideoThumbnail } from "./AuthenticatedMedia";
+
 import { format, differenceInDays, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
@@ -34,7 +34,6 @@ type Charge = {
   property: { name: string; cover_photo_url: string | null } | null;
   owner: { name: string } | null;
   _count?: { messages: number };
-  latestAttachment?: { file_path: string; mime_type?: string | null } | null;
 };
 
 type KanbanColumn = {
@@ -102,25 +101,6 @@ export function ChargesKanbanPreview() {
 
       if (error) throw error;
 
-      // Fetch latest attachment for each charge
-      const chargeIds = (data || []).map(c => c.id);
-      const attachmentsMap = new Map<string, { file_path: string; mime_type?: string | null }>();
-      
-      if (chargeIds.length > 0) {
-        const { data: attachmentsData } = await supabase
-          .from("charge_attachments")
-          .select("charge_id, file_path, mime_type")
-          .in("charge_id", chargeIds)
-          .order("created_at", { ascending: false });
-        
-        // Keep only first attachment per charge (most recent)
-        (attachmentsData || []).forEach(att => {
-          if (!attachmentsMap.has(att.charge_id!) && att.charge_id) {
-            attachmentsMap.set(att.charge_id, { file_path: att.file_path, mime_type: att.mime_type });
-          }
-        });
-      }
-
       // Fetch message counts
       const enrichedCharges = await Promise.all(
         (data || []).map(async (charge) => {
@@ -132,7 +112,6 @@ export function ChargesKanbanPreview() {
           return {
             ...charge,
             _count: { messages: count || 0 },
-            latestAttachment: attachmentsMap.get(charge.id) || null,
           } as Charge;
         })
       );
@@ -269,41 +248,37 @@ export function ChargesKanbanPreview() {
                           <div
                             key={charge.id}
                             onClick={() => navigate(`/cobranca/${charge.id}`)}
-                            className="bg-card rounded-lg p-2 shadow-sm cursor-pointer hover:shadow-md transition-shadow w-full"
+                            className="bg-card rounded-lg p-2 shadow-sm cursor-pointer hover:shadow-md transition-shadow w-full overflow-hidden"
                           >
-                            {/* Thumbnail + Content */}
-                            <div className="flex gap-2">
-                              {/* Thumbnail */}
-                              {charge.latestAttachment && (
-                                <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0 bg-muted">
-                                  {charge.latestAttachment.mime_type?.startsWith("video/") ? (
-                                    <VideoThumbnail 
-                                      src={charge.latestAttachment.file_path} 
-                                      className="w-10 h-10 object-cover"
-                                    />
-                                  ) : (
-                                    <AuthenticatedImage 
-                                      src={charge.latestAttachment.file_path} 
-                                      alt="Anexo" 
-                                      className="w-10 h-10 object-cover"
-                                    />
-                                  )}
-                                </div>
-                              )}
+                            {/* Property thumbnail + Content */}
+                            <div className="flex gap-2 min-w-0">
+                              {/* Property photo thumbnail */}
+                              <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0 bg-muted">
+                                {charge.property?.cover_photo_url ? (
+                                  <img 
+                                    src={charge.property.cover_photo_url} 
+                                    alt={charge.property.name || "Imóvel"} 
+                                    className="w-10 h-10 object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-10 h-10 flex items-center justify-center">
+                                    <Building className="h-4 w-4 text-muted-foreground" />
+                                  </div>
+                                )}
+                              </div>
                               
                               {/* Text content */}
-                              <div className="flex-1 min-w-0">
-                                {/* Owner + Property */}
+                              <div className="flex-1 min-w-0 overflow-hidden">
                                 <p className="font-medium text-xs truncate">
-                                  {charge.owner?.name || "Sem prop."}
+                                  {charge.property?.name || charge.owner?.name || "Sem prop."}
                                 </p>
                                 <p className="text-muted-foreground text-[10px] truncate">
                                   {charge.title}
                                 </p>
                                 
                                 {/* Amount + Due date */}
-                                <div className="flex items-center justify-between mt-1">
-                                  <span className="font-bold text-green-600 text-sm">
+                                <div className="flex items-center gap-1 mt-1 flex-wrap">
+                                  <span className="font-bold text-green-600 text-xs">
                                     {formatBRL(dueAmount)}
                                   </span>
                                   {dueDateInfo && (
@@ -315,18 +290,18 @@ export function ChargesKanbanPreview() {
                               </div>
                             </div>
                             
-                            {/* Actions - stacked vertically to prevent overflow */}
-                            <div className="flex flex-col gap-1 mt-2">
+                            {/* Actions */}
+                            <div className="flex gap-1 mt-2">
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="w-full h-8 text-xs"
+                                className="flex-1 h-7 text-[10px] px-1"
                                 onClick={(e) => openChatDialog(charge, e)}
                               >
-                                <MessageSquare className="h-3.5 w-3.5 mr-1" />
+                                <MessageSquare className="h-3 w-3 mr-0.5" />
                                 Chat
                                 {(charge._count?.messages || 0) > 0 && (
-                                  <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">
+                                  <Badge variant="secondary" className="ml-0.5 h-4 px-1 text-[9px]">
                                     {charge._count?.messages}
                                   </Badge>
                                 )}
@@ -335,13 +310,13 @@ export function ChargesKanbanPreview() {
                               {isOwner && charge.payment_link_url && (
                                 <Button
                                   size="sm"
-                                  className="w-full h-8 text-xs bg-green-600 hover:bg-green-700"
+                                  className="flex-1 h-7 text-[10px] px-1 bg-green-600 hover:bg-green-700"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     window.open(charge.payment_link_url!, "_blank");
                                   }}
                                 >
-                                  <CreditCard className="h-3.5 w-3.5 mr-1" />
+                                  <CreditCard className="h-3 w-3 mr-0.5" />
                                   Pagar
                                 </Button>
                               )}
