@@ -10,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Wrench, ArrowRight, User, Calendar, ChevronRight, ChevronLeft, MessageSquare } from "lucide-react";
+import { Wrench, ArrowRight, User, Calendar, ChevronRight, ChevronLeft, MessageSquare, Image } from "lucide-react";
+import { AuthenticatedImage, VideoThumbnail } from "./AuthenticatedMedia";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -29,6 +30,7 @@ type MaintenanceTicket = {
   cost_responsible: string | null;
   property: { name: string } | null;
   service_provider: { id: string; name: string; phone: string | null } | null;
+  latestAttachment?: { file_url: string; mime_type?: string | null } | null;
 };
 
 type ServiceProvider = {
@@ -109,7 +111,32 @@ export function MaintenanceKanbanPreview() {
         .limit(20);
 
       if (error) throw error;
-      setTickets(data || []);
+      
+      // Fetch latest attachment for each ticket
+      const ticketIds = (data || []).map(t => t.id);
+      const attachmentsMap = new Map<string, { file_url: string; mime_type?: string | null }>();
+      
+      if (ticketIds.length > 0) {
+        const { data: attachmentsData } = await supabase
+          .from("ticket_attachments")
+          .select("ticket_id, file_url, mime_type")
+          .in("ticket_id", ticketIds)
+          .order("created_at", { ascending: false });
+        
+        // Keep only first attachment per ticket (most recent)
+        (attachmentsData || []).forEach(att => {
+          if (!attachmentsMap.has(att.ticket_id!) && att.ticket_id) {
+            attachmentsMap.set(att.ticket_id, { file_url: att.file_url, mime_type: att.mime_type });
+          }
+        });
+      }
+      
+      const ticketsWithAttachments = (data || []).map(t => ({
+        ...t,
+        latestAttachment: attachmentsMap.get(t.id) || null,
+      }));
+      
+      setTickets(ticketsWithAttachments);
     } catch (error) {
       console.error("Error fetching maintenance tickets:", error);
     } finally {
@@ -347,35 +374,57 @@ export function MaintenanceKanbanPreview() {
                           onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
                           className="bg-card rounded-lg p-2 shadow-sm cursor-pointer hover:shadow-md transition-shadow w-full"
                         >
-                          {/* Property name */}
-                          <p className="font-medium text-xs truncate">
-                            {ticket.property?.name || "Sem unidade"}
-                          </p>
-                          
-                          {/* Subject */}
-                          <p className="text-muted-foreground text-[10px] truncate mt-0.5">
-                            {ticket.subject}
-                          </p>
-                          
-                          {/* Schedule info */}
-                          {ticket.scheduled_at && (
-                            <div className="flex items-center gap-1 mt-1 text-blue-600 text-[10px]">
-                              <Calendar className="h-3 w-3" />
-                              {format(new Date(ticket.scheduled_at), "dd/MM HH:mm", { locale: ptBR })}
-                              {ticket.service_provider && (
-                                <span className="text-purple-600 truncate">
-                                  • {ticket.service_provider.name}
-                                </span>
+                          {/* Thumbnail + Content */}
+                          <div className="flex gap-2">
+                            {/* Thumbnail */}
+                            {ticket.latestAttachment && (
+                              <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0 bg-muted">
+                                {ticket.latestAttachment.mime_type?.startsWith("video/") ? (
+                                  <VideoThumbnail 
+                                    src={ticket.latestAttachment.file_url} 
+                                    className="w-10 h-10 object-cover"
+                                  />
+                                ) : (
+                                  <AuthenticatedImage 
+                                    src={ticket.latestAttachment.file_url} 
+                                    alt="Anexo" 
+                                    className="w-10 h-10 object-cover"
+                                  />
+                                )}
+                              </div>
+                            )}
+                            
+                            {/* Text content */}
+                            <div className="flex-1 min-w-0">
+                              {/* Property name */}
+                              <p className="font-medium text-xs truncate">
+                                {ticket.property?.name || "Sem unidade"}
+                              </p>
+                              
+                              {/* Subject */}
+                              <p className="text-muted-foreground text-[10px] truncate mt-0.5">
+                                {ticket.subject}
+                              </p>
+                              
+                              {/* Schedule info */}
+                              {ticket.scheduled_at && (
+                                <div className="flex items-center gap-1 mt-1 text-blue-600 text-[10px]">
+                                  <Calendar className="h-3 w-3 flex-shrink-0" />
+                                  <span className="truncate">
+                                    {format(new Date(ticket.scheduled_at), "dd/MM HH:mm", { locale: ptBR })}
+                                    {ticket.service_provider && ` • ${ticket.service_provider.name}`}
+                                  </span>
+                                </div>
                               )}
                             </div>
-                          )}
+                          </div>
                           
-                          {/* Actions - stacked vertically */}
-                          <div className="flex gap-1 mt-2">
+                          {/* Actions - stacked vertically to prevent overflow */}
+                          <div className="flex flex-col gap-1 mt-2">
                             <Button
                               size="sm"
                               variant="outline"
-                              className="flex-1 h-8 text-xs"
+                              className="w-full h-8 text-xs"
                               onClick={(e) => openChatDialog(ticket, e)}
                             >
                               <MessageSquare className="h-3.5 w-3.5 mr-1" />
@@ -389,30 +438,30 @@ export function MaintenanceKanbanPreview() {
                             {column.key === "pendente" && (
                               <Button
                                 size="sm"
-                                className="flex-1 h-8 text-xs"
+                                className="w-full h-8 text-xs"
                                 onClick={(e) => openScheduleDialog(ticket, e)}
                               >
                                 Agendar
                               </Button>
                             )}
                             {column.key === "agendado" && (
-                              <>
+                              <div className="flex gap-1">
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="h-8 text-xs px-2"
+                                  className="flex-1 h-8 text-xs"
                                   onClick={(e) => openScheduleDialog(ticket, e)}
                                 >
                                   Editar
                                 </Button>
                                 <Button
                                   size="sm"
-                                  className="h-8 px-2"
+                                  className="flex-1 h-8"
                                   onClick={(e) => moveToExecution(ticket, e)}
                                 >
                                   <ChevronRight className="h-4 w-4" />
                                 </Button>
-                              </>
+                              </div>
                             )}
                           </div>
                         </div>

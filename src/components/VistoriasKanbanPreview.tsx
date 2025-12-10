@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ClipboardCheck, Building2, AlertTriangle, CheckCircle2, Wrench, Clock, ChevronRight } from 'lucide-react';
+import { ClipboardCheck, Building2, AlertTriangle, CheckCircle2, Wrench, Clock, ChevronRight, Image } from 'lucide-react';
+import { AuthenticatedImage, VideoThumbnail } from './AuthenticatedMedia';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CreateMaintenanceFromInspectionDialog } from './CreateMaintenanceFromInspectionDialog';
@@ -63,15 +64,15 @@ export function VistoriasKanbanPreview() {
 
       if (error) throw error;
 
-      // Get attachments for inspections with problems
-      const problemInspections = (data || []).filter(i => i.notes === 'NÃO');
+      // Get attachments for all inspections
+      const inspectionIds = (data || []).map(i => i.id);
       const attachmentsMap = new Map<string, Attachment[]>();
 
-      if (problemInspections.length > 0) {
+      if (inspectionIds.length > 0) {
         const { data: attachmentsData } = await supabase
           .from('cleaning_inspection_attachments')
           .select('id, file_url, file_name, file_type, inspection_id')
-          .in('inspection_id', problemInspections.map(i => i.id));
+          .in('inspection_id', inspectionIds);
 
         (attachmentsData || []).forEach(att => {
           const existing = attachmentsMap.get(att.inspection_id) || [];
@@ -109,28 +110,53 @@ export function VistoriasKanbanPreview() {
 
   const renderInspectionCard = (inspection: Inspection, hasProblem: boolean) => {
     const property = inspection.property;
+    const firstAttachment = inspection.attachments?.[0];
     
     return (
       <div
         key={inspection.id}
         className="p-2 rounded-lg border bg-card hover:bg-accent/50 transition-colors w-full"
       >
-        {/* Property name */}
-        <p className="text-xs font-medium truncate">{property?.name || 'Imóvel'}</p>
-        
-        {/* Time */}
-        <div className="flex items-center gap-1 text-[10px] text-muted-foreground mt-0.5">
-          <Clock className="h-3 w-3" />
-          {format(new Date(inspection.created_at), "dd/MM HH:mm", { locale: ptBR })}
+        {/* Thumbnail + Content */}
+        <div className="flex gap-2">
+          {/* Thumbnail */}
+          {firstAttachment && (
+            <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0 bg-muted">
+              {firstAttachment.file_type?.startsWith("video/") ? (
+                <VideoThumbnail 
+                  src={firstAttachment.file_url} 
+                  className="w-10 h-10 object-cover"
+                />
+              ) : (
+                <AuthenticatedImage 
+                  src={firstAttachment.file_url} 
+                  alt="Anexo" 
+                  className="w-10 h-10 object-cover"
+                />
+              )}
+            </div>
+          )}
+          
+          {/* Text content */}
+          <div className="flex-1 min-w-0">
+            {/* Property name */}
+            <p className="text-xs font-medium truncate">{property?.name || 'Imóvel'}</p>
+            
+            {/* Time */}
+            <div className="flex items-center gap-1 text-[10px] text-muted-foreground mt-0.5">
+              <Clock className="h-3 w-3" />
+              {format(new Date(inspection.created_at), "dd/MM HH:mm", { locale: ptBR })}
+            </div>
+          </div>
         </div>
 
-        {/* Actions - stacked vertically */}
-        <div className="flex gap-1 mt-2">
+        {/* Actions - stacked vertically to prevent overflow */}
+        <div className="flex flex-col gap-1 mt-2">
           {hasProblem && (
             <Button
               variant="outline"
               size="sm"
-              className="flex-1 h-8 text-xs text-orange-600 border-orange-300"
+              className="w-full h-8 text-xs text-orange-600 border-orange-300"
               onClick={(e) => {
                 e.stopPropagation();
                 handleNewMaintenance(inspection);
@@ -143,11 +169,11 @@ export function VistoriasKanbanPreview() {
           <Button
             variant="outline"
             size="sm"
-            className={`h-8 text-xs ${hasProblem ? 'px-2' : 'flex-1'}`}
+            className="w-full h-8 text-xs"
             onClick={() => navigate(`/admin/vistorias/${inspection.id}`)}
           >
-            <ChevronRight className="h-4 w-4" />
-            {!hasProblem && <span className="ml-1">Ver</span>}
+            <ChevronRight className="h-4 w-4 mr-1" />
+            Ver detalhes
           </Button>
         </div>
       </div>
