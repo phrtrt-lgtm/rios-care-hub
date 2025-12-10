@@ -219,6 +219,30 @@ export function MaintenanceKanbanPreview() {
 
       if (messageError) throw messageError;
 
+      // Notify owner if cost_responsible is 'owner' (not guest/pm which are hidden from owner)
+      if (scheduleData.cost_responsible === 'owner') {
+        // Fetch ticket owner_id
+        const { data: ticketData } = await supabase
+          .from("tickets")
+          .select("owner_id, property:properties(name)")
+          .eq("id", selectedTicket.id)
+          .single();
+
+        if (ticketData?.owner_id) {
+          const formattedDate = scheduleData.scheduled_at 
+            ? format(new Date(scheduleData.scheduled_at), "dd/MM 'às' HH:mm", { locale: ptBR })
+            : "";
+          await supabase.from("notifications").insert({
+            owner_id: ticketData.owner_id,
+            title: "Manutenção Agendada",
+            message: `${(ticketData.property as any)?.name || "Sua unidade"} - ${formattedDate}`,
+            type: "maintenance",
+            reference_id: selectedTicket.id,
+            reference_url: `/manutencao/${selectedTicket.id}`,
+          });
+        }
+      }
+
       toast.success("Manutenção agendada com sucesso!");
       setScheduleDialogOpen(false);
       setSelectedTicket(null);
