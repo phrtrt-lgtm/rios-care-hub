@@ -200,15 +200,31 @@ const AdminManutencoesKanban = () => {
           messageBody += `\n**Observação:** ${observation}`;
         }
 
-        await supabase
-          .from("ticket_messages")
-          .insert({
-            ticket_id: data.id,
-            author_id: user.id,
-            body: messageBody,
-            is_internal: false,
-          });
+      await supabase
+        .from("ticket_messages")
+        .insert({
+          ticket_id: data.id,
+          author_id: user.id,
+          body: messageBody,
+          is_internal: false,
+        });
+
+      // Notify owner if cost_responsible is 'owner' (not guest/pm which are hidden from owner)
+      const ticket = tickets?.find(t => t.id === data.id);
+      if (ticket && (updateData.cost_responsible === 'owner' || (!updateData.cost_responsible && ticket.cost_responsible === 'owner'))) {
+        const formattedDate = data.scheduled_at 
+          ? format(new Date(data.scheduled_at), "dd/MM 'às' HH:mm", { locale: ptBR })
+          : "";
+        await supabase.from("notifications").insert({
+          owner_id: ticket.owner?.id,
+          title: "Manutenção Agendada",
+          message: `${ticket.property?.name || "Sua unidade"} - ${formattedDate}`,
+          type: "maintenance",
+          reference_id: data.id,
+          reference_url: `/manutencao/${data.id}`,
+        });
       }
+    }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["maintenance-tickets-kanban"] });
