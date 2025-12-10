@@ -390,29 +390,77 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
               </p>
             </div>
 
-            {/* Amount - Fixed */}
-            {(proposal as any).payment_type === 'fixed' && proposal.amount_cents && proposal.amount_cents > 0 && (
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/10 border border-primary/20">
-                <CreditCard className="h-5 w-5 text-primary" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Valor</p>
-                  <p className="text-xl font-bold text-primary">
-                    R$ {(proposal.amount_cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Amount - Quantity Based */}
-            {(proposal as any).payment_type === 'quantity' && (proposal as any).unit_price_cents > 0 && (
-              <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 space-y-2">
+            {/* Payment Info Preview - Always visible */}
+            {((proposal as any).payment_type === 'fixed' || 
+              (proposal as any).payment_type === 'quantity' || 
+              (proposal as any).payment_type === 'items') && (
+              <div className="p-4 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 border border-blue-200 dark:border-blue-800 space-y-3">
                 <div className="flex items-center gap-2">
-                  <CreditCard className="h-5 w-5 text-primary" />
-                  <p className="text-xs text-muted-foreground">Preço por unidade</p>
+                  <div className="h-8 w-8 rounded-full bg-blue-500/20 flex items-center justify-center">
+                    <CreditCard className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                      💳 Pagamento automático incluso
+                    </p>
+                    <p className="text-xs text-blue-600 dark:text-blue-400">
+                      Ao aprovar, você será direcionado para pagamento via PIX ou cartão
+                    </p>
+                  </div>
                 </div>
-                <p className="text-lg font-bold text-primary">
-                  R$ {((proposal as any).unit_price_cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / unidade
-                </p>
+
+                {/* Fixed amount */}
+                {(proposal as any).payment_type === 'fixed' && proposal.amount_cents && proposal.amount_cents > 0 && (
+                  <div className="p-3 rounded-lg bg-white/60 dark:bg-black/20 border border-blue-200/50 dark:border-blue-700/50">
+                    <p className="text-xs text-muted-foreground">Valor fixo</p>
+                    <p className="text-xl font-bold text-primary">
+                      R$ {(proposal.amount_cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                )}
+
+                {/* Quantity based */}
+                {(proposal as any).payment_type === 'quantity' && (proposal as any).unit_price_cents > 0 && (
+                  <div className="p-3 rounded-lg bg-white/60 dark:bg-black/20 border border-blue-200/50 dark:border-blue-700/50">
+                    <p className="text-xs text-muted-foreground">Preço por unidade</p>
+                    <p className="text-lg font-bold text-primary">
+                      R$ {((proposal as any).unit_price_cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / unidade
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Você escolherá a quantidade ao aprovar
+                    </p>
+                  </div>
+                )}
+
+                {/* Multiple items preview */}
+                {(proposal as any).payment_type === 'items' && ((proposal as any).proposal_items || []).length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground font-medium">Itens disponíveis:</p>
+                    <div className="space-y-1.5">
+                      {((proposal as any).proposal_items || []).map((item: any) => (
+                        <div key={item.id} className="flex items-center justify-between p-2 rounded bg-white/60 dark:bg-black/20 border border-blue-200/50 dark:border-blue-700/50">
+                          <span className="text-sm font-medium">{item.name}</span>
+                          <span className="text-sm text-primary font-semibold">
+                            R$ {(item.unit_price_cents / 100).toFixed(2)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Você escolherá as quantidades ao aprovar
+                    </p>
+                  </div>
+                )}
+
+                {/* Which options require payment */}
+                {options.filter((o: any) => o.requires_payment).length > 0 && (
+                  <div className="pt-2 border-t border-blue-200/50 dark:border-blue-700/50">
+                    <p className="text-xs text-blue-700 dark:text-blue-400">
+                      <strong>Opções que geram pagamento:</strong>{' '}
+                      {options.filter((o: any) => o.requires_payment).map((o: any) => `"${o.option_text}"`).join(', ')}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
