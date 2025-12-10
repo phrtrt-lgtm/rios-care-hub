@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { AttachmentBubble } from "@/components/AttachmentBubble";
 import { MediaGallery } from "@/components/MediaGallery";
+import { VoiceToTextInput } from "@/components/VoiceToTextInput";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -320,6 +321,46 @@ export function ChargeChatDialog({
     }
   };
 
+  const handleVoiceTranscript = async (text: string) => {
+    if (!chargeId) {
+      setNewMessage(prev => prev ? `${prev} ${text}` : text);
+      return;
+    }
+
+    try {
+      setGeneratingAI(true);
+      toast({
+        title: "Gerando resposta...",
+        description: "A IA está criando uma resposta baseada no seu áudio.",
+      });
+      
+      const { data, error } = await supabase.functions.invoke('ai-generate-response', {
+        body: {
+          templateKey: 'charge_response',
+          chargeId: chargeId,
+          customInstructions: `Baseado nas instruções do atendente: "${text}", gere uma resposta profissional e amigável para o proprietário.`
+        }
+      });
+
+      if (error) throw error;
+
+      setNewMessage(data.text);
+      toast({
+        title: "Resposta gerada!",
+        description: "A IA gerou uma resposta baseada no seu áudio.",
+      });
+    } catch (error: any) {
+      setNewMessage(prev => prev ? `${prev} ${text}` : text);
+      toast({
+        title: "Erro ao gerar resposta",
+        description: "Usando transcrição direta. " + error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingAI(false);
+    }
+  };
+
   const handlePreviewMedia = async (filePath: string, fileName: string) => {
     const { data } = await supabase.storage
       .from('charge-attachments')
@@ -510,48 +551,56 @@ export function ChargeChatDialog({
             </div>
           )}
 
-          <div className="p-3 border-t flex-shrink-0">
-            <div className="flex gap-2 items-end">
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                onChange={handleFileSelect}
-                className="hidden"
-                accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx"
-              />
-              
-              <div className="flex flex-col gap-1">
+          <div className="p-3 border-t flex-shrink-0 space-y-2">
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              onChange={handleFileSelect}
+              className="hidden"
+              accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx"
+            />
+            
+            {/* Row 1: Microphone + AI (team only) */}
+            {isTeamMember && (
+              <div className="flex gap-2">
+                <VoiceToTextInput
+                  onTranscript={handleVoiceTranscript}
+                  disabled={sending || generatingAI}
+                />
                 <Button
                   type="button"
                   variant="outline"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={sending}
-                  title="Anexar arquivo"
+                  size="sm"
+                  className="h-8 gap-1.5"
+                  onClick={generateAIResponse}
+                  disabled={sending || generatingAI}
+                  title="Gerar resposta com IA"
                 >
-                  <Paperclip className="h-4 w-4" />
+                  {generatingAI ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-4 w-4" />
+                  )}
+                  <span className="text-xs">Gerar resposta</span>
                 </Button>
-                
-                {isTeamMember && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={generateAIResponse}
-                    disabled={sending || generatingAI}
-                    title="Gerar resposta com IA"
-                  >
-                    {generatingAI ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Sparkles className="h-4 w-4" />
-                    )}
-                  </Button>
-                )}
               </div>
+            )}
+            
+            {/* Row 2: Attachment + Message + Send */}
+            <div className="flex gap-2 items-end">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-10 w-10 flex-shrink-0"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={sending}
+                title="Anexar arquivo"
+              >
+                <Paperclip className="h-4 w-4" />
+              </Button>
               
               <Textarea
                 ref={textareaRef}
@@ -567,7 +616,7 @@ export function ChargeChatDialog({
                 onClick={handleSend}
                 disabled={(!newMessage.trim() && selectedFiles.length === 0) || sending}
                 size="icon"
-                className="h-10 w-10"
+                className="h-10 w-10 flex-shrink-0"
               >
                 {sending ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
