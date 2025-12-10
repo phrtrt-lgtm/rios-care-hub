@@ -23,6 +23,11 @@ interface OptionConfig {
   requiresPayment: boolean;
 }
 
+interface ItemConfig {
+  name: string;
+  unitPriceCents: number;
+}
+
 const formSchema = z.object({
   title: z.string().min(5, "Título deve ter no mínimo 5 caracteres"),
   description: z.string().min(10, "Descrição deve ter no mínimo 10 caracteres"),
@@ -35,9 +40,13 @@ const formSchema = z.object({
     text: z.string().min(1),
     requiresPayment: z.boolean(),
   })).min(2, "Adicione pelo menos 2 opções"),
-  payment_type: z.enum(['none', 'fixed', 'quantity']),
+  payment_type: z.enum(['none', 'fixed', 'quantity', 'items']),
   amount_cents: z.number().optional(),
   unit_price_cents: z.number().optional(),
+  items: z.array(z.object({
+    name: z.string().min(1),
+    unitPriceCents: z.number().min(1),
+  })).optional(),
 }).refine((data) => {
   if (data.target_audience === 'owners') {
     return (data.property_ids?.length ?? 0) > 0;
@@ -56,6 +65,9 @@ const formSchema = z.object({
   if (data.payment_type === 'quantity') {
     return data.unit_price_cents && data.unit_price_cents > 0;
   }
+  if (data.payment_type === 'items') {
+    return data.items && data.items.length > 0;
+  }
   return true;
 }, {
   message: "Informe o valor do pagamento",
@@ -70,6 +82,8 @@ export default function NovaPropostaVotacao() {
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
+  const [newItemName, setNewItemName] = useState("");
+  const [newItemPrice, setNewItemPrice] = useState("");
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -85,6 +99,7 @@ export default function NovaPropostaVotacao() {
       payment_type: 'none' as const,
       amount_cents: undefined,
       unit_price_cents: undefined,
+      items: [],
     },
   });
 
@@ -248,6 +263,22 @@ export default function NovaPropostaVotacao() {
 
       if (optionsError) throw optionsError;
 
+      // Create proposal items if payment_type is 'items'
+      if (values.payment_type === 'items' && values.items && values.items.length > 0) {
+        const itemsData = values.items.map((item, index) => ({
+          proposal_id: proposal.id,
+          name: item.name,
+          unit_price_cents: item.unitPriceCents,
+          order_index: index,
+        }));
+
+        const { error: itemsError } = await supabase
+          .from('proposal_items')
+          .insert(itemsData);
+
+        if (itemsError) throw itemsError;
+      }
+
       // Create responses for each participant  
       const responses = participantIds.map(userId => ({
         proposal_id: proposal.id,
@@ -329,6 +360,21 @@ export default function NovaPropostaVotacao() {
       i === index ? { ...opt, requiresPayment: !opt.requiresPayment } : opt
     );
     form.setValue('options', updated);
+  };
+
+  const addItem = () => {
+    if (!newItemName.trim() || !newItemPrice) return;
+    const current = form.getValues('items') || [];
+    const priceCents = Math.round(parseFloat(newItemPrice) * 100);
+    if (priceCents <= 0) return;
+    form.setValue('items', [...current, { name: newItemName.trim(), unitPriceCents: priceCents }]);
+    setNewItemName("");
+    setNewItemPrice("");
+  };
+
+  const removeItem = (index: number) => {
+    const current = form.getValues('items') || [];
+    form.setValue('items', current.filter((_, i) => i !== index));
   };
 
   const paymentType = form.watch('payment_type');
@@ -571,7 +617,13 @@ export default function NovaPropostaVotacao() {
                             <div className="flex items-center space-x-2">
                               <RadioGroupItem value="quantity" id="payment-quantity" />
                               <label htmlFor="payment-quantity" className="cursor-pointer text-sm">
-                                Por quantidade (preço unitário × quantidade)
+                                Por quantidade (item único × quantidade)
+                              </label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="items" id="payment-items" />
+                              <label htmlFor="payment-items" className="cursor-pointer text-sm">
+                                Múltiplos itens (cada item com preço diferente)
                               </label>
                             </div>
                           </RadioGroup>
@@ -620,12 +672,65 @@ export default function NovaPropostaVotacao() {
                             />
                           </FormControl>
                           <p className="text-xs text-muted-foreground mt-1">
-                            O proprietário informará a quantidade desejada e o valor será calculado automaticamente.
+                            O proprietário informará a quantidade desejada.
                           </p>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
+                  )}
+
+                  {paymentType === 'items' && (
+                    <div className="space-y-3">
+                      <FormLabel>Itens disponíveis *</FormLabel>
+                      <p className="text-xs text-muted-foreground">
+                        Adicione os itens com seus respectivos preços. O proprietário informará a quantidade de cada um.
+                      </p>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Nome do item (ex: Capa Queen)"
+                          value={newItemName}
+                          onChange={(e) => setNewItemName(e.target.value)}
+                          className="flex-1"
+                        />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="Preço (R$)"
+                          value={newItemPrice}
+                          onChange={(e) => setNewItemPrice(e.target.value)}
+                          className="w-28"
+                        />
+                        <Button type="button" onClick={addItem} size="icon">
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="border rounded-md p-3 space-y-2 min-h-[80px]">
+                        {form.watch('items')?.map((item, index) => (
+                          <div key={index} className="flex items-center justify-between bg-muted p-2 rounded gap-2">
+                            <div className="flex items-center gap-3 flex-1">
+                              <span className="text-sm flex-1">{item.name}</span>
+                              <Badge variant="secondary" className="text-xs">
+                                R$ {(item.unitPriceCents / 100).toFixed(2)}
+                              </Badge>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeItem(index)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                        {!form.watch('items')?.length && (
+                          <p className="text-sm text-muted-foreground text-center py-2">
+                            Adicione pelo menos 1 item
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   )}
                 </div>
 

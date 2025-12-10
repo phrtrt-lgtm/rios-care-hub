@@ -9,6 +9,7 @@ const corsHeaders = {
 interface CreatePaymentRequest {
   proposalId: string;
   quantity?: number;
+  itemQuantities?: Record<string, number>;
 }
 
 serve(async (req) => {
@@ -48,7 +49,7 @@ serve(async (req) => {
       );
     }
 
-    const { proposalId, quantity } = await req.json() as CreatePaymentRequest;
+    const { proposalId, quantity, itemQuantities } = await req.json() as CreatePaymentRequest;
 
     if (!proposalId) {
       return new Response(
@@ -57,12 +58,20 @@ serve(async (req) => {
       );
     }
 
-    console.log('Creating payment for proposal:', proposalId, 'user:', user.id, 'quantity:', quantity);
+    console.log('Creating payment for proposal:', proposalId, 'user:', user.id, 'quantity:', quantity, 'itemQuantities:', itemQuantities);
 
-    // Fetch proposal details
+    // Fetch proposal details with items
     const { data: proposal, error: proposalError } = await supabase
       .from('proposals')
-      .select('*')
+      .select(`
+        *,
+        proposal_items (
+          id,
+          name,
+          unit_price_cents,
+          order_index
+        )
+      `)
       .eq('id', proposalId)
       .single();
 
@@ -76,6 +85,7 @@ serve(async (req) => {
 
     // Calculate amount based on payment_type
     let amountCents = 0;
+    let itemDescription = '';
     const paymentType = proposal.payment_type || 'none';
     
     if (paymentType === 'fixed') {
@@ -84,6 +94,22 @@ serve(async (req) => {
       const unitPrice = proposal.unit_price_cents || 0;
       const qty = quantity || 1;
       amountCents = unitPrice * qty;
+      itemDescription = ` (x${qty})`;
+    } else if (paymentType === 'items' && itemQuantities) {
+      const items = proposal.proposal_items || [];
+      const itemDescriptions: string[] = [];
+      
+      for (const item of items) {
+        const qty = itemQuantities[item.id] || 0;
+        if (qty > 0) {
+          amountCents += item.unit_price_cents * qty;
+          itemDescriptions.push(`${item.name} x${qty}`);
+        }
+      }
+      
+      if (itemDescriptions.length > 0) {
+        itemDescription = ` (${itemDescriptions.join(', ')})`;
+      }
     }
 
     if (amountCents <= 0) {
@@ -103,15 +129,11 @@ serve(async (req) => {
     const amountBRL = amountCents / 100;
 
     // Create Mercado Pago preference
-    const itemTitle = paymentType === 'quantity' 
-      ? `${proposal.title} (x${quantity || 1})` 
-      : proposal.title;
-
     const preferencePayload = {
       items: [
         {
           id: proposalId,
-          title: `Proposta: ${itemTitle}`,
+          title: `Proposta: ${proposal.title}${itemDescription}`,
           description: proposal.description?.substring(0, 200) || proposal.title,
           quantity: 1,
           currency_id: 'BRL',
