@@ -2,8 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Plus, Building2, Clock, MessageSquare } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { ArrowLeft, Plus, Building2, Clock, MessageSquare, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { TicketBadges } from "@/components/TicketBadges";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,6 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 
 const statusLabels: Record<string, string> = {
   novo: "Novo",
@@ -22,15 +23,27 @@ const statusLabels: Record<string, string> = {
 };
 
 const typeLabels: Record<string, string> = {
-  duvida: "Dúvida/Informação",
+  duvida: "Dúvida/Info",
   informacao: "Informação",
-  conversar_hospedes: "Conversar com Hóspedes",
-  bloqueio_data: "Bloqueio de Datas",
+  conversar_hospedes: "Hóspedes",
+  bloqueio_data: "Bloqueio",
   manutencao: "Manutenção",
-  melhorias_compras: "Melhorias/Compras",
+  melhorias_compras: "Melhorias",
   cobranca: "Cobrança",
   financeiro: "Financeiro",
   outros: "Outros",
+};
+
+const typeColors: Record<string, string> = {
+  duvida: "bg-secondary text-secondary-foreground",
+  informacao: "bg-secondary text-secondary-foreground",
+  conversar_hospedes: "bg-secondary text-secondary-foreground",
+  bloqueio_data: "bg-secondary text-secondary-foreground",
+  manutencao: "bg-primary text-primary-foreground",
+  melhorias_compras: "bg-primary text-primary-foreground",
+  cobranca: "bg-destructive text-destructive-foreground",
+  financeiro: "bg-destructive text-destructive-foreground",
+  outros: "bg-muted text-muted-foreground",
 };
 
 export default function MeusChamados() {
@@ -41,13 +54,16 @@ export default function MeusChamados() {
   const [activeTab, setActiveTab] = useState("abertos");
   const [ticketTypeFilter, setTicketTypeFilter] = useState("todos");
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [chatOpen, setChatOpen] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState<any>(null);
 
-  // Update current time every minute for live countdown
+  const ticketIds = tickets.map(t => t.id);
+  const { unreadCounts, markAsRead } = useUnreadMessages(ticketIds);
+
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentTime(new Date());
-    }, 60000); // Update every minute
-
+    }, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -63,7 +79,6 @@ export default function MeusChamados() {
       .from("tickets")
       .select("*, properties(name, cover_photo_url), kind, essential, owner_decision, owner_action_due_at, sla_due_at, cost_responsible")
       .eq("owner_id", user?.id)
-      // Hide maintenance tickets where guest or management is responsible (internal only)
       .or("cost_responsible.is.null,cost_responsible.eq.owner,cost_responsible.eq.pm,cost_responsible.eq.split");
 
     if (activeTab === "abertos") {
@@ -79,7 +94,6 @@ export default function MeusChamados() {
     const { data, error } = await query;
 
     if (!error && data) {
-      // Fetch last message for each ticket
       const ticketsWithMessages = await Promise.all(
         data.map(async (ticket) => {
           const { data: messages } = await supabase
@@ -96,16 +110,13 @@ export default function MeusChamados() {
         })
       );
 
-      // Sort: open tickets by SLA (closest to expiring first), closed tickets at the end
       ticketsWithMessages.sort((a, b) => {
         const aIsOpen = ["novo", "em_analise", "aguardando_info", "em_execucao"].includes(a.status);
         const bIsOpen = ["novo", "em_analise", "aguardando_info", "em_execucao"].includes(b.status);
         
-        // If one is closed and other is open, open comes first
         if (aIsOpen && !bIsOpen) return -1;
         if (!aIsOpen && bIsOpen) return 1;
         
-        // Both open or both closed - sort by SLA
         if (!a.sla_due_at && !b.sla_due_at) return 0;
         if (!a.sla_due_at) return 1;
         if (!b.sla_due_at) return -1;
@@ -117,27 +128,23 @@ export default function MeusChamados() {
     setLoading(false);
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusStyle = (status: string) => {
     switch (status) {
       case "novo":
-        return "bg-blue-500";
+        return "bg-secondary text-secondary-foreground";
       case "em_analise":
-        return "bg-yellow-500";
+        return "bg-primary/80 text-primary-foreground";
       case "aguardando_info":
-        return "bg-orange-500";
+        return "bg-primary text-primary-foreground";
       case "em_execucao":
-        return "bg-purple-500";
+        return "bg-secondary/80 text-secondary-foreground";
       case "concluido":
-        return "bg-green-500";
+        return "bg-green-600 text-white";
       case "cancelado":
-        return "bg-gray-500";
+        return "bg-muted text-muted-foreground";
       default:
-        return "bg-gray-500";
+        return "bg-muted text-muted-foreground";
     }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    return priority === "urgente" ? "destructive" : "secondary";
   };
 
   const getTimeUntilSLA = (slaDueAt: string | null) => {
@@ -148,7 +155,7 @@ export default function MeusChamados() {
     const diffMs = slaTime - now;
     
     if (diffMs < 0) {
-      return { expired: true, text: "SLA Expirado", hours: 0, minutes: 0 };
+      return { expired: true, text: "Expirado", hours: 0, minutes: 0 };
     }
     
     const hours = Math.floor(diffMs / (1000 * 60 * 60));
@@ -156,11 +163,18 @@ export default function MeusChamados() {
     
     return {
       expired: false,
-      text: `${hours}h ${minutes}m`,
+      text: `${hours}h${minutes}m`,
       hours,
       minutes,
-      isUrgent: hours < 2
+      isUrgent: hours < 24
     };
+  };
+
+  const openChat = (ticket: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedTicket(ticket);
+    setChatOpen(true);
+    markAsRead(ticket.id);
   };
 
   if (loading) {
@@ -168,187 +182,190 @@ export default function MeusChamados() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
-      <header className="border-b bg-card/50 backdrop-blur-sm">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
+    <div className="min-h-screen bg-gradient-to-br from-secondary/5 via-background to-primary/5">
+      <header className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-10">
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => navigate("/minha-caixa")}
+                className="shrink-0"
               >
                 <ArrowLeft className="h-5 w-5" />
               </Button>
               <div>
-                <h1 className="text-xl font-semibold">Meus Chamados</h1>
-                <p className="text-sm text-muted-foreground">
+                <h1 className="text-lg font-semibold text-secondary">Meus Chamados</h1>
+                <p className="text-xs text-muted-foreground">
                   {tickets.length} {tickets.length === 1 ? "chamado" : "chamados"}
                 </p>
               </div>
             </div>
-            <Button onClick={() => navigate("/novo-ticket")}>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Chamado
+            <Button size="sm" onClick={() => navigate("/novo-ticket")} className="bg-primary hover:bg-primary/90">
+              <Plus className="h-4 w-4 mr-1" />
+              Novo
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-6">
-        <div className="space-y-4">
+      <main className="container mx-auto px-4 py-4">
+        <div className="space-y-3">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="mb-4">
-              <TabsTrigger value="abertos">Abertos</TabsTrigger>
-              <TabsTrigger value="fechados">Fechados</TabsTrigger>
+            <TabsList className="h-9">
+              <TabsTrigger value="abertos" className="text-sm">Abertos</TabsTrigger>
+              <TabsTrigger value="fechados" className="text-sm">Fechados</TabsTrigger>
             </TabsList>
           </Tabs>
 
           <Tabs value={ticketTypeFilter} onValueChange={setTicketTypeFilter}>
-            <TabsList className="mb-6 flex-wrap h-auto">
-              <TabsTrigger value="todos">Todos</TabsTrigger>
-              <TabsTrigger value="manutencao">Manutenção</TabsTrigger>
-              <TabsTrigger value="bloqueio_data">Bloqueio de Datas</TabsTrigger>
-              <TabsTrigger value="duvida">Dúvida/Info</TabsTrigger>
-              <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
-              <TabsTrigger value="outros">Outros</TabsTrigger>
+            <TabsList className="flex-wrap h-auto gap-1 p-1">
+              <TabsTrigger value="todos" className="text-xs h-7 px-2">Todos</TabsTrigger>
+              <TabsTrigger value="manutencao" className="text-xs h-7 px-2">Manutenção</TabsTrigger>
+              <TabsTrigger value="bloqueio_data" className="text-xs h-7 px-2">Bloqueio</TabsTrigger>
+              <TabsTrigger value="duvida" className="text-xs h-7 px-2">Dúvida</TabsTrigger>
+              <TabsTrigger value="financeiro" className="text-xs h-7 px-2">Financeiro</TabsTrigger>
+              <TabsTrigger value="outros" className="text-xs h-7 px-2">Outros</TabsTrigger>
             </TabsList>
           </Tabs>
 
           {tickets.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <p className="text-muted-foreground mb-4">
-                  Nenhum ticket {activeTab === "abertos" ? "aberto" : "fechado"} encontrado
-                  {ticketTypeFilter !== "todos" && ` na categoria ${typeLabels[ticketTypeFilter]}`}
-                </p>
-                <Button onClick={() => navigate("/novo-ticket")}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Criar Primeiro Chamado
-                </Button>
-              </CardContent>
-            </Card>
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                <MessageSquare className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <p className="text-muted-foreground mb-4">
+                Nenhum ticket {activeTab === "abertos" ? "aberto" : "fechado"}
+                {ticketTypeFilter !== "todos" && ` em ${typeLabels[ticketTypeFilter]}`}
+              </p>
+              <Button onClick={() => navigate("/novo-ticket")} size="sm">
+                <Plus className="h-4 w-4 mr-1" />
+                Criar Chamado
+              </Button>
+            </div>
           ) : (
-            <div className="grid gap-3">
+            <div className="space-y-2">
               {tickets.map((ticket) => {
                 const ticketIsOpen = ["novo", "em_analise", "aguardando_info", "em_execucao"].includes(ticket.status);
                 const slaInfo = ticketIsOpen ? getTimeUntilSLA(ticket.sla_due_at) : null;
+                const unreadCount = unreadCounts[ticket.id] || 0;
                 
                 return (
-                  <Card
+                  <div
                     key={ticket.id}
-                    className="cursor-pointer transition-all hover:shadow-md hover:border-primary/20 overflow-hidden group"
+                    className="bg-card border rounded-lg p-3 cursor-pointer transition-all hover:shadow-md hover:border-primary/30 active:scale-[0.99]"
                     onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
                   >
-                    <div className="flex gap-4 p-4">
-                      {/* Left side - Property Photo and Info */}
-                      <div className="flex flex-col items-center gap-2">
-                        <div className="w-32 h-32 flex-shrink-0 relative rounded-lg overflow-hidden bg-muted">
-                          {ticket.properties?.cover_photo_url ? (
-                            <img 
-                              src={ticket.properties.cover_photo_url} 
-                              alt={ticket.properties.name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-secondary/20 to-secondary/5">
-                              <Building2 className="h-12 w-12 text-muted-foreground/40" />
-                            </div>
-                          )}
-                        </div>
-                        {ticket.properties && (
-                          <p className="text-xs text-center font-medium text-muted-foreground line-clamp-2 w-32">
-                            {ticket.properties.name}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Center - Main Content */}
-                      <div className="flex-1 min-w-0 space-y-3">
-                        {/* Top badges */}
-                        <div className="flex flex-wrap gap-2 items-center">
-                          <Badge className={`${getStatusColor(ticket.status)} text-white`}>
-                            {statusLabels[ticket.status]}
-                          </Badge>
-                          <Badge variant="outline" className="bg-background">
-                            {typeLabels[ticket.ticket_type]}
-                          </Badge>
-                          <Badge variant={getPriorityColor(ticket.priority)}>
-                            {ticket.priority === "urgente" ? "Urgente" : "Normal"}
-                          </Badge>
-                          <TicketBadges ticket={ticket} />
-                        </div>
-
-                        {/* Subject */}
-                        <h3 className="font-bold text-lg leading-tight group-hover:text-primary transition-colors">
-                          {ticket.subject}
-                        </h3>
-
-                        {/* Last Message */}
-                        {ticket.lastMessage && (
-                          <div className="bg-muted/50 rounded-md p-3 border border-border/50">
-                            <div className="flex items-start gap-2 mb-1">
-                              <MessageSquare className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
-                              <span className="text-xs text-muted-foreground">
-                                Última mensagem {formatDistanceToNow(new Date(ticket.lastMessage.created_at), {
-                                  locale: ptBR,
-                                  addSuffix: true,
-                                })}
-                              </span>
-                            </div>
-                            <p className="text-sm line-clamp-2 pl-6">
-                              {ticket.lastMessage.body}
-                            </p>
+                    {/* Row 1: Property + Status + Type + SLA */}
+                    <div className="flex items-center gap-2 mb-2">
+                      {/* Property thumbnail */}
+                      <div className="w-10 h-10 rounded-md overflow-hidden bg-muted shrink-0">
+                        {ticket.properties?.cover_photo_url ? (
+                          <img 
+                            src={ticket.properties.cover_photo_url} 
+                            alt=""
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Building2 className="h-5 w-5 text-muted-foreground/50" />
                           </div>
                         )}
                       </div>
-
-                      {/* Right side - Metadata */}
-                      <div className="flex flex-col items-end justify-between gap-2 min-w-[140px]">
-                        <div className="text-right space-y-1">
-                          <p className="text-xs text-muted-foreground">
-                            Criado em
-                          </p>
-                          <p className="text-sm font-medium">
-                            {format(new Date(ticket.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {format(new Date(ticket.created_at), "HH:mm", { locale: ptBR })}
-                          </p>
-                        </div>
-
-                        {/* SLA Countdown */}
-                        {slaInfo && (
-                          <div className={`text-right px-3 py-2 rounded-md ${
-                            slaInfo.expired 
-                              ? "bg-destructive/10 border border-destructive" 
-                              : slaInfo.isUrgent
-                              ? "bg-orange-500/10 border border-orange-500"
-                              : "bg-primary/10 border border-primary/20"
-                          }`}>
-                            <p className="text-xs text-muted-foreground mb-0.5">
-                              {slaInfo.expired ? "SLA" : "Expira em"}
-                            </p>
-                            <p className={`text-lg font-bold ${
-                              slaInfo.expired 
-                                ? "text-destructive" 
-                                : slaInfo.isUrgent
-                                ? "text-orange-600"
-                                : "text-primary"
-                            }`}>
-                              {slaInfo.expired ? "EXPIRADO" : slaInfo.text}
-                            </p>
-                          </div>
-                        )}
+                      
+                      {/* Property name + badges */}
+                      <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-medium text-secondary truncate max-w-[120px]">
+                          {ticket.properties?.name || "Sem imóvel"}
+                        </span>
+                        <Badge className={`text-[10px] h-5 px-1.5 ${getStatusStyle(ticket.status)}`}>
+                          {statusLabels[ticket.status]}
+                        </Badge>
+                        <Badge className={`text-[10px] h-5 px-1.5 ${typeColors[ticket.ticket_type]}`}>
+                          {typeLabels[ticket.ticket_type]}
+                        </Badge>
+                        <TicketBadges ticket={ticket} />
                       </div>
+
+                      {/* SLA */}
+                      {slaInfo && (
+                        <div className={`text-[10px] font-bold px-2 py-1 rounded shrink-0 ${
+                          slaInfo.expired 
+                            ? "bg-destructive/10 text-destructive border border-destructive/30" 
+                            : slaInfo.isUrgent
+                            ? "bg-primary/10 text-primary border border-primary/30"
+                            : "bg-secondary/10 text-secondary border border-secondary/30"
+                        }`}>
+                          <Clock className="h-3 w-3 inline mr-0.5" />
+                          {slaInfo.text}
+                        </div>
+                      )}
                     </div>
-                  </Card>
+
+                    {/* Row 2: Subject */}
+                    <h3 className="font-semibold text-sm text-foreground mb-1.5 line-clamp-1">
+                      {ticket.subject}
+                    </h3>
+
+                    {/* Row 3: Last message + Actions */}
+                    <div className="flex items-center gap-2">
+                      {/* Last message preview */}
+                      <div className="flex-1 min-w-0">
+                        {ticket.lastMessage ? (
+                          <p className="text-xs text-muted-foreground line-clamp-1">
+                            <MessageSquare className="h-3 w-3 inline mr-1" />
+                            {ticket.lastMessage.body}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground/60 italic">
+                            Sem mensagens
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Date */}
+                      <span className="text-[10px] text-muted-foreground shrink-0">
+                        {format(new Date(ticket.created_at), "dd/MM", { locale: ptBR })}
+                      </span>
+
+                      {/* Chat button */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-xs shrink-0 border-secondary/30 hover:bg-secondary/10 hover:text-secondary relative"
+                        onClick={(e) => openChat(ticket, e)}
+                      >
+                        <MessageSquare className="h-3.5 w-3.5 mr-1" />
+                        Chat
+                        {unreadCount > 0 && (
+                          <span className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full h-4 min-w-[16px] flex items-center justify-center px-1">
+                            {unreadCount > 9 ? "9+" : unreadCount}
+                          </span>
+                        )}
+                      </Button>
+
+                      {/* Arrow */}
+                      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                    </div>
+                  </div>
                 );
               })}
             </div>
           )}
         </div>
       </main>
+
+      {/* Chat Dialog */}
+      {selectedTicket && (
+        <MaintenanceChatDialog
+          open={chatOpen}
+          onOpenChange={setChatOpen}
+          ticketId={selectedTicket.id}
+          ticketSubject={selectedTicket.subject}
+          propertyName={selectedTicket.properties?.name}
+        />
+      )}
     </div>
   );
 }
