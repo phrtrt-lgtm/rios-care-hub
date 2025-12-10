@@ -5,8 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ClipboardCheck, Building2, AlertTriangle, CheckCircle2, Wrench, Clock, ChevronRight, Image } from 'lucide-react';
-import { AuthenticatedImage, VideoThumbnail } from './AuthenticatedMedia';
+import { ClipboardCheck, Building2, AlertTriangle, CheckCircle2, Wrench, Clock, ChevronRight, Building } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CreateMaintenanceFromInspectionDialog } from './CreateMaintenanceFromInspectionDialog';
@@ -110,35 +109,31 @@ export function VistoriasKanbanPreview() {
 
   const renderInspectionCard = (inspection: Inspection, hasProblem: boolean) => {
     const property = inspection.property;
-    const firstAttachment = inspection.attachments?.[0];
     
     return (
       <div
         key={inspection.id}
-        className="p-2 rounded-lg border bg-card hover:bg-accent/50 transition-colors w-full"
+        className="p-2 rounded-lg border bg-card hover:bg-accent/50 transition-colors w-full overflow-hidden"
       >
-        {/* Thumbnail + Content */}
-        <div className="flex gap-2">
-          {/* Thumbnail */}
-          {firstAttachment && (
-            <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0 bg-muted">
-              {firstAttachment.file_type?.startsWith("video/") ? (
-                <VideoThumbnail 
-                  src={firstAttachment.file_url} 
-                  className="w-10 h-10 object-cover"
-                />
-              ) : (
-                <AuthenticatedImage 
-                  src={firstAttachment.file_url} 
-                  alt="Anexo" 
-                  className="w-10 h-10 object-cover"
-                />
-              )}
-            </div>
-          )}
+        {/* Property thumbnail + Content */}
+        <div className="flex gap-2 min-w-0">
+          {/* Property photo thumbnail */}
+          <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0 bg-muted">
+            {property?.cover_photo_url ? (
+              <img 
+                src={property.cover_photo_url} 
+                alt={property.name || "Imóvel"} 
+                className="w-10 h-10 object-cover"
+              />
+            ) : (
+              <div className="w-10 h-10 flex items-center justify-center">
+                <Building className="h-4 w-4 text-muted-foreground" />
+              </div>
+            )}
+          </div>
           
           {/* Text content */}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 overflow-hidden">
             {/* Property name */}
             <p className="text-xs font-medium truncate">{property?.name || 'Imóvel'}</p>
             

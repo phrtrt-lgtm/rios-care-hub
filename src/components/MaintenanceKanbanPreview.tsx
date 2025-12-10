@@ -10,8 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Wrench, ArrowRight, User, Calendar, ChevronRight, ChevronLeft, MessageSquare, Image } from "lucide-react";
-import { AuthenticatedImage, VideoThumbnail } from "./AuthenticatedMedia";
+import { Wrench, ArrowRight, User, Calendar, ChevronRight, ChevronLeft, MessageSquare, Building } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -28,9 +27,8 @@ type MaintenanceTicket = {
   scheduled_at: string | null;
   service_provider_id: string | null;
   cost_responsible: string | null;
-  property: { name: string } | null;
+  property: { name: string; cover_photo_url: string | null } | null;
   service_provider: { id: string; name: string; phone: string | null } | null;
-  latestAttachment?: { file_url: string; mime_type?: string | null } | null;
 };
 
 type ServiceProvider = {
@@ -102,7 +100,7 @@ export function MaintenanceKanbanPreview() {
           scheduled_at,
           service_provider_id,
           cost_responsible,
-          property:properties(name),
+          property:properties(name, cover_photo_url),
           service_provider:service_providers(id, name, phone)
         `)
         .eq("ticket_type", "manutencao")
@@ -112,31 +110,7 @@ export function MaintenanceKanbanPreview() {
 
       if (error) throw error;
       
-      // Fetch latest attachment for each ticket
-      const ticketIds = (data || []).map(t => t.id);
-      const attachmentsMap = new Map<string, { file_url: string; mime_type?: string | null }>();
-      
-      if (ticketIds.length > 0) {
-        const { data: attachmentsData } = await supabase
-          .from("ticket_attachments")
-          .select("ticket_id, file_url, mime_type")
-          .in("ticket_id", ticketIds)
-          .order("created_at", { ascending: false });
-        
-        // Keep only first attachment per ticket (most recent)
-        (attachmentsData || []).forEach(att => {
-          if (!attachmentsMap.has(att.ticket_id!) && att.ticket_id) {
-            attachmentsMap.set(att.ticket_id, { file_url: att.file_url, mime_type: att.mime_type });
-          }
-        });
-      }
-      
-      const ticketsWithAttachments = (data || []).map(t => ({
-        ...t,
-        latestAttachment: attachmentsMap.get(t.id) || null,
-      }));
-      
-      setTickets(ticketsWithAttachments);
+      setTickets(data || []);
     } catch (error) {
       console.error("Error fetching maintenance tickets:", error);
     } finally {
@@ -374,28 +348,25 @@ export function MaintenanceKanbanPreview() {
                           onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
                           className="bg-card rounded-lg p-2 shadow-sm cursor-pointer hover:shadow-md transition-shadow w-full"
                         >
-                          {/* Thumbnail + Content */}
-                          <div className="flex gap-2">
-                            {/* Thumbnail */}
-                            {ticket.latestAttachment && (
-                              <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0 bg-muted">
-                                {ticket.latestAttachment.mime_type?.startsWith("video/") ? (
-                                  <VideoThumbnail 
-                                    src={ticket.latestAttachment.file_url} 
-                                    className="w-10 h-10 object-cover"
-                                  />
-                                ) : (
-                                  <AuthenticatedImage 
-                                    src={ticket.latestAttachment.file_url} 
-                                    alt="Anexo" 
-                                    className="w-10 h-10 object-cover"
-                                  />
-                                )}
-                              </div>
-                            )}
+                          {/* Property thumbnail + Content */}
+                          <div className="flex gap-2 min-w-0">
+                            {/* Property photo thumbnail */}
+                            <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0 bg-muted">
+                              {ticket.property?.cover_photo_url ? (
+                                <img 
+                                  src={ticket.property.cover_photo_url} 
+                                  alt={ticket.property.name || "Imóvel"} 
+                                  className="w-10 h-10 object-cover"
+                                />
+                              ) : (
+                                <div className="w-10 h-10 flex items-center justify-center">
+                                  <Building className="h-4 w-4 text-muted-foreground" />
+                                </div>
+                              )}
+                            </div>
                             
                             {/* Text content */}
-                            <div className="flex-1 min-w-0">
+                            <div className="flex-1 min-w-0 overflow-hidden">
                               {/* Property name */}
                               <p className="font-medium text-xs truncate">
                                 {ticket.property?.name || "Sem unidade"}
