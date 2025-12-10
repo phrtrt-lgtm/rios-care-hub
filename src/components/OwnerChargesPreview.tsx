@@ -410,14 +410,17 @@ export function OwnerChargesPreview() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-7 min-w-[65px] text-xs shrink-0"
+                        className="h-7 w-[72px] text-xs shrink-0 justify-center"
                         onClick={(e) => handleOpenPix(charge, e)}
                         disabled={generatingPixFor === charge.id}
                       >
                         {generatingPixFor === charge.id ? (
                           <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full" />
                         ) : (
-                          <QrCode className="h-3.5 w-3.5" />
+                          <>
+                            <QrCode className="h-3.5 w-3.5 mr-1" />
+                            QR
+                          </>
                         )}
                       </Button>
                     </div>
@@ -428,7 +431,7 @@ export function OwnerChargesPreview() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-7 min-w-[65px] text-xs shrink-0"
+                        className="h-7 w-[72px] text-xs shrink-0 justify-center"
                         onClick={(e) => handleOpenPaymentLink(charge, e)}
                         disabled={generatingLinkFor === charge.id}
                       >
@@ -452,7 +455,7 @@ export function OwnerChargesPreview() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-7 min-w-[65px] text-xs shrink-0 relative"
+                        className="h-7 w-[72px] text-xs shrink-0 justify-center relative"
                         onClick={(e) => handleOpenChat(charge, e)}
                       >
                         <MessageSquare className="h-3.5 w-3.5 mr-1" />
