@@ -8,6 +8,7 @@ const corsHeaders = {
 
 interface CreatePaymentRequest {
   proposalId: string;
+  quantity?: number;
 }
 
 serve(async (req) => {
@@ -47,7 +48,7 @@ serve(async (req) => {
       );
     }
 
-    const { proposalId } = await req.json() as CreatePaymentRequest;
+    const { proposalId, quantity } = await req.json() as CreatePaymentRequest;
 
     if (!proposalId) {
       return new Response(
@@ -56,7 +57,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('Creating payment for proposal:', proposalId, 'user:', user.id);
+    console.log('Creating payment for proposal:', proposalId, 'user:', user.id, 'quantity:', quantity);
 
     // Fetch proposal details
     const { data: proposal, error: proposalError } = await supabase
@@ -73,7 +74,19 @@ serve(async (req) => {
       );
     }
 
-    if (!proposal.amount_cents || proposal.amount_cents <= 0) {
+    // Calculate amount based on payment_type
+    let amountCents = 0;
+    const paymentType = proposal.payment_type || 'none';
+    
+    if (paymentType === 'fixed') {
+      amountCents = proposal.amount_cents || 0;
+    } else if (paymentType === 'quantity') {
+      const unitPrice = proposal.unit_price_cents || 0;
+      const qty = quantity || 1;
+      amountCents = unitPrice * qty;
+    }
+
+    if (amountCents <= 0) {
       return new Response(
         JSON.stringify({ error: 'Proposal has no payment amount' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -87,14 +100,18 @@ serve(async (req) => {
       .eq('id', user.id)
       .single();
 
-    const amountBRL = proposal.amount_cents / 100;
+    const amountBRL = amountCents / 100;
 
     // Create Mercado Pago preference
+    const itemTitle = paymentType === 'quantity' 
+      ? `${proposal.title} (x${quantity || 1})` 
+      : proposal.title;
+
     const preferencePayload = {
       items: [
         {
           id: proposalId,
-          title: `Proposta: ${proposal.title}`,
+          title: `Proposta: ${itemTitle}`,
           description: proposal.description?.substring(0, 200) || proposal.title,
           quantity: 1,
           currency_id: 'BRL',

@@ -11,11 +11,17 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, X, Plus, Sparkles, Upload, FileIcon } from "lucide-react";
+import { ArrowLeft, X, Plus, Sparkles, Upload, FileIcon, CreditCard } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { buildStorageKey } from "@/lib/storage";
 import { VoiceToTextInput } from "@/components/VoiceToTextInput";
+
+interface OptionConfig {
+  text: string;
+  requiresPayment: boolean;
+}
 
 const formSchema = z.object({
   title: z.string().min(5, "Título deve ter no mínimo 5 caracteres"),
@@ -25,7 +31,13 @@ const formSchema = z.object({
   target_audience: z.enum(['owners', 'team'], { required_error: "Selecione o público-alvo" }),
   team_ids: z.array(z.string()).optional(),
   property_ids: z.array(z.string()).min(1, "Selecione pelo menos uma unidade"),
-  options: z.array(z.string()).min(2, "Adicione pelo menos 2 opções"),
+  options: z.array(z.object({
+    text: z.string().min(1),
+    requiresPayment: z.boolean(),
+  })).min(2, "Adicione pelo menos 2 opções"),
+  payment_type: z.enum(['none', 'fixed', 'quantity']),
+  amount_cents: z.number().optional(),
+  unit_price_cents: z.number().optional(),
 }).refine((data) => {
   if (data.target_audience === 'owners') {
     return (data.property_ids?.length ?? 0) > 0;
@@ -37,6 +49,17 @@ const formSchema = z.object({
 }, {
   message: "Selecione pelo menos uma unidade ou membro da equipe",
   path: ["property_ids"],
+}).refine((data) => {
+  if (data.payment_type === 'fixed') {
+    return data.amount_cents && data.amount_cents > 0;
+  }
+  if (data.payment_type === 'quantity') {
+    return data.unit_price_cents && data.unit_price_cents > 0;
+  }
+  return true;
+}, {
+  message: "Informe o valor do pagamento",
+  path: ["amount_cents"],
 });
 
 export default function NovaPropostaVotacao() {
@@ -59,6 +82,9 @@ export default function NovaPropostaVotacao() {
       team_ids: [],
       property_ids: [],
       options: [],
+      payment_type: 'none' as const,
+      amount_cents: undefined,
+      unit_price_cents: undefined,
     },
   });
 
@@ -174,6 +200,9 @@ export default function NovaPropostaVotacao() {
           created_by: user.id,
           required_approvals: participantIds.length,
           has_attachments: attachments.length > 0,
+          payment_type: values.payment_type,
+          amount_cents: values.payment_type === 'fixed' ? values.amount_cents : null,
+          unit_price_cents: values.payment_type === 'quantity' ? values.unit_price_cents : null,
         })
         .select()
         .single();
@@ -206,10 +235,11 @@ export default function NovaPropostaVotacao() {
       }
 
       // Create options
-      const optionsData = values.options.map((text, index) => ({
+      const optionsData = values.options.map((opt, index) => ({
         proposal_id: proposal.id,
-        option_text: text,
+        option_text: opt.text,
         order_index: index,
+        requires_payment: opt.requiresPayment,
       }));
 
       const { error: optionsError } = await supabase
@@ -284,7 +314,7 @@ export default function NovaPropostaVotacao() {
   const addOption = () => {
     if (!newOption.trim()) return;
     const current = form.getValues('options') || [];
-    form.setValue('options', [...current, newOption.trim()]);
+    form.setValue('options', [...current, { text: newOption.trim(), requiresPayment: false }]);
     setNewOption("");
   };
 
@@ -292,6 +322,16 @@ export default function NovaPropostaVotacao() {
     const current = form.getValues('options') || [];
     form.setValue('options', current.filter((_, i) => i !== index));
   };
+
+  const toggleOptionPayment = (index: number) => {
+    const current = form.getValues('options') || [];
+    const updated = current.map((opt, i) => 
+      i === index ? { ...opt, requiresPayment: !opt.requiresPayment } : opt
+    );
+    form.setValue('options', updated);
+  };
+
+  const paymentType = form.watch('payment_type');
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
@@ -501,12 +541,105 @@ export default function NovaPropostaVotacao() {
                   )}
                 </div>
 
+                {/* Payment Configuration */}
+                <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                  <FormLabel className="text-base font-semibold">Configuração de Pagamento</FormLabel>
+                  
+                  <FormField
+                    control={form.control}
+                    name="payment_type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <RadioGroup
+                            onValueChange={field.onChange}
+                            value={field.value}
+                            className="space-y-2"
+                          >
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="none" id="payment-none" />
+                              <label htmlFor="payment-none" className="cursor-pointer text-sm">
+                                Sem pagamento
+                              </label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="fixed" id="payment-fixed" />
+                              <label htmlFor="payment-fixed" className="cursor-pointer text-sm">
+                                Valor fixo (mesmo valor para todos)
+                              </label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="quantity" id="payment-quantity" />
+                              <label htmlFor="payment-quantity" className="cursor-pointer text-sm">
+                                Por quantidade (preço unitário × quantidade)
+                              </label>
+                            </div>
+                          </RadioGroup>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {paymentType === 'fixed' && (
+                    <FormField
+                      control={form.control}
+                      name="amount_cents"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Valor total (R$) *</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              placeholder="Ex: 150.00"
+                              value={field.value ? (field.value / 100).toFixed(2) : ''}
+                              onChange={(e) => field.onChange(Math.round(parseFloat(e.target.value || '0') * 100))}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+                  {paymentType === 'quantity' && (
+                    <FormField
+                      control={form.control}
+                      name="unit_price_cents"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Preço unitário (R$) *</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              placeholder="Ex: 89.90"
+                              value={field.value ? (field.value / 100).toFixed(2) : ''}
+                              onChange={(e) => field.onChange(Math.round(parseFloat(e.target.value || '0') * 100))}
+                            />
+                          </FormControl>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            O proprietário informará a quantidade desejada e o valor será calculado automaticamente.
+                          </p>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
+
                 <FormField
                   control={form.control}
                   name="options"
                   render={() => (
                     <FormItem>
                       <FormLabel>Opções de resposta *</FormLabel>
+                      {paymentType !== 'none' && (
+                        <p className="text-xs text-muted-foreground">
+                          Marque quais opções requerem pagamento (ex: "Sim")
+                        </p>
+                      )}
                       <div className="space-y-3">
                         <div className="flex gap-2">
                           <Input
@@ -521,8 +654,22 @@ export default function NovaPropostaVotacao() {
                         </div>
                         <div className="border rounded-md p-3 space-y-2 min-h-[100px]">
                           {form.watch('options')?.map((option, index) => (
-                            <div key={index} className="flex items-center justify-between bg-muted p-2 rounded">
-                              <span className="text-sm">{option}</span>
+                            <div key={index} className="flex items-center justify-between bg-muted p-2 rounded gap-2">
+                              <div className="flex items-center gap-3 flex-1">
+                                {paymentType !== 'none' && (
+                                  <Checkbox
+                                    checked={option.requiresPayment}
+                                    onCheckedChange={() => toggleOptionPayment(index)}
+                                    title="Requer pagamento"
+                                  />
+                                )}
+                                <span className="text-sm flex-1">{option.text}</span>
+                                {option.requiresPayment && paymentType !== 'none' && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    Paga
+                                  </Badge>
+                                )}
+                              </div>
                               <Button
                                 type="button"
                                 variant="ghost"

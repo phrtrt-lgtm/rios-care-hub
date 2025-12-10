@@ -46,6 +46,7 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
   const [note, setNote] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [selectedOption, setSelectedOption] = useState<string>("");
+  const [quantity, setQuantity] = useState<number>(1);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryItems, setGalleryItems] = useState<any[]>([]);
   const [galleryIndex, setGalleryIndex] = useState(0);
@@ -54,6 +55,7 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
     paymentLink?: string;
     pixQrCode?: string;
     pixQrCodeBase64?: string;
+    totalAmount?: number;
   } | null>(null);
   const [isGeneratingPayment, setIsGeneratingPayment] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true);
@@ -146,14 +148,26 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
 
   // Check if selected option requires payment
   const requiresPayment = () => {
-    if (!proposal?.amount_cents || proposal.amount_cents <= 0) return false;
-    
-    const selectedOpt = proposal.proposal_options?.find((o: any) => o.id === selectedOption);
-    const optionText = selectedOpt?.option_text?.toLowerCase() || '';
-    return optionText.includes('sim') || 
-           optionText.includes('aprovar') || 
-           optionText.includes('concordo') ||
-           optionText.includes('aceito');
+    const selectedOpt = proposal?.proposal_options?.find((o: any) => o.id === selectedOption) as any;
+    // Check if option has requires_payment flag
+    if (selectedOpt?.requires_payment) {
+      const paymentType = (proposal as any)?.payment_type;
+      return paymentType === 'fixed' || paymentType === 'quantity';
+    }
+    return false;
+  };
+
+  // Calculate payment amount based on type
+  const calculatePaymentAmount = () => {
+    if (!proposal) return 0;
+    const paymentType = (proposal as any)?.payment_type;
+    if (paymentType === 'fixed') {
+      return proposal.amount_cents || 0;
+    }
+    if (paymentType === 'quantity') {
+      return ((proposal as any).unit_price_cents || 0) * quantity;
+    }
+    return 0;
   };
 
   const respondMutation = useMutation({
@@ -186,6 +200,7 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
             note: note || null,
             attachment_path: attachmentPath || myResponse.attachment_path,
             responded_at: new Date().toISOString(),
+            quantity: proposal?.payment_type === 'quantity' ? quantity : null,
           })
           .eq('id', myResponse.id);
 
@@ -199,13 +214,19 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
           const { data: paymentResult, error: paymentError } = await supabase.functions.invoke(
             'create-proposal-payment',
             {
-              body: { proposalId }
+              body: { 
+                proposalId,
+                quantity: proposal?.payment_type === 'quantity' ? quantity : undefined
+              }
             }
           );
 
           if (paymentError) throw paymentError;
           
-          setPaymentData(paymentResult);
+          setPaymentData({
+            ...paymentResult,
+            totalAmount: calculatePaymentAmount()
+          });
           setPixDialogOpen(true);
         } catch (err) {
           console.error('Error generating payment:', err);
@@ -318,8 +339,8 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
               </p>
             </div>
 
-            {/* Amount */}
-            {proposal.amount_cents && proposal.amount_cents > 0 && (
+            {/* Amount - Fixed */}
+            {(proposal as any).payment_type === 'fixed' && proposal.amount_cents && proposal.amount_cents > 0 && (
               <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/10 border border-primary/20">
                 <CreditCard className="h-5 w-5 text-primary" />
                 <div>
@@ -328,6 +349,19 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
                     R$ {(proposal.amount_cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
+              </div>
+            )}
+
+            {/* Amount - Quantity Based */}
+            {(proposal as any).payment_type === 'quantity' && (proposal as any).unit_price_cents > 0 && (
+              <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 space-y-2">
+                <div className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5 text-primary" />
+                  <p className="text-xs text-muted-foreground">Preço por unidade</p>
+                </div>
+                <p className="text-lg font-bold text-primary">
+                  R$ {((proposal as any).unit_price_cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / unidade
+                </p>
               </div>
             )}
 
@@ -446,8 +480,47 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
                   </RadioGroup>
                 </div>
 
-                {/* Payment warning */}
-                {selectedOption && requiresPayment() && (
+                {/* Quantity Input - for quantity-based proposals */}
+                {selectedOption && requiresPayment() && (proposal as any).payment_type === 'quantity' && (
+                  <div className="p-3 rounded-lg bg-muted border space-y-3">
+                    <Label className="text-sm font-medium">Quantidade desejada *</Label>
+                    <div className="flex items-center gap-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                        disabled={quantity <= 1}
+                      >
+                        -
+                      </Button>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={quantity}
+                        onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-20 text-center"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setQuantity(quantity + 1)}
+                      >
+                        +
+                      </Button>
+                    </div>
+                    <div className="p-2 rounded bg-primary/10 text-center">
+                      <p className="text-xs text-muted-foreground">Total a pagar</p>
+                      <p className="text-lg font-bold text-primary">
+                        R$ {(calculatePaymentAmount() / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Payment warning - fixed amount */}
+                {selectedOption && requiresPayment() && (proposal as any).payment_type === 'fixed' && (
                   <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
                     <div className="flex items-start gap-2">
                       <CreditCard className="h-4 w-4 text-amber-600 mt-0.5" />
@@ -456,7 +529,7 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
                           Pagamento necessário
                         </p>
                         <p className="text-xs text-amber-700 dark:text-amber-500 mt-0.5">
-                          Valor: R$ {(proposal.amount_cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          Valor: R$ {(proposal.amount_cents! / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </p>
                       </div>
                     </div>
@@ -543,7 +616,7 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
             <div className="p-4 rounded-lg bg-muted text-center">
               <p className="text-sm text-muted-foreground">Valor</p>
               <p className="text-2xl font-bold text-primary">
-                R$ {(proposal.amount_cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {((paymentData?.totalAmount || calculatePaymentAmount()) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
             </div>
 
