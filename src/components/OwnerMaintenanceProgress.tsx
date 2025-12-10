@@ -178,12 +178,13 @@ export function OwnerMaintenanceProgress() {
                     {/* Chat button */}
                     <div className="flex items-center gap-1">
                       <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 relative"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 relative gap-1.5"
                         onClick={(e) => handleOpenChat(ticket, e)}
                       >
                         <MessageSquare className="h-4 w-4" />
+                        <span className="text-xs">Mensagens</span>
                         {unreadCount > 0 && (
                           <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
                             {unreadCount > 9 ? "9+" : unreadCount}
