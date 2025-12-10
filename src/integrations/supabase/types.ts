@@ -1208,8 +1208,12 @@ export type Database = {
           created_at: string
           id: string
           is_visible_to_owner: boolean
+          mercadopago_payment_id: string | null
           note: string | null
           owner_id: string
+          paid_at: string | null
+          payment_amount_cents: number | null
+          payment_status: string | null
           proposal_id: string
           responded_at: string
           selected_option_id: string | null
@@ -1220,8 +1224,12 @@ export type Database = {
           created_at?: string
           id?: string
           is_visible_to_owner?: boolean
+          mercadopago_payment_id?: string | null
           note?: string | null
           owner_id: string
+          paid_at?: string | null
+          payment_amount_cents?: number | null
+          payment_status?: string | null
           proposal_id: string
           responded_at?: string
           selected_option_id?: string | null
@@ -1232,8 +1240,12 @@ export type Database = {
           created_at?: string
           id?: string
           is_visible_to_owner?: boolean
+          mercadopago_payment_id?: string | null
           note?: string | null
           owner_id?: string
+          paid_at?: string | null
+          payment_amount_cents?: number | null
+          payment_status?: string | null
           proposal_id?: string
           responded_at?: string
           selected_option_id?: string | null

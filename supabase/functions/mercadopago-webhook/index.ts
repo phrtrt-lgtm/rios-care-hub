@@ -144,6 +144,9 @@ const handler = async (req: Request): Promise<Response> => {
       const status = payment.status; // approved, pending, rejected, etc.
       const isGroupPayment = payment.metadata?.is_group_payment === true;
       const chargeIds = payment.metadata?.charge_ids || [];
+      const isProposalPayment = payment.metadata?.type === 'proposal_payment';
+      const proposalId = payment.metadata?.proposal_id;
+      const proposalOwnerId = payment.metadata?.owner_id;
 
       if (!externalRef) {
         console.log('No external_reference in payment');
@@ -152,6 +155,7 @@ const handler = async (req: Request): Promise<Response> => {
 
       console.log('Processing payment:', paymentId, 'Status:', status);
       console.log('Is group payment:', isGroupPayment);
+      console.log('Is proposal payment:', isProposalPayment);
       console.log('Charge IDs from metadata:', chargeIds);
 
       // Mapear status do Mercado Pago para status de cobrança
@@ -212,6 +216,71 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       const paidAt = new Date().toISOString();
+
+      // Handle proposal payment
+      if (isProposalPayment && proposalId && proposalOwnerId) {
+        console.log('Processing proposal payment for:', proposalId, 'owner:', proposalOwnerId);
+
+        if (status === 'approved') {
+          // Update proposal_response with payment info
+          const { error: updateError } = await supabase
+            .from('proposal_responses')
+            .update({
+              paid_at: paidAt,
+              payment_amount_cents: Math.round(payment.transaction_amount * 100),
+              mercadopago_payment_id: String(paymentId),
+              payment_status: 'approved',
+            })
+            .eq('proposal_id', proposalId)
+            .eq('owner_id', proposalOwnerId);
+
+          if (updateError) {
+            console.error('Error updating proposal response payment:', updateError);
+          } else {
+            console.log('Proposal response payment recorded successfully');
+          }
+
+          // Create notification for team about payment received
+          try {
+            // Fetch proposal title
+            const { data: proposal } = await supabase
+              .from('proposals')
+              .select('title')
+              .eq('id', proposalId)
+              .single();
+
+            // Fetch owner name
+            const { data: owner } = await supabase
+              .from('profiles')
+              .select('name')
+              .eq('id', proposalOwnerId)
+              .single();
+
+            // Notify all admin users
+            const { data: admins } = await supabase
+              .from('profiles')
+              .select('id')
+              .eq('role', 'admin');
+
+            if (admins && admins.length > 0) {
+              const notifications = admins.map((admin: any) => ({
+                owner_id: admin.id,
+                title: '💰 Pagamento de Proposta Recebido',
+                message: `${owner?.name || 'Proprietário'} pagou R$ ${payment.transaction_amount.toFixed(2)} da proposta: ${proposal?.title || 'Proposta'}`,
+                type: 'proposal_payment',
+                reference_id: proposalId,
+                reference_url: `/votacao-detalhes/${proposalId}`,
+              }));
+
+              await supabase.from('notifications').insert(notifications);
+            }
+          } catch (notifyError) {
+            console.error('Error sending proposal payment notification:', notifyError);
+          }
+        }
+
+        return new Response('OK', { status: 200 });
+      }
 
       // Handle group payment
       if (isGroupPayment && chargeIds.length > 0) {
