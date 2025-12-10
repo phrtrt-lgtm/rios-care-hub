@@ -402,35 +402,39 @@ export function OwnerChargesPreview() {
                     </div>
                   </div>
 
-                  {/* 3 rows: Total, Ajuda, Devido - using grid for alignment */}
-                  <div className="space-y-1.5 pl-7">
+                  {/* 3 rows: Total, Ajuda, Devido */}
+                  <div className="space-y-2 pl-7">
                     {/* Row 1: Total */}
-                    <div className="grid grid-cols-[1fr_auto_auto] items-center gap-2 text-xs">
-                      <span className="text-muted-foreground">Total</span>
-                      <span className="text-muted-foreground text-right min-w-[80px]">{formatBRL(charge.amount_cents)}</span>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-muted-foreground">Total:</span>
+                        <span className="text-muted-foreground font-medium">{formatBRL(charge.amount_cents)}</span>
+                      </div>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-6 w-[60px] text-[10px] justify-center"
+                        className="h-7 px-3 text-xs"
                         onClick={(e) => handleOpenPix(charge, e)}
                         disabled={generatingPixFor === charge.id}
                       >
                         {generatingPixFor === charge.id ? (
                           <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full" />
                         ) : (
-                          <QrCode className="h-3 w-3" />
+                          <QrCode className="h-3.5 w-3.5" />
                         )}
                       </Button>
                     </div>
 
                     {/* Row 2: Ajuda da RIOS */}
-                    <div className="grid grid-cols-[1fr_auto_auto] items-center gap-2 text-xs">
-                      <span className="text-green-600">Ajuda da RIOS</span>
-                      <span className="text-green-600 font-medium text-right min-w-[80px]">-{formatBRL(charge.management_contribution_cents)}</span>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-green-600">Ajuda da RIOS:</span>
+                        <span className="text-green-600 font-medium">-{formatBRL(charge.management_contribution_cents)}</span>
+                      </div>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-6 w-[60px] text-[10px] justify-center"
+                        className="h-7 px-3 text-xs"
                         onClick={(e) => handleOpenPaymentLink(charge, e)}
                         disabled={generatingLinkFor === charge.id}
                       >
@@ -438,7 +442,7 @@ export function OwnerChargesPreview() {
                           <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full" />
                         ) : (
                           <>
-                            <CreditCard className="h-3 w-3 mr-0.5" />
+                            <CreditCard className="h-3.5 w-3.5 mr-1" />
                             12x
                           </>
                         )}
@@ -446,16 +450,18 @@ export function OwnerChargesPreview() {
                     </div>
 
                     {/* Row 3: Total Devido */}
-                    <div className="grid grid-cols-[1fr_auto_auto] items-center gap-2 text-xs">
-                      <span className="font-semibold text-primary">Total Devido</span>
-                      <span className="font-bold text-primary text-right min-w-[80px]">{formatBRL(dueAmount)}</span>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="font-semibold text-primary">Total Devido:</span>
+                        <span className="font-bold text-primary">{formatBRL(dueAmount)}</span>
+                      </div>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-6 w-[60px] text-[10px] justify-center relative"
+                        className="h-7 px-3 text-xs relative"
                         onClick={(e) => handleOpenChat(charge, e)}
                       >
-                        <MessageSquare className="h-3 w-3 mr-0.5" />
+                        <MessageSquare className="h-3.5 w-3.5 mr-1" />
                         Msgs
                         {unreadCount > 0 && (
                           <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
