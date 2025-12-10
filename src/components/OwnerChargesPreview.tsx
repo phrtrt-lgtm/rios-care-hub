@@ -259,7 +259,7 @@ export function OwnerChargesPreview() {
   return (
     <>
       <Card className="overflow-hidden border-green-500/20">
-        <CardHeader className="pb-3 bg-gradient-to-r from-green-500/5 to-transparent">
+        <CardHeader className="pb-2 bg-gradient-to-r from-green-500/5 to-transparent">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="text-lg flex items-center gap-2">
               <DollarSign className="h-5 w-5 text-green-500" />
@@ -280,6 +280,9 @@ export function OwnerChargesPreview() {
               </Button>
             </div>
           </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            💡 Selecione várias cobranças para gerar um pagamento único e facilitar!
+          </p>
         </CardHeader>
         <CardContent className="pt-4">
           {/* Bulk payment panel */}
