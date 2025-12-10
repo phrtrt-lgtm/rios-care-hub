@@ -62,6 +62,7 @@ export function OwnerChargesPreview() {
   const [chatOpen, setChatOpen] = useState(false);
   const [pixDialogOpen, setPixDialogOpen] = useState(false);
   const [pixCharge, setPixCharge] = useState<OwnerCharge | null>(null);
+  const [pixLoading, setPixLoading] = useState(false);
   const [selectedCharges, setSelectedCharges] = useState<string[]>([]);
   const [generatingPayment, setGeneratingPayment] = useState(false);
   const [groupPayment, setGroupPayment] = useState<{
@@ -70,6 +71,7 @@ export function OwnerChargesPreview() {
     pix_qr_code_base64: string;
     total_amount: number;
   } | null>(null);
+  const [generatingLinkFor, setGeneratingLinkFor] = useState<string | null>(null);
 
   const { data: charges, isLoading } = useQuery({
     queryKey: ["owner-charges-preview", user?.id],
@@ -112,16 +114,64 @@ export function OwnerChargesPreview() {
     markAsRead(charge.id);
   };
 
-  const handleOpenPix = (charge: OwnerCharge, e: React.MouseEvent) => {
+  const handleOpenPix = async (charge: OwnerCharge, e: React.MouseEvent) => {
     e.stopPropagation();
-    setPixCharge(charge);
-    setPixDialogOpen(true);
+    
+    // If PIX already exists, just open dialog
+    if (charge.pix_qr_code && charge.pix_qr_code_base64) {
+      setPixCharge(charge);
+      setPixDialogOpen(true);
+      return;
+    }
+    
+    // Generate payment first
+    try {
+      setPixLoading(true);
+      const { data, error } = await supabase.functions.invoke('create-group-payment', {
+        body: { chargeIds: [charge.id] }
+      });
+      
+      if (error) throw error;
+      
+      setPixCharge({
+        ...charge,
+        pix_qr_code: data.pix_qr_code,
+        pix_qr_code_base64: data.pix_qr_code_base64,
+        payment_link_url: data.payment_link
+      });
+      setPixDialogOpen(true);
+    } catch (error) {
+      console.error('Erro ao gerar PIX:', error);
+      toast.error('Erro ao gerar QR Code PIX');
+    } finally {
+      setPixLoading(false);
+    }
   };
 
-  const handleOpenPaymentLink = (charge: OwnerCharge, e: React.MouseEvent) => {
+  const handleOpenPaymentLink = async (charge: OwnerCharge, e: React.MouseEvent) => {
     e.stopPropagation();
+    
+    // If payment link already exists, just open it
     if (charge.payment_link_url) {
       window.open(charge.payment_link_url, '_blank');
+      return;
+    }
+    
+    // Generate payment first
+    try {
+      setGeneratingLinkFor(charge.id);
+      const { data, error } = await supabase.functions.invoke('create-group-payment', {
+        body: { chargeIds: [charge.id] }
+      });
+      
+      if (error) throw error;
+      
+      window.open(data.payment_link, '_blank');
+    } catch (error) {
+      console.error('Erro ao gerar link:', error);
+      toast.error('Erro ao gerar link de pagamento');
+    } finally {
+      setGeneratingLinkFor(null);
     }
   };
 
@@ -364,27 +414,31 @@ export function OwnerChargesPreview() {
                     {/* Actions */}
                     <div className="flex flex-col gap-1 shrink-0">
                       <div className="flex items-center gap-1">
-                        {charge.pix_qr_code && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-6 px-2 text-[10px]"
-                            onClick={(e) => handleOpenPix(charge, e)}
-                          >
-                            <QrCode className="h-3 w-3" />
-                          </Button>
-                        )}
-                        {charge.payment_link_url && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-6 px-2 text-[10px]"
-                            onClick={(e) => handleOpenPaymentLink(charge, e)}
-                          >
-                            <CreditCard className="h-3 w-3 mr-0.5" />
-                            12x
-                          </Button>
-                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-6 px-2 text-[10px]"
+                          onClick={(e) => handleOpenPix(charge, e)}
+                          disabled={pixLoading}
+                        >
+                          <QrCode className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-6 px-2 text-[10px]"
+                          onClick={(e) => handleOpenPaymentLink(charge, e)}
+                          disabled={generatingLinkFor === charge.id}
+                        >
+                          {generatingLinkFor === charge.id ? (
+                            <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full" />
+                          ) : (
+                            <>
+                              <CreditCard className="h-3 w-3 mr-0.5" />
+                              12x
+                            </>
+                          )}
+                        </Button>
                       </div>
                       <Button
                         variant="outline"
