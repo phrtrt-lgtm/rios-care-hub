@@ -39,6 +39,7 @@ export function MaintenanceChatDialog({
     open ? ticketId : null
   );
   const [newMessage, setNewMessage] = useState("");
+  const [aiCommand, setAiCommand] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
   const [generatingAI, setGeneratingAI] = useState(false);
@@ -156,68 +157,36 @@ export function MaintenanceChatDialog({
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleVoiceTranscript = async (text: string) => {
-    // Automatically generate AI response from voice transcript
-    if (!ticketId) {
-      setNewMessage(prev => prev ? `${prev} ${text}` : text);
-      return;
-    }
+  const handleVoiceTranscript = (text: string) => {
+    // Put transcription in the AI command box
+    setAiCommand(prev => prev ? `${prev} ${text}` : text);
+  };
+
+  const generateAIResponse = async () => {
+    if (!ticketId || !aiCommand.trim()) return;
 
     try {
       setGeneratingAI(true);
       toast({
         title: "Gerando resposta...",
-        description: "A IA está criando uma resposta baseada no seu áudio.",
+        description: "A IA está criando uma resposta baseada no comando.",
       });
       
       const { data, error } = await supabase.functions.invoke('ai-generate-response', {
         body: {
           templateKey: 'ticket_response',
           ticketId: ticketId,
-          customInstructions: `Baseado nas instruções do atendente: "${text}", gere uma resposta profissional e amigável para o proprietário.`
+          customInstructions: `Baseado nas instruções do atendente: "${aiCommand}", gere uma resposta profissional e amigável para o proprietário.`
         }
       });
 
       if (error) throw error;
 
       setNewMessage(data.text);
+      setAiCommand(""); // Clear the command after generating
       toast({
         title: "Resposta gerada!",
-        description: "A IA gerou uma resposta baseada no seu áudio.",
-      });
-    } catch (error: any) {
-      // If AI fails, just use the transcript directly
-      setNewMessage(prev => prev ? `${prev} ${text}` : text);
-      toast({
-        title: "Erro ao gerar resposta",
-        description: "Usando transcrição direta. " + error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setGeneratingAI(false);
-    }
-  };
-
-  const generateAIResponse = async () => {
-    if (!ticketId) return;
-
-    try {
-      setGeneratingAI(true);
-      
-      const { data, error } = await supabase.functions.invoke('ai-generate-response', {
-        body: {
-          templateKey: 'ticket_response',
-          ticketId: ticketId,
-          customInstructions: "Responda de forma profissional e amigável"
-        }
-      });
-
-      if (error) throw error;
-
-      setNewMessage(data.text);
-      toast({
-        title: "Resposta gerada!",
-        description: "A IA gerou uma sugestão de resposta.",
+        description: "A IA gerou uma resposta. Revise e envie.",
       });
     } catch (error: any) {
       toast({
@@ -448,20 +417,28 @@ export function MaintenanceChatDialog({
               accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx"
             />
             
-            {/* Row 1: Microphone + AI (team only) */}
+            {/* Row 1: Microphone + AI Command + Generate Button (team only) */}
             {isTeamMember && (
-              <div className="flex gap-2">
+              <div className="flex gap-2 items-end">
                 <VoiceToTextInput
                   onTranscript={handleVoiceTranscript}
                   disabled={sending || generatingAI}
+                />
+                <Textarea
+                  value={aiCommand}
+                  onChange={(e) => setAiCommand(e.target.value)}
+                  placeholder="Comando para IA (grave áudio ou digite)..."
+                  className="min-h-[36px] max-h-[80px] resize-none flex-1 text-sm"
+                  rows={1}
+                  disabled={generatingAI}
                 />
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="h-8 gap-1.5"
+                  className="h-9 gap-1.5 flex-shrink-0"
                   onClick={generateAIResponse}
-                  disabled={sending || generatingAI}
+                  disabled={sending || generatingAI || !aiCommand.trim()}
                   title="Gerar resposta com IA"
                 >
                   {generatingAI ? (
@@ -469,7 +446,7 @@ export function MaintenanceChatDialog({
                   ) : (
                     <Sparkles className="h-4 w-4" />
                   )}
-                  <span className="text-xs">Gerar resposta</span>
+                  <span className="text-xs hidden sm:inline">Gerar</span>
                 </Button>
               </div>
             )}
@@ -493,7 +470,7 @@ export function MaintenanceChatDialog({
                 value={newMessage}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
-                placeholder="Digite sua mensagem..."
+                placeholder="Mensagem para enviar..."
                 className="min-h-[40px] max-h-[120px] resize-none flex-1"
                 rows={1}
               />

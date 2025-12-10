@@ -69,6 +69,7 @@ export function ChargeChatDialog({
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [newMessage, setNewMessage] = useState("");
+  const [aiCommand, setAiCommand] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
   const [generatingAI, setGeneratingAI] = useState(false);
@@ -290,25 +291,30 @@ export function ChargeChatDialog({
   };
 
   const generateAIResponse = async () => {
-    if (!chargeId) return;
+    if (!chargeId || !aiCommand.trim()) return;
 
     try {
       setGeneratingAI(true);
+      toast({
+        title: "Gerando resposta...",
+        description: "A IA está criando uma resposta baseada no comando.",
+      });
       
       const { data, error } = await supabase.functions.invoke('ai-generate-response', {
         body: {
           templateKey: 'charge_response',
           chargeId: chargeId,
-          customInstructions: "Responda de forma profissional e amigável sobre a cobrança"
+          customInstructions: `Baseado nas instruções do atendente: "${aiCommand}", gere uma resposta profissional e amigável para o proprietário.`
         }
       });
 
       if (error) throw error;
 
       setNewMessage(data.text);
+      setAiCommand(""); // Clear the command after generating
       toast({
         title: "Resposta gerada!",
-        description: "A IA gerou uma sugestão de resposta.",
+        description: "A IA gerou uma resposta. Revise e envie.",
       });
     } catch (error: any) {
       toast({
@@ -321,44 +327,9 @@ export function ChargeChatDialog({
     }
   };
 
-  const handleVoiceTranscript = async (text: string) => {
-    if (!chargeId) {
-      setNewMessage(prev => prev ? `${prev} ${text}` : text);
-      return;
-    }
-
-    try {
-      setGeneratingAI(true);
-      toast({
-        title: "Gerando resposta...",
-        description: "A IA está criando uma resposta baseada no seu áudio.",
-      });
-      
-      const { data, error } = await supabase.functions.invoke('ai-generate-response', {
-        body: {
-          templateKey: 'charge_response',
-          chargeId: chargeId,
-          customInstructions: `Baseado nas instruções do atendente: "${text}", gere uma resposta profissional e amigável para o proprietário.`
-        }
-      });
-
-      if (error) throw error;
-
-      setNewMessage(data.text);
-      toast({
-        title: "Resposta gerada!",
-        description: "A IA gerou uma resposta baseada no seu áudio.",
-      });
-    } catch (error: any) {
-      setNewMessage(prev => prev ? `${prev} ${text}` : text);
-      toast({
-        title: "Erro ao gerar resposta",
-        description: "Usando transcrição direta. " + error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setGeneratingAI(false);
-    }
+  const handleVoiceTranscript = (text: string) => {
+    // Put transcription in the AI command box
+    setAiCommand(prev => prev ? `${prev} ${text}` : text);
   };
 
   const handlePreviewMedia = async (filePath: string, fileName: string) => {
@@ -562,20 +533,28 @@ export function ChargeChatDialog({
               accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx"
             />
             
-            {/* Row 1: Microphone + AI (team only) */}
+            {/* Row 1: Microphone + AI Command + Generate Button (team only) */}
             {isTeamMember && (
-              <div className="flex gap-2">
+              <div className="flex gap-2 items-end">
                 <VoiceToTextInput
                   onTranscript={handleVoiceTranscript}
                   disabled={sending || generatingAI}
+                />
+                <Textarea
+                  value={aiCommand}
+                  onChange={(e) => setAiCommand(e.target.value)}
+                  placeholder="Comando para IA (grave áudio ou digite)..."
+                  className="min-h-[36px] max-h-[80px] resize-none flex-1 text-sm"
+                  rows={1}
+                  disabled={generatingAI}
                 />
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="h-8 gap-1.5"
+                  className="h-9 gap-1.5 flex-shrink-0"
                   onClick={generateAIResponse}
-                  disabled={sending || generatingAI}
+                  disabled={sending || generatingAI || !aiCommand.trim()}
                   title="Gerar resposta com IA"
                 >
                   {generatingAI ? (
@@ -583,7 +562,7 @@ export function ChargeChatDialog({
                   ) : (
                     <Sparkles className="h-4 w-4" />
                   )}
-                  <span className="text-xs">Gerar resposta</span>
+                  <span className="text-xs hidden sm:inline">Gerar</span>
                 </Button>
               </div>
             )}
@@ -607,7 +586,7 @@ export function ChargeChatDialog({
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Digite sua mensagem..."
+                placeholder="Mensagem para enviar..."
                 className="flex-1 min-h-[40px] max-h-[120px] resize-none"
                 disabled={sending}
               />
