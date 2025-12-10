@@ -114,7 +114,7 @@ export function OwnerTicketsPreview() {
 
   return (
     <>
-      <Card className="mb-6 overflow-hidden border-blue-500/20">
+      <Card className="overflow-hidden border-blue-500/20">
         <CardHeader className="pb-3 bg-gradient-to-r from-blue-500/5 to-transparent">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="text-lg flex items-center gap-2">

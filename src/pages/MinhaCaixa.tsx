@@ -18,6 +18,7 @@ import { OwnerScoreDisplay } from "@/components/OwnerScoreDisplay";
 import { MaintenanceKanbanPreview } from "@/components/MaintenanceKanbanPreview";
 import { OwnerMaintenanceProgress } from "@/components/OwnerMaintenanceProgress";
 import { OwnerTicketsPreview } from "@/components/OwnerTicketsPreview";
+import { OwnerChargesPreview } from "@/components/OwnerChargesPreview";
 
 
 export default function MinhaCaixa() {
@@ -187,8 +188,13 @@ export default function MinhaCaixa() {
         {/* Owner Maintenance Progress - for owners */}
         {profile?.role === "owner" && <OwnerMaintenanceProgress />}
 
-        {/* Owner Tickets Preview - for owners */}
-        {profile?.role === "owner" && <OwnerTicketsPreview />}
+        {/* Owner Tickets and Charges Preview - for owners - side by side */}
+        {profile?.role === "owner" && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+            <OwnerTicketsPreview />
+            <OwnerChargesPreview />
+          </div>
+        )}
 
         {/* Owner Properties Section */}
         <OwnerPropertiesSection />
