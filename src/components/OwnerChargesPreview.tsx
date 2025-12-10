@@ -62,7 +62,7 @@ export function OwnerChargesPreview() {
   const [chatOpen, setChatOpen] = useState(false);
   const [pixDialogOpen, setPixDialogOpen] = useState(false);
   const [pixCharge, setPixCharge] = useState<OwnerCharge | null>(null);
-  const [pixLoading, setPixLoading] = useState(false);
+  const [generatingPixFor, setGeneratingPixFor] = useState<string | null>(null);
   const [selectedCharges, setSelectedCharges] = useState<string[]>([]);
   const [generatingPayment, setGeneratingPayment] = useState(false);
   const [groupPayment, setGroupPayment] = useState<{
@@ -126,7 +126,7 @@ export function OwnerChargesPreview() {
     
     // Generate payment first
     try {
-      setPixLoading(true);
+      setGeneratingPixFor(charge.id);
       const { data, error } = await supabase.functions.invoke('create-group-payment', {
         body: { chargeIds: [charge.id] }
       });
@@ -144,7 +144,7 @@ export function OwnerChargesPreview() {
       console.error('Erro ao gerar PIX:', error);
       toast.error('Erro ao gerar QR Code PIX');
     } finally {
-      setPixLoading(false);
+      setGeneratingPixFor(null);
     }
   };
 
@@ -419,9 +419,13 @@ export function OwnerChargesPreview() {
                           size="sm"
                           className="h-6 px-2 text-[10px]"
                           onClick={(e) => handleOpenPix(charge, e)}
-                          disabled={pixLoading}
+                          disabled={generatingPixFor === charge.id}
                         >
-                          <QrCode className="h-3 w-3" />
+                          {generatingPixFor === charge.id ? (
+                            <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full" />
+                          ) : (
+                            <QrCode className="h-3 w-3" />
+                          )}
                         </Button>
                         <Button
                           variant="outline"
