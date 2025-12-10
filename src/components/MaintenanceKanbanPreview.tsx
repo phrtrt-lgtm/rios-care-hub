@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Wrench, ArrowRight, User, Calendar, ChevronRight, ChevronLeft, MessageSquare, Building } from "lucide-react";
+import { Wrench, ArrowRight, User, Calendar, ChevronRight, ChevronLeft, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -346,59 +346,37 @@ export function MaintenanceKanbanPreview() {
                         <div
                           key={ticket.id}
                           onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
-                          className="bg-card rounded-lg p-2 shadow-sm cursor-pointer hover:shadow-md transition-shadow w-full"
+                          className="bg-card rounded-lg p-2 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
                         >
-                          {/* Property thumbnail + Content */}
-                          <div className="flex gap-2 min-w-0">
-                            {/* Property photo thumbnail */}
-                            <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0 bg-muted">
-                              {ticket.property?.cover_photo_url ? (
-                                <img 
-                                  src={ticket.property.cover_photo_url} 
-                                  alt={ticket.property.name || "Imóvel"} 
-                                  className="w-10 h-10 object-cover"
-                                />
-                              ) : (
-                                <div className="w-10 h-10 flex items-center justify-center">
-                                  <Building className="h-4 w-4 text-muted-foreground" />
-                                </div>
-                              )}
-                            </div>
-                            
-                            {/* Text content */}
-                            <div className="flex-1 min-w-0 overflow-hidden">
-                              {/* Property name */}
-                              <p className="font-medium text-xs truncate">
-                                {ticket.property?.name || "Sem unidade"}
-                              </p>
-                              
-                              {/* Subject */}
-                              <p className="text-muted-foreground text-[10px] truncate mt-0.5">
-                                {ticket.subject}
-                              </p>
-                              
-                              {/* Schedule info */}
-                              {ticket.scheduled_at && (
-                                <div className="flex items-center gap-1 mt-1 text-blue-600 text-[10px]">
-                                  <Calendar className="h-3 w-3 flex-shrink-0" />
-                                  <span className="truncate">
-                                    {format(new Date(ticket.scheduled_at), "dd/MM HH:mm", { locale: ptBR })}
-                                    {ticket.service_provider && ` • ${ticket.service_provider.name}`}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
+                          {/* Property name */}
+                          <p className="font-medium text-xs truncate">
+                            {ticket.property?.name || "Sem unidade"}
+                          </p>
                           
-                          {/* Actions - stacked vertically to prevent overflow */}
+                          {/* Subject */}
+                          <p className="text-muted-foreground text-[10px] truncate mt-0.5">
+                            {ticket.subject}
+                          </p>
+                          
+                          {/* Schedule info */}
+                          {ticket.scheduled_at && (
+                            <div className="flex items-center gap-1 mt-1 text-blue-600 text-[10px]">
+                              <Calendar className="h-3 w-3 flex-shrink-0" />
+                              <span className="truncate">
+                                {format(new Date(ticket.scheduled_at), "dd/MM HH:mm", { locale: ptBR })}
+                              </span>
+                            </div>
+                          )}
+                          
+                          {/* Actions */}
                           <div className="flex flex-col gap-1 mt-2">
                             <Button
                               size="sm"
                               variant="outline"
-                              className="w-full h-8 text-xs"
+                              className="w-full h-7 text-xs"
                               onClick={(e) => openChatDialog(ticket, e)}
                             >
-                              <MessageSquare className="h-3.5 w-3.5 mr-1" />
+                              <MessageSquare className="h-3 w-3 mr-1" />
                               Chat
                               {unreadCounts[ticket.id] > 0 && (
                                 <Badge variant="destructive" className="ml-1 h-4 px-1 text-[10px]">
@@ -409,7 +387,7 @@ export function MaintenanceKanbanPreview() {
                             {column.key === "pendente" && (
                               <Button
                                 size="sm"
-                                className="w-full h-8 text-xs"
+                                className="w-full h-7 text-xs"
                                 onClick={(e) => openScheduleDialog(ticket, e)}
                               >
                                 Agendar
@@ -420,14 +398,14 @@ export function MaintenanceKanbanPreview() {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="flex-1 h-8 text-xs"
+                                  className="flex-1 h-7 text-xs"
                                   onClick={(e) => openScheduleDialog(ticket, e)}
                                 >
                                   Editar
                                 </Button>
                                 <Button
                                   size="sm"
-                                  className="flex-1 h-8"
+                                  className="flex-1 h-7 text-xs"
                                   onClick={(e) => moveToExecution(ticket, e)}
                                 >
                                   <ChevronRight className="h-4 w-4" />
