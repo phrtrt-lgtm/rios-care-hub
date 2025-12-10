@@ -47,6 +47,7 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
   const [file, setFile] = useState<File | null>(null);
   const [selectedOption, setSelectedOption] = useState<string>("");
   const [quantity, setQuantity] = useState<number>(1);
+  const [itemQuantities, setItemQuantities] = useState<Record<string, number>>({});
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryItems, setGalleryItems] = useState<any[]>([]);
   const [galleryIndex, setGalleryIndex] = useState(0);
@@ -90,6 +91,12 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
           proposal_options (
             id,
             option_text,
+            order_index
+          ),
+          proposal_items (
+            id,
+            name,
+            unit_price_cents,
             order_index
           )
         `)
@@ -152,7 +159,7 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
     // Check if option has requires_payment flag
     if (selectedOpt?.requires_payment) {
       const paymentType = (proposal as any)?.payment_type;
-      return paymentType === 'fixed' || paymentType === 'quantity';
+      return paymentType === 'fixed' || paymentType === 'quantity' || paymentType === 'items';
     }
     return false;
   };
@@ -167,7 +174,22 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
     if (paymentType === 'quantity') {
       return ((proposal as any).unit_price_cents || 0) * quantity;
     }
+    if (paymentType === 'items') {
+      const items = (proposal as any).proposal_items || [];
+      return items.reduce((total: number, item: any) => {
+        const qty = itemQuantities[item.id] || 0;
+        return total + (item.unit_price_cents * qty);
+      }, 0);
+    }
     return 0;
+  };
+
+  const hasAnyItemSelected = () => {
+    const paymentType = (proposal as any)?.payment_type;
+    if (paymentType === 'items') {
+      return Object.values(itemQuantities).some(qty => qty > 0);
+    }
+    return true;
   };
 
   const respondMutation = useMutation({
@@ -193,6 +215,7 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
 
       if (myResponse) {
         // Update existing response
+        const paymentType = (proposal as any)?.payment_type;
         const { error } = await supabase
           .from('proposal_responses')
           .update({
@@ -200,15 +223,42 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
             note: note || null,
             attachment_path: attachmentPath || myResponse.attachment_path,
             responded_at: new Date().toISOString(),
-            quantity: proposal?.payment_type === 'quantity' ? quantity : null,
+            quantity: paymentType === 'quantity' ? quantity : null,
           })
           .eq('id', myResponse.id);
 
         if (error) throw error;
+
+        // Save item quantities if payment_type is 'items'
+        if (paymentType === 'items' && requiresPayment()) {
+          const items = (proposal as any).proposal_items || [];
+          const itemsToInsert = items
+            .filter((item: any) => (itemQuantities[item.id] || 0) > 0)
+            .map((item: any) => ({
+              response_id: myResponse.id,
+              item_id: item.id,
+              quantity: itemQuantities[item.id] || 0,
+            }));
+
+          if (itemsToInsert.length > 0) {
+            // Delete existing and insert new
+            await supabase
+              .from('proposal_response_items')
+              .delete()
+              .eq('response_id', myResponse.id);
+
+            const { error: itemsError } = await supabase
+              .from('proposal_response_items')
+              .insert(itemsToInsert);
+
+            if (itemsError) throw itemsError;
+          }
+        }
       }
 
       // If requires payment, generate payment link
       if (requiresPayment()) {
+        const paymentType = (proposal as any)?.payment_type;
         setIsGeneratingPayment(true);
         try {
           const { data: paymentResult, error: paymentError } = await supabase.functions.invoke(
@@ -216,7 +266,8 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
             {
               body: { 
                 proposalId,
-                quantity: proposal?.payment_type === 'quantity' ? quantity : undefined
+                quantity: paymentType === 'quantity' ? quantity : undefined,
+                itemQuantities: paymentType === 'items' ? itemQuantities : undefined,
               }
             }
           );
@@ -519,6 +570,63 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
                   </div>
                 )}
 
+                {/* Multiple Items Input */}
+                {selectedOption && requiresPayment() && (proposal as any).payment_type === 'items' && (
+                  <div className="p-3 rounded-lg bg-muted border space-y-3">
+                    <Label className="text-sm font-medium">Selecione as quantidades *</Label>
+                    <div className="space-y-2">
+                      {((proposal as any).proposal_items || []).map((item: any) => (
+                        <div key={item.id} className="flex items-center justify-between gap-2 p-2 bg-background rounded border">
+                          <div className="flex-1">
+                            <p className="text-sm font-medium">{item.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              R$ {(item.unit_price_cents / 100).toFixed(2)} cada
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => setItemQuantities(prev => ({
+                                ...prev,
+                                [item.id]: Math.max(0, (prev[item.id] || 0) - 1)
+                              }))}
+                              disabled={(itemQuantities[item.id] || 0) <= 0}
+                            >
+                              -
+                            </Button>
+                            <span className="w-8 text-center font-medium">
+                              {itemQuantities[item.id] || 0}
+                            </span>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => setItemQuantities(prev => ({
+                                ...prev,
+                                [item.id]: (prev[item.id] || 0) + 1
+                              }))}
+                            >
+                              +
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {calculatePaymentAmount() > 0 && (
+                      <div className="p-2 rounded bg-primary/10 text-center">
+                        <p className="text-xs text-muted-foreground">Total a pagar</p>
+                        <p className="text-lg font-bold text-primary">
+                          R$ {(calculatePaymentAmount() / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Payment warning - fixed amount */}
                 {selectedOption && requiresPayment() && (proposal as any).payment_type === 'fixed' && (
                   <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
@@ -563,7 +671,12 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
 
                 <Button
                   onClick={() => respondMutation.mutate()}
-                  disabled={respondMutation.isPending || !selectedOption || isGeneratingPayment}
+                  disabled={
+                    respondMutation.isPending || 
+                    !selectedOption || 
+                    isGeneratingPayment ||
+                    (requiresPayment() && (proposal as any).payment_type === 'items' && !hasAnyItemSelected())
+                  }
                   className="w-full"
                   size="lg"
                 >
