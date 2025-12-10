@@ -1176,6 +1176,7 @@ export type Database = {
           option_text: string
           order_index: number
           proposal_id: string
+          requires_payment: boolean | null
         }
         Insert: {
           created_at?: string
@@ -1183,6 +1184,7 @@ export type Database = {
           option_text: string
           order_index?: number
           proposal_id: string
+          requires_payment?: boolean | null
         }
         Update: {
           created_at?: string
@@ -1190,6 +1192,7 @@ export type Database = {
           option_text?: string
           order_index?: number
           proposal_id?: string
+          requires_payment?: boolean | null
         }
         Relationships: [
           {
@@ -1215,6 +1218,7 @@ export type Database = {
           payment_amount_cents: number | null
           payment_status: string | null
           proposal_id: string
+          quantity: number | null
           responded_at: string
           selected_option_id: string | null
         }
@@ -1231,6 +1235,7 @@ export type Database = {
           payment_amount_cents?: number | null
           payment_status?: string | null
           proposal_id: string
+          quantity?: number | null
           responded_at?: string
           selected_option_id?: string | null
         }
@@ -1247,6 +1252,7 @@ export type Database = {
           payment_amount_cents?: number | null
           payment_status?: string | null
           proposal_id?: string
+          quantity?: number | null
           responded_at?: string
           selected_option_id?: string | null
         }
@@ -1278,11 +1284,13 @@ export type Database = {
           description: string
           has_attachments: boolean | null
           id: string
+          payment_type: string | null
           property_id: string | null
           required_approvals: number | null
           status: string
           target_audience: string
           title: string
+          unit_price_cents: number | null
           updated_at: string
         }
         Insert: {
@@ -1295,11 +1303,13 @@ export type Database = {
           description: string
           has_attachments?: boolean | null
           id?: string
+          payment_type?: string | null
           property_id?: string | null
           required_approvals?: number | null
           status?: string
           target_audience?: string
           title: string
+          unit_price_cents?: number | null
           updated_at?: string
         }
         Update: {
@@ -1312,11 +1322,13 @@ export type Database = {
           description?: string
           has_attachments?: boolean | null
           id?: string
+          payment_type?: string | null
           property_id?: string | null
           required_approvals?: number | null
           status?: string
           target_audience?: string
           title?: string
+          unit_price_cents?: number | null
           updated_at?: string
         }
         Relationships: [
