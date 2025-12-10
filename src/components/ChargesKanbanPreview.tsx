@@ -8,11 +8,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   DollarSign, 
   ArrowRight, 
-  Building, 
   MessageSquare, 
-  CreditCard,
-  AlertCircle,
-  Clock
+  CreditCard
 } from "lucide-react";
 
 import { format, differenceInDays, isPast } from "date-fns";
@@ -248,79 +245,40 @@ export function ChargesKanbanPreview() {
                           <div
                             key={charge.id}
                             onClick={() => navigate(`/cobranca/${charge.id}`)}
-                            className="bg-card rounded-lg p-2 shadow-sm cursor-pointer hover:shadow-md transition-shadow w-full overflow-hidden"
+                            className="bg-card rounded-lg p-2 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
                           >
-                            {/* Property thumbnail + Content */}
-                            <div className="flex gap-2 min-w-0">
-                              {/* Property photo thumbnail */}
-                              <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0 bg-muted">
-                                {charge.property?.cover_photo_url ? (
-                                  <img 
-                                    src={charge.property.cover_photo_url} 
-                                    alt={charge.property.name || "Imóvel"} 
-                                    className="w-10 h-10 object-cover"
-                                  />
-                                ) : (
-                                  <div className="w-10 h-10 flex items-center justify-center">
-                                    <Building className="h-4 w-4 text-muted-foreground" />
-                                  </div>
-                                )}
-                              </div>
-                              
-                              {/* Text content */}
-                              <div className="flex-1 min-w-0 overflow-hidden">
-                                <p className="font-medium text-xs truncate">
-                                  {charge.property?.name || charge.owner?.name || "Sem prop."}
-                                </p>
-                                <p className="text-muted-foreground text-[10px] truncate">
-                                  {charge.title}
-                                </p>
-                                
-                                {/* Amount + Due date */}
-                                <div className="flex items-center gap-1 mt-1 flex-wrap">
-                                  <span className="font-bold text-green-600 text-xs">
-                                    {formatBRL(dueAmount)}
-                                  </span>
-                                  {dueDateInfo && (
-                                    <span className={`text-[10px] ${dueDateInfo.colorClass}`}>
-                                      {dueDateInfo.text}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
+                            {/* Property name - single line */}
+                            <p className="font-medium text-xs truncate">
+                              {charge.property?.name || charge.owner?.name || "Sem prop."}
+                            </p>
                             
-                            {/* Actions */}
-                            <div className="flex gap-1 mt-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="flex-1 h-7 text-[10px] px-1"
-                                onClick={(e) => openChatDialog(charge, e)}
-                              >
-                                <MessageSquare className="h-3 w-3 mr-0.5" />
-                                Chat
-                                {(charge._count?.messages || 0) > 0 && (
-                                  <Badge variant="secondary" className="ml-0.5 h-4 px-1 text-[9px]">
-                                    {charge._count?.messages}
-                                  </Badge>
-                                )}
-                              </Button>
-                              
-                              {isOwner && charge.payment_link_url && (
-                                <Button
-                                  size="sm"
-                                  className="flex-1 h-7 text-[10px] px-1 bg-green-600 hover:bg-green-700"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    window.open(charge.payment_link_url!, "_blank");
-                                  }}
-                                >
-                                  <CreditCard className="h-3 w-3 mr-0.5" />
-                                  Pagar
-                                </Button>
+                            {/* Amount + Due date */}
+                            <div className="flex items-center justify-between mt-1">
+                              <span className="font-bold text-green-600 text-sm">
+                                {formatBRL(dueAmount)}
+                              </span>
+                              {dueDateInfo && (
+                                <span className={`text-[10px] ${dueDateInfo.colorClass}`}>
+                                  {dueDateInfo.text}
+                                </span>
                               )}
                             </div>
+                            
+                            {/* Chat button */}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="w-full h-7 text-xs mt-2"
+                              onClick={(e) => openChatDialog(charge, e)}
+                            >
+                              <MessageSquare className="h-3 w-3 mr-1" />
+                              Chat
+                              {(charge._count?.messages || 0) > 0 && (
+                                <Badge variant="secondary" className="ml-1 h-4 px-1 text-[9px]">
+                                  {charge._count?.messages}
+                                </Badge>
+                              )}
+                            </Button>
                           </div>
                         );
                       })}
