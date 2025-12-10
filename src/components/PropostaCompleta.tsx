@@ -341,8 +341,14 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
   const options = proposal.proposal_options || [];
   const mySelectedOption = options.find((o: any) => o.id === myResponse?.selected_option_id);
 
-  // If already responded AND paid (or no payment required), don't show
-  if (hasResponded && (hasPaid || !proposal.amount_cents)) {
+  // Check if the selected option requires payment
+  const selectedOptionRequiresPayment = mySelectedOption?.requires_payment === true;
+  const paymentType = (proposal as any)?.payment_type;
+  const hasPaymentConfig = paymentType === 'fixed' || paymentType === 'quantity' || paymentType === 'items';
+  const needsPayment = selectedOptionRequiresPayment && hasPaymentConfig;
+
+  // If already responded AND paid (or no payment required for the selected option), don't show
+  if (hasResponded && (hasPaid || !needsPayment)) {
     return null;
   }
 
