@@ -10,7 +10,7 @@ import { AlertBanner } from "@/components/AlertBanner";
 import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
 import { NotificationButton } from "@/components/NotificationButton";
 import TopChargesRules from "@/components/TopChargesRules";
-import { VotacoesPendentes } from "@/components/VotacoesPendentes";
+import { PropostasPendentesCompletas } from "@/components/PropostasPendentesCompletas";
 import { supabase } from "@/integrations/supabase/client";
 import OwnerMaintenancePolicyBanner from "@/components/OwnerMaintenancePolicyBanner";
 import { OwnerPropertiesSection } from "@/components/OwnerPropertiesSection";
@@ -175,8 +175,8 @@ export default function MinhaCaixa() {
 
       {/* Content */}
       <main className="container mx-auto px-4 py-6 md:py-8">
-        {/* Propostas Pendentes - Prioridade no topo */}
-        <VotacoesPendentes />
+        {/* Propostas Pendentes - Prioridade no topo - na íntegra para owners */}
+        <PropostasPendentesCompletas />
 
         {/* Kanban de Manutenções - visível para equipe */}
         {(profile?.role === "admin" || profile?.role === "maintenance" || profile?.role === "agent") && (
