@@ -402,18 +402,18 @@ export function OwnerChargesPreview() {
                     </div>
                   </div>
 
-                  {/* 3 rows: Total, Ajuda, Devido */}
-                  <div className="space-y-2 pl-7">
+                  {/* Payment breakdown card */}
+                  <div className="ml-7 mt-2 p-3 rounded-lg bg-muted/50 border border-border/50 space-y-2">
                     {/* Row 1: Total */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-xs">
-                        <span className="text-muted-foreground">Total:</span>
-                        <span className="text-muted-foreground font-medium">{formatBRL(charge.amount_cents)}</span>
+                        <span className="text-muted-foreground w-[90px]">Total:</span>
+                        <span className="text-foreground font-medium">{formatBRL(charge.amount_cents)}</span>
                       </div>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-7 px-3 text-xs"
+                        className="h-7 w-[70px] text-xs justify-center"
                         onClick={(e) => handleOpenPix(charge, e)}
                         disabled={generatingPixFor === charge.id}
                       >
@@ -428,13 +428,13 @@ export function OwnerChargesPreview() {
                     {/* Row 2: Ajuda da RIOS */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-xs">
-                        <span className="text-green-600">Ajuda da RIOS:</span>
+                        <span className="text-green-600 w-[90px]">Ajuda RIOS:</span>
                         <span className="text-green-600 font-medium">-{formatBRL(charge.management_contribution_cents)}</span>
                       </div>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-7 px-3 text-xs"
+                        className="h-7 w-[70px] text-xs justify-center"
                         onClick={(e) => handleOpenPaymentLink(charge, e)}
                         disabled={generatingLinkFor === charge.id}
                       >
@@ -449,16 +449,19 @@ export function OwnerChargesPreview() {
                       </Button>
                     </div>
 
+                    {/* Divider */}
+                    <div className="border-t border-border/50" />
+
                     {/* Row 3: Total Devido */}
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className="font-semibold text-primary">Total Devido:</span>
-                        <span className="font-bold text-primary">{formatBRL(dueAmount)}</span>
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="font-semibold text-primary w-[90px]">A Pagar:</span>
+                        <span className="font-bold text-primary text-base">{formatBRL(dueAmount)}</span>
                       </div>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-7 px-3 text-xs relative"
+                        className="h-7 w-[70px] text-xs justify-center relative"
                         onClick={(e) => handleOpenChat(charge, e)}
                       >
                         <MessageSquare className="h-3.5 w-3.5 mr-1" />
