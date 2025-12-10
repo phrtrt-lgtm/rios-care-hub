@@ -19,11 +19,17 @@ export function PropostasPendentesCompletas() {
           id,
           title,
           amount_cents,
+          payment_type,
           proposal_responses!inner (
             id,
             owner_id,
             selected_option_id,
-            paid_at
+            paid_at,
+            payment_amount_cents
+          ),
+          proposal_options (
+            id,
+            requires_payment
           )
         `)
         .eq('status', 'active')
@@ -34,7 +40,7 @@ export function PropostasPendentesCompletas() {
       
       // Filtrar para mostrar apenas:
       // 1. Propostas não respondidas (selected_option_id is null)
-      // 2. OU propostas respondidas mas não pagas (quando tem valor)
+      // 2. OU propostas respondidas mas não pagas (quando opção selecionada requer pagamento)
       const filtered = (data || []).filter((p: any) => {
         const response = p.proposal_responses?.[0];
         if (!response) return false;
@@ -42,8 +48,13 @@ export function PropostasPendentesCompletas() {
         // Não respondeu ainda
         if (!response.selected_option_id) return true;
         
-        // Respondeu mas não pagou (e tem valor)
-        if (p.amount_cents && p.amount_cents > 0 && !response.paid_at) return true;
+        // Respondeu - verificar se a opção selecionada requer pagamento
+        const selectedOption = p.proposal_options?.find((o: any) => o.id === response.selected_option_id);
+        const optionRequiresPayment = selectedOption?.requires_payment === true;
+        const hasPaymentConfig = p.payment_type === 'fixed' || p.payment_type === 'quantity' || p.payment_type === 'items';
+        
+        // Se a opção requer pagamento e ainda não pagou, mostrar
+        if (optionRequiresPayment && hasPaymentConfig && !response.paid_at) return true;
         
         return false;
       });
