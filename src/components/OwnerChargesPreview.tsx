@@ -360,7 +360,8 @@ export function OwnerChargesPreview() {
                   }`}
                   onClick={() => navigate(`/cobranca-detalhes/${charge.id}`)}
                 >
-                  <div className="flex items-start gap-2">
+                  {/* Top row: checkbox, photo, info */}
+                  <div className="flex items-start gap-2 mb-2">
                     {/* Checkbox */}
                     <div className="flex items-center pt-1" onClick={(e) => e.stopPropagation()}>
                       <Checkbox
@@ -386,7 +387,7 @@ export function OwnerChargesPreview() {
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
                         <Badge variant={statusConfig.variant} className="text-[10px] px-1.5 py-0">
                           {statusConfig.label}
                         </Badge>
@@ -398,60 +399,63 @@ export function OwnerChargesPreview() {
                       <h4 className="font-medium text-sm line-clamp-1 group-hover:text-primary transition-colors">
                         {charge.title}
                       </h4>
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className="text-muted-foreground line-through">
-                          {formatBRL(charge.amount_cents)}
-                        </span>
-                        <span className="text-green-600 font-medium">
-                          -{formatBRL(charge.management_contribution_cents)}
-                        </span>
-                        <span className="font-bold text-primary">
-                          {formatBRL(dueAmount)}
-                        </span>
-                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom row: values and actions */}
+                  <div className="flex items-center justify-between gap-2 pl-7">
+                    {/* Values */}
+                    <div className="flex items-center gap-1.5 text-xs flex-wrap">
+                      <span className="text-muted-foreground line-through">
+                        {formatBRL(charge.amount_cents)}
+                      </span>
+                      <span className="text-green-600 font-medium">
+                        -{formatBRL(charge.management_contribution_cents)}
+                      </span>
+                      <span className="font-bold text-primary">
+                        {formatBRL(dueAmount)}
+                      </span>
                     </div>
 
                     {/* Actions */}
-                    <div className="flex flex-col gap-1 shrink-0">
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-6 px-2 text-[10px]"
-                          onClick={(e) => handleOpenPix(charge, e)}
-                          disabled={generatingPixFor === charge.id}
-                        >
-                          {generatingPixFor === charge.id ? (
-                            <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full" />
-                          ) : (
-                            <QrCode className="h-3 w-3" />
-                          )}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-6 px-2 text-[10px]"
-                          onClick={(e) => handleOpenPaymentLink(charge, e)}
-                          disabled={generatingLinkFor === charge.id}
-                        >
-                          {generatingLinkFor === charge.id ? (
-                            <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full" />
-                          ) : (
-                            <>
-                              <CreditCard className="h-3 w-3 mr-0.5" />
-                              12x
-                            </>
-                          )}
-                        </Button>
-                      </div>
+                    <div className="flex items-center gap-1 shrink-0">
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-6 px-2 text-[10px] relative gap-1"
+                        className="h-7 px-2 text-xs"
+                        onClick={(e) => handleOpenPix(charge, e)}
+                        disabled={generatingPixFor === charge.id}
+                      >
+                        {generatingPixFor === charge.id ? (
+                          <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full" />
+                        ) : (
+                          <QrCode className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={(e) => handleOpenPaymentLink(charge, e)}
+                        disabled={generatingLinkFor === charge.id}
+                      >
+                        {generatingLinkFor === charge.id ? (
+                          <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full" />
+                        ) : (
+                          <>
+                            <CreditCard className="h-3.5 w-3.5 mr-1" />
+                            12x
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-xs relative"
                         onClick={(e) => handleOpenChat(charge, e)}
                       >
-                        <MessageSquare className="h-3 w-3" />
-                        <span>Msgs</span>
+                        <MessageSquare className="h-3.5 w-3.5 mr-1" />
+                        Msgs
                         {unreadCount > 0 && (
                           <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
                             {unreadCount > 9 ? "9+" : unreadCount}
