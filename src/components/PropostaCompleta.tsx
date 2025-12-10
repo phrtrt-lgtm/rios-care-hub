@@ -91,7 +91,8 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
           proposal_options (
             id,
             option_text,
-            order_index
+            order_index,
+            requires_payment
           ),
           proposal_items (
             id,
