@@ -297,11 +297,8 @@ const NovoAlerta = () => {
       // Send emails via edge function
       await supabase.functions.invoke('send-alert-email', {
         body: {
-          alert_id: alert.id,
-          title: formData.title,
-          message: formData.message,
-          type: formData.type,
-          recipient_ids: recipientIds,
+          alertId: alert.id,
+          recipientIds: recipientIds,
         },
       });
 
