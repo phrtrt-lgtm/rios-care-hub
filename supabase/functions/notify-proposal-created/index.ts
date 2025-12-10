@@ -42,18 +42,32 @@ serve(async (req) => {
     // Fetch responses to get list of participants
     const { data: responses, error: responsesError } = await supabase
       .from('proposal_responses')
-      .select(`
-        owner_id,
-        profiles (
-          name,
-          email
-        )
-      `)
+      .select('owner_id')
       .eq('proposal_id', proposalId);
 
     if (responsesError) {
       console.error('Error fetching responses:', responsesError);
       throw new Error('Error fetching responses');
+    }
+
+    if (!responses || responses.length === 0) {
+      console.log('No responses found for proposal');
+      return new Response(
+        JSON.stringify({ success: true, sent: 0, message: 'No recipients' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Fetch profiles for all owner_ids
+    const ownerIds = responses.map(r => r.owner_id);
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, name, email')
+      .in('id', ownerIds);
+
+    if (profilesError) {
+      console.error('Error fetching profiles:', profilesError);
+      throw new Error('Error fetching profiles');
     }
 
     // Get email template
@@ -67,8 +81,7 @@ serve(async (req) => {
     const results = [];
 
     // Send email to each owner
-    for (const response of responses || []) {
-      const profile = response.profiles as any;
+    for (const profile of profiles || []) {
       if (!profile?.email) continue;
 
       const variables = {
@@ -97,7 +110,7 @@ serve(async (req) => {
       try {
         await supabase.functions.invoke('send-push', {
           body: {
-            ownerId: response.owner_id,
+            ownerId: profile.id,
             payload: {
               title: '📋 Nova Proposta de Votação',
               body: `${proposal.title} - Prazo: ${new Date(proposal.deadline).toLocaleDateString('pt-BR')}`,
@@ -111,7 +124,7 @@ serve(async (req) => {
       }
 
       results.push({
-        owner_id: response.owner_id,
+        owner_id: profile.id,
         email: profile.email,
         result: emailResult,
       });
