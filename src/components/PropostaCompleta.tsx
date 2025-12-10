@@ -508,7 +508,7 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
             <Separator />
 
             {/* Already Responded - Waiting Payment */}
-            {hasResponded && !hasPaid && proposal.amount_cents && proposal.amount_cents > 0 && (
+            {hasResponded && !hasPaid && needsPayment && (
               <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
                 <div className="flex items-start gap-3">
                   <CreditCard className="h-5 w-5 text-amber-600 mt-0.5" />
@@ -519,10 +519,12 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
                     <p className="text-sm text-amber-700 dark:text-amber-500 mt-1">
                       Você respondeu: <strong>{mySelectedOption?.option_text}</strong>
                     </p>
-                    <p className="text-sm text-amber-700 dark:text-amber-500 mt-1">
-                      Complete o pagamento de{' '}
-                      <strong>R$ {(proposal.amount_cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
-                    </p>
+                    {myResponse?.payment_amount_cents && myResponse.payment_amount_cents > 0 && (
+                      <p className="text-sm text-amber-700 dark:text-amber-500 mt-1">
+                        Complete o pagamento de{' '}
+                        <strong>R$ {(myResponse.payment_amount_cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+                      </p>
+                    )}
                     <Button
                       className="mt-3 w-full"
                       onClick={async () => {
