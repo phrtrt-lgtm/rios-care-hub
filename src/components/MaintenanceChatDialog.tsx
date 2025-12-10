@@ -437,59 +437,57 @@ export function MaintenanceChatDialog({
           )}
 
           {/* Input area */}
-          <div className="p-3 border-t flex-shrink-0">
-            <div className="flex gap-2 items-end">
-              {/* File input */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                onChange={handleFileSelect}
-                className="hidden"
-                accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx"
-              />
-              
-              {/* Action buttons */}
-              <div className="flex flex-col gap-1">
+          <div className="p-3 border-t flex-shrink-0 space-y-2">
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              onChange={handleFileSelect}
+              className="hidden"
+              accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx"
+            />
+            
+            {/* Row 1: Microphone + AI (team only) */}
+            {isTeamMember && (
+              <div className="flex gap-2">
+                <VoiceToTextInput
+                  onTranscript={handleVoiceTranscript}
+                  disabled={sending || generatingAI}
+                />
                 <Button
                   type="button"
                   variant="outline"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={sending}
-                  title="Anexar arquivo"
+                  size="sm"
+                  className="h-8 gap-1.5"
+                  onClick={generateAIResponse}
+                  disabled={sending || generatingAI}
+                  title="Gerar resposta com IA"
                 >
-                  <Paperclip className="h-4 w-4" />
+                  {generatingAI ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-4 w-4" />
+                  )}
+                  <span className="text-xs">Gerar resposta</span>
                 </Button>
-                
-                {isTeamMember && (
-                  <VoiceToTextInput
-                    onTranscript={handleVoiceTranscript}
-                    disabled={sending}
-                  />
-                )}
-                
-                {isTeamMember && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={generateAIResponse}
-                    disabled={sending || generatingAI}
-                    title="Gerar resposta com IA"
-                  >
-                    {generatingAI ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Sparkles className="h-4 w-4" />
-                    )}
-                  </Button>
-                )}
               </div>
+            )}
+            
+            {/* Row 2: Attachment + Message + Send */}
+            <div className="flex gap-2 items-end">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-10 w-10 flex-shrink-0"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={sending}
+                title="Anexar arquivo"
+              >
+                <Paperclip className="h-4 w-4" />
+              </Button>
               
-              {/* Textarea */}
               <Textarea
                 ref={textareaRef}
                 value={newMessage}
@@ -500,12 +498,11 @@ export function MaintenanceChatDialog({
                 rows={1}
               />
               
-              {/* Send button */}
               <Button
                 onClick={handleSend}
                 disabled={(!newMessage.trim() && selectedFiles.length === 0) || sending || uploadingFiles.size > 0}
                 size="icon"
-                className="flex-shrink-0"
+                className="h-10 w-10 flex-shrink-0"
               >
                 {sending || uploadingFiles.size > 0 ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
