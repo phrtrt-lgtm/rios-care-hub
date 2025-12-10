@@ -73,7 +73,10 @@ export default function VotacaoDetalhes() {
             attachment_path,
             responded_at,
             selected_option_id,
-            is_visible_to_owner
+            is_visible_to_owner,
+            paid_at,
+            payment_amount_cents,
+            payment_status
           ),
           proposal_attachments (
             id,
@@ -432,30 +435,62 @@ export default function VotacaoDetalhes() {
           </CardContent>
         </Card>
 
-        {/* Response Options */}
-        <Card className="border-0 shadow-md">
-          <CardContent className="p-6">
-            <h3 className="font-semibold mb-4 flex items-center gap-2">
-              <Check className="h-4 w-4 text-primary" />
-              Opções de Resposta
-            </h3>
-
-            <div className="space-y-3">
-              {options.map((option: any) => (
-                <div
-                  key={option.id}
-                  className={`p-4 rounded-lg border-2 transition-all ${
-                    mySelectedOption?.id === option.id
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border hover:border-muted-foreground/30'
-                  }`}
-                >
-                  <span className="font-medium">{option.option_text}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        {/* Team: Payment Tracking */}
+        {isTeam && proposal.amount_cents && proposal.amount_cents > 0 && (
+          <Card className="border-0 shadow-md border-green-200 dark:border-green-800">
+            <CardContent className="p-6">
+              <h3 className="font-semibold mb-4 flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-green-600" />
+                Pagamentos Recebidos
+              </h3>
+              
+              {(() => {
+                const paidResponses = responses.filter((r: any) => r.paid_at);
+                const totalPaid = paidResponses.reduce((sum: number, r: any) => sum + (r.payment_amount_cents || 0), 0);
+                
+                return (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-green-50 dark:bg-green-950/30">
+                      <span className="text-sm text-muted-foreground">Total arrecadado</span>
+                      <span className="text-xl font-bold text-green-600">
+                        R$ {(totalPaid / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    
+                    <div className="text-sm text-muted-foreground">
+                      {paidResponses.length} de {responses.length} pagaram
+                    </div>
+                    
+                    {paidResponses.length > 0 && (
+                      <div className="space-y-2">
+                        {paidResponses.map((r: any) => (
+                          <div key={r.id} className="flex items-center justify-between p-2 rounded border bg-background">
+                            <span className="font-medium">{r.profiles?.name || 'Proprietário'}</span>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                <Check className="h-3 w-3 mr-1" />
+                                Pago
+                              </Badge>
+                              <span className="text-sm font-medium">
+                                R$ {((r.payment_amount_cents || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {paidResponses.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        Nenhum pagamento recebido ainda
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Team: Vote Results */}
         {isTeam && (
