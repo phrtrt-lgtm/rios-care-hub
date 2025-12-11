@@ -367,7 +367,7 @@ export function OwnerChargesPreview() {
                   {/* Compact header - always visible */}
                   <div
                     className="p-2.5 flex items-center gap-2 cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => navigate(`/cobranca-detalhes/${charge.id}`)}
+                    onClick={() => navigate(`/cobranca/${charge.id}`)}
                   >
                     {/* Checkbox */}
                     <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
