@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -80,7 +80,8 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
             is_visible_to_owner,
             paid_at,
             payment_amount_cents,
-            payment_status
+            payment_status,
+            quantity
           ),
           proposal_attachments (
             id,
@@ -129,6 +130,44 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
 
   const hasResponded = myResponse?.selected_option_id != null;
   const hasPaid = myResponse?.paid_at != null;
+
+  // Fetch saved item quantities if already responded
+  const { data: savedItemQuantities } = useQuery({
+    queryKey: ['proposal-response-items', myResponse?.id],
+    queryFn: async () => {
+      if (!myResponse?.id) return {};
+      
+      const { data, error } = await supabase
+        .from('proposal_response_items')
+        .select('item_id, quantity')
+        .eq('response_id', myResponse.id);
+      
+      if (error) throw error;
+      
+      const quantities: Record<string, number> = {};
+      (data || []).forEach((item: any) => {
+        quantities[item.item_id] = item.quantity;
+      });
+      return quantities;
+    },
+    enabled: !!myResponse?.id && (proposal as any)?.payment_type === 'items',
+  });
+
+  // Initialize state from saved data when available
+  useEffect(() => {
+    if (savedItemQuantities && Object.keys(savedItemQuantities).length > 0) {
+      setItemQuantities(savedItemQuantities);
+    }
+  }, [savedItemQuantities]);
+
+  useEffect(() => {
+    if (myResponse?.selected_option_id && !selectedOption) {
+      setSelectedOption(myResponse.selected_option_id);
+    }
+    if (myResponse?.quantity && myResponse.quantity > 0) {
+      setQuantity(myResponse.quantity);
+    }
+  }, [myResponse]);
 
   // Get signed URLs for attachments
   const { data: attachmentUrls } = useQuery({
@@ -509,7 +548,7 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
 
             {/* Already Responded - Waiting Payment */}
             {hasResponded && !hasPaid && needsPayment && (
-              <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+              <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 space-y-4">
                 <div className="flex items-start gap-3">
                   <CreditCard className="h-5 w-5 text-amber-600 mt-0.5" />
                   <div className="flex-1">
@@ -519,40 +558,143 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
                     <p className="text-sm text-amber-700 dark:text-amber-500 mt-1">
                       Você respondeu: <strong>{mySelectedOption?.option_text}</strong>
                     </p>
-                    {myResponse?.payment_amount_cents && myResponse.payment_amount_cents > 0 && (
-                      <p className="text-sm text-amber-700 dark:text-amber-500 mt-1">
-                        Complete o pagamento de{' '}
-                        <strong>R$ {(myResponse.payment_amount_cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
-                      </p>
-                    )}
-                    <Button
-                      className="mt-3 w-full"
-                      onClick={async () => {
-                        setIsGeneratingPayment(true);
-                        try {
-                          const { data: paymentResult, error: paymentError } = await supabase.functions.invoke(
-                            'create-proposal-payment',
-                            { body: { proposalId } }
-                          );
-                          if (paymentError) throw paymentError;
-                          setPaymentData(paymentResult);
-                          setPixDialogOpen(true);
-                        } catch (err) {
-                          toast({ title: "Erro ao gerar pagamento", variant: "destructive" });
-                        } finally {
-                          setIsGeneratingPayment(false);
-                        }
-                      }}
-                      disabled={isGeneratingPayment}
-                    >
-                      {isGeneratingPayment ? (
-                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Gerando...</>
-                      ) : (
-                        <><CreditCard className="mr-2 h-4 w-4" /> Pagar Agora</>
-                      )}
-                    </Button>
                   </div>
                 </div>
+
+                {/* Editable quantity for quantity-based proposals */}
+                {paymentType === 'quantity' && (
+                  <div className="p-3 rounded-lg bg-white/60 dark:bg-black/20 border space-y-3">
+                    <Label className="text-sm font-medium">Quantidade</Label>
+                    <div className="flex items-center gap-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                        disabled={quantity <= 1}
+                      >
+                        -
+                      </Button>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={quantity}
+                        onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-20 text-center"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setQuantity(quantity + 1)}
+                      >
+                        +
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Editable item quantities for items-based proposals */}
+                {paymentType === 'items' && (
+                  <div className="p-3 rounded-lg bg-white/60 dark:bg-black/20 border space-y-3">
+                    <Label className="text-sm font-medium">Ajuste as quantidades se necessário</Label>
+                    <div className="space-y-2">
+                      {((proposal as any).proposal_items || []).map((item: any) => (
+                        <div key={item.id} className="flex items-center justify-between gap-2 p-2 bg-background rounded border">
+                          <div className="flex-1">
+                            <p className="text-sm font-medium">{item.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              R$ {(item.unit_price_cents / 100).toFixed(2)} cada
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => setItemQuantities(prev => ({
+                                ...prev,
+                                [item.id]: Math.max(0, (prev[item.id] || 0) - 1)
+                              }))}
+                              disabled={(itemQuantities[item.id] || 0) <= 0}
+                            >
+                              -
+                            </Button>
+                            <span className="w-8 text-center font-medium">
+                              {itemQuantities[item.id] || 0}
+                            </span>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => setItemQuantities(prev => ({
+                                ...prev,
+                                [item.id]: (prev[item.id] || 0) + 1
+                              }))}
+                            >
+                              +
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Total amount display */}
+                {calculatePaymentAmount() > 0 && (
+                  <div className="p-3 rounded bg-primary/10 text-center">
+                    <p className="text-xs text-muted-foreground">Total a pagar</p>
+                    <p className="text-lg font-bold text-primary">
+                      R$ {(calculatePaymentAmount() / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                )}
+
+                <Button
+                  className="w-full"
+                  onClick={async () => {
+                    // Validate items selection
+                    if (paymentType === 'items' && !hasAnyItemSelected()) {
+                      toast({ title: "Selecione pelo menos um item", variant: "destructive" });
+                      return;
+                    }
+
+                    setIsGeneratingPayment(true);
+                    try {
+                      const { data: paymentResult, error: paymentError } = await supabase.functions.invoke(
+                        'create-proposal-payment',
+                        { 
+                          body: { 
+                            proposalId,
+                            quantity: paymentType === 'quantity' ? quantity : undefined,
+                            itemQuantities: paymentType === 'items' ? itemQuantities : undefined,
+                          } 
+                        }
+                      );
+                      if (paymentError) throw paymentError;
+                      setPaymentData({
+                        ...paymentResult,
+                        totalAmount: calculatePaymentAmount()
+                      });
+                      setPixDialogOpen(true);
+                    } catch (err) {
+                      console.error('Payment error:', err);
+                      toast({ title: "Erro ao gerar pagamento", variant: "destructive" });
+                    } finally {
+                      setIsGeneratingPayment(false);
+                    }
+                  }}
+                  disabled={isGeneratingPayment || (paymentType === 'items' && !hasAnyItemSelected())}
+                >
+                  {isGeneratingPayment ? (
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Gerando...</>
+                  ) : (
+                    <><CreditCard className="mr-2 h-4 w-4" /> Pagar Agora</>
+                  )}
+                </Button>
               </div>
             )}
 
