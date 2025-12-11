@@ -34,6 +34,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
+import { ProposalBulkPurchasePanel } from "@/components/ProposalBulkPurchasePanel";
 
 export default function VotacaoDetalhes() {
   const { id } = useParams();
@@ -490,6 +491,11 @@ export default function VotacaoDetalhes() {
               })()}
             </CardContent>
           </Card>
+        )}
+
+        {/* Team: Bulk Purchase Panel for item-based proposals */}
+        {isTeam && proposal.payment_type === 'items' && (
+          <ProposalBulkPurchasePanel proposalId={id as string} />
         )}
 
         {/* Team: Vote Results */}
