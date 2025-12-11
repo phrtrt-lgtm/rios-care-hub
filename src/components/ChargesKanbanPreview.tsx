@@ -244,7 +244,7 @@ export function ChargesKanbanPreview() {
                         return (
                           <div
                             key={charge.id}
-                            onClick={() => navigate(`/cobranca/${charge.id}`)}
+                            onClick={() => navigate(`/cobranca-detalhes/${charge.id}`)}
                             className="bg-card rounded-lg p-2 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
                           >
                             {/* Property name - single line */}
