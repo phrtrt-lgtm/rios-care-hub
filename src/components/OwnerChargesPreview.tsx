@@ -499,7 +499,7 @@ export function OwnerChargesPreview() {
               {pixCharge.pix_qr_code_base64 && (
                 <div className="flex justify-center p-4 bg-white rounded-lg border">
                   <img 
-                    src={pixCharge.pix_qr_code_base64} 
+                    src={pixCharge.pix_qr_code_base64.startsWith('data:') ? pixCharge.pix_qr_code_base64 : `data:image/png;base64,${pixCharge.pix_qr_code_base64}`} 
                     alt="QR Code PIX" 
                     className="w-48 h-48"
                   />
