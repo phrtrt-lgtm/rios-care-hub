@@ -49,7 +49,7 @@ serve(async (req) => {
       );
     }
 
-    const { proposalId, quantity, itemQuantities } = await req.json() as CreatePaymentRequest;
+    const { proposalId, quantity, itemQuantities: providedItemQuantities } = await req.json() as CreatePaymentRequest;
 
     if (!proposalId) {
       return new Response(
@@ -58,7 +58,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('Creating payment for proposal:', proposalId, 'user:', user.id, 'quantity:', quantity, 'itemQuantities:', itemQuantities);
+    console.log('Creating payment for proposal:', proposalId, 'user:', user.id, 'quantity:', quantity, 'itemQuantities:', providedItemQuantities);
 
     // Fetch proposal details with items
     const { data: proposal, error: proposalError } = await supabase
@@ -83,6 +83,42 @@ serve(async (req) => {
       );
     }
 
+    // If itemQuantities not provided and payment_type is 'items', try to fetch from saved response
+    let itemQuantities = providedItemQuantities;
+    let savedQuantity = quantity;
+    
+    if (!itemQuantities || !savedQuantity) {
+      const { data: existingResponse } = await supabase
+        .from('proposal_responses')
+        .select('id, quantity')
+        .eq('proposal_id', proposalId)
+        .eq('owner_id', user.id)
+        .maybeSingle();
+      
+      if (existingResponse) {
+        // Get saved quantity
+        if (!savedQuantity && existingResponse.quantity) {
+          savedQuantity = existingResponse.quantity;
+        }
+        
+        // Get saved item quantities if payment_type is items
+        if (!itemQuantities && proposal.payment_type === 'items') {
+          const { data: savedItems } = await supabase
+            .from('proposal_response_items')
+            .select('item_id, quantity')
+            .eq('response_id', existingResponse.id);
+          
+          if (savedItems && savedItems.length > 0) {
+            itemQuantities = {};
+            for (const item of savedItems) {
+              itemQuantities[item.item_id] = item.quantity;
+            }
+            console.log('Using saved itemQuantities:', itemQuantities);
+          }
+        }
+      }
+    }
+
     // Calculate amount based on payment_type
     let amountCents = 0;
     let itemDescription = '';
@@ -92,7 +128,7 @@ serve(async (req) => {
       amountCents = proposal.amount_cents || 0;
     } else if (paymentType === 'quantity') {
       const unitPrice = proposal.unit_price_cents || 0;
-      const qty = quantity || 1;
+      const qty = savedQuantity || 1;
       amountCents = unitPrice * qty;
       itemDescription = ` (x${qty})`;
     } else if (paymentType === 'items' && itemQuantities) {
