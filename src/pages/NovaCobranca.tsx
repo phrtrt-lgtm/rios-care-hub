@@ -134,7 +134,7 @@ export default function NovaCobranca() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent, asDraft: boolean = false) => {
     e.preventDefault();
     
     if (!formData.owner_id || !formData.title || !formData.amount_cents || !formData.category) {
@@ -161,7 +161,7 @@ export default function NovaCobranca() {
           amount_cents: parseInt(formData.amount_cents) * 100, // Convert to cents
           management_contribution_cents: formData.management_contribution_cents ? parseInt(formData.management_contribution_cents) * 100 : 0,
           due_date: formData.due_date || null,
-          status: 'draft'
+          status: asDraft ? 'draft' : 'sent'
         })
         .select()
         .single();
@@ -194,8 +194,8 @@ export default function NovaCobranca() {
       }
 
       toast({
-        title: "Cobrança criada!",
-        description: "A cobrança foi criada com sucesso.",
+        title: asDraft ? "Rascunho salvo!" : "Cobrança criada!",
+        description: asDraft ? "A cobrança foi salva como rascunho." : "A cobrança foi criada e enviada.",
       });
 
       navigate('/painel');
@@ -424,9 +424,18 @@ export default function NovaCobranca() {
                 <Button type="button" variant="outline" onClick={() => navigate('/painel')}>
                   Cancelar
                 </Button>
+                <Button 
+                  type="button" 
+                  variant="secondary" 
+                  disabled={loading}
+                  onClick={(e) => handleSubmit(e, true)}
+                >
+                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Salvar Rascunho
+                </Button>
                 <Button type="submit" disabled={loading}>
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Criar Cobrança
+                  Criar e Enviar
                 </Button>
               </div>
             </form>
