@@ -406,40 +406,47 @@ export function OwnerChargesPreview() {
                     {/* Quick actions */}
                     <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
-                        className="h-7 w-7 p-0"
+                        className="h-7 px-2 text-xs"
                         onClick={(e) => handleOpenPix(charge, e)}
                         disabled={generatingPixFor === charge.id}
                       >
                         {generatingPixFor === charge.id ? (
                           <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full" />
                         ) : (
-                          <QrCode className="h-3.5 w-3.5" />
+                          <>
+                            <QrCode className="h-3 w-3 mr-1" />
+                            QR
+                          </>
                         )}
                       </Button>
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
-                        className="h-7 w-7 p-0"
+                        className="h-7 px-2 text-xs"
                         onClick={(e) => handleOpenPaymentLink(charge, e)}
                         disabled={generatingLinkFor === charge.id}
                       >
                         {generatingLinkFor === charge.id ? (
                           <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full" />
                         ) : (
-                          <CreditCard className="h-3.5 w-3.5" />
+                          <>
+                            <CreditCard className="h-3 w-3 mr-1" />
+                            12x
+                          </>
                         )}
                       </Button>
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
-                        className="h-7 w-7 p-0 relative"
+                        className="h-7 px-2 text-xs relative"
                         onClick={(e) => handleOpenChat(charge, e)}
                       >
-                        <MessageSquare className="h-3.5 w-3.5" />
+                        <MessageSquare className="h-3 w-3 mr-1" />
+                        Chat
                         {unreadCount > 0 && (
-                          <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[8px] font-bold rounded-full min-w-[14px] h-3.5 flex items-center justify-center px-0.5">
+                          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] font-bold rounded-full min-w-[14px] h-3.5 flex items-center justify-center px-0.5">
                             {unreadCount > 9 ? "9+" : unreadCount}
                           </span>
                         )}
