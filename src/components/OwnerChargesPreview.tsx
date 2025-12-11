@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { format, differenceInDays, isPast, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
@@ -22,6 +23,7 @@ import {
   Clock,
   AlertTriangle,
   ChevronRight,
+  ChevronDown,
   Paperclip
 } from "lucide-react";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
@@ -347,7 +349,7 @@ export function OwnerChargesPreview() {
             </div>
           )}
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             {charges.map((charge) => {
               const statusConfig = STATUS_CONFIG[charge.status] || STATUS_CONFIG.sent;
               const unreadCount = unreadCounts[charge.id] || 0;
@@ -358,15 +360,17 @@ export function OwnerChargesPreview() {
               return (
                 <div
                   key={charge.id}
-                  className={`p-3 rounded-lg border bg-card hover:bg-muted/50 cursor-pointer transition-colors group ${
+                  className={`rounded-lg border bg-card overflow-hidden ${
                     isSelected ? 'border-primary bg-primary/5' : ''
                   }`}
-                  onClick={() => navigate(`/cobranca-detalhes/${charge.id}`)}
                 >
-                  {/* Header: checkbox, photo, info */}
-                  <div className="flex items-start gap-2 mb-3">
+                  {/* Compact header - always visible */}
+                  <div
+                    className="p-2.5 flex items-center gap-2 cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => navigate(`/cobranca-detalhes/${charge.id}`)}
+                  >
                     {/* Checkbox */}
-                    <div className="flex items-center pt-1" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
                       <Checkbox
                         checked={isSelected}
                         onCheckedChange={() => toggleChargeSelection(charge.id, { stopPropagation: () => {} } as React.MouseEvent)}
@@ -374,7 +378,7 @@ export function OwnerChargesPreview() {
                     </div>
 
                     {/* Property photo */}
-                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                    <div className="w-8 h-8 rounded overflow-hidden bg-muted flex-shrink-0">
                       {charge.property?.cover_photo_url ? (
                         <img
                           src={charge.property.cover_photo_url}
@@ -383,88 +387,59 @@ export function OwnerChargesPreview() {
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <Building2 className="h-5 w-5 text-muted-foreground" />
+                          <Building2 className="h-4 w-4 text-muted-foreground" />
                         </div>
                       )}
                     </div>
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <Badge variant={statusConfig.variant} className="text-[10px] px-1.5 py-0">
-                          {statusConfig.label}
-                        </Badge>
-                        <span className={`text-[10px] flex items-center gap-0.5 ${dueDateInfo.color}`}>
-                          {dueDateInfo.urgent && <AlertTriangle className="h-3 w-3" />}
+                      <p className="font-medium text-xs line-clamp-1">{charge.title}</p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-primary">{formatBRL(dueAmount)}</span>
+                        <span className={`text-[10px] ${dueDateInfo.color}`}>
                           {dueDateInfo.text}
                         </span>
                       </div>
-                      <h4 className="font-medium text-sm line-clamp-1 group-hover:text-primary transition-colors">
-                        {charge.title}
-                      </h4>
                     </div>
-                  </div>
 
-                  {/* Payment breakdown card */}
-                  <div className="ml-7 mt-2 p-3 rounded-lg bg-muted/30 border space-y-2.5">
-                    {/* Row 1: Total */}
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">Total: <span className="font-medium text-foreground">{formatBRL(charge.amount_cents)}</span></span>
+                    {/* Quick actions */}
+                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
-                        className="h-7 w-[72px] text-xs shrink-0 justify-center"
+                        className="h-7 w-7 p-0"
                         onClick={(e) => handleOpenPix(charge, e)}
                         disabled={generatingPixFor === charge.id}
                       >
                         {generatingPixFor === charge.id ? (
                           <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full" />
                         ) : (
-                          <>
-                            <QrCode className="h-3.5 w-3.5 mr-1" />
-                            QR
-                          </>
+                          <QrCode className="h-3.5 w-3.5" />
                         )}
                       </Button>
-                    </div>
-
-                    {/* Row 2: Ajuda */}
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs text-green-600 whitespace-nowrap">Ajuda RIOS: <span className="font-medium">-{formatBRL(charge.management_contribution_cents)}</span></span>
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
-                        className="h-7 w-[72px] text-xs shrink-0 justify-center"
+                        className="h-7 w-7 p-0"
                         onClick={(e) => handleOpenPaymentLink(charge, e)}
                         disabled={generatingLinkFor === charge.id}
                       >
                         {generatingLinkFor === charge.id ? (
                           <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full" />
                         ) : (
-                          <>
-                            <CreditCard className="h-3.5 w-3.5 mr-1" />
-                            12x
-                          </>
+                          <CreditCard className="h-3.5 w-3.5" />
                         )}
                       </Button>
-                    </div>
-
-                    {/* Divider */}
-                    <div className="border-t" />
-
-                    {/* Row 3: A Pagar */}
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm text-primary font-semibold whitespace-nowrap">A Pagar: <span className="font-bold">{formatBRL(dueAmount)}</span></span>
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
-                        className="h-7 w-[72px] text-xs shrink-0 justify-center relative"
+                        className="h-7 w-7 p-0 relative"
                         onClick={(e) => handleOpenChat(charge, e)}
                       >
-                        <MessageSquare className="h-3.5 w-3.5 mr-1" />
-                        Msgs
+                        <MessageSquare className="h-3.5 w-3.5" />
                         {unreadCount > 0 && (
-                          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+                          <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[8px] font-bold rounded-full min-w-[14px] h-3.5 flex items-center justify-center px-0.5">
                             {unreadCount > 9 ? "9+" : unreadCount}
                           </span>
                         )}
