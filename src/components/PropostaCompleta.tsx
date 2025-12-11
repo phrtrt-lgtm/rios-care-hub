@@ -546,7 +546,7 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
 
             <Separator />
 
-            {/* Already Responded - Waiting Payment */}
+            {/* Already Responded - Waiting Payment (Editable) */}
             {hasResponded && !hasPaid && needsPayment && (
               <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 space-y-4">
                 <div className="flex items-start gap-3">
@@ -555,115 +555,211 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
                     <p className="font-medium text-amber-800 dark:text-amber-400">
                       Aguardando pagamento
                     </p>
-                    <p className="text-sm text-amber-700 dark:text-amber-500 mt-1">
-                      Você respondeu: <strong>{mySelectedOption?.option_text}</strong>
+                    <p className="text-xs text-amber-700 dark:text-amber-500 mt-1">
+                      Você pode alterar sua resposta antes de pagar
                     </p>
                   </div>
                 </div>
 
-                {/* Editable quantity for quantity-based proposals */}
-                {paymentType === 'quantity' && (
-                  <div className="p-3 rounded-lg bg-white/60 dark:bg-black/20 border space-y-3">
-                    <Label className="text-sm font-medium">Quantidade</Label>
-                    <div className="flex items-center gap-3">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                        disabled={quantity <= 1}
+                {/* Editable option selection */}
+                <div>
+                  <Label className="text-sm font-medium">Sua resposta</Label>
+                  <RadioGroup
+                    value={selectedOption}
+                    onValueChange={setSelectedOption}
+                    className="mt-2 space-y-2"
+                  >
+                    {options.map((option: any) => (
+                      <div 
+                        key={option.id} 
+                        className={`flex items-center space-x-3 p-3 rounded-lg border-2 transition-all cursor-pointer ${
+                          selectedOption === option.id 
+                            ? 'border-primary bg-primary/5' 
+                            : 'border-border hover:border-muted-foreground/30 bg-background'
+                        }`}
+                        onClick={() => setSelectedOption(option.id)}
                       >
-                        -
-                      </Button>
-                      <Input
-                        type="number"
-                        min={1}
-                        value={quantity}
-                        onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                        className="w-20 text-center"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => setQuantity(quantity + 1)}
-                      >
-                        +
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                        <RadioGroupItem value={option.id} id={`opt-edit-${proposalId}-${option.id}`} />
+                        <label 
+                          htmlFor={`opt-edit-${proposalId}-${option.id}`} 
+                          className="cursor-pointer flex-1 font-medium text-sm"
+                        >
+                          {option.option_text}
+                          {option.requires_payment && (
+                            <span className="ml-2 text-xs text-primary">(requer pagamento)</span>
+                          )}
+                        </label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                </div>
 
-                {/* Editable item quantities for items-based proposals */}
-                {paymentType === 'items' && (
-                  <div className="p-3 rounded-lg bg-white/60 dark:bg-black/20 border space-y-3">
-                    <Label className="text-sm font-medium">Ajuste as quantidades se necessário</Label>
-                    <div className="space-y-2">
-                      {((proposal as any).proposal_items || []).map((item: any) => (
-                        <div key={item.id} className="flex items-center justify-between gap-2 p-2 bg-background rounded border">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium">{item.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              R$ {(item.unit_price_cents / 100).toFixed(2)} cada
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => setItemQuantities(prev => ({
-                                ...prev,
-                                [item.id]: Math.max(0, (prev[item.id] || 0) - 1)
-                              }))}
-                              disabled={(itemQuantities[item.id] || 0) <= 0}
-                            >
-                              -
-                            </Button>
-                            <span className="w-8 text-center font-medium">
-                              {itemQuantities[item.id] || 0}
-                            </span>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => setItemQuantities(prev => ({
-                                ...prev,
-                                [item.id]: (prev[item.id] || 0) + 1
-                              }))}
-                            >
-                              +
-                            </Button>
-                          </div>
+                {/* Show quantity/items only if selected option requires payment */}
+                {requiresPayment() && (
+                  <>
+                    {/* Editable quantity for quantity-based proposals */}
+                    {paymentType === 'quantity' && (
+                      <div className="p-3 rounded-lg bg-white/60 dark:bg-black/20 border space-y-3">
+                        <Label className="text-sm font-medium">Quantidade</Label>
+                        <div className="flex items-center gap-3">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                            disabled={quantity <= 1}
+                          >
+                            -
+                          </Button>
+                          <Input
+                            type="number"
+                            min={1}
+                            value={quantity}
+                            onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                            className="w-20 text-center"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setQuantity(quantity + 1)}
+                          >
+                            +
+                          </Button>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                      </div>
+                    )}
 
-                {/* Total amount display */}
-                {calculatePaymentAmount() > 0 && (
-                  <div className="p-3 rounded bg-primary/10 text-center">
-                    <p className="text-xs text-muted-foreground">Total a pagar</p>
-                    <p className="text-lg font-bold text-primary">
-                      R$ {(calculatePaymentAmount() / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
-                  </div>
+                    {/* Editable item quantities for items-based proposals */}
+                    {paymentType === 'items' && (
+                      <div className="p-3 rounded-lg bg-white/60 dark:bg-black/20 border space-y-3">
+                        <Label className="text-sm font-medium">Selecione as quantidades</Label>
+                        <div className="space-y-2">
+                          {((proposal as any).proposal_items || []).map((item: any) => (
+                            <div key={item.id} className="flex items-center justify-between gap-2 p-2 bg-background rounded border">
+                              <div className="flex-1">
+                                <p className="text-sm font-medium">{item.name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  R$ {(item.unit_price_cents / 100).toFixed(2)} cada
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => setItemQuantities(prev => ({
+                                    ...prev,
+                                    [item.id]: Math.max(0, (prev[item.id] || 0) - 1)
+                                  }))}
+                                  disabled={(itemQuantities[item.id] || 0) <= 0}
+                                >
+                                  -
+                                </Button>
+                                <span className="w-8 text-center font-medium">
+                                  {itemQuantities[item.id] || 0}
+                                </span>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => setItemQuantities(prev => ({
+                                    ...prev,
+                                    [item.id]: (prev[item.id] || 0) + 1
+                                  }))}
+                                >
+                                  +
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Total amount display */}
+                    {calculatePaymentAmount() > 0 && (
+                      <div className="p-3 rounded bg-primary/10 text-center">
+                        <p className="text-xs text-muted-foreground">Total a pagar</p>
+                        <p className="text-lg font-bold text-primary">
+                          R$ {(calculatePaymentAmount() / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </p>
+                      </div>
+                    )}
+                  </>
                 )}
 
                 <Button
                   className="w-full"
                   onClick={async () => {
-                    // Validate items selection
-                    if (paymentType === 'items' && !hasAnyItemSelected()) {
+                    if (!selectedOption) {
+                      toast({ title: "Selecione uma opção", variant: "destructive" });
+                      return;
+                    }
+
+                    // Check if selected option requires payment
+                    const selectedOpt = options.find((o: any) => o.id === selectedOption);
+                    const optRequiresPayment = selectedOpt?.requires_payment && 
+                      (paymentType === 'fixed' || paymentType === 'quantity' || paymentType === 'items');
+
+                    // Validate items selection if requires payment
+                    if (optRequiresPayment && paymentType === 'items' && !hasAnyItemSelected()) {
                       toast({ title: "Selecione pelo menos um item", variant: "destructive" });
                       return;
                     }
 
                     setIsGeneratingPayment(true);
                     try {
+                      // Update the response with new selection
+                      const { error: updateError } = await supabase
+                        .from('proposal_responses')
+                        .update({
+                          selected_option_id: selectedOption,
+                          quantity: paymentType === 'quantity' ? quantity : null,
+                          responded_at: new Date().toISOString(),
+                        })
+                        .eq('id', myResponse.id);
+
+                      if (updateError) throw updateError;
+
+                      // Update item quantities if items type
+                      if (paymentType === 'items') {
+                        // Delete existing items
+                        await supabase
+                          .from('proposal_response_items')
+                          .delete()
+                          .eq('response_id', myResponse.id);
+
+                        // Insert new items
+                        const items = (proposal as any).proposal_items || [];
+                        const itemsToInsert = items
+                          .filter((item: any) => (itemQuantities[item.id] || 0) > 0)
+                          .map((item: any) => ({
+                            response_id: myResponse.id,
+                            item_id: item.id,
+                            quantity: itemQuantities[item.id] || 0,
+                          }));
+
+                        if (itemsToInsert.length > 0) {
+                          const { error: itemsError } = await supabase
+                            .from('proposal_response_items')
+                            .insert(itemsToInsert);
+                          if (itemsError) throw itemsError;
+                        }
+                      }
+
+                      // If doesn't require payment, just complete
+                      if (!optRequiresPayment) {
+                        toast({ title: "Resposta atualizada!", description: "Sua resposta foi salva." });
+                        queryClient.invalidateQueries({ queryKey: ['proposal-complete', proposalId] });
+                        queryClient.invalidateQueries({ queryKey: ['pending-proposals-full'] });
+                        onResponded?.();
+                        return;
+                      }
+
+                      // Generate payment
                       const { data: paymentResult, error: paymentError } = await supabase.functions.invoke(
                         'create-proposal-payment',
                         { 
@@ -682,17 +778,19 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
                       setPixDialogOpen(true);
                     } catch (err) {
                       console.error('Payment error:', err);
-                      toast({ title: "Erro ao gerar pagamento", variant: "destructive" });
+                      toast({ title: "Erro ao processar", variant: "destructive" });
                     } finally {
                       setIsGeneratingPayment(false);
                     }
                   }}
-                  disabled={isGeneratingPayment || (paymentType === 'items' && !hasAnyItemSelected())}
+                  disabled={isGeneratingPayment || !selectedOption || (requiresPayment() && paymentType === 'items' && !hasAnyItemSelected())}
                 >
                   {isGeneratingPayment ? (
-                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Gerando...</>
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processando...</>
+                  ) : requiresPayment() ? (
+                    <><CreditCard className="mr-2 h-4 w-4" /> Confirmar e Pagar</>
                   ) : (
-                    <><CreditCard className="mr-2 h-4 w-4" /> Pagar Agora</>
+                    <><Check className="mr-2 h-4 w-4" /> Atualizar Resposta</>
                   )}
                 </Button>
               </div>
