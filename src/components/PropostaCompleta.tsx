@@ -59,7 +59,7 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
     totalAmount?: number;
   } | null>(null);
   const [isGeneratingPayment, setIsGeneratingPayment] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // Fetch proposal data
   const { data: proposal, isLoading } = useQuery({
