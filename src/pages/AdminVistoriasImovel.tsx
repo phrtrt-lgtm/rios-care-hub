@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { InspectionCalendar } from '@/components/InspectionCalendar';
 import TeamInspectionDialog from '@/components/TeamInspectionDialog';
+import { PropertyInspectionItemsKanban } from '@/components/InspectionItemsKanban';
 import { Headphones, Paperclip, ArrowLeft, User, Calendar, AlertTriangle, CheckCircle2, Building2, FileText, Plus, EyeOff } from 'lucide-react';
 import { format, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -19,6 +20,7 @@ interface Property {
   name: string;
   address: string;
   cover_photo_url?: string;
+  owner_id: string;
 }
 
 interface Inspection {
@@ -29,6 +31,7 @@ interface Inspection {
   audio_url?: string;
   notes?: string;
   transcript?: string;
+  transcript_summary?: string;
   internal_only?: boolean;
 }
 
@@ -65,7 +68,7 @@ export default function AdminVistoriasImovel() {
       // Fetch property
       const { data: propData, error: propError } = await supabase
         .from('properties')
-        .select('id, name, address, cover_photo_url')
+        .select('id, name, address, cover_photo_url, owner_id')
         .eq('id', id)
         .single();
 
@@ -225,6 +228,17 @@ export default function AdminVistoriasImovel() {
                 </div>
               </div>
             </Card>
+
+            {/* Problem Items Kanban */}
+            {problemCount > 0 && (
+              <PropertyInspectionItemsKanban
+                propertyId={property.id}
+                ownerId={property.owner_id}
+                inspections={inspections
+                  .filter(i => i.notes === 'NÃO' && i.transcript_summary)
+                  .map(i => ({ id: i.id, transcript_summary: i.transcript_summary || null }))}
+              />
+            )}
 
             {/* Filters */}
             <div className="flex flex-wrap gap-2">
