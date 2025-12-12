@@ -314,21 +314,37 @@ export function PropertyInspectionItemsKanban({
     );
   }
 
+  // Count items per column for display
+  const managementCount = getItemsByStatus('management').length;
+  const ownerCount = getItemsByStatus('owner').length;
+  const guestCount = getItemsByStatus('guest').length;
+  const completedCount = getItemsByStatus('completed').length;
+
+  const getColumnSummary = () => {
+    const parts: string[] = [];
+    if (pendingCount > 0) parts.push(`${pendingCount} pendente${pendingCount > 1 ? 's' : ''}`);
+    if (managementCount > 0) parts.push(`${managementCount} gestão`);
+    if (ownerCount > 0) parts.push(`${ownerCount} proprietário`);
+    if (guestCount > 0) parts.push(`${guestCount} hóspede`);
+    if (completedCount > 0) parts.push(`${completedCount} concluído${completedCount > 1 ? 's' : ''}`);
+    return parts.join(' · ');
+  };
+
   return (
     <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-      <Card className="border-amber-500/30">
+      <Card className="border-blue-700/50 overflow-hidden">
         <CollapsibleTrigger asChild>
-          <CardHeader className="pb-3 cursor-pointer hover:bg-muted/50 transition-colors">
+          <CardHeader className="pb-3 cursor-pointer bg-blue-900 hover:bg-blue-800 transition-colors text-white">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-amber-500/20">
-                  <AlertTriangle className="h-5 w-5 text-amber-600" />
+                <div className="p-2 rounded-lg bg-white/10">
+                  <AlertTriangle className="h-5 w-5 text-yellow-300" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">Problemas do Imóvel</CardTitle>
-                  <p className="text-sm text-muted-foreground">
+                  <CardTitle className="text-lg text-white">Problemas do Imóvel</CardTitle>
+                  <p className="text-sm text-blue-200">
                     {totalCount > 0 ? (
-                      <>{totalCount} itens identificados • {pendingCount} pendentes</>
+                      getColumnSummary()
                     ) : hasAISummaries ? (
                       <>Importe os itens das análises de IA</>
                     ) : (
@@ -339,8 +355,8 @@ export function PropertyInspectionItemsKanban({
               </div>
               <div className="flex items-center gap-2">
                 {totalCount > 0 && (
-                  <Badge variant="secondary" className="bg-amber-500/20 text-amber-700">
-                    {pendingCount} pendentes
+                  <Badge className="bg-white/20 text-white hover:bg-white/30">
+                    {totalCount} itens
                   </Badge>
                 )}
                 {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
