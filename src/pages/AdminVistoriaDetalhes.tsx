@@ -10,8 +10,9 @@ import { Badge } from '@/components/ui/badge';
 import { MediaThumbnail } from '@/components/MediaThumbnail';
 import { MediaGallery } from '@/components/MediaGallery';
 import { CreateMaintenanceFromInspectionDialog } from '@/components/CreateMaintenanceFromInspectionDialog';
+import EditInspectionDialog from '@/components/EditInspectionDialog';
 import { preloadMediaUrls } from '@/hooks/useMediaCache';
-import { ArrowLeft, Calendar, User, CheckCircle2, AlertTriangle, Headphones, FileText, Building2, Wrench, Plus, Sparkles, Loader2 } from 'lucide-react';
+import { ArrowLeft, Calendar, User, CheckCircle2, AlertTriangle, Headphones, FileText, Building2, Wrench, Plus, Sparkles, Loader2, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -55,6 +56,7 @@ export default function AdminVistoriaDetalhes() {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryStartIndex, setGalleryStartIndex] = useState(0);
   const [maintenanceDialogOpen, setMaintenanceDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [generatingSummary, setGeneratingSummary] = useState(false);
 
   useEffect(() => {
@@ -190,6 +192,15 @@ export default function AdminVistoriaDetalhes() {
               <h1 className="text-xl font-semibold">Detalhes da Vistoria</h1>
               <p className="text-sm text-muted-foreground">{property.name}</p>
             </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setEditDialogOpen(true)}
+              className="gap-2"
+            >
+              <Pencil className="h-4 w-4" />
+              Editar
+            </Button>
             <Badge 
               variant={isOk ? "secondary" : "destructive"}
               className={isOk ? "bg-green-500/20 text-green-700 dark:text-green-400" : ""}
@@ -408,6 +419,14 @@ export default function AdminVistoriaDetalhes() {
         inspectionId={inspection.id}
         attachments={attachments}
         transcriptSummary={transcriptSummaryForDialog}
+      />
+
+      <EditInspectionDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        inspection={inspection}
+        existingAttachments={attachments}
+        onSuccess={fetchData}
       />
     </div>
   );
