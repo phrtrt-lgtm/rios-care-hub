@@ -857,6 +857,70 @@ export type Database = {
         }
         Relationships: []
       }
+      inspection_items: {
+        Row: {
+          category: string
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          description: string
+          id: string
+          inspection_id: string
+          maintenance_ticket_id: string | null
+          order_index: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          inspection_id: string
+          maintenance_ticket_id?: string | null
+          order_index?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          inspection_id?: string
+          maintenance_ticket_id?: string | null
+          order_index?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inspection_items_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspection_items_inspection_id_fkey"
+            columns: ["inspection_id"]
+            isOneToOne: false
+            referencedRelation: "cleaning_inspections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspection_items_maintenance_ticket_id_fkey"
+            columns: ["maintenance_ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inspection_settings: {
         Row: {
           id: string
