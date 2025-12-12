@@ -145,23 +145,41 @@ export function PropertyInspectionItemsKanban({
     setImporting(true);
     try {
       let totalImported = 0;
+      let skippedDuplicates = 0;
+      
+      // Normalize description for comparison (lowercase, trim, remove extra spaces)
+      const normalizeDesc = (desc: string) => desc.toLowerCase().trim().replace(/\s+/g, ' ');
+      
+      // Get all existing descriptions to check for duplicates (across all statuses)
+      const existingDescriptions = new Set(
+        items.map(item => normalizeDesc(item.description))
+      );
       
       for (const { inspectionId, summary } of summaries) {
         const parsedItems = parseAISummary(summary);
         
         if (parsedItems.length === 0) continue;
 
-        // Check if items already exist for this inspection
-        const existingItems = items.filter(item => item.inspection_id === inspectionId);
-        if (existingItems.length > 0) continue; // Skip if already imported
+        // Filter out duplicates by description (regardless of status)
+        const newItems = parsedItems.filter(item => {
+          const normalized = normalizeDesc(item.description);
+          if (existingDescriptions.has(normalized)) {
+            skippedDuplicates++;
+            return false;
+          }
+          existingDescriptions.add(normalized); // Add to set to prevent duplicates within same import
+          return true;
+        });
 
-        // Insert all items for this inspection
-        const itemsToInsert = parsedItems.map((item, index) => ({
+        if (newItems.length === 0) continue;
+
+        // Insert only non-duplicate items
+        const itemsToInsert = newItems.map((item, index) => ({
           inspection_id: inspectionId,
           category: item.category,
           description: item.description,
           status: 'pending',
-          order_index: index,
+          order_index: items.length + index,
         }));
 
         const { error } = await supabase
@@ -169,12 +187,17 @@ export function PropertyInspectionItemsKanban({
           .insert(itemsToInsert);
 
         if (error) throw error;
-        totalImported += parsedItems.length;
+        totalImported += newItems.length;
       }
 
       if (totalImported > 0) {
-        toast.success(`${totalImported} itens importados com sucesso`);
+        const msg = skippedDuplicates > 0 
+          ? `${totalImported} itens importados (${skippedDuplicates} duplicados ignorados)`
+          : `${totalImported} itens importados com sucesso`;
+        toast.success(msg);
         fetchItems();
+      } else if (skippedDuplicates > 0) {
+        toast.info(`Nenhum item novo (${skippedDuplicates} já existentes)`);
       } else {
         toast.info('Nenhum item novo para importar');
       }
@@ -332,17 +355,17 @@ export function PropertyInspectionItemsKanban({
 
   return (
     <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-      <Card className="border-blue-700/50 overflow-hidden">
+      <Card className="border-primary/30 overflow-hidden">
         <CollapsibleTrigger asChild>
-          <CardHeader className="pb-3 cursor-pointer bg-blue-900 hover:bg-blue-800 transition-colors text-white">
+          <CardHeader className="pb-3 cursor-pointer bg-secondary hover:bg-secondary/90 transition-colors text-secondary-foreground">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-white/10">
-                  <AlertTriangle className="h-5 w-5 text-yellow-300" />
+                <div className="p-2 rounded-lg bg-primary/20">
+                  <AlertTriangle className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg text-white">Problemas do Imóvel</CardTitle>
-                  <p className="text-sm text-blue-200">
+                  <CardTitle className="text-lg text-secondary-foreground">Problemas do Imóvel</CardTitle>
+                  <p className="text-sm text-secondary-foreground/70">
                     {totalCount > 0 ? (
                       getColumnSummary()
                     ) : hasAISummaries ? (
@@ -355,7 +378,7 @@ export function PropertyInspectionItemsKanban({
               </div>
               <div className="flex items-center gap-2">
                 {totalCount > 0 && (
-                  <Badge className="bg-white/20 text-white hover:bg-white/30">
+                  <Badge className="bg-primary text-primary-foreground hover:bg-primary/90">
                     {totalCount} itens
                   </Badge>
                 )}
@@ -366,7 +389,7 @@ export function PropertyInspectionItemsKanban({
         </CollapsibleTrigger>
         
         <CollapsibleContent>
-          <CardContent className="pt-0">
+          <CardContent className="pt-4">
             {/* Action buttons */}
             <div className="flex flex-wrap gap-2 mb-4">
               {hasAISummaries && (
@@ -374,7 +397,7 @@ export function PropertyInspectionItemsKanban({
                   onClick={handleImportItems}
                   disabled={importing}
                   size="sm"
-                  variant="outline"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90"
                 >
                   {importing ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
