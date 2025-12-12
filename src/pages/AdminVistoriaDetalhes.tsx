@@ -7,12 +7,14 @@ import { formatDateTime } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { MediaThumbnail } from '@/components/MediaThumbnail';
 import { MediaGallery } from '@/components/MediaGallery';
 import { CreateMaintenanceFromInspectionDialog } from '@/components/CreateMaintenanceFromInspectionDialog';
 import EditInspectionDialog from '@/components/EditInspectionDialog';
 import { preloadMediaUrls } from '@/hooks/useMediaCache';
-import { ArrowLeft, Calendar, User, CheckCircle2, AlertTriangle, Headphones, FileText, Building2, Wrench, Plus, Sparkles, Loader2, Pencil } from 'lucide-react';
+import { ArrowLeft, Calendar, User, CheckCircle2, AlertTriangle, Headphones, FileText, Building2, Wrench, Plus, Sparkles, Loader2, Pencil, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -45,6 +47,42 @@ interface Attachment {
   file_type?: string;
 }
 
+// Component to show audio with duration
+function AudioWithDuration({ audio, index }: { audio: Attachment; index: number }) {
+  const [duration, setDuration] = useState<string>('...');
+  const audioRef = React.useRef<HTMLAudioElement>(null);
+
+  useEffect(() => {
+    const audioEl = audioRef.current;
+    if (audioEl) {
+      const handleLoadedMetadata = () => {
+        const secs = audioEl.duration;
+        if (isFinite(secs) && !isNaN(secs)) {
+          const mins = Math.floor(secs / 60);
+          const remainingSecs = Math.floor(secs % 60);
+          setDuration(`${mins}:${remainingSecs.toString().padStart(2, '0')}`);
+        }
+      };
+      audioEl.addEventListener('loadedmetadata', handleLoadedMetadata);
+      // Try to load if already cached
+      if (audioEl.readyState >= 1) {
+        handleLoadedMetadata();
+      }
+      return () => audioEl.removeEventListener('loadedmetadata', handleLoadedMetadata);
+    }
+  }, []);
+
+  return (
+    <div className="bg-muted/50 rounded-lg p-3">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-sm text-muted-foreground">Áudio {index + 1}</span>
+        <Badge variant="outline" className="text-xs">{duration}</Badge>
+      </div>
+      <audio ref={audioRef} controls src={audio.file_url} className="w-full" preload="metadata" />
+    </div>
+  );
+}
+
 export default function AdminVistoriaDetalhes() {
   const { inspectionId } = useParams<{ inspectionId: string }>();
   const navigate = useNavigate();
@@ -58,6 +96,8 @@ export default function AdminVistoriaDetalhes() {
   const [maintenanceDialogOpen, setMaintenanceDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [generatingSummary, setGeneratingSummary] = useState(false);
+  const [regenerateDialogOpen, setRegenerateDialogOpen] = useState(false);
+  const [extraPrompt, setExtraPrompt] = useState('');
 
   useEffect(() => {
     if (!authLoading) {
@@ -118,7 +158,7 @@ export default function AdminVistoriaDetalhes() {
     }
   };
 
-  const generateAISummary = async () => {
+  const generateAISummary = async (customPrompt?: string) => {
     if (!inspection?.transcript) return;
     
     setGeneratingSummary(true);
@@ -126,7 +166,8 @@ export default function AdminVistoriaDetalhes() {
       const response = await supabase.functions.invoke('generate-inspection-summary', {
         body: { 
           inspectionId: inspection.id,
-          transcript: inspection.transcript 
+          transcript: inspection.transcript,
+          extraPrompt: customPrompt || undefined
         }
       });
 
@@ -136,6 +177,8 @@ export default function AdminVistoriaDetalhes() {
       if (summary) {
         setInspection(prev => prev ? { ...prev, transcript_summary: summary } : null);
         toast.success('Resumo gerado com sucesso!');
+        setRegenerateDialogOpen(false);
+        setExtraPrompt('');
       } else {
         toast.error('Não foi possível gerar o resumo');
       }
@@ -259,10 +302,7 @@ export default function AdminVistoriaDetalhes() {
               </div>
               <div className="space-y-3">
                 {audioAttachments.map((audio, idx) => (
-                  <div key={audio.id} className="bg-muted/50 rounded-lg p-3">
-                    <div className="text-sm text-muted-foreground mb-2">Áudio {idx + 1}</div>
-                    <audio controls src={audio.file_url} className="w-full" />
-                  </div>
+                  <AudioWithDuration key={audio.id} audio={audio} index={idx} />
                 ))}
               </div>
             </Card>
@@ -271,9 +311,20 @@ export default function AdminVistoriaDetalhes() {
           {/* AI Summary Section - Show first if available */}
           {inspection.transcript_summary && (
             <Card className="p-4 border-purple-500/30 bg-gradient-to-br from-purple-500/10 to-blue-500/10">
-              <div className="flex items-center gap-2 mb-4">
-                <Sparkles className="h-5 w-5 text-purple-600" />
-                <h3 className="font-semibold text-purple-700 dark:text-purple-300">Análise da IA</h3>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-purple-600" />
+                  <h3 className="font-semibold text-purple-700 dark:text-purple-300">Análise da IA</h3>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setRegenerateDialogOpen(true)}
+                  className="gap-1.5 text-purple-600 hover:text-purple-700 hover:bg-purple-500/10"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Regenerar
+                </Button>
               </div>
               <div className="whitespace-pre-wrap text-sm">
                 {inspection.transcript_summary}
@@ -293,7 +344,7 @@ export default function AdminVistoriaDetalhes() {
                   </div>
                 </div>
                 <Button 
-                  onClick={generateAISummary}
+                  onClick={() => generateAISummary()}
                   disabled={generatingSummary}
                   variant="outline"
                   className="gap-2 border-purple-500/50 text-purple-700 hover:bg-purple-500/10"
@@ -428,6 +479,63 @@ export default function AdminVistoriaDetalhes() {
         existingAttachments={attachments}
         onSuccess={fetchData}
       />
+
+      {/* Regenerate AI Dialog */}
+      <Dialog open={regenerateDialogOpen} onOpenChange={setRegenerateDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-purple-600" />
+              Regenerar Análise IA
+            </DialogTitle>
+            <DialogDescription>
+              Gere uma nova análise da transcrição. Você pode adicionar um comando extra para personalizar o resultado.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-3 py-4">
+            <label className="text-sm font-medium">Comando extra (opcional)</label>
+            <Textarea
+              placeholder="Ex: Agrupe por cômodo, destaque problemas urgentes, foque em problemas elétricos..."
+              value={extraPrompt}
+              onChange={(e) => setExtraPrompt(e.target.value)}
+              rows={3}
+            />
+            <p className="text-xs text-muted-foreground">
+              A análise já agrupa por categoria de serviço. Use este campo para instruções adicionais.
+            </p>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setRegenerateDialogOpen(false);
+                setExtraPrompt('');
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => generateAISummary(extraPrompt)}
+              disabled={generatingSummary}
+              className="gap-2 bg-purple-600 hover:bg-purple-700"
+            >
+              {generatingSummary ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Gerando...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4" />
+                  Regenerar
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
