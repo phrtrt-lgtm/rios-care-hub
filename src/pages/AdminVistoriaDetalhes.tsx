@@ -45,62 +45,47 @@ interface Attachment {
   file_url: string;
   file_name?: string;
   file_type?: string;
+  size_bytes?: number;
 }
 
 // Component to show audio with duration
 function AudioWithDuration({ audio, index }: { audio: Attachment; index: number }) {
   const [duration, setDuration] = useState<string>('...');
-  const [blobUrl, setBlobUrl] = useState<string | null>(null);
-  const audioRef = React.useRef<HTMLAudioElement>(null);
 
-  // Fetch authenticated audio and create blob URL
+  // Get duration using a separate Audio element
   useEffect(() => {
-    let objectUrl: string | null = null;
+    const tempAudio = new Audio();
+    tempAudio.preload = 'metadata';
     
-    const loadAudio = async () => {
-      try {
-        // Fetch with credentials to handle authenticated storage URLs
-        const response = await fetch(audio.file_url, { credentials: 'include' });
-        if (response.ok) {
-          const blob = await response.blob();
-          objectUrl = URL.createObjectURL(blob);
-          setBlobUrl(objectUrl);
-        } else {
-          // Fallback to direct URL if fetch fails
-          setBlobUrl(audio.file_url);
-        }
-      } catch {
-        // Fallback to direct URL
-        setBlobUrl(audio.file_url);
+    const handleLoadedMetadata = () => {
+      const secs = tempAudio.duration;
+      if (isFinite(secs) && !isNaN(secs)) {
+        const mins = Math.floor(secs / 60);
+        const remainingSecs = Math.floor(secs % 60);
+        setDuration(`${mins}:${remainingSecs.toString().padStart(2, '0')}`);
+      }
+    };
+
+    const handleError = () => {
+      // If we can't load metadata, show file size as fallback
+      if (audio.size_bytes) {
+        const kb = Math.round((audio as any).size_bytes / 1024);
+        setDuration(`${kb}KB`);
+      } else {
+        setDuration('—');
       }
     };
     
-    loadAudio();
+    tempAudio.addEventListener('loadedmetadata', handleLoadedMetadata);
+    tempAudio.addEventListener('error', handleError);
+    tempAudio.src = audio.file_url;
     
     return () => {
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      tempAudio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      tempAudio.removeEventListener('error', handleError);
+      tempAudio.src = '';
     };
   }, [audio.file_url]);
-
-  // Get duration once audio is loaded
-  useEffect(() => {
-    const audioEl = audioRef.current;
-    if (audioEl && blobUrl) {
-      const handleLoadedMetadata = () => {
-        const secs = audioEl.duration;
-        if (isFinite(secs) && !isNaN(secs)) {
-          const mins = Math.floor(secs / 60);
-          const remainingSecs = Math.floor(secs % 60);
-          setDuration(`${mins}:${remainingSecs.toString().padStart(2, '0')}`);
-        }
-      };
-      audioEl.addEventListener('loadedmetadata', handleLoadedMetadata);
-      if (audioEl.readyState >= 1) {
-        handleLoadedMetadata();
-      }
-      return () => audioEl.removeEventListener('loadedmetadata', handleLoadedMetadata);
-    }
-  }, [blobUrl]);
 
   return (
     <div className="bg-muted/50 rounded-lg p-3">
@@ -108,13 +93,7 @@ function AudioWithDuration({ audio, index }: { audio: Attachment; index: number 
         <span className="text-sm text-muted-foreground">Áudio {index + 1}</span>
         <Badge variant="outline" className="text-xs">{duration}</Badge>
       </div>
-      {blobUrl ? (
-        <audio ref={audioRef} controls src={blobUrl} className="w-full" preload="metadata" />
-      ) : (
-        <div className="h-12 flex items-center justify-center text-sm text-muted-foreground">
-          Carregando áudio...
-        </div>
-      )}
+      <audio controls src={audio.file_url} className="w-full" preload="metadata" />
     </div>
   );
 }
