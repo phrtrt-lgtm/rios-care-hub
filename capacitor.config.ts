@@ -4,11 +4,10 @@ const config: CapacitorConfig = {
   appId: 'com.rioscarehubb.app',
   appName: 'RIOS Proprietários',
   webDir: 'dist',
-  // DEVELOPMENT ONLY - Uncomment for hot-reload during development:
-  // server: {
-  //   url: 'https://3e755580-de69-4b87-9e32-0e8bf7881879.lovableproject.com?forceHideBadge=true',
-  //   cleartext: true
-  // },
+  server: {
+    url: 'https://portal.rioshospedagens.com.br',
+    cleartext: false
+  },
   plugins: {
     PushNotifications: {
       presentationOptions: ["badge", "sound", "alert"]
