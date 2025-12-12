@@ -14,7 +14,7 @@ import { MediaGallery } from '@/components/MediaGallery';
 import { CreateMaintenanceFromInspectionDialog } from '@/components/CreateMaintenanceFromInspectionDialog';
 import EditInspectionDialog from '@/components/EditInspectionDialog';
 import { preloadMediaUrls } from '@/hooks/useMediaCache';
-import { ArrowLeft, Calendar, User, CheckCircle2, AlertTriangle, Headphones, FileText, Building2, Wrench, Plus, Sparkles, Loader2, Pencil, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Calendar, User, CheckCircle2, AlertTriangle, Headphones, FileText, Building2, Wrench, Plus, Sparkles, Loader2, Pencil, RefreshCw, Import } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -113,6 +113,7 @@ export default function AdminVistoriaDetalhes() {
   const [generatingSummary, setGeneratingSummary] = useState(false);
   const [regenerateDialogOpen, setRegenerateDialogOpen] = useState(false);
   const [extraPrompt, setExtraPrompt] = useState('');
+  const [importingToKanban, setImportingToKanban] = useState(false);
 
   useEffect(() => {
     if (!authLoading) {
@@ -202,6 +203,101 @@ export default function AdminVistoriaDetalhes() {
       toast.error('Erro ao gerar resumo');
     } finally {
       setGeneratingSummary(false);
+    }
+  };
+
+  const CATEGORY_PATTERNS: { pattern: RegExp; category: string }[] = [
+    { pattern: /PEDREIRO|ALVENARIA/i, category: 'PEDREIRO/ALVENARIA' },
+    { pattern: /VIDRACEIRO/i, category: 'VIDRACEIRO' },
+    { pattern: /HIDR[ÁA]ULICA/i, category: 'HIDRÁULICA' },
+    { pattern: /EL[ÉE]TRICA/i, category: 'ELÉTRICA' },
+    { pattern: /MARCENARIA/i, category: 'MARCENARIA' },
+    { pattern: /MANUTEN[ÇC][ÃA]O\s*GERAL/i, category: 'MANUTENÇÃO GERAL' },
+    { pattern: /REFRIGERA[ÇC][ÃA]O/i, category: 'REFRIGERAÇÃO' },
+    { pattern: /LIMPEZA/i, category: 'LIMPEZA' },
+    { pattern: /ITENS|REPOSI[ÇC][ÃA]O/i, category: 'ITENS/REPOSIÇÃO' },
+  ];
+
+  const parseAISummary = (summary: string): { category: string; description: string }[] => {
+    const lines = summary.split('\n');
+    const result: { category: string; description: string }[] = [];
+    let currentCategory = '';
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      
+      // Check if this line is a category header
+      let foundCategory = false;
+      for (const { pattern, category } of CATEGORY_PATTERNS) {
+        if (pattern.test(trimmed) && trimmed.includes(':')) {
+          currentCategory = category;
+          foundCategory = true;
+          break;
+        }
+      }
+      
+      if (foundCategory) continue;
+
+      // Check if it's a bullet point item
+      if ((trimmed.startsWith('•') || trimmed.startsWith('-') || trimmed.startsWith('*')) && currentCategory) {
+        const description = trimmed.replace(/^[•\-*]\s*/, '').trim();
+        if (description) {
+          result.push({ category: currentCategory, description });
+        }
+      }
+    }
+
+    return result;
+  };
+
+  const handleImportToKanban = async () => {
+    if (!inspection?.transcript_summary) {
+      toast.error('Nenhuma análise de IA disponível para importar');
+      return;
+    }
+
+    setImportingToKanban(true);
+    try {
+      const parsedItems = parseAISummary(inspection.transcript_summary);
+      
+      if (parsedItems.length === 0) {
+        toast.error('Não foi possível extrair itens da análise');
+        return;
+      }
+
+      // Check if items already exist for this inspection
+      const { data: existingItems } = await supabase
+        .from('inspection_items')
+        .select('id')
+        .eq('inspection_id', inspection.id);
+
+      if (existingItems && existingItems.length > 0) {
+        toast.info('Os itens desta vistoria já foram importados');
+        return;
+      }
+
+      // Insert all items
+      const itemsToInsert = parsedItems.map((item, index) => ({
+        inspection_id: inspection.id,
+        category: item.category,
+        description: item.description,
+        status: 'pending',
+        order_index: index,
+      }));
+
+      const { error } = await supabase
+        .from('inspection_items')
+        .insert(itemsToInsert);
+
+      if (error) throw error;
+      
+      toast.success(`${parsedItems.length} itens importados para o Kanban do imóvel`);
+    } catch (error) {
+      console.error('Error importing items:', error);
+      toast.error('Erro ao importar itens');
+    } finally {
+      setImportingToKanban(false);
     }
   };
 
@@ -331,15 +427,31 @@ export default function AdminVistoriaDetalhes() {
                   <Sparkles className="h-5 w-5 text-purple-600" />
                   <h3 className="font-semibold text-purple-700 dark:text-purple-300">Análise da IA</h3>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setRegenerateDialogOpen(true)}
-                  className="gap-1.5 text-purple-600 hover:text-purple-700 hover:bg-purple-500/10"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  Regenerar
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleImportToKanban()}
+                    disabled={importingToKanban}
+                    className="gap-1.5 border-purple-500/50 text-purple-700 hover:bg-purple-500/10"
+                  >
+                    {importingToKanban ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Import className="h-4 w-4" />
+                    )}
+                    Importar p/ Kanban
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setRegenerateDialogOpen(true)}
+                    className="gap-1.5 text-purple-600 hover:text-purple-700 hover:bg-purple-500/10"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Regenerar
+                  </Button>
+                </div>
               </div>
               <div className="whitespace-pre-wrap text-sm">
                 {inspection.transcript_summary}
