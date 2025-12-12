@@ -13,6 +13,7 @@ import { MediaThumbnail } from '@/components/MediaThumbnail';
 import { MediaGallery } from '@/components/MediaGallery';
 import { CreateMaintenanceFromInspectionDialog } from '@/components/CreateMaintenanceFromInspectionDialog';
 import EditInspectionDialog from '@/components/EditInspectionDialog';
+import { InspectionItemsKanban } from '@/components/InspectionItemsKanban';
 import { preloadMediaUrls } from '@/hooks/useMediaCache';
 import { ArrowLeft, Calendar, User, CheckCircle2, AlertTriangle, Headphones, FileText, Building2, Wrench, Plus, Sparkles, Loader2, Pencil, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
@@ -441,18 +442,30 @@ export default function AdminVistoriaDetalhes() {
             </Card>
           )}
 
+          {/* Kanban for problem triage - show for inspections with problems and AI summary */}
+          {inspection.notes === 'NÃO' && inspection.transcript_summary && (
+            <InspectionItemsKanban
+              inspectionId={inspection.id}
+              aiSummary={inspection.transcript_summary}
+              propertyId={property.id}
+              ownerId={property.owner_id}
+              attachments={attachments}
+            />
+          )}
+
           {/* Create Maintenance Section - Always show for inspections with problems */}
           {inspection.notes === 'NÃO' && (
             <Card className="p-4 border-destructive/50 bg-destructive/5">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                  <h3 className="font-semibold text-destructive">Problemas Identificados</h3>
+                  <h3 className="font-semibold text-destructive">Criar Manutenção Manual</h3>
                   <p className="text-sm text-muted-foreground">
-                    Crie manutenções para resolver os problemas encontrados. Você pode selecionar quais anexos importar.
+                    Crie uma manutenção manualmente com anexos da vistoria. Para triagem automática, use o Kanban acima.
                   </p>
                 </div>
                 <Button 
                   onClick={() => setMaintenanceDialogOpen(true)}
+                  variant="outline"
                   className="gap-2 w-full sm:w-auto"
                 >
                   <Plus className="h-4 w-4" />

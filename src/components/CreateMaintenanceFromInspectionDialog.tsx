@@ -26,11 +26,13 @@ interface CreateMaintenanceFromInspectionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   propertyId: string;
-  propertyName: string;
+  propertyName?: string;
   ownerId: string;
   inspectionId: string;
   attachments: Attachment[];
   transcriptSummary?: string;
+  prefilledDescription?: string;
+  onMaintenanceCreated?: (ticketId: string) => void;
 }
 
 export function CreateMaintenanceFromInspectionDialog({
@@ -41,7 +43,9 @@ export function CreateMaintenanceFromInspectionDialog({
   ownerId,
   inspectionId,
   attachments,
-  transcriptSummary
+  transcriptSummary,
+  prefilledDescription,
+  onMaintenanceCreated,
 }: CreateMaintenanceFromInspectionDialogProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -59,7 +63,7 @@ export function CreateMaintenanceFromInspectionDialog({
   useEffect(() => {
     if (open) {
       setSubject('');
-      setDescription(transcriptSummary || '');
+      setDescription(prefilledDescription || transcriptSummary || '');
       setPriority('normal');
       setCostResponsible('owner');
       setGuestCheckoutDate('');
@@ -68,7 +72,7 @@ export function CreateMaintenanceFromInspectionDialog({
     }
     // Only run when dialog opens, not when transcriptSummary changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, prefilledDescription]);
 
   const mediaAttachments = attachments.filter(a => 
     a.file_type?.startsWith('image/') || a.file_type?.startsWith('video/')
@@ -180,6 +184,7 @@ export function CreateMaintenanceFromInspectionDialog({
       }
 
       toast.success('Manutenção criada com sucesso!');
+      onMaintenanceCreated?.(ticket.id);
       onOpenChange(false);
       navigate('/admin/manutencoes');
     } catch (error: any) {
