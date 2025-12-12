@@ -369,13 +369,40 @@ export function PropertyInspectionItemsKanban({
                 </Button>
               )}
               {selectedItems.size > 0 && (
-                <Button
-                  onClick={handleCreateMaintenance}
-                  size="sm"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nova Manutenção ({selectedItems.size})
-                </Button>
+                <>
+                  <Button
+                    onClick={handleCreateMaintenance}
+                    size="sm"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nova Manutenção ({selectedItems.size})
+                  </Button>
+                  <Button
+                    onClick={async () => {
+                      try {
+                        const { error } = await supabase
+                          .from('inspection_items')
+                          .delete()
+                          .in('id', Array.from(selectedItems));
+                        
+                        if (error) throw error;
+                        
+                        setItems(prev => prev.filter(i => !selectedItems.has(i.id)));
+                        setSelectedItems(new Set());
+                        toast.success(`${selectedItems.size} itens excluídos`);
+                      } catch (error) {
+                        console.error('Error deleting items:', error);
+                        toast.error('Erro ao excluir itens');
+                      }
+                    }}
+                    size="sm"
+                    variant="outline"
+                    className="text-destructive border-destructive/50 hover:bg-destructive/10"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Excluir ({selectedItems.size})
+                  </Button>
+                </>
               )}
               {items.length > 0 && (
                 <AlertDialog>
