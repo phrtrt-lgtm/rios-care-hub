@@ -50,11 +50,42 @@ interface Attachment {
 // Component to show audio with duration
 function AudioWithDuration({ audio, index }: { audio: Attachment; index: number }) {
   const [duration, setDuration] = useState<string>('...');
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const audioRef = React.useRef<HTMLAudioElement>(null);
 
+  // Fetch authenticated audio and create blob URL
+  useEffect(() => {
+    let objectUrl: string | null = null;
+    
+    const loadAudio = async () => {
+      try {
+        // Fetch with credentials to handle authenticated storage URLs
+        const response = await fetch(audio.file_url, { credentials: 'include' });
+        if (response.ok) {
+          const blob = await response.blob();
+          objectUrl = URL.createObjectURL(blob);
+          setBlobUrl(objectUrl);
+        } else {
+          // Fallback to direct URL if fetch fails
+          setBlobUrl(audio.file_url);
+        }
+      } catch {
+        // Fallback to direct URL
+        setBlobUrl(audio.file_url);
+      }
+    };
+    
+    loadAudio();
+    
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [audio.file_url]);
+
+  // Get duration once audio is loaded
   useEffect(() => {
     const audioEl = audioRef.current;
-    if (audioEl) {
+    if (audioEl && blobUrl) {
       const handleLoadedMetadata = () => {
         const secs = audioEl.duration;
         if (isFinite(secs) && !isNaN(secs)) {
@@ -64,13 +95,12 @@ function AudioWithDuration({ audio, index }: { audio: Attachment; index: number 
         }
       };
       audioEl.addEventListener('loadedmetadata', handleLoadedMetadata);
-      // Try to load if already cached
       if (audioEl.readyState >= 1) {
         handleLoadedMetadata();
       }
       return () => audioEl.removeEventListener('loadedmetadata', handleLoadedMetadata);
     }
-  }, []);
+  }, [blobUrl]);
 
   return (
     <div className="bg-muted/50 rounded-lg p-3">
@@ -78,7 +108,13 @@ function AudioWithDuration({ audio, index }: { audio: Attachment; index: number 
         <span className="text-sm text-muted-foreground">Áudio {index + 1}</span>
         <Badge variant="outline" className="text-xs">{duration}</Badge>
       </div>
-      <audio ref={audioRef} controls src={audio.file_url} className="w-full" preload="metadata" />
+      {blobUrl ? (
+        <audio ref={audioRef} controls src={blobUrl} className="w-full" preload="metadata" />
+      ) : (
+        <div className="h-12 flex items-center justify-center text-sm text-muted-foreground">
+          Carregando áudio...
+        </div>
+      )}
     </div>
   );
 }
