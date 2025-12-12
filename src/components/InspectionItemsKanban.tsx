@@ -31,6 +31,7 @@ interface PropertyInspectionItemsKanbanProps {
   ownerId: string;
   inspections: InspectionWithSummary[];
   attachments?: { id: string; file_url: string; file_name?: string; file_type?: string }[];
+  isOwnerView?: boolean; // If true, owner can only select items in 'owner' column and cannot drag
 }
 
 const COLUMNS = [
@@ -58,6 +59,7 @@ export function PropertyInspectionItemsKanban({
   ownerId,
   inspections,
   attachments = [],
+  isOwnerView = false,
 }: PropertyInspectionItemsKanbanProps) {
   const [items, setItems] = useState<InspectionItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -265,6 +267,13 @@ export function PropertyInspectionItemsKanban({
   };
 
   const toggleItemSelection = (itemId: string) => {
+    const item = items.find(i => i.id === itemId);
+    
+    // Owner can only select items in 'owner' column
+    if (isOwnerView && item?.status !== 'owner') {
+      return;
+    }
+    
     setSelectedItems(prev => {
       const next = new Set(prev);
       if (next.has(itemId)) {
@@ -390,9 +399,9 @@ export function PropertyInspectionItemsKanban({
         
         <CollapsibleContent>
           <CardContent className="pt-4">
-            {/* Action buttons */}
+            {/* Action buttons - only for team, not owners */}
             <div className="flex flex-wrap gap-2 mb-4">
-              {hasAISummaries && (
+              {!isOwnerView && hasAISummaries && (
                 <Button
                   onClick={handleImportItems}
                   disabled={importing}
@@ -416,34 +425,36 @@ export function PropertyInspectionItemsKanban({
                     <Plus className="h-4 w-4 mr-2" />
                     Nova Manutenção ({selectedItems.size})
                   </Button>
-                  <Button
-                    onClick={async () => {
-                      try {
-                        const { error } = await supabase
-                          .from('inspection_items')
-                          .delete()
-                          .in('id', Array.from(selectedItems));
-                        
-                        if (error) throw error;
-                        
-                        setItems(prev => prev.filter(i => !selectedItems.has(i.id)));
-                        setSelectedItems(new Set());
-                        toast.success(`${selectedItems.size} itens excluídos`);
-                      } catch (error) {
-                        console.error('Error deleting items:', error);
-                        toast.error('Erro ao excluir itens');
-                      }
-                    }}
-                    size="sm"
-                    variant="outline"
-                    className="text-destructive border-destructive/50 hover:bg-destructive/10"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Excluir ({selectedItems.size})
-                  </Button>
+                  {!isOwnerView && (
+                    <Button
+                      onClick={async () => {
+                        try {
+                          const { error } = await supabase
+                            .from('inspection_items')
+                            .delete()
+                            .in('id', Array.from(selectedItems));
+                          
+                          if (error) throw error;
+                          
+                          setItems(prev => prev.filter(i => !selectedItems.has(i.id)));
+                          setSelectedItems(new Set());
+                          toast.success(`${selectedItems.size} itens excluídos`);
+                        } catch (error) {
+                          console.error('Error deleting items:', error);
+                          toast.error('Erro ao excluir itens');
+                        }
+                      }}
+                      size="sm"
+                      variant="outline"
+                      className="text-destructive border-destructive/50 hover:bg-destructive/10"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Excluir ({selectedItems.size})
+                    </Button>
+                  )}
                 </>
               )}
-              {items.length > 0 && (
+              {!isOwnerView && items.length > 0 && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button
@@ -496,7 +507,9 @@ export function PropertyInspectionItemsKanban({
 
             {items.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                {hasAISummaries ? (
+                {isOwnerView ? (
+                  <p>Nenhum problema identificado nas vistorias</p>
+                ) : hasAISummaries ? (
                   <p>Clique em "Importar da IA" para extrair os itens das análises</p>
                 ) : (
                   <p>Nenhuma análise de IA disponível nas vistorias</p>
@@ -504,63 +517,73 @@ export function PropertyInspectionItemsKanban({
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-                {COLUMNS.map(column => (
-                  <div
-                    key={column.key}
-                    className={`rounded-lg p-2 min-h-[200px] ${column.color}`}
-                    onDragOver={handleDragOver}
-                    onDrop={(e) => handleDrop(e, column.key)}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-medium text-sm">{column.label}</h3>
-                      <Badge variant="secondary" className="text-xs">
-                        {getItemsByStatus(column.key).length}
-                      </Badge>
-                    </div>
-                    <div className="space-y-2">
-                      {getItemsByStatus(column.key).map(item => (
-                        <div
-                          key={item.id}
-                          draggable
-                          onDragStart={(e) => handleDragStart(e, item.id)}
-                          className={`bg-background rounded-md p-2 shadow-sm cursor-grab active:cursor-grabbing border ${
-                            draggedItem === item.id ? 'opacity-50' : ''
-                          } ${selectedItems.has(item.id) ? 'ring-2 ring-primary' : ''} ${
-                            item.maintenance_ticket_id ? 'border-green-500/50' : ''
-                          }`}
-                        >
-                          <div className="flex items-start gap-2">
-                            <div className="flex items-center gap-1 pt-0.5">
-                              <GripVertical className="h-3 w-3 text-muted-foreground" />
-                              {column.key !== 'completed' && !item.maintenance_ticket_id && (
-                                <Checkbox
-                                  checked={selectedItems.has(item.id)}
-                                  onCheckedChange={() => toggleItemSelection(item.id)}
-                                  onClick={(e) => e.stopPropagation()}
-                                />
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1 mb-1">
-                                <span className="text-xs">{getCategoryEmoji(item.category)}</span>
-                                <span className="text-xs font-medium truncate">{item.category}</span>
-                              </div>
-                              <p className="text-xs text-muted-foreground line-clamp-3">
-                                {item.description}
-                              </p>
-                              {item.maintenance_ticket_id && (
-                                <div className="flex items-center gap-1 mt-1 text-green-600">
-                                  <Check className="h-3 w-3" />
-                                  <span className="text-xs">Manutenção criada</span>
+                {COLUMNS.map(column => {
+                  // For owners, determine if this column allows selection
+                  const canOwnerSelect = column.key === 'owner';
+                  
+                  return (
+                    <div
+                      key={column.key}
+                      className={`rounded-lg p-2 min-h-[200px] ${column.color}`}
+                      onDragOver={isOwnerView ? undefined : handleDragOver}
+                      onDrop={isOwnerView ? undefined : (e) => handleDrop(e, column.key)}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-medium text-sm">{column.label}</h3>
+                        <Badge variant="secondary" className="text-xs">
+                          {getItemsByStatus(column.key).length}
+                        </Badge>
+                      </div>
+                      <div className="space-y-2">
+                        {getItemsByStatus(column.key).map(item => {
+                          const canSelect = !isOwnerView || (isOwnerView && canOwnerSelect);
+                          const showCheckbox = column.key !== 'completed' && !item.maintenance_ticket_id && canSelect;
+                          
+                          return (
+                            <div
+                              key={item.id}
+                              draggable={!isOwnerView}
+                              onDragStart={isOwnerView ? undefined : (e) => handleDragStart(e, item.id)}
+                              className={`bg-background rounded-md p-2 shadow-sm border ${
+                                !isOwnerView ? 'cursor-grab active:cursor-grabbing' : ''
+                              } ${draggedItem === item.id ? 'opacity-50' : ''} ${
+                                selectedItems.has(item.id) ? 'ring-2 ring-primary' : ''
+                              } ${item.maintenance_ticket_id ? 'border-green-500/50' : ''}`}
+                            >
+                              <div className="flex items-start gap-2">
+                                <div className="flex items-center gap-1 pt-0.5">
+                                  {!isOwnerView && <GripVertical className="h-3 w-3 text-muted-foreground" />}
+                                  {showCheckbox && (
+                                    <Checkbox
+                                      checked={selectedItems.has(item.id)}
+                                      onCheckedChange={() => toggleItemSelection(item.id)}
+                                      onClick={(e) => e.stopPropagation()}
+                                    />
+                                  )}
                                 </div>
-                              )}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1 mb-1">
+                                    <span className="text-xs">{getCategoryEmoji(item.category)}</span>
+                                    <span className="text-xs font-medium truncate">{item.category}</span>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground line-clamp-3">
+                                    {item.description}
+                                  </p>
+                                  {item.maintenance_ticket_id && (
+                                    <div className="flex items-center gap-1 mt-1 text-green-600">
+                                      <Check className="h-3 w-3" />
+                                      <span className="text-xs">Manutenção criada</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        </div>
-                      ))}
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>
