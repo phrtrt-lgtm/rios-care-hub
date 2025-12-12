@@ -13,7 +13,6 @@ import { MediaThumbnail } from '@/components/MediaThumbnail';
 import { MediaGallery } from '@/components/MediaGallery';
 import { CreateMaintenanceFromInspectionDialog } from '@/components/CreateMaintenanceFromInspectionDialog';
 import EditInspectionDialog from '@/components/EditInspectionDialog';
-import { InspectionItemsKanban } from '@/components/InspectionItemsKanban';
 import { preloadMediaUrls } from '@/hooks/useMediaCache';
 import { ArrowLeft, Calendar, User, CheckCircle2, AlertTriangle, Headphones, FileText, Building2, Wrench, Plus, Sparkles, Loader2, Pencil, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
@@ -440,17 +439,6 @@ export default function AdminVistoriaDetalhes() {
                   ))}
               </div>
             </Card>
-          )}
-
-          {/* Kanban for problem triage - show for inspections with problems and AI summary */}
-          {inspection.notes === 'NÃO' && inspection.transcript_summary && (
-            <InspectionItemsKanban
-              inspectionId={inspection.id}
-              aiSummary={inspection.transcript_summary}
-              propertyId={property.id}
-              ownerId={property.owner_id}
-              attachments={attachments}
-            />
           )}
 
           {/* Create Maintenance Section - Always show for inspections with problems */}
