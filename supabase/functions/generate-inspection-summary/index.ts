@@ -13,13 +13,13 @@ serve(async (req) => {
   }
 
   try {
-    const { inspectionId, transcript } = await req.json();
+    const { inspectionId, transcript, extraPrompt } = await req.json();
 
     if (!inspectionId || !transcript) {
       throw new Error('Missing inspectionId or transcript');
     }
 
-    console.log(`Generating summary for inspection ${inspectionId}`);
+    console.log(`Generating summary for inspection ${inspectionId}`, extraPrompt ? `with extra prompt: ${extraPrompt}` : '');
 
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openAIApiKey) {
@@ -73,7 +73,7 @@ Se houver problemas, agrupe assim:
           },
           {
             role: 'user',
-            content: `Transcrição do áudio da vistoria:\n\n${transcript}`
+            content: `Transcrição do áudio da vistoria:\n\n${transcript}${extraPrompt ? `\n\nINSTRUÇÕES ADICIONAIS DO USUÁRIO: ${extraPrompt}` : ''}`
           }
         ],
         max_completion_tokens: 500,
