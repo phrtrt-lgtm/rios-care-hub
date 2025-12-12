@@ -4,9 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Wrench, GripVertical, Plus, Import, Check, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
+import { Loader2, Wrench, GripVertical, Plus, Import, Check, ChevronDown, ChevronUp, AlertTriangle, Trash2 } from 'lucide-react';
 import { CreateMaintenanceFromInspectionDialog } from './CreateMaintenanceFromInspectionDialog';
 
 interface InspectionItem {
@@ -375,6 +376,55 @@ export function PropertyInspectionItemsKanban({
                   <Plus className="h-4 w-4 mr-2" />
                   Nova Manutenção ({selectedItems.size})
                 </Button>
+              )}
+              {items.length > 0 && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-destructive border-destructive/50 hover:bg-destructive/10"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Limpar Kanban
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Limpar todos os itens?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Esta ação irá excluir todos os {items.length} itens do Kanban. 
+                        Você poderá reimportar os itens da análise de IA novamente.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={async () => {
+                          try {
+                            const inspectionIds = inspections.map(i => i.id);
+                            const { error } = await supabase
+                              .from('inspection_items')
+                              .delete()
+                              .in('inspection_id', inspectionIds);
+                            
+                            if (error) throw error;
+                            
+                            setItems([]);
+                            setSelectedItems(new Set());
+                            toast.success('Itens excluídos com sucesso');
+                          } catch (error) {
+                            console.error('Error deleting items:', error);
+                            toast.error('Erro ao excluir itens');
+                          }
+                        }}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Excluir tudo
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               )}
             </div>
 
