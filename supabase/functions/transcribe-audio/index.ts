@@ -55,25 +55,38 @@ async function generateSummary(transcript: string): Promise<string> {
         messages: [
           {
             role: 'system',
-            content: `Você é um especialista em manutenção de imóveis de aluguel de temporada. Analise a transcrição de vistoria e identifique problemas e soluções.
+            content: `Você é um especialista em manutenção de imóveis de aluguel de temporada. Analise a transcrição de vistoria e AGRUPE os problemas por CATEGORIA/TIPO DE SERVIÇO.
 
-CATEGORIAS DE PROFISSIONAIS (use a categoria correta!):
-- 🪟 Vidraceiro: box de banheiro, janelas, espelhos, portas de vidro
-- 💧 Encanador/Hidráulica: vazamentos, torneiras, chuveiros (parte hidráulica), canos, ralos
-- ⚡ Eletricista: tomadas, interruptores, lâmpadas, fiação, disjuntores
-- 🪚 Marceneiro: móveis de madeira, portas, gavetas, armários, dobradiças
-- 🔧 Manutenção geral: fechaduras, maçanetas, pequenos reparos
-- ❄️ Refrigeração: ar-condicionado, geladeira
-- 🧹 Limpeza: sujeira, manchas, limpeza profunda
-- 🛒 Compras: itens faltando (pilhas, utensílios, etc)
+CATEGORIAS (AGRUPE TODOS OS ITENS DE CADA CATEGORIA JUNTOS):
 
-Formato de resposta:
-- Se não houver problemas: "✅ Sem problemas identificados"
-- Se houver problemas, liste cada um:
-  • [EMOJI] Problema: descrição breve
-  • Profissional: tipo específico
-  
-Seja objetivo e direto. Não repita informações.`
+🧱 PEDREIRO/ALVENARIA: reparos em paredes, reboco, tapar buracos, dutos de ar (parte estrutural), azulejos, rejunte, pequenas obras
+🪟 VIDRACEIRO: box de banheiro, janelas de vidro, espelhos, portas de vidro
+💧 HIDRÁULICA: vazamentos, torneiras, chuveiros, canos, ralos, entupimentos, caixa d'água
+⚡ ELÉTRICA: tomadas, interruptores, lâmpadas, fiação, disjuntores
+🪚 MARCENARIA: móveis de madeira, portas de madeira, gavetas, armários, dobradiças de móveis
+🔧 MANUTENÇÃO GERAL: fechaduras, maçanetas, pequenos reparos diversos
+❄️ REFRIGERAÇÃO: ar-condicionado (parte mecânica/gás), geladeira
+🧹 LIMPEZA: sujeira, manchas, limpeza profunda necessária
+🛒 COMPRAS: itens faltando ou para repor (pilhas, utensílios, produtos, etc)
+
+REGRAS IMPORTANTES:
+- Tapar buraco/duto de ar-condicionado na parede = PEDREIRO (não refrigeração)
+- Problema no funcionamento do ar-condicionado = REFRIGERAÇÃO
+- Reparo em estrutura = PEDREIRO
+- Reparo em vidro = VIDRACEIRO
+
+FORMATO DE RESPOSTA:
+Se não houver problemas: "✅ Sem problemas identificados"
+
+Se houver problemas, agrupe assim:
+🧱 PEDREIRO/ALVENARIA:
+• Item 1
+• Item 2
+
+💧 HIDRÁULICA:
+• Item 1
+
+(Liste APENAS as categorias que têm problemas. Seja breve e direto.)`
           },
           {
             role: 'user',

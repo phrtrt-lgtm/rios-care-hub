@@ -1,20 +1,30 @@
-import React, { useState } from 'react';
-import { Loader2, Trash2, CheckCircle2, XCircle, Camera, Video, Mic, Sparkles, Eye, EyeOff } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Loader2, Trash2, CheckCircle2, XCircle, Camera, Video, Mic, Sparkles, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import AudioRecorder from '@/components/AudioRecorder';
 import AudioPlayer from '@/components/AudioPlayer';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
-interface TeamInspectionDialogProps {
+interface EditInspectionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  propertyId: string;
-  propertyName: string;
+  inspection: {
+    id: string;
+    property_id: string;
+    notes?: string;
+    transcript?: string;
+    transcript_summary?: string;
+    audio_url?: string;
+  };
+  existingAttachments: Array<{
+    id: string;
+    file_url: string;
+    file_name?: string;
+    file_type?: string;
+  }>;
   onSuccess?: () => void;
 }
 
@@ -34,30 +44,32 @@ interface AudioFile {
   uploading: boolean;
 }
 
-export default function TeamInspectionDialog({ 
+export default function EditInspectionDialog({ 
   open, 
-  onOpenChange, 
-  propertyId, 
-  propertyName,
+  onOpenChange,
+  inspection,
+  existingAttachments,
   onSuccess 
-}: TeamInspectionDialogProps) {
-  const [inspectionStatus, setInspectionStatus] = useState<'OK' | 'NÃO' | ''>('');
+}: EditInspectionDialogProps) {
+  const [inspectionStatus, setInspectionStatus] = useState<'OK' | 'NÃO' | ''>(inspection.notes as 'OK' | 'NÃO' || '');
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [audioFiles, setAudioFiles] = useState<AudioFile[]>([]);
-  const [internalOnly, setInternalOnly] = useState(true);
-  const [sending, setSending] = useState(false);
+  const [attachmentsToDelete, setAttachmentsToDelete] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
 
-  const resetForm = () => {
-    setInspectionStatus('');
-    setUploadedFiles([]);
-    setAudioFiles([]);
-    setInternalOnly(true);
-  };
+  useEffect(() => {
+    if (open) {
+      setInspectionStatus(inspection.notes as 'OK' | 'NÃO' || '');
+      setUploadedFiles([]);
+      setAudioFiles([]);
+      setAttachmentsToDelete([]);
+    }
+  }, [open, inspection]);
 
   const uploadFile = async (file: File): Promise<string> => {
     const fileExt = file.name.split('.').pop();
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-    const filePath = `inspections/${propertyId}/${fileName}`;
+    const filePath = `inspections/${inspection.property_id}/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
       .from('attachments')
@@ -76,7 +88,7 @@ export default function TeamInspectionDialog({
     if (!e.target.files) return;
     
     const selectedFiles = Array.from(e.target.files);
-    const maxSize = 50 * 1024 * 1024; // 50MB
+    const maxSize = 50 * 1024 * 1024;
     const oversizedFiles = selectedFiles.filter(f => f.size > maxSize);
     
     if (oversizedFiles.length > 0) {
@@ -117,6 +129,14 @@ export default function TeamInspectionDialog({
 
   const handleRemoveFile = (file: File) => {
     setUploadedFiles(prev => prev.filter(f => f.file !== file));
+  };
+
+  const handleRemoveExistingAttachment = (attachmentId: string) => {
+    setAttachmentsToDelete(prev => [...prev, attachmentId]);
+  };
+
+  const handleRestoreAttachment = (attachmentId: string) => {
+    setAttachmentsToDelete(prev => prev.filter(id => id !== attachmentId));
   };
 
   const handleAudioReady = async (file: File, transcriptText: string, summaryText: string, transcribing: boolean) => {
@@ -162,7 +182,7 @@ export default function TeamInspectionDialog({
     setAudioFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = async () => {
+  const handleSave = async () => {
     if (!inspectionStatus) {
       toast.error('Selecione o status da vistoria (OK ou NÃO)');
       return;
@@ -181,83 +201,94 @@ export default function TeamInspectionDialog({
       return;
     }
 
-    const filesWithErrors = uploadedFiles.filter(f => f.error);
-    if (filesWithErrors.length > 0) {
-      toast.error('Remova os arquivos com erro antes de enviar');
-      return;
-    }
-
-    setSending(true);
+    setSaving(true);
     
     try {
-      const attachments = uploadedFiles
-        .filter(f => f.url && !f.error)
-        .map(f => ({
+      // Update inspection record
+      const updateData: any = {
+        notes: inspectionStatus,
+      };
+
+      // If we have new audio with transcripts, append to existing
+      if (audioFiles.length > 0) {
+        const newTranscripts = audioFiles.filter(a => a.transcript).map(a => a.transcript).join('\n\n');
+        const newSummaries = audioFiles.filter(a => a.summary).map(a => a.summary).join('\n\n');
+        
+        if (newTranscripts) {
+          updateData.transcript = inspection.transcript 
+            ? `${inspection.transcript}\n\n${newTranscripts}` 
+            : newTranscripts;
+        }
+        
+        if (newSummaries) {
+          updateData.transcript_summary = inspection.transcript_summary 
+            ? `${inspection.transcript_summary}\n\n${newSummaries}` 
+            : newSummaries;
+        }
+      }
+
+      const { error: updateError } = await supabase
+        .from('cleaning_inspections')
+        .update(updateData)
+        .eq('id', inspection.id);
+
+      if (updateError) throw updateError;
+
+      // Delete removed attachments
+      if (attachmentsToDelete.length > 0) {
+        const { error: deleteError } = await supabase
+          .from('cleaning_inspection_attachments')
+          .delete()
+          .in('id', attachmentsToDelete);
+        
+        if (deleteError) throw deleteError;
+      }
+
+      // Add new attachments
+      const newAttachments = [
+        ...uploadedFiles.filter(f => f.url && !f.error).map(f => ({
+          inspection_id: inspection.id,
           file_url: f.url,
           file_name: f.file.name,
           file_type: f.file.type,
           size_bytes: f.file.size,
-        }));
+        })),
+        ...audioFiles.filter(a => a.url).map(a => ({
+          inspection_id: inspection.id,
+          file_url: a.url,
+          file_name: a.file.name,
+          file_type: a.file.type,
+          size_bytes: a.file.size,
+        }))
+      ];
 
-      const audioData = audioFiles
-        .filter(a => a.url)
-        .map(a => ({ 
-          audio_url: a.url, 
-          transcript: a.transcript,
-          summary: a.summary,
-        }));
-      
-      audioFiles
-        .filter(a => a.url)
-        .forEach(a => {
-          attachments.push({
-            file_url: a.url,
-            file_name: a.file.name,
-            file_type: a.file.type,
-            size_bytes: a.file.size,
-          });
-        });
+      if (newAttachments.length > 0) {
+        const { error: insertError } = await supabase
+          .from('cleaning_inspection_attachments')
+          .insert(newAttachments);
+        
+        if (insertError) throw insertError;
+      }
 
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('name, phone')
-        .eq('id', user?.id)
-        .single();
-
-      const { data, error } = await supabase.functions.invoke('create-inspection', {
-        body: {
-          property_id: propertyId,
-          cleaner_name: profile?.name,
-          cleaner_phone: profile?.phone,
-          notes: inspectionStatus,
-          audio_data: audioData,
-          attachments,
-          internal_only: internalOnly,
-        },
-      });
-
-      if (error) throw error;
-      if (!data?.ok) throw new Error(data?.error || 'Falha no envio');
-
-      toast.success('Vistoria criada com sucesso!');
-      resetForm();
+      toast.success('Vistoria atualizada com sucesso!');
       onOpenChange(false);
       onSuccess?.();
     } catch (error: any) {
-      console.error('Erro ao enviar vistoria:', error);
-      toast.error('Erro ao enviar vistoria: ' + (error.message || 'Erro desconhecido'));
+      console.error('Erro ao salvar vistoria:', error);
+      toast.error('Erro ao salvar vistoria: ' + (error.message || 'Erro desconhecido'));
     } finally {
-      setSending(false);
+      setSaving(false);
     }
   };
 
   const isUploading = uploadedFiles.some(f => f.uploading) || audioFiles.some(a => a.uploading);
   const isTranscribing = audioFiles.some(a => a.transcribing);
   const hasErrors = uploadedFiles.some(f => f.error);
-  const uploadedCount = uploadedFiles.filter(f => f.url && !f.error).length;
-  const totalFilesCount = uploadedFiles.length;
+  
+  const remainingAttachments = existingAttachments.filter(a => !attachmentsToDelete.includes(a.id));
+  const imageAttachments = remainingAttachments.filter(a => a.file_type?.startsWith('image/'));
+  const videoAttachments = remainingAttachments.filter(a => a.file_type?.startsWith('video/'));
+  const audioAttachments = remainingAttachments.filter(a => a.file_type?.startsWith('audio/'));
   
   const combinedSummary = audioFiles
     .filter(a => a.summary && !a.transcribing)
@@ -268,72 +299,43 @@ export default function TeamInspectionDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Eye className="h-5 w-5" />
-            Nova Vistoria – {propertyName}
-          </DialogTitle>
+          <DialogTitle>Editar Vistoria</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Internal Only Toggle */}
-          <div className="flex items-center justify-between p-4 bg-muted rounded-lg border">
-            <div className="flex items-center gap-3">
-              {internalOnly ? (
-                <EyeOff className="h-5 w-5 text-muted-foreground" />
-              ) : (
-                <Eye className="h-5 w-5 text-primary" />
-              )}
-              <div>
-                <Label htmlFor="internal-only" className="text-base font-medium">
-                  Vistoria Interna
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  {internalOnly 
-                    ? "Visível apenas para a equipe" 
-                    : "Visível para o proprietário"}
-                </p>
-              </div>
-            </div>
-            <Switch
-              id="internal-only"
-              checked={internalOnly}
-              onCheckedChange={setInternalOnly}
-            />
-          </div>
-
           {/* Status Selection */}
           <div className="space-y-4">
             <div className="text-center">
-              <h2 className="text-xl font-bold mb-1">Como está o imóvel?</h2>
+              <h2 className="text-lg font-bold mb-1">Status do imóvel</h2>
             </div>
             <RadioGroup value={inspectionStatus} onValueChange={(value) => setInspectionStatus(value as 'OK' | 'NÃO')}>
               <div className="grid grid-cols-2 gap-4">
                 <label 
-                  htmlFor="team-status-ok"
+                  htmlFor="edit-status-ok"
                   className={`cursor-pointer border-2 rounded-xl p-4 flex flex-col items-center gap-2 transition-all ${
                     inspectionStatus === 'OK' 
                       ? 'border-green-500 bg-green-50 dark:bg-green-950' 
                       : 'border-border hover:border-green-300'
                   }`}
                 >
-                  <RadioGroupItem value="OK" id="team-status-ok" className="sr-only" />
-                  <CheckCircle2 className={`h-12 w-12 ${inspectionStatus === 'OK' ? 'text-green-600' : 'text-muted-foreground'}`} />
-                  <span className={`text-xl font-bold ${inspectionStatus === 'OK' ? 'text-green-600' : 'text-muted-foreground'}`}>
+                  <RadioGroupItem value="OK" id="edit-status-ok" className="sr-only" />
+                  <CheckCircle2 className={`h-10 w-10 ${inspectionStatus === 'OK' ? 'text-green-600' : 'text-muted-foreground'}`} />
+                  <span className={`text-lg font-bold ${inspectionStatus === 'OK' ? 'text-green-600' : 'text-muted-foreground'}`}>
                     OK
                   </span>
                 </label>
 
                 <label 
-                  htmlFor="team-status-nao"
+                  htmlFor="edit-status-nao"
                   className={`cursor-pointer border-2 rounded-xl p-4 flex flex-col items-center gap-2 transition-all ${
                     inspectionStatus === 'NÃO' 
                       ? 'border-red-500 bg-red-50 dark:bg-red-950' 
                       : 'border-border hover:border-red-300'
                   }`}
                 >
-                  <RadioGroupItem value="NÃO" id="team-status-nao" className="sr-only" />
-                  <XCircle className={`h-12 w-12 ${inspectionStatus === 'NÃO' ? 'text-red-600' : 'text-muted-foreground'}`} />
-                  <span className={`text-xl font-bold ${inspectionStatus === 'NÃO' ? 'text-red-600' : 'text-muted-foreground'}`}>
+                  <RadioGroupItem value="NÃO" id="edit-status-nao" className="sr-only" />
+                  <XCircle className={`h-10 w-10 ${inspectionStatus === 'NÃO' ? 'text-red-600' : 'text-muted-foreground'}`} />
+                  <span className={`text-lg font-bold ${inspectionStatus === 'NÃO' ? 'text-red-600' : 'text-muted-foreground'}`}>
                     NÃO
                   </span>
                 </label>
@@ -341,15 +343,95 @@ export default function TeamInspectionDialog({
             </RadioGroup>
           </div>
 
-          {/* Audio Recording */}
+          {/* Existing Attachments */}
+          {existingAttachments.length > 0 && (
+            <div className="space-y-3 bg-card border rounded-xl p-4">
+              <h3 className="text-base font-bold">Anexos Existentes</h3>
+              
+              {imageAttachments.length > 0 && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">Fotos ({imageAttachments.length})</p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {imageAttachments.map(att => (
+                      <div key={att.id} className="relative aspect-square rounded-lg overflow-hidden border">
+                        <img src={att.file_url} alt="" className="w-full h-full object-cover" />
+                        <button
+                          onClick={() => handleRemoveExistingAttachment(att.id)}
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {videoAttachments.length > 0 && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">Vídeos ({videoAttachments.length})</p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {videoAttachments.map(att => (
+                      <div key={att.id} className="relative aspect-square rounded-lg overflow-hidden border bg-muted flex items-center justify-center">
+                        <Video className="h-8 w-8 text-muted-foreground" />
+                        <button
+                          onClick={() => handleRemoveExistingAttachment(att.id)}
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {audioAttachments.length > 0 && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">Áudios ({audioAttachments.length})</p>
+                  <div className="space-y-2">
+                    {audioAttachments.map(att => (
+                      <div key={att.id} className="flex items-center gap-2 p-2 bg-muted rounded-lg">
+                        <audio controls src={att.file_url} className="flex-1 h-8" />
+                        <button
+                          onClick={() => handleRemoveExistingAttachment(att.id)}
+                          className="bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {attachmentsToDelete.length > 0 && (
+                <div className="mt-3 p-2 bg-red-50 dark:bg-red-950 rounded-lg">
+                  <p className="text-sm text-red-600 dark:text-red-400">
+                    {attachmentsToDelete.length} anexo(s) serão removidos ao salvar
+                  </p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setAttachmentsToDelete([])}
+                    className="text-red-600 hover:text-red-700 mt-1"
+                  >
+                    Desfazer remoções
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Add New Audio */}
           <div className="space-y-3 bg-card border rounded-xl p-4">
             <div className="flex items-center gap-3">
               <div className="bg-primary/10 p-2 rounded-full">
                 <Mic className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <h3 className="text-base font-bold">Gravar áudio</h3>
-                <p className="text-sm text-muted-foreground">Opcional - Observações</p>
+                <h3 className="text-base font-bold">Adicionar áudio</h3>
+                <p className="text-sm text-muted-foreground">Novas observações</p>
               </div>
             </div>
             <AudioRecorder onAudioReady={handleAudioReady} />
@@ -361,7 +443,7 @@ export default function TeamInspectionDialog({
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <Mic className="h-4 w-4 text-primary" />
-                        <span className="text-sm font-medium">Áudio {index + 1}</span>
+                        <span className="text-sm font-medium">Novo Áudio {index + 1}</span>
                         {audio.uploading && (
                           <span className="text-xs text-muted-foreground ml-auto flex items-center gap-1">
                             <Loader2 className="h-3 w-3 animate-spin" />
@@ -399,7 +481,7 @@ export default function TeamInspectionDialog({
               <div className="mt-4 p-4 bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/20 rounded-xl">
                 <div className="flex items-center gap-2 mb-2">
                   <Sparkles className="h-5 w-5 text-purple-600" />
-                  <span className="font-semibold text-purple-700 dark:text-purple-300">Análise da IA</span>
+                  <span className="font-semibold text-purple-700 dark:text-purple-300">Nova Análise da IA</span>
                 </div>
                 <div className="text-sm whitespace-pre-wrap">
                   {combinedSummary}
@@ -408,7 +490,7 @@ export default function TeamInspectionDialog({
             )}
           </div>
 
-          {/* File Upload */}
+          {/* Add New Files */}
           <div className="space-y-3 bg-card border rounded-xl p-4">
             <div className="flex items-center gap-3 mb-3">
               <div className="bg-primary/10 p-2 rounded-full">
@@ -416,23 +498,22 @@ export default function TeamInspectionDialog({
               </div>
               <div>
                 <h3 className="text-base font-bold">Adicionar fotos e vídeos</h3>
-                <p className="text-sm text-muted-foreground">Opcional</p>
+                <p className="text-sm text-muted-foreground">Novos arquivos</p>
               </div>
             </div>
             
             <label 
-              htmlFor="team-files" 
+              htmlFor="edit-files" 
               className="cursor-pointer border-2 border-dashed rounded-xl p-4 flex flex-col items-center gap-2 hover:border-primary transition-colors bg-muted/30"
             >
               <div className="flex gap-4">
-                <Camera className="h-8 w-8 text-primary" />
-                <Video className="h-8 w-8 text-primary" />
+                <Plus className="h-8 w-8 text-primary" />
               </div>
               <p className="text-sm font-medium">Clique para adicionar</p>
             </label>
             
             <input
-              id="team-files"
+              id="edit-files"
               type="file"
               accept="image/*,video/*,video/mp4,video/quicktime,video/x-msvideo"
               multiple
@@ -446,17 +527,17 @@ export default function TeamInspectionDialog({
                   {isUploading ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                      Enviando {uploadedCount}/{totalFilesCount}...
+                      Enviando...
                     </>
                   ) : hasErrors ? (
                     <>
                       <XCircle className="h-4 w-4 text-red-600" />
-                      {uploadedCount} de {totalFilesCount} enviado(s)
+                      Alguns arquivos com erro
                     </>
                   ) : (
                     <>
                       <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      {uploadedFiles.length} arquivo(s) prontos
+                      {uploadedFiles.length} novo(s) arquivo(s) pronto(s)
                     </>
                   )}
                 </p>
@@ -480,21 +561,18 @@ export default function TeamInspectionDialog({
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-muted">
-                          <Video className="h-6 w-6 text-muted-foreground" />
+                          <Video className="h-8 w-8 text-muted-foreground" />
                         </div>
                       )}
-                      
                       {uploadedFile.uploading && (
                         <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                          <Loader2 className="h-6 w-6 animate-spin text-white" />
+                          <Loader2 className="h-6 w-6 text-white animate-spin" />
                         </div>
                       )}
-                      
                       {!uploadedFile.uploading && (
                         <button
-                          type="button"
                           onClick={() => handleRemoveFile(uploadedFile.file)}
-                          className="absolute top-1 right-1 bg-destructive text-white rounded-full p-1"
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
                         >
                           <Trash2 className="h-3 w-3" />
                         </button>
@@ -506,25 +584,22 @@ export default function TeamInspectionDialog({
             )}
           </div>
 
-          {/* Submit Buttons */}
-          <div className="flex gap-3 justify-end">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button 
-              onClick={handleSubmit} 
-              disabled={sending || isUploading || isTranscribing || hasErrors || !inspectionStatus}
-            >
-              {sending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Enviando...
-                </>
-              ) : (
-                'Criar Vistoria'
-              )}
-            </Button>
-          </div>
+          {/* Save Button */}
+          <Button
+            onClick={handleSave}
+            disabled={saving || isUploading || isTranscribing || !inspectionStatus}
+            className="w-full"
+            size="lg"
+          >
+            {saving ? (
+              <>
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                Salvando...
+              </>
+            ) : (
+              'Salvar Alterações'
+            )}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

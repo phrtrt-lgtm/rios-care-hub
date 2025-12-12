@@ -428,9 +428,8 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
         <input
           id="files"
           type="file"
-          accept="image/*,video/*"
+          accept="image/*,video/*,video/mp4,video/quicktime,video/x-msvideo"
           multiple
-          capture="environment"
           onChange={handleFileChange}
           className="sr-only"
         />
