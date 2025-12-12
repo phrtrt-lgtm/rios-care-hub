@@ -43,10 +43,10 @@ serve(async (req) => {
 CATEGORIAS (AGRUPE TODOS OS ITENS DE CADA CATEGORIA JUNTOS):
 
 🧱 PEDREIRO/ALVENARIA: reparos em paredes, reboco, tapar buracos, dutos de ar (parte estrutural), azulejos, rejunte, pequenas obras
-🪟 VIDRACEIRO: box de banheiro, janelas de vidro, espelhos, portas de vidro
+🔷 VIDRACEIRO: box de banheiro, janelas de vidro, espelhos, portas de vidro
 💧 HIDRÁULICA: vazamentos, torneiras, chuveiros, canos, ralos, entupimentos, caixa d'água
 ⚡ ELÉTRICA: tomadas, interruptores, lâmpadas, fiação, disjuntores
-🪚 MARCENARIA: móveis de madeira, portas de madeira, gavetas, armários, dobradiças de móveis
+🔨 MARCENARIA: móveis de madeira, portas de madeira, gavetas, armários, dobradiças de móveis
 🔧 MANUTENÇÃO GERAL: fechaduras, maçanetas, pequenos reparos diversos
 ❄️ REFRIGERAÇÃO: ar-condicionado (parte mecânica/gás), geladeira
 🧹 LIMPEZA: sujeira, manchas, limpeza profunda necessária
@@ -61,7 +61,7 @@ REGRAS IMPORTANTES:
 FORMATO DE RESPOSTA:
 Se não houver problemas: "✅ Sem problemas identificados"
 
-Se houver problemas, agrupe assim:
+Se houver problemas, agrupe assim (IMPORTANTE - use EXATAMENTE estes emojis):
 🧱 PEDREIRO/ALVENARIA:
 • Item 1
 • Item 2
