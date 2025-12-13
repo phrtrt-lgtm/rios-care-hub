@@ -115,7 +115,7 @@ export default function NovoTicketInterno() {
       if (assignedTo === "all") {
         let successCount = 0;
         for (const member of teamMembers) {
-          const { error } = await supabase
+          const { data: ticket, error } = await supabase
             .from("tickets")
             .insert([{
               owner_id: member.id,
@@ -126,9 +126,31 @@ export default function NovoTicketInterno() {
               priority: priority,
               property_id: propertyId || null,
               kind: "internal"
-            }]);
+            }])
+            .select()
+            .single();
 
-          if (!error) successCount++;
+          if (!error && ticket) {
+            // Create initial message with description
+            const session = await supabase.auth.getSession();
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+            await fetch(`${supabaseUrl}/functions/v1/create-ticket-message/${ticket.id}`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.data.session?.access_token}`,
+                'apikey': supabaseKey,
+              },
+              body: JSON.stringify({
+                author_type: 'agent',
+                message: description,
+                attachments: [],
+              }),
+            });
+            successCount++;
+          }
         }
         
         toast.success(`${successCount} ticket(s) criado(s) para a equipe!`);
@@ -150,6 +172,25 @@ export default function NovoTicketInterno() {
           .single();
 
         if (error) throw error;
+
+        // Create initial message with description
+        const session = await supabase.auth.getSession();
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+        await fetch(`${supabaseUrl}/functions/v1/create-ticket-message/${ticket.id}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.data.session?.access_token}`,
+            'apikey': supabaseKey,
+          },
+          body: JSON.stringify({
+            author_type: 'agent',
+            message: description,
+            attachments: [],
+          }),
+        });
 
         toast.success("Ticket interno criado com sucesso!");
         navigate(`/ticket-detalhes/${ticket.id}`);
