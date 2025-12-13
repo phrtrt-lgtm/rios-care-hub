@@ -117,8 +117,14 @@ export function VistoriasKanbanPreview() {
       >
         {/* Property thumbnail + Content */}
         <div className="flex gap-2 min-w-0">
-          {/* Property photo thumbnail */}
-          <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0 bg-muted">
+          {/* Property photo thumbnail - clickable */}
+          <div 
+            className="w-10 h-10 rounded overflow-hidden flex-shrink-0 bg-muted cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (property?.id) navigate(`/admin/vistorias/${property.id}`);
+            }}
+          >
             {property?.cover_photo_url ? (
               <img 
                 src={property.cover_photo_url} 
@@ -134,8 +140,16 @@ export function VistoriasKanbanPreview() {
           
           {/* Text content */}
           <div className="flex-1 min-w-0 overflow-hidden">
-            {/* Property name */}
-            <p className="text-xs font-medium truncate">{property?.name || 'Imóvel'}</p>
+            {/* Property name - clickable */}
+            <p 
+              className="text-xs font-medium truncate cursor-pointer hover:text-primary hover:underline transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (property?.id) navigate(`/admin/vistorias/${property.id}`);
+              }}
+            >
+              {property?.name || 'Imóvel'}
+            </p>
             
             {/* Time */}
             <div className="flex items-center gap-1 text-[10px] text-muted-foreground mt-0.5">
