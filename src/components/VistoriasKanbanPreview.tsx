@@ -122,7 +122,7 @@ export function VistoriasKanbanPreview() {
             className="w-10 h-10 rounded overflow-hidden flex-shrink-0 bg-muted cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
             onClick={(e) => {
               e.stopPropagation();
-              if (property?.id) navigate(`/admin/vistorias/${property.id}`);
+              if (property?.id) navigate(`/admin/vistorias/imovel/${property.id}`);
             }}
           >
             {property?.cover_photo_url ? (
@@ -145,7 +145,7 @@ export function VistoriasKanbanPreview() {
               className="text-xs font-medium truncate cursor-pointer hover:text-primary hover:underline transition-colors"
               onClick={(e) => {
                 e.stopPropagation();
-                if (property?.id) navigate(`/admin/vistorias/${property.id}`);
+                if (property?.id) navigate(`/admin/vistorias/imovel/${property.id}`);
               }}
             >
               {property?.name || 'Imóvel'}
