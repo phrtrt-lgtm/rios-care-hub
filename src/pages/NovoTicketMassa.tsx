@@ -60,7 +60,7 @@ const NovoTicketMassa = () => {
   });
 
   useEffect(() => {
-    if (!user || !['admin', 'agent'].includes(profile?.role || '')) {
+    if (!user || !['admin', 'agent', 'maintenance'].includes(profile?.role || '')) {
       navigate("/");
       return;
     }
