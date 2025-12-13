@@ -188,73 +188,99 @@ export function ChargeChatDialog({
 
   const handleSend = async () => {
     if (!newMessage.trim() && selectedFiles.length === 0) return;
-    if (!chargeId || !user) return;
+    if (!chargeId || !user || !profile) return;
     if (sending) return;
 
-    setSending(true);
-    try {
-      // Create message
-      const { data: messageData, error: messageError } = await supabase
-        .from("charge_messages")
-        .insert({
-          charge_id: chargeId,
-          author_id: user.id,
-          body: newMessage.trim(),
-          is_internal: false,
-        })
-        .select()
-        .single();
+    const messageText = newMessage.trim();
+    const filesToUpload = [...selectedFiles];
 
-      if (messageError) throw messageError;
+    // Create optimistic message immediately - user sees it instantly
+    const optimisticId = `optimistic-${Date.now()}`;
+    const optimisticMessage: ChargeMessage = {
+      id: optimisticId,
+      body: messageText,
+      created_at: new Date().toISOString(),
+      author_id: user.id,
+      is_internal: false,
+      profiles: {
+        id: user.id,
+        name: profile.name,
+        photo_url: profile.photo_url,
+        role: profile.role,
+      },
+      attachments: filesToUpload.map((file, i) => ({
+        id: `optimistic-att-${i}`,
+        file_name: file.name,
+        file_path: URL.createObjectURL(file),
+        file_size: file.size,
+        mime_type: file.type,
+      })),
+    };
 
-      // Upload attachments
-      if (selectedFiles.length > 0) {
-        for (const file of selectedFiles) {
-          setUploadingFiles(prev => new Set(prev).add(file.name));
-          
-          const filePath = `${chargeId}/${Date.now()}_${file.name}`;
-          
-          const { error: uploadError } = await supabase.storage
-            .from('charge-attachments')
-            .upload(filePath, file);
+    // Add optimistic message immediately
+    setMessages(prev => [...prev, optimisticMessage]);
+    
+    // Clear inputs immediately - feels instant
+    setNewMessage("");
+    setSelectedFiles([]);
 
-          if (uploadError) throw uploadError;
-
-          await supabase.from("charge_message_attachments").insert({
-            message_id: messageData.id,
+    // Upload and send in background
+    (async () => {
+      try {
+        // Create message
+        const { data: messageData, error: messageError } = await supabase
+          .from("charge_messages")
+          .insert({
             charge_id: chargeId,
-            created_by: user.id,
-            file_name: file.name,
-            file_path: filePath,
-            file_size: file.size,
-            mime_type: file.type,
-          });
-          
-          setUploadingFiles(prev => {
-            const next = new Set(prev);
-            next.delete(file.name);
-            return next;
-          });
+            author_id: user.id,
+            body: messageText,
+            is_internal: false,
+          })
+          .select()
+          .single();
+
+        if (messageError) throw messageError;
+
+        // Upload attachments
+        if (filesToUpload.length > 0) {
+          for (const file of filesToUpload) {
+            const filePath = `${chargeId}/${Date.now()}_${file.name}`;
+            
+            const { error: uploadError } = await supabase.storage
+              .from('charge-attachments')
+              .upload(filePath, file);
+
+            if (uploadError) throw uploadError;
+
+            await supabase.from("charge_message_attachments").insert({
+              message_id: messageData.id,
+              charge_id: chargeId,
+              created_by: user.id,
+              file_name: file.name,
+              file_path: filePath,
+              file_size: file.size,
+              mime_type: file.type,
+            });
+          }
         }
+
+        // Notify via edge function
+        supabase.functions.invoke('notify-charge-message', {
+          body: { chargeId, messageId: messageData.id }
+        }).catch(console.error);
+        
+        // Refetch to get real message with proper IDs
+        fetchMessages();
+      } catch (error: any) {
+        // Remove optimistic message on error
+        setMessages(prev => prev.filter(m => m.id !== optimisticId));
+        toast({
+          title: "Erro ao enviar mensagem",
+          description: error.message,
+          variant: "destructive",
+        });
       }
-
-      setNewMessage("");
-      setSelectedFiles([]);
-      fetchMessages();
-
-      // Notify via edge function
-      supabase.functions.invoke('notify-charge-message', {
-        body: { chargeId, messageId: messageData.id }
-      }).catch(console.error);
-    } catch (error: any) {
-      toast({
-        title: "Erro ao enviar mensagem",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setSending(false);
-    }
+    })();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
