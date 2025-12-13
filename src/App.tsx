@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { SessionHandlerWrapper } from "@/components/SessionHandlerWrapper";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Cadastro from "./pages/Cadastro";
@@ -61,6 +62,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <SessionHandlerWrapper>
           <Routes>
             <Route index element={<Index />} />
             <Route path="/login" element={<Login />} />
@@ -376,6 +378,7 @@ const App = () => (
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </SessionHandlerWrapper>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
