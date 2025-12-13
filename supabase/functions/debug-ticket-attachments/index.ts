@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
       .eq('id', user.id)
       .single()
 
-    const isTeam = profile?.role === 'admin' || profile?.role === 'agent'
+    const isTeam = profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance'
 
     // Seta contexto de sessão para RLS
     await supabase.rpc('set_session_context', {

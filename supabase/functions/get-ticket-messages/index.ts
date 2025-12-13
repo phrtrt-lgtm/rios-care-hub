@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
 
     console.log(`👤 User ${userId} has role: ${profile?.role}`)
 
-    const isTeam = profile?.role === 'admin' || profile?.role === 'agent'
+    const isTeam = profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance'
 
     console.log(`🔍 Searching for ticket ${ticketId}`)
 
