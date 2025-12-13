@@ -75,7 +75,10 @@ export function PropertyInspectionItemsKanban({
   const [addingProblem, setAddingProblem] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
+  const [editingCategory, setEditingCategory] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
+
+  const CATEGORY_OPTIONS = CATEGORY_PATTERNS.map(p => ({ value: p.category, emoji: p.emoji }));
 
   useEffect(() => {
     fetchItems();
@@ -109,32 +112,38 @@ export function PropertyInspectionItemsKanban({
   const handleStartEdit = (item: InspectionItem) => {
     setEditingItemId(item.id);
     setEditingText(item.description);
+    setEditingCategory(item.category);
   };
 
   const handleCancelEdit = () => {
     setEditingItemId(null);
     setEditingText('');
+    setEditingCategory('');
   };
 
   const handleSaveEdit = async () => {
-    if (!editingItemId || !editingText.trim()) return;
+    if (!editingItemId || !editingText.trim() || !editingCategory) return;
     setSavingEdit(true);
     try {
       const { error } = await supabase
         .from('inspection_items')
-        .update({ description: editingText.trim() })
+        .update({ 
+          description: editingText.trim(),
+          category: editingCategory
+        })
         .eq('id', editingItemId);
       
       if (error) throw error;
       
       setItems(prev => prev.map(item => 
         item.id === editingItemId 
-          ? { ...item, description: editingText.trim() } 
+          ? { ...item, description: editingText.trim(), category: editingCategory } 
           : item
       ));
       toast.success('Item atualizado');
       setEditingItemId(null);
       setEditingText('');
+      setEditingCategory('');
     } catch (error) {
       console.error('Error updating item:', error);
       toast.error('Erro ao atualizar item');
@@ -740,7 +749,7 @@ export function PropertyInspectionItemsKanban({
                               } ${item.maintenance_ticket_id ? 'border-green-500/50' : ''}`}
                             >
                               <div className="flex items-start gap-2">
-                                <div className="flex items-center gap-1 pt-0.5">
+                                <div className="flex flex-col items-center gap-1 pt-0.5">
                                   {!isOwnerView && !isEditing && <GripVertical className="h-3 w-3 text-muted-foreground" />}
                                   {showCheckbox && !isEditing && (
                                     <Checkbox
@@ -749,28 +758,34 @@ export function PropertyInspectionItemsKanban({
                                       onClick={(e) => e.stopPropagation()}
                                     />
                                   )}
+                                  {canEdit && !isEditing && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleStartEdit(item);
+                                      }}
+                                      className="p-0.5 rounded hover:bg-muted transition-colors"
+                                      title="Editar"
+                                    >
+                                      <Pencil className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                                    </button>
+                                  )}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center justify-between gap-1 mb-1">
-                                    <div className="flex items-center gap-1">
-                                      <span className="text-xs">{getCategoryEmoji(item.category)}</span>
-                                      <span className="text-xs font-medium truncate">{item.category}</span>
-                                    </div>
-                                    {canEdit && !isEditing && (
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleStartEdit(item);
-                                        }}
-                                        className="p-0.5 rounded hover:bg-muted transition-colors"
-                                        title="Editar"
-                                      >
-                                        <Pencil className="h-3 w-3 text-muted-foreground hover:text-foreground" />
-                                      </button>
-                                    )}
-                                  </div>
                                   {isEditing ? (
                                     <div className="space-y-2">
+                                      {/* Category selector */}
+                                      <select
+                                        value={editingCategory}
+                                        onChange={(e) => setEditingCategory(e.target.value)}
+                                        className="w-full text-xs border rounded px-2 py-1 bg-background"
+                                      >
+                                        {CATEGORY_OPTIONS.map(cat => (
+                                          <option key={cat.value} value={cat.value}>
+                                            {cat.emoji} {cat.value}
+                                          </option>
+                                        ))}
+                                      </select>
                                       <Textarea
                                         value={editingText}
                                         onChange={(e) => setEditingText(e.target.value)}
@@ -814,6 +829,10 @@ export function PropertyInspectionItemsKanban({
                                     </div>
                                   ) : (
                                     <>
+                                      <div className="flex items-center gap-1 mb-1">
+                                        <span className="text-xs">{getCategoryEmoji(item.category)}</span>
+                                        <span className="text-xs font-medium truncate">{item.category}</span>
+                                      </div>
                                       <TooltipProvider>
                                         <Tooltip delayDuration={300}>
                                           <TooltipTrigger asChild>
