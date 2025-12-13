@@ -12,7 +12,7 @@ import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useChatPreloader } from "@/hooks/useChatPreloader";
 import { MaintenanceChatDialog } from "./MaintenanceChatDialog";
 
-type TicketType = "duvida" | "cobranca" | "bloqueio_data" | "financeiro" | "outros" | "informacao" | "conversar_hospedes" | "melhorias_compras";
+type TicketType = "duvida" | "cobranca" | "bloqueio_data" | "financeiro" | "outros" | "conversar_hospedes" | "melhorias_compras";
 
 type OwnerTicket = {
   id: string;
@@ -38,7 +38,6 @@ const TICKET_TYPE_LABELS: Record<TicketType, string> = {
   bloqueio_data: "Bloqueio",
   financeiro: "Financeiro",
   outros: "Outros",
-  informacao: "Informação",
   conversar_hospedes: "Hóspedes",
   melhorias_compras: "Melhorias",
 };
@@ -49,7 +48,6 @@ const TICKET_TYPE_ICONS: Record<TicketType, React.ReactNode> = {
   bloqueio_data: <Lock className="h-3 w-3" />,
   financeiro: <DollarSign className="h-3 w-3" />,
   outros: <Info className="h-3 w-3" />,
-  informacao: <Info className="h-3 w-3" />,
   conversar_hospedes: <MessageCircle className="h-3 w-3" />,
   melhorias_compras: <ShoppingBag className="h-3 w-3" />,
 };

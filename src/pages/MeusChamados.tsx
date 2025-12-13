@@ -24,7 +24,6 @@ const statusLabels: Record<string, string> = {
 
 const typeLabels: Record<string, string> = {
   duvida: "Dúvida/Info",
-  informacao: "Informação",
   conversar_hospedes: "Hóspedes",
   bloqueio_data: "Bloqueio",
   manutencao: "Manutenção",
@@ -36,7 +35,6 @@ const typeLabels: Record<string, string> = {
 
 const typeColors: Record<string, string> = {
   duvida: "bg-secondary text-secondary-foreground",
-  informacao: "bg-secondary text-secondary-foreground",
   conversar_hospedes: "bg-secondary text-secondary-foreground",
   bloqueio_data: "bg-secondary text-secondary-foreground",
   manutencao: "bg-primary text-primary-foreground",

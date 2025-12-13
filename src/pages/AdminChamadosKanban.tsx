@@ -15,7 +15,7 @@ import { ArrowLeft, Search, Building, Clock, MessageSquare, HelpCircle, Calendar
 import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
 
 type TicketStatus = "novo" | "em_analise" | "aguardando_info" | "em_execucao" | "concluido" | "cancelado";
-type TicketType = "duvida" | "cobranca" | "bloqueio_data" | "financeiro" | "outros" | "informacao" | "conversar_hospedes" | "melhorias_compras";
+type TicketType = "duvida" | "cobranca" | "bloqueio_data" | "financeiro" | "outros" | "conversar_hospedes" | "melhorias_compras";
 
 interface OwnerTicket {
   id: string;
@@ -48,7 +48,6 @@ const TICKET_TYPE_LABELS: Record<TicketType, string> = {
   bloqueio_data: "Bloqueio de Data",
   financeiro: "Financeiro",
   outros: "Outros",
-  informacao: "Informação",
   conversar_hospedes: "Conversar c/ Hóspedes",
   melhorias_compras: "Melhorias/Compras",
 };
@@ -59,7 +58,6 @@ const TICKET_TYPE_ICONS: Record<TicketType, React.ReactNode> = {
   bloqueio_data: <Lock className="h-3 w-3" />,
   financeiro: <DollarSign className="h-3 w-3" />,
   outros: <Info className="h-3 w-3" />,
-  informacao: <Info className="h-3 w-3" />,
   conversar_hospedes: <MessageCircle className="h-3 w-3" />,
   melhorias_compras: <ShoppingBag className="h-3 w-3" />,
 };
