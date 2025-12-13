@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -6,9 +6,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
+import { useReadReceipts } from "@/hooks/useReadReceipts";
 import { AttachmentBubble } from "@/components/AttachmentBubble";
 import { MediaGallery } from "@/components/MediaGallery";
 import { VoiceToTextInput } from "@/components/VoiceToTextInput";
+import { ReadReceiptDisplay } from "@/components/ReadReceiptDisplay";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -81,6 +83,23 @@ export function ChargeChatDialog({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance';
+
+  // Read receipts for messages
+  const messageIds = useMemo(() => messages.map(m => m.id), [messages]);
+  const { receipts, markAsRead } = useReadReceipts(messageIds, "charge");
+
+  // Mark messages as read when dialog opens or new messages arrive
+  useEffect(() => {
+    if (open && messages.length > 0 && user) {
+      // Mark messages from others as read
+      const otherMessages = messages
+        .filter(m => m.author_id !== user.id)
+        .map(m => m.id);
+      if (otherMessages.length > 0) {
+        markAsRead(otherMessages);
+      }
+    }
+  }, [open, messages, user, markAsRead]);
 
   useEffect(() => {
     if (open && chargeId) {
@@ -388,6 +407,7 @@ export function ChargeChatDialog({
   const renderMessage = (message: ChargeMessage) => {
     const isOwnMessage = message.author_id === user?.id;
     const authorIsTeam = message.profiles?.role && isTeamMemberRole(message.profiles.role);
+    const messageReceipts = receipts[message.id] || [];
 
     return (
       <div
@@ -446,6 +466,11 @@ export function ChargeChatDialog({
               ))}
             </div>
           )}
+
+          {/* Read receipts */}
+          <div className="mt-1">
+            <ReadReceiptDisplay receipts={messageReceipts} isOwnMessage={isOwnMessage} />
+          </div>
         </div>
       </div>
     );

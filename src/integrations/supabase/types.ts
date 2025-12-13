@@ -1018,6 +1018,38 @@ export type Database = {
         }
         Relationships: []
       }
+      message_read_receipts: {
+        Row: {
+          id: string
+          message_id: string
+          message_type: string
+          read_at: string
+          reader_id: string
+        }
+        Insert: {
+          id?: string
+          message_id: string
+          message_type: string
+          read_at?: string
+          reader_id: string
+        }
+        Update: {
+          id?: string
+          message_id?: string
+          message_type?: string
+          read_at?: string
+          reader_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_read_receipts_reader_id_fkey"
+            columns: ["reader_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string

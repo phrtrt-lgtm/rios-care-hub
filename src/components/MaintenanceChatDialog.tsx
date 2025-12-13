@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,9 +7,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useMaintenanceChat, ChatMessage, ChatAttachment } from "@/hooks/useMaintenanceChat";
 import { useAuth } from "@/hooks/useAuth";
+import { useReadReceipts } from "@/hooks/useReadReceipts";
 import { AttachmentBubble } from "@/components/AttachmentBubble";
 import { MediaGallery } from "@/components/MediaGallery";
 import { VoiceToTextInput } from "@/components/VoiceToTextInput";
+import { ReadReceiptDisplay } from "@/components/ReadReceiptDisplay";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -50,6 +52,23 @@ export function MaintenanceChatDialog({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance';
+
+  // Read receipts for messages
+  const messageIds = useMemo(() => messages.map(m => m.id), [messages]);
+  const { receipts, markAsRead } = useReadReceipts(messageIds, "ticket");
+
+  // Mark messages as read when dialog opens or new messages arrive
+  useEffect(() => {
+    if (open && messages.length > 0 && user) {
+      // Mark messages from others as read
+      const otherMessages = messages
+        .filter(m => m.author?.id !== user.id)
+        .map(m => m.id);
+      if (otherMessages.length > 0) {
+        markAsRead(otherMessages);
+      }
+    }
+  }, [open, messages, user, markAsRead]);
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
@@ -223,6 +242,7 @@ export function MaintenanceChatDialog({
   const renderMessage = (message: ChatMessage) => {
     const isOwnMessage = message.author?.id === user?.id;
     const authorIsTeam = message.author?.role && isTeamMemberRole(message.author.role);
+    const messageReceipts = receipts[message.id] || [];
 
     return (
       <div
@@ -283,6 +303,11 @@ export function MaintenanceChatDialog({
               ))}
             </div>
           )}
+
+          {/* Read receipts */}
+          <div className="mt-1">
+            <ReadReceiptDisplay receipts={messageReceipts} isOwnMessage={isOwnMessage} />
+          </div>
         </div>
       </div>
     );
