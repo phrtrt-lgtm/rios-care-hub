@@ -137,21 +137,24 @@ Diretrizes:
           break;
 
         case 'generate_title':
-          systemPrompt = `Você é um assistente especializado em criar títulos curtos e objetivos para chamados de manutenção em imóveis de hospedagem.
+          systemPrompt = `Você é um assistente que cria títulos CURTOS para chamados de manutenção.
 
-${context.propertyContext ? `${context.propertyContext}\n` : ''}
-${context.projectContext || 'Gere um título curto (máximo 60 caracteres) e objetivo para um chamado de manutenção.'}
-
-Diretrizes:
-- Escreva em português brasileiro
-- Máximo 60 caracteres
-- Seja direto e objetivo
-- Resuma o problema principal
-- NÃO comece com palavras como "Manutenção", "Reparo", "Conserto"
+REGRAS OBRIGATÓRIAS:
+- MÁXIMO 50 caracteres
+- Se houver múltiplos problemas, escolha o mais importante OU use um termo genérico como "Múltiplos reparos necessários"
+- NÃO liste todos os problemas no título
+- NÃO comece com "Manutenção", "Reparo", "Conserto"
 - NÃO use aspas
 - NÃO use pontuação final
-- Exemplos bons: "Torneira vazando no banheiro da suíte", "Ar-condicionado não liga", "Infiltração na parede da sala"`;
-          userPrompt = `Com base na descrição abaixo, gere APENAS o título (sem explicações, sem aspas):
+- Responda APENAS com o título, nada mais
+
+Exemplos de títulos bons:
+- "Torneira vazando no banheiro"
+- "Ar-condicionado não funciona"
+- "Infiltração na parede"
+- "Reparos gerais na unidade"
+- "Problemas hidráulicos diversos"`;
+          userPrompt = `Gere UM título curto (máximo 50 caracteres) para esta manutenção:
 
 ${context.description}`;
           break;
