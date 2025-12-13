@@ -228,43 +228,57 @@ export function PropertyInspectionItemsKanban({
 
     setAddingProblem(true);
     try {
-      // Call the AI to parse and categorize the problem
+      // Call the AI to parse and categorize the problem(s)
       const { data, error } = await supabase.functions.invoke('parse-inspection-problem', {
         body: { problemText: newProblemText.trim() }
       });
 
       if (error) throw error;
 
-      if (!data?.success || !data?.item) {
+      if (!data?.success || !data?.items || !Array.isArray(data.items) || data.items.length === 0) {
         throw new Error('Falha ao processar o problema');
       }
-
-      const { category, description } = data.item;
 
       // Normalize description for duplicate check
       const normalizeDesc = (desc: string) => desc.toLowerCase().trim().replace(/\s+/g, ' ');
       const existingDescriptions = new Set(items.map(item => normalizeDesc(item.description)));
       
-      if (existingDescriptions.has(normalizeDesc(description))) {
-        toast.error('Este problema já existe no Kanban');
+      // Filter out duplicates
+      const newItems = data.items.filter((item: { category: string; description: string }) => {
+        const normalized = normalizeDesc(item.description);
+        if (existingDescriptions.has(normalized)) {
+          return false;
+        }
+        existingDescriptions.add(normalized);
+        return true;
+      });
+
+      if (newItems.length === 0) {
+        toast.error('Todos os problemas já existem no Kanban');
         return;
       }
 
-      // Insert the new item
+      // Insert all new items
+      const itemsToInsert = newItems.map((item: { category: string; description: string }, index: number) => ({
+        inspection_id: inspections[0].id,
+        category: item.category,
+        description: item.description,
+        status: 'pending',
+        order_index: items.length + index,
+      }));
+
       const { error: insertError } = await supabase
         .from('inspection_items')
-        .insert({
-          inspection_id: inspections[0].id,
-          category,
-          description,
-          status: 'pending',
-          order_index: items.length,
-        });
+        .insert(itemsToInsert);
 
       if (insertError) throw insertError;
 
       setNewProblemText('');
-      toast.success('Problema adicionado ao Kanban');
+      const skipped = data.items.length - newItems.length;
+      const msg = skipped > 0 
+        ? `${newItems.length} problema(s) adicionado(s) (${skipped} duplicado(s) ignorado(s))`
+        : `${newItems.length} problema(s) adicionado(s) ao Kanban`;
+      toast.success(msg);
       fetchItems();
     } catch (error) {
       console.error('Error adding problem:', error);
