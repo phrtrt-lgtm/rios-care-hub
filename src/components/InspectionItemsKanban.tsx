@@ -3,11 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Wrench, GripVertical, Plus, Import, Check, ChevronDown, ChevronUp, AlertTriangle, Trash2 } from 'lucide-react';
+import { Loader2, Wrench, GripVertical, Plus, Import, Check, ChevronDown, ChevronUp, AlertTriangle, Trash2, Send, Sparkles } from 'lucide-react';
 import { CreateMaintenanceFromInspectionDialog } from './CreateMaintenanceFromInspectionDialog';
 
 interface InspectionItem {
@@ -68,6 +69,8 @@ export function PropertyInspectionItemsKanban({
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
   const [maintenanceDialogOpen, setMaintenanceDialogOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [newProblemText, setNewProblemText] = useState('');
+  const [addingProblem, setAddingProblem] = useState(false);
 
   useEffect(() => {
     fetchItems();
@@ -208,6 +211,65 @@ export function PropertyInspectionItemsKanban({
       toast.error('Erro ao importar itens');
     } finally {
       setImporting(false);
+    }
+  };
+
+  const handleAddProblem = async () => {
+    if (!newProblemText.trim()) {
+      toast.error('Digite a descrição do problema');
+      return;
+    }
+
+    if (inspections.length === 0) {
+      toast.error('Nenhuma vistoria disponível para adicionar o problema');
+      return;
+    }
+
+    setAddingProblem(true);
+    try {
+      // Call the AI to parse and categorize the problem
+      const { data, error } = await supabase.functions.invoke('parse-inspection-problem', {
+        body: { problemText: newProblemText.trim() }
+      });
+
+      if (error) throw error;
+
+      if (!data?.success || !data?.item) {
+        throw new Error('Falha ao processar o problema');
+      }
+
+      const { category, description } = data.item;
+
+      // Normalize description for duplicate check
+      const normalizeDesc = (desc: string) => desc.toLowerCase().trim().replace(/\s+/g, ' ');
+      const existingDescriptions = new Set(items.map(item => normalizeDesc(item.description)));
+      
+      if (existingDescriptions.has(normalizeDesc(description))) {
+        toast.error('Este problema já existe no Kanban');
+        return;
+      }
+
+      // Insert the new item
+      const { error: insertError } = await supabase
+        .from('inspection_items')
+        .insert({
+          inspection_id: inspections[0].id,
+          category,
+          description,
+          status: 'pending',
+          order_index: items.length,
+        });
+
+      if (insertError) throw insertError;
+
+      setNewProblemText('');
+      toast.success('Problema adicionado ao Kanban');
+      fetchItems();
+    } catch (error) {
+      console.error('Error adding problem:', error);
+      toast.error('Erro ao adicionar problema');
+    } finally {
+      setAddingProblem(false);
     }
   };
 
@@ -399,6 +461,38 @@ export function PropertyInspectionItemsKanban({
         
         <CollapsibleContent>
           <CardContent className="pt-4">
+            {/* Add problem input - only for team, not owners */}
+            {!isOwnerView && (
+              <div className="flex gap-2 mb-4">
+                <div className="flex-1 relative">
+                  <Sparkles className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Descreva um problema para a IA categorizar e adicionar..."
+                    value={newProblemText}
+                    onChange={(e) => setNewProblemText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !addingProblem) {
+                        handleAddProblem();
+                      }
+                    }}
+                    disabled={addingProblem}
+                    className="pl-9"
+                  />
+                </div>
+                <Button
+                  onClick={handleAddProblem}
+                  disabled={addingProblem || !newProblemText.trim()}
+                  size="sm"
+                >
+                  {addingProblem ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            )}
+
             {/* Action buttons - only for team, not owners */}
             <div className="flex flex-wrap gap-2 mb-4">
               {!isOwnerView && hasAISummaries && (
