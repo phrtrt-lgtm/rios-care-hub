@@ -773,6 +773,7 @@ export type Database = {
       }
       cleaning_inspections: {
         Row: {
+          archived_at: string | null
           audio_url: string | null
           cleaner_name: string | null
           cleaner_phone: string | null
@@ -786,6 +787,7 @@ export type Database = {
           transcript_summary: string | null
         }
         Insert: {
+          archived_at?: string | null
           audio_url?: string | null
           cleaner_name?: string | null
           cleaner_phone?: string | null
@@ -799,6 +801,7 @@ export type Database = {
           transcript_summary?: string | null
         }
         Update: {
+          archived_at?: string | null
           audio_url?: string | null
           cleaner_name?: string | null
           cleaner_phone?: string | null
