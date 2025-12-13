@@ -371,7 +371,10 @@ export default function AdminVistoriaDetalhes() {
           {/* Property & Date Info */}
           <Card className="p-4">
             <div className="flex items-center gap-4">
-              <div className="w-20 h-14 rounded overflow-hidden bg-muted flex-shrink-0">
+              <div 
+                className="w-20 h-14 rounded overflow-hidden bg-muted flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
+                onClick={() => navigate(`/admin/vistorias/${property.id}`)}
+              >
                 {property.cover_photo_url ? (
                   <img src={property.cover_photo_url} alt={property.name} className="w-full h-full object-cover" />
                 ) : (
@@ -381,7 +384,12 @@ export default function AdminVistoriaDetalhes() {
                 )}
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold">{property.name}</h3>
+                <h3 
+                  className="font-semibold cursor-pointer hover:text-primary hover:underline transition-colors"
+                  onClick={() => navigate(`/admin/vistorias/${property.id}`)}
+                >
+                  {property.name}
+                </h3>
                 <p className="text-sm text-muted-foreground">{property.address || 'Sem endereço'}</p>
               </div>
             </div>

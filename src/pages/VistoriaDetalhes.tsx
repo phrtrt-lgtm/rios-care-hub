@@ -171,7 +171,10 @@ export default function VistoriaDetalhes() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-4">
-                <div className="w-20 h-14 rounded overflow-hidden bg-muted flex-shrink-0">
+                <div 
+                  className="w-20 h-14 rounded overflow-hidden bg-muted flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
+                  onClick={() => navigate(`/vistorias?property=${inspection.property_id}`)}
+                >
                   {inspection.property.cover_photo_url ? (
                     <img 
                       src={inspection.property.cover_photo_url} 
@@ -185,7 +188,12 @@ export default function VistoriaDetalhes() {
                   )}
                 </div>
                 <div>
-                  <h3 className="font-semibold">{inspection.property.name}</h3>
+                  <h3 
+                    className="font-semibold cursor-pointer hover:text-primary hover:underline transition-colors"
+                    onClick={() => navigate(`/vistorias?property=${inspection.property_id}`)}
+                  >
+                    {inspection.property.name}
+                  </h3>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                     <Calendar className="h-4 w-4" />
                     {format(new Date(inspection.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
