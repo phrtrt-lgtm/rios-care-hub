@@ -137,26 +137,29 @@ Diretrizes:
           break;
 
         case 'generate_title':
-          systemPrompt = `Você é um assistente que cria títulos CURTOS para chamados de manutenção.
+          // Count how many problems are in the description (each line with emoji is a problem)
+          const descriptionLines = (context.description || '').split('\n').filter((line: string) => line.trim());
+          const problemCount = descriptionLines.length;
+          
+          systemPrompt = `Você cria títulos CURTOS para chamados de manutenção.
 
 REGRAS OBRIGATÓRIAS:
-- MÁXIMO 50 caracteres
-- Se houver múltiplos problemas, escolha o mais importante OU use um termo genérico como "Múltiplos reparos necessários"
-- NÃO liste todos os problemas no título
-- NÃO comece com "Manutenção", "Reparo", "Conserto"
-- NÃO use aspas
-- NÃO use pontuação final
-- Responda APENAS com o título, nada mais
+1. MÁXIMO 40 caracteres
+2. ${problemCount > 1 ? `A descrição tem ${problemCount} PROBLEMAS DIFERENTES. Use um título GENÉRICO como: "Múltiplos reparos", "Diversos ajustes", "Reparos gerais"` : 'Resuma o problema principal'}
+3. NUNCA concatene ou liste múltiplos problemas
+4. NÃO comece com "Manutenção", "Reparo", "Conserto"
+5. SEM aspas, SEM pontuação final
+6. Responda APENAS o título, nada mais
 
-Exemplos de títulos bons:
-- "Torneira vazando no banheiro"
-- "Ar-condicionado não funciona"
-- "Infiltração na parede"
-- "Reparos gerais na unidade"
-- "Problemas hidráulicos diversos"`;
-          userPrompt = `Gere UM título curto (máximo 50 caracteres) para esta manutenção:
+Exemplos para UM problema:
+- Torneira vazando no banheiro
+- Ar-condicionado não funciona
 
-${context.description}`;
+Exemplos para MÚLTIPLOS problemas:
+- Múltiplos reparos necessários
+- Diversos ajustes na unidade
+- Reparos gerais`;
+          userPrompt = `${problemCount > 1 ? `ATENÇÃO: São ${problemCount} problemas diferentes. Gere um título GENÉRICO (não liste todos).` : 'Gere um título curto.'}\n\n${context.description}`;
           break;
         
         default:
