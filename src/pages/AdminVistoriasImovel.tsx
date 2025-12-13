@@ -557,7 +557,7 @@ export default function AdminVistoriasImovel() {
                             ? 'bg-green-500/20 text-green-600' 
                             : 'bg-destructive/20 text-destructive'
                         }`}
-                        onClick={() => navigate(`/admin/vistorias/${inspection.id}`)}
+                        onClick={() => navigate(`/admin/vistoria/${inspection.id}`)}
                       >
                         {inspection.notes === 'OK' ? (
                           <CheckCircle2 className="h-6 w-6" />
@@ -569,7 +569,7 @@ export default function AdminVistoriasImovel() {
                       {/* Content */}
                       <div 
                         className="flex-1 min-w-0 cursor-pointer"
-                        onClick={() => navigate(`/admin/vistorias/${inspection.id}`)}
+                        onClick={() => navigate(`/admin/vistoria/${inspection.id}`)}
                       >
                         <div className="flex items-center justify-between gap-2 mb-1">
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
