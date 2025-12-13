@@ -237,6 +237,7 @@ export default function AdminVistoriasImovel() {
                 inspections={inspections
                   .filter(i => i.notes === 'NÃO' && i.transcript_summary)
                   .map(i => ({ id: i.id, transcript_summary: i.transcript_summary || null }))}
+                isAdmin={profile?.role === 'admin'}
               />
             )}
 
