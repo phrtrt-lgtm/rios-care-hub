@@ -32,7 +32,6 @@ interface PropertyInspectionItemsKanbanProps {
   propertyId: string;
   ownerId: string;
   inspections: InspectionWithSummary[];
-  attachments?: { id: string; file_url: string; file_name?: string; file_type?: string }[];
   isOwnerView?: boolean; // If true, owner can only select items in 'owner' column and cannot drag
   isAdmin?: boolean; // If true, user can select, delete, and clear items
 }
@@ -61,7 +60,6 @@ export function PropertyInspectionItemsKanban({
   propertyId,
   ownerId,
   inspections,
-  attachments = [],
   isOwnerView = false,
   isAdmin = false,
 }: PropertyInspectionItemsKanbanProps) {
@@ -391,12 +389,42 @@ export function PropertyInspectionItemsKanban({
       .join('\n');
   };
 
-  const handleCreateMaintenance = () => {
+  const [filteredAttachments, setFilteredAttachments] = useState<{ id: string; file_url: string; file_name?: string; file_type?: string; inspection_id: string }[]>([]);
+  const [loadingAttachments, setLoadingAttachments] = useState(false);
+
+  const handleCreateMaintenance = async () => {
     if (selectedItems.size === 0) {
       toast.error('Selecione ao menos um item');
       return;
     }
-    setMaintenanceDialogOpen(true);
+    
+    // Get unique inspection_ids from selected items
+    const selectedItemsList = items.filter(item => selectedItems.has(item.id));
+    const uniqueInspectionIds = [...new Set(selectedItemsList.map(item => item.inspection_id))];
+    
+    if (uniqueInspectionIds.length === 0) {
+      setMaintenanceDialogOpen(true);
+      return;
+    }
+    
+    // Fetch attachments only from those inspections
+    setLoadingAttachments(true);
+    try {
+      const { data: attachments, error } = await supabase
+        .from('cleaning_inspection_attachments')
+        .select('id, file_url, file_name, file_type, inspection_id')
+        .in('inspection_id', uniqueInspectionIds);
+      
+      if (error) throw error;
+      
+      setFilteredAttachments(attachments || []);
+    } catch (error) {
+      console.error('Error fetching attachments:', error);
+      setFilteredAttachments([]);
+    } finally {
+      setLoadingAttachments(false);
+      setMaintenanceDialogOpen(true);
+    }
   };
 
   const handleMaintenanceCreated = async (ticketId: string) => {
@@ -722,7 +750,7 @@ export function PropertyInspectionItemsKanban({
           inspectionId={inspections[0]?.id || ''}
           propertyId={propertyId}
           ownerId={ownerId}
-          attachments={attachments}
+          attachments={filteredAttachments}
           prefilledDescription={getSelectedItemsDescription()}
           onMaintenanceCreated={handleMaintenanceCreated}
         />
