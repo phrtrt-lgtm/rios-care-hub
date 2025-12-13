@@ -24,7 +24,7 @@ interface TeamMessage {
 const LAST_READ_KEY = 'team_chat_last_read';
 
 export function TeamChatWidget() {
-  const { user, profile } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<TeamMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -34,8 +34,8 @@ export function TeamChatWidget() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Check if user is team member
-  const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance';
+  // Check if user is team member - wait for auth to load
+  const isTeamMember = !authLoading && (profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance');
 
   const getLastReadTime = () => {
     const stored = localStorage.getItem(LAST_READ_KEY);
@@ -247,7 +247,8 @@ export function TeamChatWidget() {
     }
   }, [isOpen]);
 
-  if (!isTeamMember) return null;
+  // Don't render if still loading auth or not a team member
+  if (authLoading || !isTeamMember) return null;
 
   return (
     <div className="w-full bg-card border-b border-border">
