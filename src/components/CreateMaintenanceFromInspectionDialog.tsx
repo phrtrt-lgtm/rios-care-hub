@@ -59,16 +59,53 @@ export function CreateMaintenanceFromInspectionDialog({
   const [aiPrompt, setAiPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
+  const [isGeneratingTitle, setIsGeneratingTitle] = useState(false);
+
+  // Generate title from description using AI
+  const generateTitle = async (descriptionText: string) => {
+    if (!descriptionText.trim()) return;
+    setIsGeneratingTitle(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-generate-response', {
+        body: { 
+          action: 'generate_title',
+          context: {
+            description: descriptionText,
+            projectContext: 'Sistema de gestão de hospedagens RIOS - gere um título curto (máximo 60 caracteres) e objetivo para um chamado de manutenção. O título deve resumir o problema principal de forma clara e direta, sem usar palavras como "Manutenção" ou "Reparo" no início.'
+          }
+        }
+      });
+      
+      if (error) throw error;
+      if (data?.generatedText) {
+        // Clean up the title - remove quotes if present
+        const cleanTitle = data.generatedText.replace(/^["']|["']$/g, '').trim();
+        setSubject(cleanTitle);
+      }
+    } catch (error: any) {
+      console.error('Error generating title:', error);
+      // Silently fail - user can still type manually
+    } finally {
+      setIsGeneratingTitle(false);
+    }
+  };
+
   // Reset form and pre-populate description when dialog opens
   useEffect(() => {
     if (open) {
       setSubject('');
-      setDescription(prefilledDescription || transcriptSummary || '');
+      const desc = prefilledDescription || transcriptSummary || '';
+      setDescription(desc);
       setPriority('normal');
       setCostResponsible('owner');
       setGuestCheckoutDate('');
       setSelectedAttachments([]);
       setAiPrompt('');
+      
+      // Auto-generate title if we have a description
+      if (desc) {
+        generateTitle(desc);
+      }
     }
     // Only run when dialog opens, not when transcriptSummary changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -217,13 +254,31 @@ export function CreateMaintenanceFromInspectionDialog({
           {/* Subject */}
           <div className="space-y-2">
             <Label htmlFor="subject">Assunto *</Label>
-            <Input
-              id="subject"
-              placeholder="Ex: Torneira do banheiro vazando"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              required
-            />
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Input
+                  id="subject"
+                  placeholder={isGeneratingTitle ? "Gerando título..." : "Ex: Torneira do banheiro vazando"}
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  disabled={isGeneratingTitle}
+                  required
+                />
+                {isGeneratingTitle && (
+                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                )}
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                size="icon"
+                onClick={() => generateTitle(description)}
+                disabled={isGeneratingTitle || !description.trim()}
+                title="Gerar título com IA"
+              >
+                {isGeneratingTitle ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              </Button>
+            </div>
           </div>
 
           {/* Description */}

@@ -46,6 +46,7 @@ export default function NovaManutencao() {
   const [guestCheckoutDate, setGuestCheckoutDate] = useState<string>("");
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingTitle, setIsGeneratingTitle] = useState(false);
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -151,6 +152,41 @@ export default function NovaManutencao() {
     setUploadedFiles((prev) => prev.filter((f) => f.file_url !== fileUrl));
   };
 
+  const generateTitle = async (descriptionText?: string) => {
+    const textToUse = descriptionText || description;
+    if (!textToUse.trim()) {
+      toast.error("Preencha a descrição primeiro");
+      return;
+    }
+    setIsGeneratingTitle(true);
+    try {
+      const selectedProperty = properties.find(p => p.id === propertyId);
+      const propertyContext = selectedProperty ? `Unidade: ${selectedProperty.name}` : '';
+      
+      const { data, error } = await supabase.functions.invoke('ai-generate-response', {
+        body: { 
+          action: 'generate_title',
+          context: {
+            description: textToUse,
+            propertyContext,
+            projectContext: 'Sistema de gestão de hospedagens RIOS - gere um título curto (máximo 60 caracteres) e objetivo para um chamado de manutenção. O título deve resumir o problema principal de forma clara e direta, sem usar palavras como "Manutenção" ou "Reparo" no início.'
+          }
+        }
+      });
+      
+      if (error) throw error;
+      if (data?.generatedText) {
+        const cleanTitle = data.generatedText.replace(/^["']|["']$/g, '').trim();
+        setSubject(cleanTitle);
+        toast.success("Título gerado!");
+      }
+    } catch (error: any) {
+      toast.error("Erro ao gerar título: " + error.message);
+    } finally {
+      setIsGeneratingTitle(false);
+    }
+  };
+
   const generateDescription = async () => {
     if (!aiPrompt.trim()) return;
     setIsGenerating(true);
@@ -174,6 +210,11 @@ export default function NovaManutencao() {
         setDescription(data.generatedText);
         setAiPrompt("");
         toast.success("Descrição gerada! Revise e edite se necessário.");
+        
+        // Auto-generate title if subject is empty
+        if (!subject.trim()) {
+          generateTitle(data.generatedText);
+        }
       }
     } catch (error: any) {
       toast.error("Erro ao gerar descrição: " + error.message);
@@ -316,13 +357,31 @@ export default function NovaManutencao() {
 
               <div className="space-y-2">
                 <Label htmlFor="subject">Assunto *</Label>
-                <Input
-                  id="subject"
-                  placeholder="Ex: Torneira do banheiro vazando"
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  required
-                />
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Input
+                      id="subject"
+                      placeholder={isGeneratingTitle ? "Gerando título..." : "Ex: Torneira do banheiro vazando"}
+                      value={subject}
+                      onChange={(e) => setSubject(e.target.value)}
+                      disabled={isGeneratingTitle}
+                      required
+                    />
+                    {isGeneratingTitle && (
+                      <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                    )}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="icon"
+                    onClick={() => generateTitle()}
+                    disabled={isGeneratingTitle || !description.trim()}
+                    title="Gerar título com IA"
+                  >
+                    {isGeneratingTitle ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  </Button>
+                </div>
               </div>
 
               <div className="space-y-2">
