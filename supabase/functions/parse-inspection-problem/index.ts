@@ -17,6 +17,15 @@ const CATEGORY_PATTERNS = [
   { pattern: /ITENS|REPOSI[ÇC][ÃA]O|COMPRAS/i, category: 'ITENS/REPOSIÇÃO', emoji: '📦' },
 ];
 
+function getEmojiForCategory(category: string): string {
+  for (const { pattern, emoji } of CATEGORY_PATTERNS) {
+    if (pattern.test(category)) {
+      return emoji;
+    }
+  }
+  return '🔧';
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -31,7 +40,7 @@ serve(async (req) => {
 
     console.log('Parsing problem text:', problemText);
 
-    // Call Lovable AI to categorize the problem
+    // Call Lovable AI to categorize the problem(s)
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -43,7 +52,7 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `Você é um especialista em manutenção de imóveis. Analise o texto do problema e retorne um JSON com a categoria e descrição corrigida.
+            content: `Você é um especialista em manutenção de imóveis. Analise o texto e identifique TODOS os problemas mencionados, separando cada um em um item individual.
 
 CATEGORIAS DISPONÍVEIS:
 - PEDREIRO/ALVENARIA: reparos em paredes, reboco, tapar buracos, dutos de ar (parte estrutural), azulejos, rejunte
@@ -56,20 +65,24 @@ CATEGORIAS DISPONÍVEIS:
 - LIMPEZA: sujeira, manchas, limpeza profunda necessária
 - ITENS/REPOSIÇÃO: itens faltando ou para repor
 
-REGRAS:
+REGRAS IMPORTANTES:
+- Se o texto mencionar MÚLTIPLOS problemas, separe cada um em um item distinto
 - Tapar buraco/duto de ar-condicionado na parede = PEDREIRO/ALVENARIA
 - Problema no funcionamento do ar-condicionado = REFRIGERAÇÃO
 - Reparo em estrutura de vidro = VIDRACEIRO
+- Cada problema deve ter uma descrição clara e concisa
 
 Retorne APENAS um JSON válido no formato:
-{"category": "CATEGORIA", "description": "Descrição clara e concisa do problema"}`
+{"items": [{"category": "CATEGORIA", "description": "Descrição do problema 1"}, {"category": "CATEGORIA", "description": "Descrição do problema 2"}]}
+
+Se for apenas um problema, retorne um array com um único item.`
           },
           {
             role: 'user',
             content: problemText
           }
         ],
-        max_tokens: 200,
+        max_tokens: 500,
       }),
     });
 
@@ -85,53 +98,60 @@ Retorne APENAS um JSON válido no formato:
     console.log('AI response:', aiResponse);
 
     // Try to parse the JSON response
-    let parsedItem: { category: string; description: string };
+    let parsedItems: { category: string; description: string }[] = [];
     
     try {
       // Extract JSON from the response (it might have extra text around it)
       const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        parsedItem = JSON.parse(jsonMatch[0]);
+        const parsed = JSON.parse(jsonMatch[0]);
+        
+        // Handle both formats: {items: [...]} or single {category, description}
+        if (parsed.items && Array.isArray(parsed.items)) {
+          parsedItems = parsed.items;
+        } else if (parsed.category && parsed.description) {
+          parsedItems = [parsed];
+        } else {
+          throw new Error('Invalid JSON structure');
+        }
       } else {
         throw new Error('No JSON found in response');
       }
     } catch (parseError) {
       console.error('Failed to parse AI response, using fallback:', parseError);
       // Fallback: use the original text and try to categorize based on keywords
-      parsedItem = {
-        category: 'MANUTENÇÃO GERAL',
-        description: problemText.trim()
-      };
+      let fallbackCategory = 'MANUTENÇÃO GERAL';
       
       // Try to match category from keywords
       const upperText = problemText.toUpperCase();
       for (const { pattern, category } of CATEGORY_PATTERNS) {
         if (pattern.test(upperText)) {
-          parsedItem.category = category;
+          fallbackCategory = category;
           break;
         }
       }
+      
+      parsedItems = [{
+        category: fallbackCategory,
+        description: problemText.trim()
+      }];
     }
 
-    // Find the emoji for the category
-    let emoji = '🔧';
-    for (const { pattern, emoji: catEmoji } of CATEGORY_PATTERNS) {
-      if (pattern.test(parsedItem.category)) {
-        emoji = catEmoji;
-        break;
-      }
-    }
+    // Add emojis to each item
+    const itemsWithEmoji = parsedItems.map(item => ({
+      category: item.category,
+      description: item.description,
+      emoji: getEmojiForCategory(item.category)
+    }));
 
-    console.log('Parsed item:', parsedItem, 'emoji:', emoji);
+    console.log('Parsed items:', itemsWithEmoji);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        item: {
-          category: parsedItem.category,
-          description: parsedItem.description,
-          emoji
-        }
+        items: itemsWithEmoji,
+        // Keep backward compatibility with single item
+        item: itemsWithEmoji[0]
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
