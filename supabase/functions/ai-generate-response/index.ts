@@ -135,6 +135,26 @@ Diretrizes:
 - Foque no que precisa ser resolvido`;
           userPrompt = context.prompt;
           break;
+
+        case 'generate_title':
+          systemPrompt = `Você é um assistente especializado em criar títulos curtos e objetivos para chamados de manutenção em imóveis de hospedagem.
+
+${context.propertyContext ? `${context.propertyContext}\n` : ''}
+${context.projectContext || 'Gere um título curto (máximo 60 caracteres) e objetivo para um chamado de manutenção.'}
+
+Diretrizes:
+- Escreva em português brasileiro
+- Máximo 60 caracteres
+- Seja direto e objetivo
+- Resuma o problema principal
+- NÃO comece com palavras como "Manutenção", "Reparo", "Conserto"
+- NÃO use aspas
+- NÃO use pontuação final
+- Exemplos bons: "Torneira vazando no banheiro da suíte", "Ar-condicionado não liga", "Infiltração na parede da sala"`;
+          userPrompt = `Com base na descrição abaixo, gere APENAS o título (sem explicações, sem aspas):
+
+${context.description}`;
+          break;
         
         default:
           throw new Error('Invalid action');
