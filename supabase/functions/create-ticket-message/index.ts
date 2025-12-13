@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
       .eq('id', user.id)
       .single()
 
-    const isTeam = profile?.role === 'admin' || profile?.role === 'agent'
+    const isTeam = profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance'
 
     // Busca o ticket PRIMEIRO (usa auth.uid() nas políticas RLS existentes)
     const { data: ticket } = await supabase

@@ -68,7 +68,7 @@ serve(async (req) => {
       .eq("id", user.id)
       .single();
 
-    const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent';
+    const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance';
 
     // Try to get attachment from charge_attachments first
     let attachment: any = null;
