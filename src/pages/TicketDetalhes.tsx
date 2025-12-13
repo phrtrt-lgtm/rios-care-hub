@@ -180,79 +180,104 @@ export default function TicketDetalhes() {
 
   const sendMessage = async () => {
     if (!newMessage.trim() && selectedFiles.length === 0) return;
+    if (!user || !profile) return;
 
-    try {
-      setSending(true);
-      
-      // Upload de anexos primeiro se houver
-      const attachments = [];
-      if (selectedFiles.length > 0) {
-        for (const file of selectedFiles) {
-          setUploadingFiles(prev => new Set(prev).add(file.name));
-          
-          const filePath = `${id}/${Date.now()}_${file.name}`;
+    const messageText = newMessage.trim();
+    const filesToUpload = [...selectedFiles];
+    
+    // Create optimistic message immediately - user sees it instantly
+    const optimisticId = `optimistic-${Date.now()}`;
+    const optimisticMessage: Message = {
+      id: optimisticId,
+      body: messageText,
+      created_at: new Date().toISOString(),
+      author_id: user.id,
+      is_internal: false,
+      profiles: {
+        name: profile.name,
+        photo_url: profile.photo_url,
+        role: profile.role,
+      },
+      attachments: filesToUpload.map((file, i) => ({
+        id: `optimistic-att-${i}`,
+        file_url: URL.createObjectURL(file),
+        file_name: file.name,
+        file_type: file.type,
+        size_bytes: file.size,
+      })),
+    };
 
-          const { error: uploadError } = await supabase.storage
-            .from('attachments')
-            .upload(filePath, file);
+    // Add optimistic message immediately
+    setMessages(prev => [...prev, optimisticMessage]);
+    
+    // Clear inputs immediately - feels instant
+    setNewMessage("");
+    setSelectedFiles([]);
 
-          if (uploadError) throw uploadError;
+    // Upload and send in background
+    (async () => {
+      try {
+        // Upload de anexos primeiro se houver
+        const attachments = [];
+        if (filesToUpload.length > 0) {
+          for (const file of filesToUpload) {
+            const filePath = `${id}/${Date.now()}_${file.name}`;
 
-          const { data: { publicUrl } } = supabase.storage
-            .from('attachments')
-            .getPublicUrl(filePath);
+            const { error: uploadError } = await supabase.storage
+              .from('attachments')
+              .upload(filePath, file);
 
-          attachments.push({
-            file_url: publicUrl,
-            file_name: file.name,
-            file_type: file.type,
-            size_bytes: file.size,
-            path: filePath
-          });
-          
-          setUploadingFiles(prev => {
-            const next = new Set(prev);
-            next.delete(file.name);
-            return next;
+            if (uploadError) throw uploadError;
+
+            const { data: { publicUrl } } = supabase.storage
+              .from('attachments')
+              .getPublicUrl(filePath);
+
+            attachments.push({
+              file_url: publicUrl,
+              file_name: file.name,
+              file_type: file.type,
+              size_bytes: file.size,
+              path: filePath
+            });
+          }
+        }
+
+        // Criar mensagem via edge function
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error('Not authenticated');
+
+        const { error } = await supabase.functions.invoke(`create-ticket-message/${id}`, {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`
+          },
+          body: {
+            message: messageText || null,
+            attachments,
+            is_internal: false
+          }
+        });
+
+        if (error) {
+          // Remove optimistic message on error
+          setMessages(prev => prev.filter(m => m.id !== optimisticId));
+          toast({
+            title: "Erro ao enviar mensagem",
+            description: error.message,
+            variant: "destructive",
           });
         }
+        // Realtime subscription will handle replacing the optimistic message
+      } catch (error: any) {
+        // Remove optimistic message on error
+        setMessages(prev => prev.filter(m => m.id !== optimisticId));
+        toast({
+          title: "Erro ao enviar mensagem",
+          description: error.message,
+          variant: "destructive",
+        });
       }
-
-      // Criar mensagem via edge function
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Not authenticated');
-
-      const { data, error } = await supabase.functions.invoke(`create-ticket-message/${id}`, {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`
-        },
-        body: {
-          message: newMessage.trim() || null,
-          attachments,
-          is_internal: false
-        }
-      });
-
-      if (error) throw error;
-
-      setNewMessage("");
-      setSelectedFiles([]);
-      toast({
-        title: "Mensagem enviada!",
-      });
-      
-      // Recarrega as mensagens
-      await fetchMessages();
-    } catch (error: any) {
-      toast({
-        title: "Erro ao enviar mensagem",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setSending(false);
-      setUploadingFiles(new Set());
-    }
+    })();
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {

@@ -223,49 +223,77 @@ export function useMaintenanceChat(ticketId: string | null) {
     [ticketId, profile]
   );
 
-  // Send message with attachments
+  // Send message with attachments - OPTIMISTIC UPDATE
   const sendMessage = useCallback(
     async (
       body: string, 
       attachments: Array<{ file_url: string; file_name: string; file_type: string; size_bytes: number; path: string }> = [],
       isInternal: boolean = false
     ) => {
-      if (!ticketId || !user) return false;
+      if (!ticketId || !user || !profile) return false;
       if (!body.trim() && attachments.length === 0) return false;
 
-      setSending(true);
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) throw new Error('Not authenticated');
+      // Create optimistic message immediately
+      const optimisticId = `optimistic-${Date.now()}`;
+      const optimisticMessage: ChatMessage = {
+        id: optimisticId,
+        body: body.trim(),
+        created_at: new Date().toISOString(),
+        is_internal: isInternal,
+        author: {
+          id: user.id,
+          name: profile.name,
+          photo_url: profile.photo_url,
+          role: profile.role,
+        },
+        attachments: attachments.map((att, i) => ({
+          id: `optimistic-att-${i}`,
+          file_url: att.file_url,
+          file_name: att.file_name,
+          file_type: att.file_type,
+          size_bytes: att.size_bytes,
+        })),
+      };
 
-        const { error } = await supabase.functions.invoke(`create-ticket-message/${ticketId}`, {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`
-          },
-          body: {
-            message: body.trim() || null,
-            attachments,
-            is_internal: isInternal
+      // Add optimistic message immediately - user sees it instantly
+      setMessages(prev => [...prev, optimisticMessage]);
+      
+      // Clear typing indicator
+      setTyping(false);
+
+      // Send in background - no await blocking UI
+      (async () => {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session) throw new Error('Not authenticated');
+
+          const { error } = await supabase.functions.invoke(`create-ticket-message/${ticketId}`, {
+            headers: {
+              Authorization: `Bearer ${session.access_token}`
+            },
+            body: {
+              message: body.trim() || null,
+              attachments,
+              is_internal: isInternal
+            }
+          });
+
+          if (error) {
+            console.error("Error sending message:", error);
+            // Remove optimistic message on error
+            setMessages(prev => prev.filter(m => m.id !== optimisticId));
           }
-        });
-
-        if (error) throw error;
-
-        // Clear typing indicator
-        setTyping(false);
-        
-        // Refetch messages to get the new one with attachments
-        await fetchMessages();
-        
-        return true;
-      } catch (error) {
-        console.error("Error sending message:", error);
-        return false;
-      } finally {
-        setSending(false);
-      }
+          // Realtime subscription will handle adding the real message
+        } catch (error) {
+          console.error("Error sending message:", error);
+          // Remove optimistic message on error
+          setMessages(prev => prev.filter(m => m.id !== optimisticId));
+        }
+      })();
+      
+      return true;
     },
-    [ticketId, user, setTyping, fetchMessages]
+    [ticketId, user, profile, setTyping]
   );
 
   return {
