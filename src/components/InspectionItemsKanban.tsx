@@ -439,6 +439,19 @@ export function PropertyInspectionItemsKanban({
       .join('\n');
   };
 
+  const getSelectedItemsTitle = () => {
+    const selectedItemsList = items.filter(item => selectedItems.has(item.id));
+    // Format: [Item 1] [Item 2] [Item 3]
+    return selectedItemsList
+      .map(item => {
+        // Capitalize first letter and clean up the description
+        const desc = item.description.trim();
+        const capitalized = desc.charAt(0).toUpperCase() + desc.slice(1);
+        return `[${capitalized}]`;
+      })
+      .join(' ');
+  };
+
   const [filteredAttachments, setFilteredAttachments] = useState<{ id: string; file_url: string; file_name?: string; file_type?: string; inspection_id: string }[]>([]);
   const [loadingAttachments, setLoadingAttachments] = useState(false);
 
@@ -875,6 +888,7 @@ export function PropertyInspectionItemsKanban({
           ownerId={ownerId}
           attachments={filteredAttachments}
           prefilledDescription={getSelectedItemsDescription()}
+          prefilledSubject={getSelectedItemsTitle()}
           onMaintenanceCreated={handleMaintenanceCreated}
         />
       </Card>
