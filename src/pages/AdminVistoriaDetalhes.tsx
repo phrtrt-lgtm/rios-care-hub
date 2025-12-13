@@ -117,7 +117,7 @@ export default function AdminVistoriaDetalhes() {
 
   useEffect(() => {
     if (!authLoading) {
-      if (profile?.role !== 'admin' && profile?.role !== 'agent') {
+      if (profile?.role !== 'admin' && profile?.role !== 'agent' && profile?.role !== 'maintenance') {
         navigate('/');
         return;
       }
