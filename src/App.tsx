@@ -109,7 +109,7 @@ const App = () => (
             <Route
               path="/aprovacoes"
               element={
-                <ProtectedRoute allowedRoles={['admin', 'maintenance']}>
+                <ProtectedRoute allowedRoles={['admin']}>
                   <Aprovacoes />
                 </ProtectedRoute>
               }
@@ -117,7 +117,7 @@ const App = () => (
             <Route
               path="/admin/cadastrar-proprietario"
               element={
-                <ProtectedRoute allowedRoles={['admin', 'maintenance']}>
+                <ProtectedRoute allowedRoles={['admin']}>
                   <AdminCadastrarProprietario />
                 </ProtectedRoute>
               }
@@ -125,7 +125,7 @@ const App = () => (
             <Route
               path="/admin/cadastrar-faxineira"
               element={
-                <ProtectedRoute allowedRoles={['admin', 'maintenance']}>
+                <ProtectedRoute allowedRoles={['admin']}>
                   <AdminCadastrarFaxineira />
                 </ProtectedRoute>
               }
@@ -197,7 +197,7 @@ const App = () => (
             <Route
               path="/migrar-anexos"
               element={
-                <ProtectedRoute allowedRoles={['admin', 'maintenance']}>
+                <ProtectedRoute allowedRoles={['admin']}>
                   <MigrarAnexos />
                 </ProtectedRoute>
               }
@@ -220,7 +220,7 @@ const App = () => (
             />
             <Route path="/configuracao-email" element={<ProtectedRoute allowedRoles={["admin"]}><ConfiguracaoEmail /></ProtectedRoute>} />
             <Route path="/configuracao-ia" element={<ProtectedRoute allowedRoles={["admin"]}><ConfiguracaoIA /></ProtectedRoute>} />
-            <Route path="/regras-cobrancas" element={<ProtectedRoute allowedRoles={["admin", "maintenance"]}><RegrasCobrancas /></ProtectedRoute>} />
+            <Route path="/regras-cobrancas" element={<ProtectedRoute allowedRoles={["admin"]}><RegrasCobrancas /></ProtectedRoute>} />
             <Route
               path="/manutencoes"
               element={
