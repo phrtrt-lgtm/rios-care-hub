@@ -226,7 +226,7 @@ export default function AdminVistorias() {
                     <Card
                       key={property.id}
                       className="cursor-pointer hover:shadow-lg transition-all hover:scale-[1.02] overflow-hidden group"
-                      onClick={() => navigate(`/admin/vistorias/imovel/${property.id}`)}
+                      onClick={() => navigate(`/admin/vistorias/${property.id}`)}
                     >
                       <div className="aspect-video bg-muted overflow-hidden relative">
                         {property.cover_photo_url ? (
@@ -296,7 +296,7 @@ export default function AdminVistorias() {
                       <div
                         key={insp.id}
                         className="flex items-center gap-3 p-2 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors"
-                        onClick={() => navigate(`/admin/vistorias/${insp.id}`)}
+                        onClick={() => navigate(`/admin/vistoria/${insp.id}`)}
                       >
                         <div className="w-10 h-10 rounded-lg bg-muted overflow-hidden flex-shrink-0">
                           {insp.property?.cover_photo_url ? (

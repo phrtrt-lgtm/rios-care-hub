@@ -254,7 +254,7 @@ const App = () => (
               }
             />
             <Route
-              path="/admin/vistorias/imovel/:id"
+              path="/admin/vistorias/:id"
               element={
                 <ProtectedRoute allowedRoles={['agent', 'admin', 'maintenance']}>
                   <AdminVistoriasImovel />
@@ -262,7 +262,7 @@ const App = () => (
               }
             />
             <Route
-              path="/admin/vistorias/:inspectionId"
+              path="/admin/vistoria/:inspectionId"
               element={
                 <ProtectedRoute allowedRoles={['agent', 'admin', 'maintenance']}>
                   <AdminVistoriaDetalhes />

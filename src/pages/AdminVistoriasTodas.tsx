@@ -164,7 +164,7 @@ export default function AdminVistoriasTodas() {
             <Card
               key={inspection.id}
               className="cursor-pointer transition-all hover:shadow-md"
-              onClick={() => navigate(`/admin/vistorias/${inspection.id}`)}
+              onClick={() => navigate(`/admin/vistoria/${inspection.id}`)}
             >
               <CardHeader className="pb-3">
                 <div className="flex items-start gap-4">
