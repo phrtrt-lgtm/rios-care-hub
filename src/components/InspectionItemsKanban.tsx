@@ -9,7 +9,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Wrench, GripVertical, Plus, Import, Check, ChevronDown, ChevronUp, AlertTriangle, Trash2, Send, Sparkles } from 'lucide-react';
+import { Loader2, Wrench, GripVertical, Plus, Import, Check, ChevronDown, ChevronUp, AlertTriangle, Trash2, Send, Sparkles, Pencil, X } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 import { CreateMaintenanceFromInspectionDialog } from './CreateMaintenanceFromInspectionDialog';
 
 interface InspectionItem {
@@ -72,6 +73,9 @@ export function PropertyInspectionItemsKanban({
   const [isExpanded, setIsExpanded] = useState(false);
   const [newProblemText, setNewProblemText] = useState('');
   const [addingProblem, setAddingProblem] = useState(false);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => {
     fetchItems();
@@ -99,6 +103,43 @@ export function PropertyInspectionItemsKanban({
       console.error('Error fetching inspection items:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleStartEdit = (item: InspectionItem) => {
+    setEditingItemId(item.id);
+    setEditingText(item.description);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingItemId(null);
+    setEditingText('');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingItemId || !editingText.trim()) return;
+    setSavingEdit(true);
+    try {
+      const { error } = await supabase
+        .from('inspection_items')
+        .update({ description: editingText.trim() })
+        .eq('id', editingItemId);
+      
+      if (error) throw error;
+      
+      setItems(prev => prev.map(item => 
+        item.id === editingItemId 
+          ? { ...item, description: editingText.trim() } 
+          : item
+      ));
+      toast.success('Item atualizado');
+      setEditingItemId(null);
+      setEditingText('');
+    } catch (error) {
+      console.error('Error updating item:', error);
+      toast.error('Erro ao atualizar item');
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -684,22 +725,24 @@ export function PropertyInspectionItemsKanban({
                           // Admin can select any item, owner can only select items in 'owner' column
                           const canSelect = isAdmin || (isOwnerView && canOwnerSelect);
                           const showCheckbox = column.key !== 'completed' && !item.maintenance_ticket_id && canSelect;
+                          const isEditing = editingItemId === item.id;
+                          const canEdit = !isOwnerView && !item.maintenance_ticket_id;
                           
                           return (
                             <div
                               key={item.id}
-                              draggable={!isOwnerView}
-                              onDragStart={isOwnerView ? undefined : (e) => handleDragStart(e, item.id)}
+                              draggable={!isOwnerView && !isEditing}
+                              onDragStart={isOwnerView || isEditing ? undefined : (e) => handleDragStart(e, item.id)}
                               className={`bg-background rounded-md p-2 shadow-sm border ${
-                                !isOwnerView ? 'cursor-grab active:cursor-grabbing' : ''
+                                !isOwnerView && !isEditing ? 'cursor-grab active:cursor-grabbing' : ''
                               } ${draggedItem === item.id ? 'opacity-50' : ''} ${
                                 selectedItems.has(item.id) ? 'ring-2 ring-primary' : ''
                               } ${item.maintenance_ticket_id ? 'border-green-500/50' : ''}`}
                             >
                               <div className="flex items-start gap-2">
                                 <div className="flex items-center gap-1 pt-0.5">
-                                  {!isOwnerView && <GripVertical className="h-3 w-3 text-muted-foreground" />}
-                                  {showCheckbox && (
+                                  {!isOwnerView && !isEditing && <GripVertical className="h-3 w-3 text-muted-foreground" />}
+                                  {showCheckbox && !isEditing && (
                                     <Checkbox
                                       checked={selectedItems.has(item.id)}
                                       onCheckedChange={() => toggleItemSelection(item.id)}
@@ -708,27 +751,88 @@ export function PropertyInspectionItemsKanban({
                                   )}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-1 mb-1">
-                                    <span className="text-xs">{getCategoryEmoji(item.category)}</span>
-                                    <span className="text-xs font-medium truncate">{item.category}</span>
-                                  </div>
-                                  <TooltipProvider>
-                                    <Tooltip delayDuration={300}>
-                                      <TooltipTrigger asChild>
-                                        <p className="text-xs text-muted-foreground line-clamp-3 cursor-help">
-                                          {item.description}
-                                        </p>
-                                      </TooltipTrigger>
-                                      <TooltipContent side="top" className="max-w-xs">
-                                        <p className="text-sm">{item.description}</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                  {item.maintenance_ticket_id && (
-                                    <div className="flex items-center gap-1 mt-1 text-green-600">
-                                      <Check className="h-3 w-3" />
-                                      <span className="text-xs">Manutenção criada</span>
+                                  <div className="flex items-center justify-between gap-1 mb-1">
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-xs">{getCategoryEmoji(item.category)}</span>
+                                      <span className="text-xs font-medium truncate">{item.category}</span>
                                     </div>
+                                    {canEdit && !isEditing && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleStartEdit(item);
+                                        }}
+                                        className="p-0.5 rounded hover:bg-muted transition-colors"
+                                        title="Editar"
+                                      >
+                                        <Pencil className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                                      </button>
+                                    )}
+                                  </div>
+                                  {isEditing ? (
+                                    <div className="space-y-2">
+                                      <Textarea
+                                        value={editingText}
+                                        onChange={(e) => setEditingText(e.target.value)}
+                                        className="text-xs min-h-[60px] resize-none"
+                                        autoFocus
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Escape') {
+                                            handleCancelEdit();
+                                          } else if (e.key === 'Enter' && e.ctrlKey) {
+                                            handleSaveEdit();
+                                          }
+                                        }}
+                                      />
+                                      <div className="flex gap-1 justify-end">
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-6 px-2 text-xs"
+                                          onClick={handleCancelEdit}
+                                          disabled={savingEdit}
+                                        >
+                                          <X className="h-3 w-3 mr-1" />
+                                          Cancelar
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          className="h-6 px-2 text-xs"
+                                          onClick={handleSaveEdit}
+                                          disabled={savingEdit || !editingText.trim()}
+                                        >
+                                          {savingEdit ? (
+                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                          ) : (
+                                            <>
+                                              <Check className="h-3 w-3 mr-1" />
+                                              Salvar
+                                            </>
+                                          )}
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <TooltipProvider>
+                                        <Tooltip delayDuration={300}>
+                                          <TooltipTrigger asChild>
+                                            <p className="text-xs text-muted-foreground line-clamp-3 cursor-help">
+                                              {item.description}
+                                            </p>
+                                          </TooltipTrigger>
+                                          <TooltipContent side="top" className="max-w-xs">
+                                            <p className="text-sm">{item.description}</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                      {item.maintenance_ticket_id && (
+                                        <div className="flex items-center gap-1 mt-1 text-green-600">
+                                          <Check className="h-3 w-3" />
+                                          <span className="text-xs">Manutenção criada</span>
+                                        </div>
+                                      )}
+                                    </>
                                   )}
                                 </div>
                               </div>
