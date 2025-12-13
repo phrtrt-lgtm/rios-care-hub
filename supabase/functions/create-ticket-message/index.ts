@@ -9,7 +9,13 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    // Use service role client with auth.admin to bypass RLS
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    })
 
     const authHeader = req.headers.get('Authorization')!
     const token = authHeader.replace('Bearer ', '')
@@ -79,11 +85,8 @@ Deno.serve(async (req) => {
       })
     }
 
-    // AGORA seta o contexto RLS com o owner_id correto do ticket
-    await supabase.rpc('set_session_context', {
-      p_role: profile?.role || 'owner',
-      p_owner_id: ticket.owner_id
-    })
+    // Skip RLS context - using service role which bypasses RLS
+    console.log(`📝 Creating message for ticket ${ticketId} by user ${user.id} (${profile?.role})`)
 
     // Cria a mensagem
     const { data: messageData, error: messageError } = await supabase
