@@ -54,7 +54,7 @@ export default function ManutencaoDetalhes() {
     );
   }
 
-  const isTeam = profile?.role === 'admin' || profile?.role === 'agent';
+  const isTeam = profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance';
   const totalPaid = maintenance.payments?.reduce((sum: number, p: any) => sum + p.amount_cents, 0) || 0;
   
   // Usar management_contribution_cents diretamente

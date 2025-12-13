@@ -48,7 +48,7 @@ export default function NovaCobranca() {
     due_date: "",
   });
 
-  const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent';
+  const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance';
 
   useEffect(() => {
     if (!isTeamMember) {
