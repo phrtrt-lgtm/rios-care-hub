@@ -5,6 +5,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -660,9 +661,18 @@ export function PropertyInspectionItemsKanban({
                                     <span className="text-xs">{getCategoryEmoji(item.category)}</span>
                                     <span className="text-xs font-medium truncate">{item.category}</span>
                                   </div>
-                                  <p className="text-xs text-muted-foreground line-clamp-3">
-                                    {item.description}
-                                  </p>
+                                  <TooltipProvider>
+                                    <Tooltip delayDuration={300}>
+                                      <TooltipTrigger asChild>
+                                        <p className="text-xs text-muted-foreground line-clamp-3 cursor-help">
+                                          {item.description}
+                                        </p>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="top" className="max-w-xs">
+                                        <p className="text-sm">{item.description}</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
                                   {item.maintenance_ticket_id && (
                                     <div className="flex items-center gap-1 mt-1 text-green-600">
                                       <Check className="h-3 w-3" />
