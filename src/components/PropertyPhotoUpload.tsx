@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Upload, Loader2, Image as ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageCropDialog } from "./ImageCropDialog";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
+import { cn } from "@/lib/utils";
 
 interface PropertyPhotoUploadProps {
   propertyId: string;
@@ -22,22 +23,55 @@ export function PropertyPhotoUpload({
   const [uploading, setUploading] = useState(false);
   const [cropDialogOpen, setCropDialogOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const { toast } = useToast();
 
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!event.target.files || event.target.files.length === 0) {
+  const processFile = useCallback((file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Arquivo inválido",
+        description: "Por favor, selecione uma imagem.",
+        variant: "destructive",
+      });
       return;
     }
-
-    const file = event.target.files[0];
-    const reader = new FileReader();
     
+    const reader = new FileReader();
     reader.onload = () => {
       setSelectedImage(reader.result as string);
       setCropDialogOpen(true);
     };
-    
     reader.readAsDataURL(file);
+  }, [toast]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      processFile(file);
+    }
+  }, [processFile]);
+
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      processFile(file);
+    }
   };
 
   const uploadPhoto = async (croppedImageBlob: Blob) => {
@@ -92,19 +126,45 @@ export function PropertyPhotoUpload({
 
   return (
     <>
-      <AspectRatio ratio={16 / 9} className="bg-muted rounded-lg overflow-hidden">
-        {currentPhotoUrl ? (
-          <img 
-            src={currentPhotoUrl} 
-            alt={propertyName}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <ImageIcon className="h-8 w-8 text-muted-foreground" />
-          </div>
+      <div
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={cn(
+          "relative rounded-lg overflow-hidden transition-all duration-200",
+          isDragging && "ring-2 ring-primary ring-offset-2"
         )}
-      </AspectRatio>
+      >
+        <AspectRatio ratio={16 / 9} className="bg-muted">
+          {currentPhotoUrl ? (
+            <img 
+              src={currentPhotoUrl} 
+              alt={propertyName}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className={cn(
+              "w-full h-full flex flex-col items-center justify-center gap-2 transition-colors",
+              isDragging ? "bg-primary/10" : "bg-muted"
+            )}>
+              <ImageIcon className={cn(
+                "h-8 w-8 transition-colors",
+                isDragging ? "text-primary" : "text-muted-foreground"
+              )} />
+              <span className="text-xs text-muted-foreground">
+                Arraste uma foto aqui
+              </span>
+            </div>
+          )}
+          {isDragging && currentPhotoUrl && (
+            <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+              <span className="text-sm font-medium text-primary bg-background/90 px-3 py-1 rounded">
+                Solte para trocar
+              </span>
+            </div>
+          )}
+        </AspectRatio>
+      </div>
       
       <div className="mt-3">
         <input
