@@ -34,6 +34,7 @@ interface PropertyInspectionItemsKanbanProps {
   inspections: InspectionWithSummary[];
   attachments?: { id: string; file_url: string; file_name?: string; file_type?: string }[];
   isOwnerView?: boolean; // If true, owner can only select items in 'owner' column and cannot drag
+  isAdmin?: boolean; // If true, user can select, delete, and clear items
 }
 
 const COLUMNS = [
@@ -62,6 +63,7 @@ export function PropertyInspectionItemsKanban({
   inspections,
   attachments = [],
   isOwnerView = false,
+  isAdmin = false,
 }: PropertyInspectionItemsKanbanProps) {
   const [items, setItems] = useState<InspectionItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -346,8 +348,14 @@ export function PropertyInspectionItemsKanban({
   const toggleItemSelection = (itemId: string) => {
     const item = items.find(i => i.id === itemId);
     
-    // Owner can only select items in 'owner' column
-    if (isOwnerView && item?.status !== 'owner') {
+    // Only admin can select items (except owners can select their own items)
+    if (isOwnerView) {
+      // Owner can only select items in 'owner' column
+      if (item?.status !== 'owner') {
+        return;
+      }
+    } else if (!isAdmin) {
+      // Non-admin team members cannot select items
       return;
     }
     
@@ -534,7 +542,7 @@ export function PropertyInspectionItemsKanban({
                     <Plus className="h-4 w-4 mr-2" />
                     Nova Manutenção ({selectedItems.size})
                   </Button>
-                  {!isOwnerView && (
+                  {isAdmin && (
                     <Button
                       onClick={async () => {
                         try {
@@ -563,7 +571,7 @@ export function PropertyInspectionItemsKanban({
                   )}
                 </>
               )}
-              {!isOwnerView && items.length > 0 && (
+              {isAdmin && items.length > 0 && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button
@@ -645,7 +653,8 @@ export function PropertyInspectionItemsKanban({
                       </div>
                       <div className="space-y-2">
                         {getItemsByStatus(column.key).map(item => {
-                          const canSelect = !isOwnerView || (isOwnerView && canOwnerSelect);
+                          // Admin can select any item, owner can only select items in 'owner' column
+                          const canSelect = isAdmin || (isOwnerView && canOwnerSelect);
                           const showCheckbox = column.key !== 'completed' && !item.maintenance_ticket_id && canSelect;
                           
                           return (
