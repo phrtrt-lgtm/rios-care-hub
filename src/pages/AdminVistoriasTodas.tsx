@@ -35,7 +35,7 @@ export default function AdminVistoriasTodas() {
   const [statusFilter, setStatusFilter] = useState<"todos" | "ok" | "nao">("todos");
 
   useEffect(() => {
-    if (profile?.role !== "admin") {
+    if (profile?.role !== "admin" && profile?.role !== "agent" && profile?.role !== "maintenance") {
       navigate("/painel");
       return;
     }
