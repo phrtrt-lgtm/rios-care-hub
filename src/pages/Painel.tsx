@@ -332,11 +332,11 @@ export default function Painel() {
           </Card>
         </div>
 
-        {/* Quick Actions - Outras Ações */}
+        {/* Quick Actions - Outras Ações - Admin only */}
+        {profile?.role === "admin" && (
         <div>
           <h3 className="mb-4 text-xl font-semibold">Outras Ações</h3>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {(profile?.role === "admin" || profile?.role === "maintenance") && (
             <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/admin/cadastrar-proprietario")}>
               <CardHeader>
                 <CardTitle>Cadastrar Proprietário</CardTitle>
@@ -351,9 +351,7 @@ export default function Painel() {
                 </Button>
               </CardContent>
             </Card>
-          )}
 
-          {(profile?.role === "admin" || profile?.role === "maintenance") && (
             <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/admin/cadastrar-faxineira")}>
               <CardHeader>
                 <CardTitle>Cadastrar Faxineira</CardTitle>
@@ -368,9 +366,7 @@ export default function Painel() {
                 </Button>
               </CardContent>
             </Card>
-          )}
 
-          {profile?.role === "admin" && (
             <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/admin/cadastrar-equipe")}>
               <CardHeader>
                 <CardTitle>Cadastrar Equipe</CardTitle>
@@ -385,9 +381,7 @@ export default function Painel() {
                 </Button>
               </CardContent>
             </Card>
-          )}
 
-          {profile?.role === "admin" && (
             <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/admin/gerenciar-usuarios")}>
               <CardHeader>
                 <CardTitle>Gerenciar Usuários</CardTitle>
@@ -402,9 +396,7 @@ export default function Painel() {
                 </Button>
               </CardContent>
             </Card>
-          )}
 
-          {(profile?.role === "admin" || profile?.role === "maintenance") && (
             <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/aprovacoes")}>
               <CardHeader>
                 <CardTitle>Aprovações Pendentes</CardTitle>
@@ -418,24 +410,24 @@ export default function Painel() {
                 </Button>
               </CardContent>
             </Card>
-          )}
 
-          <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/propriedades")}>
-            <CardHeader>
-              <CardTitle>Gerenciar Unidades</CardTitle>
-              <CardDescription>
-                Cadastrar e gerenciar propriedades
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button variant="outline" className="w-full">
-                <Building2 className="mr-2 h-4 w-4" />
-                Ver Unidades
-              </Button>
-            </CardContent>
-          </Card>
+            <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/propriedades")}>
+              <CardHeader>
+                <CardTitle>Gerenciar Unidades</CardTitle>
+                <CardDescription>
+                  Cadastrar e gerenciar propriedades
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button variant="outline" className="w-full">
+                  <Building2 className="mr-2 h-4 w-4" />
+                  Ver Unidades
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </div>
+        )}
       </main>
     </div>
   );
