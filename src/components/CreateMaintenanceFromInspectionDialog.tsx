@@ -32,6 +32,7 @@ interface CreateMaintenanceFromInspectionDialogProps {
   attachments: Attachment[];
   transcriptSummary?: string;
   prefilledDescription?: string;
+  prefilledSubject?: string;
   onMaintenanceCreated?: (ticketId: string) => void;
 }
 
@@ -45,6 +46,7 @@ export function CreateMaintenanceFromInspectionDialog({
   attachments,
   transcriptSummary,
   prefilledDescription,
+  prefilledSubject,
   onMaintenanceCreated,
 }: CreateMaintenanceFromInspectionDialogProps) {
   const navigate = useNavigate();
@@ -93,7 +95,12 @@ export function CreateMaintenanceFromInspectionDialog({
   // Reset form and pre-populate description when dialog opens
   useEffect(() => {
     if (open) {
-      setSubject('');
+      // If we have a prefilledSubject (from Kanban items), use it directly
+      if (prefilledSubject) {
+        setSubject(prefilledSubject);
+      } else {
+        setSubject('');
+      }
       const desc = prefilledDescription || transcriptSummary || '';
       setDescription(desc);
       setPriority('normal');
@@ -102,14 +109,14 @@ export function CreateMaintenanceFromInspectionDialog({
       setSelectedAttachments([]);
       setAiPrompt('');
       
-      // Auto-generate title if we have a description
-      if (desc) {
+      // Auto-generate title ONLY if we have description but no prefilledSubject
+      if (desc && !prefilledSubject) {
         generateTitle(desc);
       }
     }
     // Only run when dialog opens, not when transcriptSummary changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, prefilledDescription]);
+  }, [open, prefilledDescription, prefilledSubject]);
 
   const mediaAttachments = attachments.filter(a => 
     a.file_type?.startsWith('image/') || a.file_type?.startsWith('video/')
