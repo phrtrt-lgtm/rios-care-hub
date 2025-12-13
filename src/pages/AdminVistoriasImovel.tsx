@@ -8,12 +8,24 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
+import { Checkbox } from '@/components/ui/checkbox';
 import { InspectionCalendar } from '@/components/InspectionCalendar';
 import TeamInspectionDialog from '@/components/TeamInspectionDialog';
 import { PropertyInspectionItemsKanban } from '@/components/InspectionItemsKanban';
-import { Headphones, Paperclip, ArrowLeft, User, Calendar, AlertTriangle, CheckCircle2, Building2, FileText, Plus, EyeOff } from 'lucide-react';
+import { Headphones, Paperclip, ArrowLeft, User, Calendar, AlertTriangle, CheckCircle2, Building2, FileText, Plus, EyeOff, Trash2, Archive, X } from 'lucide-react';
 import { format, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Property {
   id: string;
@@ -33,6 +45,7 @@ interface Inspection {
   transcript?: string;
   transcript_summary?: string;
   internal_only?: boolean;
+  archived_at?: string | null;
 }
 
 interface InspectionDate {
@@ -44,18 +57,26 @@ interface InspectionDate {
 export default function AdminVistoriasImovel() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { profile, loading: authLoading } = useAuth();
   const [property, setProperty] = useState<Property | null>(null);
   const [inspections, setInspections] = useState<Inspection[]>([]);
   const [attachmentCounts, setAttachmentCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<"todos" | "ok" | "nao">("todos");
+  const [statusFilter, setStatusFilter] = useState<"todos" | "ok" | "nao" | "arquivadas">("todos");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [showInspectionDialog, setShowInspectionDialog] = useState(false);
+  
+  // Selection state (admin only)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const isAdmin = profile?.role === 'admin';
 
   useEffect(() => {
     if (!authLoading) {
-      if (profile?.role !== 'admin' && profile?.role !== 'agent') {
+      if (profile?.role !== 'admin' && profile?.role !== 'agent' && profile?.role !== 'maintenance') {
         navigate('/');
         return;
       }
@@ -75,7 +96,7 @@ export default function AdminVistoriasImovel() {
       if (propError) throw propError;
       setProperty(propData);
 
-      // Fetch inspections
+      // Fetch inspections (including archived)
       const { data: inspData, error: inspError } = await supabase
         .from('cleaning_inspections')
         .select('*')
@@ -107,19 +128,21 @@ export default function AdminVistoriasImovel() {
     }
   };
 
-  // Build calendar data
+  // Build calendar data (exclude archived)
   const inspectionDates = useMemo(() => {
     const dateAggregates = new Map<string, { count: number; hasProblems: boolean }>();
     
-    inspections.forEach(insp => {
-      const dateKey = format(new Date(insp.created_at), 'yyyy-MM-dd');
-      const existing = dateAggregates.get(dateKey) || { count: 0, hasProblems: false };
-      existing.count++;
-      if (insp.notes === 'NÃO') {
-        existing.hasProblems = true;
-      }
-      dateAggregates.set(dateKey, existing);
-    });
+    inspections
+      .filter(i => !i.archived_at)
+      .forEach(insp => {
+        const dateKey = format(new Date(insp.created_at), 'yyyy-MM-dd');
+        const existing = dateAggregates.get(dateKey) || { count: 0, hasProblems: false };
+        existing.count++;
+        if (insp.notes === 'NÃO') {
+          existing.hasProblems = true;
+        }
+        dateAggregates.set(dateKey, existing);
+      });
 
     const datesArray: InspectionDate[] = [];
     dateAggregates.forEach((value, key) => {
@@ -132,10 +155,17 @@ export default function AdminVistoriasImovel() {
   const filteredInspections = useMemo(() => {
     let filtered = inspections;
     
-    if (statusFilter === "ok") {
-      filtered = filtered.filter((insp) => insp.notes === "OK");
-    } else if (statusFilter === "nao") {
-      filtered = filtered.filter((insp) => insp.notes === "NÃO");
+    if (statusFilter === "arquivadas") {
+      filtered = filtered.filter((insp) => insp.archived_at);
+    } else {
+      // Exclude archived from normal views
+      filtered = filtered.filter((insp) => !insp.archived_at);
+      
+      if (statusFilter === "ok") {
+        filtered = filtered.filter((insp) => insp.notes === "OK");
+      } else if (statusFilter === "nao") {
+        filtered = filtered.filter((insp) => insp.notes === "NÃO");
+      }
     }
 
     if (selectedDate) {
@@ -151,6 +181,112 @@ export default function AdminVistoriasImovel() {
     setSelectedDate(prev => prev && isSameDay(prev, date) ? undefined : date);
   };
 
+  const toggleSelect = (inspectionId: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(inspectionId)) {
+        next.delete(inspectionId);
+      } else {
+        next.add(inspectionId);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredInspections.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredInspections.map(i => i.id)));
+    }
+  };
+
+  const handleArchiveSelected = async () => {
+    if (selectedIds.size === 0) return;
+    
+    try {
+      const { error } = await supabase
+        .from('cleaning_inspections')
+        .update({ archived_at: new Date().toISOString() })
+        .in('id', Array.from(selectedIds));
+
+      if (error) throw error;
+
+      toast({ title: `${selectedIds.size} vistoria(s) arquivada(s)` });
+      setSelectedIds(new Set());
+      fetchData();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao arquivar",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUnarchiveSelected = async () => {
+    if (selectedIds.size === 0) return;
+    
+    try {
+      const { error } = await supabase
+        .from('cleaning_inspections')
+        .update({ archived_at: null })
+        .in('id', Array.from(selectedIds));
+
+      if (error) throw error;
+
+      toast({ title: `${selectedIds.size} vistoria(s) restaurada(s)` });
+      setSelectedIds(new Set());
+      fetchData();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao restaurar",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedIds.size === 0) return;
+    
+    setDeleting(true);
+    try {
+      // First delete attachments
+      await supabase
+        .from('cleaning_inspection_attachments')
+        .delete()
+        .in('inspection_id', Array.from(selectedIds));
+
+      // Then delete inspection items
+      await supabase
+        .from('inspection_items')
+        .delete()
+        .in('inspection_id', Array.from(selectedIds));
+
+      // Finally delete inspections
+      const { error } = await supabase
+        .from('cleaning_inspections')
+        .delete()
+        .in('id', Array.from(selectedIds));
+
+      if (error) throw error;
+
+      toast({ title: `${selectedIds.size} vistoria(s) excluída(s)` });
+      setSelectedIds(new Set());
+      setShowDeleteDialog(false);
+      fetchData();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao excluir",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (authLoading || loading) {
     return <LoadingScreen />;
   }
@@ -163,8 +299,10 @@ export default function AdminVistoriasImovel() {
     );
   }
 
-  const okCount = inspections.filter(i => i.notes === 'OK').length;
-  const problemCount = inspections.filter(i => i.notes === 'NÃO').length;
+  const activeInspections = inspections.filter(i => !i.archived_at);
+  const archivedCount = inspections.filter(i => i.archived_at).length;
+  const okCount = activeInspections.filter(i => i.notes === 'OK').length;
+  const problemCount = activeInspections.filter(i => i.notes === 'NÃO').length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
@@ -177,7 +315,7 @@ export default function AdminVistoriasImovel() {
             <div className="flex-1">
               <h1 className="text-xl font-semibold line-clamp-1">{property.name}</h1>
               <p className="text-sm text-muted-foreground">
-                {inspections.length} vistorias registradas
+                {activeInspections.length} vistorias registradas
               </p>
             </div>
             <Button onClick={() => setShowInspectionDialog(true)}>
@@ -188,6 +326,59 @@ export default function AdminVistoriasImovel() {
         </div>
       </header>
 
+      {/* Bulk Actions Bar (Admin only) */}
+      {isAdmin && selectedIds.size > 0 && (
+        <div className="sticky top-16 z-10 bg-primary text-primary-foreground py-2 px-4 shadow-md">
+          <div className="container mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                checked={selectedIds.size === filteredInspections.length}
+                onCheckedChange={toggleSelectAll}
+                className="border-primary-foreground"
+              />
+              <span className="font-medium">{selectedIds.size} selecionada(s)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {statusFilter === "arquivadas" ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleUnarchiveSelected}
+                >
+                  <Archive className="h-4 w-4 mr-1" />
+                  Restaurar
+                </Button>
+              ) : (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleArchiveSelected}
+                >
+                  <Archive className="h-4 w-4 mr-1" />
+                  Arquivar
+                </Button>
+              )}
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setShowDeleteDialog(true)}
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Excluir
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedIds(new Set())}
+                className="text-primary-foreground hover:text-primary-foreground/80"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <TeamInspectionDialog
         open={showInspectionDialog}
         onOpenChange={setShowInspectionDialog}
@@ -195,6 +386,28 @@ export default function AdminVistoriasImovel() {
         propertyName={property.name}
         onSuccess={fetchData}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir {selectedIds.size} vistoria(s)?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. Todas as vistorias selecionadas e seus anexos serão permanentemente excluídos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteSelected}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <main className="container mx-auto px-4 py-6">
         <div className="grid lg:grid-cols-[1fr_320px] gap-6">
@@ -225,16 +438,22 @@ export default function AdminVistoriasImovel() {
                     <AlertTriangle className="h-3 w-3 mr-1" />
                     {problemCount} Problemas
                   </Badge>
+                  {archivedCount > 0 && (
+                    <Badge variant="outline">
+                      <Archive className="h-3 w-3 mr-1" />
+                      {archivedCount} Arquivadas
+                    </Badge>
+                  )}
                 </div>
               </div>
             </Card>
 
             {/* Problem Items Kanban */}
-            {problemCount > 0 && (
+            {problemCount > 0 && statusFilter !== "arquivadas" && (
               <PropertyInspectionItemsKanban
                 propertyId={property.id}
                 ownerId={property.owner_id}
-                inspections={inspections
+                inspections={activeInspections
                   .filter(i => i.notes === 'NÃO' && i.transcript_summary)
                   .map(i => ({ id: i.id, transcript_summary: i.transcript_summary || null }))}
                 isAdmin={profile?.role === 'admin'}
@@ -243,17 +462,24 @@ export default function AdminVistoriasImovel() {
 
             {/* Filters */}
             <div className="flex flex-wrap gap-2">
+              {isAdmin && filteredInspections.length > 0 && (
+                <Checkbox
+                  checked={selectedIds.size === filteredInspections.length && filteredInspections.length > 0}
+                  onCheckedChange={toggleSelectAll}
+                  className="mr-2 self-center"
+                />
+              )}
               <Button
                 variant={statusFilter === "todos" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setStatusFilter("todos")}
+                onClick={() => { setStatusFilter("todos"); setSelectedIds(new Set()); }}
               >
-                Todos ({inspections.length})
+                Todos ({activeInspections.length})
               </Button>
               <Button
                 variant={statusFilter === "ok" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setStatusFilter("ok")}
+                onClick={() => { setStatusFilter("ok"); setSelectedIds(new Set()); }}
                 className={statusFilter === "ok" ? "bg-green-600 hover:bg-green-700" : ""}
               >
                 <CheckCircle2 className="h-4 w-4 mr-1" />
@@ -262,12 +488,22 @@ export default function AdminVistoriasImovel() {
               <Button
                 variant={statusFilter === "nao" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setStatusFilter("nao")}
+                onClick={() => { setStatusFilter("nao"); setSelectedIds(new Set()); }}
                 className={statusFilter === "nao" ? "bg-red-600 hover:bg-red-700" : ""}
               >
                 <AlertTriangle className="h-4 w-4 mr-1" />
                 Problemas ({problemCount})
               </Button>
+              {archivedCount > 0 && (
+                <Button
+                  variant={statusFilter === "arquivadas" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => { setStatusFilter("arquivadas"); setSelectedIds(new Set()); }}
+                >
+                  <Archive className="h-4 w-4 mr-1" />
+                  Arquivadas ({archivedCount})
+                </Button>
+              )}
               
               {selectedDate && (
                 <Badge variant="outline" className="ml-auto">
@@ -287,7 +523,9 @@ export default function AdminVistoriasImovel() {
               <Card className="p-12 text-center">
                 <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <p className="text-muted-foreground">
-                  {statusFilter !== "todos" || selectedDate
+                  {statusFilter === "arquivadas"
+                    ? 'Nenhuma vistoria arquivada.'
+                    : statusFilter !== "todos" || selectedDate
                     ? 'Nenhuma vistoria encontrada com os filtros selecionados.'
                     : 'Nenhuma vistoria registrada para este imóvel.'}
                 </p>
@@ -297,16 +535,30 @@ export default function AdminVistoriasImovel() {
                 {filteredInspections.map((inspection) => (
                   <Card
                     key={inspection.id}
-                    className="p-4 cursor-pointer hover:shadow-md transition-all hover:border-primary/50"
-                    onClick={() => navigate(`/admin/vistorias/${inspection.id}`)}
+                    className={`p-4 transition-all hover:shadow-md ${
+                      selectedIds.has(inspection.id) ? 'ring-2 ring-primary' : 'hover:border-primary/50'
+                    } ${inspection.archived_at ? 'opacity-70' : ''}`}
                   >
                     <div className="flex items-start gap-4">
+                      {/* Checkbox (Admin only) */}
+                      {isAdmin && (
+                        <Checkbox
+                          checked={selectedIds.has(inspection.id)}
+                          onCheckedChange={() => toggleSelect(inspection.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="mt-3"
+                        />
+                      )}
+
                       {/* Status Badge */}
-                      <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${
-                        inspection.notes === 'OK' 
-                          ? 'bg-green-500/20 text-green-600' 
-                          : 'bg-destructive/20 text-destructive'
-                      }`}>
+                      <div 
+                        className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center cursor-pointer ${
+                          inspection.notes === 'OK' 
+                            ? 'bg-green-500/20 text-green-600' 
+                            : 'bg-destructive/20 text-destructive'
+                        }`}
+                        onClick={() => navigate(`/admin/vistorias/${inspection.id}`)}
+                      >
                         {inspection.notes === 'OK' ? (
                           <CheckCircle2 className="h-6 w-6" />
                         ) : (
@@ -315,15 +567,26 @@ export default function AdminVistoriasImovel() {
                       </div>
 
                       {/* Content */}
-                      <div className="flex-1 min-w-0">
+                      <div 
+                        className="flex-1 min-w-0 cursor-pointer"
+                        onClick={() => navigate(`/admin/vistorias/${inspection.id}`)}
+                      >
                         <div className="flex items-center justify-between gap-2 mb-1">
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <Calendar className="h-4 w-4" />
                             {format(new Date(inspection.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                           </div>
-                          <Badge variant={inspection.notes === 'OK' ? 'secondary' : 'destructive'}>
-                            {inspection.notes || '—'}
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            {inspection.archived_at && (
+                              <Badge variant="outline" className="text-xs">
+                                <Archive className="h-3 w-3 mr-1" />
+                                Arquivada
+                              </Badge>
+                            )}
+                            <Badge variant={inspection.notes === 'OK' ? 'secondary' : 'destructive'}>
+                              {inspection.notes || '—'}
+                            </Badge>
+                          </div>
                         </div>
 
                         {inspection.cleaner_name && (
