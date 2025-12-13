@@ -17,6 +17,7 @@ import { VistoriasKanbanPreview } from '@/components/VistoriasKanbanPreview';
 import { ChargesKanbanPreview } from '@/components/ChargesKanbanPreview';
 import { GuestChargeReminders } from "@/components/GuestChargeReminders";
 import { NotificationButton } from "@/components/NotificationButton";
+import { TeamChatWidget } from "@/components/TeamChatWidget";
 export default function Painel() {
   const { profile, user, signOut } = useAuth();
   const [photoUrl, setPhotoUrl] = useState(profile?.photo_url);
@@ -51,6 +52,8 @@ export default function Painel() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+      {/* Team Chat Widget - Only for team members */}
+      <TeamChatWidget />
       {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-3">
