@@ -53,7 +53,7 @@ const NovoTicketMassa = () => {
   const [formData, setFormData] = useState({
     subject: "",
     description: "",
-    ticket_type: "duvida" as "duvida" | "informacao" | "conversar_hospedes" | "bloqueio_data" | "manutencao" | "melhorias_compras" | "financeiro",
+    ticket_type: "duvida" as "duvida" | "conversar_hospedes" | "bloqueio_data" | "manutencao" | "melhorias_compras" | "financeiro",
     priority: "normal" as "normal" | "urgente",
     target_audience: "specific",
     property_id: "",
@@ -349,7 +349,6 @@ const NovoTicketMassa = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="duvida">Dúvida/Informação</SelectItem>
-                    <SelectItem value="informacao">Informação</SelectItem>
                     <SelectItem value="conversar_hospedes">Conversar com Hóspedes e Sugestões</SelectItem>
                     <SelectItem value="bloqueio_data">Bloqueio de Datas</SelectItem>
                     <SelectItem value="manutencao">Manutenção</SelectItem>

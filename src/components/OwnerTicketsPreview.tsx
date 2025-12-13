@@ -43,7 +43,6 @@ const TICKET_TYPE_LABELS: Record<string, string> = {
   bloqueio_data: "Bloqueio de Data",
   financeiro: "Financeiro",
   outros: "Outros",
-  informacao: "Informação",
   conversar_hospedes: "Conversa com Hóspedes",
   melhorias_compras: "Melhorias/Compras",
 };
