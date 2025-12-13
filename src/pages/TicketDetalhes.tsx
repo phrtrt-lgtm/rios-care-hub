@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useReadReceipts } from "@/hooks/useReadReceipts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -15,6 +16,7 @@ import { ArrowLeft, Send, Paperclip, Loader2, Sparkles, FileText, ChevronDown, X
 import { AttachmentBubble } from "@/components/AttachmentBubble";
 import { MediaGallery } from "@/components/MediaGallery";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { ReadReceiptDisplay } from "@/components/ReadReceiptDisplay";
 import { preloadMediaUrls } from "@/hooks/useMediaCache";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -86,6 +88,22 @@ export default function TicketDetalhes() {
 
   const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance';
   const canUpdate = ticket?.status !== 'concluido' && ticket?.status !== 'cancelado';
+
+  // Read receipts for messages
+  const messageIds = useMemo(() => messages.map(m => m.id), [messages]);
+  const { receipts, markAsRead } = useReadReceipts(messageIds, "ticket");
+
+  // Mark messages as read when viewing the page
+  useEffect(() => {
+    if (messages.length > 0 && user) {
+      const otherMessages = messages
+        .filter(m => m.author_id !== user.id)
+        .map(m => m.id);
+      if (otherMessages.length > 0) {
+        markAsRead(otherMessages);
+      }
+    }
+  }, [messages, user, markAsRead]);
 
   useEffect(() => {
     fetchTicketData();
@@ -772,72 +790,82 @@ export default function TicketDetalhes() {
         )}
 
         <div className="space-y-4 mb-6">
-          {messages.map((message) => (
-            <Card key={message.id}>
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-3 mb-3">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={message.profiles.photo_url || undefined} />
-                    <AvatarFallback>{getInitials(message.profiles.name)}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{message.profiles.name}</span>
-                      {message.profiles.role !== 'owner' && message.profiles.role !== 'pending_owner' && (
-                        <Badge variant="secondary" className="text-xs">Equipe</Badge>
-                      )}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {format(new Date(message.created_at), "d 'de' MMMM 'às' HH:mm", { locale: ptBR })}
-                    </div>
-                  </div>
-                </div>
-                {message.body && (
-                  <p className="text-rios-dark-blue whitespace-pre-wrap">{message.body}</p>
-                )}
-                {message.attachments && message.attachments.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="text-xs text-muted-foreground font-medium">
-                        Anexos ({message.attachments.length})
+          {messages.map((message) => {
+            const isOwnMessage = message.author_id === user?.id;
+            const messageReceipts = receipts[message.id] || [];
+            
+            return (
+              <Card key={message.id}>
+                <CardContent className="pt-6">
+                  <div className="flex items-start gap-3 mb-3">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={message.profiles.photo_url || undefined} />
+                      <AvatarFallback>{getInitials(message.profiles.name)}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{message.profiles.name}</span>
+                        {message.profiles.role !== 'owner' && message.profiles.role !== 'pending_owner' && (
+                          <Badge variant="secondary" className="text-xs">Equipe</Badge>
+                        )}
                       </div>
-                      {message.attachments.length > 1 && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 text-xs"
-                          onClick={() => downloadMessageAttachments(
-                            message.attachments!,
-                            `anexos-${format(new Date(message.created_at), "dd-MM-yyyy-HH-mm")}`
-                          )}
-                        >
-                          <Download className="h-3 w-3 mr-1" />
-                          Baixar todos
-                        </Button>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                      {message.attachments.map((attachment) => (
-                        <AttachmentBubble
-                          key={attachment.id}
-                          {...attachment}
-                          onPreview={() => {
-                            if (attachment.file_type?.startsWith('image/') || attachment.file_type?.startsWith('video/')) {
-                              const index = allMediaItems.findIndex(item => item.id === attachment.id);
-                              if (index !== -1) {
-                                setGalleryStartIndex(index);
-                                setGalleryOpen(true);
-                              }
-                            }
-                          }}
-                        />
-                      ))}
+                      <div className="text-xs text-muted-foreground">
+                        {format(new Date(message.created_at), "d 'de' MMMM 'às' HH:mm", { locale: ptBR })}
+                      </div>
                     </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+                  {message.body && (
+                    <p className="text-rios-dark-blue whitespace-pre-wrap">{message.body}</p>
+                  )}
+                  {message.attachments && message.attachments.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs text-muted-foreground font-medium">
+                          Anexos ({message.attachments.length})
+                        </div>
+                        {message.attachments.length > 1 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={() => downloadMessageAttachments(
+                              message.attachments!,
+                              `anexos-${format(new Date(message.created_at), "dd-MM-yyyy-HH-mm")}`
+                            )}
+                          >
+                            <Download className="h-3 w-3 mr-1" />
+                            Baixar todos
+                          </Button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                        {message.attachments.map((attachment) => (
+                          <AttachmentBubble
+                            key={attachment.id}
+                            {...attachment}
+                            onPreview={() => {
+                              if (attachment.file_type?.startsWith('image/') || attachment.file_type?.startsWith('video/')) {
+                                const index = allMediaItems.findIndex(item => item.id === attachment.id);
+                                if (index !== -1) {
+                                  setGalleryStartIndex(index);
+                                  setGalleryOpen(true);
+                                }
+                              }
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Read receipts */}
+                  <div className="mt-3 flex justify-end">
+                    <ReadReceiptDisplay receipts={messageReceipts} isOwnMessage={isOwnMessage} />
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
         {canUpdate && (

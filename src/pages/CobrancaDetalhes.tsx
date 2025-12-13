@@ -1,7 +1,8 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useReadReceipts } from "@/hooks/useReadReceipts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +17,7 @@ import { AuthenticatedImage, AuthenticatedVideo, VideoThumbnail } from "@/compon
 import { MediaGallery } from "@/components/MediaGallery";
 import { preloadMediaUrls } from "@/hooks/useMediaCache";
 import { AttachmentBubble } from "@/components/AttachmentBubble";
+import { ReadReceiptDisplay } from "@/components/ReadReceiptDisplay";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
@@ -119,6 +121,22 @@ export default function CobrancaDetalhes() {
   const [updatingStatus, setUpdatingStatus] = useState(false);
 
   const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance';
+
+  // Read receipts for messages
+  const messageIds = useMemo(() => messages.map(m => m.id), [messages]);
+  const { receipts, markAsRead } = useReadReceipts(messageIds, "charge");
+
+  // Mark messages as read when viewing the page
+  useEffect(() => {
+    if (messages.length > 0 && user) {
+      const otherMessages = messages
+        .filter(m => m.author_id !== user.id)
+        .map(m => m.id);
+      if (otherMessages.length > 0) {
+        markAsRead(otherMessages);
+      }
+    }
+  }, [messages, user, markAsRead]);
 
   useEffect(() => {
     fetchChargeData();
@@ -1446,97 +1464,107 @@ export default function CobrancaDetalhes() {
         </Card>
 
         <div className="space-y-4 mb-6">
-          {messages.map((message) => (
-            <Card key={message.id}>
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-3 mb-3">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={message.profiles?.photo_url || undefined} />
-                    <AvatarFallback>{getInitials(message.profiles?.name || 'Desconhecido')}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{message.profiles?.name || 'Desconhecido'}</span>
-                      {message.profiles?.role && message.profiles.role !== 'owner' && message.profiles.role !== 'pending_owner' && (
-                        <Badge variant="secondary" className="text-xs">Equipe</Badge>
-                      )}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {format(new Date(message.created_at), "d 'de' MMMM 'às' HH:mm", { locale: ptBR })}
-                    </div>
-                  </div>
-                </div>
-                {message.body && message.body !== '(anexos)' && (
-                  <p className="text-muted-foreground whitespace-pre-wrap mb-3">{message.body}</p>
-                )}
-                
-                 {/* Galeria de anexos da mensagem */}
-                {message.attachments && message.attachments.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="text-xs text-muted-foreground font-medium">
-                        Anexos ({message.attachments.length})
+          {messages.map((message) => {
+            const isOwnMessage = message.author_id === user?.id;
+            const messageReceipts = receipts[message.id] || [];
+            
+            return (
+              <Card key={message.id}>
+                <CardContent className="pt-6">
+                  <div className="flex items-start gap-3 mb-3">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={message.profiles?.photo_url || undefined} />
+                      <AvatarFallback>{getInitials(message.profiles?.name || 'Desconhecido')}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{message.profiles?.name || 'Desconhecido'}</span>
+                        {message.profiles?.role && message.profiles.role !== 'owner' && message.profiles.role !== 'pending_owner' && (
+                          <Badge variant="secondary" className="text-xs">Equipe</Badge>
+                        )}
                       </div>
-                      {message.attachments.length > 1 && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 text-xs"
-                          onClick={() => downloadMessageAttachments(
-                            message.attachments!,
-                            `anexos-${format(new Date(message.created_at), "dd-MM-yyyy-HH-mm")}`
-                          )}
-                        >
-                          <Download className="h-3 w-3 mr-1" />
-                          Baixar todos
-                        </Button>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                      {message.attachments.map((attachment) => {
-                        const isImage = attachment.mime_type?.startsWith('image/');
-                        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-                        const attachmentUrl = `${supabaseUrl}/functions/v1/serve-attachment/${attachment.id}/file`;
-                        
-                        return (
-                          <div key={attachment.id} className="relative aspect-square rounded-lg overflow-hidden border bg-muted group">
-                            {isImage ? (
-                              <>
-                                <AuthenticatedImage
-                                  src={attachmentUrl}
-                                  alt={attachment.file_name}
-                                  className="w-full h-full object-cover cursor-pointer transition-transform group-hover:scale-105"
-                                  onClick={() => setSelectedImage({ url: attachmentUrl, name: attachment.file_name })}
-                                />
-                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                  <Button
-                                    size="sm"
-                                    variant="secondary"
-                                    onClick={() => setSelectedImage({ url: attachmentUrl, name: attachment.file_name })}
-                                    className="h-8 w-8 p-0"
-                                  >
-                                    <ZoomIn className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </>
-                            ) : (
-                              <div 
-                                className="w-full h-full flex flex-col items-center justify-center p-2 cursor-pointer hover:bg-accent"
-                                onClick={() => window.open(attachmentUrl, '_blank')}
-                              >
-                                <FileText className="h-8 w-8 text-muted-foreground mb-1" />
-                                <span className="text-xs text-center truncate w-full px-1">{attachment.file_name}</span>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                      <div className="text-xs text-muted-foreground">
+                        {format(new Date(message.created_at), "d 'de' MMMM 'às' HH:mm", { locale: ptBR })}
+                      </div>
                     </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+                  {message.body && message.body !== '(anexos)' && (
+                    <p className="text-muted-foreground whitespace-pre-wrap mb-3">{message.body}</p>
+                  )}
+                  
+                   {/* Galeria de anexos da mensagem */}
+                  {message.attachments && message.attachments.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs text-muted-foreground font-medium">
+                          Anexos ({message.attachments.length})
+                        </div>
+                        {message.attachments.length > 1 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={() => downloadMessageAttachments(
+                              message.attachments!,
+                              `anexos-${format(new Date(message.created_at), "dd-MM-yyyy-HH-mm")}`
+                            )}
+                          >
+                            <Download className="h-3 w-3 mr-1" />
+                            Baixar todos
+                          </Button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                        {message.attachments.map((attachment) => {
+                          const isImage = attachment.mime_type?.startsWith('image/');
+                          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+                          const attachmentUrl = `${supabaseUrl}/functions/v1/serve-attachment/${attachment.id}/file`;
+                          
+                          return (
+                            <div key={attachment.id} className="relative aspect-square rounded-lg overflow-hidden border bg-muted group">
+                              {isImage ? (
+                                <>
+                                  <AuthenticatedImage
+                                    src={attachmentUrl}
+                                    alt={attachment.file_name}
+                                    className="w-full h-full object-cover cursor-pointer transition-transform group-hover:scale-105"
+                                    onClick={() => setSelectedImage({ url: attachmentUrl, name: attachment.file_name })}
+                                  />
+                                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                    <Button
+                                      size="sm"
+                                      variant="secondary"
+                                      onClick={() => setSelectedImage({ url: attachmentUrl, name: attachment.file_name })}
+                                      className="h-8 w-8 p-0"
+                                    >
+                                      <ZoomIn className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </>
+                              ) : (
+                                <div 
+                                  className="w-full h-full flex flex-col items-center justify-center p-2 cursor-pointer hover:bg-accent"
+                                  onClick={() => window.open(attachmentUrl, '_blank')}
+                                >
+                                  <FileText className="h-8 w-8 text-muted-foreground mb-1" />
+                                  <span className="text-xs text-center truncate w-full px-1">{attachment.file_name}</span>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Read receipts */}
+                  <div className="mt-3 flex justify-end">
+                    <ReadReceiptDisplay receipts={messageReceipts} isOwnMessage={isOwnMessage} />
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
         <Card>
