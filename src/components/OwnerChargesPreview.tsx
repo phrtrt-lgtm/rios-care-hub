@@ -395,8 +395,22 @@ export function OwnerChargesPreview() {
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-xs line-clamp-1">{charge.title}</p>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-primary">{formatBRL(dueAmount)}</span>
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                        {charge.management_contribution_cents > 0 ? (
+                          <>
+                            <span className="text-[10px] text-muted-foreground line-through">
+                              {formatBRL(charge.amount_cents)}
+                            </span>
+                            <span className="text-[10px] text-green-600">
+                              -{formatBRL(charge.management_contribution_cents)}
+                            </span>
+                            <span className="text-sm font-bold text-primary">
+                              {formatBRL(dueAmount)}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-sm font-bold text-primary">{formatBRL(dueAmount)}</span>
+                        )}
                         <span className={`text-[10px] ${dueDateInfo.color}`}>
                           {dueDateInfo.text}
                         </span>
