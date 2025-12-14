@@ -7,6 +7,8 @@ import AudioPlayer from '@/components/AudioPlayer';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { compressVideo, isVideoFile, FileUploadProgress } from '@/lib/fileUpload';
+import { VideoCompressionProgress } from '@/components/VideoCompressionProgress';
 
 interface EditInspectionDialogProps {
   open: boolean;
@@ -32,6 +34,8 @@ interface UploadedFile {
   file: File;
   url: string;
   uploading: boolean;
+  compressing: boolean;
+  compressionProgress: number;
   error?: string;
 }
 
@@ -88,41 +92,62 @@ export default function EditInspectionDialog({
     if (!e.target.files) return;
     
     const selectedFiles = Array.from(e.target.files);
-    const maxSize = 50 * 1024 * 1024;
-    const oversizedFiles = selectedFiles.filter(f => f.size > maxSize);
-    
-    if (oversizedFiles.length > 0) {
-      toast.error(`Arquivos muito grandes (máx 50MB): ${oversizedFiles.map(f => f.name).join(', ')}`);
-      e.target.value = '';
-      return;
-    }
+    // No file size limit - compression will reduce video sizes significantly
 
     const newFiles: UploadedFile[] = selectedFiles.map(file => ({
       file,
       url: '',
-      uploading: true,
+      uploading: false,
+      compressing: isVideoFile(file),
+      compressionProgress: 0,
     }));
     
     setUploadedFiles(prev => [...prev, ...newFiles]);
     e.target.value = '';
 
     for (let i = 0; i < selectedFiles.length; i++) {
-      const file = selectedFiles[i];
+      const originalFile = selectedFiles[i];
       try {
-        const url = await uploadFile(file);
+        let fileToUpload = originalFile;
+        
+        // Compress video if it's a video file
+        if (isVideoFile(originalFile)) {
+          fileToUpload = await compressVideo(originalFile, (progress: FileUploadProgress) => {
+            setUploadedFiles(prev => 
+              prev.map(f => 
+                f.file === originalFile ? { ...f, compressionProgress: progress.percent } : f
+              )
+            );
+          });
+          
+          // Update state with compressed file
+          setUploadedFiles(prev => 
+            prev.map(f => 
+              f.file === originalFile ? { ...f, file: fileToUpload, compressing: false, uploading: true } : f
+            )
+          );
+        } else {
+          setUploadedFiles(prev => 
+            prev.map(f => 
+              f.file === originalFile ? { ...f, uploading: true } : f
+            )
+          );
+        }
+
+        const url = await uploadFile(fileToUpload);
         setUploadedFiles(prev => 
           prev.map(f => 
-            f.file === file ? { ...f, url, uploading: false } : f
+            (f.file === originalFile || f.file === fileToUpload) ? { ...f, url, uploading: false, compressing: false } : f
           )
         );
       } catch (error: any) {
         console.error('Upload error:', error);
         setUploadedFiles(prev => 
           prev.map(f => 
-            f.file === file ? { ...f, uploading: false, error: error.message } : f
+            f.file === originalFile ? { ...f, uploading: false, compressing: false, error: error.message } : f
           )
         );
-        toast.error(`Erro no upload de ${file.name}`);
+        toast.error(`Erro no upload de ${originalFile.name}`);
       }
     }
   };
@@ -281,6 +306,7 @@ export default function EditInspectionDialog({
     }
   };
 
+  const isCompressing = uploadedFiles.some(f => f.compressing);
   const isUploading = uploadedFiles.some(f => f.uploading) || audioFiles.some(a => a.uploading);
   const isTranscribing = audioFiles.some(a => a.transcribing);
   const hasErrors = uploadedFiles.some(f => f.error);
@@ -524,7 +550,12 @@ export default function EditInspectionDialog({
             {uploadedFiles.length > 0 && (
               <div className="space-y-2">
                 <p className="text-sm font-semibold flex items-center gap-2">
-                  {isUploading ? (
+                  {isCompressing ? (
+                    <>
+                      <Video className="h-4 w-4 animate-pulse text-primary" />
+                      Comprimindo vídeo...
+                    </>
+                  ) : isUploading ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin text-primary" />
                       Enviando...
@@ -548,7 +579,7 @@ export default function EditInspectionDialog({
                       className={`relative aspect-square rounded-lg overflow-hidden border-2 ${
                         uploadedFile.error 
                           ? 'border-red-500' 
-                          : uploadedFile.uploading 
+                          : uploadedFile.compressing || uploadedFile.uploading 
                             ? 'border-primary/50' 
                             : 'border-green-500'
                       }`}
@@ -560,16 +591,29 @@ export default function EditInspectionDialog({
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-muted">
-                          <Video className="h-8 w-8 text-muted-foreground" />
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-muted p-1">
+                          <Video className="h-6 w-6 text-muted-foreground" />
+                          {uploadedFile.compressing && (
+                            <div className="w-full mt-1">
+                              <div className="h-1 bg-muted-foreground/20 rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-primary transition-all duration-300"
+                                  style={{ width: `${uploadedFile.compressionProgress}%` }}
+                                />
+                              </div>
+                              <p className="text-[10px] text-center text-muted-foreground mt-0.5">
+                                {uploadedFile.compressionProgress}%
+                              </p>
+                            </div>
+                          )}
                         </div>
                       )}
-                      {uploadedFile.uploading && (
+                      {(uploadedFile.compressing || uploadedFile.uploading) && (
                         <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                           <Loader2 className="h-6 w-6 text-white animate-spin" />
                         </div>
                       )}
-                      {!uploadedFile.uploading && (
+                      {!uploadedFile.uploading && !uploadedFile.compressing && (
                         <button
                           onClick={() => handleRemoveFile(uploadedFile.file)}
                           className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
@@ -587,7 +631,7 @@ export default function EditInspectionDialog({
           {/* Save Button */}
           <Button
             onClick={handleSave}
-            disabled={saving || isUploading || isTranscribing || !inspectionStatus}
+            disabled={saving || isCompressing || isUploading || isTranscribing || !inspectionStatus}
             className="w-full"
             size="lg"
           >
