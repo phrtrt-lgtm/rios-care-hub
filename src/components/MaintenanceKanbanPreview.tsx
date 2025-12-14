@@ -350,28 +350,28 @@ export function MaintenanceKanbanPreview() {
             <p className="text-sm">Nenhuma manutenção no momento</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full overflow-hidden">
             {columns.map((column) => {
-              const columnTickets = getTicketsForColumn(column.key);
+              const columnTickets = getTicketsForColumn(column.key).slice(0, 3); // Limit to 3 cards per column in preview
+              const totalTickets = getTicketsForColumn(column.key).length;
 
               return (
-                <div key={column.key} className={`rounded-lg p-2 min-w-0 ${column.bgColor}`}>
+                <div key={column.key} className={`rounded-lg p-2 min-w-0 overflow-hidden ${column.bgColor}`}>
                   <div className="flex items-center justify-between mb-2">
                     <span className={`text-xs font-semibold ${column.color}`}>
                       {column.title}
                     </span>
                     <Badge variant="outline" className="text-xs h-5 px-1.5">
-                      {columnTickets.length}
+                      {totalTickets}
                     </Badge>
                   </div>
-                  <ScrollArea className="h-[180px]">
-                    <div className="space-y-1 pr-1">
-                      {columnTickets.map((ticket) => (
-                        <div
-                          key={ticket.id}
-                          onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
-                          className="bg-card rounded-lg p-2 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-                        >
+                  <div className="space-y-1.5 max-h-[200px] overflow-hidden">
+                    {columnTickets.map((ticket) => (
+                      <div
+                        key={ticket.id}
+                        onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
+                        className="bg-card rounded-lg p-2 shadow-sm cursor-pointer hover:shadow-md transition-shadow overflow-hidden"
+                      >
                           {/* Property name */}
                           <p className="font-medium text-xs truncate">
                             {ticket.property?.name || "Sem unidade"}
@@ -437,15 +437,14 @@ export function MaintenanceKanbanPreview() {
                               </div>
                             )}
                           </div>
-                        </div>
-                      ))}
-                      {columnTickets.length === 0 && (
-                        <p className="text-[8px] text-muted-foreground text-center py-2">
-                          Nenhum item
-                        </p>
-                      )}
-                    </div>
-                  </ScrollArea>
+                      </div>
+                    ))}
+                    {columnTickets.length === 0 && (
+                      <p className="text-[10px] text-muted-foreground text-center py-2">
+                        Nenhum item
+                      </p>
+                    )}
+                  </div>
                 </div>
               );
             })}
