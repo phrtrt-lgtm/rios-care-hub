@@ -30,25 +30,35 @@ async function loadFFmpeg(onProgress?: ProgressCallback): Promise<FFmpeg> {
   onProgress?.({ stage: 'compressing', percent: 0, message: 'Carregando compressor...' });
 
   ffmpegLoadPromise = (async () => {
-    const ffmpeg = new FFmpeg();
-    
-    ffmpeg.on('log', ({ message }) => {
-      console.log('[FFmpeg]', message);
-    });
+    try {
+      const ffmpeg = new FFmpeg();
+      
+      ffmpeg.on('log', ({ message }) => {
+        console.log('[FFmpeg]', message);
+      });
 
-    const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
-    
-    await ffmpeg.load({
-      coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-      wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-    });
+      const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+      
+      console.log('[FFmpeg] Loading core...');
+      await ffmpeg.load({
+        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+      });
+      console.log('[FFmpeg] Core loaded successfully');
 
-    sharedFFmpeg = ffmpeg;
+      sharedFFmpeg = ffmpeg;
+    } catch (err) {
+      console.error('[FFmpeg] Failed to load:', err);
+      throw err;
+    }
   })();
 
   try {
     await ffmpegLoadPromise;
     return sharedFFmpeg!;
+  } catch (err) {
+    ffmpegLoadPromise = null;
+    throw err;
   } finally {
     isFFmpegLoading = false;
   }
@@ -95,9 +105,22 @@ export async function compressVideo(
     const inputName = 'input' + getExtension(file.name);
     const outputName = 'output.mp4';
 
-    // Write input file
+    // Write input file with timeout for large files
+    console.log('[VideoCompression] Reading file into memory...');
+    onProgress?.({ stage: 'compressing', percent: 5, message: 'Lendo arquivo...' });
+    
+    let fileData: Uint8Array;
+    try {
+      fileData = await fetchFile(file);
+      console.log('[VideoCompression] File read successfully, size:', fileData.length);
+    } catch (readError: any) {
+      console.error('[VideoCompression] Failed to read file:', readError);
+      throw new Error(`Falha ao ler arquivo: ${readError.message || 'Memória insuficiente'}`);
+    }
+
     console.log('[VideoCompression] Writing input file to FFmpeg...');
-    await ffmpeg.writeFile(inputName, await fetchFile(file));
+    onProgress?.({ stage: 'compressing', percent: 8, message: 'Preparando...' });
+    await ffmpeg.writeFile(inputName, fileData);
 
     onProgress?.({ stage: 'compressing', percent: 10, message: 'Comprimindo vídeo...' });
 
