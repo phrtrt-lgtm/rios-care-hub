@@ -107,25 +107,36 @@ export default function EditInspectionDialog({
 
     for (let i = 0; i < selectedFiles.length; i++) {
       const originalFile = selectedFiles[i];
+      let fileToUpload = originalFile;
+      
       try {
-        let fileToUpload = originalFile;
-        
         // Compress video if it's a video file
         if (isVideoFile(originalFile)) {
-          fileToUpload = await compressVideo(originalFile, (progress: FileUploadProgress) => {
+          try {
+            fileToUpload = await compressVideo(originalFile, (progress: FileUploadProgress) => {
+              setUploadedFiles(prev => 
+                prev.map(f => 
+                  f.file === originalFile ? { ...f, compressionProgress: progress.percent } : f
+                )
+              );
+            });
+            
+            // Update state with compressed file
             setUploadedFiles(prev => 
               prev.map(f => 
-                f.file === originalFile ? { ...f, compressionProgress: progress.percent } : f
+                f.file === originalFile ? { ...f, file: fileToUpload, compressing: false, uploading: true } : f
               )
             );
-          });
-          
-          // Update state with compressed file
-          setUploadedFiles(prev => 
-            prev.map(f => 
-              f.file === originalFile ? { ...f, file: fileToUpload, compressing: false, uploading: true } : f
-            )
-          );
+          } catch (compressionError: any) {
+            console.error('Compression failed, uploading original:', compressionError);
+            toast.error(`Erro na compressão, enviando original: ${compressionError.message}`);
+            // Continue with original file
+            setUploadedFiles(prev => 
+              prev.map(f => 
+                f.file === originalFile ? { ...f, compressing: false, uploading: true } : f
+              )
+            );
+          }
         } else {
           setUploadedFiles(prev => 
             prev.map(f => 

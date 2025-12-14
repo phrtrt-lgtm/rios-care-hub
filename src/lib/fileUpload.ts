@@ -71,6 +71,8 @@ export async function compressVideo(
   }
 
   try {
+    console.log('[VideoCompression] Starting compression for:', file.name, 'Size:', (file.size / 1024 / 1024).toFixed(2) + 'MB');
+    
     const ffmpeg = await loadFFmpeg(onProgress);
 
     // Set up progress tracking
@@ -79,6 +81,7 @@ export async function compressVideo(
       const percent = Math.min(Math.round(p * 100), 99);
       if (percent > lastProgress) {
         lastProgress = percent;
+        console.log('[VideoCompression] Progress:', percent + '%');
         onProgress?.({ 
           stage: 'compressing', 
           percent, 
@@ -93,6 +96,7 @@ export async function compressVideo(
     const outputName = 'output.mp4';
 
     // Write input file
+    console.log('[VideoCompression] Writing input file to FFmpeg...');
     await ffmpeg.writeFile(inputName, await fetchFile(file));
 
     onProgress?.({ stage: 'compressing', percent: 10, message: 'Comprimindo vídeo...' });
@@ -101,6 +105,7 @@ export async function compressVideo(
     // - Lower resolution (max 480p height)
     // - Lower bitrate (~800kbps video, 64kbps audio)
     // - H.264 codec for maximum compatibility
+    console.log('[VideoCompression] Running FFmpeg compression...');
     await ffmpeg.exec([
       '-i', inputName,
       // Scale down to max 480p height, maintain aspect ratio
@@ -122,6 +127,7 @@ export async function compressVideo(
     ]);
 
     // Read output file
+    console.log('[VideoCompression] Reading output file...');
     const data = await ffmpeg.readFile(outputName);
     
     // Convert to proper array
@@ -140,17 +146,20 @@ export async function compressVideo(
     const originalSize = (file.size / 1024 / 1024).toFixed(2);
     const compressedSize = (compressedFile.size / 1024 / 1024).toFixed(2);
     const reduction = ((1 - compressedFile.size / file.size) * 100).toFixed(1);
-    console.log(`Video compressed: ${originalSize}MB → ${compressedSize}MB (${reduction}% reduction)`);
+    console.log(`[VideoCompression] SUCCESS: ${originalSize}MB → ${compressedSize}MB (${reduction}% reduction)`);
 
     // Cleanup
     await ffmpeg.deleteFile(inputName);
     await ffmpeg.deleteFile(outputName);
 
+    onProgress?.({ stage: 'done', percent: 100, message: 'Compressão concluída!' });
+
     return compressedFile;
-  } catch (error) {
-    console.error('Video compression error:', error);
-    // Return original file on error
-    return file;
+  } catch (error: any) {
+    console.error('[VideoCompression] ERROR:', error);
+    onProgress?.({ stage: 'error', percent: 0, message: `Erro: ${error.message || 'Falha na compressão'}` });
+    // Re-throw error so caller can handle it
+    throw error;
   }
 }
 
