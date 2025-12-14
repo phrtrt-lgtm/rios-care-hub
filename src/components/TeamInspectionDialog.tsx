@@ -9,6 +9,8 @@ import AudioPlayer from '@/components/AudioPlayer';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { compressVideo, isVideoFile, FileUploadProgress } from '@/lib/fileUpload';
+import { VideoCompressionProgress } from '@/components/VideoCompressionProgress';
 
 interface TeamInspectionDialogProps {
   open: boolean;
@@ -22,6 +24,8 @@ interface UploadedFile {
   file: File;
   url: string;
   uploading: boolean;
+  compressing: boolean;
+  compressionProgress?: FileUploadProgress;
   error?: string;
 }
 
@@ -76,41 +80,66 @@ export default function TeamInspectionDialog({
     if (!e.target.files) return;
     
     const selectedFiles = Array.from(e.target.files);
-    const maxSize = 50 * 1024 * 1024; // 50MB
+    const maxSize = 100 * 1024 * 1024; // 100MB (before compression)
     const oversizedFiles = selectedFiles.filter(f => f.size > maxSize);
     
     if (oversizedFiles.length > 0) {
-      toast.error(`Arquivos muito grandes (máx 50MB): ${oversizedFiles.map(f => f.name).join(', ')}`);
+      toast.error(`Arquivos muito grandes (máx 100MB): ${oversizedFiles.map(f => f.name).join(', ')}`);
       e.target.value = '';
       return;
     }
 
+    // Add files with initial state (compressing for videos, uploading for others)
     const newFiles: UploadedFile[] = selectedFiles.map(file => ({
       file,
       url: '',
-      uploading: true,
+      uploading: !isVideoFile(file),
+      compressing: isVideoFile(file),
     }));
     
     setUploadedFiles(prev => [...prev, ...newFiles]);
     e.target.value = '';
 
+    // Process and upload each file progressively
     for (let i = 0; i < selectedFiles.length; i++) {
-      const file = selectedFiles[i];
+      const originalFile = selectedFiles[i];
       try {
-        const url = await uploadFile(file);
+        let fileToUpload = originalFile;
+        
+        // Compress video if needed
+        if (isVideoFile(originalFile)) {
+          fileToUpload = await compressVideo(originalFile, (progress) => {
+            setUploadedFiles(prev => 
+              prev.map(f => 
+                f.file === originalFile ? { ...f, compressionProgress: progress } : f
+              )
+            );
+          });
+          
+          // Update state: compression done, now uploading
+          setUploadedFiles(prev => 
+            prev.map(f => 
+              f.file === originalFile ? { ...f, compressing: false, uploading: true, file: fileToUpload } : f
+            )
+          );
+        }
+        
+        const url = await uploadFile(fileToUpload);
         setUploadedFiles(prev => 
           prev.map(f => 
-            f.file === file ? { ...f, url, uploading: false } : f
+            (f.file === originalFile || f.file === fileToUpload) 
+              ? { ...f, url, uploading: false, compressing: false } 
+              : f
           )
         );
       } catch (error: any) {
         console.error('Upload error:', error);
         setUploadedFiles(prev => 
           prev.map(f => 
-            f.file === file ? { ...f, uploading: false, error: error.message } : f
+            f.file === originalFile ? { ...f, uploading: false, compressing: false, error: error.message } : f
           )
         );
-        toast.error(`Erro no upload de ${file.name}`);
+        toast.error(`Erro no upload de ${originalFile.name}`);
       }
     }
   };
@@ -253,6 +282,7 @@ export default function TeamInspectionDialog({
     }
   };
 
+  const isCompressing = uploadedFiles.some(f => f.compressing);
   const isUploading = uploadedFiles.some(f => f.uploading) || audioFiles.some(a => a.uploading);
   const isTranscribing = audioFiles.some(a => a.transcribing);
   const hasErrors = uploadedFiles.some(f => f.error);
@@ -443,7 +473,12 @@ export default function TeamInspectionDialog({
             {uploadedFiles.length > 0 && (
               <div className="space-y-2">
                 <p className="text-sm font-semibold flex items-center gap-2">
-                  {isUploading ? (
+                  {isCompressing ? (
+                    <>
+                      <Video className="h-4 w-4 animate-pulse text-amber-600" />
+                      Comprimindo vídeo(s)...
+                    </>
+                  ) : isUploading ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin text-primary" />
                       Enviando {uploadedCount}/{totalFilesCount}...
@@ -467,9 +502,11 @@ export default function TeamInspectionDialog({
                       className={`relative aspect-square rounded-lg overflow-hidden border-2 ${
                         uploadedFile.error 
                           ? 'border-red-500' 
-                          : uploadedFile.uploading 
-                            ? 'border-primary/50' 
-                            : 'border-green-500'
+                          : uploadedFile.compressing
+                            ? 'border-amber-500'
+                            : uploadedFile.uploading 
+                              ? 'border-primary/50' 
+                              : 'border-green-500'
                       }`}
                     >
                       {uploadedFile.file.type.startsWith('image/') ? (
@@ -484,7 +521,18 @@ export default function TeamInspectionDialog({
                         </div>
                       )}
                       
-                      {uploadedFile.uploading && (
+                      {/* Compression indicator overlay */}
+                      {uploadedFile.compressing && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/70 p-1">
+                          <Video className="h-5 w-5 text-primary animate-pulse mb-1" />
+                          <span className="text-[10px] font-medium text-primary text-center">
+                            {uploadedFile.compressionProgress?.percent || 0}%
+                          </span>
+                        </div>
+                      )}
+                      
+                      {/* Upload indicator overlay */}
+                      {uploadedFile.uploading && !uploadedFile.compressing && (
                         <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                           <Loader2 className="h-6 w-6 animate-spin text-white" />
                         </div>
