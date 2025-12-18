@@ -272,7 +272,7 @@ export type Database = {
       alerts: {
         Row: {
           created_at: string
-          created_by: string
+          created_by: string | null
           expires_at: string | null
           has_attachments: boolean | null
           id: string
@@ -284,7 +284,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          created_by: string
+          created_by?: string | null
           expires_at?: string | null
           has_attachments?: boolean | null
           id?: string
@@ -296,7 +296,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           expires_at?: string | null
           has_attachments?: boolean | null
           id?: string
@@ -398,7 +398,7 @@ export type Database = {
         Row: {
           charge_id: string | null
           created_at: string
-          created_by: string
+          created_by: string | null
           duration_sec: number | null
           file_name: string
           file_path: string
@@ -415,7 +415,7 @@ export type Database = {
         Insert: {
           charge_id?: string | null
           created_at?: string
-          created_by: string
+          created_by?: string | null
           duration_sec?: number | null
           file_name: string
           file_path: string
@@ -432,7 +432,7 @@ export type Database = {
         Update: {
           charge_id?: string | null
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           duration_sec?: number | null
           file_name?: string
           file_path?: string
@@ -959,7 +959,7 @@ export type Database = {
       maintenance_payment_attachments: {
         Row: {
           created_at: string
-          created_by: string
+          created_by: string | null
           file_name: string
           file_path: string
           file_size: number | null
@@ -969,7 +969,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          created_by: string
+          created_by?: string | null
           file_name: string
           file_path: string
           file_size?: number | null
@@ -979,7 +979,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           file_name?: string
           file_path?: string
           file_size?: number | null
@@ -1230,7 +1230,7 @@ export type Database = {
       proposal_attachments: {
         Row: {
           created_at: string
-          created_by: string
+          created_by: string | null
           file_name: string
           file_path: string
           file_size: number | null
@@ -1240,7 +1240,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          created_by: string
+          created_by?: string | null
           file_name: string
           file_path: string
           file_size?: number | null
@@ -1250,7 +1250,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           file_name?: string
           file_path?: string
           file_size?: number | null
@@ -1451,7 +1451,7 @@ export type Database = {
           amount_cents: number | null
           category: string | null
           created_at: string
-          created_by: string
+          created_by: string | null
           currency: string | null
           deadline: string
           description: string
@@ -1470,7 +1470,7 @@ export type Database = {
           amount_cents?: number | null
           category?: string | null
           created_at?: string
-          created_by: string
+          created_by?: string | null
           currency?: string | null
           deadline: string
           description: string
@@ -1489,7 +1489,7 @@ export type Database = {
           amount_cents?: number | null
           category?: string | null
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           currency?: string | null
           deadline?: string
           description?: string
