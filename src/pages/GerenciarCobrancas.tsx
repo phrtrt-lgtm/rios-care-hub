@@ -58,6 +58,7 @@ interface PropertyGroup {
   charges: Charge[];
   openCount: number;
   overdueCount: number;
+  totalDueCents: number; // Total a receber (já com aporte deduzido)
 }
 
 const GerenciarCobrancas = () => {
@@ -160,11 +161,16 @@ const GerenciarCobrancas = () => {
           ownerName: charge.owner.name,
           charges: [],
           openCount: 0,
-          overdueCount: 0
+          overdueCount: 0,
+          totalDueCents: 0
         };
       }
       
       groups[propertyId].charges.push(charge);
+      
+      // Calculate amount due (total - management contribution)
+      const amountDue = charge.amount_cents - (charge.management_contribution_cents || 0);
+      groups[propertyId].totalDueCents += amountDue;
       
       if (['sent', 'draft'].includes(charge.status)) {
         groups[propertyId].openCount++;
@@ -375,6 +381,51 @@ const GerenciarCobrancas = () => {
           />
         </div>
 
+        {/* Summary Cards */}
+        {propertyGroups.length > 0 && (
+          <div className="mb-6 space-y-4">
+            {/* Overall Total */}
+            <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
+              <CardContent className="py-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground font-medium">Total a Receber (já com aporte deduzido)</p>
+                    <p className="text-3xl font-bold text-primary">
+                      {formatCurrency(propertyGroups.reduce((acc, g) => acc + g.totalDueCents, 0), 'BRL')}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-muted-foreground">{propertyGroups.reduce((acc, g) => acc + g.charges.length, 0)} cobranças</p>
+                    <p className="text-sm text-muted-foreground">{propertyGroups.length} imóveis</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Per Property Summary */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+              {propertyGroups.map((group) => (
+                <div
+                  key={group.id}
+                  className={`p-3 rounded-lg border text-sm cursor-pointer hover:bg-muted/50 transition-colors ${
+                    group.overdueCount > 0 ? 'border-red-300 bg-red-50/50' : 'bg-card'
+                  }`}
+                  onClick={() => {
+                    if (!expandedProperties.has(group.id)) {
+                      toggleProperty(group.id);
+                    }
+                    document.getElementById(`property-${group.id}`)?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                >
+                  <p className="font-medium truncate text-xs">{group.name}</p>
+                  <p className="font-bold text-primary">{formatCurrency(group.totalDueCents, 'BRL')}</p>
+                  <p className="text-xs text-muted-foreground">{group.charges.length} cobrança{group.charges.length > 1 ? 's' : ''}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Property Groups */}
         {propertyGroups.length === 0 ? (
           <Card>
@@ -391,7 +442,7 @@ const GerenciarCobrancas = () => {
                 open={expandedProperties.has(group.id)}
                 onOpenChange={() => toggleProperty(group.id)}
               >
-                <Card className={`transition-all ${group.overdueCount > 0 ? 'border-red-300 bg-red-50/50' : ''}`}>
+                <Card id={`property-${group.id}`} className={`transition-all ${group.overdueCount > 0 ? 'border-red-300 bg-red-50/50' : ''}`}>
                   <CollapsibleTrigger asChild>
                     <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
                       <div className="flex items-center gap-4">
