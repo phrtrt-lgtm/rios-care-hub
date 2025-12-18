@@ -124,17 +124,29 @@ serve(async (req) => {
     console.log("Looking for property with name:", propertyName);
 
     // Find property and get owner_id and property_id
-    const { data: property, error: propertyError } = await supabase
+    // Use limit(1) because there might be multiple properties with the same name
+    const { data: properties, error: propertyError } = await supabase
       .from('properties')
-      .select('id, owner_id')
+      .select('id, owner_id, name')
       .ilike('name', propertyName)
-      .maybeSingle();
+      .limit(10);
 
-    if (propertyError || !property) {
-      console.error("Property not found:", propertyName, propertyError);
+    if (propertyError) {
+      console.error("Error searching for property:", propertyName, propertyError);
+      throw new Error(`Erro ao buscar unidade "${propertyName}": ${propertyError.message}`);
+    }
+
+    if (!properties || properties.length === 0) {
+      console.error("Property not found:", propertyName);
       throw new Error(`Unidade "${propertyName}" não encontrada no sistema. Certifique-se de que a propriedade existe e está associada a um proprietário.`);
     }
 
+    if (properties.length > 1) {
+      console.warn(`ATENÇÃO: Existem ${properties.length} propriedades com nome "${propertyName}". Usando a primeira encontrada.`);
+      console.warn("Propriedades encontradas:", JSON.stringify(properties, null, 2));
+    }
+
+    const property = properties[0];
     console.log("Found property:", property.id, "owner:", property.owner_id);
 
     // Extract charge data using the actual column IDs from your Monday board
