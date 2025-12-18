@@ -57,7 +57,7 @@ const handler = async (req: Request): Promise<Response> => {
     const isTeamMessage = ["admin", "agent", "maintenance"].includes(message.author.role);
     
     const portalUrl = Deno.env.get("PORTAL_URL") || "https://portal.rioshospedagens.com.br";
-    const chargeUrl = `${portalUrl}/cobranca-detalhes/${chargeId}`;
+    const chargeUrl = `${portalUrl}/cobranca/${chargeId}`;
 
     const variables = {
       owner_name: charge.owner.name,
@@ -92,7 +92,7 @@ const handler = async (req: Request): Promise<Response> => {
         message: `${message.author.name}: ${message.body.substring(0, 100)}${message.body.length > 100 ? '...' : ''}`,
         type: "charge",
         reference_id: chargeId,
-        reference_url: `/cobranca-detalhes/${chargeId}`,
+        reference_url: `/cobranca/${chargeId}`,
       });
       console.log("Notification created for owner");
 
@@ -128,7 +128,7 @@ const handler = async (req: Request): Promise<Response> => {
             message: `${charge.owner.name}: ${message.body.substring(0, 100)}${message.body.length > 100 ? '...' : ''}`,
             type: "charge",
             reference_id: chargeId,
-            reference_url: `/cobranca-detalhes/${chargeId}`,
+            reference_url: `/cobranca/${chargeId}`,
           }));
 
           await supabase.from("notifications").insert(notifications);
