@@ -76,7 +76,7 @@ const handler = async (req: Request): Promise<Response> => {
       ? new Intl.DateTimeFormat("pt-BR").format(new Date(charge.maintenance_date))
       : "";
 
-    const portalUrl = Deno.env.get("PORTAL_URL") || "https://rios.lovable.app";
+    const portalUrl = Deno.env.get("PORTAL_URL") || "https://portal.rioshospedagens.com.br";
     const chargeUrl = `${portalUrl}/cobranca-detalhes/${chargeId}`;
     
     const contestDeadline = charge.due_date 

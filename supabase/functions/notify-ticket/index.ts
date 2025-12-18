@@ -242,7 +242,7 @@ const handler = async (req: Request): Promise<Response> => {
         const variables = {
           user_name: user.name,
           user_email: user.email,
-          portal_url: "https://portal.rioshospedagens.com.br/",
+          portal_url: "https://portal.rioshospedagens.com.br",
         };
 
         // Send welcome email
