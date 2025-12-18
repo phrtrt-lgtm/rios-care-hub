@@ -128,9 +128,9 @@ const handler = async (req: Request): Promise<Response> => {
         default_installments: 1,
       },
       back_urls: {
-        success: `${Deno.env.get('SUPABASE_URL')?.replace('supabase.co', 'lovable.app')}/minhas-cobrancas`,
-        failure: `${Deno.env.get('SUPABASE_URL')?.replace('supabase.co', 'lovable.app')}/minhas-cobrancas`,
-        pending: `${Deno.env.get('SUPABASE_URL')?.replace('supabase.co', 'lovable.app')}/minhas-cobrancas`,
+        success: 'https://portal.rioshospedagens.com.br/minhas-cobrancas',
+        failure: 'https://portal.rioshospedagens.com.br/minhas-cobrancas',
+        pending: 'https://portal.rioshospedagens.com.br/minhas-cobrancas',
       },
       auto_return: 'approved',
       external_reference: chargeId,
