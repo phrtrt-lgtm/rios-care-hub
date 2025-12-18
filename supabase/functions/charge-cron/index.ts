@@ -15,13 +15,25 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const url = new URL(req.url);
     const token = url.searchParams.get("token");
-
-    if (token !== Deno.env.get("CRON_SECRET_TOKEN")) {
+    const authHeader = req.headers.get("Authorization");
+    
+    // Accept either: token query param OR service role key in Authorization header
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const cronToken = Deno.env.get("CRON_SECRET_TOKEN");
+    const internalCronToken = "charge_internal_cron_2024"; // Internal token for pg_cron
+    
+    const isValidToken = token && (token === cronToken || token === internalCronToken);
+    const isValidServiceRole = authHeader && authHeader === `Bearer ${serviceRoleKey}`;
+    
+    if (!isValidToken && !isValidServiceRole) {
+      console.log("Unauthorized attempt - token match:", isValidToken, "service role match:", isValidServiceRole);
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+    
+    console.log("Authorization successful via:", isValidToken ? "token" : "service_role");
 
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",

@@ -90,7 +90,16 @@ const handler = async (req: Request): Promise<Response> => {
         templateKey = "charge_created";
         break;
       case "charge_reminder":
-        templateKey = "charge_reminder";
+        // Use specific template based on days remaining
+        if (diasRestantes === "2") {
+          templateKey = "charge_reminder_48h";
+        } else if (diasRestantes === "1") {
+          templateKey = "charge_reminder_24h";
+        } else if (diasRestantes === "hoje") {
+          templateKey = "charge_reminder_day";
+        } else {
+          templateKey = "charge_reminder_48h"; // fallback
+        }
         break;
       case "charge_overdue":
         templateKey = "charge_overdue";

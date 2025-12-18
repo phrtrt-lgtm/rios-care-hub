@@ -38,3 +38,6 @@ verify_jwt = true
 
 [functions.create-proposal-payment]
 verify_jwt = true
+
+[functions.charge-cron]
+verify_jwt = false
