@@ -1887,6 +1887,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      invoke_charge_cron: { Args: never; Returns: undefined }
       is_admin_or_maintenance: { Args: { _user_id: string }; Returns: boolean }
       is_team_member: { Args: { _user_id: string }; Returns: boolean }
       set_session_context: {
