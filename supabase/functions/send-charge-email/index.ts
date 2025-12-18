@@ -77,7 +77,7 @@ const handler = async (req: Request): Promise<Response> => {
       : "";
 
     const portalUrl = Deno.env.get("PORTAL_URL") || "https://portal.rioshospedagens.com.br";
-    const chargeUrl = `${portalUrl}/cobranca-detalhes/${chargeId}`;
+    const chargeUrl = `${portalUrl}/cobranca/${chargeId}`;
     
     const contestDeadline = charge.due_date 
       ? new Intl.DateTimeFormat("pt-BR").format(new Date(charge.due_date))
@@ -217,7 +217,7 @@ const handler = async (req: Request): Promise<Response> => {
           message: notificationMessage,
           type: notificationType,
           reference_id: chargeId,
-          reference_url: `/cobranca-detalhes/${chargeId}`,
+          reference_url: `/cobranca/${chargeId}`,
           read: false,
         });
 
@@ -232,17 +232,17 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send push notification to owner
     try {
-      await supabaseClient.functions.invoke("send-push", {
-        body: {
-          ownerId: charge.owner.id,
-          payload: {
-            title: notificationTitle,
-            body: notificationMessage,
-            url: `/cobranca-detalhes/${chargeId}`,
-            tag: `charge_${chargeId}`,
+        await supabaseClient.functions.invoke("send-push", {
+          body: {
+            ownerId: charge.owner.id,
+            payload: {
+              title: notificationTitle,
+              body: notificationMessage,
+              url: `/cobranca/${chargeId}`,
+              tag: `charge_${chargeId}`,
+            },
           },
-        },
-      });
+        });
       
       console.log("Push notification sent to owner");
     } catch (pushError) {
