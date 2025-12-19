@@ -198,14 +198,14 @@ export function EditChargeDialog({ open, onOpenChange, charge, onSuccess }: Edit
             <div className="space-y-2">
               <Label htmlFor="edit-property">Unidade</Label>
               <Select 
-                value={formData.property_id} 
-                onValueChange={(value) => setFormData({ ...formData, property_id: value })}
+                value={formData.property_id || "none"} 
+                onValueChange={(value) => setFormData({ ...formData, property_id: value === "none" ? "" : value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhuma</SelectItem>
+                  <SelectItem value="none">Nenhuma</SelectItem>
                   {properties.map((property) => (
                     <SelectItem key={property.id} value={property.id}>
                       {property.name}
