@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Send, Calendar, DollarSign, Paperclip, Download, Eye, FileText, Image as ImageIcon, Trash2, Sparkles, ChevronDown, X, ZoomIn, Play, Video, Loader2, Copy, CreditCard, Check } from "lucide-react";
+import { ArrowLeft, Send, Calendar, DollarSign, Paperclip, Download, Eye, FileText, Image as ImageIcon, Trash2, Sparkles, ChevronDown, X, ZoomIn, Play, Video, Loader2, Copy, CreditCard, Check, Pencil } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { VoiceToTextInput } from "@/components/VoiceToTextInput";
 import { LoadingScreen } from "@/components/LoadingScreen";
@@ -25,6 +25,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import JSZip from "jszip";
 import { CHARGE_CATEGORIES } from "@/constants/chargeCategories";
+import { EditChargeDialog } from "@/components/EditChargeDialog";
 
 interface Charge {
   id: string;
@@ -119,6 +120,7 @@ export default function CobrancaDetalhes() {
   const [downloadingAll, setDownloadingAll] = useState(false);
   const [generatingPaymentLink, setGeneratingPaymentLink] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance';
 
@@ -1000,14 +1002,24 @@ export default function CobrancaDetalhes() {
                   getStatusBadge(charge.status)
                 )}
                 {isTeamMember && (
-                  <Button 
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => setDeleteDialogOpen(true)}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Excluir
-                  </Button>
+                  <>
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditDialogOpen(true)}
+                    >
+                      <Pencil className="h-4 w-4 mr-2" />
+                      Editar
+                    </Button>
+                    <Button 
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setDeleteDialogOpen(true)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Excluir
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
@@ -1725,6 +1737,14 @@ export default function CobrancaDetalhes() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog de Edição */}
+      <EditChargeDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        charge={charge}
+        onSuccess={fetchChargeData}
+      />
     </div>
   );
 }
