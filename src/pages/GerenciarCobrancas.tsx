@@ -6,24 +6,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ArrowLeft, DollarSign, Calendar, User, Search, Pencil, ChevronDown, ChevronRight, Building2, AlertCircle } from "lucide-react";
+import { ArrowLeft, DollarSign, Calendar, Search, Pencil, ChevronDown, ChevronRight, Building2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
-import { z } from "zod";
 import { CHARGE_CATEGORIES } from "@/constants/chargeCategories";
-import { useUpdateOwnerScore } from "@/hooks/useOwnerScore";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-
-const statusUpdateSchema = z.object({
-  status: z.enum(['draft', 'sent', 'paid', 'paid_early', 'paid_on_time', 'paid_late', 'overdue', 'cancelled', 'debited']),
-  payment_link_url: z.string().url().optional().or(z.literal(''))
-});
+import { EditChargeDialog } from "@/components/EditChargeDialog";
 
 interface Charge {
   id: string;
@@ -65,19 +54,13 @@ const GerenciarCobrancas = () => {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { updateScore } = useUpdateOwnerScore();
   const [charges, setCharges] = useState<Charge[]>([]);
   const [propertyGroups, setPropertyGroups] = useState<PropertyGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedProperties, setExpandedProperties] = useState<Set<string>>(new Set());
   const [editingCharge, setEditingCharge] = useState<Charge | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    status: "",
-    payment_link_url: ""
-  });
-  const [updatingScore, setUpdatingScore] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!user || !['admin', 'agent', 'maintenance'].includes(profile?.role || '')) {
@@ -201,105 +184,7 @@ const GerenciarCobrancas = () => {
 
   const handleEdit = (charge: Charge) => {
     setEditingCharge(charge);
-    setFormData({
-      status: charge.status,
-      payment_link_url: charge.payment_link_url || ""
-    });
-    setDialogOpen(true);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    try {
-      const validated = statusUpdateSchema.parse(formData);
-      setUpdatingScore(true);
-
-      let dbStatus = validated.status;
-      let scoreReason: "early_payment" | "on_time_payment" | "late_payment" | "reserve_debit" | null = null;
-      let paidAt: string | null = null;
-      let debitedAt: string | null = null;
-
-      switch (validated.status) {
-        case 'paid_early':
-          dbStatus = 'paid';
-          scoreReason = 'early_payment';
-          paidAt = new Date().toISOString();
-          break;
-        case 'paid_on_time':
-          dbStatus = 'paid';
-          scoreReason = 'on_time_payment';
-          paidAt = new Date().toISOString();
-          break;
-        case 'paid_late':
-          dbStatus = 'paid';
-          scoreReason = 'late_payment';
-          paidAt = new Date().toISOString();
-          break;
-        case 'debited':
-          dbStatus = 'debited';
-          scoreReason = 'reserve_debit';
-          debitedAt = new Date().toISOString();
-          break;
-      }
-
-      const updateData: any = {
-        status: dbStatus,
-        payment_link_url: validated.payment_link_url || null
-      };
-      
-      if (paidAt) updateData.paid_at = paidAt;
-      if (debitedAt) updateData.debited_at = debitedAt;
-
-      const { error } = await supabase
-        .from('charges')
-        .update(updateData)
-        .eq('id', editingCharge!.id);
-
-      if (error) throw error;
-
-      if (scoreReason && editingCharge) {
-        try {
-          await updateScore(editingCharge.owner_id, editingCharge.id, scoreReason);
-          toast({
-            title: "Status e pontuação atualizados!",
-            description: `O status foi atualizado e a pontuação do proprietário foi ${scoreReason.includes('payment') && !scoreReason.includes('late') ? 'aumentada' : 'reduzida'}.`
-          });
-        } catch (scoreError) {
-          console.error('Erro ao atualizar pontuação:', scoreError);
-          toast({
-            title: "Status atualizado!",
-            description: "O status foi atualizado, mas houve um erro ao atualizar a pontuação.",
-            variant: "destructive"
-          });
-        }
-      } else {
-        toast({
-          title: "Status atualizado!",
-          description: "O status da cobrança foi atualizado com sucesso."
-        });
-      }
-
-      setDialogOpen(false);
-      setEditingCharge(null);
-      fetchCharges();
-    } catch (error: any) {
-      if (error instanceof z.ZodError) {
-        toast({
-          title: "Dados inválidos",
-          description: error.errors[0].message,
-          variant: "destructive"
-        });
-      } else {
-        toast({
-          title: "Erro ao atualizar status",
-          description: error.message,
-          variant: "destructive"
-        });
-      }
-    } finally {
-      setUpdatingScore(false);
-    }
+    setEditDialogOpen(true);
   };
 
   const getStatusBadge = (status: string) => {
@@ -314,21 +199,6 @@ const GerenciarCobrancas = () => {
 
     const config = statusConfig[status] || { label: status, variant: 'outline' as const };
     return <Badge variant={config.variant} className={config.className}>{config.label}</Badge>;
-  };
-
-  const getScoreImpactInfo = (status: string) => {
-    switch (status) {
-      case 'paid_early':
-        return { points: '+5', color: 'text-green-600', description: 'Pago com antecedência (2+ dias antes)' };
-      case 'paid_on_time':
-        return { points: '+1', color: 'text-blue-600', description: 'Pago no prazo' };
-      case 'paid_late':
-        return { points: '-15', color: 'text-orange-600', description: 'Pago com atraso' };
-      case 'debited':
-        return { points: '-30', color: 'text-red-600', description: 'Debitado da reserva' };
-      default:
-        return null;
-    }
   };
 
   const formatCurrency = (cents: number, currency: string) => {
@@ -552,91 +422,12 @@ const GerenciarCobrancas = () => {
         )}
 
         {/* Dialog de Edição */}
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Atualizar Status da Cobrança</DialogTitle>
-              <DialogDescription>
-                Selecione o novo status. Status de pagamento afetam a pontuação do proprietário.
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit}>
-              <div className="space-y-4 py-4">
-                <div>
-                  <Label htmlFor="status">Status *</Label>
-                  <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="draft">Rascunho</SelectItem>
-                      <SelectItem value="sent">Enviada</SelectItem>
-                      <SelectItem value="overdue">Vencida</SelectItem>
-                      <SelectItem value="cancelled">Cancelada</SelectItem>
-                      <SelectItem value="paid" disabled className="opacity-50">
-                        ── Status de Pagamento ──
-                      </SelectItem>
-                      <SelectItem value="paid_early">
-                        <span className="flex items-center gap-2">
-                          ✅ Pago em até 2 dias
-                          <Badge variant="outline" className="text-green-600 border-green-600 text-xs">+5 pts</Badge>
-                        </span>
-                      </SelectItem>
-                      <SelectItem value="paid_on_time">
-                        <span className="flex items-center gap-2">
-                          ✅ Pago até o vencimento
-                          <Badge variant="outline" className="text-blue-600 border-blue-600 text-xs">+1 pt</Badge>
-                        </span>
-                      </SelectItem>
-                      <SelectItem value="paid_late">
-                        <span className="flex items-center gap-2">
-                          ⚠️ Pago com atraso
-                          <Badge variant="outline" className="text-orange-600 border-orange-600 text-xs">-15 pts</Badge>
-                        </span>
-                      </SelectItem>
-                      <SelectItem value="debited">
-                        <span className="flex items-center gap-2">
-                          🔴 Débito em Reserva
-                          <Badge variant="outline" className="text-red-600 border-red-600 text-xs">-30 pts</Badge>
-                        </span>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {getScoreImpactInfo(formData.status) && (
-                  <Alert className={`border-2 ${formData.status.includes('paid') && !formData.status.includes('late') ? 'border-green-200 bg-green-50' : 'border-orange-200 bg-orange-50'}`}>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription className="flex flex-col gap-1">
-                      <span className="font-medium">{getScoreImpactInfo(formData.status)?.description}</span>
-                      <span className={`font-bold ${getScoreImpactInfo(formData.status)?.color}`}>
-                        Impacto na pontuação: {getScoreImpactInfo(formData.status)?.points} pontos
-                      </span>
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                <div>
-                  <Label htmlFor="payment_link">Link de Pagamento</Label>
-                  <Input
-                    id="payment_link"
-                    placeholder="https://..."
-                    value={formData.payment_link_url}
-                    onChange={(e) => setFormData({ ...formData, payment_link_url: e.target.value })}
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} disabled={updatingScore}>
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={updatingScore}>
-                  {updatingScore ? "Salvando..." : "Salvar"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <EditChargeDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          charge={editingCharge}
+          onSuccess={fetchCharges}
+        />
       </main>
     </div>
   );
