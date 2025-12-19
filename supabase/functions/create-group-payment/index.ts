@@ -88,6 +88,11 @@ serve(async (req) => {
 
     // Create Mercado Pago preference
     const chargesTitles = charges.map(c => c.title).join(', ');
+    
+    // Generate a short unique reference ID for MercadoPago (max ~64 chars for PIX)
+    // Use first charge ID + timestamp to ensure uniqueness
+    const shortReference = `grp_${chargeIds[0].substring(0, 8)}_${Date.now()}`;
+    
     const preferenceData = {
       items: [
         {
@@ -110,7 +115,7 @@ serve(async (req) => {
         charge_ids: chargeIds,
         is_group_payment: true,
       },
-      external_reference: `group_${chargeIds.join('_')}`,
+      external_reference: shortReference,
       notification_url: `${supabaseUrl}/functions/v1/mercadopago-webhook`,
       statement_descriptor: 'RIOS Gestao', // Nome que aparece na fatura do cartão
     };
@@ -152,7 +157,7 @@ serve(async (req) => {
           charge_ids: chargeIds,
           is_group_payment: true,
         },
-        external_reference: `group_${chargeIds.join('_')}`,
+        external_reference: shortReference,
         notification_url: `${supabaseUrl}/functions/v1/mercadopago-webhook`,
       };
 
