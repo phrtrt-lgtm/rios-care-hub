@@ -161,10 +161,26 @@ const handler = async (req: Request): Promise<Response> => {
       // Mapear status do Mercado Pago para status de cobrança
       // O status final de pagamento será determinado pela data
       let baseChargeStatus: string | null = null;
+      let isPaymentExpired = false;
+      
       if (status === 'approved') {
         baseChargeStatus = 'approved'; // Will be refined based on due date later
-      } else if (status === 'rejected' || status === 'cancelled') {
+      } else if (status === 'rejected') {
+        // Only rejected payments should mark as cancelled, not expired ones
         baseChargeStatus = 'cancelled';
+      } else if (status === 'cancelled') {
+        // Check if it's an expiration (PIX expired) vs actual cancellation
+        // Expired PIX payments have status_detail = 'expired'
+        if (payment.status_detail === 'expired') {
+          isPaymentExpired = true;
+          baseChargeStatus = 'sent'; // Reset to sent so owner can pay again
+          console.log('Payment expired (PIX timeout), resetting charge status to sent');
+        } else {
+          // Actual cancellation - don't change charge status, just clear payment data
+          console.log('Payment cancelled by user, clearing payment data');
+          isPaymentExpired = true;
+          baseChargeStatus = 'sent';
+        }
       }
 
       // Só atualizar se temos um status válido
@@ -313,6 +329,15 @@ const handler = async (req: Request): Promise<Response> => {
           if (status === 'approved') {
             updateData.paid_at = paidAt;
           }
+          
+          // If payment expired, clear the payment data so a new payment can be generated
+          if (isPaymentExpired) {
+            updateData.mercadopago_preference_id = null;
+            updateData.mercadopago_payment_id = null;
+            updateData.pix_qr_code = null;
+            updateData.pix_qr_code_base64 = null;
+            updateData.payment_link_url = null;
+          }
 
           const { error: updateError } = await supabase
             .from('charges')
@@ -322,7 +347,7 @@ const handler = async (req: Request): Promise<Response> => {
           if (updateError) {
             console.error(`Error updating charge ${chargeId}:`, updateError);
           } else {
-            console.log(`Charge ${chargeId} updated to status: ${chargeStatus}`);
+            console.log(`Charge ${chargeId} updated to status: ${chargeStatus}${isPaymentExpired ? ' (payment data cleared)' : ''}`);
           }
 
           // Criar registro de pagamento se foi aprovado
@@ -404,6 +429,15 @@ const handler = async (req: Request): Promise<Response> => {
 
       if (status === 'approved') {
         updateData.paid_at = paidAt;
+      }
+      
+      // If payment expired, clear the payment data so a new payment can be generated
+      if (isPaymentExpired) {
+        updateData.mercadopago_preference_id = null;
+        updateData.mercadopago_payment_id = null;
+        updateData.pix_qr_code = null;
+        updateData.pix_qr_code_base64 = null;
+        updateData.payment_link_url = null;
       }
 
       const { error: updateError } = await supabase
