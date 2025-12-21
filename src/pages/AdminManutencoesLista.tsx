@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
+import { useChatPreloader } from "@/hooks/useChatPreloader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -11,10 +13,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, Search, Plus, ChevronDown, ChevronRight, Paperclip, Check, X } from "lucide-react";
+import { ArrowLeft, Search, Plus, ChevronDown, ChevronRight, Paperclip, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatBRL } from "@/lib/format";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
 
 // ===== TYPES =====
 type TicketStatus = "novo" | "em_analise" | "aguardando_info" | "em_execucao" | "concluido" | "cancelado";
@@ -179,10 +182,11 @@ interface GroupRowProps {
   isExpanded: boolean;
   onToggle: () => void;
   onUpdateItem: (id: string, field: string, value: any) => void;
-  navigate: (path: string) => void;
+  onOpenChat: (item: MaintenanceItem) => void;
+  unreadCounts: Record<string, number>;
 }
 
-function GroupRow({ group, items, isExpanded, onToggle, onUpdateItem, navigate }: GroupRowProps) {
+function GroupRow({ group, items, isExpanded, onToggle, onUpdateItem, onOpenChat, unreadCounts }: GroupRowProps) {
   return (
     <>
       {/* Group Header */}
@@ -193,7 +197,7 @@ function GroupRow({ group, items, isExpanded, onToggle, onUpdateItem, navigate }
         )}
         onClick={onToggle}
       >
-        <td colSpan={8} className="p-2">
+        <td colSpan={9} className="p-2">
           <div className="flex items-center gap-2 font-medium">
             {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
             <span>{group.label}</span>
@@ -203,112 +207,129 @@ function GroupRow({ group, items, isExpanded, onToggle, onUpdateItem, navigate }
       </tr>
 
       {/* Group Items */}
-      {isExpanded && items.map((item) => (
-        <tr 
-          key={item.id}
-          className="border-b hover:bg-muted/30 transition-colors group h-10"
-        >
-          {/* Nome da Manutenção */}
-          <td className="p-0 max-w-[250px]">
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div 
-                    className="px-2 py-2 font-medium text-sm cursor-pointer hover:text-primary transition-colors truncate"
-                    onClick={() => navigate(`/ticket-detalhes/${item.id}`)}
-                  >
-                    {item.subject}
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="max-w-sm">
-                  <p>{item.subject}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </td>
+      {isExpanded && items.map((item) => {
+        const unread = unreadCounts[item.id] || 0;
+        return (
+          <tr 
+            key={item.id}
+            className="border-b hover:bg-muted/30 transition-colors group h-10"
+          >
+            {/* Nome da Manutenção - Abre Chat */}
+            <td className="p-0 max-w-[200px]">
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div 
+                      className="px-2 py-2 font-medium text-sm cursor-pointer hover:text-primary transition-colors truncate flex items-center gap-2"
+                      onClick={() => onOpenChat(item)}
+                    >
+                      <span className="truncate">{item.subject}</span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-sm">
+                    <p>{item.subject}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </td>
 
-          {/* Imóvel */}
-          <td className="p-0 max-w-[150px]">
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="px-2 py-2 text-sm text-muted-foreground truncate">
-                    {item.property?.name || "—"}
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>{item.property?.name || "—"}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </td>
+            {/* Chat / Mensagens não lidas */}
+            <td className="p-0 w-[60px]">
+              <div 
+                className="flex items-center justify-center px-2 py-2 cursor-pointer hover:bg-muted/50 rounded transition-colors"
+                onClick={() => onOpenChat(item)}
+              >
+                <div className="relative">
+                  <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                  {unread > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center text-[10px] font-bold bg-destructive text-destructive-foreground rounded-full px-1">
+                      {unread > 9 ? "9+" : unread}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </td>
 
-          {/* Valor */}
-          <td className="p-0 w-[120px]">
-            <EditableCell
-              value={item.amount_cents || null}
-              type="currency"
-              placeholder="R$ 0,00"
-              onSave={(val) => onUpdateItem(item.id, "amount_cents", val)}
-              className="justify-end font-medium"
-            />
-          </td>
+            {/* Imóvel */}
+            <td className="p-0 max-w-[130px]">
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="px-2 py-2 text-sm text-muted-foreground truncate">
+                      {item.property?.name || "—"}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p>{item.property?.name || "—"}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </td>
 
-          {/* Aporte Gestão */}
-          <td className="p-0 w-[120px]">
-            <EditableCell
-              value={item.management_contribution_cents || null}
-              type="currency"
-              placeholder="R$ 0,00"
-              onSave={(val) => onUpdateItem(item.id, "management_contribution_cents", val)}
-              className="justify-end text-green-600"
-            />
-          </td>
+            {/* Valor */}
+            <td className="p-0 w-[120px]">
+              <EditableCell
+                value={item.amount_cents || null}
+                type="currency"
+                placeholder="R$ 0,00"
+                onSave={(val) => onUpdateItem(item.id, "amount_cents", val)}
+                className="justify-end font-medium"
+              />
+            </td>
 
-          {/* Data */}
-          <td className="p-0 w-[100px]">
-            <EditableCell
-              value={item.scheduled_at}
-              type="date"
-              placeholder="—"
-              onSave={(val) => onUpdateItem(item.id, "scheduled_at", val)}
-              className="justify-center"
-            />
-          </td>
+            {/* Aporte Gestão */}
+            <td className="p-0 w-[120px]">
+              <EditableCell
+                value={item.management_contribution_cents || null}
+                type="currency"
+                placeholder="R$ 0,00"
+                onSave={(val) => onUpdateItem(item.id, "management_contribution_cents", val)}
+                className="justify-end text-green-600"
+              />
+            </td>
 
-          {/* Anexos */}
-          <td className="p-0 w-[80px]">
-            <div 
-              className="flex items-center justify-center gap-1 px-2 py-2 text-sm cursor-pointer hover:bg-muted/50 rounded transition-colors"
-              onClick={() => navigate(`/ticket-detalhes/${item.id}`)}
-            >
-              <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-muted-foreground">{item.attachments_count || 0}</span>
-            </div>
-          </td>
+            {/* Data */}
+            <td className="p-0 w-[100px]">
+              <EditableCell
+                value={item.scheduled_at}
+                type="date"
+                placeholder="—"
+                onSave={(val) => onUpdateItem(item.id, "scheduled_at", val)}
+                className="justify-center"
+              />
+            </td>
 
-          {/* Label (Categoria) */}
-          <td className="p-0 w-[130px]">
-            <EditableCell
-              value={item.service_type || null}
-              type="select"
-              options={SERVICE_LABELS}
-              placeholder="Selecionar"
-              onSave={(val) => onUpdateItem(item.id, "service_type", val)}
-            />
-          </td>
+            {/* Anexos */}
+            <td className="p-0 w-[60px]">
+              <div className="flex items-center justify-center gap-1 px-2 py-2 text-sm">
+                <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-muted-foreground">{item.attachments_count || 0}</span>
+              </div>
+            </td>
 
-          {/* Status */}
-          <td className="p-0 w-[150px]">
-            <EditableCell
-              value={item.list_status || "em_progresso"}
-              type="select"
-              options={LIST_STATUSES}
-              onSave={(val) => onUpdateItem(item.id, "list_status", val)}
-            />
-          </td>
-        </tr>
-      ))}
+            {/* Label (Categoria) */}
+            <td className="p-0 w-[130px]">
+              <EditableCell
+                value={item.service_type || null}
+                type="select"
+                options={SERVICE_LABELS}
+                placeholder="Selecionar"
+                onSave={(val) => onUpdateItem(item.id, "service_type", val)}
+              />
+            </td>
+
+            {/* Status */}
+            <td className="p-0 w-[150px]">
+              <EditableCell
+                value={item.list_status || "em_progresso"}
+                type="select"
+                options={LIST_STATUSES}
+                onSave={(val) => onUpdateItem(item.id, "list_status", val)}
+              />
+            </td>
+          </tr>
+        );
+      })}
     </>
   );
 }
@@ -324,6 +345,10 @@ export default function AdminManutencoesLista() {
     concluidas: true,
     cobrancas: false,
   });
+
+  // Chat dialog state
+  const [chatDialogOpen, setChatDialogOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<MaintenanceItem | null>(null);
 
   // Debounced search
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -536,6 +561,29 @@ export default function AdminManutencoesLista() {
     setExpandedGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
   }, []);
 
+  // Get all ticket IDs for unread messages tracking
+  const allTicketIds = useMemo(() => {
+    return (tickets || []).map(t => t.id);
+  }, [tickets]);
+
+  const { unreadCounts, markAsRead } = useUnreadMessages(allTicketIds);
+
+  // Preload chat messages
+  useChatPreloader(allTicketIds);
+
+  // Open chat dialog
+  const handleOpenChat = useCallback((item: MaintenanceItem) => {
+    setSelectedItem(item);
+    setChatDialogOpen(true);
+  }, []);
+
+  const handleCloseChat = useCallback((open: boolean) => {
+    setChatDialogOpen(open);
+    if (!open && selectedItem) {
+      markAsRead(selectedItem.id);
+    }
+  }, [selectedItem, markAsRead]);
+
   // Organize items into groups with search filter
   const groupedItems = useMemo(() => {
     const searchLower = debouncedSearch.toLowerCase();
@@ -617,12 +665,13 @@ export default function AdminManutencoesLista() {
             <table className="w-full text-sm table-fixed">
               <thead className="bg-secondary text-secondary-foreground">
                 <tr className="h-10">
-                  <th className="text-left px-2 py-2 font-medium w-[250px] max-w-[250px]">Manutenção</th>
-                  <th className="text-left px-2 py-2 font-medium w-[150px] max-w-[150px]">Imóvel</th>
+                  <th className="text-left px-2 py-2 font-medium w-[200px] max-w-[200px]">Manutenção</th>
+                  <th className="text-center px-2 py-2 font-medium w-[60px]">Chat</th>
+                  <th className="text-left px-2 py-2 font-medium w-[130px] max-w-[130px]">Imóvel</th>
                   <th className="text-right px-2 py-2 font-medium w-[120px]">Valor</th>
                   <th className="text-right px-2 py-2 font-medium w-[120px]">Aporte Gestão</th>
                   <th className="text-center px-2 py-2 font-medium w-[100px]">Data</th>
-                  <th className="text-center px-2 py-2 font-medium w-[80px]">Anexos</th>
+                  <th className="text-center px-2 py-2 font-medium w-[60px]">Anexos</th>
                   <th className="text-center px-2 py-2 font-medium w-[130px]">Label</th>
                   <th className="text-center px-2 py-2 font-medium w-[150px]">Status</th>
                 </tr>
@@ -630,7 +679,7 @@ export default function AdminManutencoesLista() {
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={8} className="text-center p-8 text-muted-foreground">
+                    <td colSpan={9} className="text-center p-8 text-muted-foreground">
                       Carregando...
                     </td>
                   </tr>
@@ -643,7 +692,8 @@ export default function AdminManutencoesLista() {
                       isExpanded={expandedGroups[group.id]}
                       onToggle={() => toggleGroup(group.id)}
                       onUpdateItem={handleUpdateItem}
-                      navigate={navigate}
+                      onOpenChat={handleOpenChat}
+                      unreadCounts={unreadCounts}
                     />
                   ))
                 )}
@@ -651,6 +701,15 @@ export default function AdminManutencoesLista() {
             </table>
           </div>
         </Card>
+
+        {/* Chat Dialog */}
+        <MaintenanceChatDialog
+          open={chatDialogOpen}
+          onOpenChange={handleCloseChat}
+          ticketId={selectedItem?.id || ""}
+          ticketSubject={selectedItem?.subject || ""}
+          propertyName={selectedItem?.property?.name}
+        />
       </div>
     </div>
   );
