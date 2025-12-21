@@ -691,15 +691,17 @@ function VistoriasTable({
         )}
       >
         {/* Checkbox */}
-        <td className="p-0 w-[40px]" onClick={(e) => e.stopPropagation()}>
+        <td 
+          className="p-0 w-[40px] cursor-pointer" 
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleInspectionSelection(inspection.id, e.shiftKey);
+          }}
+        >
           <div className="flex items-center justify-center px-2 py-2">
             <Checkbox
               checked={isSelected}
-              onCheckedChange={(e) => {
-                // Check if shift key was pressed during click
-                const event = window.event as MouseEvent | undefined;
-                onToggleInspectionSelection(inspection.id, event?.shiftKey || false);
-              }}
+              className="pointer-events-none"
             />
           </div>
         </td>
