@@ -14,6 +14,7 @@ import { ptBR } from "date-fns/locale";
 import { ArrowLeft, Search, Plus, ChevronDown, ChevronRight, Paperclip, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatBRL } from "@/lib/format";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // ===== TYPES =====
 type TicketStatus = "novo" | "em_analise" | "aguardando_info" | "em_execucao" | "concluido" | "cancelado";
@@ -205,27 +206,45 @@ function GroupRow({ group, items, isExpanded, onToggle, onUpdateItem, navigate }
       {isExpanded && items.map((item) => (
         <tr 
           key={item.id}
-          className="border-b hover:bg-muted/30 transition-colors group"
+          className="border-b hover:bg-muted/30 transition-colors group h-10"
         >
           {/* Nome da Manutenção */}
-          <td className="p-0">
-            <div 
-              className="p-2 font-medium text-sm cursor-pointer hover:text-primary transition-colors"
-              onClick={() => navigate(`/ticket-detalhes/${item.id}`)}
-            >
-              {item.subject}
-            </div>
+          <td className="p-0 max-w-[250px]">
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div 
+                    className="px-2 py-2 font-medium text-sm cursor-pointer hover:text-primary transition-colors truncate"
+                    onClick={() => navigate(`/ticket-detalhes/${item.id}`)}
+                  >
+                    {item.subject}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-sm">
+                  <p>{item.subject}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </td>
 
           {/* Imóvel */}
-          <td className="p-0">
-            <div className="p-2 text-sm text-muted-foreground">
-              {item.property?.name || "—"}
-            </div>
+          <td className="p-0 max-w-[150px]">
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="px-2 py-2 text-sm text-muted-foreground truncate">
+                    {item.property?.name || "—"}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>{item.property?.name || "—"}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </td>
 
           {/* Valor */}
-          <td className="p-0">
+          <td className="p-0 w-[120px]">
             <EditableCell
               value={item.amount_cents || null}
               type="currency"
@@ -236,7 +255,7 @@ function GroupRow({ group, items, isExpanded, onToggle, onUpdateItem, navigate }
           </td>
 
           {/* Aporte Gestão */}
-          <td className="p-0">
+          <td className="p-0 w-[120px]">
             <EditableCell
               value={item.management_contribution_cents || null}
               type="currency"
@@ -247,7 +266,7 @@ function GroupRow({ group, items, isExpanded, onToggle, onUpdateItem, navigate }
           </td>
 
           {/* Data */}
-          <td className="p-0">
+          <td className="p-0 w-[100px]">
             <EditableCell
               value={item.scheduled_at}
               type="date"
@@ -258,9 +277,9 @@ function GroupRow({ group, items, isExpanded, onToggle, onUpdateItem, navigate }
           </td>
 
           {/* Anexos */}
-          <td className="p-0">
+          <td className="p-0 w-[80px]">
             <div 
-              className="flex items-center justify-center gap-1 p-2 text-sm cursor-pointer hover:bg-muted/50 rounded transition-colors"
+              className="flex items-center justify-center gap-1 px-2 py-2 text-sm cursor-pointer hover:bg-muted/50 rounded transition-colors"
               onClick={() => navigate(`/ticket-detalhes/${item.id}`)}
             >
               <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
@@ -269,7 +288,7 @@ function GroupRow({ group, items, isExpanded, onToggle, onUpdateItem, navigate }
           </td>
 
           {/* Label (Categoria) */}
-          <td className="p-0">
+          <td className="p-0 w-[130px]">
             <EditableCell
               value={item.service_type || null}
               type="select"
@@ -280,7 +299,7 @@ function GroupRow({ group, items, isExpanded, onToggle, onUpdateItem, navigate }
           </td>
 
           {/* Status */}
-          <td className="p-0">
+          <td className="p-0 w-[150px]">
             <EditableCell
               value={item.list_status || "em_progresso"}
               type="select"
@@ -595,17 +614,17 @@ export default function AdminManutencoesLista() {
         {/* Table */}
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm table-fixed">
               <thead className="bg-secondary text-secondary-foreground">
-                <tr>
-                  <th className="text-left p-3 font-medium min-w-[250px]">Manutenção</th>
-                  <th className="text-left p-3 font-medium min-w-[150px]">Imóvel</th>
-                  <th className="text-right p-3 font-medium min-w-[120px]">Valor</th>
-                  <th className="text-right p-3 font-medium min-w-[120px]">Aporte Gestão</th>
-                  <th className="text-center p-3 font-medium min-w-[100px]">Data</th>
-                  <th className="text-center p-3 font-medium min-w-[80px]">Anexos</th>
-                  <th className="text-center p-3 font-medium min-w-[130px]">Label</th>
-                  <th className="text-center p-3 font-medium min-w-[150px]">Status</th>
+                <tr className="h-10">
+                  <th className="text-left px-2 py-2 font-medium w-[250px] max-w-[250px]">Manutenção</th>
+                  <th className="text-left px-2 py-2 font-medium w-[150px] max-w-[150px]">Imóvel</th>
+                  <th className="text-right px-2 py-2 font-medium w-[120px]">Valor</th>
+                  <th className="text-right px-2 py-2 font-medium w-[120px]">Aporte Gestão</th>
+                  <th className="text-center px-2 py-2 font-medium w-[100px]">Data</th>
+                  <th className="text-center px-2 py-2 font-medium w-[80px]">Anexos</th>
+                  <th className="text-center px-2 py-2 font-medium w-[130px]">Label</th>
+                  <th className="text-center px-2 py-2 font-medium w-[150px]">Status</th>
                 </tr>
               </thead>
               <tbody>
