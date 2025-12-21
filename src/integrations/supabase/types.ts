@@ -606,6 +606,7 @@ export type Database = {
       charges: {
         Row: {
           amount_cents: number
+          archived_at: string | null
           category: string | null
           contested_at: string | null
           cost_responsible: string | null
@@ -641,6 +642,7 @@ export type Database = {
         }
         Insert: {
           amount_cents: number
+          archived_at?: string | null
           category?: string | null
           contested_at?: string | null
           cost_responsible?: string | null
@@ -676,6 +678,7 @@ export type Database = {
         }
         Update: {
           amount_cents?: number
+          archived_at?: string | null
           category?: string | null
           contested_at?: string | null
           cost_responsible?: string | null
@@ -1753,6 +1756,7 @@ export type Database = {
       }
       tickets: {
         Row: {
+          archived_at: string | null
           assigned_to: string | null
           blocked_dates_end: string | null
           blocked_dates_start: string | null
@@ -1779,6 +1783,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          archived_at?: string | null
           assigned_to?: string | null
           blocked_dates_end?: string | null
           blocked_dates_start?: string | null
@@ -1805,6 +1810,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          archived_at?: string | null
           assigned_to?: string | null
           blocked_dates_end?: string | null
           blocked_dates_start?: string | null
