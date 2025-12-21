@@ -53,6 +53,13 @@ const SERVICE_LABELS = [
   { value: "marcenaria", label: "Marcenaria", color: "bg-amber-700" },
   { value: "estrutural", label: "Estrutural", color: "bg-slate-600" },
   { value: "itens", label: "Itens", color: "bg-purple-500" },
+  // Support legacy values stored as labels
+  { value: "Refrigeração", label: "Refrigeração", color: "bg-blue-500" },
+  { value: "Elétrica", label: "Elétrica", color: "bg-yellow-500" },
+  { value: "Hidráulica", label: "Hidráulica", color: "bg-cyan-500" },
+  { value: "Marcenaria", label: "Marcenaria", color: "bg-amber-700" },
+  { value: "Estrutural", label: "Estrutural", color: "bg-slate-600" },
+  { value: "Itens", label: "Itens", color: "bg-purple-500" },
 ];
 
 const LIST_STATUSES = [
@@ -565,7 +572,25 @@ export default function AdminManutencoesLista() {
         .order("due_date", { ascending: true });
 
       if (error) throw error;
-      return data || [];
+
+      // Fetch attachment counts for charges
+      const chargeIds = (data || []).map(c => c.id);
+      const { data: attachments } = await supabase
+        .from("charge_attachments")
+        .select("charge_id")
+        .in("charge_id", chargeIds);
+
+      const attachmentCounts: Record<string, number> = {};
+      (attachments || []).forEach(a => {
+        if (a.charge_id) {
+          attachmentCounts[a.charge_id] = (attachmentCounts[a.charge_id] || 0) + 1;
+        }
+      });
+
+      return (data || []).map(c => ({
+        ...c,
+        attachments_count: attachmentCounts[c.id] || 0,
+      }));
     },
   });
 
@@ -820,7 +845,7 @@ export default function AdminManutencoesLista() {
       management_contribution_cents: c.management_contribution_cents,
       service_type: c.service_type || c.category, // Fallback to category if service_type is null
       list_status: "enviar_proprietario" as ListStatus,
-      attachments_count: 0,
+      attachments_count: c.attachments_count || 0,
       itemType: "charge" as const,
     });
 
