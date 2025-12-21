@@ -22,6 +22,8 @@ import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
 import { MediaGallery } from "@/components/MediaGallery";
 import { uploadFileWithCompression, FileUploadProgress } from "@/lib/fileUpload";
 import { CreateMaintenanceFromInspectionDialog } from "@/components/CreateMaintenanceFromInspectionDialog";
+import EditInspectionDialog from "@/components/EditInspectionDialog";
+import { Pencil } from "lucide-react";
 // ===== TYPES =====
 type TicketStatus = "novo" | "em_analise" | "aguardando_info" | "em_execucao" | "concluido" | "cancelado";
 
@@ -559,11 +561,11 @@ interface VistoriasTableProps {
   onOpenAttachments: (inspection: InspectionItem) => void;
   onGenerateSummary: (inspection: InspectionItem) => void;
   onCreateMaintenance: (inspection: InspectionItem) => void;
+  onEditInspection: (inspection: InspectionItem) => void;
   generatingIds: Set<string>;
   title: string;
   colorClass: string;
   bgClass: string;
-  showCleanerColumn?: boolean;
 }
 
 function VistoriasTable({
@@ -573,11 +575,11 @@ function VistoriasTable({
   onOpenAttachments,
   onGenerateSummary,
   onCreateMaintenance,
+  onEditInspection,
   generatingIds,
   title,
   colorClass,
   bgClass,
-  showCleanerColumn = true,
 }: VistoriasTableProps) {
   return (
     <Card className="overflow-hidden mb-4">
@@ -589,14 +591,12 @@ function VistoriasTable({
               <th className="text-left px-2 py-2 font-medium w-[150px]">Proprietário</th>
               <th className="text-left px-2 py-2 font-medium w-[150px]">Unidade</th>
               <th className="text-center px-2 py-2 font-medium w-[100px]">Data</th>
-              {showCleanerColumn && (
-                <th className="text-left px-2 py-2 font-medium w-[120px]">Faxineira</th>
-              )}
+              <th className="text-left px-2 py-2 font-medium w-[120px]">Faxineira</th>
               <th className="text-center px-2 py-2 font-medium w-[80px]">OK ou NÃO</th>
               <th className="text-left px-2 py-2 font-medium w-[250px]">Audio</th>
               <th className="text-center px-2 py-2 font-medium w-[80px]">Arquivos</th>
               <th className="text-left px-2 py-2 font-medium w-[300px]">Summarize</th>
-              <th className="text-center px-2 py-2 font-medium w-[50px]"></th>
+              <th className="text-center px-2 py-2 font-medium w-[80px]"></th>
             </tr>
           </thead>
           <tbody>
@@ -608,7 +608,7 @@ function VistoriasTable({
               )}
               onClick={onToggle}
             >
-              <td colSpan={showCleanerColumn ? 10 : 9} className="p-2">
+              <td colSpan={10} className="p-2">
                 <div className="flex items-center gap-2 font-medium">
                   {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                   <span>{title}</span>
@@ -663,14 +663,12 @@ function VistoriasTable({
                     </div>
                   </td>
 
-                  {/* Faxineira - conditionally rendered */}
-                  {showCleanerColumn && (
-                    <td className="p-0 max-w-[120px]">
-                      <div className="px-2 py-2 text-sm truncate">
-                        {inspection.cleaner_name || "—"}
-                      </div>
-                    </td>
-                  )}
+                  {/* Faxineira */}
+                  <td className="p-0 max-w-[120px]">
+                    <div className="px-2 py-2 text-sm truncate">
+                      {inspection.cleaner_name || "—"}
+                    </div>
+                  </td>
 
                   {/* OK ou NÃO */}
                   <td className="p-0 w-[80px]">
@@ -786,9 +784,29 @@ function VistoriasTable({
                     </div>
                   </td>
 
-                  {/* Nova Manutenção */}
-                  <td className="p-0 w-[50px]">
-                    <div className="flex justify-center px-1 py-2">
+                  {/* Ações */}
+                  <td className="p-0 w-[80px]">
+                    <div className="flex justify-center gap-1 px-1 py-2">
+                      <TooltipProvider delayDuration={300}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEditInspection(inspection);
+                              }}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Editar Vistoria</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       <TooltipProvider delayDuration={300}>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -836,10 +854,11 @@ export default function AdminManutencoesLista() {
 
   // Vistorias state
   const [vistoriasExpanded, setVistoriasExpanded] = useState(true);
-  const [vistoriasAdminExpanded, setVistoriasAdminExpanded] = useState(true);
   const [generatingSummaryIds, setGeneratingSummaryIds] = useState<Set<string>>(new Set());
   const [maintenanceDialogOpen, setMaintenanceDialogOpen] = useState(false);
   const [selectedInspection, setSelectedInspection] = useState<InspectionItem | null>(null);
+  const [editInspectionDialogOpen, setEditInspectionDialogOpen] = useState(false);
+  const [inspectionToEdit, setInspectionToEdit] = useState<InspectionItem | null>(null);
 
   // Chat dialog state
   const [chatDialogOpen, setChatDialogOpen] = useState(false);
@@ -1470,24 +1489,16 @@ export default function AdminManutencoesLista() {
     };
   }, [tickets, charges, debouncedSearch]);
 
-  // Filter and split inspections by search and type
-  const { cleanerInspections, adminInspections } = useMemo(() => {
-    if (!inspections) return { cleanerInspections: [], adminInspections: [] };
+  // Filter inspections by search
+  const filteredInspections = useMemo(() => {
+    if (!inspections) return [];
     const searchLower = debouncedSearch.toLowerCase();
     
-    const filtered = inspections.filter(i =>
+    return inspections.filter(i =>
       i.property?.name?.toLowerCase().includes(searchLower) ||
       i.owner_name?.toLowerCase().includes(searchLower) ||
       i.cleaner_name?.toLowerCase().includes(searchLower)
     );
-
-    // Cleaner inspections: have cleaner_name and are not internal_only
-    const cleanerInspections = filtered.filter(i => i.cleaner_name && !i.internal_only);
-    
-    // Admin/Team inspections: internal_only OR no cleaner_name
-    const adminInspections = filtered.filter(i => i.internal_only || !i.cleaner_name);
-
-    return { cleanerInspections, adminInspections };
   }, [inspections, debouncedSearch]);
 
   // Handle opening inspection attachments
@@ -1545,6 +1556,12 @@ export default function AdminManutencoesLista() {
     setMaintenanceDialogOpen(true);
   }, []);
 
+  // Handle editing inspection
+  const handleEditInspection = useCallback((inspection: InspectionItem) => {
+    setInspectionToEdit(inspection);
+    setEditInspectionDialogOpen(true);
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 p-4 md:p-6">
       <div className="max-w-[1600px] mx-auto space-y-4">
@@ -1595,34 +1612,19 @@ export default function AdminManutencoesLista() {
           )}
         </div>
 
-        {/* Vistorias Faxineiras Table */}
+        {/* Vistorias Table */}
         <VistoriasTable
-          inspections={cleanerInspections}
+          inspections={filteredInspections}
           isExpanded={vistoriasExpanded}
           onToggle={() => setVistoriasExpanded(!vistoriasExpanded)}
           onOpenAttachments={handleOpenInspectionAttachments}
           onGenerateSummary={handleGenerateSummary}
           onCreateMaintenance={handleCreateMaintenanceFromInspection}
+          onEditInspection={handleEditInspection}
           generatingIds={generatingSummaryIds}
-          title="VISTORIAS FAXINEIRAS"
+          title="VISTORIAS"
           colorClass="bg-blue-50 dark:bg-blue-950/30 border-l-blue-500 text-blue-700 dark:text-blue-300"
           bgClass="bg-blue-600"
-          showCleanerColumn={true}
-        />
-
-        {/* Vistorias Administração Table */}
-        <VistoriasTable
-          inspections={adminInspections}
-          isExpanded={vistoriasAdminExpanded}
-          onToggle={() => setVistoriasAdminExpanded(!vistoriasAdminExpanded)}
-          onOpenAttachments={handleOpenInspectionAttachments}
-          onGenerateSummary={handleGenerateSummary}
-          onCreateMaintenance={handleCreateMaintenanceFromInspection}
-          generatingIds={generatingSummaryIds}
-          title="VISTORIAS ADMINISTRAÇÃO/EQUIPE"
-          colorClass="bg-purple-50 dark:bg-purple-950/30 border-l-purple-500 text-purple-700 dark:text-purple-300"
-          bgClass="bg-purple-600"
-          showCleanerColumn={false}
         />
 
         {/* Maintenances Table */}
@@ -1716,6 +1718,26 @@ export default function AdminManutencoesLista() {
             attachments={selectedInspection.attachments}
             transcriptSummary={selectedInspection.transcript_summary || undefined}
             prefilledDescription={selectedInspection.transcript_summary || selectedInspection.transcript || undefined}
+          />
+        )}
+
+        {/* Edit Inspection Dialog */}
+        {inspectionToEdit && (
+          <EditInspectionDialog
+            open={editInspectionDialogOpen}
+            onOpenChange={setEditInspectionDialogOpen}
+            inspection={{
+              id: inspectionToEdit.id,
+              property_id: inspectionToEdit.property?.id || "",
+              notes: inspectionToEdit.notes || undefined,
+              transcript: inspectionToEdit.transcript || undefined,
+              transcript_summary: inspectionToEdit.transcript_summary || undefined,
+              audio_url: inspectionToEdit.audio_url || undefined,
+            }}
+            existingAttachments={inspectionToEdit.attachments}
+            onSuccess={() => {
+              queryClient.invalidateQueries({ queryKey: ["inspections-for-list"] });
+            }}
           />
         )}
       </div>
