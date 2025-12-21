@@ -14,11 +14,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, Search, Plus, ChevronDown, ChevronRight, Paperclip, MessageSquare, ArrowUpDown, ArrowUp, ArrowDown, Archive } from "lucide-react";
+import { ArrowLeft, Search, Plus, ChevronDown, ChevronRight, Paperclip, MessageSquare, ArrowUpDown, ArrowUp, ArrowDown, Archive, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatBRL } from "@/lib/format";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
+import { MediaGallery } from "@/components/MediaGallery";
+import { uploadFileWithCompression, FileUploadProgress } from "@/lib/fileUpload";
 
 // ===== TYPES =====
 type TicketStatus = "novo" | "em_analise" | "aguardando_info" | "em_execucao" | "concluido" | "cancelado";
@@ -236,6 +238,9 @@ interface GroupRowProps {
   sortField: SortField | null;
   sortDirection: SortDirection;
   onSort: (field: SortField) => void;
+  onOpenAttachments: (item: MaintenanceItem) => void;
+  onUploadAttachment: (item: MaintenanceItem) => void;
+  uploadingItemId: string | null;
 }
 
 function GroupRow({ 
@@ -250,7 +255,10 @@ function GroupRow({
   onToggleSelection,
   sortField,
   sortDirection,
-  onSort
+  onSort,
+  onOpenAttachments,
+  onUploadAttachment,
+  uploadingItemId
 }: GroupRowProps) {
   // Sort items within the group
   const sortedItems = useMemo(() => {
@@ -425,10 +433,40 @@ function GroupRow({
             </td>
 
             {/* Anexos */}
-            <td className="p-0 w-[60px]">
-              <div className="flex items-center justify-center gap-1 px-2 py-2 text-sm">
-                <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="text-muted-foreground">{item.attachments_count || 0}</span>
+            <td className="p-0 w-[80px]">
+              <div className="flex items-center justify-center gap-1 px-1 py-2">
+                <button
+                  className={cn(
+                    "flex items-center gap-1 px-2 py-1 rounded text-sm transition-colors",
+                    item.attachments_count && item.attachments_count > 0
+                      ? "hover:bg-primary/10 cursor-pointer text-primary"
+                      : "text-muted-foreground"
+                  )}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (item.attachments_count && item.attachments_count > 0) {
+                      onOpenAttachments(item);
+                    }
+                  }}
+                  disabled={!item.attachments_count || item.attachments_count === 0}
+                >
+                  <Paperclip className="h-3.5 w-3.5" />
+                  <span>{item.attachments_count || 0}</span>
+                </button>
+                <button
+                  className="p-1 rounded hover:bg-muted/50 transition-colors text-muted-foreground hover:text-primary"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onUploadAttachment(item);
+                  }}
+                  disabled={uploadingItemId === item.id}
+                >
+                  {uploadingItemId === item.id ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Plus className="h-3.5 w-3.5" />
+                  )}
+                </button>
               </div>
             </td>
 
@@ -482,6 +520,16 @@ export default function AdminManutencoesLista() {
   // Sorting state
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+
+  // Gallery state
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryItems, setGalleryItems] = useState<Array<{ id: string; file_url: string; file_name?: string | null; file_type?: string | null }>>([]);
+  const [galleryInitialIndex, setGalleryInitialIndex] = useState(0);
+
+  // Upload state
+  const [uploadingItemId, setUploadingItemId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [pendingUploadItem, setPendingUploadItem] = useState<MaintenanceItem | null>(null);
 
   // Debounced search
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -815,6 +863,144 @@ export default function AdminManutencoesLista() {
     archiveMutation.mutate(Array.from(selectedIds));
   }, [selectedIds, archiveMutation]);
 
+  // Open attachments gallery
+  const handleOpenAttachments = useCallback(async (item: MaintenanceItem) => {
+    const isCharge = item.itemType === "charge";
+    
+    if (isCharge) {
+      const { data, error } = await supabase
+        .from("charge_attachments")
+        .select("id, file_path, file_name, mime_type")
+        .eq("charge_id", item.id)
+        .order("created_at", { ascending: false });
+      
+      if (error) {
+        toast.error("Erro ao carregar anexos");
+        return;
+      }
+      
+      if (data && data.length > 0) {
+        const mediaItems = data.map(att => ({
+          id: att.id,
+          file_url: att.file_path,
+          file_name: att.file_name,
+          file_type: att.mime_type,
+        }));
+        setGalleryItems(mediaItems);
+        setGalleryInitialIndex(0);
+        setGalleryOpen(true);
+      }
+    } else {
+      // For tickets, fetch ticket attachments
+      const { data, error } = await supabase
+        .from("ticket_attachments")
+        .select("id, path, file_name, mime_type")
+        .eq("ticket_id", item.id)
+        .order("created_at", { ascending: false });
+      
+      if (error) {
+        toast.error("Erro ao carregar anexos");
+        return;
+      }
+      
+      if (data && data.length > 0) {
+        const mediaItems = data.map(att => ({
+          id: att.id,
+          file_url: att.path,
+          file_name: att.file_name,
+          file_type: att.mime_type,
+        }));
+        setGalleryItems(mediaItems);
+        setGalleryInitialIndex(0);
+        setGalleryOpen(true);
+      }
+    }
+  }, []);
+
+  // Trigger file upload
+  const handleUploadAttachment = useCallback((item: MaintenanceItem) => {
+    setPendingUploadItem(item);
+    fileInputRef.current?.click();
+  }, []);
+
+  // Handle file selection
+  const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0 || !pendingUploadItem) return;
+
+    const item = pendingUploadItem;
+    const isCharge = item.itemType === "charge";
+    setUploadingItemId(item.id);
+
+    try {
+      for (const file of Array.from(files)) {
+        const folder = isCharge ? `charges/${item.id}` : `tickets/${item.id}`;
+        const { url } = await uploadFileWithCompression(
+          file,
+          "attachments",
+          folder,
+          (progress) => {
+            // Could show progress here if needed
+          }
+        );
+
+        if (isCharge) {
+          const { error } = await supabase
+            .from("charge_attachments")
+            .insert({
+              charge_id: item.id,
+              file_path: url,
+              file_name: file.name,
+              mime_type: file.type,
+              file_size: file.size,
+              created_by: user?.id,
+            });
+          if (error) throw error;
+        } else {
+          // For tickets, we need a message first - create a system message
+          const { data: msgData, error: msgError } = await supabase
+            .from("ticket_messages")
+            .insert({
+              ticket_id: item.id,
+              author_id: user?.id,
+              body: `Anexo adicionado: ${file.name}`,
+              is_internal: true,
+            })
+            .select("id")
+            .single();
+          
+          if (msgError) throw msgError;
+
+          const { error } = await supabase
+            .from("ticket_attachments")
+            .insert({
+              ticket_id: item.id,
+              message_id: msgData.id,
+              path: url,
+              file_url: url,
+              file_name: file.name,
+              mime_type: file.type,
+              file_size: file.size,
+            });
+          if (error) throw error;
+        }
+      }
+
+      toast.success("Anexo(s) enviado(s) com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["maintenance-list-view"] });
+      queryClient.invalidateQueries({ queryKey: ["pending-charges-list"] });
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error("Erro ao enviar anexo");
+    } finally {
+      setUploadingItemId(null);
+      setPendingUploadItem(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  }, [pendingUploadItem, user?.id, queryClient]);
+
   // Organize items into groups with search filter
   const groupedItems = useMemo(() => {
     const searchLower = debouncedSearch.toLowerCase();
@@ -962,6 +1148,9 @@ export default function AdminManutencoesLista() {
                       sortField={sortField}
                       sortDirection={sortDirection}
                       onSort={handleSort}
+                      onOpenAttachments={handleOpenAttachments}
+                      onUploadAttachment={handleUploadAttachment}
+                      uploadingItemId={uploadingItemId}
                     />
                   ))
                 )}
@@ -970,6 +1159,16 @@ export default function AdminManutencoesLista() {
           </div>
         </Card>
 
+        {/* Hidden file input for uploads */}
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          className="hidden"
+          multiple
+          accept="image/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx"
+        />
+
         {/* Chat Dialog */}
         <MaintenanceChatDialog
           open={chatDialogOpen}
@@ -977,6 +1176,14 @@ export default function AdminManutencoesLista() {
           ticketId={selectedItem?.id || ""}
           ticketSubject={selectedItem?.subject || ""}
           propertyName={selectedItem?.property?.name}
+        />
+
+        {/* Media Gallery */}
+        <MediaGallery
+          items={galleryItems}
+          initialIndex={galleryInitialIndex}
+          open={galleryOpen}
+          onOpenChange={setGalleryOpen}
         />
       </div>
     </div>
