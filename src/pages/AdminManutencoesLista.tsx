@@ -9,11 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, Search, Plus, ChevronDown, ChevronRight, Paperclip, MessageSquare } from "lucide-react";
+import { ArrowLeft, Search, Plus, ChevronDown, ChevronRight, Paperclip, MessageSquare, ArrowUpDown, ArrowUp, ArrowDown, Archive } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatBRL } from "@/lib/format";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -23,6 +24,9 @@ import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
 type TicketStatus = "novo" | "em_analise" | "aguardando_info" | "em_execucao" | "concluido" | "cancelado";
 
 type ListStatus = "em_progresso" | "feito" | "enviar_proprietario";
+
+type SortDirection = "asc" | "desc" | null;
+type SortField = "subject" | "property" | "amount_cents" | "management_contribution_cents" | "scheduled_at" | "service_type" | "list_status";
 
 interface MaintenanceItem {
   id: string;
@@ -38,6 +42,7 @@ interface MaintenanceItem {
   service_type?: string;
   list_status?: ListStatus;
   attachments_count?: number;
+  itemType?: "ticket" | "charge";
 }
 
 // ===== CONSTANTS =====
@@ -61,6 +66,40 @@ const GROUPS = [
   { id: "concluidas", label: "Manutenções Concluídas", color: "border-l-green-500" },
   { id: "cobrancas", label: "Cobranças Pendentes", color: "border-l-destructive" },
 ];
+
+// ===== SORTABLE HEADER COMPONENT =====
+interface SortableHeaderProps {
+  label: string;
+  field: SortField;
+  currentSort: SortField | null;
+  direction: SortDirection;
+  onSort: (field: SortField) => void;
+  className?: string;
+}
+
+function SortableHeader({ label, field, currentSort, direction, onSort, className }: SortableHeaderProps) {
+  const isActive = currentSort === field;
+  
+  return (
+    <th 
+      className={cn("px-2 py-2 font-medium cursor-pointer hover:bg-muted/50 transition-colors select-none", className)}
+      onClick={() => onSort(field)}
+    >
+      <div className="flex items-center gap-1">
+        <span>{label}</span>
+        {isActive ? (
+          direction === "asc" ? (
+            <ArrowUp className="h-3.5 w-3.5 text-primary" />
+          ) : (
+            <ArrowDown className="h-3.5 w-3.5 text-primary" />
+          )
+        ) : (
+          <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground opacity-50" />
+        )}
+      </div>
+    </th>
+  );
+}
 
 // ===== INLINE EDIT CELL COMPONENT =====
 interface EditableCellProps {
@@ -184,9 +223,74 @@ interface GroupRowProps {
   onUpdateItem: (id: string, field: string, value: any) => void;
   onOpenChat: (item: MaintenanceItem) => void;
   unreadCounts: Record<string, number>;
+  selectedIds: Set<string>;
+  onToggleSelection: (id: string) => void;
+  sortField: SortField | null;
+  sortDirection: SortDirection;
+  onSort: (field: SortField) => void;
 }
 
-function GroupRow({ group, items, isExpanded, onToggle, onUpdateItem, onOpenChat, unreadCounts }: GroupRowProps) {
+function GroupRow({ 
+  group, 
+  items, 
+  isExpanded, 
+  onToggle, 
+  onUpdateItem, 
+  onOpenChat, 
+  unreadCounts,
+  selectedIds,
+  onToggleSelection,
+  sortField,
+  sortDirection,
+  onSort
+}: GroupRowProps) {
+  // Sort items within the group
+  const sortedItems = useMemo(() => {
+    if (!sortField || !sortDirection) return items;
+    
+    return [...items].sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortField) {
+        case "subject":
+          aValue = a.subject.toLowerCase();
+          bValue = b.subject.toLowerCase();
+          break;
+        case "property":
+          aValue = (a.property?.name || "").toLowerCase();
+          bValue = (b.property?.name || "").toLowerCase();
+          break;
+        case "amount_cents":
+          aValue = a.amount_cents || 0;
+          bValue = b.amount_cents || 0;
+          break;
+        case "management_contribution_cents":
+          aValue = a.management_contribution_cents || 0;
+          bValue = b.management_contribution_cents || 0;
+          break;
+        case "scheduled_at":
+          aValue = a.scheduled_at || "";
+          bValue = b.scheduled_at || "";
+          break;
+        case "service_type":
+          aValue = (a.service_type || "").toLowerCase();
+          bValue = (b.service_type || "").toLowerCase();
+          break;
+        case "list_status":
+          aValue = (a.list_status || "").toLowerCase();
+          bValue = (b.list_status || "").toLowerCase();
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [items, sortField, sortDirection]);
+
   return (
     <>
       {/* Group Header */}
@@ -197,7 +301,7 @@ function GroupRow({ group, items, isExpanded, onToggle, onUpdateItem, onOpenChat
         )}
         onClick={onToggle}
       >
-        <td colSpan={9} className="p-2">
+        <td colSpan={10} className="p-2">
           <div className="flex items-center gap-2 font-medium">
             {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
             <span>{group.label}</span>
@@ -207,13 +311,26 @@ function GroupRow({ group, items, isExpanded, onToggle, onUpdateItem, onOpenChat
       </tr>
 
       {/* Group Items */}
-      {isExpanded && items.map((item) => {
+      {isExpanded && sortedItems.map((item) => {
         const unread = unreadCounts[item.id] || 0;
         return (
           <tr 
             key={item.id}
-            className="border-b hover:bg-muted/30 transition-colors group h-10"
+            className={cn(
+              "border-b hover:bg-muted/30 transition-colors group h-10",
+              selectedIds.has(item.id) && "bg-primary/5"
+            )}
           >
+            {/* Checkbox */}
+            <td className="p-0 w-[40px]" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-center px-2 py-2">
+                <Checkbox
+                  checked={selectedIds.has(item.id)}
+                  onCheckedChange={() => onToggleSelection(item.id)}
+                />
+              </div>
+            </td>
+
             {/* Nome da Manutenção - Abre Chat */}
             <td className="p-0 max-w-[200px]">
               <TooltipProvider delayDuration={300}>
@@ -349,6 +466,13 @@ export default function AdminManutencoesLista() {
   // Chat dialog state
   const [chatDialogOpen, setChatDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<MaintenanceItem | null>(null);
+
+  // Selection state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Sorting state
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
 
   // Debounced search
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -585,6 +709,82 @@ export default function AdminManutencoesLista() {
     }
   }, [selectedItem, markAsRead]);
 
+  // Handle sort
+  const handleSort = useCallback((field: SortField) => {
+    if (sortField === field) {
+      if (sortDirection === "asc") {
+        setSortDirection("desc");
+      } else if (sortDirection === "desc") {
+        setSortField(null);
+        setSortDirection(null);
+      } else {
+        setSortDirection("asc");
+      }
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  }, [sortField, sortDirection]);
+
+  // Selection handlers
+  const toggleSelection = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  }, []);
+
+  // Archive mutation
+  const archiveMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const now = new Date().toISOString();
+      
+      // Separate ticket IDs and charge IDs
+      const ticketIds = ids.filter(id => {
+        const allItems = [...(tickets || []), ...(charges || []).map(c => ({ ...c, itemType: "charge" }))];
+        const item = allItems.find(i => i.id === id);
+        return item && !("itemType" in item && item.itemType === "charge");
+      });
+      
+      const chargeIds = ids.filter(id => !ticketIds.includes(id));
+
+      if (ticketIds.length > 0) {
+        const { error } = await supabase
+          .from("tickets")
+          .update({ archived_at: now })
+          .in("id", ticketIds);
+        if (error) throw error;
+      }
+
+      if (chargeIds.length > 0) {
+        const { error } = await supabase
+          .from("charges")
+          .update({ archived_at: now })
+          .in("id", chargeIds);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["maintenance-list-view"] });
+      queryClient.invalidateQueries({ queryKey: ["pending-charges-list"] });
+      setSelectedIds(new Set());
+      toast.success("Itens arquivados com sucesso!");
+    },
+    onError: () => {
+      toast.error("Erro ao arquivar itens");
+    },
+  });
+
+  const handleArchive = useCallback(() => {
+    if (selectedIds.size === 0) return;
+    archiveMutation.mutate(Array.from(selectedIds));
+  }, [selectedIds, archiveMutation]);
+
   // Organize items into groups with search filter
   const groupedItems = useMemo(() => {
     const searchLower = debouncedSearch.toLowerCase();
@@ -617,6 +817,7 @@ export default function AdminManutencoesLista() {
       service_type: c.service_type,
       list_status: "enviar_proprietario" as ListStatus,
       attachments_count: 0,
+      itemType: "charge" as const,
     }));
 
     return {
@@ -640,6 +841,10 @@ export default function AdminManutencoesLista() {
               Lista estilo Monday com edição inline
             </p>
           </div>
+          <Button variant="outline" onClick={() => navigate("/admin/manutencoes-arquivo")}>
+            <Archive className="h-4 w-4 mr-2" />
+            Arquivo
+          </Button>
           <Button variant="outline" onClick={() => navigate("/admin/manutencoes")}>
             Ver Kanban
           </Button>
@@ -649,15 +854,27 @@ export default function AdminManutencoesLista() {
           </Button>
         </div>
 
-        {/* Search */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nome ou imóvel..."
-            className="pl-10"
-          />
+        {/* Search and Actions */}
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por nome ou imóvel..."
+              className="pl-10"
+            />
+          </div>
+          {selectedIds.size > 0 && (
+            <Button 
+              variant="outline"
+              onClick={handleArchive}
+              disabled={archiveMutation.isPending}
+            >
+              <Archive className="h-4 w-4 mr-2" />
+              Arquivar ({selectedIds.size})
+            </Button>
+          )}
         </div>
 
         {/* Table */}
@@ -666,21 +883,22 @@ export default function AdminManutencoesLista() {
             <table className="w-full text-sm table-fixed">
               <thead className="bg-secondary text-secondary-foreground">
                 <tr className="h-10">
-                  <th className="text-left px-2 py-2 font-medium w-[200px] max-w-[200px]">Manutenção</th>
+                  <th className="w-[40px] px-2 py-2"></th>
+                  <SortableHeader label="Manutenção" field="subject" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-left w-[200px] max-w-[200px]" />
                   <th className="text-center px-2 py-2 font-medium w-[60px]">Chat</th>
-                  <th className="text-left px-2 py-2 font-medium w-[130px] max-w-[130px]">Imóvel</th>
-                  <th className="text-right px-2 py-2 font-medium w-[120px]">Valor</th>
-                  <th className="text-right px-2 py-2 font-medium w-[120px]">Aporte Gestão</th>
-                  <th className="text-center px-2 py-2 font-medium w-[100px]">Data</th>
+                  <SortableHeader label="Imóvel" field="property" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-left w-[130px] max-w-[130px]" />
+                  <SortableHeader label="Valor" field="amount_cents" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-right w-[120px]" />
+                  <SortableHeader label="Aporte Gestão" field="management_contribution_cents" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-right w-[120px]" />
+                  <SortableHeader label="Data" field="scheduled_at" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[100px]" />
                   <th className="text-center px-2 py-2 font-medium w-[60px]">Anexos</th>
-                  <th className="text-center px-2 py-2 font-medium w-[130px]">Label</th>
-                  <th className="text-center px-2 py-2 font-medium w-[150px]">Status</th>
+                  <SortableHeader label="Label" field="service_type" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[130px]" />
+                  <SortableHeader label="Status" field="list_status" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[150px]" />
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={9} className="text-center p-8 text-muted-foreground">
+                    <td colSpan={10} className="text-center p-8 text-muted-foreground">
                       Carregando...
                     </td>
                   </tr>
@@ -695,6 +913,11 @@ export default function AdminManutencoesLista() {
                       onUpdateItem={handleUpdateItem}
                       onOpenChat={handleOpenChat}
                       unreadCounts={unreadCounts}
+                      selectedIds={selectedIds}
+                      onToggleSelection={toggleSelection}
+                      sortField={sortField}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
                     />
                   ))
                 )}
