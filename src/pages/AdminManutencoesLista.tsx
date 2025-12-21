@@ -863,6 +863,17 @@ export default function AdminManutencoesLista() {
     archiveMutation.mutate(Array.from(selectedIds));
   }, [selectedIds, archiveMutation]);
 
+  // Helper to get public URL from storage path
+  const getStorageUrl = useCallback((path: string, bucket: string = "attachments") => {
+    // If already a full URL, return as-is
+    if (path.startsWith("http://") || path.startsWith("https://")) {
+      return path;
+    }
+    // Build the public URL
+    const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+    return data.publicUrl;
+  }, []);
+
   // Open attachments gallery
   const handleOpenAttachments = useCallback(async (item: MaintenanceItem) => {
     const isCharge = item.itemType === "charge";
@@ -882,7 +893,7 @@ export default function AdminManutencoesLista() {
       if (data && data.length > 0) {
         const mediaItems = data.map(att => ({
           id: att.id,
-          file_url: att.file_path,
+          file_url: getStorageUrl(att.file_path),
           file_name: att.file_name,
           file_type: att.mime_type,
         }));
@@ -906,7 +917,7 @@ export default function AdminManutencoesLista() {
       if (data && data.length > 0) {
         const mediaItems = data.map(att => ({
           id: att.id,
-          file_url: att.path,
+          file_url: getStorageUrl(att.path),
           file_name: att.file_name,
           file_type: att.mime_type,
         }));
@@ -915,7 +926,7 @@ export default function AdminManutencoesLista() {
         setGalleryOpen(true);
       }
     }
-  }, []);
+  }, [getStorageUrl]);
 
   // Trigger file upload
   const handleUploadAttachment = useCallback((item: MaintenanceItem) => {
