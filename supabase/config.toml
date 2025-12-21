@@ -41,3 +41,6 @@ verify_jwt = true
 
 [functions.charge-cron]
 verify_jwt = false
+
+[functions.summarize-inspection]
+verify_jwt = true

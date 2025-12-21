@@ -14,14 +14,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, Search, Plus, ChevronDown, ChevronRight, Paperclip, MessageSquare, ArrowUpDown, ArrowUp, ArrowDown, Archive, Loader2 } from "lucide-react";
+import { ArrowLeft, Search, Plus, ChevronDown, ChevronRight, Paperclip, MessageSquare, ArrowUpDown, ArrowUp, ArrowDown, Archive, Loader2, FileAudio, Sparkles, Wrench, Play, Pause } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatBRL } from "@/lib/format";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
 import { MediaGallery } from "@/components/MediaGallery";
 import { uploadFileWithCompression, FileUploadProgress } from "@/lib/fileUpload";
-
+import { CreateMaintenanceFromInspectionDialog } from "@/components/CreateMaintenanceFromInspectionDialog";
 // ===== TYPES =====
 type TicketStatus = "novo" | "em_analise" | "aguardando_info" | "em_execucao" | "concluido" | "cancelado";
 
@@ -497,6 +497,314 @@ function GroupRow({
   );
 }
 
+// ===== INSPECTION TYPES =====
+interface InspectionItem {
+  id: string;
+  property: { id: string; name: string; owner_id: string } | null;
+  owner_name: string | null;
+  created_at: string;
+  cleaner_name: string | null;
+  notes: string | null;
+  transcript: string | null;
+  transcript_summary: string | null;
+  audio_url: string | null;
+  attachments: Array<{ id: string; file_url: string; file_name?: string; file_type?: string }>;
+}
+
+// ===== AUDIO PLAYER MINI COMPONENT =====
+function AudioPlayerMini({ url }: { url: string }) {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  const togglePlay = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play();
+    }
+    setIsPlaying(!isPlaying);
+  }, [isPlaying]);
+
+  return (
+    <div className="flex items-center gap-1">
+      <button
+        onClick={togglePlay}
+        className="p-1.5 rounded-full bg-primary/10 hover:bg-primary/20 transition-colors"
+      >
+        {isPlaying ? (
+          <Pause className="h-3 w-3 text-primary" />
+        ) : (
+          <Play className="h-3 w-3 text-primary" />
+        )}
+      </button>
+      <audio
+        ref={audioRef}
+        src={url}
+        onEnded={() => setIsPlaying(false)}
+        onPause={() => setIsPlaying(false)}
+        onPlay={() => setIsPlaying(true)}
+      />
+    </div>
+  );
+}
+
+// ===== VISTORIAS TABLE COMPONENT =====
+interface VistoriasTableProps {
+  inspections: InspectionItem[];
+  isExpanded: boolean;
+  onToggle: () => void;
+  onOpenAttachments: (inspection: InspectionItem) => void;
+  onGenerateSummary: (inspection: InspectionItem) => void;
+  onCreateMaintenance: (inspection: InspectionItem) => void;
+  generatingIds: Set<string>;
+}
+
+function VistoriasTable({
+  inspections,
+  isExpanded,
+  onToggle,
+  onOpenAttachments,
+  onGenerateSummary,
+  onCreateMaintenance,
+  generatingIds,
+}: VistoriasTableProps) {
+  return (
+    <Card className="overflow-hidden mb-6">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm table-fixed">
+          <thead className="bg-blue-600 text-white">
+            <tr className="h-10">
+              <th className="w-[40px] px-2 py-2"></th>
+              <th className="text-left px-2 py-2 font-medium w-[150px]">Proprietário</th>
+              <th className="text-left px-2 py-2 font-medium w-[150px]">Unidade</th>
+              <th className="text-center px-2 py-2 font-medium w-[100px]">Data</th>
+              <th className="text-left px-2 py-2 font-medium w-[120px]">Faxineira</th>
+              <th className="text-center px-2 py-2 font-medium w-[80px]">OK ou NÃO</th>
+              <th className="text-left px-2 py-2 font-medium w-[250px]">Audio</th>
+              <th className="text-center px-2 py-2 font-medium w-[80px]">Arquivos</th>
+              <th className="text-left px-2 py-2 font-medium w-[300px]">Summarize</th>
+              <th className="text-center px-2 py-2 font-medium w-[50px]"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {/* Group Header */}
+            <tr 
+              className="bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50 cursor-pointer transition-colors border-l-4 border-l-blue-500"
+              onClick={onToggle}
+            >
+              <td colSpan={10} className="p-2">
+                <div className="flex items-center gap-2 font-medium text-blue-700 dark:text-blue-300">
+                  {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  <span>VISTORIAS</span>
+                  <Badge variant="secondary" className="ml-2 bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                    {inspections.length}
+                  </Badge>
+                </div>
+              </td>
+            </tr>
+
+            {/* Inspection Rows */}
+            {isExpanded && inspections.map((inspection) => {
+              const hasProblems = inspection.notes?.toLowerCase().includes('não') ||
+                                  inspection.transcript_summary?.toLowerCase().includes('problema') ||
+                                  (inspection.transcript && inspection.transcript.length > 0 && !inspection.transcript_summary?.toLowerCase().includes('sem problema'));
+              
+              return (
+                <tr 
+                  key={inspection.id}
+                  className="border-b hover:bg-muted/30 transition-colors h-12"
+                >
+                  {/* Empty cell for alignment */}
+                  <td className="p-0 w-[40px]"></td>
+
+                  {/* Proprietário */}
+                  <td className="p-0 max-w-[150px]">
+                    <div className="px-2 py-2 text-sm truncate">
+                      {inspection.owner_name || "—"}
+                    </div>
+                  </td>
+
+                  {/* Unidade */}
+                  <td className="p-0 max-w-[150px]">
+                    <TooltipProvider delayDuration={300}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="px-2 py-2 text-sm font-medium truncate">
+                            {inspection.property?.name || "—"}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">
+                          <p>{inspection.property?.name || "—"}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </td>
+
+                  {/* Data */}
+                  <td className="p-0 w-[100px]">
+                    <div className="px-2 py-2 text-sm text-center text-muted-foreground">
+                      {format(new Date(inspection.created_at), "dd MMM", { locale: ptBR })}
+                    </div>
+                  </td>
+
+                  {/* Faxineira */}
+                  <td className="p-0 max-w-[120px]">
+                    <div className="px-2 py-2 text-sm truncate">
+                      {inspection.cleaner_name || "—"}
+                    </div>
+                  </td>
+
+                  {/* OK ou NÃO */}
+                  <td className="p-0 w-[80px]">
+                    <div className="flex justify-center px-2 py-2">
+                      <Badge 
+                        variant={hasProblems ? "destructive" : "secondary"}
+                        className={hasProblems ? "" : "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"}
+                      >
+                        {hasProblems ? "NÃO" : "OK"}
+                      </Badge>
+                    </div>
+                  </td>
+
+                  {/* Audio (transcript) */}
+                  <td className="p-0 w-[250px]">
+                    <div className="px-2 py-2 flex items-center gap-2">
+                      {inspection.audio_url && (
+                        <AudioPlayerMini url={inspection.audio_url} />
+                      )}
+                      <TooltipProvider delayDuration={300}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="text-xs text-muted-foreground truncate max-w-[200px] cursor-default">
+                              {inspection.transcript 
+                                ? `${inspection.transcript.substring(0, 60)}...` 
+                                : inspection.notes || "—"}
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom" className="max-w-md">
+                            <p className="text-sm whitespace-pre-wrap">
+                              {inspection.transcript || inspection.notes || "—"}
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  </td>
+
+                  {/* Arquivos */}
+                  <td className="p-0 w-[80px]">
+                    <div className="flex items-center justify-center gap-1 px-1 py-2">
+                      <button
+                        className={cn(
+                          "flex items-center gap-1 px-2 py-1 rounded text-sm transition-colors",
+                          inspection.attachments.length > 0
+                            ? "hover:bg-primary/10 cursor-pointer text-primary"
+                            : "text-muted-foreground"
+                        )}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (inspection.attachments.length > 0) {
+                            onOpenAttachments(inspection);
+                          }
+                        }}
+                        disabled={inspection.attachments.length === 0}
+                      >
+                        <Paperclip className="h-3.5 w-3.5" />
+                        <span>{inspection.attachments.length}</span>
+                      </button>
+                      {inspection.audio_url && (
+                        <FileAudio className="h-3.5 w-3.5 text-blue-500" />
+                      )}
+                    </div>
+                  </td>
+
+                  {/* Summarize */}
+                  <td className="p-0 w-[300px]">
+                    <div className="px-2 py-2 flex items-center gap-2">
+                      {inspection.transcript_summary ? (
+                        <TooltipProvider delayDuration={300}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="text-xs truncate max-w-[220px] cursor-default flex items-center gap-1">
+                                <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
+                                  RESUMO
+                                </Badge>
+                                <span>{inspection.transcript_summary.substring(0, 50)}...</span>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent side="left" className="max-w-md">
+                              <p className="text-sm whitespace-pre-wrap">
+                                {inspection.transcript_summary}
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : inspection.transcript ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs gap-1"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onGenerateSummary(inspection);
+                          }}
+                          disabled={generatingIds.has(inspection.id)}
+                        >
+                          {generatingIds.has(inspection.id) ? (
+                            <>
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                              Gerando...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="h-3 w-3" />
+                              Gerar Resumo
+                            </>
+                          )}
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </div>
+                  </td>
+
+                  {/* Nova Manutenção */}
+                  <td className="p-0 w-[50px]">
+                    <div className="flex justify-center px-1 py-2">
+                      <TooltipProvider delayDuration={300}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onCreateMaintenance(inspection);
+                              }}
+                            >
+                              <Wrench className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Nova Manutenção</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  );
+}
+
 // ===== MAIN COMPONENT =====
 export default function AdminManutencoesLista() {
   const navigate = useNavigate();
@@ -509,6 +817,12 @@ export default function AdminManutencoesLista() {
     cobrancas_vencidas: true,
     cobrancas: false,
   });
+
+  // Vistorias state
+  const [vistoriasExpanded, setVistoriasExpanded] = useState(true);
+  const [generatingSummaryIds, setGeneratingSummaryIds] = useState<Set<string>>(new Set());
+  const [maintenanceDialogOpen, setMaintenanceDialogOpen] = useState(false);
+  const [selectedInspection, setSelectedInspection] = useState<InspectionItem | null>(null);
 
   // Chat dialog state
   const [chatDialogOpen, setChatDialogOpen] = useState(false);
@@ -537,6 +851,75 @@ export default function AdminManutencoesLista() {
     const timer = setTimeout(() => setDebouncedSearch(search), 300);
     return () => clearTimeout(timer);
   }, [search]);
+
+  // Fetch vistorias (inspections)
+  const { data: inspections } = useQuery({
+    queryKey: ["inspections-for-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("cleaning_inspections")
+        .select(`
+          id,
+          created_at,
+          cleaner_name,
+          notes,
+          transcript,
+          transcript_summary,
+          audio_url,
+          property:properties!cleaning_inspections_property_id_fkey(id, name, owner_id)
+        `)
+        .is("archived_at", null)
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+
+      // Fetch attachments for each inspection
+      const inspectionIds = (data || []).map(i => i.id);
+      const { data: attachments } = await supabase
+        .from("cleaning_inspection_attachments")
+        .select("id, inspection_id, file_url, file_name, file_type")
+        .in("inspection_id", inspectionIds);
+
+      // Fetch owner names
+      const ownerIds = [...new Set((data || []).map(i => i.property?.owner_id).filter(Boolean))];
+      const { data: owners } = await supabase
+        .from("profiles")
+        .select("id, name")
+        .in("id", ownerIds);
+
+      const ownerMap: Record<string, string> = {};
+      (owners || []).forEach(o => {
+        ownerMap[o.id] = o.name;
+      });
+
+      const attachmentsByInspection: Record<string, typeof attachments> = {};
+      (attachments || []).forEach(a => {
+        if (!attachmentsByInspection[a.inspection_id]) {
+          attachmentsByInspection[a.inspection_id] = [];
+        }
+        attachmentsByInspection[a.inspection_id].push(a);
+      });
+
+      return (data || []).map(i => ({
+        id: i.id,
+        property: i.property,
+        owner_name: i.property?.owner_id ? ownerMap[i.property.owner_id] || null : null,
+        created_at: i.created_at,
+        cleaner_name: i.cleaner_name,
+        notes: i.notes,
+        transcript: i.transcript,
+        transcript_summary: i.transcript_summary,
+        audio_url: i.audio_url,
+        attachments: (attachmentsByInspection[i.id] || []).map(a => ({
+          id: a.id,
+          file_url: a.file_url,
+          file_name: a.file_name || undefined,
+          file_type: a.file_type || undefined,
+        })),
+      })) as InspectionItem[];
+    },
+  });
 
   // Fetch maintenance tickets
   const { data: tickets, isLoading } = useQuery({
@@ -1068,6 +1451,72 @@ export default function AdminManutencoesLista() {
     };
   }, [tickets, charges, debouncedSearch]);
 
+  // Filter inspections by search
+  const filteredInspections = useMemo(() => {
+    if (!inspections) return [];
+    const searchLower = debouncedSearch.toLowerCase();
+    return inspections.filter(i =>
+      i.property?.name?.toLowerCase().includes(searchLower) ||
+      i.owner_name?.toLowerCase().includes(searchLower) ||
+      i.cleaner_name?.toLowerCase().includes(searchLower)
+    );
+  }, [inspections, debouncedSearch]);
+
+  // Handle opening inspection attachments
+  const handleOpenInspectionAttachments = useCallback((inspection: InspectionItem) => {
+    if (inspection.attachments.length > 0) {
+      setGalleryItems(inspection.attachments.map(a => ({
+        id: a.id,
+        file_url: a.file_url,
+        file_name: a.file_name || null,
+        file_type: a.file_type || null,
+      })));
+      setGalleryInitialIndex(0);
+      setGalleryOpen(true);
+    }
+  }, []);
+
+  // Handle generating summary for inspection
+  const handleGenerateSummary = useCallback(async (inspection: InspectionItem) => {
+    if (!inspection.transcript) {
+      toast.error("Não há transcrição para resumir");
+      return;
+    }
+
+    setGeneratingSummaryIds(prev => new Set(prev).add(inspection.id));
+
+    try {
+      const { data, error } = await supabase.functions.invoke("summarize-inspection", {
+        body: { 
+          transcript: inspection.transcript,
+          inspectionId: inspection.id,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.summary) {
+        toast.success("Resumo gerado com sucesso!");
+        queryClient.invalidateQueries({ queryKey: ["inspections-for-list"] });
+      }
+    } catch (error: any) {
+      console.error("Error generating summary:", error);
+      toast.error(error.message || "Erro ao gerar resumo");
+    } finally {
+      setGeneratingSummaryIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(inspection.id);
+        return newSet;
+      });
+    }
+  }, [queryClient]);
+
+  // Handle creating maintenance from inspection
+  const handleCreateMaintenanceFromInspection = useCallback((inspection: InspectionItem) => {
+    setSelectedInspection(inspection);
+    setMaintenanceDialogOpen(true);
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 p-4 md:p-6">
       <div className="max-w-[1600px] mx-auto space-y-4">
@@ -1118,7 +1567,18 @@ export default function AdminManutencoesLista() {
           )}
         </div>
 
-        {/* Table */}
+        {/* Vistorias Table */}
+        <VistoriasTable
+          inspections={filteredInspections}
+          isExpanded={vistoriasExpanded}
+          onToggle={() => setVistoriasExpanded(!vistoriasExpanded)}
+          onOpenAttachments={handleOpenInspectionAttachments}
+          onGenerateSummary={handleGenerateSummary}
+          onCreateMaintenance={handleCreateMaintenanceFromInspection}
+          generatingIds={generatingSummaryIds}
+        />
+
+        {/* Maintenances Table */}
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm table-fixed">
@@ -1196,6 +1656,21 @@ export default function AdminManutencoesLista() {
           open={galleryOpen}
           onOpenChange={setGalleryOpen}
         />
+
+        {/* Create Maintenance from Inspection Dialog */}
+        {selectedInspection && (
+          <CreateMaintenanceFromInspectionDialog
+            open={maintenanceDialogOpen}
+            onOpenChange={setMaintenanceDialogOpen}
+            propertyId={selectedInspection.property?.id || ""}
+            propertyName={selectedInspection.property?.name}
+            ownerId={selectedInspection.property?.owner_id || ""}
+            inspectionId={selectedInspection.id}
+            attachments={selectedInspection.attachments}
+            transcriptSummary={selectedInspection.transcript_summary || undefined}
+            prefilledDescription={selectedInspection.transcript_summary || selectedInspection.transcript || undefined}
+          />
+        )}
       </div>
     </div>
   );
