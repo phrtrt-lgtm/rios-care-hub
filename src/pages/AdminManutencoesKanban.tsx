@@ -397,6 +397,9 @@ const AdminManutencoesKanban = () => {
             <Plus className="h-4 w-4 mr-2" />
             Nova Manutenção
           </Button>
+          <Button variant="outline" onClick={() => navigate("/admin/manutencoes-lista")}>
+            Ver Lista
+          </Button>
           <Button variant="secondary" onClick={() => navigate("/admin/manutencoes-concluidas")}>
             Concluídas
           </Button>
