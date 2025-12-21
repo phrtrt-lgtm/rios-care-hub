@@ -555,283 +555,293 @@ function AudioPlayerMini({ url }: { url: string }) {
 
 // ===== VISTORIAS TABLE COMPONENT =====
 interface VistoriasTableProps {
-  inspections: InspectionItem[];
-  isExpanded: boolean;
-  onToggle: () => void;
+  cleanerInspections: InspectionItem[];
+  teamInspections: InspectionItem[];
+  cleanerExpanded: boolean;
+  teamExpanded: boolean;
+  onToggleCleaner: () => void;
+  onToggleTeam: () => void;
   onOpenAttachments: (inspection: InspectionItem) => void;
   onGenerateSummary: (inspection: InspectionItem) => void;
   onCreateMaintenance: (inspection: InspectionItem) => void;
   onEditInspection: (inspection: InspectionItem) => void;
   generatingIds: Set<string>;
-  title: string;
-  colorClass: string;
-  bgClass: string;
 }
 
 function VistoriasTable({
-  inspections,
-  isExpanded,
-  onToggle,
+  cleanerInspections,
+  teamInspections,
+  cleanerExpanded,
+  teamExpanded,
+  onToggleCleaner,
+  onToggleTeam,
   onOpenAttachments,
   onGenerateSummary,
   onCreateMaintenance,
   onEditInspection,
   generatingIds,
-  title,
-  colorClass,
-  bgClass,
 }: VistoriasTableProps) {
+  const renderInspectionRow = (inspection: InspectionItem, showCleanerColumn: boolean) => {
+    const hasProblems = inspection.notes?.toLowerCase().includes('não') ||
+                        inspection.transcript_summary?.toLowerCase().includes('problema') ||
+                        (inspection.transcript && inspection.transcript.length > 0 && !inspection.transcript_summary?.toLowerCase().includes('sem problema'));
+    
+    return (
+      <tr 
+        key={inspection.id}
+        className="border-b hover:bg-muted/30 transition-colors h-12"
+      >
+        {/* Empty cell for alignment */}
+        <td className="p-0 w-[40px]"></td>
+
+        {/* Imóvel */}
+        <td className="p-0 max-w-[150px]">
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="px-2 py-2 text-sm font-medium truncate">
+                  {inspection.property?.name || "—"}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p>{inspection.property?.name || "—"}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </td>
+
+        {/* Data */}
+        <td className="p-0 w-[100px]">
+          <div className="px-2 py-2 text-sm text-center text-muted-foreground">
+            {format(new Date(inspection.created_at), "dd MMM", { locale: ptBR })}
+          </div>
+        </td>
+
+        {/* Faxineira/Equipe */}
+        <td className="p-0 max-w-[120px]">
+          <div className="px-2 py-2 text-sm truncate">
+            {showCleanerColumn ? (inspection.cleaner_name || "—") : (inspection.owner_name || "Equipe")}
+          </div>
+        </td>
+
+        {/* OK ou NÃO */}
+        <td className="p-0 w-[80px]">
+          <div className="flex justify-center px-2 py-2">
+            <Badge 
+              variant={hasProblems ? "destructive" : "secondary"}
+              className={hasProblems ? "" : "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"}
+            >
+              {hasProblems ? "NÃO" : "OK"}
+            </Badge>
+          </div>
+        </td>
+
+        {/* Audio (transcript) */}
+        <td className="p-0 w-[250px]">
+          <div className="px-2 py-2 flex items-center gap-2">
+            {inspection.audio_url && (
+              <AudioPlayerMini url={inspection.audio_url} />
+            )}
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="text-xs text-muted-foreground truncate max-w-[200px] cursor-default">
+                    {inspection.transcript 
+                      ? `${inspection.transcript.substring(0, 60)}...` 
+                      : inspection.notes || "—"}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-md">
+                  <p className="text-sm whitespace-pre-wrap">
+                    {inspection.transcript || inspection.notes || "—"}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        </td>
+
+        {/* Arquivos */}
+        <td className="p-0 w-[80px]">
+          <div className="flex items-center justify-center gap-1 px-1 py-2">
+            <button
+              className={cn(
+                "flex items-center gap-1 px-2 py-1 rounded text-sm transition-colors",
+                inspection.attachments.length > 0
+                  ? "hover:bg-primary/10 cursor-pointer text-primary"
+                  : "text-muted-foreground"
+              )}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (inspection.attachments.length > 0) {
+                  onOpenAttachments(inspection);
+                }
+              }}
+              disabled={inspection.attachments.length === 0}
+            >
+              <Paperclip className="h-3.5 w-3.5" />
+              <span>{inspection.attachments.length}</span>
+            </button>
+            {inspection.audio_url && (
+              <FileAudio className="h-3.5 w-3.5 text-blue-500" />
+            )}
+          </div>
+        </td>
+
+        {/* Summarize */}
+        <td className="p-0 w-[300px]">
+          <div className="px-2 py-2 flex items-center gap-2">
+            {inspection.transcript_summary ? (
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="text-xs truncate max-w-[220px] cursor-default flex items-center gap-1">
+                      <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
+                        RESUMO
+                      </Badge>
+                      <span>{inspection.transcript_summary.substring(0, 50)}...</span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="left" className="max-w-md">
+                    <p className="text-sm whitespace-pre-wrap">
+                      {inspection.transcript_summary}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : inspection.transcript ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs gap-1"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onGenerateSummary(inspection);
+                }}
+                disabled={generatingIds.has(inspection.id)}
+              >
+                {generatingIds.has(inspection.id) ? (
+                  <>
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Gerando...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-3 w-3" />
+                    Gerar Resumo
+                  </>
+                )}
+              </Button>
+            ) : (
+              <span className="text-xs text-muted-foreground">—</span>
+            )}
+          </div>
+        </td>
+
+        {/* Ações */}
+        <td className="p-0 w-[80px]">
+          <div className="flex justify-center gap-1 px-1 py-2">
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEditInspection(inspection);
+                    }}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Editar Vistoria</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onCreateMaintenance(inspection);
+                    }}
+                  >
+                    <Wrench className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Nova Manutenção</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        </td>
+      </tr>
+    );
+  };
+
   return (
     <Card className="overflow-hidden mb-4">
       <div className="overflow-x-auto">
         <table className="w-full text-sm table-fixed">
-          <thead className={cn("text-white", bgClass)}>
+          <thead className="bg-muted text-muted-foreground">
             <tr className="h-10">
               <th className="w-[40px] px-2 py-2"></th>
-              <th className="text-left px-2 py-2 font-medium w-[150px]">Proprietário</th>
-              <th className="text-left px-2 py-2 font-medium w-[150px]">Unidade</th>
+              <th className="text-left px-2 py-2 font-medium w-[150px]">Imóvel</th>
               <th className="text-center px-2 py-2 font-medium w-[100px]">Data</th>
-              <th className="text-left px-2 py-2 font-medium w-[120px]">Faxineira</th>
-              <th className="text-center px-2 py-2 font-medium w-[80px]">OK ou NÃO</th>
+              <th className="text-left px-2 py-2 font-medium w-[120px]">Responsável</th>
+              <th className="text-center px-2 py-2 font-medium w-[80px]">Status</th>
               <th className="text-left px-2 py-2 font-medium w-[250px]">Audio</th>
               <th className="text-center px-2 py-2 font-medium w-[80px]">Arquivos</th>
-              <th className="text-left px-2 py-2 font-medium w-[300px]">Summarize</th>
+              <th className="text-left px-2 py-2 font-medium w-[300px]">Resumo</th>
               <th className="text-center px-2 py-2 font-medium w-[80px]"></th>
             </tr>
           </thead>
           <tbody>
-            {/* Group Header */}
+            {/* Vistorias Faxineiras Group Header */}
             <tr 
-              className={cn(
-                "hover:opacity-80 cursor-pointer transition-colors border-l-4",
-                colorClass
-              )}
-              onClick={onToggle}
+              className="bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors border-l-4 border-l-amber-500"
+              onClick={onToggleCleaner}
             >
-              <td colSpan={10} className="p-2">
+              <td colSpan={9} className="p-2">
                 <div className="flex items-center gap-2 font-medium">
-                  {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                  <span>{title}</span>
+                  {cleanerExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  <span>Vistorias de Faxineiras</span>
                   <Badge variant="secondary" className="ml-2">
-                    {inspections.length}
+                    {cleanerInspections.length}
                   </Badge>
                 </div>
               </td>
             </tr>
 
-            {/* Inspection Rows */}
-            {isExpanded && inspections.map((inspection) => {
-              const hasProblems = inspection.notes?.toLowerCase().includes('não') ||
-                                  inspection.transcript_summary?.toLowerCase().includes('problema') ||
-                                  (inspection.transcript && inspection.transcript.length > 0 && !inspection.transcript_summary?.toLowerCase().includes('sem problema'));
-              
-              return (
-                <tr 
-                  key={inspection.id}
-                  className="border-b hover:bg-muted/30 transition-colors h-12"
-                >
-                  {/* Empty cell for alignment */}
-                  <td className="p-0 w-[40px]"></td>
+            {/* Cleaner Inspection Rows */}
+            {cleanerExpanded && cleanerInspections.map((inspection) => renderInspectionRow(inspection, true))}
 
-                  {/* Proprietário */}
-                  <td className="p-0 max-w-[150px]">
-                    <div className="px-2 py-2 text-sm truncate">
-                      {inspection.owner_name || "—"}
-                    </div>
-                  </td>
+            {/* Vistorias Equipe Group Header */}
+            <tr 
+              className="bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors border-l-4 border-l-green-500"
+              onClick={onToggleTeam}
+            >
+              <td colSpan={9} className="p-2">
+                <div className="flex items-center gap-2 font-medium">
+                  {teamExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  <span>Vistorias de Equipe</span>
+                  <Badge variant="secondary" className="ml-2">
+                    {teamInspections.length}
+                  </Badge>
+                </div>
+              </td>
+            </tr>
 
-                  {/* Unidade */}
-                  <td className="p-0 max-w-[150px]">
-                    <TooltipProvider delayDuration={300}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="px-2 py-2 text-sm font-medium truncate">
-                            {inspection.property?.name || "—"}
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom">
-                          <p>{inspection.property?.name || "—"}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </td>
-
-                  {/* Data */}
-                  <td className="p-0 w-[100px]">
-                    <div className="px-2 py-2 text-sm text-center text-muted-foreground">
-                      {format(new Date(inspection.created_at), "dd MMM", { locale: ptBR })}
-                    </div>
-                  </td>
-
-                  {/* Faxineira */}
-                  <td className="p-0 max-w-[120px]">
-                    <div className="px-2 py-2 text-sm truncate">
-                      {inspection.cleaner_name || "—"}
-                    </div>
-                  </td>
-
-                  {/* OK ou NÃO */}
-                  <td className="p-0 w-[80px]">
-                    <div className="flex justify-center px-2 py-2">
-                      <Badge 
-                        variant={hasProblems ? "destructive" : "secondary"}
-                        className={hasProblems ? "" : "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"}
-                      >
-                        {hasProblems ? "NÃO" : "OK"}
-                      </Badge>
-                    </div>
-                  </td>
-
-                  {/* Audio (transcript) */}
-                  <td className="p-0 w-[250px]">
-                    <div className="px-2 py-2 flex items-center gap-2">
-                      {inspection.audio_url && (
-                        <AudioPlayerMini url={inspection.audio_url} />
-                      )}
-                      <TooltipProvider delayDuration={300}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="text-xs text-muted-foreground truncate max-w-[200px] cursor-default">
-                              {inspection.transcript 
-                                ? `${inspection.transcript.substring(0, 60)}...` 
-                                : inspection.notes || "—"}
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom" className="max-w-md">
-                            <p className="text-sm whitespace-pre-wrap">
-                              {inspection.transcript || inspection.notes || "—"}
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                  </td>
-
-                  {/* Arquivos */}
-                  <td className="p-0 w-[80px]">
-                    <div className="flex items-center justify-center gap-1 px-1 py-2">
-                      <button
-                        className={cn(
-                          "flex items-center gap-1 px-2 py-1 rounded text-sm transition-colors",
-                          inspection.attachments.length > 0
-                            ? "hover:bg-primary/10 cursor-pointer text-primary"
-                            : "text-muted-foreground"
-                        )}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (inspection.attachments.length > 0) {
-                            onOpenAttachments(inspection);
-                          }
-                        }}
-                        disabled={inspection.attachments.length === 0}
-                      >
-                        <Paperclip className="h-3.5 w-3.5" />
-                        <span>{inspection.attachments.length}</span>
-                      </button>
-                      {inspection.audio_url && (
-                        <FileAudio className="h-3.5 w-3.5 text-blue-500" />
-                      )}
-                    </div>
-                  </td>
-
-                  {/* Summarize */}
-                  <td className="p-0 w-[300px]">
-                    <div className="px-2 py-2 flex items-center gap-2">
-                      {inspection.transcript_summary ? (
-                        <TooltipProvider delayDuration={300}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="text-xs truncate max-w-[220px] cursor-default flex items-center gap-1">
-                                <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
-                                  RESUMO
-                                </Badge>
-                                <span>{inspection.transcript_summary.substring(0, 50)}...</span>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent side="left" className="max-w-md">
-                              <p className="text-sm whitespace-pre-wrap">
-                                {inspection.transcript_summary}
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      ) : inspection.transcript ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-xs gap-1"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onGenerateSummary(inspection);
-                          }}
-                          disabled={generatingIds.has(inspection.id)}
-                        >
-                          {generatingIds.has(inspection.id) ? (
-                            <>
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                              Gerando...
-                            </>
-                          ) : (
-                            <>
-                              <Sparkles className="h-3 w-3" />
-                              Gerar Resumo
-                            </>
-                          )}
-                        </Button>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </div>
-                  </td>
-
-                  {/* Ações */}
-                  <td className="p-0 w-[80px]">
-                    <div className="flex justify-center gap-1 px-1 py-2">
-                      <TooltipProvider delayDuration={300}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-7 w-7"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onEditInspection(inspection);
-                              }}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Editar Vistoria</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      <TooltipProvider delayDuration={300}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-7 w-7"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onCreateMaintenance(inspection);
-                              }}
-                            >
-                              <Wrench className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Nova Manutenção</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
+            {/* Team Inspection Rows */}
+            {teamExpanded && teamInspections.map((inspection) => renderInspectionRow(inspection, false))}
           </tbody>
         </table>
       </div>
@@ -853,7 +863,8 @@ export default function AdminManutencoesLista() {
   });
 
   // Vistorias state
-  const [vistoriasExpanded, setVistoriasExpanded] = useState(true);
+  const [vistoriasFaxineirasExpanded, setVistoriasFaxineirasExpanded] = useState(true);
+  const [vistoriasEquipeExpanded, setVistoriasEquipeExpanded] = useState(true);
   const [generatingSummaryIds, setGeneratingSummaryIds] = useState<Set<string>>(new Set());
   const [maintenanceDialogOpen, setMaintenanceDialogOpen] = useState(false);
   const [selectedInspection, setSelectedInspection] = useState<InspectionItem | null>(null);
@@ -1489,16 +1500,23 @@ export default function AdminManutencoesLista() {
     };
   }, [tickets, charges, debouncedSearch]);
 
-  // Filter inspections by search
-  const filteredInspections = useMemo(() => {
-    if (!inspections) return [];
+  // Filter inspections by search and split by type
+  const { cleanerInspections, teamInspections } = useMemo(() => {
+    if (!inspections) return { cleanerInspections: [], teamInspections: [] };
     const searchLower = debouncedSearch.toLowerCase();
     
-    return inspections.filter(i =>
+    const filtered = inspections.filter(i =>
       i.property?.name?.toLowerCase().includes(searchLower) ||
       i.owner_name?.toLowerCase().includes(searchLower) ||
       i.cleaner_name?.toLowerCase().includes(searchLower)
     );
+    
+    // Faxineiras: has cleaner_name and NOT internal_only
+    const cleanerInspections = filtered.filter(i => i.cleaner_name && !i.internal_only);
+    // Equipe: internal_only OR no cleaner_name (admin/team inspections)
+    const teamInspections = filtered.filter(i => i.internal_only || !i.cleaner_name);
+    
+    return { cleanerInspections, teamInspections };
   }, [inspections, debouncedSearch]);
 
   // Handle opening inspection attachments
@@ -1614,17 +1632,17 @@ export default function AdminManutencoesLista() {
 
         {/* Vistorias Table */}
         <VistoriasTable
-          inspections={filteredInspections}
-          isExpanded={vistoriasExpanded}
-          onToggle={() => setVistoriasExpanded(!vistoriasExpanded)}
+          cleanerInspections={cleanerInspections}
+          teamInspections={teamInspections}
+          cleanerExpanded={vistoriasFaxineirasExpanded}
+          teamExpanded={vistoriasEquipeExpanded}
+          onToggleCleaner={() => setVistoriasFaxineirasExpanded(!vistoriasFaxineirasExpanded)}
+          onToggleTeam={() => setVistoriasEquipeExpanded(!vistoriasEquipeExpanded)}
           onOpenAttachments={handleOpenInspectionAttachments}
           onGenerateSummary={handleGenerateSummary}
           onCreateMaintenance={handleCreateMaintenanceFromInspection}
           onEditInspection={handleEditInspection}
           generatingIds={generatingSummaryIds}
-          title="VISTORIAS"
-          colorClass="bg-blue-50 dark:bg-blue-950/30 border-l-blue-500 text-blue-700 dark:text-blue-300"
-          bgClass="bg-blue-600"
         />
 
         {/* Maintenances Table */}
