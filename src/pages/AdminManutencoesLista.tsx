@@ -59,7 +59,7 @@ const LIST_STATUSES = [
 const GROUPS = [
   { id: "em_progresso", label: "Em Progresso", color: "border-l-amber-500" },
   { id: "concluidas", label: "Manutenções Concluídas", color: "border-l-green-500" },
-  { id: "cobrancas", label: "Cobranças Geradas", color: "border-l-primary" },
+  { id: "cobrancas", label: "Cobranças Pendentes", color: "border-l-destructive" },
 ];
 
 // ===== INLINE EDIT CELL COMPONENT =====
@@ -412,9 +412,9 @@ export default function AdminManutencoesLista() {
     },
   });
 
-  // Fetch completed charges (cobranças geradas)
+  // Fetch pending charges (cobranças pendentes de pagamento)
   const { data: charges } = useQuery({
-    queryKey: ["charges-from-maintenance"],
+    queryKey: ["pending-charges-list"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("charges")
@@ -431,8 +431,9 @@ export default function AdminManutencoesLista() {
           owner:profiles!charges_owner_id_fkey(id, name),
           ticket_id
         `)
-        .not("ticket_id", "is", null)
-        .order("created_at", { ascending: false });
+        .in("status", ["pending", "draft", "sent", "contested"])
+        .is("paid_at", null)
+        .order("due_date", { ascending: true });
 
       if (error) throw error;
       return data || [];
@@ -528,11 +529,11 @@ export default function AdminManutencoesLista() {
     onMutate: async ({ id, field, value }) => {
       // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: ["maintenance-list-view"] });
-      await queryClient.cancelQueries({ queryKey: ["charges-from-maintenance"] });
+      await queryClient.cancelQueries({ queryKey: ["pending-charges-list"] });
 
       // Snapshot previous value
       const previousTickets = queryClient.getQueryData(["maintenance-list-view"]);
-      const previousCharges = queryClient.getQueryData(["charges-from-maintenance"]);
+      const previousCharges = queryClient.getQueryData(["pending-charges-list"]);
 
       // Optimistically update
       queryClient.setQueryData(["maintenance-list-view"], (old: MaintenanceItem[] | undefined) => {
@@ -544,12 +545,12 @@ export default function AdminManutencoesLista() {
     },
     onError: (err, variables, context) => {
       queryClient.setQueryData(["maintenance-list-view"], context?.previousTickets);
-      queryClient.setQueryData(["charges-from-maintenance"], context?.previousCharges);
+      queryClient.setQueryData(["pending-charges-list"], context?.previousCharges);
       toast.error("Erro ao atualizar");
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["maintenance-list-view"] });
-      queryClient.invalidateQueries({ queryKey: ["charges-from-maintenance"] });
+      queryClient.invalidateQueries({ queryKey: ["pending-charges-list"] });
     },
   });
 
