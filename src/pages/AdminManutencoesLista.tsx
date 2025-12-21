@@ -511,6 +511,7 @@ interface InspectionItem {
   transcript_summary: string | null;
   audio_url: string | null;
   internal_only: boolean;
+  is_team_inspection: boolean;
   attachments: Array<{ id: string; file_url: string; file_name?: string; file_type?: string }>;
 }
 
@@ -553,6 +554,9 @@ function AudioPlayerMini({ url }: { url: string }) {
   );
 }
 
+// ===== VISTORIAS SORT =====
+type InspectionSortField = "property" | "created_at" | "cleaner_name" | "status";
+
 // ===== VISTORIAS TABLE COMPONENT =====
 interface VistoriasTableProps {
   cleanerInspections: InspectionItem[];
@@ -566,6 +570,10 @@ interface VistoriasTableProps {
   onCreateMaintenance: (inspection: InspectionItem) => void;
   onEditInspection: (inspection: InspectionItem) => void;
   generatingIds: Set<string>;
+  selectedInspectionIds: Set<string>;
+  onToggleInspectionSelection: (id: string, shiftKey: boolean) => void;
+  onArchiveInspections: () => void;
+  archivingInspections: boolean;
 }
 
 function VistoriasTable({
@@ -580,19 +588,121 @@ function VistoriasTable({
   onCreateMaintenance,
   onEditInspection,
   generatingIds,
+  selectedInspectionIds,
+  onToggleInspectionSelection,
+  onArchiveInspections,
+  archivingInspections,
 }: VistoriasTableProps) {
+  const [sortField, setSortField] = useState<InspectionSortField | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+
+  const handleSort = useCallback((field: InspectionSortField) => {
+    if (sortField === field) {
+      if (sortDirection === "asc") {
+        setSortDirection("desc");
+      } else if (sortDirection === "desc") {
+        setSortField(null);
+        setSortDirection(null);
+      } else {
+        setSortDirection("asc");
+      }
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  }, [sortField, sortDirection]);
+
+  const sortInspections = useCallback((items: InspectionItem[]) => {
+    if (!sortField || !sortDirection) return items;
+    
+    return [...items].sort((a, b) => {
+      let aValue: string;
+      let bValue: string;
+
+      switch (sortField) {
+        case "property":
+          aValue = (a.property?.name || "").toLowerCase();
+          bValue = (b.property?.name || "").toLowerCase();
+          break;
+        case "created_at":
+          aValue = a.created_at;
+          bValue = b.created_at;
+          break;
+        case "cleaner_name":
+          aValue = (a.cleaner_name || "").toLowerCase();
+          bValue = (b.cleaner_name || "").toLowerCase();
+          break;
+        case "status":
+          const aHasProblems = a.notes?.toLowerCase().includes('não') || 
+                               a.transcript_summary?.toLowerCase().includes('problema');
+          const bHasProblems = b.notes?.toLowerCase().includes('não') || 
+                               b.transcript_summary?.toLowerCase().includes('problema');
+          aValue = aHasProblems ? "nao" : "ok";
+          bValue = bHasProblems ? "nao" : "ok";
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [sortField, sortDirection]);
+
+  const sortedCleanerInspections = useMemo(() => sortInspections(cleanerInspections), [cleanerInspections, sortInspections]);
+  const sortedTeamInspections = useMemo(() => sortInspections(teamInspections), [teamInspections, sortInspections]);
+
+  const renderSortableHeader = (label: string, field: InspectionSortField, className?: string) => {
+    const isActive = sortField === field;
+    return (
+      <th 
+        className={cn("px-2 py-2 font-medium cursor-pointer hover:bg-muted/50 transition-colors select-none", className)}
+        onClick={() => handleSort(field)}
+      >
+        <div className="flex items-center gap-1">
+          <span>{label}</span>
+          {isActive ? (
+            sortDirection === "asc" ? (
+              <ArrowUp className="h-3.5 w-3.5 text-primary" />
+            ) : (
+              <ArrowDown className="h-3.5 w-3.5 text-primary" />
+            )
+          ) : (
+            <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground opacity-50" />
+          )}
+        </div>
+      </th>
+    );
+  };
+
   const renderInspectionRow = (inspection: InspectionItem, showCleanerColumn: boolean) => {
     const hasProblems = inspection.notes?.toLowerCase().includes('não') ||
                         inspection.transcript_summary?.toLowerCase().includes('problema') ||
                         (inspection.transcript && inspection.transcript.length > 0 && !inspection.transcript_summary?.toLowerCase().includes('sem problema'));
+    const isSelected = selectedInspectionIds.has(inspection.id);
     
     return (
       <tr 
         key={inspection.id}
-        className="border-b hover:bg-muted/30 transition-colors h-12"
+        className={cn(
+          "border-b hover:bg-muted/30 transition-colors h-12",
+          isSelected && "bg-primary/5"
+        )}
       >
-        {/* Empty cell for alignment */}
-        <td className="p-0 w-[40px]"></td>
+        {/* Checkbox */}
+        <td className="p-0 w-[40px]" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-center px-2 py-2">
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={(e) => {
+                // Check if shift key was pressed during click
+                const event = window.event as MouseEvent | undefined;
+                onToggleInspectionSelection(inspection.id, event?.shiftKey || false);
+              }}
+            />
+          </div>
+        </td>
 
         {/* Imóvel */}
         <td className="p-0 max-w-[150px]">
@@ -620,7 +730,7 @@ function VistoriasTable({
         {/* Faxineira/Equipe */}
         <td className="p-0 max-w-[120px]">
           <div className="px-2 py-2 text-sm truncate">
-            {showCleanerColumn ? (inspection.cleaner_name || "—") : (inspection.owner_name || "Equipe")}
+            {showCleanerColumn ? (inspection.cleaner_name || "—") : (inspection.cleaner_name || inspection.owner_name || "Equipe")}
           </div>
         </td>
 
@@ -789,15 +899,36 @@ function VistoriasTable({
 
   return (
     <Card className="overflow-hidden mb-4">
+      {/* Archive button when items selected */}
+      {selectedInspectionIds.size > 0 && (
+        <div className="bg-muted/50 p-2 flex items-center justify-between border-b">
+          <span className="text-sm text-muted-foreground">
+            {selectedInspectionIds.size} vistoria(s) selecionada(s)
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onArchiveInspections}
+            disabled={archivingInspections}
+          >
+            {archivingInspections ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Archive className="h-4 w-4 mr-2" />
+            )}
+            Arquivar
+          </Button>
+        </div>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full text-sm table-fixed">
           <thead className="bg-muted text-muted-foreground">
             <tr className="h-10">
               <th className="w-[40px] px-2 py-2"></th>
-              <th className="text-left px-2 py-2 font-medium w-[150px]">Imóvel</th>
-              <th className="text-center px-2 py-2 font-medium w-[100px]">Data</th>
-              <th className="text-left px-2 py-2 font-medium w-[120px]">Responsável</th>
-              <th className="text-center px-2 py-2 font-medium w-[80px]">Status</th>
+              {renderSortableHeader("Imóvel", "property", "text-left w-[150px]")}
+              {renderSortableHeader("Data", "created_at", "text-center w-[100px]")}
+              {renderSortableHeader("Responsável", "cleaner_name", "text-left w-[120px]")}
+              {renderSortableHeader("Status", "status", "text-center w-[80px]")}
               <th className="text-left px-2 py-2 font-medium w-[250px]">Audio</th>
               <th className="text-center px-2 py-2 font-medium w-[80px]">Arquivos</th>
               <th className="text-left px-2 py-2 font-medium w-[300px]">Resumo</th>
@@ -822,7 +953,7 @@ function VistoriasTable({
             </tr>
 
             {/* Cleaner Inspection Rows */}
-            {cleanerExpanded && cleanerInspections.map((inspection) => renderInspectionRow(inspection, true))}
+            {cleanerExpanded && sortedCleanerInspections.map((inspection) => renderInspectionRow(inspection, true))}
 
             {/* Vistorias Equipe Group Header */}
             <tr 
@@ -841,7 +972,7 @@ function VistoriasTable({
             </tr>
 
             {/* Team Inspection Rows */}
-            {teamExpanded && teamInspections.map((inspection) => renderInspectionRow(inspection, false))}
+            {teamExpanded && sortedTeamInspections.map((inspection) => renderInspectionRow(inspection, false))}
           </tbody>
         </table>
       </div>
@@ -870,6 +1001,11 @@ export default function AdminManutencoesLista() {
   const [selectedInspection, setSelectedInspection] = useState<InspectionItem | null>(null);
   const [editInspectionDialogOpen, setEditInspectionDialogOpen] = useState(false);
   const [inspectionToEdit, setInspectionToEdit] = useState<InspectionItem | null>(null);
+  
+  // Inspection selection state
+  const [selectedInspectionIds, setSelectedInspectionIds] = useState<Set<string>>(new Set());
+  const [lastSelectedInspectionId, setLastSelectedInspectionId] = useState<string | null>(null);
+  const [archivingInspections, setArchivingInspections] = useState(false);
 
   // Chat dialog state
   const [chatDialogOpen, setChatDialogOpen] = useState(false);
@@ -903,6 +1039,14 @@ export default function AdminManutencoesLista() {
   const { data: inspections } = useQuery({
     queryKey: ["inspections-for-list"],
     queryFn: async () => {
+      // First fetch team member names to identify team inspections
+      const { data: teamMembers } = await supabase
+        .from("profiles")
+        .select("name")
+        .in("role", ["admin", "agent", "maintenance"]);
+      
+      const teamNames = new Set((teamMembers || []).map(t => t.name.toLowerCase()));
+
       const { data, error } = await supabase
         .from("cleaning_inspections")
         .select(`
@@ -949,24 +1093,31 @@ export default function AdminManutencoesLista() {
         attachmentsByInspection[a.inspection_id].push(a);
       });
 
-      return (data || []).map(i => ({
-        id: i.id,
-        property: i.property,
-        owner_name: i.property?.owner_id ? ownerMap[i.property.owner_id] || null : null,
-        created_at: i.created_at,
-        cleaner_name: i.cleaner_name,
-        notes: i.notes,
-        transcript: i.transcript,
-        transcript_summary: i.transcript_summary,
-        audio_url: i.audio_url,
-        internal_only: i.internal_only,
-        attachments: (attachmentsByInspection[i.id] || []).map(a => ({
-          id: a.id,
-          file_url: a.file_url,
-          file_name: a.file_name || undefined,
-          file_type: a.file_type || undefined,
-        })),
-      })) as InspectionItem[];
+      return (data || []).map(i => {
+        // Check if cleaner_name matches a team member
+        const isTeamInspection = i.internal_only || 
+          (i.cleaner_name && teamNames.has(i.cleaner_name.toLowerCase()));
+        
+        return {
+          id: i.id,
+          property: i.property,
+          owner_name: i.property?.owner_id ? ownerMap[i.property.owner_id] || null : null,
+          created_at: i.created_at,
+          cleaner_name: i.cleaner_name,
+          notes: i.notes,
+          transcript: i.transcript,
+          transcript_summary: i.transcript_summary,
+          audio_url: i.audio_url,
+          internal_only: i.internal_only,
+          is_team_inspection: isTeamInspection,
+          attachments: (attachmentsByInspection[i.id] || []).map(a => ({
+            id: a.id,
+            file_url: a.file_url,
+            file_name: a.file_name || undefined,
+            file_type: a.file_type || undefined,
+          })),
+        };
+      }) as InspectionItem[];
     },
   });
 
@@ -1501,8 +1652,8 @@ export default function AdminManutencoesLista() {
   }, [tickets, charges, debouncedSearch]);
 
   // Filter inspections by search and split by type
-  const { cleanerInspections, teamInspections } = useMemo(() => {
-    if (!inspections) return { cleanerInspections: [], teamInspections: [] };
+  const { cleanerInspections, teamInspections, allInspectionsList } = useMemo(() => {
+    if (!inspections) return { cleanerInspections: [], teamInspections: [], allInspectionsList: [] };
     const searchLower = debouncedSearch.toLowerCase();
     
     const filtered = inspections.filter(i =>
@@ -1511,13 +1662,70 @@ export default function AdminManutencoesLista() {
       i.cleaner_name?.toLowerCase().includes(searchLower)
     );
     
-    // Faxineiras: has cleaner_name and NOT internal_only
-    const cleanerInspections = filtered.filter(i => i.cleaner_name && !i.internal_only);
-    // Equipe: internal_only OR no cleaner_name (admin/team inspections)
-    const teamInspections = filtered.filter(i => i.internal_only || !i.cleaner_name);
+    // Use the is_team_inspection flag to split
+    const cleanerInspections = filtered.filter(i => !i.is_team_inspection && i.cleaner_name);
+    const teamInspections = filtered.filter(i => i.is_team_inspection || !i.cleaner_name);
     
-    return { cleanerInspections, teamInspections };
+    return { cleanerInspections, teamInspections, allInspectionsList: filtered };
   }, [inspections, debouncedSearch]);
+
+  // Handle inspection selection with shift+click support
+  const handleToggleInspectionSelection = useCallback((id: string, shiftKey: boolean) => {
+    if (shiftKey && lastSelectedInspectionId && allInspectionsList.length > 0) {
+      // Find indices
+      const lastIndex = allInspectionsList.findIndex(i => i.id === lastSelectedInspectionId);
+      const currentIndex = allInspectionsList.findIndex(i => i.id === id);
+      
+      if (lastIndex !== -1 && currentIndex !== -1) {
+        const start = Math.min(lastIndex, currentIndex);
+        const end = Math.max(lastIndex, currentIndex);
+        const idsInRange = allInspectionsList.slice(start, end + 1).map(i => i.id);
+        
+        setSelectedInspectionIds(prev => {
+          const newSet = new Set(prev);
+          idsInRange.forEach(rangeId => newSet.add(rangeId));
+          return newSet;
+        });
+        return;
+      }
+    }
+    
+    // Normal toggle
+    setSelectedInspectionIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+    setLastSelectedInspectionId(id);
+  }, [lastSelectedInspectionId, allInspectionsList]);
+
+  // Archive selected inspections
+  const handleArchiveInspections = useCallback(async () => {
+    if (selectedInspectionIds.size === 0) return;
+    
+    setArchivingInspections(true);
+    try {
+      const { error } = await supabase
+        .from("cleaning_inspections")
+        .update({ archived_at: new Date().toISOString() })
+        .in("id", Array.from(selectedInspectionIds));
+      
+      if (error) throw error;
+      
+      toast.success(`${selectedInspectionIds.size} vistoria(s) arquivada(s)`);
+      setSelectedInspectionIds(new Set());
+      queryClient.invalidateQueries({ queryKey: ["inspections-for-list"] });
+    } catch (error: any) {
+      console.error("Error archiving inspections:", error);
+      toast.error(error.message || "Erro ao arquivar vistorias");
+    } finally {
+      setArchivingInspections(false);
+    }
+  }, [selectedInspectionIds, queryClient]);
 
   // Handle opening inspection attachments
   const handleOpenInspectionAttachments = useCallback((inspection: InspectionItem) => {
@@ -1643,6 +1851,10 @@ export default function AdminManutencoesLista() {
           onCreateMaintenance={handleCreateMaintenanceFromInspection}
           onEditInspection={handleEditInspection}
           generatingIds={generatingSummaryIds}
+          selectedInspectionIds={selectedInspectionIds}
+          onToggleInspectionSelection={handleToggleInspectionSelection}
+          onArchiveInspections={handleArchiveInspections}
+          archivingInspections={archivingInspections}
         />
 
         {/* Maintenances Table */}
