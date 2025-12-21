@@ -64,6 +64,7 @@ const LIST_STATUSES = [
 const GROUPS = [
   { id: "em_progresso", label: "Em Progresso", color: "border-l-amber-500" },
   { id: "concluidas", label: "Manutenções Concluídas", color: "border-l-green-500" },
+  { id: "cobrancas_vencidas", label: "Cobranças Vencidas", color: "border-l-red-600" },
   { id: "cobrancas", label: "Cobranças Pendentes", color: "border-l-destructive" },
 ];
 
@@ -460,6 +461,7 @@ export default function AdminManutencoesLista() {
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
     em_progresso: true,
     concluidas: true,
+    cobrancas_vencidas: true,
     cobrancas: false,
   });
 
@@ -498,6 +500,7 @@ export default function AdminManutencoesLista() {
         `)
         .eq("ticket_type", "manutencao")
         .neq("status", "cancelado")
+        .is("archived_at", null)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -548,6 +551,7 @@ export default function AdminManutencoesLista() {
           amount_cents,
           management_contribution_cents,
           service_type,
+          category,
           created_at,
           due_date,
           status,
@@ -557,6 +561,7 @@ export default function AdminManutencoesLista() {
         `)
         .in("status", ["pending", "draft", "sent", "contested"])
         .is("paid_at", null)
+        .is("archived_at", null)
         .order("due_date", { ascending: true });
 
       if (error) throw error;
@@ -788,6 +793,8 @@ export default function AdminManutencoesLista() {
   // Organize items into groups with search filter
   const groupedItems = useMemo(() => {
     const searchLower = debouncedSearch.toLowerCase();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     const emProgresso = (tickets || []).filter(t => 
       t.status !== "concluido" &&
@@ -801,10 +808,7 @@ export default function AdminManutencoesLista() {
        t.property?.name.toLowerCase().includes(searchLower))
     );
 
-    const cobrancas = (charges || []).filter(c =>
-      c.title.toLowerCase().includes(searchLower) ||
-      c.property?.name?.toLowerCase().includes(searchLower)
-    ).map(c => ({
+    const mapCharge = (c: any) => ({
       id: c.id,
       subject: c.title,
       status: "concluido" as TicketStatus,
@@ -814,16 +818,31 @@ export default function AdminManutencoesLista() {
       owner: c.owner,
       amount_cents: c.amount_cents,
       management_contribution_cents: c.management_contribution_cents,
-      service_type: c.service_type,
+      service_type: c.service_type || c.category, // Fallback to category if service_type is null
       list_status: "enviar_proprietario" as ListStatus,
       attachments_count: 0,
       itemType: "charge" as const,
-    }));
+    });
+
+    const filteredCharges = (charges || []).filter(c =>
+      c.title.toLowerCase().includes(searchLower) ||
+      c.property?.name?.toLowerCase().includes(searchLower)
+    );
+
+    // Split charges into overdue and pending
+    const cobrancasVencidas = filteredCharges
+      .filter(c => c.due_date && new Date(c.due_date) < today)
+      .map(mapCharge);
+
+    const cobrancasPendentes = filteredCharges
+      .filter(c => !c.due_date || new Date(c.due_date) >= today)
+      .map(mapCharge);
 
     return {
       em_progresso: emProgresso,
       concluidas: concluidas,
-      cobrancas: cobrancas,
+      cobrancas_vencidas: cobrancasVencidas,
+      cobrancas: cobrancasPendentes,
     };
   }, [tickets, charges, debouncedSearch]);
 
