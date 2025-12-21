@@ -508,6 +508,7 @@ interface InspectionItem {
   transcript: string | null;
   transcript_summary: string | null;
   audio_url: string | null;
+  internal_only: boolean;
   attachments: Array<{ id: string; file_url: string; file_name?: string; file_type?: string }>;
 }
 
@@ -559,6 +560,10 @@ interface VistoriasTableProps {
   onGenerateSummary: (inspection: InspectionItem) => void;
   onCreateMaintenance: (inspection: InspectionItem) => void;
   generatingIds: Set<string>;
+  title: string;
+  colorClass: string;
+  bgClass: string;
+  showCleanerColumn?: boolean;
 }
 
 function VistoriasTable({
@@ -569,18 +574,24 @@ function VistoriasTable({
   onGenerateSummary,
   onCreateMaintenance,
   generatingIds,
+  title,
+  colorClass,
+  bgClass,
+  showCleanerColumn = true,
 }: VistoriasTableProps) {
   return (
-    <Card className="overflow-hidden mb-6">
+    <Card className="overflow-hidden mb-4">
       <div className="overflow-x-auto">
         <table className="w-full text-sm table-fixed">
-          <thead className="bg-blue-600 text-white">
+          <thead className={cn("text-white", bgClass)}>
             <tr className="h-10">
               <th className="w-[40px] px-2 py-2"></th>
               <th className="text-left px-2 py-2 font-medium w-[150px]">Proprietário</th>
               <th className="text-left px-2 py-2 font-medium w-[150px]">Unidade</th>
               <th className="text-center px-2 py-2 font-medium w-[100px]">Data</th>
-              <th className="text-left px-2 py-2 font-medium w-[120px]">Faxineira</th>
+              {showCleanerColumn && (
+                <th className="text-left px-2 py-2 font-medium w-[120px]">Faxineira</th>
+              )}
               <th className="text-center px-2 py-2 font-medium w-[80px]">OK ou NÃO</th>
               <th className="text-left px-2 py-2 font-medium w-[250px]">Audio</th>
               <th className="text-center px-2 py-2 font-medium w-[80px]">Arquivos</th>
@@ -591,14 +602,17 @@ function VistoriasTable({
           <tbody>
             {/* Group Header */}
             <tr 
-              className="bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50 cursor-pointer transition-colors border-l-4 border-l-blue-500"
+              className={cn(
+                "hover:opacity-80 cursor-pointer transition-colors border-l-4",
+                colorClass
+              )}
               onClick={onToggle}
             >
-              <td colSpan={10} className="p-2">
-                <div className="flex items-center gap-2 font-medium text-blue-700 dark:text-blue-300">
+              <td colSpan={showCleanerColumn ? 10 : 9} className="p-2">
+                <div className="flex items-center gap-2 font-medium">
                   {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                  <span>VISTORIAS</span>
-                  <Badge variant="secondary" className="ml-2 bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                  <span>{title}</span>
+                  <Badge variant="secondary" className="ml-2">
                     {inspections.length}
                   </Badge>
                 </div>
@@ -649,12 +663,14 @@ function VistoriasTable({
                     </div>
                   </td>
 
-                  {/* Faxineira */}
-                  <td className="p-0 max-w-[120px]">
-                    <div className="px-2 py-2 text-sm truncate">
-                      {inspection.cleaner_name || "—"}
-                    </div>
-                  </td>
+                  {/* Faxineira - conditionally rendered */}
+                  {showCleanerColumn && (
+                    <td className="p-0 max-w-[120px]">
+                      <div className="px-2 py-2 text-sm truncate">
+                        {inspection.cleaner_name || "—"}
+                      </div>
+                    </td>
+                  )}
 
                   {/* OK ou NÃO */}
                   <td className="p-0 w-[80px]">
@@ -820,6 +836,7 @@ export default function AdminManutencoesLista() {
 
   // Vistorias state
   const [vistoriasExpanded, setVistoriasExpanded] = useState(true);
+  const [vistoriasAdminExpanded, setVistoriasAdminExpanded] = useState(true);
   const [generatingSummaryIds, setGeneratingSummaryIds] = useState<Set<string>>(new Set());
   const [maintenanceDialogOpen, setMaintenanceDialogOpen] = useState(false);
   const [selectedInspection, setSelectedInspection] = useState<InspectionItem | null>(null);
@@ -866,6 +883,7 @@ export default function AdminManutencoesLista() {
           transcript,
           transcript_summary,
           audio_url,
+          internal_only,
           property:properties!cleaning_inspections_property_id_fkey(id, name, owner_id)
         `)
         .is("archived_at", null)
@@ -911,6 +929,7 @@ export default function AdminManutencoesLista() {
         transcript: i.transcript,
         transcript_summary: i.transcript_summary,
         audio_url: i.audio_url,
+        internal_only: i.internal_only,
         attachments: (attachmentsByInspection[i.id] || []).map(a => ({
           id: a.id,
           file_url: a.file_url,
@@ -1451,15 +1470,24 @@ export default function AdminManutencoesLista() {
     };
   }, [tickets, charges, debouncedSearch]);
 
-  // Filter inspections by search
-  const filteredInspections = useMemo(() => {
-    if (!inspections) return [];
+  // Filter and split inspections by search and type
+  const { cleanerInspections, adminInspections } = useMemo(() => {
+    if (!inspections) return { cleanerInspections: [], adminInspections: [] };
     const searchLower = debouncedSearch.toLowerCase();
-    return inspections.filter(i =>
+    
+    const filtered = inspections.filter(i =>
       i.property?.name?.toLowerCase().includes(searchLower) ||
       i.owner_name?.toLowerCase().includes(searchLower) ||
       i.cleaner_name?.toLowerCase().includes(searchLower)
     );
+
+    // Cleaner inspections: have cleaner_name and are not internal_only
+    const cleanerInspections = filtered.filter(i => i.cleaner_name && !i.internal_only);
+    
+    // Admin/Team inspections: internal_only OR no cleaner_name
+    const adminInspections = filtered.filter(i => i.internal_only || !i.cleaner_name);
+
+    return { cleanerInspections, adminInspections };
   }, [inspections, debouncedSearch]);
 
   // Handle opening inspection attachments
@@ -1567,15 +1595,34 @@ export default function AdminManutencoesLista() {
           )}
         </div>
 
-        {/* Vistorias Table */}
+        {/* Vistorias Faxineiras Table */}
         <VistoriasTable
-          inspections={filteredInspections}
+          inspections={cleanerInspections}
           isExpanded={vistoriasExpanded}
           onToggle={() => setVistoriasExpanded(!vistoriasExpanded)}
           onOpenAttachments={handleOpenInspectionAttachments}
           onGenerateSummary={handleGenerateSummary}
           onCreateMaintenance={handleCreateMaintenanceFromInspection}
           generatingIds={generatingSummaryIds}
+          title="VISTORIAS FAXINEIRAS"
+          colorClass="bg-blue-50 dark:bg-blue-950/30 border-l-blue-500 text-blue-700 dark:text-blue-300"
+          bgClass="bg-blue-600"
+          showCleanerColumn={true}
+        />
+
+        {/* Vistorias Administração Table */}
+        <VistoriasTable
+          inspections={adminInspections}
+          isExpanded={vistoriasAdminExpanded}
+          onToggle={() => setVistoriasAdminExpanded(!vistoriasAdminExpanded)}
+          onOpenAttachments={handleOpenInspectionAttachments}
+          onGenerateSummary={handleGenerateSummary}
+          onCreateMaintenance={handleCreateMaintenanceFromInspection}
+          generatingIds={generatingSummaryIds}
+          title="VISTORIAS ADMINISTRAÇÃO/EQUIPE"
+          colorClass="bg-purple-50 dark:bg-purple-950/30 border-l-purple-500 text-purple-700 dark:text-purple-300"
+          bgClass="bg-purple-600"
+          showCleanerColumn={false}
         />
 
         {/* Maintenances Table */}
