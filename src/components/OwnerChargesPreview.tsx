@@ -364,65 +364,65 @@ export function OwnerChargesPreview() {
                     isSelected ? 'border-primary bg-primary/5' : ''
                   }`}
                 >
-                  {/* Compact header - always visible */}
+                  {/* Card content */}
                   <div
-                    className="p-2.5 flex items-center gap-2 cursor-pointer hover:bg-muted/50 transition-colors"
+                    className="p-3 cursor-pointer hover:bg-muted/50 transition-colors"
                     onClick={() => navigate(`/cobranca/${charge.id}`)}
                   >
-                    {/* Checkbox */}
-                    <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={() => toggleChargeSelection(charge.id, { stopPropagation: () => {} } as React.MouseEvent)}
-                      />
-                    </div>
-
-                    {/* Property photo */}
-                    <div className="w-8 h-8 rounded overflow-hidden bg-muted flex-shrink-0">
-                      {charge.property?.cover_photo_url ? (
-                        <img
-                          src={charge.property.cover_photo_url}
-                          alt={charge.property.name}
-                          className="w-full h-full object-cover"
+                    {/* Top row: checkbox, photo, title and amount */}
+                    <div className="flex items-start gap-2">
+                      {/* Checkbox */}
+                      <div className="flex items-center pt-0.5" onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => toggleChargeSelection(charge.id, { stopPropagation: () => {} } as React.MouseEvent)}
                         />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Building2 className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                      )}
-                    </div>
+                      </div>
 
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-xs line-clamp-1">{charge.title}</p>
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                        {charge.management_contribution_cents > 0 ? (
-                          <>
-                            <span className="text-[10px] text-muted-foreground line-through">
-                              {formatBRL(charge.amount_cents)}
-                            </span>
-                            <span className="text-[10px] text-green-600">
-                              -{formatBRL(charge.management_contribution_cents)}
-                            </span>
-                            <span className="text-sm font-bold text-primary">
-                              {formatBRL(dueAmount)}
-                            </span>
-                          </>
+                      {/* Property photo */}
+                      <div className="w-10 h-10 rounded overflow-hidden bg-muted flex-shrink-0">
+                        {charge.property?.cover_photo_url ? (
+                          <img
+                            src={charge.property.cover_photo_url}
+                            alt={charge.property.name}
+                            className="w-full h-full object-cover"
+                          />
                         ) : (
-                          <span className="text-sm font-bold text-primary">{formatBRL(dueAmount)}</span>
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Building2 className="h-4 w-4 text-muted-foreground" />
+                          </div>
                         )}
-                        <span className={`text-[10px] ${dueDateInfo.color}`}>
+                      </div>
+
+                      {/* Info - stacked layout */}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm line-clamp-1">{charge.title}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {charge.management_contribution_cents > 0 ? (
+                            <>
+                              <span className="text-xs text-muted-foreground line-through">
+                                {formatBRL(charge.amount_cents)}
+                              </span>
+                              <span className="text-sm font-bold text-primary">
+                                {formatBRL(dueAmount)}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-sm font-bold text-primary">{formatBRL(dueAmount)}</span>
+                          )}
+                        </div>
+                        <span className={`text-xs ${dueDateInfo.color}`}>
                           {dueDateInfo.text}
                         </span>
                       </div>
                     </div>
 
-                    {/* Quick actions */}
-                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                    {/* Quick actions - separate row on mobile */}
+                    <div className="flex items-center gap-2 mt-3 ml-7" onClick={(e) => e.stopPropagation()}>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-7 px-2 text-xs"
+                        className="h-8 px-3 text-xs flex-1"
                         onClick={(e) => handleOpenPix(charge, e)}
                         disabled={generatingPixFor === charge.id}
                       >
@@ -430,15 +430,15 @@ export function OwnerChargesPreview() {
                           <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full" />
                         ) : (
                           <>
-                            <QrCode className="h-3 w-3 mr-1" />
-                            QR
+                            <QrCode className="h-4 w-4 mr-1" />
+                            PIX
                           </>
                         )}
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-7 px-2 text-xs"
+                        className="h-8 px-3 text-xs flex-1"
                         onClick={(e) => handleOpenPaymentLink(charge, e)}
                         disabled={generatingLinkFor === charge.id}
                       >
@@ -446,7 +446,7 @@ export function OwnerChargesPreview() {
                           <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full" />
                         ) : (
                           <>
-                            <CreditCard className="h-3 w-3 mr-1" />
+                            <CreditCard className="h-4 w-4 mr-1" />
                             12x
                           </>
                         )}
@@ -454,13 +454,13 @@ export function OwnerChargesPreview() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-7 px-2 text-xs relative"
+                        className="h-8 px-3 text-xs flex-1 relative"
                         onClick={(e) => handleOpenChat(charge, e)}
                       >
-                        <MessageSquare className="h-3 w-3 mr-1" />
+                        <MessageSquare className="h-4 w-4 mr-1" />
                         Chat
                         {unreadCount > 0 && (
-                          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] font-bold rounded-full min-w-[14px] h-3.5 flex items-center justify-center px-0.5">
+                          <span className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
                             {unreadCount > 9 ? "9+" : unreadCount}
                           </span>
                         )}
