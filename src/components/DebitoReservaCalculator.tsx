@@ -10,7 +10,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Calculator, Percent, DollarSign, ArrowRight } from "lucide-react";
+import { Calculator, Percent, DollarSign, ArrowRight, Copy } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 interface DebitoReservaCalculatorProps {
   open: boolean;
@@ -27,14 +29,43 @@ export const DebitoReservaCalculator = ({
   propertyName,
   totalDebtCents,
 }: DebitoReservaCalculatorProps) => {
+  const { toast } = useToast();
   const [reservationValue, setReservationValue] = useState<string>("");
   const [ownerPercent, setOwnerPercent] = useState<string>("78");
 
+  // Parse value with comma support (Brazilian format)
+  const parseValue = (value: string): number => {
+    // Replace comma with dot for parsing
+    const normalized = value.replace(",", ".");
+    const parsed = parseFloat(normalized);
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
+  // Handle input that accepts both comma and dot as decimal separators
+  const handleReservationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Allow only numbers, comma, and dot
+    if (/^[0-9]*[,.]?[0-9]*$/.test(value) || value === "") {
+      setReservationValue(value);
+    }
+  };
+
+  const handleOwnerPercentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Allow only numbers, comma, and dot
+    if (/^[0-9]*[,.]?[0-9]*$/.test(value) || value === "") {
+      setOwnerPercent(value);
+    }
+  };
+
   // Derived calculations
-  const reservationCents = Math.round(parseFloat(reservationValue || "0") * 100);
-  const ownerPercentNum = parseFloat(ownerPercent || "0");
+  const reservationCents = Math.round(parseValue(reservationValue) * 100);
+  const ownerPercentNum = parseValue(ownerPercent);
   const companyPercent = 100 - ownerPercentNum;
   const extraForDebt = Math.max(0, companyPercent - BASE_COMMISSION);
+  
+  // Total commission to set in the platform
+  const totalCommissionToSet = BASE_COMMISSION + extraForDebt;
   
   // Calculate amounts
   const ownerValueCents = Math.round((reservationCents * ownerPercentNum) / 100);
@@ -50,6 +81,11 @@ export const DebitoReservaCalculator = ({
   const suggestedOwnerPercent = reservationCents > 0
     ? Math.max(0, 100 - BASE_COMMISSION - (totalDebtCents / reservationCents * 100))
     : 0;
+  
+  // Suggested total commission to set
+  const suggestedTotalCommission = reservationCents > 0
+    ? Math.min(100, BASE_COMMISSION + (totalDebtCents / reservationCents * 100))
+    : BASE_COMMISSION;
 
   const formatCurrency = (cents: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -58,9 +94,17 @@ export const DebitoReservaCalculator = ({
     }).format(cents / 100);
   };
 
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copiado!",
+      description: `${label} copiado para a área de transferência.`,
+    });
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calculator className="h-5 w-5" />
@@ -83,12 +127,11 @@ export const DebitoReservaCalculator = ({
               </Label>
               <Input
                 id="reservation-value"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="Ex: 1500.00"
+                type="text"
+                inputMode="decimal"
+                placeholder="Ex: 1500,00"
                 value={reservationValue}
-                onChange={(e) => setReservationValue(e.target.value)}
+                onChange={handleReservationChange}
               />
             </div>
             <div className="space-y-2">
@@ -98,18 +141,38 @@ export const DebitoReservaCalculator = ({
               </Label>
               <Input
                 id="owner-percent"
-                type="number"
-                step="0.1"
-                min="0"
-                max="100"
+                type="text"
+                inputMode="decimal"
                 placeholder="Ex: 70"
                 value={ownerPercent}
-                onChange={(e) => setOwnerPercent(e.target.value)}
+                onChange={handleOwnerPercentChange}
               />
             </div>
           </div>
 
           <Separator />
+
+          {/* MAIN RESULT - Total Commission to Set */}
+          <Card className="bg-gradient-to-r from-primary/20 to-primary/10 border-primary/30">
+            <CardContent className="p-4">
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground mb-1">Comissão total a configurar na reserva</p>
+                <div className="flex items-center justify-center gap-2">
+                  <p className="text-4xl font-bold text-primary">{totalCommissionToSet.toFixed(1)}%</p>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => copyToClipboard(totalCommissionToSet.toFixed(1), "Comissão")}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  (Base {BASE_COMMISSION}% + Extra {extraForDebt.toFixed(1)}% para débito)
+                </p>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Results */}
           <div className="space-y-3">
@@ -175,16 +238,34 @@ export const DebitoReservaCalculator = ({
                     <ArrowRight className="h-4 w-4 text-primary" />
                     <span className="font-semibold text-sm">Sugestão para quitar em 1 reserva</span>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Para cobrir o débito de <strong>{formatCurrency(totalDebtCents)}</strong> em uma única reserva de{" "}
-                    <strong>{formatCurrency(reservationCents)}</strong>, configure o proprietário para receber{" "}
-                    <strong className="text-primary">{Math.max(0, suggestedOwnerPercent).toFixed(1)}%</strong>
-                  </p>
-                  {suggestedOwnerPercent < 0 && (
-                    <p className="text-xs text-destructive mt-1">
-                      ⚠️ O valor da reserva não é suficiente para cobrir o débito em uma única vez.
+                  <div className="space-y-2 text-sm">
+                    <p className="text-muted-foreground">
+                      Para cobrir <strong>{formatCurrency(totalDebtCents)}</strong> em uma reserva de{" "}
+                      <strong>{formatCurrency(reservationCents)}</strong>:
                     </p>
-                  )}
+                    <div className="flex items-center gap-3 bg-background rounded-lg p-2">
+                      <div className="flex-1">
+                        <p className="text-xs text-muted-foreground">Proprietário recebe:</p>
+                        <p className="font-bold text-primary">{Math.max(0, suggestedOwnerPercent).toFixed(1)}%</p>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs text-muted-foreground">Comissão a configurar:</p>
+                        <p className="font-bold text-primary">{suggestedTotalCommission.toFixed(1)}%</p>
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => copyToClipboard(suggestedTotalCommission.toFixed(1), "Comissão sugerida")}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    {suggestedOwnerPercent < 0 && (
+                      <p className="text-xs text-destructive">
+                        ⚠️ O valor da reserva não é suficiente para cobrir o débito em uma única vez.
+                      </p>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             )}
@@ -195,7 +276,7 @@ export const DebitoReservaCalculator = ({
             <strong>Como funciona:</strong> Comissão base = {BASE_COMMISSION}%. 
             O que exceder {BASE_COMMISSION}% é usado para cobrir o débito do proprietário.
             <br />
-            Ex: Se o proprietário recebe 70%, você fica com 30%. Sendo 22% base + 8% para débito.
+            Ex: Se o proprietário recebe 70%, configure <strong>30%</strong> de comissão (22% base + 8% débito).
           </div>
         </div>
       </DialogContent>
