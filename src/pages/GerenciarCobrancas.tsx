@@ -7,12 +7,23 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ArrowLeft, DollarSign, Calendar, Search, Pencil, ChevronDown, ChevronRight, Building2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ArrowLeft, DollarSign, Calendar, Search, Pencil, ChevronDown, ChevronRight, Building2, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { CHARGE_CATEGORIES } from "@/constants/chargeCategories";
 import { EditChargeDialog } from "@/components/EditChargeDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Charge {
   id: string;
@@ -61,6 +72,9 @@ const GerenciarCobrancas = () => {
   const [expandedProperties, setExpandedProperties] = useState<Set<string>>(new Set());
   const [editingCharge, setEditingCharge] = useState<Charge | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedCharges, setSelectedCharges] = useState<Set<string>>(new Set());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!user || !['admin', 'agent', 'maintenance'].includes(profile?.role || '')) {
@@ -187,6 +201,58 @@ const GerenciarCobrancas = () => {
     setEditDialogOpen(true);
   };
 
+  const toggleChargeSelection = (chargeId: string) => {
+    const newSelected = new Set(selectedCharges);
+    if (newSelected.has(chargeId)) {
+      newSelected.delete(chargeId);
+    } else {
+      newSelected.add(chargeId);
+    }
+    setSelectedCharges(newSelected);
+  };
+
+  const toggleSelectAll = () => {
+    const allChargeIds = charges.map(c => c.id);
+    if (selectedCharges.size === allChargeIds.length) {
+      setSelectedCharges(new Set());
+    } else {
+      setSelectedCharges(new Set(allChargeIds));
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedCharges.size === 0) return;
+    
+    try {
+      setDeleting(true);
+      
+      const { error } = await supabase
+        .from('charges')
+        .delete()
+        .in('id', Array.from(selectedCharges));
+
+      if (error) throw error;
+
+      toast({
+        title: "Cobranças excluídas",
+        description: `${selectedCharges.size} cobrança(s) excluída(s) permanentemente.`,
+      });
+      
+      setSelectedCharges(new Set());
+      setDeleteDialogOpen(false);
+      fetchCharges();
+    } catch (error) {
+      console.error('Erro ao excluir cobranças:', error);
+      toast({
+        title: "Erro ao excluir",
+        description: "Não foi possível excluir as cobranças selecionadas.",
+        variant: "destructive"
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { label: string; variant: "secondary" | "default" | "destructive" | "outline"; className?: string }> = {
       draft: { label: 'Rascunho', variant: 'secondary' },
@@ -240,15 +306,44 @@ const GerenciarCobrancas = () => {
           </Button>
         </div>
 
-        {/* Search */}
-        <div className="mb-6 relative">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por imóvel, proprietário ou título..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
-          />
+        {/* Search and Selection Controls */}
+        <div className="mb-6 space-y-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por imóvel, proprietário ou título..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          
+          {/* Selection Controls */}
+          <div className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
+            <div className="flex items-center gap-3">
+              <Checkbox
+                id="select-all"
+                checked={charges.length > 0 && selectedCharges.size === charges.length}
+                onCheckedChange={toggleSelectAll}
+              />
+              <label htmlFor="select-all" className="text-sm cursor-pointer">
+                {selectedCharges.size === 0 
+                  ? "Selecionar todas" 
+                  : `${selectedCharges.size} selecionada(s)`}
+              </label>
+            </div>
+            
+            {selectedCharges.size > 0 && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setDeleteDialogOpen(true)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Excluir ({selectedCharges.size})
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Summary Cards */}
@@ -367,25 +462,36 @@ const GerenciarCobrancas = () => {
                         {group.charges.map((charge) => (
                           <div
                             key={charge.id}
-                            className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors"
-                            onClick={() => navigate(`/cobranca/${charge.id}`)}
+                            className={`flex items-center justify-between p-3 rounded-lg hover:bg-muted cursor-pointer transition-colors ${
+                              selectedCharges.has(charge.id) ? 'bg-primary/10 border border-primary/30' : 'bg-muted/50'
+                            }`}
                           >
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="font-medium truncate">{charge.title}</span>
-                                {getStatusBadge(charge.status)}
-                              </div>
-                              {charge.category && (
-                                <span className="text-xs text-muted-foreground">
-                                  {CHARGE_CATEGORIES[charge.category as keyof typeof CHARGE_CATEGORIES]}
-                                </span>
-                              )}
-                              {charge.due_date && (
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                                  <Calendar className="h-3 w-3" />
-                                  <span>Venc: {format(new Date(charge.due_date), "dd/MM/yyyy", { locale: ptBR })}</span>
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <Checkbox
+                                checked={selectedCharges.has(charge.id)}
+                                onCheckedChange={() => toggleChargeSelection(charge.id)}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                              <div 
+                                className="flex-1 min-w-0"
+                                onClick={() => navigate(`/cobranca/${charge.id}`)}
+                              >
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="font-medium truncate">{charge.title}</span>
+                                  {getStatusBadge(charge.status)}
                                 </div>
-                              )}
+                                {charge.category && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {CHARGE_CATEGORIES[charge.category as keyof typeof CHARGE_CATEGORIES]}
+                                  </span>
+                                )}
+                                {charge.due_date && (
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                                    <Calendar className="h-3 w-3" />
+                                    <span>Venc: {format(new Date(charge.due_date), "dd/MM/yyyy", { locale: ptBR })}</span>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                             
                             <div className="flex items-center gap-3">
@@ -428,6 +534,29 @@ const GerenciarCobrancas = () => {
           charge={editingCharge}
           onSuccess={fetchCharges}
         />
+
+        {/* Dialog de Confirmação de Exclusão */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir cobranças permanentemente?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Você está prestes a excluir <strong>{selectedCharges.size} cobrança(s)</strong> permanentemente. 
+                Esta ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDeleteSelected}
+                disabled={deleting}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deleting ? "Excluindo..." : "Excluir permanentemente"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </main>
     </div>
   );
