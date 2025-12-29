@@ -8,12 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, DollarSign, Calendar, Search, Pencil, ChevronDown, ChevronRight, Building2, Trash2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowLeft, DollarSign, Calendar, Search, Pencil, ChevronDown, ChevronRight, Building2, Trash2, Calculator, CreditCard } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { CHARGE_CATEGORIES } from "@/constants/chargeCategories";
 import { EditChargeDialog } from "@/components/EditChargeDialog";
+import { DebitoReservaCalculator } from "@/components/DebitoReservaCalculator";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -75,6 +77,11 @@ const GerenciarCobrancas = () => {
   const [selectedCharges, setSelectedCharges] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [activeTab, setActiveTab] = useState("abertas");
+  const [debitoCharges, setDebitoCharges] = useState<Charge[]>([]);
+  const [debitoPropertyGroups, setDebitoPropertyGroups] = useState<PropertyGroup[]>([]);
+  const [calculatorOpen, setCalculatorOpen] = useState(false);
+  const [selectedPropertyForCalc, setSelectedPropertyForCalc] = useState<PropertyGroup | null>(null);
 
   useEffect(() => {
     if (!user || !['admin', 'agent', 'maintenance'].includes(profile?.role || '')) {
@@ -82,11 +89,16 @@ const GerenciarCobrancas = () => {
       return;
     }
     fetchCharges();
+    fetchDebitoCharges();
   }, [user, profile, navigate]);
 
   useEffect(() => {
     groupChargesByProperty();
   }, [charges, searchTerm]);
+
+  useEffect(() => {
+    groupDebitoChargesByProperty();
+  }, [debitoCharges]);
 
   const fetchCharges = async () => {
     try {
@@ -132,6 +144,78 @@ const GerenciarCobrancas = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchDebitoCharges = async () => {
+    try {
+      const { data: chargesData, error } = await supabase
+        .from('charges')
+        .select('*')
+        .in('status', ['overdue', 'debited'])
+        .order('due_date', { ascending: true });
+
+      if (error) throw error;
+
+      const enrichedCharges = await Promise.all(
+        (chargesData || []).map(async (charge) => {
+          const [ownerResult, propertyResult] = await Promise.all([
+            supabase
+              .from('profiles')
+              .select('name, email')
+              .eq('id', charge.owner_id)
+              .single(),
+            charge.property_id
+              ? supabase.from('properties').select('id, name, cover_photo_url').eq('id', charge.property_id).single()
+              : Promise.resolve({ data: null })
+          ]);
+
+          return {
+            ...charge,
+            owner: ownerResult.data || { name: 'N/A', email: 'N/A' },
+            property: propertyResult.data || undefined
+          };
+        })
+      );
+
+      setDebitoCharges(enrichedCharges);
+    } catch (error) {
+      console.error('Erro ao carregar cobranças para débito:', error);
+    }
+  };
+
+  const groupDebitoChargesByProperty = () => {
+    const groups: Record<string, PropertyGroup> = {};
+    
+    debitoCharges.forEach(charge => {
+      const propertyId = charge.property?.id || 'sem-imovel';
+      const propertyName = charge.property?.name || 'Sem Imóvel';
+      
+      if (!groups[propertyId]) {
+        groups[propertyId] = {
+          id: propertyId,
+          name: propertyName,
+          cover_photo_url: charge.property?.cover_photo_url || null,
+          ownerName: charge.owner.name,
+          charges: [],
+          openCount: 0,
+          overdueCount: 0,
+          totalDueCents: 0
+        };
+      }
+      
+      groups[propertyId].charges.push(charge);
+      const amountDue = charge.amount_cents - (charge.management_contribution_cents || 0);
+      groups[propertyId].totalDueCents += amountDue;
+      groups[propertyId].overdueCount++;
+    });
+    
+    const sortedGroups = Object.values(groups).sort((a, b) => b.totalDueCents - a.totalDueCents);
+    setDebitoPropertyGroups(sortedGroups);
+  };
+
+  const openCalculator = (group: PropertyGroup) => {
+    setSelectedPropertyForCalc(group);
+    setCalculatorOpen(true);
   };
 
   const groupChargesByProperty = () => {
@@ -306,113 +390,285 @@ const GerenciarCobrancas = () => {
           </Button>
         </div>
 
-        {/* Search and Selection Controls */}
-        <div className="mb-6 space-y-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por imóvel, proprietário ou título..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          
-          {/* Selection Controls */}
-          <div className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
-            <div className="flex items-center gap-3">
-              <Checkbox
-                id="select-all"
-                checked={charges.length > 0 && selectedCharges.size === charges.length}
-                onCheckedChange={toggleSelectAll}
-              />
-              <label htmlFor="select-all" className="text-sm cursor-pointer">
-                {selectedCharges.size === 0 
-                  ? "Selecionar todas" 
-                  : `${selectedCharges.size} selecionada(s)`}
-              </label>
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="abertas" className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4" />
+              Em Aberto ({charges.length})
+            </TabsTrigger>
+            <TabsTrigger value="debito" className="flex items-center gap-2">
+              <CreditCard className="h-4 w-4" />
+              Débito Reserva ({debitoCharges.length})
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Tab: Cobranças em Aberto */}
+          <TabsContent value="abertas" className="space-y-4">
+            {/* Search and Selection Controls */}
+            <div className="space-y-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por imóvel, proprietário ou título..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              
+              {/* Selection Controls */}
+              <div className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
+                <div className="flex items-center gap-3">
+                  <Checkbox
+                    id="select-all"
+                    checked={charges.length > 0 && selectedCharges.size === charges.length}
+                    onCheckedChange={toggleSelectAll}
+                  />
+                  <label htmlFor="select-all" className="text-sm cursor-pointer">
+                    {selectedCharges.size === 0 
+                      ? "Selecionar todas" 
+                      : `${selectedCharges.size} selecionada(s)`}
+                  </label>
+                </div>
+                
+                {selectedCharges.size > 0 && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setDeleteDialogOpen(true)}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Excluir ({selectedCharges.size})
+                  </Button>
+                )}
+              </div>
             </div>
-            
-            {selectedCharges.size > 0 && (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => setDeleteDialogOpen(true)}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Excluir ({selectedCharges.size})
-              </Button>
+
+            {/* Summary Cards */}
+            {propertyGroups.length > 0 && (
+              <div className="space-y-4">
+                {/* Overall Total */}
+                <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
+                  <CardContent className="py-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-muted-foreground font-medium">Total a Receber (já com aporte deduzido)</p>
+                        <p className="text-3xl font-bold text-primary">
+                          {formatCurrency(propertyGroups.reduce((acc, g) => acc + g.totalDueCents, 0), 'BRL')}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-muted-foreground">{propertyGroups.reduce((acc, g) => acc + g.charges.length, 0)} cobranças</p>
+                        <p className="text-sm text-muted-foreground">{propertyGroups.length} imóveis</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Per Property Summary */}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                  {propertyGroups.map((group) => (
+                    <div
+                      key={group.id}
+                      className={`p-3 rounded-lg border text-sm cursor-pointer hover:bg-muted/50 transition-colors ${
+                        group.overdueCount > 0 ? 'border-red-300 bg-red-50/50' : 'bg-card'
+                      }`}
+                      onClick={() => {
+                        if (!expandedProperties.has(group.id)) {
+                          toggleProperty(group.id);
+                        }
+                        document.getElementById(`property-${group.id}`)?.scrollIntoView({ behavior: 'smooth' });
+                      }}
+                    >
+                      <p className="font-medium truncate text-xs">{group.name}</p>
+                      <p className="font-bold text-primary">{formatCurrency(group.totalDueCents, 'BRL')}</p>
+                      <p className="text-xs text-muted-foreground">{group.charges.length} cobrança{group.charges.length > 1 ? 's' : ''}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
-          </div>
-        </div>
 
-        {/* Summary Cards */}
-        {propertyGroups.length > 0 && (
-          <div className="mb-6 space-y-4">
-            {/* Overall Total */}
-            <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
-              <CardContent className="py-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground font-medium">Total a Receber (já com aporte deduzido)</p>
-                    <p className="text-3xl font-bold text-primary">
-                      {formatCurrency(propertyGroups.reduce((acc, g) => acc + g.totalDueCents, 0), 'BRL')}
-                    </p>
+            {/* Property Groups */}
+            {propertyGroups.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <Building2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-muted-foreground">Nenhuma cobrança em aberto encontrada.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {propertyGroups.map((group) => (
+                  <Collapsible
+                    key={group.id}
+                    open={expandedProperties.has(group.id)}
+                    onOpenChange={() => toggleProperty(group.id)}
+                  >
+                    <Card id={`property-${group.id}`} className={`transition-all ${group.overdueCount > 0 ? 'border-red-300 bg-red-50/50' : ''}`}>
+                      <CollapsibleTrigger asChild>
+                        <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                          <div className="flex items-center gap-4">
+                            {/* Property Photo */}
+                            <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                              {group.cover_photo_url ? (
+                                <img 
+                                  src={group.cover_photo_url} 
+                                  alt={group.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <Building2 className="h-6 w-6 text-muted-foreground" />
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Property Info */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <CardTitle className="text-lg truncate">{group.name}</CardTitle>
+                                {expandedProperties.has(group.id) ? (
+                                  <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                                ) : (
+                                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                                )}
+                              </div>
+                              <CardDescription className="truncate">{group.ownerName}</CardDescription>
+                              
+                              {/* Counters */}
+                              <div className="flex gap-2 mt-2">
+                                {group.openCount > 0 && (
+                                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                    {group.openCount} em aberto
+                                  </Badge>
+                                )}
+                                {group.overdueCount > 0 && (
+                                  <Badge variant="destructive">
+                                    {group.overdueCount} vencida{group.overdueCount > 1 ? 's' : ''}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </CardHeader>
+                      </CollapsibleTrigger>
+                      
+                      <CollapsibleContent>
+                        <CardContent className="pt-0">
+                          <div className="space-y-2 border-t pt-4">
+                            {group.charges.map((charge) => (
+                              <div
+                                key={charge.id}
+                                className={`flex items-center justify-between p-3 rounded-lg hover:bg-muted cursor-pointer transition-colors ${
+                                  selectedCharges.has(charge.id) ? 'bg-primary/10 border border-primary/30' : 'bg-muted/50'
+                                }`}
+                              >
+                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                  <Checkbox
+                                    checked={selectedCharges.has(charge.id)}
+                                    onCheckedChange={() => toggleChargeSelection(charge.id)}
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                  <div 
+                                    className="flex-1 min-w-0"
+                                    onClick={() => navigate(`/cobranca/${charge.id}`)}
+                                  >
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className="font-medium truncate">{charge.title}</span>
+                                      {getStatusBadge(charge.status)}
+                                    </div>
+                                    {charge.category && (
+                                      <span className="text-xs text-muted-foreground">
+                                        {CHARGE_CATEGORIES[charge.category as keyof typeof CHARGE_CATEGORIES]}
+                                      </span>
+                                    )}
+                                    {charge.due_date && (
+                                      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                                        <Calendar className="h-3 w-3" />
+                                        <span>Venc: {format(new Date(charge.due_date), "dd/MM/yyyy", { locale: ptBR })}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                <div className="flex items-center gap-3">
+                                  <div className="text-right">
+                                    <div className="font-bold">
+                                      {formatCurrency(charge.amount_cents - (charge.management_contribution_cents || 0), charge.currency)}
+                                    </div>
+                                    {charge.management_contribution_cents > 0 && (
+                                      <div className="text-xs text-green-600">
+                                        Aporte: {formatCurrency(charge.management_contribution_cents, charge.currency)}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEdit(charge);
+                                    }}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </CollapsibleContent>
+                    </Card>
+                  </Collapsible>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Tab: Débito em Reserva */}
+          <TabsContent value="debito" className="space-y-4">
+            {/* Summary */}
+            {debitoPropertyGroups.length > 0 && (
+              <Card className="bg-gradient-to-r from-red-100 to-red-50 border-red-200">
+                <CardContent className="py-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground font-medium">Total a Debitar em Reservas</p>
+                      <p className="text-3xl font-bold text-red-700">
+                        {formatCurrency(debitoPropertyGroups.reduce((acc, g) => acc + g.totalDueCents, 0), 'BRL')}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-muted-foreground">{debitoCharges.length} cobranças</p>
+                      <p className="text-sm text-muted-foreground">{debitoPropertyGroups.length} imóveis</p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm text-muted-foreground">{propertyGroups.reduce((acc, g) => acc + g.charges.length, 0)} cobranças</p>
-                    <p className="text-sm text-muted-foreground">{propertyGroups.length} imóveis</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
 
-            {/* Per Property Summary */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-              {propertyGroups.map((group) => (
-                <div
-                  key={group.id}
-                  className={`p-3 rounded-lg border text-sm cursor-pointer hover:bg-muted/50 transition-colors ${
-                    group.overdueCount > 0 ? 'border-red-300 bg-red-50/50' : 'bg-card'
-                  }`}
-                  onClick={() => {
-                    if (!expandedProperties.has(group.id)) {
-                      toggleProperty(group.id);
-                    }
-                    document.getElementById(`property-${group.id}`)?.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                >
-                  <p className="font-medium truncate text-xs">{group.name}</p>
-                  <p className="font-bold text-primary">{formatCurrency(group.totalDueCents, 'BRL')}</p>
-                  <p className="text-xs text-muted-foreground">{group.charges.length} cobrança{group.charges.length > 1 ? 's' : ''}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Property Groups */}
-        {propertyGroups.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <Building2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-muted-foreground">Nenhuma cobrança em aberto encontrada.</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {propertyGroups.map((group) => (
-              <Collapsible
-                key={group.id}
-                open={expandedProperties.has(group.id)}
-                onOpenChange={() => toggleProperty(group.id)}
-              >
-                <Card id={`property-${group.id}`} className={`transition-all ${group.overdueCount > 0 ? 'border-red-300 bg-red-50/50' : ''}`}>
-                  <CollapsibleTrigger asChild>
-                    <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+            {/* Property List for Debit */}
+            {debitoPropertyGroups.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <CreditCard className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-muted-foreground">Nenhuma cobrança pendente de débito em reserva.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {debitoPropertyGroups.map((group) => (
+                  <Card 
+                    key={group.id} 
+                    className="border-red-200 bg-red-50/30 hover:bg-red-50 transition-colors cursor-pointer"
+                    onClick={() => openCalculator(group)}
+                  >
+                    <CardContent className="py-4">
                       <div className="flex items-center gap-4">
                         {/* Property Photo */}
-                        <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                        <div className="w-14 h-14 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                           {group.cover_photo_url ? (
                             <img 
                               src={group.cover_photo_url} 
@@ -421,118 +677,69 @@ const GerenciarCobrancas = () => {
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
-                              <Building2 className="h-6 w-6 text-muted-foreground" />
+                              <Building2 className="h-5 w-5 text-muted-foreground" />
                             </div>
                           )}
                         </div>
                         
                         {/* Property Info */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <CardTitle className="text-lg truncate">{group.name}</CardTitle>
-                            {expandedProperties.has(group.id) ? (
-                              <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                            ) : (
-                              <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                            )}
-                          </div>
-                          <CardDescription className="truncate">{group.ownerName}</CardDescription>
-                          
-                          {/* Counters */}
-                          <div className="flex gap-2 mt-2">
-                            {group.openCount > 0 && (
-                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                                {group.openCount} em aberto
-                              </Badge>
-                            )}
-                            {group.overdueCount > 0 && (
-                              <Badge variant="destructive">
-                                {group.overdueCount} vencida{group.overdueCount > 1 ? 's' : ''}
-                              </Badge>
-                            )}
+                          <p className="font-semibold truncate">{group.name}</p>
+                          <p className="text-sm text-muted-foreground truncate">{group.ownerName}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge variant="destructive" className="text-xs">
+                              {group.charges.length} cobrança{group.charges.length > 1 ? 's' : ''}
+                            </Badge>
                           </div>
                         </div>
+                        
+                        {/* Amount and Calculator Button */}
+                        <div className="text-right flex items-center gap-3">
+                          <div>
+                            <p className="text-lg font-bold text-red-700">
+                              {formatCurrency(group.totalDueCents, 'BRL')}
+                            </p>
+                            <p className="text-xs text-muted-foreground">a debitar</p>
+                          </div>
+                          <Button variant="outline" size="sm" className="border-red-300 hover:bg-red-100">
+                            <Calculator className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </CardHeader>
-                  </CollapsibleTrigger>
-                  
-                  <CollapsibleContent>
-                    <CardContent className="pt-0">
-                      <div className="space-y-2 border-t pt-4">
-                        {group.charges.map((charge) => (
-                          <div
-                            key={charge.id}
-                            className={`flex items-center justify-between p-3 rounded-lg hover:bg-muted cursor-pointer transition-colors ${
-                              selectedCharges.has(charge.id) ? 'bg-primary/10 border border-primary/30' : 'bg-muted/50'
-                            }`}
-                          >
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <Checkbox
-                                checked={selectedCharges.has(charge.id)}
-                                onCheckedChange={() => toggleChargeSelection(charge.id)}
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                              <div 
-                                className="flex-1 min-w-0"
-                                onClick={() => navigate(`/cobranca/${charge.id}`)}
-                              >
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="font-medium truncate">{charge.title}</span>
-                                  {getStatusBadge(charge.status)}
-                                </div>
-                                {charge.category && (
-                                  <span className="text-xs text-muted-foreground">
-                                    {CHARGE_CATEGORIES[charge.category as keyof typeof CHARGE_CATEGORIES]}
-                                  </span>
-                                )}
-                                {charge.due_date && (
-                                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                                    <Calendar className="h-3 w-3" />
-                                    <span>Venc: {format(new Date(charge.due_date), "dd/MM/yyyy", { locale: ptBR })}</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-center gap-3">
-                              <div className="text-right">
-                                <div className="font-bold">
-                                  {formatCurrency(charge.amount_cents - (charge.management_contribution_cents || 0), charge.currency)}
-                                </div>
-                                {charge.management_contribution_cents > 0 && (
-                                  <div className="text-xs text-green-600">
-                                    Aporte: {formatCurrency(charge.management_contribution_cents, charge.currency)}
-                                  </div>
-                                )}
-                              </div>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEdit(charge);
-                                }}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                            </div>
+
+                      {/* Charges List Preview */}
+                      <div className="mt-3 pt-3 border-t border-red-200 space-y-1">
+                        {group.charges.slice(0, 3).map((charge) => (
+                          <div key={charge.id} className="flex justify-between text-sm">
+                            <span className="text-muted-foreground truncate flex-1">{charge.title}</span>
+                            <span className="font-medium ml-2">
+                              {formatCurrency(charge.amount_cents - (charge.management_contribution_cents || 0), charge.currency)}
+                            </span>
                           </div>
                         ))}
+                        {group.charges.length > 3 && (
+                          <p className="text-xs text-muted-foreground">
+                            + {group.charges.length - 3} mais...
+                          </p>
+                        )}
                       </div>
                     </CardContent>
-                  </CollapsibleContent>
-                </Card>
-              </Collapsible>
-            ))}
-          </div>
-        )}
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
 
         {/* Dialog de Edição */}
         <EditChargeDialog
           open={editDialogOpen}
           onOpenChange={setEditDialogOpen}
           charge={editingCharge}
-          onSuccess={fetchCharges}
+          onSuccess={() => {
+            fetchCharges();
+            fetchDebitoCharges();
+          }}
         />
 
         {/* Dialog de Confirmação de Exclusão */}
@@ -557,6 +764,14 @@ const GerenciarCobrancas = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Calculadora de Débito em Reserva */}
+        <DebitoReservaCalculator
+          open={calculatorOpen}
+          onOpenChange={setCalculatorOpen}
+          propertyName={selectedPropertyForCalc?.name || ""}
+          totalDebtCents={selectedPropertyForCalc?.totalDueCents || 0}
+        />
       </main>
     </div>
   );
