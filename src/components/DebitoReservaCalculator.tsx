@@ -21,7 +21,7 @@ interface DebitoReservaCalculatorProps {
   totalDebtCents: number;
 }
 
-const BASE_COMMISSION = 22; // Comissão base padrão
+const DEFAULT_BASE_COMMISSION = "22"; // Comissão base padrão
 
 export const DebitoReservaCalculator = ({
   open,
@@ -31,6 +31,7 @@ export const DebitoReservaCalculator = ({
 }: DebitoReservaCalculatorProps) => {
   const { toast } = useToast();
   const [ownerValue, setOwnerValue] = useState<string>("");
+  const [baseCommission, setBaseCommission] = useState<string>(DEFAULT_BASE_COMMISSION);
   const [copied, setCopied] = useState(false);
 
   // Parse value with comma support (Brazilian format)
@@ -49,7 +50,16 @@ export const DebitoReservaCalculator = ({
     }
   };
 
+  // Handle base commission input
+  const handleBaseCommissionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (/^[0-9]*[,.]?[0-9]*$/.test(value) || value === "") {
+      setBaseCommission(value);
+    }
+  };
+
   const ownerValueNum = parseValue(ownerValue);
+  const baseCommissionNum = parseValue(baseCommission);
   const totalDebt = totalDebtCents / 100;
 
   // Se o proprietário recebe X reais, e temos uma dívida de Y,
@@ -60,7 +70,7 @@ export const DebitoReservaCalculator = ({
     : 0;
 
   // Total de comissão a configurar na reserva (base + extra)
-  const totalCommissionToSet = BASE_COMMISSION + extraPercentNeeded;
+  const totalCommissionToSet = baseCommissionNum + extraPercentNeeded;
 
   // Valor que será descontado do proprietário
   const debtCoverage = ownerValueNum > 0 
@@ -140,7 +150,24 @@ export const DebitoReservaCalculator = ({
             </p>
           </div>
 
-          {ownerValueNum > 0 && (
+          {/* Input da comissão base */}
+          <div className="space-y-2">
+            <Label htmlFor="base-commission">Comissão Base (%)</Label>
+            <Input
+              id="base-commission"
+              type="text"
+              inputMode="decimal"
+              placeholder="22"
+              value={baseCommission}
+              onChange={handleBaseCommissionChange}
+              className="text-lg"
+            />
+            <p className="text-xs text-muted-foreground">
+              Sua comissão padrão (ex: 22%)
+            </p>
+          </div>
+
+          {ownerValueNum > 0 && baseCommissionNum > 0 && (
             <>
               <Separator />
 
@@ -167,7 +194,7 @@ export const DebitoReservaCalculator = ({
                       </Button>
                     </div>
                     <p className="text-xs text-muted-foreground mt-2">
-                      Base {BASE_COMMISSION}% + {extraPercentNeeded.toFixed(2).replace(".", ",")}% extra para débito
+                      Base {baseCommissionNum.toFixed(0)}% + {extraPercentNeeded.toFixed(2).replace(".", ",")}% extra para débito
                     </p>
                   </div>
                 </CardContent>
@@ -178,7 +205,7 @@ export const DebitoReservaCalculator = ({
                 <Card className="bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800">
                   <CardContent className="p-3">
                     <p className="text-xs text-muted-foreground">Comissão Base</p>
-                    <p className="text-xl font-bold text-amber-700 dark:text-amber-400">{BASE_COMMISSION}%</p>
+                    <p className="text-xl font-bold text-amber-700 dark:text-amber-400">{baseCommissionNum.toFixed(0)}%</p>
                   </CardContent>
                 </Card>
                 <Card className="bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800">
@@ -225,7 +252,7 @@ export const DebitoReservaCalculator = ({
 
           {/* Legenda */}
           <div className="text-xs text-muted-foreground bg-muted/30 rounded p-2">
-            <strong>Como funciona:</strong> Sua comissão base é {BASE_COMMISSION}%. 
+            <strong>Como funciona:</strong> Sua comissão base é {baseCommissionNum.toFixed(0)}%. 
             O extra ({extraPercentNeeded > 0 ? extraPercentNeeded.toFixed(2).replace(".", ",") : "0"}%) 
             é calculado em cima do valor do proprietário para cobrir a dívida.
           </div>
