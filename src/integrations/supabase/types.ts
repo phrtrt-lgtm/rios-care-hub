@@ -633,6 +633,12 @@ export type Database = {
           reminder_24h_sent: boolean | null
           reminder_48h_sent: boolean | null
           reminder_day_sent: boolean | null
+          reserve_base_commission_percent: number | null
+          reserve_commission_percent: number | null
+          reserve_debit_date: string | null
+          reserve_extra_commission_percent: number | null
+          reserve_owner_receives_cents: number | null
+          reserve_owner_value_cents: number | null
           service_type: string | null
           split_owner_percent: number | null
           status: string
@@ -669,6 +675,12 @@ export type Database = {
           reminder_24h_sent?: boolean | null
           reminder_48h_sent?: boolean | null
           reminder_day_sent?: boolean | null
+          reserve_base_commission_percent?: number | null
+          reserve_commission_percent?: number | null
+          reserve_debit_date?: string | null
+          reserve_extra_commission_percent?: number | null
+          reserve_owner_receives_cents?: number | null
+          reserve_owner_value_cents?: number | null
           service_type?: string | null
           split_owner_percent?: number | null
           status?: string
@@ -705,6 +717,12 @@ export type Database = {
           reminder_24h_sent?: boolean | null
           reminder_48h_sent?: boolean | null
           reminder_day_sent?: boolean | null
+          reserve_base_commission_percent?: number | null
+          reserve_commission_percent?: number | null
+          reserve_debit_date?: string | null
+          reserve_extra_commission_percent?: number | null
+          reserve_owner_receives_cents?: number | null
+          reserve_owner_value_cents?: number | null
           service_type?: string | null
           split_owner_percent?: number | null
           status?: string
