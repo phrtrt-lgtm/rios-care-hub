@@ -10,15 +10,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Calculator, DollarSign, Copy, Check } from "lucide-react";
+import { Calculator, DollarSign, Copy, Check, Send, CalendarIcon, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 interface DebitoReservaCalculatorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   propertyName: string;
   totalDebtCents: number;
+  chargeId?: string;
+  chargeIds?: string[];
+  onDebitConfirmed?: () => void;
 }
 
 const DEFAULT_BASE_COMMISSION = "22"; // Comissão base padrão
@@ -28,11 +37,16 @@ export const DebitoReservaCalculator = ({
   onOpenChange,
   propertyName,
   totalDebtCents,
+  chargeId,
+  chargeIds,
+  onDebitConfirmed,
 }: DebitoReservaCalculatorProps) => {
   const { toast } = useToast();
   const [ownerValue, setOwnerValue] = useState<string>("");
   const [baseCommission, setBaseCommission] = useState<string>(DEFAULT_BASE_COMMISSION);
   const [copied, setCopied] = useState(false);
+  const [reserveDate, setReserveDate] = useState<Date | undefined>();
+  const [isConfirming, setIsConfirming] = useState(false);
 
   // Parse value with comma support (Brazilian format)
   const parseValue = (value: string): number => {
@@ -104,9 +118,75 @@ export const DebitoReservaCalculator = ({
     }
   };
 
+  const handleConfirmDebit = async () => {
+    // Support both single chargeId and array of chargeIds
+    const idsToProcess = chargeIds || (chargeId ? [chargeId] : []);
+    
+    if (idsToProcess.length === 0) {
+      toast({
+        title: "Erro",
+        description: "ID da cobrança não encontrado",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (ownerValueNum <= 0 || baseCommissionNum <= 0) {
+      toast({
+        title: "Erro",
+        description: "Preencha os valores corretamente",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsConfirming(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('debit-reserve', {
+        body: {
+          chargeIds: idsToProcess,
+          reserveDate: reserveDate ? format(reserveDate, 'yyyy-MM-dd') : null,
+          ownerValueCents: Math.round(ownerValueNum * 100),
+          baseCommissionPercent: baseCommissionNum,
+          extraCommissionPercent: extraPercentNeeded,
+          totalCommissionPercent: totalCommissionToSet,
+          ownerReceivesCents: Math.round(ownerReceivesAfter * 100),
+        },
+      });
+
+      if (error) throw error;
+
+      const chargeCount = idsToProcess.length;
+      toast({
+        title: "Débito confirmado!",
+        description: `${chargeCount} cobrança${chargeCount > 1 ? 's processadas' : ' processada'}. Proprietário notificado.`,
+      });
+
+      onDebitConfirmed?.();
+      onOpenChange(false);
+
+      // Reset form
+      setOwnerValue("");
+      setReserveDate(undefined);
+    } catch (error: any) {
+      console.error('Error confirming debit:', error);
+      toast({
+        title: "Erro ao confirmar débito",
+        description: error.message || "Tente novamente",
+        variant: "destructive",
+      });
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  const hasCharges = (chargeIds && chargeIds.length > 0) || chargeId;
+  const canConfirm = hasCharges && ownerValueNum > 0 && baseCommissionNum > 0;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calculator className="h-5 w-5" />
@@ -166,6 +246,36 @@ export const DebitoReservaCalculator = ({
               Sua comissão padrão (ex: 22%)
             </p>
           </div>
+
+          {/* Data da reserva (opcional) */}
+          {hasCharges && (
+            <div className="space-y-2">
+              <Label>Data da Reserva (opcional)</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !reserveDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {reserveDate ? format(reserveDate, "PPP", { locale: ptBR }) : "Selecionar data"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={reserveDate}
+                    onSelect={setReserveDate}
+                    locale={ptBR}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
 
           {ownerValueNum > 0 && baseCommissionNum > 0 && (
             <>
@@ -247,6 +357,29 @@ export const DebitoReservaCalculator = ({
                   ⚠️ Restará {formatCurrency(totalDebt - debtCoverage)} de dívida
                 </div>
               )}
+
+              {/* Botão de confirmar débito */}
+              {hasCharges && (
+                <Button 
+                  onClick={handleConfirmDebit}
+                  disabled={!canConfirm || isConfirming}
+                  className="w-full"
+                  size="lg"
+                >
+                  {isConfirming ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processando...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="mr-2 h-4 w-4" />
+                      Confirmar Débito e Notificar Proprietário
+                      {chargeIds && chargeIds.length > 1 && ` (${chargeIds.length} cobranças)`}
+                    </>
+                  )}
+                </Button>
+              )}
             </>
           )}
 
@@ -255,6 +388,11 @@ export const DebitoReservaCalculator = ({
             <strong>Como funciona:</strong> Sua comissão base é {baseCommissionNum.toFixed(0)}%. 
             O extra ({extraPercentNeeded > 0 ? extraPercentNeeded.toFixed(2).replace(".", ",") : "0"}%) 
             é calculado em cima do valor do proprietário para cobrir a dívida.
+            {hasCharges && (
+              <span className="block mt-1">
+                <strong>Ao confirmar:</strong> O proprietário receberá email e notificação com todos os detalhes do cálculo.
+              </span>
+            )}
           </div>
         </div>
       </DialogContent>

@@ -82,6 +82,7 @@ const GerenciarCobrancas = () => {
   const [debitoPropertyGroups, setDebitoPropertyGroups] = useState<PropertyGroup[]>([]);
   const [calculatorOpen, setCalculatorOpen] = useState(false);
   const [selectedPropertyForCalc, setSelectedPropertyForCalc] = useState<PropertyGroup | null>(null);
+  const [selectedChargeIdsForCalc, setSelectedChargeIdsForCalc] = useState<string[]>([]);
 
   useEffect(() => {
     if (!user || !['admin', 'agent', 'maintenance'].includes(profile?.role || '')) {
@@ -215,7 +216,16 @@ const GerenciarCobrancas = () => {
 
   const openCalculator = (group: PropertyGroup) => {
     setSelectedPropertyForCalc(group);
+    setSelectedChargeIdsForCalc(group.charges.map(c => c.id));
     setCalculatorOpen(true);
+  };
+
+  const handleDebitConfirmed = () => {
+    fetchCharges();
+    fetchDebitoCharges();
+    setCalculatorOpen(false);
+    setSelectedPropertyForCalc(null);
+    setSelectedChargeIdsForCalc([]);
   };
 
   const groupChargesByProperty = () => {
@@ -771,6 +781,8 @@ const GerenciarCobrancas = () => {
           onOpenChange={setCalculatorOpen}
           propertyName={selectedPropertyForCalc?.name || ""}
           totalDebtCents={selectedPropertyForCalc?.totalDueCents || 0}
+          chargeIds={selectedChargeIdsForCalc}
+          onDebitConfirmed={handleDebitConfirmed}
         />
       </main>
     </div>
