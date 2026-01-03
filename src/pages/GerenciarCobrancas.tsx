@@ -233,6 +233,9 @@ const GerenciarCobrancas = () => {
     const groups: Record<string, PropertyGroup> = {};
     
     charges.forEach(charge => {
+      // Exclude charges that are waiting for reserve debit (they show in ReserveDebitsTable)
+      if (charge.status === 'aguardando_reserva') return;
+      
       const propertyId = charge.property?.id || 'sem-imovel';
       const propertyName = charge.property?.name || 'Sem Imóvel';
       

@@ -14,7 +14,8 @@ import {
   ArrowUp, 
   ArrowDown,
   Check,
-  Loader2
+  Loader2,
+  Calculator
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatBRL } from "@/lib/format";
@@ -29,6 +30,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { DebitoReservaCalculator } from "@/components/DebitoReservaCalculator";
 
 interface ChargeItem {
   id: string;
@@ -64,6 +66,8 @@ export function ReserveDebitsTable() {
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<GroupedDebit | null>(null);
   const [newCommission, setNewCommission] = useState("");
+  const [calculatorOpen, setCalculatorOpen] = useState(false);
+  const [calculatorGroup, setCalculatorGroup] = useState<GroupedDebit | null>(null);
 
   // Fetch reserve debits
   const { data: charges, isLoading } = useQuery({
@@ -246,6 +250,11 @@ export function ReserveDebitsTable() {
     setConfirmDialogOpen(true);
   };
 
+  const handleOpenCalculator = (group: GroupedDebit) => {
+    setCalculatorGroup(group);
+    setCalculatorOpen(true);
+  };
+
   const handleConfirmDebit = () => {
     if (!selectedGroup) return;
     
@@ -254,6 +263,12 @@ export function ReserveDebitsTable() {
       chargeIds: selectedGroup.charge_ids, 
       newCommissionPercent 
     });
+  };
+
+  const handleCalculatorDebitConfirmed = () => {
+    queryClient.invalidateQueries({ queryKey: ["reserve-debits-list"] });
+    setCalculatorOpen(false);
+    setCalculatorGroup(null);
   };
 
   const renderSortableHeader = (label: string, field: SortField, className?: string) => {
@@ -339,9 +354,18 @@ export function ReserveDebitsTable() {
           </div>
         </td>
 
-        {/* Ação */}
-        <td className="p-0 w-[130px]">
-          <div className="flex justify-center px-2 py-2">
+        {/* Ações */}
+        <td className="p-0 w-[180px]">
+          <div className="flex justify-center gap-1 px-2 py-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs gap-1"
+              onClick={() => handleOpenCalculator(group)}
+            >
+              <Calculator className="h-3 w-3" />
+              Calcular
+            </Button>
             <Button
               size="sm"
               variant="outline"
@@ -370,12 +394,12 @@ export function ReserveDebitsTable() {
           <table className="w-full text-sm table-fixed">
             <thead className="bg-muted text-muted-foreground">
               <tr className="h-10">
-                {renderSortableHeader("Imóvel", "property", "text-left w-[220px]")}
-                {renderSortableHeader("Check-in", "reserve_debit_date", "text-center w-[110px]")}
-                {renderSortableHeader("Débito", "total_debit_cents", "text-right w-[120px]")}
-                {renderSortableHeader("Nova Comissão", "new_commission_percent", "text-center w-[120px]")}
-                <th className="text-center px-2 py-2 font-medium w-[80px]">Qtd</th>
-                <th className="text-center px-2 py-2 font-medium w-[130px]">Ação</th>
+            {renderSortableHeader("Imóvel", "property", "text-left w-[220px]")}
+            {renderSortableHeader("Check-in", "reserve_debit_date", "text-center w-[110px]")}
+            {renderSortableHeader("Débito", "total_debit_cents", "text-right w-[120px]")}
+            {renderSortableHeader("Nova Comissão", "new_commission_percent", "text-center w-[120px]")}
+            <th className="text-center px-2 py-2 font-medium w-[80px]">Qtd</th>
+            <th className="text-center px-2 py-2 font-medium w-[180px]">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -510,6 +534,18 @@ export function ReserveDebitsTable() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Calculator Dialog */}
+      {calculatorGroup && (
+        <DebitoReservaCalculator
+          open={calculatorOpen}
+          onOpenChange={setCalculatorOpen}
+          propertyName={calculatorGroup.properties.join(", ") || "Sem imóvel"}
+          totalDebtCents={calculatorGroup.total_debit_cents}
+          chargeIds={calculatorGroup.charge_ids}
+          onDebitConfirmed={handleCalculatorDebitConfirmed}
+        />
+      )}
     </>
   );
 }
