@@ -2,14 +2,13 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, DollarSign, Calendar, Search, Pencil, ChevronDown, ChevronRight, Building2, Trash2, Calculator, CreditCard } from "lucide-react";
+import { ArrowLeft, DollarSign, Search, Trash2, Calculator, CreditCard, Building2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -17,6 +16,7 @@ import { CHARGE_CATEGORIES } from "@/constants/chargeCategories";
 import { EditChargeDialog } from "@/components/EditChargeDialog";
 import { DebitoReservaCalculator } from "@/components/DebitoReservaCalculator";
 import { ReserveDebitsTable } from "@/components/ReserveDebitsTable";
+import { OpenChargesTable } from "@/components/OpenChargesTable";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -72,7 +72,7 @@ const GerenciarCobrancas = () => {
   const [propertyGroups, setPropertyGroups] = useState<PropertyGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [expandedProperties, setExpandedProperties] = useState<Set<string>>(new Set());
+  
   const [editingCharge, setEditingCharge] = useState<Charge | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedCharges, setSelectedCharges] = useState<Set<string>>(new Set());
@@ -281,15 +281,6 @@ const GerenciarCobrancas = () => {
     setPropertyGroups(sortedGroups);
   };
 
-  const toggleProperty = (propertyId: string) => {
-    const newExpanded = new Set(expandedProperties);
-    if (newExpanded.has(propertyId)) {
-      newExpanded.delete(propertyId);
-    } else {
-      newExpanded.add(propertyId);
-    }
-    setExpandedProperties(newExpanded);
-  };
 
   const handleEdit = (charge: Charge) => {
     setEditingCharge(charge);
@@ -459,186 +450,14 @@ const GerenciarCobrancas = () => {
               </div>
             </div>
 
-            {/* Summary Cards */}
-            {propertyGroups.length > 0 && (
-              <div className="space-y-4">
-                {/* Overall Total */}
-                <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
-                  <CardContent className="py-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground font-medium">Total a Receber (já com aporte deduzido)</p>
-                        <p className="text-3xl font-bold text-primary">
-                          {formatCurrency(propertyGroups.reduce((acc, g) => acc + g.totalDueCents, 0), 'BRL')}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm text-muted-foreground">{propertyGroups.reduce((acc, g) => acc + g.charges.length, 0)} cobranças</p>
-                        <p className="text-sm text-muted-foreground">{propertyGroups.length} imóveis</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+            {/* Inline Property Table */}
+            <OpenChargesTable
+              propertyGroups={propertyGroups}
+              selectedCharges={selectedCharges}
+              onToggleChargeSelection={toggleChargeSelection}
+              onEditCharge={handleEdit}
+            />
 
-                {/* Per Property Summary */}
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                  {propertyGroups.map((group) => (
-                    <div
-                      key={group.id}
-                      className={`p-3 rounded-lg border text-sm cursor-pointer hover:bg-muted/50 transition-colors ${
-                        group.overdueCount > 0 ? 'border-red-300 bg-red-50/50' : 'bg-card'
-                      }`}
-                      onClick={() => {
-                        if (!expandedProperties.has(group.id)) {
-                          toggleProperty(group.id);
-                        }
-                        document.getElementById(`property-${group.id}`)?.scrollIntoView({ behavior: 'smooth' });
-                      }}
-                    >
-                      <p className="font-medium truncate text-xs">{group.name}</p>
-                      <p className="font-bold text-primary">{formatCurrency(group.totalDueCents, 'BRL')}</p>
-                      <p className="text-xs text-muted-foreground">{group.charges.length} cobrança{group.charges.length > 1 ? 's' : ''}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Property Groups */}
-            {propertyGroups.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <Building2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground">Nenhuma cobrança em aberto encontrada.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-3">
-                {propertyGroups.map((group) => (
-                  <Collapsible
-                    key={group.id}
-                    open={expandedProperties.has(group.id)}
-                    onOpenChange={() => toggleProperty(group.id)}
-                  >
-                    <Card id={`property-${group.id}`} className={`transition-all ${group.overdueCount > 0 ? 'border-red-300 bg-red-50/50' : ''}`}>
-                      <CollapsibleTrigger asChild>
-                        <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
-                          <div className="flex items-center gap-4">
-                            {/* Property Photo */}
-                            <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-                              {group.cover_photo_url ? (
-                                <img 
-                                  src={group.cover_photo_url} 
-                                  alt={group.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center">
-                                  <Building2 className="h-6 w-6 text-muted-foreground" />
-                                </div>
-                              )}
-                            </div>
-                            
-                            {/* Property Info */}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <CardTitle className="text-lg truncate">{group.name}</CardTitle>
-                                {expandedProperties.has(group.id) ? (
-                                  <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                                ) : (
-                                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                                )}
-                              </div>
-                              <CardDescription className="truncate">{group.ownerName}</CardDescription>
-                              
-                              {/* Counters */}
-                              <div className="flex gap-2 mt-2">
-                                {group.openCount > 0 && (
-                                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                                    {group.openCount} em aberto
-                                  </Badge>
-                                )}
-                                {group.overdueCount > 0 && (
-                                  <Badge variant="destructive">
-                                    {group.overdueCount} vencida{group.overdueCount > 1 ? 's' : ''}
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </CardHeader>
-                      </CollapsibleTrigger>
-                      
-                      <CollapsibleContent>
-                        <CardContent className="pt-0">
-                          <div className="space-y-2 border-t pt-4">
-                            {group.charges.map((charge) => (
-                              <div
-                                key={charge.id}
-                                className={`flex items-center justify-between p-3 rounded-lg hover:bg-muted cursor-pointer transition-colors ${
-                                  selectedCharges.has(charge.id) ? 'bg-primary/10 border border-primary/30' : 'bg-muted/50'
-                                }`}
-                              >
-                                <div className="flex items-center gap-3 flex-1 min-w-0">
-                                  <Checkbox
-                                    checked={selectedCharges.has(charge.id)}
-                                    onCheckedChange={() => toggleChargeSelection(charge.id)}
-                                    onClick={(e) => e.stopPropagation()}
-                                  />
-                                  <div 
-                                    className="flex-1 min-w-0"
-                                    onClick={() => navigate(`/cobranca/${charge.id}`)}
-                                  >
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <span className="font-medium truncate">{charge.title}</span>
-                                      {getStatusBadge(charge.status)}
-                                    </div>
-                                    {charge.category && (
-                                      <span className="text-xs text-muted-foreground">
-                                        {CHARGE_CATEGORIES[charge.category as keyof typeof CHARGE_CATEGORIES]}
-                                      </span>
-                                    )}
-                                    {charge.due_date && (
-                                      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                                        <Calendar className="h-3 w-3" />
-                                        <span>Venc: {format(new Date(charge.due_date), "dd/MM/yyyy", { locale: ptBR })}</span>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                                
-                                <div className="flex items-center gap-3">
-                                  <div className="text-right">
-                                    <div className="font-bold">
-                                      {formatCurrency(charge.amount_cents - (charge.management_contribution_cents || 0), charge.currency)}
-                                    </div>
-                                    {charge.management_contribution_cents > 0 && (
-                                      <div className="text-xs text-green-600">
-                                        Aporte: {formatCurrency(charge.management_contribution_cents, charge.currency)}
-                                      </div>
-                                    )}
-                                  </div>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleEdit(charge);
-                                    }}
-                                  >
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </CardContent>
-                      </CollapsibleContent>
-                    </Card>
-                  </Collapsible>
-                ))}
-              </div>
-            )}
           </TabsContent>
 
           {/* Tab: Débito em Reserva */}
