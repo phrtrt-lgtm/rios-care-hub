@@ -44,3 +44,9 @@ verify_jwt = false
 
 [functions.summarize-inspection]
 verify_jwt = true
+
+[functions.daily-summary]
+verify_jwt = true
+
+[functions.daily-summary-cron]
+verify_jwt = false

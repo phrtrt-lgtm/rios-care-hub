@@ -55,6 +55,7 @@ import AdminChamadosKanban from "./pages/AdminChamadosKanban";
 import AdminManutencoesLista from "./pages/AdminManutencoesLista";
 import HistoricoComunicacao from "./pages/HistoricoComunicacao";
 import ResumoPropriedades from "./pages/ResumoPropriedades";
+import ResumoDiario from "./pages/ResumoDiario";
 
 const queryClient = new QueryClient();
 
@@ -399,6 +400,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['owner', 'agent', 'admin', 'maintenance']}>
                   <ResumoPropriedades />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/resumo-diario"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'agent', 'admin', 'maintenance']}>
+                  <ResumoDiario />
                 </ProtectedRoute>
               }
             />
