@@ -93,6 +93,10 @@ export default function Painel() {
                 </>
               )}
               
+              {(profile?.role === "admin" || profile?.role === "agent" || profile?.role === "maintenance") && (
+                <ResponseTemplatesPanel />
+              )}
+              
               {(profile?.role === "admin" || profile?.role === "maintenance") && (
                 <Button
                   variant="ghost"
@@ -238,12 +242,6 @@ export default function Painel() {
           </div>
         )}
 
-        {/* Response Templates Panel */}
-        {(profile?.role === "admin" || profile?.role === "maintenance" || profile?.role === "agent") && (
-          <div className="mb-6">
-            <ResponseTemplatesPanel />
-          </div>
-        )}
 
         {/* Ações de Criar */}
         {(profile?.role === "admin" || profile?.role === "maintenance" || profile?.role === "agent") && (

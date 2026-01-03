@@ -3,8 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,10 +44,11 @@ const CATEGORIES = [
 export function ResponseTemplatesPanel() {
   const { profile } = useAuth();
   const [templates, setTemplates] = useState<ResponseTemplate[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [mainDialogOpen, setMainDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState<ResponseTemplate | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<ResponseTemplate | null>(null);
@@ -63,12 +63,13 @@ export function ResponseTemplatesPanel() {
   const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance';
 
   useEffect(() => {
-    if (isTeamMember) {
+    if (isTeamMember && mainDialogOpen) {
       fetchTemplates();
     }
-  }, [isTeamMember]);
+  }, [isTeamMember, mainDialogOpen]);
 
   const fetchTemplates = async () => {
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from("response_templates")
@@ -100,12 +101,12 @@ export function ResponseTemplatesPanel() {
     setFormContent(template.content);
     setFormCategory(template.category);
     setFormShortcut(template.shortcut || "");
-    setDialogOpen(true);
+    setEditDialogOpen(true);
   };
 
   const openNewDialog = () => {
     resetForm();
-    setDialogOpen(true);
+    setEditDialogOpen(true);
   };
 
   const handleSave = async () => {
@@ -146,7 +147,7 @@ export function ResponseTemplatesPanel() {
         toast.success("Template criado!");
       }
 
-      setDialogOpen(false);
+      setEditDialogOpen(false);
       resetForm();
       fetchTemplates();
     } catch (error: any) {
@@ -203,182 +204,193 @@ export function ResponseTemplatesPanel() {
   if (!isTeamMember) return null;
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <CardTitle className="flex items-center gap-2 text-lg">
+    <>
+      <Dialog open={mainDialogOpen} onOpenChange={setMainDialogOpen}>
+        <DialogTrigger asChild>
+          <Button variant="ghost" size="icon" title="Templates de Resposta">
             <FileText className="h-5 w-5" />
-            Templates de Resposta
-          </CardTitle>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Templates de Resposta
+            </DialogTitle>
+            <DialogDescription>
+              Gerencie templates de texto para respostas rápidas
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-y-auto space-y-4">
+            {/* Filters and Add button */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Buscar templates..."
+                  className="pl-9"
+                />
+              </div>
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="w-full sm:w-40">
+                  <SelectValue placeholder="Categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  {CATEGORIES.map(cat => (
+                    <SelectItem key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Button size="sm" onClick={openNewDialog}>
                 <Plus className="h-4 w-4 mr-1" />
-                Novo Template
+                Novo
               </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle>
-                  {editingTemplate ? "Editar Template" : "Novo Template"}
-                </DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Label>Título</Label>
-                  <Input
-                    value={formTitle}
-                    onChange={(e) => setFormTitle(e.target.value)}
-                    placeholder="Ex: Boas-vindas ao proprietário"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label>Categoria</Label>
-                    <Select value={formCategory} onValueChange={setFormCategory}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CATEGORIES.map(cat => (
-                          <SelectItem key={cat.value} value={cat.value}>
-                            {cat.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Atalho (opcional)</Label>
-                    <Input
-                      value={formShortcut}
-                      onChange={(e) => setFormShortcut(e.target.value)}
-                      placeholder="Ex: /boasvindas"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Conteúdo</Label>
-                  <Textarea
-                    value={formContent}
-                    onChange={(e) => setFormContent(e.target.value)}
-                    placeholder="Digite o texto do template..."
-                    rows={6}
-                  />
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                    Cancelar
-                  </Button>
-                  <Button onClick={handleSave} disabled={saving}>
-                    {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
-                    {editingTemplate ? "Salvar" : "Criar"}
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar templates..."
-              className="pl-9"
-            />
-          </div>
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-full sm:w-40">
-              <SelectValue placeholder="Categoria" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas</SelectItem>
-              {CATEGORIES.map(cat => (
-                <SelectItem key={cat.value} value={cat.value}>
-                  {cat.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+            </div>
 
-        {/* Templates list */}
-        {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : filteredTemplates.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p>Nenhum template encontrado</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {filteredTemplates.map((template) => (
-              <div
-                key={template.id}
-                className="p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-medium text-sm truncate">{template.title}</h4>
-                      <Badge variant="outline" className="text-[10px]">
-                        {CATEGORIES.find(c => c.value === template.category)?.label || template.category}
-                      </Badge>
-                      {template.shortcut && (
-                        <code className="text-[10px] bg-muted px-1 rounded">
-                          {template.shortcut}
-                        </code>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground line-clamp-2">
-                      {template.content}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => copyToClipboard(template.content, template.id)}
-                      title="Copiar"
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => openEditDialog(template)}
-                      title="Editar"
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive"
-                      onClick={() => {
-                        setTemplateToDelete(template);
-                        setDeleteDialogOpen(true);
-                      }}
-                      title="Remover"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
+            {/* Templates list */}
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
-            ))}
+            ) : filteredTemplates.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p>Nenhum template encontrado</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredTemplates.map((template) => (
+                  <div
+                    key={template.id}
+                    className="p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <h4 className="font-medium text-sm truncate">{template.title}</h4>
+                          <Badge variant="outline" className="text-[10px]">
+                            {CATEGORIES.find(c => c.value === template.category)?.label || template.category}
+                          </Badge>
+                          {template.shortcut && (
+                            <code className="text-[10px] bg-muted px-1 rounded">
+                              {template.shortcut}
+                            </code>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                          {template.content}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => copyToClipboard(template.content, template.id)}
+                          title="Copiar"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => openEditDialog(template)}
+                          title="Editar"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          onClick={() => {
+                            setTemplateToDelete(template);
+                            setDeleteDialogOpen(true);
+                          }}
+                          title="Remover"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        )}
-      </CardContent>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit/Create Template Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {editingTemplate ? "Editar Template" : "Novo Template"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label>Título</Label>
+              <Input
+                value={formTitle}
+                onChange={(e) => setFormTitle(e.target.value)}
+                placeholder="Ex: Boas-vindas ao proprietário"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Categoria</Label>
+                <Select value={formCategory} onValueChange={setFormCategory}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CATEGORIES.map(cat => (
+                      <SelectItem key={cat.value} value={cat.value}>
+                        {cat.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Atalho (opcional)</Label>
+                <Input
+                  value={formShortcut}
+                  onChange={(e) => setFormShortcut(e.target.value)}
+                  placeholder="Ex: /boasvindas"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Conteúdo</Label>
+              <Textarea
+                value={formContent}
+                onChange={(e) => setFormContent(e.target.value)}
+                placeholder="Digite o texto do template..."
+                rows={6}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSave} disabled={saving}>
+                {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+                {editingTemplate ? "Salvar" : "Criar"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete confirmation */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -397,6 +409,6 @@ export function ResponseTemplatesPanel() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </Card>
+    </>
   );
 }
