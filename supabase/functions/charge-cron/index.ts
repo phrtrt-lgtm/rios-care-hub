@@ -248,11 +248,11 @@ const handler = async (req: Request): Promise<Response> => {
         const commission = charges[0].reserve_commission_percent || 0;
         const extraPercent = charges[0].reserve_extra_commission_percent || 0;
 
-        // Create team notification
+        // Create team notification (including maintenance team)
         const { data: teamMembers } = await supabaseClient
           .from("profiles")
           .select("id")
-          .in("role", ["admin", "agent"]);
+          .in("role", ["admin", "agent", "maintenance"]);
 
         if (teamMembers) {
           for (const member of teamMembers) {
