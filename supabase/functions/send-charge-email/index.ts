@@ -9,9 +9,16 @@ const corsHeaders = {
 };
 
 interface NotifyRequest {
-  type: "charge_created" | "charge_reminder" | "charge_overdue" | "charge_debit_notice" | "charge_paid";
+  type: "charge_created" | "charge_reminder" | "charge_overdue" | "charge_debit_notice" | "charge_paid" | "reserve_checkin_reminder";
   chargeId: string;
   diasRestantes?: string;
+  // For reserve_checkin_reminder
+  propertyName?: string;
+  chargeTitles?: string;
+  commission?: number;
+  extraPercent?: number;
+  checkinDate?: string;
+  adminEmails?: string[];
 }
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
@@ -27,8 +34,51 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { type, chargeId, diasRestantes }: NotifyRequest = await req.json();
+    const body: NotifyRequest = await req.json();
+    const { type, chargeId, diasRestantes, propertyName, chargeTitles, commission, extraPercent, checkinDate, adminEmails } = body;
     console.log("Email notification request:", { type, chargeId, diasRestantes });
+
+    // Handle reserve_checkin_reminder separately (for team only)
+    if (type === "reserve_checkin_reminder" && adminEmails && adminEmails.length > 0) {
+      const formattedCheckin = checkinDate 
+        ? new Intl.DateTimeFormat("pt-BR").format(new Date(checkinDate))
+        : "amanhã";
+
+      const emailHtml = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #e65100;">⚠️ Lembrete: Check-in Amanhã - Alterar Comissão</h2>
+          <p>Olá equipe,</p>
+          <p>Amanhã (<strong>${formattedCheckin}</strong>) tem check-in com débito em reserva agendado:</p>
+          <div style="background: #fff3e0; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 5px 0;"><strong>Imóvel:</strong> ${propertyName}</p>
+            <p style="margin: 5px 0;"><strong>Cobranças:</strong> ${chargeTitles}</p>
+            <p style="margin: 5px 0;"><strong>Comissão a configurar:</strong> <span style="font-size: 18px; color: #e65100;">${commission?.toFixed(0)}%</span></p>
+            <p style="margin: 5px 0;"><strong>Extra para débito:</strong> +${extraPercent?.toFixed(0)}%</p>
+          </div>
+          <p><strong>Ação necessária:</strong> Entrar no Airbnb e alterar a comissão dessa reserva para <strong>${commission?.toFixed(0)}%</strong>.</p>
+          <p style="color: #666; font-size: 12px;">Este é um lembrete automático do sistema RIOS.</p>
+        </div>
+      `;
+
+      const { error: emailError } = await resend.emails.send({
+        from: "RIOS <sistema@rioshospedagens.com.br>",
+        reply_to: "rioslagoon@gmail.com",
+        to: adminEmails,
+        subject: `⚠️ Check-in Amanhã: ${propertyName} - Alterar comissão para ${commission?.toFixed(0)}%`,
+        html: emailHtml,
+      });
+
+      if (emailError) {
+        console.error("Reserve checkin reminder email error:", emailError);
+        throw emailError;
+      }
+
+      console.log("Reserve checkin reminder sent to:", adminEmails);
+      return new Response(
+        JSON.stringify({ success: true }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Fetch charge data
     const { data: charge, error: chargeError } = await supabaseClient

@@ -9,10 +9,11 @@ const corsHeaders = {
 
 interface DebitReserveRequest {
   chargeIds: string[];
-  reserveDate?: string;
+  reserveDate: string; // Required now - check-in date
   ownerValueCents: number;
   baseCommissionPercent: number;
   extraCommissionPercent: number;
+  extraCommissionPercentExact?: number;
   totalCommissionPercent: number;
   ownerReceivesCents: number;
 }
@@ -33,7 +34,8 @@ const handler = async (req: Request): Promise<Response> => {
       reserveDate, 
       ownerValueCents, 
       baseCommissionPercent, 
-      extraCommissionPercent, 
+      extraCommissionPercent,
+      extraCommissionPercentExact,
       totalCommissionPercent, 
       ownerReceivesCents 
     } = body;
@@ -41,6 +43,13 @@ const handler = async (req: Request): Promise<Response> => {
     if (!chargeIds || chargeIds.length === 0) {
       return new Response(
         JSON.stringify({ error: 'chargeIds is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!reserveDate) {
+      return new Response(
+        JSON.stringify({ error: 'reserveDate (check-in date) is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -113,14 +122,13 @@ const handler = async (req: Request): Promise<Response> => {
     const debitedAt = new Date().toISOString();
     const chargeIdsToProcess = chargesToProcess.map(c => c.id);
 
-    // Update all charges with debited_at and reserve details
+    // Update all charges with reserve details - status aguardando_reserva (standby)
     const { error: updateError } = await supabase
       .from('charges')
       .update({ 
-        debited_at: debitedAt,
-        status: 'debited',
+        status: 'aguardando_reserva',
         updated_at: debitedAt,
-        reserve_debit_date: reserveDate || null,
+        reserve_debit_date: reserveDate,
         reserve_commission_percent: totalCommissionPercent,
         reserve_base_commission_percent: baseCommissionPercent,
         reserve_extra_commission_percent: extraCommissionPercent,
@@ -137,7 +145,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`${chargeIdsToProcess.length} charges marked as debited with reserve details`);
+    console.log(`${chargeIdsToProcess.length} charges set to aguardando_reserva with check-in date: ${reserveDate}`);
 
     // Calculate total debt amount
     const totalDebtCents = chargesToProcess.reduce((sum, c) => sum + c.amount_cents, 0);
@@ -189,13 +197,15 @@ const handler = async (req: Request): Promise<Response> => {
     // Build charge titles for notification
     const chargeTitles = chargesToProcess.map(c => c.title).join(', ');
 
+    const formattedCheckIn = new Date(reserveDate).toLocaleDateString('pt-BR');
+    
     // Create notification in the system
     const { error: notifError } = await supabase
       .from('notifications')
       .insert({
         owner_id: ownerId,
-        title: 'Débito em Reserva Processado',
-        message: `${chargesToProcess.length} cobrança(s) processada(s) via débito em reserva: ${chargeTitles}. Comissão ajustada para ${totalCommissionPercent.toFixed(2).replace('.', ',')}%`,
+        title: 'Débito em Reserva Agendado',
+        message: `${chargesToProcess.length} cobrança(s) agendada(s) para débito na reserva de ${formattedCheckIn}. Comissão: ${totalCommissionPercent.toFixed(0)}% (${extraCommissionPercent}% extra)`,
         type: 'charge',
         reference_id: chargeIdsToProcess[0],
         reference_url: `/minhas-cobrancas`,
@@ -231,19 +241,16 @@ const handler = async (req: Request): Promise<Response> => {
             .replace(/\{\{debt_amount\}\}/g, formatCurrency(totalDebtCents))
             .replace(/\{\{owner_receives\}\}/g, formatCurrency(ownerReceivesCents))
             .replace(/\{\{base_commission\}\}/g, baseCommissionPercent.toFixed(0))
-            .replace(/\{\{extra_commission\}\}/g, extraCommissionPercent.toFixed(2).replace('.', ','))
-            .replace(/\{\{total_commission\}\}/g, totalCommissionPercent.toFixed(2).replace('.', ','))
+            .replace(/\{\{extra_commission\}\}/g, extraCommissionPercent.toFixed(0))
+            .replace(/\{\{extra_commission_exact\}\}/g, (extraCommissionPercentExact ?? extraCommissionPercent).toFixed(2).replace('.', ','))
+            .replace(/\{\{total_commission\}\}/g, totalCommissionPercent.toFixed(0))
+            .replace(/\{\{checkin_date\}\}/g, formattedCheckIn)
             .replace(/\{\{portal_url\}\}/g, `${supabaseUrl.replace('.supabase.co', '')}/minhas-cobrancas`);
 
-          // Handle conditional reserve_date
-          if (reserveDate) {
-            const formattedDate = new Date(reserveDate).toLocaleDateString('pt-BR');
-            bodyHtml = bodyHtml
-              .replace(/\{\{#if reserve_date\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1')
-              .replace(/\{\{reserve_date\}\}/g, formattedDate);
-          } else {
-            bodyHtml = bodyHtml.replace(/\{\{#if reserve_date\}\}[\s\S]*?\{\{\/if\}\}/g, '');
-          }
+          // Replace reserve_date with checkin_date
+          bodyHtml = bodyHtml
+            .replace(/\{\{#if reserve_date\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1')
+            .replace(/\{\{reserve_date\}\}/g, formattedCheckIn);
 
           const resend = new Resend(resendApiKey);
           await resend.emails.send({

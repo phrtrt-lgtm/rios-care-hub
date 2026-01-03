@@ -83,8 +83,8 @@ export const DebitoReservaCalculator = ({
     ? (totalDebt / ownerValueNum) * 100 
     : 0;
 
-  // Arredondar para cima (Airbnb só aceita % inteira)
-  const extraPercentRounded = Math.ceil(extraPercentNeededExact);
+  // Arredondar para o mais próximo (Airbnb só aceita % inteira)
+  const extraPercentRounded = Math.round(extraPercentNeededExact);
 
   // Total de comissão a configurar na reserva (base + extra arredondado)
   const totalCommissionToSet = baseCommissionNum + extraPercentRounded;
@@ -189,7 +189,7 @@ export const DebitoReservaCalculator = ({
   };
 
   const hasCharges = (chargeIds && chargeIds.length > 0) || chargeId;
-  const canConfirm = hasCharges && ownerValueNum > 0 && baseCommissionNum > 0;
+  const canConfirm = hasCharges && ownerValueNum > 0 && baseCommissionNum > 0 && reserveDate;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -254,10 +254,10 @@ export const DebitoReservaCalculator = ({
             </p>
           </div>
 
-          {/* Data da reserva (opcional) */}
+          {/* Data do check-in (obrigatória para lembrete) */}
           {hasCharges && (
             <div className="space-y-2">
-              <Label>Data da Reserva (opcional)</Label>
+              <Label>Data do Check-in do Hóspede *</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -281,6 +281,9 @@ export const DebitoReservaCalculator = ({
                   />
                 </PopoverContent>
               </Popover>
+              <p className="text-xs text-muted-foreground">
+                Você receberá um lembrete 1 dia antes para alterar a comissão
+              </p>
             </div>
           )}
 

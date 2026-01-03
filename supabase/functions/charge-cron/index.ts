@@ -55,6 +55,7 @@ const handler = async (req: Request): Promise<Response> => {
       reminders_today: 0,
       overdue: 0,
       debit_notices: 0,
+      reserve_checkin_reminders: 0,
     };
 
     // Lembretes 48h
@@ -196,6 +197,94 @@ const handler = async (req: Request): Promise<Response> => {
         });
 
         results.debit_notices++;
+      }
+    }
+
+    // LEMBRETE DÉBITO RESERVA: 1 dia antes do check-in
+    // Buscar cobranças em aguardando_reserva com check-in amanhã
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().split("T")[0];
+
+    const { data: reserveReminders } = await supabaseClient
+      .from("charges")
+      .select(`
+        id, 
+        title, 
+        reserve_debit_date,
+        reserve_commission_percent,
+        reserve_extra_commission_percent,
+        property_id,
+        owner_id
+      `)
+      .eq("status", "aguardando_reserva")
+      .eq("reserve_debit_date", tomorrowStr);
+
+    if (reserveReminders && reserveReminders.length > 0) {
+      // Get admin emails for notification
+      const adminEmailsConfig = Deno.env.get("ADMIN_NOTIFY_EMAILS");
+      const adminEmails = adminEmailsConfig ? adminEmailsConfig.split(",").map(e => e.trim()) : [];
+
+      // Group by property
+      const byProperty: Record<string, typeof reserveReminders> = {};
+      for (const charge of reserveReminders) {
+        const key = charge.property_id || 'no-property';
+        if (!byProperty[key]) byProperty[key] = [];
+        byProperty[key].push(charge);
+      }
+
+      for (const [propertyId, charges] of Object.entries(byProperty)) {
+        let propertyName = "Imóvel";
+        if (propertyId !== 'no-property') {
+          const { data: property } = await supabaseClient
+            .from("properties")
+            .select("name")
+            .eq("id", propertyId)
+            .single();
+          if (property) propertyName = property.name;
+        }
+
+        const chargeTitles = charges.map(c => c.title).join(", ");
+        const commission = charges[0].reserve_commission_percent || 0;
+        const extraPercent = charges[0].reserve_extra_commission_percent || 0;
+
+        // Create team notification
+        const { data: teamMembers } = await supabaseClient
+          .from("profiles")
+          .select("id")
+          .in("role", ["admin", "agent"]);
+
+        if (teamMembers) {
+          for (const member of teamMembers) {
+            await supabaseClient
+              .from("notifications")
+              .insert({
+                owner_id: member.id,
+                title: "⚠️ Check-in Amanhã - Alterar Comissão",
+                message: `${propertyName}: Lembrar de alterar comissão para ${commission.toFixed(0)}% (+${extraPercent.toFixed(0)}% extra). Cobranças: ${chargeTitles}`,
+                type: "charge",
+                reference_url: "/gerenciar-cobrancas",
+              });
+          }
+        }
+
+        // Send email to admins
+        if (adminEmails.length > 0) {
+          await supabaseClient.functions.invoke("send-charge-email", {
+            body: {
+              type: "reserve_checkin_reminder",
+              chargeId: charges[0].id,
+              propertyName,
+              chargeTitles,
+              commission,
+              extraPercent,
+              checkinDate: tomorrowStr,
+              adminEmails,
+            },
+          });
+        }
+
+        results.reserve_checkin_reminders += charges.length;
       }
     }
 
