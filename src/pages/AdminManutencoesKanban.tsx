@@ -13,13 +13,15 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, Search, Phone, Calendar, Clock, Building, User, ChevronRight, ChevronLeft, Wrench, Plus, Receipt, AlertCircle, MessageSquare } from "lucide-react";
+import { ArrowLeft, Search, Phone, Calendar, Clock, Building, User, ChevronRight, ChevronLeft, Wrench, Plus, Receipt, AlertCircle, MessageSquare, DollarSign } from "lucide-react";
 import { CHARGE_CATEGORY_OPTIONS } from "@/constants/chargeCategories";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
+import PendingReserveDebitsBoard from "@/components/PendingReserveDebitsBoard";
 
 type TicketStatus = "novo" | "em_analise" | "aguardando_info" | "em_execucao" | "concluido" | "cancelado";
 
@@ -82,6 +84,7 @@ const AdminManutencoesKanban = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState("manutencoes");
   const [search, setSearch] = useState("");
   const [responsibleFilter, setResponsibleFilter] = useState<"all" | "owner" | "pm" | "guest">("all");
   const [selectedTicket, setSelectedTicket] = useState<MaintenanceTicket | null>(null);
@@ -102,6 +105,21 @@ const AdminManutencoesKanban = () => {
   });
   const [chatDialogOpen, setChatDialogOpen] = useState(false);
   const [chatTicket, setChatTicket] = useState<MaintenanceTicket | null>(null);
+
+  // Fetch pending debits count
+  const { data: pendingDebitsCount } = useQuery({
+    queryKey: ["pending-reserve-debits-count"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("charges")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "aguardando_reserva")
+        .not("reserve_debit_date", "is", null);
+
+      if (error) throw error;
+      return count || 0;
+    },
+  });
 
   // Fetch maintenance tickets
   const { data: tickets, isLoading } = useQuery({
@@ -409,234 +427,262 @@ const AdminManutencoesKanban = () => {
           </Button>
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-wrap gap-4 items-center">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por unidade, proprietário ou profissional..."
-              className="pl-10"
-            />
-          </div>
-          <Select value={responsibleFilter} onValueChange={(v: any) => setResponsibleFilter(v)}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Responsável" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="owner">Proprietário</SelectItem>
-              <SelectItem value="pm">Gestão</SelectItem>
-              <SelectItem value="guest">Hóspede</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        {/* Tabs for different sections */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 max-w-md">
+            <TabsTrigger value="manutencoes" className="flex items-center gap-2">
+              <Wrench className="h-4 w-4" />
+              Manutenções
+            </TabsTrigger>
+            <TabsTrigger value="debitos" className="flex items-center gap-2 relative">
+              <DollarSign className="h-4 w-4" />
+              Débitos em Reserva
+              {pendingDebitsCount && pendingDebitsCount > 0 && (
+                <Badge variant="destructive" className="ml-1 h-5 min-w-[20px] text-xs">
+                  {pendingDebitsCount}
+                </Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Kanban Board */}
-        {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="bg-muted/50 rounded-lg p-4 animate-pulse">
-                <div className="h-6 bg-muted rounded w-1/2 mb-4" />
-                <div className="space-y-3">
-                  <div className="h-24 bg-muted rounded" />
-                  <div className="h-24 bg-muted rounded" />
-                </div>
+          {/* Manutenções Tab */}
+          <TabsContent value="manutencoes" className="mt-6 space-y-6">
+            {/* Filters */}
+            <div className="flex flex-wrap gap-4 items-center">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Buscar por unidade, proprietário ou profissional..."
+                  className="pl-10"
+                />
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {columns.map((column) => (
-              <div
-                key={column.id}
-                className={`rounded-lg border-2 ${column.color} p-3`}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold">{column.label}</h3>
-                  <Badge variant="secondary">{column.tickets.length}</Badge>
-                </div>
+              <Select value={responsibleFilter} onValueChange={(v: any) => setResponsibleFilter(v)}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Responsável" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="owner">Proprietário</SelectItem>
+                  <SelectItem value="pm">Gestão</SelectItem>
+                  <SelectItem value="guest">Hóspede</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-                <div className="space-y-3 max-h-[calc(100vh-280px)] overflow-y-auto">
-                  {column.tickets.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      Nenhuma manutenção
-                    </p>
-                  ) : (
-                    column.tickets.map((ticket) => (
-                      <Card
-                        key={ticket.id}
-                        className="cursor-pointer hover:shadow-md transition-shadow"
-                        onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
-                      >
-                        <CardContent className="p-3 space-y-2">
-                          {/* Property */}
-                          <div className="flex items-center gap-2">
-                            {ticket.property?.cover_photo_url ? (
-                              <img
-                                src={ticket.property.cover_photo_url}
-                                alt=""
-                                className="w-8 h-8 rounded object-cover"
-                              />
-                            ) : (
-                              <div className="w-8 h-8 rounded bg-muted flex items-center justify-center">
-                                <Building className="h-4 w-4 text-muted-foreground" />
-                              </div>
-                            )}
-                            <span className="text-sm font-medium truncate flex-1">
-                              {ticket.property?.name || "Sem unidade"}
-                            </span>
-                          </div>
+            {/* Kanban Board */}
+            {isLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="bg-muted/50 rounded-lg p-4 animate-pulse">
+                    <div className="h-6 bg-muted rounded w-1/2 mb-4" />
+                    <div className="space-y-3">
+                      <div className="h-24 bg-muted rounded" />
+                      <div className="h-24 bg-muted rounded" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {columns.map((column) => (
+                  <div
+                    key={column.id}
+                    className={`rounded-lg border-2 ${column.color} p-3`}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-semibold">{column.label}</h3>
+                      <Badge variant="secondary">{column.tickets.length}</Badge>
+                    </div>
 
-                          <p className="text-sm line-clamp-2">{ticket.subject}</p>
-
-                          {/* Cost responsible badge */}
-                          <div className="flex flex-wrap gap-1">
-                            {ticket.cost_responsible === "guest" && (
-                              <Badge variant="outline" className="text-xs bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30">
-                                Hóspede
-                              </Badge>
-                            )}
-                            {ticket.cost_responsible === "pm" && (
-                              <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30">
-                                Gestão
-                              </Badge>
-                            )}
-                            {ticket.priority === "urgente" && (
-                              <Badge variant="destructive" className="text-xs">
-                                Urgente
-                              </Badge>
-                            )}
-                          </div>
-
-                          {/* Scheduled info */}
-                          {ticket.scheduled_at && (
-                            <div className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400">
-                              <Calendar className="h-3 w-3" />
-                              {format(new Date(ticket.scheduled_at), "dd/MM HH:mm", { locale: ptBR })}
-                            </div>
-                          )}
-
-                          {/* Provider info */}
-                          {ticket.service_provider && (
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <Wrench className="h-3 w-3" />
-                              <span className="truncate">{ticket.service_provider.name}</span>
-                              {ticket.service_provider.phone && (
-                                <a
-                                  href={`tel:${ticket.service_provider.phone}`}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="text-primary hover:underline"
-                                >
-                                  <Phone className="h-3 w-3" />
-                                </a>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Created date */}
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Clock className="h-3 w-3" />
-                            {formatDistanceToNow(new Date(ticket.created_at), {
-                              addSuffix: true,
-                              locale: ptBR,
-                            })}
-                          </div>
-
-                          {/* Action buttons */}
-                          <div className="flex gap-1 pt-1">
-                            {/* Chat button - always visible */}
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="text-xs h-7 px-2 relative"
-                              onClick={(e) => openChatDialog(ticket, e)}
-                              title="Mensagens"
-                            >
-                              <MessageSquare className="h-3 w-3" />
-                              {unreadCounts[ticket.id] > 0 && (
-                                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] rounded-full h-4 min-w-[16px] flex items-center justify-center px-1 font-bold">
-                                  {unreadCounts[ticket.id] > 9 ? "9+" : unreadCounts[ticket.id]}
+                    <div className="space-y-3 max-h-[calc(100vh-350px)] overflow-y-auto">
+                      {column.tickets.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          Nenhuma manutenção
+                        </p>
+                      ) : (
+                        column.tickets.map((ticket) => (
+                          <Card
+                            key={ticket.id}
+                            className="cursor-pointer hover:shadow-md transition-shadow"
+                            onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
+                          >
+                            <CardContent className="p-3 space-y-2">
+                              {/* Property */}
+                              <div className="flex items-center gap-2">
+                                {ticket.property?.cover_photo_url ? (
+                                  <img
+                                    src={ticket.property.cover_photo_url}
+                                    alt=""
+                                    className="w-8 h-8 rounded object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-8 h-8 rounded bg-muted flex items-center justify-center">
+                                    <Building className="h-4 w-4 text-muted-foreground" />
+                                  </div>
+                                )}
+                                <span className="text-sm font-medium truncate flex-1">
+                                  {ticket.property?.name || "Sem unidade"}
                                 </span>
+                              </div>
+
+                              <p className="text-sm line-clamp-2">{ticket.subject}</p>
+
+                              {/* Cost responsible badge */}
+                              <div className="flex flex-wrap gap-1">
+                                {ticket.cost_responsible === "guest" && (
+                                  <Badge variant="outline" className="text-xs bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30">
+                                    Hóspede
+                                  </Badge>
+                                )}
+                                {ticket.cost_responsible === "pm" && (
+                                  <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30">
+                                    Gestão
+                                  </Badge>
+                                )}
+                                {ticket.priority === "urgente" && (
+                                  <Badge variant="destructive" className="text-xs">
+                                    Urgente
+                                  </Badge>
+                                )}
+                              </div>
+
+                              {/* Scheduled info */}
+                              {ticket.scheduled_at && (
+                                <div className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400">
+                                  <Calendar className="h-3 w-3" />
+                                  {format(new Date(ticket.scheduled_at), "dd/MM HH:mm", { locale: ptBR })}
+                                </div>
                               )}
-                            </Button>
-                            {column.id === "pendente" && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="flex-1 text-xs h-7"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openScheduleDialog(ticket);
-                                }}
-                              >
-                                <Calendar className="h-3 w-3 mr-1" />
-                                Agendar
-                              </Button>
-                            )}
-                            {column.id === "agendado" && (
-                              <>
+
+                              {/* Provider info */}
+                              {ticket.service_provider && (
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                  <Wrench className="h-3 w-3" />
+                                  <span className="truncate">{ticket.service_provider.name}</span>
+                                  {ticket.service_provider.phone && (
+                                    <a
+                                      href={`tel:${ticket.service_provider.phone}`}
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="text-primary hover:underline"
+                                    >
+                                      <Phone className="h-3 w-3" />
+                                    </a>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Created date */}
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <Clock className="h-3 w-3" />
+                                {formatDistanceToNow(new Date(ticket.created_at), {
+                                  addSuffix: true,
+                                  locale: ptBR,
+                                })}
+                              </div>
+
+                              {/* Action buttons */}
+                              <div className="flex gap-1 pt-1">
+                                {/* Chat button - always visible */}
                                 <Button
                                   size="sm"
-                                  variant="outline"
-                                  className="flex-1 text-xs h-7"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    openScheduleDialog(ticket);
-                                  }}
+                                  variant="ghost"
+                                  className="text-xs h-7 px-2 relative"
+                                  onClick={(e) => openChatDialog(ticket, e)}
+                                  title="Mensagens"
                                 >
-                                  Editar
+                                  <MessageSquare className="h-3 w-3" />
+                                  {unreadCounts[ticket.id] > 0 && (
+                                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] rounded-full h-4 min-w-[16px] flex items-center justify-center px-1 font-bold">
+                                      {unreadCounts[ticket.id] > 9 ? "9+" : unreadCounts[ticket.id]}
+                                    </span>
+                                  )}
                                 </Button>
-                                <Button
-                                  size="sm"
-                                  className="flex-1 text-xs h-7"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    moveToExecution(ticket);
-                                  }}
-                                >
-                                  <ChevronRight className="h-3 w-3" />
-                                </Button>
-                              </>
-                            )}
-                            {column.id === "em_execucao" && (
-                              <>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="text-xs h-7"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    moveBackToScheduled(ticket);
-                                  }}
-                                  title="Voltar para agendado"
-                                >
-                                  <ChevronLeft className="h-3 w-3" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  className="flex-1 text-xs h-7 bg-green-600 hover:bg-green-700"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    openCompleteDialog(ticket);
-                                  }}
-                                >
-                                  <Receipt className="h-3 w-3 mr-1" />
-                                  Concluir
-                                </Button>
-                              </>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))
-                  )}
-                </div>
+                                {column.id === "pendente" && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="flex-1 text-xs h-7"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openScheduleDialog(ticket);
+                                    }}
+                                  >
+                                    <Calendar className="h-3 w-3 mr-1" />
+                                    Agendar
+                                  </Button>
+                                )}
+                                {column.id === "agendado" && (
+                                  <>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="flex-1 text-xs h-7"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        openScheduleDialog(ticket);
+                                      }}
+                                    >
+                                      Editar
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      className="flex-1 text-xs h-7"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        moveToExecution(ticket);
+                                      }}
+                                    >
+                                      <ChevronRight className="h-3 w-3" />
+                                    </Button>
+                                  </>
+                                )}
+                                {column.id === "em_execucao" && (
+                                  <>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="text-xs h-7"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        moveBackToScheduled(ticket);
+                                      }}
+                                      title="Voltar para agendado"
+                                    >
+                                      <ChevronLeft className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      className="flex-1 text-xs h-7 bg-green-600 hover:bg-green-700"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        openCompleteDialog(ticket);
+                                      }}
+                                    >
+                                      <Receipt className="h-3 w-3 mr-1" />
+                                      Concluir
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        )}
+            )}
+          </TabsContent>
+
+          {/* Débitos em Reserva Tab */}
+          <TabsContent value="debitos" className="mt-6">
+            <PendingReserveDebitsBoard />
+          </TabsContent>
+        </Tabs>
+
 
         {/* Schedule Dialog */}
         <Dialog open={scheduleDialogOpen} onOpenChange={setScheduleDialogOpen}>
