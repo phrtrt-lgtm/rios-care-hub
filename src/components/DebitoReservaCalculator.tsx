@@ -79,17 +79,23 @@ export const DebitoReservaCalculator = ({
   // Se o proprietário recebe X reais, e temos uma dívida de Y,
   // precisamos descontar Y do valor X do proprietário
   // Isso significa que precisamos adicionar (Y/X)*100% à nossa comissão base
-  const extraPercentNeeded = ownerValueNum > 0 
+  const extraPercentNeededExact = ownerValueNum > 0 
     ? (totalDebt / ownerValueNum) * 100 
     : 0;
 
-  // Total de comissão a configurar na reserva (base + extra)
-  const totalCommissionToSet = baseCommissionNum + extraPercentNeeded;
+  // Arredondar para cima (Airbnb só aceita % inteira)
+  const extraPercentRounded = Math.ceil(extraPercentNeededExact);
 
-  // Valor que será descontado do proprietário
+  // Total de comissão a configurar na reserva (base + extra arredondado)
+  const totalCommissionToSet = baseCommissionNum + extraPercentRounded;
+
+  // Valor que será descontado do proprietário (usando % arredondado)
   const debtCoverage = ownerValueNum > 0 
-    ? Math.min(totalDebt, (extraPercentNeeded / 100) * ownerValueNum) 
+    ? Math.min(totalDebt, (extraPercentRounded / 100) * ownerValueNum) 
     : 0;
+
+  // Valor extra que cobramos devido ao arredondamento
+  const extraFromRounding = (extraPercentRounded - extraPercentNeededExact) / 100 * ownerValueNum;
 
   // Quanto ficará para o proprietário depois do desconto
   const ownerReceivesAfter = ownerValueNum - debtCoverage;
@@ -103,7 +109,7 @@ export const DebitoReservaCalculator = ({
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(totalCommissionToSet.toFixed(2).replace(".", ","));
+      await navigator.clipboard.writeText(totalCommissionToSet.toFixed(0));
       setCopied(true);
       toast({
         title: "Copiado!",
@@ -149,7 +155,8 @@ export const DebitoReservaCalculator = ({
           reserveDate: reserveDate ? format(reserveDate, 'yyyy-MM-dd') : null,
           ownerValueCents: Math.round(ownerValueNum * 100),
           baseCommissionPercent: baseCommissionNum,
-          extraCommissionPercent: extraPercentNeeded,
+          extraCommissionPercent: extraPercentRounded,
+          extraCommissionPercentExact: extraPercentNeededExact,
           totalCommissionPercent: totalCommissionToSet,
           ownerReceivesCents: Math.round(ownerReceivesAfter * 100),
         },
@@ -288,7 +295,7 @@ export const DebitoReservaCalculator = ({
                     <p className="text-sm text-muted-foreground mb-1">Comissão a configurar na reserva</p>
                     <div className="flex items-center justify-center gap-2">
                       <p className="text-4xl font-bold text-primary">
-                        {totalCommissionToSet.toFixed(2).replace(".", ",")}%
+                        {totalCommissionToSet.toFixed(0)}%
                       </p>
                       <Button 
                         variant="outline" 
@@ -304,7 +311,7 @@ export const DebitoReservaCalculator = ({
                       </Button>
                     </div>
                     <p className="text-xs text-muted-foreground mt-2">
-                      Base {baseCommissionNum.toFixed(0)}% + {extraPercentNeeded.toFixed(2).replace(".", ",")}% extra para débito
+                      Base {baseCommissionNum.toFixed(0)}% + {extraPercentRounded}% extra (exato: {extraPercentNeededExact.toFixed(2).replace(".", ",")}%)
                     </p>
                   </div>
                 </CardContent>
@@ -322,8 +329,10 @@ export const DebitoReservaCalculator = ({
                   <CardContent className="p-3">
                     <p className="text-xs text-muted-foreground">Extra p/ Débito</p>
                     <p className="text-xl font-bold text-orange-600 dark:text-orange-400">
-                      +{extraPercentNeeded.toFixed(2).replace(".", ",")}%
+                      +{extraPercentRounded}%
                     </p>
+                    <p className="text-xs text-muted-foreground">
+                      (exato: {extraPercentNeededExact.toFixed(2).replace(".", ",")}%)</p>
                   </CardContent>
                 </Card>
               </div>
@@ -337,8 +346,14 @@ export const DebitoReservaCalculator = ({
                   </div>
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-muted-foreground">Desconto para dívida:</span>
-                    <span className="font-medium text-destructive">- {formatCurrency(debtCoverage)}</span>
+                    <span className="font-medium text-destructive">- {formatCurrency(totalDebt)}</span>
                   </div>
+                  {extraFromRounding > 0.01 && (
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Extra (arredondamento):</span>
+                      <span className="font-medium text-amber-600">- {formatCurrency(extraFromRounding)}</span>
+                    </div>
+                  )}
                   <Separator />
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-muted-foreground">Proprietário receberá:</span>
@@ -386,8 +401,7 @@ export const DebitoReservaCalculator = ({
           {/* Legenda */}
           <div className="text-xs text-muted-foreground bg-muted/30 rounded p-2">
             <strong>Como funciona:</strong> Sua comissão base é {baseCommissionNum.toFixed(0)}%. 
-            O extra ({extraPercentNeeded > 0 ? extraPercentNeeded.toFixed(2).replace(".", ",") : "0"}%) 
-            é calculado em cima do valor do proprietário para cobrir a dívida.
+            O extra é arredondado para cima ({extraPercentRounded}%) porque o Airbnb só aceita % inteira.
             {hasCharges && (
               <span className="block mt-1">
                 <strong>Ao confirmar:</strong> O proprietário receberá email e notificação com todos os detalhes do cálculo.
