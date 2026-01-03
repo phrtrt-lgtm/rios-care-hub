@@ -20,7 +20,7 @@ import { GuestChargeReminders } from "@/components/GuestChargeReminders";
 import { NotificationButton } from "@/components/NotificationButton";
 import { TeamChatWidget } from "@/components/TeamChatWidget";
 import { GlobalSearch, useGlobalSearch } from "@/components/GlobalSearch";
-import { AIAssistantWidget } from "@/components/AIAssistantWidget";
+
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { StatsCard } from "@/components/StatsCard";
 
@@ -61,9 +61,6 @@ export default function Painel() {
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 pb-20 md:pb-0">
       {/* Global Search */}
       <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
-      
-      {/* AI Assistant Widget */}
-      <AIAssistantWidget />
       
       {/* Team Chat Widget - Only for team members */}
       <TeamChatWidget />
