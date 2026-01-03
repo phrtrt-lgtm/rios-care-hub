@@ -203,8 +203,9 @@ export const TicketList = () => {
             return (
               <Card
                 key={ticket.id}
-                className="cursor-pointer transition-all hover:shadow-md hover:border-primary/20 overflow-hidden group"
+                className="cursor-pointer hover-lift hover:border-primary/20 overflow-hidden group animate-fade-in"
                 onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
+                style={{ animationDelay: `${tickets.indexOf(ticket) * 50}ms` }}
               >
                 <div className="flex gap-4 p-4">
                   {/* Left side - Property Photo and Info */}

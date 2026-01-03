@@ -51,7 +51,7 @@ export default function Painel() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 animate-fade-in">
       {/* Team Chat Widget - Only for team members */}
       <TeamChatWidget />
       {/* Header */}
@@ -293,10 +293,12 @@ export default function Painel() {
 
         {/* Stats Cards */}
         <div className="mb-8 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="border-l-4 border-l-blue-500">
+          <Card className="border-l-4 border-l-blue-500 hover-lift group">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Novos</CardTitle>
-              <Ticket className="h-4 w-4 text-blue-500" />
+              <div className="h-8 w-8 rounded-full bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Ticket className="h-4 w-4 text-blue-500" />
+              </div>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.novos}</div>
@@ -306,10 +308,12 @@ export default function Painel() {
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-red-500">
+          <Card className="border-l-4 border-l-red-500 hover-lift group">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Urgentes</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-red-500" />
+              <div className="h-8 w-8 rounded-full bg-red-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <AlertTriangle className="h-4 w-4 text-red-500" />
+              </div>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.urgentes}</div>
@@ -319,10 +323,12 @@ export default function Painel() {
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-yellow-500">
+          <Card className="border-l-4 border-l-yellow-500 hover-lift group">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Em Andamento</CardTitle>
-              <Users className="h-4 w-4 text-yellow-500" />
+              <div className="h-8 w-8 rounded-full bg-yellow-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Users className="h-4 w-4 text-yellow-500" />
+              </div>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.pendentes}</div>
@@ -332,10 +338,12 @@ export default function Painel() {
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-green-500">
+          <Card className="border-l-4 border-l-green-500 hover-lift group">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Concluídos</CardTitle>
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <div className="h-8 w-8 rounded-full bg-green-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+              </div>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.concluidos}</div>
@@ -348,99 +356,106 @@ export default function Painel() {
 
         {/* Quick Actions - Outras Ações - Admin only */}
         {profile?.role === "admin" && (
-        <div>
-          <h3 className="mb-4 text-xl font-semibold">Outras Ações</h3>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/admin/cadastrar-proprietario")}>
-              <CardHeader>
-                <CardTitle>Cadastrar Proprietário</CardTitle>
-                <CardDescription>
-                  Criar nova conta pendente de aprovação
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button variant="outline" className="w-full">
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Novo Usuário
-                </Button>
-              </CardContent>
-            </Card>
+          <div>
+            <h3 className="mb-4 text-xl font-semibold">Outras Ações</h3>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <Card className="cursor-pointer hover-lift group border-transparent hover:border-primary/20" onClick={() => navigate("/admin/cadastrar-proprietario")}>
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                      <UserPlus className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">Cadastrar Proprietário</CardTitle>
+                      <CardDescription className="text-xs">
+                        Criar nova conta pendente de aprovação
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
 
-            <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/admin/cadastrar-faxineira")}>
-              <CardHeader>
-                <CardTitle>Cadastrar Faxineira</CardTitle>
-                <CardDescription>
-                  Criar nova conta de faxineira
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button variant="outline" className="w-full">
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Nova Faxineira
-                </Button>
-              </CardContent>
-            </Card>
+              <Card className="cursor-pointer hover-lift group border-transparent hover:border-primary/20" onClick={() => navigate("/admin/cadastrar-faxineira")}>
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                      <UserPlus className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">Cadastrar Faxineira</CardTitle>
+                      <CardDescription className="text-xs">
+                        Criar nova conta de faxineira
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
 
-            <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/admin/cadastrar-equipe")}>
-              <CardHeader>
-                <CardTitle>Cadastrar Equipe</CardTitle>
-                <CardDescription>
-                  Adicionar atendente ou manutenção
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button variant="outline" className="w-full">
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Novo Membro
-                </Button>
-              </CardContent>
-            </Card>
+              <Card className="cursor-pointer hover-lift group border-transparent hover:border-primary/20" onClick={() => navigate("/admin/cadastrar-equipe")}>
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-secondary/10 flex items-center justify-center group-hover:bg-secondary/20 transition-colors">
+                      <Users className="h-5 w-5 text-secondary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">Cadastrar Equipe</CardTitle>
+                      <CardDescription className="text-xs">
+                        Adicionar atendente ou manutenção
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
 
-            <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/admin/gerenciar-usuarios")}>
-              <CardHeader>
-                <CardTitle>Gerenciar Usuários</CardTitle>
-                <CardDescription>
-                  Visualizar e gerenciar todas as contas
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button variant="outline" className="w-full">
-                  <Shield className="mr-2 h-4 w-4" />
-                  Ver Usuários
-                </Button>
-              </CardContent>
-            </Card>
+              <Card className="cursor-pointer hover-lift group border-transparent hover:border-primary/20" onClick={() => navigate("/admin/gerenciar-usuarios")}>
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-secondary/10 flex items-center justify-center group-hover:bg-secondary/20 transition-colors">
+                      <Shield className="h-5 w-5 text-secondary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">Gerenciar Usuários</CardTitle>
+                      <CardDescription className="text-xs">
+                        Visualizar e gerenciar todas as contas
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
 
-            <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/aprovacoes")}>
-              <CardHeader>
-                <CardTitle>Aprovações Pendentes</CardTitle>
-                <CardDescription>
-                  Gerencie solicitações de cadastro
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button variant="outline" className="w-full">
-                  Ver Solicitações
-                </Button>
-              </CardContent>
-            </Card>
+              <Card className="cursor-pointer hover-lift group border-transparent hover:border-primary/20" onClick={() => navigate("/aprovacoes")}>
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-yellow-500/10 flex items-center justify-center group-hover:bg-yellow-500/20 transition-colors">
+                      <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">Aprovações Pendentes</CardTitle>
+                      <CardDescription className="text-xs">
+                        Gerencie solicitações de cadastro
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
 
-            <Card className="cursor-pointer transition-all hover:shadow-lg" onClick={() => navigate("/propriedades")}>
-              <CardHeader>
-                <CardTitle>Gerenciar Unidades</CardTitle>
-                <CardDescription>
-                  Cadastrar e gerenciar propriedades
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button variant="outline" className="w-full">
-                  <Building2 className="mr-2 h-4 w-4" />
-                  Ver Unidades
-                </Button>
-              </CardContent>
-            </Card>
+              <Card className="cursor-pointer hover-lift group border-transparent hover:border-primary/20" onClick={() => navigate("/propriedades")}>
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-secondary/10 flex items-center justify-center group-hover:bg-secondary/20 transition-colors">
+                      <Building2 className="h-5 w-5 text-secondary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">Gerenciar Unidades</CardTitle>
+                      <CardDescription className="text-xs">
+                        Cadastrar e gerenciar propriedades
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+            </div>
           </div>
-        </div>
         )}
       </main>
     </div>

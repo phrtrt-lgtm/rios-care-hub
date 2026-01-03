@@ -147,10 +147,34 @@ export function ChamadosKanbanPreview() {
 
   if (loading) {
     return (
-      <Card className="border-2 border-blue-200 dark:border-blue-800">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <Card className="border-2 border-blue-200 dark:border-blue-800 overflow-hidden">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <Ticket className="h-5 w-5 text-blue-600 animate-pulse" />
+            <div className="h-5 w-36 rounded bg-muted shimmer" />
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="grid grid-cols-2 gap-2">
+            {[1, 2].map((col) => (
+              <div key={col} className="rounded-lg bg-muted/30 p-2 space-y-2">
+                <div className="flex justify-between items-center mb-2">
+                  <div className="h-3 w-14 rounded bg-muted shimmer" />
+                  <div className="h-5 w-6 rounded-full bg-muted shimmer" />
+                </div>
+                {[1, 2, 3].map((i) => (
+                  <div 
+                    key={i} 
+                    className="rounded-lg bg-card p-2 space-y-2 animate-fade-in"
+                    style={{ animationDelay: `${(col * 3 + i) * 50}ms` }}
+                  >
+                    <div className="h-3 w-3/4 rounded bg-muted shimmer" />
+                    <div className="h-2 w-1/2 rounded bg-muted shimmer" />
+                    <div className="h-8 w-full rounded bg-muted shimmer mt-2" />
+                  </div>
+                ))}
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
