@@ -19,6 +19,8 @@ import { MaintenanceKanbanPreview } from "@/components/MaintenanceKanbanPreview"
 import { OwnerMaintenanceProgress } from "@/components/OwnerMaintenanceProgress";
 import { OwnerTicketsPreview } from "@/components/OwnerTicketsPreview";
 import { OwnerChargesPreview } from "@/components/OwnerChargesPreview";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
+import { motion } from "framer-motion";
 
 
 export default function MinhaCaixa() {
@@ -65,7 +67,7 @@ export default function MinhaCaixa() {
   }, [user]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 pb-20 md:pb-0">
       {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-3">
@@ -174,9 +176,15 @@ export default function MinhaCaixa() {
       </header>
 
       {/* Content */}
-      <main className="container mx-auto px-4 py-6 md:py-8">
+      <main className="container mx-auto px-4 py-6 md:py-8 space-y-6">
         {/* Propostas Pendentes - Prioridade no topo - na íntegra para owners */}
-        <PropostasPendentesCompletas />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <PropostasPendentesCompletas />
+        </motion.div>
 
         {/* Kanban de Manutenções - visível para equipe */}
         {(profile?.role === "admin" || profile?.role === "maintenance" || profile?.role === "agent") && (
@@ -238,6 +246,9 @@ export default function MinhaCaixa() {
 
         <TicketList />
       </main>
+      
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav />
     </div>
   );
 }

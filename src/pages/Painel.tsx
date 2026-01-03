@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { LogOut, Users, Ticket, AlertTriangle, CheckCircle2, Plus, DollarSign, Building2, Bell, Settings, Sparkles, UserPlus, Vote, Shield, Wrench, List, Search, Command } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { AlertBanner } from "@/components/AlertBanner";
 import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
@@ -20,6 +21,8 @@ import { NotificationButton } from "@/components/NotificationButton";
 import { TeamChatWidget } from "@/components/TeamChatWidget";
 import { GlobalSearch, useGlobalSearch } from "@/components/GlobalSearch";
 import { AIAssistantWidget } from "@/components/AIAssistantWidget";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
+import { StatsCard } from "@/components/StatsCard";
 
 export default function Painel() {
   const { profile, user, signOut } = useAuth();
@@ -55,7 +58,7 @@ export default function Painel() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 animate-fade-in">
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 pb-20 md:pb-0">
       {/* Global Search */}
       <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
       
@@ -323,66 +326,45 @@ export default function Painel() {
         </div>
 
         {/* Stats Cards */}
-        <div className="mb-8 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="border-l-4 border-l-blue-500 hover-lift group">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Novos</CardTitle>
-              <div className="h-8 w-8 rounded-full bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Ticket className="h-4 w-4 text-blue-500" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.novos}</div>
-              <p className="text-xs text-muted-foreground">
-                Tickets recém-criados
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-l-4 border-l-red-500 hover-lift group">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Urgentes</CardTitle>
-              <div className="h-8 w-8 rounded-full bg-red-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <AlertTriangle className="h-4 w-4 text-red-500" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.urgentes}</div>
-              <p className="text-xs text-muted-foreground">
-                Prioridade alta
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-l-4 border-l-yellow-500 hover-lift group">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Em Andamento</CardTitle>
-              <div className="h-8 w-8 rounded-full bg-yellow-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Users className="h-4 w-4 text-yellow-500" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.pendentes}</div>
-              <p className="text-xs text-muted-foreground">
-                Aguardando conclusão
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-l-4 border-l-green-500 hover-lift group">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Concluídos</CardTitle>
-              <div className="h-8 w-8 rounded-full bg-green-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.concluidos}</div>
-              <p className="text-xs text-muted-foreground">
-                Total finalizado
-              </p>
-            </CardContent>
-          </Card>
+        <div className="mb-8 grid gap-4 grid-cols-2 lg:grid-cols-4">
+          <StatsCard
+            title="Novos"
+            value={stats.novos}
+            description="Tickets recém-criados"
+            icon={<Ticket className="h-4 w-4 text-blue-500" />}
+            iconBgColor="bg-blue-500/10"
+            borderColor="border-l-blue-500"
+            delay={0}
+            onClick={() => navigate("/todos-tickets?status=novo")}
+          />
+          <StatsCard
+            title="Urgentes"
+            value={stats.urgentes}
+            description="Prioridade alta"
+            icon={<AlertTriangle className="h-4 w-4 text-red-500" />}
+            iconBgColor="bg-red-500/10"
+            borderColor="border-l-red-500"
+            delay={0.1}
+            onClick={() => navigate("/todos-tickets?priority=urgente")}
+          />
+          <StatsCard
+            title="Em Andamento"
+            value={stats.pendentes}
+            description="Aguardando conclusão"
+            icon={<Users className="h-4 w-4 text-yellow-500" />}
+            iconBgColor="bg-yellow-500/10"
+            borderColor="border-l-yellow-500"
+            delay={0.2}
+          />
+          <StatsCard
+            title="Concluídos"
+            value={stats.concluidos}
+            description="Total finalizado"
+            icon={<CheckCircle2 className="h-4 w-4 text-green-500" />}
+            iconBgColor="bg-green-500/10"
+            borderColor="border-l-green-500"
+            delay={0.3}
+          />
         </div>
 
         {/* Quick Actions - Outras Ações - Admin only */}
@@ -489,6 +471,9 @@ export default function Painel() {
           </div>
         )}
       </main>
+      
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav />
     </div>
   );
 }

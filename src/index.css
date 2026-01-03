@@ -231,4 +231,53 @@ All colors MUST be HSL.
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     @apply bg-muted-foreground/50;
   }
+  
+  /* Safe area for mobile bottom navigation */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top, 0);
+  }
+  
+  /* Touch-friendly tap targets */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Improved mobile interactions */
+  .tap-highlight-none {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Card with active state for mobile */
+  .card-active {
+    @apply transition-all duration-150;
+  }
+  
+  .card-active:active {
+    @apply scale-[0.98] opacity-90;
+  }
+  
+  /* Smooth skeleton loading */
+  .skeleton-loading {
+    @apply bg-muted rounded animate-pulse;
+  }
+  
+  /* Section headers with nice styling */
+  .section-header {
+    @apply text-lg font-semibold mb-4 flex items-center gap-2;
+  }
+  
+  /* Mobile-first card spacing */
+  .mobile-card-spacing {
+    @apply space-y-3 md:space-y-4;
+  }
+  
+  /* Interactive feedback */
+  .press-effect {
+    @apply active:scale-95 transition-transform duration-150;
+  }
 }
