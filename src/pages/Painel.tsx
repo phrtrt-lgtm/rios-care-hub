@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { LogOut, Users, Ticket, AlertTriangle, CheckCircle2, Plus, DollarSign, Building2, Bell, Settings, Sparkles, UserPlus, Vote, Shield, Wrench, List } from "lucide-react";
+import { LogOut, Users, Ticket, AlertTriangle, CheckCircle2, Plus, DollarSign, Building2, Bell, Settings, Sparkles, UserPlus, Vote, Shield, Wrench, List, Search, Command } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { AvatarUpload } from "@/components/AvatarUpload";
@@ -18,9 +18,13 @@ import { ChargesKanbanPreview } from '@/components/ChargesKanbanPreview';
 import { GuestChargeReminders } from "@/components/GuestChargeReminders";
 import { NotificationButton } from "@/components/NotificationButton";
 import { TeamChatWidget } from "@/components/TeamChatWidget";
+import { GlobalSearch, useGlobalSearch } from "@/components/GlobalSearch";
+import { AIAssistantWidget } from "@/components/AIAssistantWidget";
+
 export default function Painel() {
   const { profile, user, signOut } = useAuth();
   const [photoUrl, setPhotoUrl] = useState(profile?.photo_url);
+  const { open: searchOpen, setOpen: setSearchOpen } = useGlobalSearch();
   const [stats, setStats] = useState({
     novos: 0,
     urgentes: 0,
@@ -52,6 +56,12 @@ export default function Painel() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 animate-fade-in">
+      {/* Global Search */}
+      <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
+      
+      {/* AI Assistant Widget */}
+      <AIAssistantWidget />
+      
       {/* Team Chat Widget - Only for team members */}
       <TeamChatWidget />
       {/* Header */}
@@ -106,6 +116,27 @@ export default function Painel() {
             </div>
             
             <div className="flex items-center gap-2">
+              {/* Search Button */}
+              <Button
+                variant="outline"
+                className="hidden sm:flex items-center gap-2 text-muted-foreground h-9"
+                onClick={() => setSearchOpen(true)}
+              >
+                <Search className="h-4 w-4" />
+                <span className="text-sm">Buscar...</span>
+                <kbd className="ml-2 pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+                  <span className="text-xs">⌘</span>K
+                </kbd>
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="sm:hidden"
+                onClick={() => setSearchOpen(true)}
+              >
+                <Search className="h-5 w-5" />
+              </Button>
+              
               <NotificationButton />
               
               <Dialog>
