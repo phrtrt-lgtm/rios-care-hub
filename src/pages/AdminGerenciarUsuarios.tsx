@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Search, UserCheck, UserX, Trash2, CheckSquare } from "lucide-react";
+import { ArrowLeft, Search, UserCheck, UserX, Trash2, CheckSquare, History } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { LoadingScreen } from "@/components/LoadingScreen";
@@ -543,6 +543,16 @@ export default function AdminGerenciarUsuarios() {
                                   <UserX className="h-4 w-4" />
                                 </Button>
                               </>
+                            )}
+                            {(user.role === "owner" || user.role === "pending_owner") && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => navigate(`/historico-comunicacao/${user.id}`)}
+                                title="Ver histórico de comunicação"
+                              >
+                                <History className="h-4 w-4" />
+                              </Button>
                             )}
                             {user.role !== "admin" && (
                               <Button
