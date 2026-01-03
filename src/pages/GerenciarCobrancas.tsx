@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { CHARGE_CATEGORIES } from "@/constants/chargeCategories";
 import { EditChargeDialog } from "@/components/EditChargeDialog";
 import { DebitoReservaCalculator } from "@/components/DebitoReservaCalculator";
+import { ReserveDebitsTable } from "@/components/ReserveDebitsTable";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -415,6 +416,9 @@ const GerenciarCobrancas = () => {
 
           {/* Tab: Cobranças em Aberto */}
           <TabsContent value="abertas" className="space-y-4">
+            {/* Débitos Pendentes em Reserva - Inline Table */}
+            <ReserveDebitsTable />
+
             {/* Search and Selection Controls */}
             <div className="space-y-3">
               <div className="relative">
