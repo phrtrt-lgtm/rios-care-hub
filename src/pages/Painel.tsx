@@ -20,6 +20,7 @@ import { GuestChargeReminders } from "@/components/GuestChargeReminders";
 import { NotificationButton } from "@/components/NotificationButton";
 import { TeamChatWidget } from "@/components/TeamChatWidget";
 import { GlobalSearch, useGlobalSearch } from "@/components/GlobalSearch";
+import { ResponseTemplatesPanel } from "@/components/ResponseTemplatesPanel";
 
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { StatsCard } from "@/components/StatsCard";
@@ -234,6 +235,13 @@ export default function Painel() {
             <VistoriasKanbanPreview />
             <MaintenanceKanbanPreview />
             <ChargesKanbanPreview />
+          </div>
+        )}
+
+        {/* Response Templates Panel */}
+        {(profile?.role === "admin" || profile?.role === "maintenance" || profile?.role === "agent") && (
+          <div className="mb-6">
+            <ResponseTemplatesPanel />
           </div>
         )}
 

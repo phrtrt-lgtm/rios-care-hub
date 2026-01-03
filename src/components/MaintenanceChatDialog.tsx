@@ -18,6 +18,8 @@ import { ptBR } from "date-fns/locale";
 import { Send, Loader2, MessageSquare, Building, ExternalLink, Paperclip, X, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { ResponseTemplatesPicker } from "@/components/ResponseTemplatesPicker";
+import { ConversationSummaryButton } from "@/components/ConversationSummaryButton";
 
 interface MaintenanceChatDialogProps {
   open: boolean;
@@ -340,18 +342,24 @@ export function MaintenanceChatDialog({
                     {propertyName}
                   </div>
                 )}
-                <Button
-                  variant="link"
-                  size="sm"
-                  className="text-xs h-auto p-0 text-primary"
-                  onClick={() => {
-                    onOpenChange(false);
-                    navigate(`/ticket-detalhes/${ticketId}`);
-                  }}
-                >
-                  <ExternalLink className="h-3 w-3 mr-1" />
-                  Ver detalhes completos
-                </Button>
+                <div className="flex items-center gap-2">
+                  <ConversationSummaryButton 
+                    ticketId={ticketId || ''} 
+                    messageCount={messages.length}
+                  />
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="text-xs h-auto p-0 text-primary"
+                    onClick={() => {
+                      onOpenChange(false);
+                      navigate(`/ticket-detalhes/${ticketId}`);
+                    }}
+                  >
+                    <ExternalLink className="h-3 w-3 mr-1" />
+                    Ver detalhes
+                  </Button>
+                </div>
               </div>
             </div>
           </DialogHeader>
@@ -476,13 +484,18 @@ export function MaintenanceChatDialog({
               </div>
             )}
             
-            {/* Row 2: Attachment + Message + Send */}
+            {/* Row 2: Templates + Attachment + Message + Send */}
             <div className="flex gap-2 items-end">
+              <ResponseTemplatesPicker
+                onSelect={(content) => setNewMessage(prev => prev ? `${prev}\n${content}` : content)}
+                disabled={sending}
+              />
+              
               <Button
                 type="button"
                 variant="outline"
                 size="icon"
-                className="h-10 w-10 flex-shrink-0"
+                className="h-9 w-9 flex-shrink-0"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={sending}
                 title="Anexar arquivo"
