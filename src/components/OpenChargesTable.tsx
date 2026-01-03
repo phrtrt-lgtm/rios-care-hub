@@ -13,12 +13,14 @@ import {
   ArrowUp, 
   ArrowDown,
   Pencil,
-  Building2
+  Building2,
+  Calculator
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatBRL } from "@/lib/format";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CHARGE_CATEGORIES } from "@/constants/chargeCategories";
+import { DebitoReservaCalculator } from "@/components/DebitoReservaCalculator";
 
 interface Charge {
   id: string;
@@ -76,6 +78,8 @@ export function OpenChargesTable({
   const [expandedProperties, setExpandedProperties] = useState<Set<string>>(new Set());
   const [sortField, setSortField] = useState<SortField | null>("due_date");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [calculatorOpen, setCalculatorOpen] = useState(false);
+  const [calculatorCharge, setCalculatorCharge] = useState<Charge | null>(null);
 
   const handleSort = useCallback((field: SortField) => {
     if (sortField === field) {
@@ -149,6 +153,15 @@ export function OpenChargesTable({
       newExpanded.add(propertyId);
     }
     setExpandedProperties(newExpanded);
+  };
+
+  const isChargeOverdue = (charge: Charge) => {
+    return charge.due_date && new Date(charge.due_date) < new Date() && charge.status !== 'paid';
+  };
+
+  const handleOpenCalculator = (charge: Charge) => {
+    setCalculatorCharge(charge);
+    setCalculatorOpen(true);
   };
 
   const getStatusBadge = (status: string) => {
@@ -396,14 +409,35 @@ export function OpenChargesTable({
                       </td>
                       <td className="px-2 py-2"></td>
                       <td className="px-2 py-2 text-center" onClick={(e) => e.stopPropagation()}>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-7 w-7 p-0"
-                          onClick={() => onEditCharge(charge)}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
+                        <div className="flex items-center justify-center gap-1">
+                          {isChargeOverdue(charge) && (
+                            <TooltipProvider delayDuration={300}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 w-7 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                    onClick={() => handleOpenCalculator(charge)}
+                                  >
+                                    <Calculator className="h-3.5 w-3.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Calcular débito em reserva</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 w-7 p-0"
+                            onClick={() => onEditCharge(charge)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -413,6 +447,21 @@ export function OpenChargesTable({
           </tbody>
         </table>
       </div>
+
+      {/* Calculator Dialog */}
+      {calculatorCharge && (
+        <DebitoReservaCalculator
+          open={calculatorOpen}
+          onOpenChange={setCalculatorOpen}
+          propertyName={calculatorCharge.property?.name || "Sem imóvel"}
+          totalDebtCents={calculatorCharge.amount_cents - (calculatorCharge.management_contribution_cents || 0)}
+          chargeIds={[calculatorCharge.id]}
+          onDebitConfirmed={() => {
+            setCalculatorOpen(false);
+            setCalculatorCharge(null);
+          }}
+        />
+      )}
     </Card>
   );
 }
