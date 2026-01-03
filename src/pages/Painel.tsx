@@ -94,7 +94,17 @@ export default function Painel() {
               )}
               
               {(profile?.role === "admin" || profile?.role === "agent" || profile?.role === "maintenance") && (
-                <ResponseTemplatesPanel />
+                <>
+                  <ResponseTemplatesPanel />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => navigate("/resumo-propriedades")}
+                    title="Resumo por Propriedade"
+                  >
+                    <Building2 className="h-5 w-5" />
+                  </Button>
+                </>
               )}
               
               {(profile?.role === "admin" || profile?.role === "maintenance") && (
