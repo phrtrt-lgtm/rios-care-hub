@@ -23,6 +23,7 @@ import { MediaGallery } from "@/components/MediaGallery";
 import { uploadFileWithCompression, FileUploadProgress } from "@/lib/fileUpload";
 import { CreateMaintenanceFromInspectionDialog } from "@/components/CreateMaintenanceFromInspectionDialog";
 import EditInspectionDialog from "@/components/EditInspectionDialog";
+import { ReserveDebitsTable } from "@/components/ReserveDebitsTable";
 import { Pencil } from "lucide-react";
 // ===== TYPES =====
 type TicketStatus = "novo" | "em_analise" | "aguardando_info" | "em_execucao" | "concluido" | "cancelado";
@@ -1858,6 +1859,9 @@ export default function AdminManutencoesLista() {
           onArchiveInspections={handleArchiveInspections}
           archivingInspections={archivingInspections}
         />
+
+        {/* Reserve Debits Table */}
+        <ReserveDebitsTable />
 
         {/* Maintenances Table */}
         <Card className="overflow-hidden">
