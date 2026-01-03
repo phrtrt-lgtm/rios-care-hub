@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowLeft, Send, Paperclip, Loader2, Sparkles, FileText, ChevronDown, X, Download, ZoomIn, Upload } from "lucide-react";
+import { ConversationSummaryButton } from "@/components/ConversationSummaryButton";
 import { AttachmentBubble } from "@/components/AttachmentBubble";
 import { MediaGallery } from "@/components/MediaGallery";
 import { LoadingScreen } from "@/components/LoadingScreen";
@@ -771,8 +772,14 @@ export default function TicketDetalhes() {
           </CardHeader>
         </Card>
 
-        {messages.some(m => m.attachments && m.attachments.length > 0) && (
-          <div className="mb-6 flex justify-end">
+        <div className="mb-6 flex justify-end gap-2">
+          {isTeamMember && (
+            <ConversationSummaryButton 
+              ticketId={id!} 
+              messageCount={messages.length}
+            />
+          )}
+          {messages.some(m => m.attachments && m.attachments.length > 0) && (
             <Button 
               variant="outline" 
               size="sm"
@@ -786,8 +793,8 @@ export default function TicketDetalhes() {
               )}
               Baixar Todos os Anexos
             </Button>
-          </div>
-        )}
+          )}
+        </div>
 
         <div className="space-y-4 mb-6">
           {messages.map((message) => {
