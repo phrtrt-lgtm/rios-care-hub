@@ -16,7 +16,7 @@ const mainItems: NavItem[] = [
   { icon: Home, label: "Início", path: "/painel", roles: ["admin", "maintenance", "agent"] },
   { icon: Home, label: "Início", path: "/minha-caixa", roles: ["owner"] },
   { icon: Ticket, label: "Tickets", path: "/todos-tickets" },
-  { icon: Wrench, label: "Manutenções", path: "/admin/manutencoes-kanban", roles: ["admin", "maintenance"] },
+  { icon: Wrench, label: "Manutenções", path: "/admin/manutencoes-lista", roles: ["admin", "maintenance"] },
   { icon: DollarSign, label: "Cobranças", path: "/gerenciar-cobrancas", roles: ["admin", "maintenance"] },
   { icon: DollarSign, label: "Cobranças", path: "/minhas-cobrancas", roles: ["owner"] },
 ];
