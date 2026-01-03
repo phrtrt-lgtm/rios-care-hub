@@ -2,16 +2,18 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Search, Filter, Building2, User, Trash2 } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ArrowLeft, Search, Filter, Building2, Trash2, MessageSquare, ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
 
 interface Ticket {
   id: string;
@@ -57,6 +59,9 @@ const TodosTickets = () => {
   const [deleting, setDeleting] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [chatOpen, setChatOpen] = useState(false);
+  const [selectedTicketForChat, setSelectedTicketForChat] = useState<Ticket | null>(null);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!user || !['admin', 'agent'].includes(profile?.role || '')) {
@@ -337,6 +342,23 @@ const TodosTickets = () => {
     }
   };
 
+  const openChat = (ticket: Ticket) => {
+    setSelectedTicketForChat(ticket);
+    setChatOpen(true);
+  };
+
+  const toggleRowExpand = (ticketId: string) => {
+    setExpandedRows(prev => {
+      const next = new Set(prev);
+      if (next.has(ticketId)) {
+        next.delete(ticketId);
+      } else {
+        next.add(ticketId);
+      }
+      return next;
+    });
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -456,133 +478,184 @@ const TodosTickets = () => {
           </CardContent>
         </Card>
 
-        {/* Lista de Tickets */}
-        <div className="space-y-4">
-          {filteredTickets.length > 0 && (
-            <div className="flex items-center gap-2 px-2">
-              <Checkbox
-                checked={selectedTickets.size === filteredTickets.length}
-                onCheckedChange={toggleSelectAll}
-              />
-              <span className="text-sm text-muted-foreground">
-                Selecionar todos ({filteredTickets.length})
-              </span>
-            </div>
-          )}
-          {filteredTickets.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
+        {/* Tabela Inline de Tickets */}
+        <Card>
+          <CardContent className="p-0">
+            {filteredTickets.length === 0 ? (
+              <div className="py-12 text-center">
                 <p className="text-muted-foreground">Nenhum ticket encontrado com os filtros aplicados.</p>
-              </CardContent>
-            </Card>
-          ) : (
-            filteredTickets.map((ticket) => {
-              const ticketIsOpen = isTicketOpen(ticket.status);
-              const slaInfo = ticketIsOpen ? getTimeUntilSLA(ticket.sla_due_at) : null;
-              
-              return (
-                <Card 
-                  key={ticket.id} 
-                  className="transition-all hover:shadow-lg"
-                >
-                  <CardContent className="p-6">
-                    <div className="flex gap-6">
-                      {/* Property Image + Name */}
-                      <div 
-                        className="cursor-pointer flex flex-col items-center gap-2 min-w-[140px]"
-                        onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
-                      >
-                        {ticket.property?.cover_photo_url ? (
-                          <img 
-                            src={ticket.property.cover_photo_url} 
-                            alt={ticket.property.name}
-                            className="h-32 w-32 rounded-lg object-cover shadow-md"
-                          />
-                        ) : (
-                          <div className="flex h-32 w-32 items-center justify-center rounded-lg bg-muted">
-                            <Building2 className="h-12 w-12 text-muted-foreground" />
-                          </div>
-                        )}
-                        <p className="text-sm font-semibold text-foreground text-center">
-                          {ticket.property?.name || 'Sem unidade'}
-                        </p>
-                      </div>
-
-                      {/* Main Content */}
-                      <div 
-                        className="flex flex-1 cursor-pointer flex-col gap-3"
-                        onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
-                      >
-                        {/* Status and Type */}
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {getStatusBadge(ticket.status)}
-                          <span className="text-muted-foreground">|</span>
-                          {getTicketTypeBadge(ticket.ticket_type)}
-                        </div>
-
-                        {/* Title */}
-                        <h3 className="text-xl font-bold text-foreground">
-                          {ticket.subject}
-                        </h3>
-
-                        {/* Last Message */}
-                        {ticket.messages?.last_message && (
-                          <div className="rounded-md bg-muted/30 p-3 border border-border">
-                            <p className="text-xs font-medium text-muted-foreground mb-1">
-                              Última mensagem de {ticket.messages.last_message.author_name}:
-                            </p>
-                            <p className="text-sm text-foreground line-clamp-2">
-                              {ticket.messages.last_message.body}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Right Side Info + Checkbox */}
-                      <div className="flex flex-col gap-3 min-w-[200px]">
-                        {/* Checkbox */}
-                        <div className="flex justify-end">
-                          <Checkbox
-                            checked={selectedTickets.has(ticket.id)}
-                            onCheckedChange={() => toggleTicketSelection(ticket.id)}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </div>
-
-                        {/* Owner */}
-                        <div className="text-right">
-                          <p className="text-xs text-muted-foreground mb-1">Proprietário</p>
-                          <p className="text-sm font-medium text-foreground">{ticket.owner.name}</p>
-                        </div>
-
-                        {/* Created Date */}
-                        <div className="text-right">
-                          <p className="text-xs text-muted-foreground mb-1">Ticket criado em:</p>
-                          <p className="text-sm font-medium text-foreground">
-                            {format(new Date(ticket.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                          </p>
-                        </div>
-
-                        {/* SLA Countdown */}
-                        {slaInfo && (
-                          <div className="text-right">
-                            <p className="text-xs text-muted-foreground mb-1">
-                              Contagem regressiva pra resposta ({ticket.priority === 'urgente' ? 'urgente' : 'normal'}):
-                            </p>
-                            <p className={`text-lg font-bold ${slaInfo.isUrgent ? 'text-red-600' : 'text-foreground'}`}>
-                              {slaInfo.text}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })
-          )}
-        </div>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="w-[40px]">
+                        <Checkbox
+                          checked={selectedTickets.size === filteredTickets.length && filteredTickets.length > 0}
+                          onCheckedChange={toggleSelectAll}
+                        />
+                      </TableHead>
+                      <TableHead className="w-[40px]"></TableHead>
+                      <TableHead className="min-w-[150px]">Unidade</TableHead>
+                      <TableHead className="min-w-[100px]">Status</TableHead>
+                      <TableHead className="min-w-[100px]">Tipo</TableHead>
+                      <TableHead className="min-w-[200px]">Assunto</TableHead>
+                      <TableHead className="min-w-[120px]">Proprietário</TableHead>
+                      <TableHead className="min-w-[80px]">SLA</TableHead>
+                      <TableHead className="min-w-[100px]">Criado em</TableHead>
+                      <TableHead className="w-[100px] text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredTickets.map((ticket) => {
+                      const ticketIsOpen = isTicketOpen(ticket.status);
+                      const slaInfo = ticketIsOpen ? getTimeUntilSLA(ticket.sla_due_at) : null;
+                      const isExpanded = expandedRows.has(ticket.id);
+                      
+                      return (
+                        <>
+                          <TableRow 
+                            key={ticket.id}
+                            className="group hover:bg-muted/50 cursor-pointer"
+                          >
+                            <TableCell onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                checked={selectedTickets.has(ticket.id)}
+                                onCheckedChange={() => toggleTicketSelection(ticket.id)}
+                              />
+                            </TableCell>
+                            <TableCell onClick={() => toggleRowExpand(ticket.id)}>
+                              {isExpanded ? (
+                                <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                              )}
+                            </TableCell>
+                            <TableCell onClick={() => toggleRowExpand(ticket.id)}>
+                              <div className="flex items-center gap-2">
+                                {ticket.property?.cover_photo_url ? (
+                                  <img 
+                                    src={ticket.property.cover_photo_url} 
+                                    alt={ticket.property.name}
+                                    className="h-8 w-8 rounded object-cover"
+                                  />
+                                ) : (
+                                  <div className="flex h-8 w-8 items-center justify-center rounded bg-muted">
+                                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                                  </div>
+                                )}
+                                <span className="font-medium text-sm truncate max-w-[100px]">
+                                  {ticket.property?.name || 'Sem unidade'}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell onClick={() => toggleRowExpand(ticket.id)}>
+                              {getStatusBadge(ticket.status)}
+                            </TableCell>
+                            <TableCell onClick={() => toggleRowExpand(ticket.id)}>
+                              {getTicketTypeBadge(ticket.ticket_type)}
+                            </TableCell>
+                            <TableCell onClick={() => toggleRowExpand(ticket.id)}>
+                              <span className="font-medium text-sm line-clamp-1">
+                                {ticket.subject}
+                              </span>
+                            </TableCell>
+                            <TableCell onClick={() => toggleRowExpand(ticket.id)}>
+                              <span className="text-sm text-muted-foreground truncate max-w-[100px] block">
+                                {ticket.owner.name}
+                              </span>
+                            </TableCell>
+                            <TableCell onClick={() => toggleRowExpand(ticket.id)}>
+                              {slaInfo ? (
+                                <span className={`text-sm font-semibold ${slaInfo.isUrgent ? 'text-red-600' : 'text-foreground'}`}>
+                                  {slaInfo.text}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">—</span>
+                              )}
+                            </TableCell>
+                            <TableCell onClick={() => toggleRowExpand(ticket.id)}>
+                              <span className="text-xs text-muted-foreground">
+                                {format(new Date(ticket.created_at), "dd/MM", { locale: ptBR })}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openChat(ticket);
+                                  }}
+                                  title="Abrir chat"
+                                >
+                                  <MessageSquare className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/ticket-detalhes/${ticket.id}`);
+                                  }}
+                                  title="Ver detalhes"
+                                >
+                                  <ExternalLink className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                          {/* Expanded row with last message */}
+                          {isExpanded && (
+                            <TableRow key={`${ticket.id}-expanded`} className="bg-muted/20">
+                              <TableCell colSpan={10} className="py-3 px-4">
+                                <div className="flex flex-col gap-2">
+                                  {ticket.messages?.last_message ? (
+                                    <div className="rounded-md bg-background p-3 border border-border">
+                                      <p className="text-xs font-medium text-muted-foreground mb-1">
+                                        Última mensagem de {ticket.messages.last_message.author_name} • {format(new Date(ticket.messages.last_message.created_at), "dd/MM 'às' HH:mm", { locale: ptBR })}:
+                                      </p>
+                                      <p className="text-sm text-foreground">
+                                        {ticket.messages.last_message.body}
+                                      </p>
+                                    </div>
+                                  ) : (
+                                    <p className="text-sm text-muted-foreground italic">Nenhuma mensagem ainda</p>
+                                  )}
+                                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                                    <span>Total de mensagens: {ticket.messages?.count || 0}</span>
+                                    <span>Criado: {format(new Date(ticket.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
+                                    {ticket.property?.address && (
+                                      <span>Endereço: {ticket.property.address}</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Chat Dialog */}
+      <MaintenanceChatDialog
+        open={chatOpen}
+        onOpenChange={setChatOpen}
+        ticketId={selectedTicketForChat?.id || null}
+        ticketSubject={selectedTicketForChat?.subject}
+        propertyName={selectedTicketForChat?.property?.name}
+      />
     </div>
   );
 };
