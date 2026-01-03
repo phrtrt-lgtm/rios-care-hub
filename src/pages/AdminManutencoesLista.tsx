@@ -1860,9 +1860,6 @@ export default function AdminManutencoesLista() {
           archivingInspections={archivingInspections}
         />
 
-        {/* Reserve Debits Table */}
-        <ReserveDebitsTable />
-
         {/* Maintenances Table */}
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
@@ -1914,6 +1911,9 @@ export default function AdminManutencoesLista() {
             </table>
           </div>
         </Card>
+
+        {/* Reserve Debits Table - Below maintenances */}
+        <ReserveDebitsTable />
 
         {/* Hidden file input for uploads */}
         <input
