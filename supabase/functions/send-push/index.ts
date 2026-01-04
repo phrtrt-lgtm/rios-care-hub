@@ -122,8 +122,7 @@ async function sendFirebasePush(
           priority: "high",
           notification: {
             channel_id: "high_importance_channel",
-            priority: "max",
-            visibility: "public",
+            visibility: "PUBLIC",
             default_sound: true,
             default_vibrate_timings: true,
           },
