@@ -26,6 +26,7 @@ import { ptBR } from "date-fns/locale";
 import JSZip from "jszip";
 import { CHARGE_CATEGORIES } from "@/constants/chargeCategories";
 import { EditChargeDialog } from "@/components/EditChargeDialog";
+import { processFileForUpload } from "@/lib/processVideoForUpload";
 
 interface Charge {
   id: string;
@@ -341,11 +342,13 @@ export default function CobrancaDetalhes() {
 
       // Upload de anexos e associação com a mensagem
       for (const file of selectedFiles) {
-        const filePath = `charges/${id}/messages/${Date.now()}_${file.name}`;
+        // Compress video if it's a video file
+        const processedFile = await processFileForUpload(file);
+        const filePath = `charges/${id}/messages/${Date.now()}_${processedFile.name}`;
         
         const { error: uploadError } = await supabase.storage
           .from('attachments')
-          .upload(filePath, file);
+          .upload(filePath, processedFile);
 
         if (uploadError) throw uploadError;
 
@@ -354,10 +357,10 @@ export default function CobrancaDetalhes() {
           .insert({
             message_id: messageData.id,
             charge_id: id,
-            file_name: file.name,
+            file_name: processedFile.name,
             file_path: filePath,
-            file_size: file.size,
-            mime_type: file.type,
+            file_size: processedFile.size,
+            mime_type: processedFile.type,
             created_by: user?.id
           });
 

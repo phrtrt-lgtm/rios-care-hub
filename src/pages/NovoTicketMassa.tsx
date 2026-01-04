@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { sanitizeFilename } from "@/lib/storage";
 import { VoiceToTextInput } from "@/components/VoiceToTextInput";
+import { processFileForUpload } from "@/lib/processVideoForUpload";
 
 interface Owner {
   id: string;
@@ -168,7 +169,9 @@ const NovoTicketMassa = () => {
     try {
       const uploaded: ReadyAttachment[] = [];
       for (const file of Array.from(selectedFiles)) {
-        const result = await uploadOne(file);
+        // Compress video if it's a video file
+        const processedFile = await processFileForUpload(file);
+        const result = await uploadOne(processedFile);
         uploaded.push(result);
       }
       setUploadedFiles((prev) => [...prev, ...uploaded]);

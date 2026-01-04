@@ -17,6 +17,7 @@ import { ptBR } from "date-fns/locale";
 import { Send, Loader2, MessageSquare, Building, ExternalLink, Paperclip, X, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { processFileForUpload } from "@/lib/processVideoForUpload";
 
 interface ChargeMessage {
   id: string;
@@ -263,11 +264,13 @@ export function ChargeChatDialog({
         // Upload attachments
         if (filesToUpload.length > 0) {
           for (const file of filesToUpload) {
-            const filePath = `${chargeId}/${Date.now()}_${file.name}`;
+            // Compress video if it's a video file
+            const processedFile = await processFileForUpload(file);
+            const filePath = `${chargeId}/${Date.now()}_${processedFile.name}`;
             
             const { error: uploadError } = await supabase.storage
               .from('charge-attachments')
-              .upload(filePath, file);
+              .upload(filePath, processedFile);
 
             if (uploadError) throw uploadError;
 
@@ -275,10 +278,10 @@ export function ChargeChatDialog({
               message_id: messageData.id,
               charge_id: chargeId,
               created_by: user.id,
-              file_name: file.name,
+              file_name: processedFile.name,
               file_path: filePath,
-              file_size: file.size,
-              mime_type: file.type,
+              file_size: processedFile.size,
+              mime_type: processedFile.type,
             });
           }
         }

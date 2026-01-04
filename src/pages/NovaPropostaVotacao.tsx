@@ -17,6 +17,7 @@ import { useQuery } from "@tanstack/react-query";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { buildStorageKey } from "@/lib/storage";
 import { VoiceToTextInput } from "@/components/VoiceToTextInput";
+import { processFileForUpload } from "@/lib/processVideoForUpload";
 
 interface OptionConfig {
   text: string;
@@ -227,10 +228,12 @@ export default function NovaPropostaVotacao() {
       // Upload attachments
       if (attachments.length > 0) {
         for (const file of attachments) {
-          const filePath = `proposals/${proposal.id}/${Date.now()}-${file.name}`;
+          // Compress video if it's a video file
+          const processedFile = await processFileForUpload(file);
+          const filePath = `proposals/${proposal.id}/${Date.now()}-${processedFile.name}`;
           const { error: uploadError } = await supabase.storage
             .from('proposals')
-            .upload(filePath, file);
+            .upload(filePath, processedFile);
 
           if (uploadError) throw uploadError;
 
@@ -239,9 +242,9 @@ export default function NovaPropostaVotacao() {
             .insert({
               proposal_id: proposal.id,
               file_path: filePath,
-              file_name: file.name,
-              file_type: file.type,
-              file_size: file.size,
+              file_name: processedFile.name,
+              file_type: processedFile.type,
+              file_size: processedFile.size,
               created_by: user.id,
             });
 

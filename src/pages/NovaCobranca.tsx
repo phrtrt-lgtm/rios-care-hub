@@ -13,6 +13,7 @@ import { VoiceToTextInput } from "@/components/VoiceToTextInput";
 import { useToast } from "@/hooks/use-toast";
 import { CHARGE_CATEGORY_OPTIONS } from "@/constants/chargeCategories";
 import { OwnerScoreCard } from "@/components/OwnerScoreCard";
+import { processFileForUpload } from "@/lib/processVideoForUpload";
 
 interface Owner {
   id: string;
@@ -170,12 +171,14 @@ export default function NovaCobranca() {
 
       // Upload attachments
       for (const file of attachments) {
-        const fileExt = file.name.split('.').pop();
+        // Compress video if it's a video file
+        const processedFile = await processFileForUpload(file);
+        const fileExt = processedFile.name.split('.').pop();
         const filePath = `charges/${charge.id}/${Date.now()}.${fileExt}`;
 
         const { error: uploadError } = await supabase.storage
           .from('attachments')
-          .upload(filePath, file);
+          .upload(filePath, processedFile);
 
         if (uploadError) throw uploadError;
 
@@ -183,10 +186,10 @@ export default function NovaCobranca() {
           .from('charge_attachments')
           .insert({
             charge_id: charge.id,
-            file_name: file.name,
+            file_name: processedFile.name,
             file_path: filePath,
-            file_size: file.size,
-            mime_type: file.type,
+            file_size: processedFile.size,
+            mime_type: processedFile.type,
             created_by: profile?.id
           });
 

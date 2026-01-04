@@ -20,6 +20,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { ResponseTemplatesPicker } from "@/components/ResponseTemplatesPicker";
 import { ConversationSummaryButton } from "@/components/ConversationSummaryButton";
+import { processFileForUpload } from "@/lib/processVideoForUpload";
 
 interface MaintenanceChatDialogProps {
   open: boolean;
@@ -98,11 +99,13 @@ export function MaintenanceChatDialog({
         for (const file of selectedFiles) {
           setUploadingFiles(prev => new Set(prev).add(file.name));
           
-          const filePath = `${ticketId}/${Date.now()}_${file.name}`;
+          // Compress video if it's a video file
+          const processedFile = await processFileForUpload(file);
+          const filePath = `${ticketId}/${Date.now()}_${processedFile.name}`;
           
           const { error: uploadError } = await supabase.storage
             .from('attachments')
-            .upload(filePath, file);
+            .upload(filePath, processedFile);
 
           if (uploadError) throw uploadError;
 
@@ -112,9 +115,9 @@ export function MaintenanceChatDialog({
 
           attachments.push({
             file_url: publicUrl,
-            file_name: file.name,
-            file_type: file.type,
-            size_bytes: file.size,
+            file_name: processedFile.name,
+            file_type: processedFile.type,
+            size_bytes: processedFile.size,
             path: filePath
           });
           
