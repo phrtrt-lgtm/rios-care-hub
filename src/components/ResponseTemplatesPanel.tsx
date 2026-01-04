@@ -41,7 +41,11 @@ const CATEGORIES = [
   { value: "informacao", label: "Informação" },
 ];
 
-export function ResponseTemplatesPanel() {
+interface ResponseTemplatesPanelProps {
+  triggerElement?: React.ReactNode;
+}
+
+export function ResponseTemplatesPanel({ triggerElement }: ResponseTemplatesPanelProps = {}) {
   const { profile } = useAuth();
   const [templates, setTemplates] = useState<ResponseTemplate[]>([]);
   const [loading, setLoading] = useState(false);
@@ -207,9 +211,11 @@ export function ResponseTemplatesPanel() {
     <>
       <Dialog open={mainDialogOpen} onOpenChange={setMainDialogOpen}>
         <DialogTrigger asChild>
-          <Button variant="ghost" size="icon" title="Templates de Resposta">
-            <FileText className="h-5 w-5" />
-          </Button>
+          {triggerElement || (
+            <Button variant="ghost" size="icon" title="Templates de Resposta">
+              <FileText className="h-5 w-5" />
+            </Button>
+          )}
         </DialogTrigger>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
