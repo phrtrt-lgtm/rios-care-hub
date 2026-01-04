@@ -74,27 +74,29 @@ export function EnablePushNative() {
             return;
           }
 
-          // Save FCM token to database with correct endpoint format
+          // Save token to backend (service-role function avoids RLS/unique-constraint issues)
           const fcmEndpoint = `https://fcm.googleapis.com/fcm/send/${token.value}`;
-          const { error } = await supabase
-            .from('push_subscriptions')
-            .upsert(
-              {
-                owner_id: session.user.id,
-                endpoint: fcmEndpoint,
-                p256dh: 'native',
-                auth: 'native',
-                user_agent: navigator.userAgent,
-                is_active: true,
-              },
-              {
-                onConflict: 'owner_id,endpoint',
-              }
-            );
 
-          if (error) {
-            console.error('Error saving token:', error);
-            toast.error('Erro ao salvar token de notificação: ' + error.message);
+          const { error: subscribeError } = await supabase.functions.invoke(
+            "push-subscribe",
+            {
+              body: {
+                endpoint: fcmEndpoint,
+                keys: {
+                  p256dh: "native",
+                  auth: "native",
+                },
+                userAgent: navigator.userAgent,
+              },
+            }
+          );
+
+          if (subscribeError) {
+            console.error("Error saving token (push-subscribe):", subscribeError);
+            toast.error(
+              "Erro ao salvar token de notificação: " +
+                (subscribeError.message || "tente novamente")
+            );
             setLoading(false);
             return;
           }
