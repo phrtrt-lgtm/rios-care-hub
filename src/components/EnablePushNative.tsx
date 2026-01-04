@@ -43,11 +43,16 @@ export function EnablePushNative() {
     setLoading(true);
 
     try {
+      // Remove any existing listeners first to avoid duplicates
+      await PushNotifications.removeAllListeners();
+
       // Request permission
       let permStatus = await PushNotifications.checkPermissions();
+      console.log('Push permission status:', permStatus);
 
       if (permStatus.receive === 'prompt') {
         permStatus = await PushNotifications.requestPermissions();
+        console.log('Push permission after request:', permStatus);
       }
 
       if (permStatus.receive !== 'granted') {
@@ -56,87 +61,95 @@ export function EnablePushNative() {
         return;
       }
 
-      // Register for push notifications
-      await PushNotifications.register();
-
-      // Listen for registration token
+      // Set up listeners BEFORE registering
       await PushNotifications.addListener('registration', async (token) => {
-        console.log('Push registration success, token: ' + token.value);
+        console.log('Push registration success, token:', token.value);
 
-        // Save token to backend
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          toast.error("Você precisa estar logado");
-          return;
-        }
+        try {
+          // Save token to backend
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session) {
+            toast.error("Você precisa estar logado");
+            setLoading(false);
+            return;
+          }
 
-        // Save FCM token to database with correct endpoint format
-        const fcmEndpoint = `https://fcm.googleapis.com/fcm/send/${token.value}`;
-        const { error } = await supabase
-          .from('push_subscriptions')
-          .upsert(
-            {
-              owner_id: session.user.id,
-              endpoint: fcmEndpoint,
-              p256dh: 'native', // Not used for native
-              auth: 'native', // Not used for native
-              user_agent: navigator.userAgent,
-              is_active: true,
+          // Save FCM token to database with correct endpoint format
+          const fcmEndpoint = `https://fcm.googleapis.com/fcm/send/${token.value}`;
+          const { error } = await supabase
+            .from('push_subscriptions')
+            .upsert(
+              {
+                owner_id: session.user.id,
+                endpoint: fcmEndpoint,
+                p256dh: 'native',
+                auth: 'native',
+                user_agent: navigator.userAgent,
+                is_active: true,
+              },
+              {
+                onConflict: 'owner_id,endpoint',
+              }
+            );
+
+          if (error) {
+            console.error('Error saving token:', error);
+            toast.error('Erro ao salvar token de notificação: ' + error.message);
+            setLoading(false);
+            return;
+          }
+
+          toast.success("Notificações ativadas com sucesso!");
+          setIsSubscribed(true);
+          setLoading(false);
+
+          // Send test notification
+          await supabase.functions.invoke("send-push", {
+            body: {
+              ownerId: session.user.id,
+              payload: {
+                title: "Notificações ativadas! 🔔",
+                body: "Você receberá alertas de tickets e cobranças aqui.",
+                url: "/",
+              },
             },
-            {
-              onConflict: 'owner_id,endpoint',
-            }
-          );
-
-        if (error) {
-          console.error('Error saving token:', error);
-          toast.error('Erro ao salvar token de notificação');
-          return;
+          });
+        } catch (err: any) {
+          console.error('Error in registration handler:', err);
+          toast.error('Erro ao processar registro: ' + err.message);
+          setLoading(false);
         }
-
-        toast.success("Notificações ativadas com sucesso!");
-        setIsSubscribed(true);
-
-        // Send test notification
-        await supabase.functions.invoke("send-push", {
-          body: {
-            ownerId: session.user.id,
-            payload: {
-              title: "Notificações ativadas! 🔔",
-              body: "Você receberá alertas de tickets e cobranças aqui.",
-              url: "/",
-            },
-          },
-        });
       });
 
-      // Handle errors
       await PushNotifications.addListener('registrationError', (error) => {
-        console.error('Error on registration: ' + JSON.stringify(error));
-        toast.error('Erro ao registrar notificações: ' + error.error);
+        console.error('Push registration error:', JSON.stringify(error));
+        toast.error('Erro ao obter token FCM: ' + (error.error || 'Verifique a configuração do Firebase'));
+        setLoading(false);
+        setIsSubscribed(false);
       });
 
-      // Handle received notifications
       await PushNotifications.addListener('pushNotificationReceived', (notification) => {
-        console.log('Push notification received: ', notification);
+        console.log('Push notification received:', notification);
         toast.info(notification.title || 'Nova notificação', {
           description: notification.body,
         });
       });
 
-      // Handle notification tap
       await PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
-        console.log('Push notification action performed', notification.actionId, notification.inputValue);
+        console.log('Push notification action performed', notification.actionId);
         const data = notification.notification.data;
         if (data?.url) {
           window.location.href = data.url;
         }
       });
 
+      // Now register - this triggers registration or registrationError
+      console.log('Calling PushNotifications.register()...');
+      await PushNotifications.register();
+
     } catch (error: any) {
       console.error("Error enabling push:", error);
       toast.error("Erro ao ativar notificações: " + error.message);
-    } finally {
       setLoading(false);
     }
   };
