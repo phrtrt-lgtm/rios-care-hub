@@ -15,7 +15,17 @@ export interface FileUploadProgress {
 
 export type ProgressCallback = (progress: FileUploadProgress) => void;
 
-// Load FFmpeg (shared instance)
+export class VideoTooLargeError extends Error {
+  readonly code = 'VIDEO_TOO_LARGE' as const;
+  constructor(message: string) {
+    super(message);
+    this.name = 'VideoTooLargeError';
+  }
+}
+
+// If compression fails (common with some camera-recorded codecs like HEVC),
+// we hard-block uploading “heavy” originals.
+const MAX_VIDEO_UPLOAD_BYTES = 15 * 1024 * 1024; // 15MB
 async function loadFFmpeg(onProgress?: ProgressCallback): Promise<FFmpeg> {
   if (sharedFFmpeg) {
     return sharedFFmpeg;
@@ -37,7 +47,8 @@ async function loadFFmpeg(onProgress?: ProgressCallback): Promise<FFmpeg> {
         console.log('[FFmpeg]', message);
       });
 
-      const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+      // Keep core version aligned with the installed @ffmpeg/ffmpeg package
+      const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.10/dist/umd';
       
       console.log('[FFmpeg] Loading core...');
       await ffmpeg.load({
@@ -266,10 +277,32 @@ export async function processFileForUpload(
   file: File,
   onProgress?: ProgressCallback
 ): Promise<File> {
-  if (isVideoFile(file)) {
-    return await compressVideo(file, onProgress);
+  if (!isVideoFile(file)) {
+    return file;
   }
-  return file;
+
+  const originalBytes = file.size;
+
+  // Try to compress; if it fails/returns original and it's still big, block upload.
+  const processed = await compressVideo(file, onProgress);
+
+  const compressionDidNothing =
+    processed === file ||
+    (processed.size === originalBytes && processed.type === file.type);
+
+  if (compressionDidNothing && originalBytes > MAX_VIDEO_UPLOAD_BYTES) {
+    onProgress?.({
+      stage: 'error',
+      percent: 100,
+      message: 'Vídeo muito pesado para envio. Grave em modo “Mais compatível” ou envie um vídeo menor.',
+    });
+
+    throw new VideoTooLargeError(
+      'Não foi possível comprimir o vídeo gravado. Ele está muito pesado para envio (provável codec não suportado para compressão no navegador).'
+    );
+  }
+
+  return processed;
 }
 
 // Process multiple files with compression
