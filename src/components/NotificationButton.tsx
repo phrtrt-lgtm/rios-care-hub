@@ -157,6 +157,7 @@ export function NotificationButton() {
               auth: "native",
             },
             userAgent: navigator.userAgent,
+            userId: session.user.id,
           },
         });
 
