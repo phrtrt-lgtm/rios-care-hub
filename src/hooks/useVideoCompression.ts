@@ -61,7 +61,8 @@ export function useVideoCompression(): UseVideoCompressionReturn {
         });
       });
 
-      const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+      // Keep core version aligned with the installed @ffmpeg/ffmpeg package
+      const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.10/dist/umd';
       
       await ffmpeg.load({
         coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
