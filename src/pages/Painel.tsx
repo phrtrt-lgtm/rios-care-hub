@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { LogOut, Users, Ticket, AlertTriangle, CheckCircle2, Plus, DollarSign, Building2, Bell, Settings, Sparkles, UserPlus, Vote, Shield, Wrench, List, Search } from "lucide-react";
+import { LogOut, Users, Ticket, AlertTriangle, CheckCircle2, Plus, DollarSign, Building2, Bell, Settings, Sparkles, UserPlus, Vote, Shield, Wrench, List, Search, FileText, Mail } from "lucide-react";
 import { UnifiedCalendarWidget } from "@/components/UnifiedCalendarWidget";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -74,38 +74,25 @@ export default function Painel() {
               <img src="/logo.png" alt="RIOS" className="h-6 object-contain" />
               
               {profile?.role === "admin" && (
-                <>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => navigate("/admin/vistorias")}
-                    title="Vistorias de Faxina"
-                  >
-                    <Sparkles className="h-5 w-5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => navigate("/configuracao-email")}
-                    title="Configurar Templates de Email"
-                  >
-                    <Settings className="h-5 w-5" />
-                  </Button>
-                </>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate("/admin/vistorias")}
+                  title="Vistorias de Faxina"
+                >
+                  <Sparkles className="h-5 w-5" />
+                </Button>
               )}
               
               {(profile?.role === "admin" || profile?.role === "agent" || profile?.role === "maintenance") && (
-                <>
-                  <ResponseTemplatesPanel />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => navigate("/resumo-propriedades")}
-                    title="Resumo por Propriedade"
-                  >
-                    <Building2 className="h-5 w-5" />
-                  </Button>
-                </>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate("/resumo-propriedades")}
+                  title="Resumo por Propriedade"
+                >
+                  <Building2 className="h-5 w-5" />
+                </Button>
               )}
               
               {(profile?.role === "admin" || profile?.role === "maintenance") && (
@@ -385,11 +372,50 @@ export default function Painel() {
           />
         </div>
 
-        {/* Quick Actions - Outras Ações - Admin only */}
-        {profile?.role === "admin" && (
+        {/* Quick Actions - Outras Ações - Admin and team */}
+        {(profile?.role === "admin" || profile?.role === "agent" || profile?.role === "maintenance") && (
           <div>
             <h3 className="mb-4 text-xl font-semibold">Outras Ações</h3>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {/* Templates de Resposta */}
+              <ResponseTemplatesPanel 
+                triggerElement={
+                  <Card className="cursor-pointer hover-lift group border-transparent hover:border-primary/20">
+                    <CardHeader>
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                          <FileText className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-base">Templates de Resposta</CardTitle>
+                          <CardDescription className="text-xs">
+                            Gerenciar respostas rápidas
+                          </CardDescription>
+                        </div>
+                      </div>
+                    </CardHeader>
+                  </Card>
+                }
+              />
+
+              {/* Templates de Email - Admin only */}
+              {profile?.role === "admin" && (
+                <Card className="cursor-pointer hover-lift group border-transparent hover:border-primary/20" onClick={() => navigate("/configuracao-email")}>
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                        <Mail className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-base">Templates de Email</CardTitle>
+                        <CardDescription className="text-xs">
+                          Configurar templates de email
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                </Card>
+              )}
               <Card className="cursor-pointer hover-lift group border-transparent hover:border-primary/20" onClick={() => navigate("/admin/cadastrar-proprietario")}>
                 <CardHeader>
                   <div className="flex items-center gap-3">
