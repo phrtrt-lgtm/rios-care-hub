@@ -122,11 +122,12 @@ async function sendFirebasePush(
           priority: "high",
           notification: {
             channel_id: "high_importance_channel",
-            tag: payload.tag || undefined,
             notification_priority: "PRIORITY_MAX",
             visibility: "PUBLIC",
             sound: "default",
             default_vibrate_timings: true,
+            // Group notifications by tag (e.g., ticket_id) so they stack
+            ...(payload.tag ? { group: payload.tag } : {}),
           },
         },
         webpush: {
