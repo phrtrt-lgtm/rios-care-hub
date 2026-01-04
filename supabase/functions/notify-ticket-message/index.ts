@@ -89,7 +89,7 @@ const handler = async (req: Request): Promise<Response> => {
         owner_id: ticket.owner_id,
         title: `Nova resposta no ticket #${ticket.id.slice(0, 8)}`,
         message: `${message.author.name}: ${message.body.substring(0, 100)}${message.body.length > 100 ? '...' : ''}`,
-        type: "ticket",
+        type: `ticket_${ticketId}`,
         reference_id: ticketId,
         reference_url: `/ticket-detalhes/${ticketId}`,
       });
@@ -147,7 +147,7 @@ const handler = async (req: Request): Promise<Response> => {
             owner_id: member.id,
             title: `Nova mensagem no ticket #${ticket.id.slice(0, 8)}`,
             message: `${ticket.owner.name}: ${message.body.substring(0, 100)}${message.body.length > 100 ? '...' : ''}`,
-            type: "ticket",
+            type: `ticket_${ticketId}`,
             reference_id: ticketId,
             reference_url: `/ticket-detalhes/${ticketId}`,
           }));
