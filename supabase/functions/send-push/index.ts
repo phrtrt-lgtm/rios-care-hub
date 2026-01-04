@@ -118,11 +118,24 @@ async function sendFirebasePush(
           url: payload.url || "",
           tag: payload.tag || "",
         },
-        webpush: payload.url ? {
-          fcm_options: {
-            link: payload.url,
+        android: {
+          priority: "high",
+          notification: {
+            channel_id: "high_importance_channel",
+            priority: "max",
+            visibility: "public",
+            default_sound: true,
+            default_vibrate_timings: true,
           },
-        } : undefined,
+        },
+        webpush: {
+          headers: {
+            Urgency: "high",
+          },
+          fcm_options: payload.url ? {
+            link: payload.url,
+          } : undefined,
+        },
       },
     };
 

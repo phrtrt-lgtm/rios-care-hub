@@ -26,8 +26,10 @@ self.addEventListener('push', (event) => {
       badge: '/logo.png',
       data: { url: data.url || '/' },
       vibrate: [200, 100, 200],
-      tag: data.tag || 'notification',
-      requireInteraction: false,
+      tag: data.tag || 'notification-' + Date.now(),
+      renotify: true,
+      requireInteraction: true,
+      silent: false,
       actions: []
     };
     
