@@ -22,6 +22,7 @@ import { NotificationButton } from "@/components/NotificationButton";
 import { TeamChatWidget } from "@/components/TeamChatWidget";
 import { GlobalSearch, useGlobalSearch } from "@/components/GlobalSearch";
 import { ResponseTemplatesPanel } from "@/components/ResponseTemplatesPanel";
+import { EnablePushNative } from "@/components/EnablePushNative";
 
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { StatsCard } from "@/components/StatsCard";
@@ -191,6 +192,9 @@ export default function Painel() {
                   </div>
                   
                   <ChangePasswordDialog />
+                  
+                  {/* Push Notifications - Native only */}
+                  <EnablePushNative />
                   
                   <Button 
                     variant="destructive"
