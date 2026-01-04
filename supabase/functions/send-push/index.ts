@@ -126,8 +126,6 @@ async function sendFirebasePush(
             visibility: "PUBLIC",
             sound: "default",
             default_vibrate_timings: true,
-            // Group notifications by tag (e.g., ticket_id) so they stack
-            ...(payload.tag ? { group: payload.tag } : {}),
           },
         },
         webpush: {
