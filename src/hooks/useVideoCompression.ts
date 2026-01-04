@@ -96,6 +96,12 @@ export function useVideoCompression(): UseVideoCompressionReturn {
       return file;
     }
 
+    // Check if SharedArrayBuffer is available (required for FFmpeg.wasm)
+    if (typeof SharedArrayBuffer === 'undefined') {
+      console.log('[VideoCompression] SharedArrayBuffer not available - compression disabled');
+      return file;
+    }
+
     setIsCompressing(true);
     
     try {
@@ -105,7 +111,8 @@ export function useVideoCompression(): UseVideoCompressionReturn {
       }
 
       if (!sharedFFmpeg) {
-        throw new Error('FFmpeg not loaded');
+        console.log('[VideoCompression] FFmpeg not loaded, returning original file');
+        return file;
       }
 
       setProgress({ stage: 'compressing', percent: 0, message: 'Preparando vídeo...' });
@@ -177,8 +184,8 @@ export function useVideoCompression(): UseVideoCompressionReturn {
       return compressedFile;
     } catch (error) {
       console.error('Video compression error:', error);
-      setProgress({ stage: 'error', percent: 0, message: 'Erro na compressão' });
-      // Return original file on error
+      setProgress({ stage: 'done', percent: 100, message: 'Usando vídeo original' });
+      // Return original file on error instead of failing
       return file;
     } finally {
       setIsCompressing(false);

@@ -64,6 +64,20 @@ async function loadFFmpeg(onProgress?: ProgressCallback): Promise<FFmpeg> {
   }
 }
 
+// Check if FFmpeg/SharedArrayBuffer is supported
+function isCompressionSupported(): boolean {
+  try {
+    // SharedArrayBuffer is required for FFmpeg.wasm
+    if (typeof SharedArrayBuffer === 'undefined') {
+      console.log('[VideoCompression] SharedArrayBuffer not available - compression disabled');
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // Compress video using FFmpeg (WhatsApp-style compression)
 export async function compressVideo(
   file: File, 
@@ -76,12 +90,21 @@ export async function compressVideo(
 
   // Skip compression for very small videos (< 3MB)
   if (file.size < 3 * 1024 * 1024) {
-    console.log('Video too small to compress, skipping:', file.name);
+    console.log('[VideoCompression] Video too small to compress, skipping:', file.name);
+    return file;
+  }
+
+  // Check if compression is supported in this environment
+  if (!isCompressionSupported()) {
+    console.log('[VideoCompression] Compression not supported in this browser, skipping');
+    onProgress?.({ stage: 'done', percent: 100, message: 'Compressão não suportada' });
     return file;
   }
 
   try {
     console.log('[VideoCompression] Starting compression for:', file.name, 'Size:', (file.size / 1024 / 1024).toFixed(2) + 'MB');
+    
+    onProgress?.({ stage: 'compressing', percent: 0, message: 'Carregando compressor...' });
     
     const ffmpeg = await loadFFmpeg(onProgress);
 
@@ -115,7 +138,10 @@ export async function compressVideo(
       console.log('[VideoCompression] File read successfully, size:', fileData.length);
     } catch (readError: any) {
       console.error('[VideoCompression] Failed to read file:', readError);
-      throw new Error(`Falha ao ler arquivo: ${readError.message || 'Memória insuficiente'}`);
+      // Return original file on read error
+      console.log('[VideoCompression] Returning original file due to read error');
+      onProgress?.({ stage: 'done', percent: 100, message: 'Usando vídeo original' });
+      return file;
     }
 
     console.log('[VideoCompression] Writing input file to FFmpeg...');
@@ -180,9 +206,10 @@ export async function compressVideo(
     return compressedFile;
   } catch (error: any) {
     console.error('[VideoCompression] ERROR:', error);
-    onProgress?.({ stage: 'error', percent: 0, message: `Erro: ${error.message || 'Falha na compressão'}` });
-    // Re-throw error so caller can handle it
-    throw error;
+    // On any error, return original file instead of failing
+    console.log('[VideoCompression] Returning original file due to error');
+    onProgress?.({ stage: 'done', percent: 100, message: 'Usando vídeo original' });
+    return file;
   }
 }
 
