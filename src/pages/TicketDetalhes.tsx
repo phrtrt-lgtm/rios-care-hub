@@ -23,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import JSZip from "jszip";
+import { processFileForUpload } from "@/lib/processVideoForUpload";
 
 interface Ticket {
   id: string;
@@ -240,11 +241,13 @@ export default function TicketDetalhes() {
         const attachments = [];
         if (filesToUpload.length > 0) {
           for (const file of filesToUpload) {
-            const filePath = `${id}/${Date.now()}_${file.name}`;
+            // Compress video if it's a video file
+            const processedFile = await processFileForUpload(file);
+            const filePath = `${id}/${Date.now()}_${processedFile.name}`;
 
             const { error: uploadError } = await supabase.storage
               .from('attachments')
-              .upload(filePath, file);
+              .upload(filePath, processedFile);
 
             if (uploadError) throw uploadError;
 
@@ -254,9 +257,9 @@ export default function TicketDetalhes() {
 
             attachments.push({
               file_url: publicUrl,
-              file_name: file.name,
-              file_type: file.type,
-              size_bytes: file.size,
+              file_name: processedFile.name,
+              file_type: processedFile.type,
+              size_bytes: processedFile.size,
               path: filePath
             });
           }

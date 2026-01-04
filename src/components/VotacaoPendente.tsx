@@ -9,6 +9,7 @@ import { ChevronDown, ChevronUp, FileIcon, Upload, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { processFileForUpload } from "@/lib/processVideoForUpload";
 
 interface VotacaoPendenteProps {
   proposal: any;
@@ -45,10 +46,12 @@ export const VotacaoPendente = ({ proposal, userRole, onVoteSubmitted }: Votacao
 
       let attachmentPath = null;
       if (attachment) {
-        const filePath = `proposals/${proposal.id}/responses/${Date.now()}-${attachment.name}`;
+        // Compress video if it's a video file
+        const processedFile = await processFileForUpload(attachment);
+        const filePath = `proposals/${proposal.id}/responses/${Date.now()}-${processedFile.name}`;
         const { error: uploadError } = await supabase.storage
           .from('proposals')
-          .upload(filePath, attachment);
+          .upload(filePath, processedFile);
 
         if (uploadError) throw uploadError;
         attachmentPath = filePath;

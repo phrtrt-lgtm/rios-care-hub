@@ -26,6 +26,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { MediaGallery } from "@/components/MediaGallery";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { processFileForUpload } from "@/lib/processVideoForUpload";
 import {
   Dialog,
   DialogContent,
@@ -242,12 +243,14 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
 
       // Upload file if provided
       if (file) {
-        const fileExt = file.name.split('.').pop();
+        // Compress video if it's a video file
+        const processedFile = await processFileForUpload(file);
+        const fileExt = processedFile.name.split('.').pop();
         const filePath = `proposals/${proposalId}/${profile?.id}-${Date.now()}.${fileExt}`;
         
         const { error: uploadError } = await supabase.storage
           .from('attachments')
-          .upload(filePath, file);
+          .upload(filePath, processedFile);
 
         if (uploadError) throw uploadError;
         attachmentPath = filePath;
