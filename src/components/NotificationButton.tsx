@@ -88,9 +88,28 @@ export function NotificationButton() {
     
     try {
       const permStatus = await PushNotifications.checkPermissions();
-      setIsPushEnabled(permStatus.receive === 'granted');
+      
+      // Check if permission granted AND we have an active subscription in DB
+      if (permStatus.receive === 'granted') {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const { data } = await supabase
+            .from('push_subscriptions')
+            .select('id')
+            .eq('owner_id', session.user.id)
+            .eq('is_active', true)
+            .limit(1)
+            .maybeSingle();
+          
+          // Only hide button if we have both permission AND active subscription
+          setIsPushEnabled(!!data);
+        }
+      } else {
+        setIsPushEnabled(false);
+      }
     } catch (error) {
       console.error("Error checking push permissions:", error);
+      setIsPushEnabled(false);
     }
   };
 
@@ -123,29 +142,28 @@ export function NotificationButton() {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
           toast.error("Você precisa estar logado");
+          setEnablingPush(false);
           return;
         }
 
+        // Save token via edge function to avoid RLS issues
         const fcmEndpoint = `https://fcm.googleapis.com/fcm/send/${token.value}`;
-        const { error } = await supabase
-          .from('push_subscriptions')
-          .upsert(
-            {
-              owner_id: session.user.id,
-              endpoint: fcmEndpoint,
-              p256dh: 'native',
-              auth: 'native',
-              user_agent: navigator.userAgent,
-              is_active: true,
+        
+        const { error } = await supabase.functions.invoke("push-subscribe", {
+          body: {
+            endpoint: fcmEndpoint,
+            keys: {
+              p256dh: "native",
+              auth: "native",
             },
-            {
-              onConflict: 'owner_id,endpoint',
-            }
-          );
+            userAgent: navigator.userAgent,
+          },
+        });
 
         if (error) {
           console.error('Error saving token:', error);
-          toast.error('Erro ao salvar token de notificação');
+          toast.error('Erro ao salvar token: ' + (error.message || 'tente novamente'));
+          setEnablingPush(false);
           return;
         }
 
