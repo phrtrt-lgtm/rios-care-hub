@@ -125,13 +125,13 @@ export async function compressVideo(
 
     onProgress?.({ stage: 'compressing', percent: 5, message: 'Preparando vídeo...' });
 
-    const inputName = 'input' + getExtension(file.name);
+    const inputName = 'input' + getExtension(file.name, file.type);
     const outputName = 'output.mp4';
 
     // Write input file with timeout for large files
     console.log('[VideoCompression] Reading file into memory...');
     onProgress?.({ stage: 'compressing', percent: 5, message: 'Lendo arquivo...' });
-    
+
     let fileData: Uint8Array;
     try {
       fileData = await fetchFile(file);
@@ -178,18 +178,16 @@ export async function compressVideo(
     // Read output file
     console.log('[VideoCompression] Reading output file...');
     const data = await ffmpeg.readFile(outputName);
-    
+
     // Convert to proper array
-    const byteArray = typeof data === 'string' 
+    const byteArray = typeof data === 'string'
       ? Array.from(new TextEncoder().encode(data))
       : Array.from(data);
-    
+
     const compressedBlob = new Blob([new Uint8Array(byteArray)], { type: 'video/mp4' });
-    const compressedFile = new File(
-      [compressedBlob],
-      file.name.replace(/\.[^.]+$/, '.mp4'),
-      { type: 'video/mp4' }
-    );
+
+    const outputFileName = normalizeMp4FileName(file.name);
+    const compressedFile = new File([compressedBlob], outputFileName, { type: 'video/mp4' });
 
     // Log compression results
     const originalSize = (file.size / 1024 / 1024).toFixed(2);
@@ -213,17 +211,49 @@ export async function compressVideo(
   }
 }
 
-function getExtension(filename: string): string {
-  const ext = filename.split('.').pop()?.toLowerCase();
-  switch (ext) {
-    case 'mp4': return '.mp4';
+function getExtension(filename: string, mimeType?: string): string {
+  const cleanName = (filename || '').trim();
+  const extFromName = cleanName.includes('.')
+    ? cleanName.split('.').pop()?.toLowerCase()
+    : undefined;
+
+  const ext = extFromName || mimeType?.toLowerCase();
+
+  // If we got a mimeType, normalize it to an extension-like token
+  const normalized = ext?.includes('/') ? ext.split('/').pop() : ext;
+
+  switch (normalized) {
+    case 'mp4':
+      return '.mp4';
     case 'mov':
-    case 'quicktime': return '.mov';
-    case 'avi': return '.avi';
-    case 'webm': return '.webm';
-    case 'mkv': return '.mkv';
-    default: return '.mp4';
+    case 'quicktime':
+      return '.mov';
+    case 'avi':
+    case 'x-msvideo':
+      return '.avi';
+    case 'webm':
+      return '.webm';
+    case 'mkv':
+      return '.mkv';
+    default:
+      return '.mp4';
   }
+}
+
+function normalizeMp4FileName(originalName: string): string {
+  const clean = (originalName || '').trim();
+
+  if (!clean) {
+    return `video-${Date.now()}.mp4`;
+  }
+
+  // If there is no extension, append .mp4
+  if (!clean.includes('.')) {
+    return `${clean}.mp4`;
+  }
+
+  // Replace any extension with .mp4
+  return clean.replace(/\.[^.]+$/, '.mp4');
 }
 
 // Check if file is a video

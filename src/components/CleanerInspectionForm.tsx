@@ -7,7 +7,8 @@ import AudioPlayer from '@/components/AudioPlayer';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { compressVideo, isVideoFile, FileUploadProgress } from '@/lib/fileUpload';
+import { isVideoFile, FileUploadProgress } from '@/lib/fileUpload';
+import { processFileForUpload } from '@/lib/processVideoForUpload';
 import { VideoCompressionProgress } from '@/components/VideoCompressionProgress';
 
 interface CleanerInspectionFormProps {
@@ -42,8 +43,12 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
   const [sending, setSending] = useState(false);
 
   const uploadFile = async (file: File): Promise<string> => {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    const ext = (file.name || '').split('.').pop()?.toLowerCase();
+    const safeExt = ext && ext !== file.name && ext.length <= 10
+      ? ext
+      : (file.type.startsWith('video/') ? 'mp4' : file.type.startsWith('image/') ? 'jpg' : 'bin');
+
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${safeExt}`;
     const filePath = `inspections/${propertyId}/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
@@ -91,17 +96,17 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
         
         // Compress video if needed
         if (isVideoFile(originalFile)) {
-          fileToUpload = await compressVideo(originalFile, (progress) => {
-            setUploadedFiles(prev => 
-              prev.map(f => 
+          fileToUpload = await processFileForUpload(originalFile, (progress) => {
+            setUploadedFiles(prev =>
+              prev.map(f =>
                 f.file === originalFile ? { ...f, compressionProgress: progress } : f
               )
             );
           });
-          
+
           // Update state: compression done, now uploading
-          setUploadedFiles(prev => 
-            prev.map(f => 
+          setUploadedFiles(prev =>
+            prev.map(f =>
               f.file === originalFile ? { ...f, compressing: false, uploading: true, file: fileToUpload } : f
             )
           );
