@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +13,7 @@ import { Wrench, Calendar, Clock, CheckCircle2, Building2, MessageSquare, Chevro
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useChatPreloader } from "@/hooks/useChatPreloader";
 import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
+import { toast } from "sonner";
 
 interface MaintenanceTicket {
   id: string;
@@ -20,8 +21,8 @@ interface MaintenanceTicket {
   status: string;
   created_at: string;
   scheduled_at: string | null;
-  kind?: string;
-  essential?: boolean;
+  kind?: string | null;
+  essential?: boolean | null;
   owner_decision?: string | null;
   owner_action_due_at?: string | null;
   property: {
@@ -43,10 +44,12 @@ const STATUS_CONFIG = {
 export function OwnerMaintenanceProgress() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [selectedTicket, setSelectedTicket] = useState<MaintenanceTicket | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
+  const [decidingTicketId, setDecidingTicketId] = useState<string | null>(null);
 
-  const { data: maintenances, isLoading } = useQuery({
+  const { data: maintenances, isLoading, refetch } = useQuery({
     queryKey: ["owner-maintenances", user?.id],
     queryFn: async () => {
       if (!user) return [];
@@ -88,6 +91,59 @@ export function OwnerMaintenanceProgress() {
     setSelectedTicket(ticket);
     setChatOpen(true);
     markAsRead(ticket.id);
+  };
+
+  const handleDecision = async (ticketId: string, decision: 'owner_will_fix' | 'pm_will_fix', e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDecidingTicketId(ticketId);
+    
+    try {
+      const newStatus = decision === 'pm_will_fix' ? 'em_execucao' : 'aguardando_info';
+      
+      const { error } = await supabase
+        .from('tickets')
+        .update({
+          owner_decision: decision,
+          status: newStatus as any
+        })
+        .eq('id', ticketId);
+
+      if (error) throw error;
+
+      // Notify team about the decision
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      
+      fetch(`${supabaseUrl}/functions/v1/notify-owner-decision`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseKey,
+        },
+        body: JSON.stringify({
+          type: 'decision_made',
+          ticketId,
+          decision,
+        }),
+      }).catch(err => console.error('Failed to notify team:', err));
+
+      toast.success(decision === 'owner_will_fix' 
+        ? 'Você assumiu a execução da manutenção' 
+        : 'Manutenção delegada à gestão!'
+      );
+      
+      refetch();
+    } catch (error) {
+      console.error('Error updating decision:', error);
+      toast.error('Erro ao registrar decisão');
+    } finally {
+      setDecidingTicketId(null);
+    }
+  };
+
+  // Check if ticket needs owner decision
+  const needsDecision = (ticket: MaintenanceTicket) => {
+    return !ticket.essential && !ticket.owner_decision && ticket.owner_action_due_at;
   };
 
   if (isLoading) {
@@ -144,11 +200,17 @@ export function OwnerMaintenanceProgress() {
             {maintenances.map((ticket) => {
               const currentStep = getStep(ticket);
               const unreadCount = unreadCounts[ticket.id] || 0;
+              const showDecisionButtons = needsDecision(ticket);
+              const isDeciding = decidingTicketId === ticket.id;
+              const dueDate = ticket.owner_action_due_at ? new Date(ticket.owner_action_due_at) : null;
+              const isOverdue = dueDate && dueDate < new Date();
 
               return (
                 <div
                   key={ticket.id}
-                  className="p-4 rounded-lg border bg-card hover:bg-muted/50 cursor-pointer transition-colors group"
+                  className={`p-4 rounded-lg border bg-card hover:bg-muted/50 cursor-pointer transition-colors group ${
+                    showDecisionButtons ? (isOverdue ? 'border-red-300 bg-red-50/50' : 'border-amber-300 bg-amber-50/50') : ''
+                  }`}
                   onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
                 >
                   <div className="flex items-start gap-3 mb-4">
@@ -177,19 +239,16 @@ export function OwnerMaintenanceProgress() {
                       </p>
                       
                       {/* Owner Decision Needed Badge */}
-                      {ticket.kind === 'maintenance' && 
-                       !ticket.essential && 
-                       !ticket.owner_decision && 
-                       ticket.owner_action_due_at && (
+                      {showDecisionButtons && (
                         <div className={`mt-1 inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
-                          new Date(ticket.owner_action_due_at) < new Date()
+                          isOverdue
                             ? 'bg-red-100 text-red-700'
                             : 'bg-amber-100 text-amber-700'
                         }`}>
                           <AlertTriangle className="h-3 w-3" />
-                          {new Date(ticket.owner_action_due_at) < new Date()
+                          {isOverdue
                             ? 'Prazo expirado'
-                            : `Decidir até ${new Date(ticket.owner_action_due_at).toLocaleDateString('pt-BR')}`
+                            : `Decidir até ${dueDate?.toLocaleDateString('pt-BR')}`
                           }
                         </div>
                       )}
@@ -234,45 +293,75 @@ export function OwnerMaintenanceProgress() {
                     </div>
                   </div>
 
-                  {/* Progress Steps */}
-                  <div className="flex items-center justify-between relative">
-                    {/* Progress line */}
-                    <div className="absolute top-4 left-0 right-0 h-0.5 bg-muted" />
-                    <div 
-                      className="absolute top-4 left-0 h-0.5 bg-primary transition-all"
-                      style={{ width: `${((currentStep - 1) / 3) * 100}%` }}
-                    />
+                  {/* Quick Decision Buttons - Show when decision is needed */}
+                  {showDecisionButtons && (
+                    <div className="mb-4 p-3 bg-background rounded-lg border">
+                      <p className="text-xs text-muted-foreground mb-2">Como você gostaria de proceder?</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-auto py-2 flex-col items-start text-left"
+                          disabled={isDeciding}
+                          onClick={(e) => handleDecision(ticket.id, 'owner_will_fix', e)}
+                        >
+                          <span className="text-xs font-medium">🔧 Assumir</span>
+                          <span className="text-[10px] text-muted-foreground">Você executa</span>
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="h-auto py-2 flex-col items-start text-left"
+                          disabled={isDeciding}
+                          onClick={(e) => handleDecision(ticket.id, 'pm_will_fix', e)}
+                        >
+                          <span className="text-xs font-medium">👥 Delegar</span>
+                          <span className="text-[10px] text-muted-foreground">Gestão cuida</span>
+                        </Button>
+                      </div>
+                    </div>
+                  )}
 
-                    {steps.map((step, index) => {
-                      const stepNumber = index + 1;
-                      const isActive = currentStep === stepNumber;
-                      const isComplete = currentStep > stepNumber;
-                      const Icon = step.icon;
+                  {/* Progress Steps - Only show if no decision needed or decision made */}
+                  {!showDecisionButtons && (
+                    <div className="flex items-center justify-between relative">
+                      {/* Progress line */}
+                      <div className="absolute top-4 left-0 right-0 h-0.5 bg-muted" />
+                      <div 
+                        className="absolute top-4 left-0 h-0.5 bg-primary transition-all"
+                        style={{ width: `${((currentStep - 1) / 3) * 100}%` }}
+                      />
 
-                      return (
-                        <div key={step.label} className="flex flex-col items-center relative z-10">
-                          <div
-                            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                              isActive
-                                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
-                                : isComplete
-                                ? "bg-primary/20 text-primary"
-                                : "bg-muted text-muted-foreground"
-                            }`}
-                          >
-                            <Icon className="h-4 w-4" />
+                      {steps.map((step, index) => {
+                        const stepNumber = index + 1;
+                        const isActive = currentStep === stepNumber;
+                        const isComplete = currentStep > stepNumber;
+                        const Icon = step.icon;
+
+                        return (
+                          <div key={step.label} className="flex flex-col items-center relative z-10">
+                            <div
+                              className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                                isActive
+                                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
+                                  : isComplete
+                                  ? "bg-primary/20 text-primary"
+                                  : "bg-muted text-muted-foreground"
+                              }`}
+                            >
+                              <Icon className="h-4 w-4" />
+                            </div>
+                            <span
+                              className={`text-[10px] mt-1 ${
+                                isActive ? "text-primary font-medium" : "text-muted-foreground"
+                              }`}
+                            >
+                              {step.label}
+                            </span>
                           </div>
-                          <span
-                            className={`text-[10px] mt-1 ${
-                              isActive ? "text-primary font-medium" : "text-muted-foreground"
-                            }`}
-                          >
-                            {step.label}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               );
             })}
