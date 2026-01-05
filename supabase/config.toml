@@ -50,3 +50,9 @@ verify_jwt = true
 
 [functions.daily-summary-cron]
 verify_jwt = false
+
+[functions.notify-owner-decision]
+verify_jwt = false
+
+[functions.owner-decision-cron]
+verify_jwt = false

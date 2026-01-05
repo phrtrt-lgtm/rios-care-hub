@@ -48,6 +48,7 @@ export default function NovaManutencao() {
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingTitle, setIsGeneratingTitle] = useState(false);
+  const [ownerActionMode, setOwnerActionMode] = useState<'pending_decision' | 'essential' | 'pm_immediate'>('pending_decision');
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -251,6 +252,15 @@ export default function NovaManutencao() {
       // Map 'management' to 'pm' for database
       const dbCostResponsible = costResponsible === 'management' ? 'pm' : costResponsible;
 
+      // Determine if this is essential (immediate action) or needs owner decision
+      const isEssential = ownerActionMode === 'essential';
+      const ownerDecision = ownerActionMode === 'pm_immediate' ? 'pm_will_fix' : null;
+      
+      // Set 72h deadline for owner decision if mode is pending_decision
+      const ownerActionDueAt = ownerActionMode === 'pending_decision' 
+        ? new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString()
+        : null;
+
       // Create maintenance ticket
       const { data: ticket, error: ticketError } = await supabase
         .from("tickets")
@@ -258,12 +268,16 @@ export default function NovaManutencao() {
           owner_id: selectedProperty.owner_id,
           created_by: user!.id,
           ticket_type: "manutencao" as const,
+          kind: "maintenance",
           subject,
           description,
           priority,
           property_id: propertyId,
           cost_responsible: dbCostResponsible,
           guest_checkout_date: costResponsible === 'guest' && guestCheckoutDate ? guestCheckoutDate : null,
+          essential: isEssential,
+          owner_decision: ownerDecision,
+          owner_action_due_at: ownerActionDueAt,
         }])
         .select()
         .single();
@@ -294,6 +308,24 @@ export default function NovaManutencao() {
             })),
           }),
         });
+      }
+
+      // Send notification for owner decision if applicable
+      if (ownerActionMode === 'pending_decision') {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+        
+        fetch(`${supabaseUrl}/functions/v1/notify-owner-decision`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': supabaseKey,
+          },
+          body: JSON.stringify({
+            type: 'decision_pending',
+            ticketId: ticket.id,
+          }),
+        }).catch(err => console.error('Failed to send decision notification:', err));
       }
 
       toast.success("Manutenção criada com sucesso!");
@@ -516,6 +548,54 @@ export default function NovaManutencao() {
                 )}
               </div>
 
+              {/* Owner Decision Mode - only show for owner-responsible costs */}
+              {costResponsible === 'owner' && (
+                <div className="space-y-3">
+                  <Label>Modo de decisão do proprietário</Label>
+                  <RadioGroup 
+                    value={ownerActionMode} 
+                    onValueChange={(v) => setOwnerActionMode(v as any)}
+                    className="space-y-2"
+                  >
+                    <div className="flex items-start space-x-2 border rounded-lg p-3">
+                      <RadioGroupItem value="pending_decision" id="mode-pending" className="mt-1" />
+                      <div className="flex-1">
+                        <Label htmlFor="mode-pending" className="font-medium cursor-pointer">
+                          ⏰ Aguardar decisão (72h)
+                        </Label>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          O proprietário terá 72h para decidir se assume a execução ou delega à gestão. 
+                          Ele será notificado por email e push, com lembrete 24h antes do prazo.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start space-x-2 border rounded-lg p-3 border-orange-200 bg-orange-50/50">
+                      <RadioGroupItem value="essential" id="mode-essential" className="mt-1" />
+                      <div className="flex-1">
+                        <Label htmlFor="mode-essential" className="font-medium cursor-pointer text-orange-700">
+                          🚨 Essencial / Urgente
+                        </Label>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Manutenção crítica que precisa ser executada imediatamente (vazamentos, 
+                          problemas elétricos graves, etc). Não aguarda decisão do proprietário.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start space-x-2 border rounded-lg p-3 border-blue-200 bg-blue-50/50">
+                      <RadioGroupItem value="pm_immediate" id="mode-pm" className="mt-1" />
+                      <div className="flex-1">
+                        <Label htmlFor="mode-pm" className="font-medium cursor-pointer text-blue-700">
+                          👥 Gestão assume imediatamente
+                        </Label>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          A gestão assumirá a execução sem consultar o proprietário. 
+                          Útil para manutenções pequenas ou já acordadas.
+                        </p>
+                      </div>
+                    </div>
+                  </RadioGroup>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label>Prioridade</Label>
                 <RadioGroup value={priority} onValueChange={(v) => setPriority(v as any)}>
