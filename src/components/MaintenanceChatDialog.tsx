@@ -12,6 +12,7 @@ import { AttachmentBubble } from "@/components/AttachmentBubble";
 import { MediaGallery } from "@/components/MediaGallery";
 import { VoiceToTextInput } from "@/components/VoiceToTextInput";
 import { ReadReceiptDisplay } from "@/components/ReadReceiptDisplay";
+import OwnerMaintenanceDecision from "@/components/OwnerMaintenanceDecision";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -29,6 +30,15 @@ interface MaintenanceChatDialogProps {
   ticketSubject?: string;
   propertyName?: string;
 }
+
+type OwnerDecisionTicket = {
+  id: string;
+  kind: string | null;
+  essential: boolean | null;
+  owner_decision: string | null;
+  owner_action_due_at: string | null;
+  status: string;
+};
 
 export function MaintenanceChatDialog({
   open,
@@ -50,11 +60,43 @@ export function MaintenanceChatDialog({
   const [generatingAI, setGeneratingAI] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryStartIndex, setGalleryStartIndex] = useState(0);
+  const [decisionTicket, setDecisionTicket] = useState<OwnerDecisionTicket | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance';
+
+  const fetchDecisionTicket = async () => {
+    if (!ticketId) {
+      setDecisionTicket(null);
+      return;
+    }
+
+    // Only show decision UI for owners
+    if (isTeamMember) {
+      setDecisionTicket(null);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('tickets')
+      .select('id, kind, essential, owner_decision, owner_action_due_at, status')
+      .eq('id', ticketId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error fetching ticket decision state:', error);
+      return;
+    }
+
+    setDecisionTicket((data || null) as OwnerDecisionTicket | null);
+  };
+
+  useEffect(() => {
+    if (open) fetchDecisionTicket();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, ticketId, isTeamMember]);
 
   // Read receipts for messages
   const messageIds = useMemo(() => messages.map(m => m.id), [messages]);
@@ -369,6 +411,13 @@ export function MaintenanceChatDialog({
 
           {/* Messages area */}
           <ScrollArea className="flex-1 px-4" ref={scrollRef}>
+            {/* Owner decision block (if applicable) */}
+            {decisionTicket && (
+              <div className="py-4">
+                <OwnerMaintenanceDecision ticket={decisionTicket as any} onUpdate={fetchDecisionTicket} />
+              </div>
+            )}
+
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />

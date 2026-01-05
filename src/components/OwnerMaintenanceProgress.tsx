@@ -296,6 +296,7 @@ export function OwnerMaintenanceProgress() {
                           Assumir execução
                         </Button>
                         <Button
+                          variant="outline"
                           size="sm"
                           className="h-9 text-xs gap-1.5"
                           disabled={isDeciding}
