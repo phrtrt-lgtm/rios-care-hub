@@ -140,6 +140,7 @@ export default function OwnerMaintenanceDecision({ ticket, onUpdate }: { ticket:
           </span>
         </Button>
         <Button 
+          variant="outline"
           disabled={loading} 
           onClick={() => handleDecision('pm_will_fix')}
           className="h-auto py-3 flex-col items-start text-left gap-1"
