@@ -1,8 +1,8 @@
 [{
-      "relation": ["delegate_permission/common.handle_all_urls"],
-      "target": {
-        "namespace": "android_app",
-        "package_name": "br.com.rioshospedagens.portal",
-        "sha256_cert_fingerprints": ["15:84:D6:2D:1A:B1:0D:4E:F7:3D:0D:EE:CE:8A:E2:02:ED:37:91:F8:90:E8:75:F5:AD:05:ED:ED:33:E6:47:1E"]
-      }
-    }]
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "app.rios.proprietarios",
+    "sha256_cert_fingerprints": ["15:84:D6:2D:1A:B1:0D:4E:F7:3D:0D:EE:CE:8A:E2:02:ED:37:91:F8:90:E8:75:F5:AD:05:ED:ED:33:E6:47:1E"]
+  }
+}]
