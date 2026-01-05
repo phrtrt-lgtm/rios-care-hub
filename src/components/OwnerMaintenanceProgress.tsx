@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
-import { Wrench, Calendar, Clock, CheckCircle2, Building2, MessageSquare, ChevronRight, AlertTriangle } from "lucide-react";
+import { Wrench, Calendar, Clock, CheckCircle2, Building2, MessageSquare, ChevronRight } from "lucide-react";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useChatPreloader } from "@/hooks/useChatPreloader";
 import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
@@ -208,9 +208,7 @@ export function OwnerMaintenanceProgress() {
               return (
                 <div
                   key={ticket.id}
-                  className={`p-4 rounded-lg border bg-card hover:bg-muted/50 cursor-pointer transition-colors group ${
-                    showDecisionButtons ? (isOverdue ? 'border-red-300 bg-red-50/50' : 'border-amber-300 bg-amber-50/50') : ''
-                  }`}
+                  className="p-4 rounded-lg border bg-card hover:bg-muted/50 cursor-pointer transition-colors group"
                   onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
                 >
                   <div className="flex items-start gap-3 mb-4">
@@ -238,31 +236,18 @@ export function OwnerMaintenanceProgress() {
                         {ticket.property?.name}
                       </p>
                       
-                      {/* Owner Decision Needed Badge */}
-                      {showDecisionButtons && (
-                        <div className={`mt-1 inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
-                          isOverdue
-                            ? 'bg-red-100 text-red-700'
-                            : 'bg-amber-100 text-amber-700'
-                        }`}>
-                          <AlertTriangle className="h-3 w-3" />
-                          {isOverdue
-                            ? 'Prazo expirado'
-                            : `Decidir até ${dueDate?.toLocaleDateString('pt-BR')}`
-                          }
-                        </div>
-                      )}
-                      
                       {/* Decision Made Badge */}
                       {ticket.owner_decision && (
-                        <div className={`mt-1 inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
-                          ticket.owner_decision === 'owner_will_fix'
-                            ? 'bg-blue-100 text-blue-700'
-                            : 'bg-green-100 text-green-700'
-                        }`}>
-                          <CheckCircle2 className="h-3 w-3" />
-                          {ticket.owner_decision === 'owner_will_fix' ? 'Você assumiu' : 'Delegado à gestão'}
-                        </div>
+                        <Badge 
+                          variant="outline" 
+                          className={`mt-1 text-[10px] ${
+                            ticket.owner_decision === 'owner_will_fix'
+                              ? 'border-blue-200 text-blue-600 bg-blue-50'
+                              : 'border-green-200 text-green-600 bg-green-50'
+                          }`}
+                        >
+                          {ticket.owner_decision === 'owner_will_fix' ? '✓ Você assumiu' : '✓ Delegado à gestão'}
+                        </Badge>
                       )}
                       
                       {ticket.scheduled_at && (
@@ -295,27 +280,27 @@ export function OwnerMaintenanceProgress() {
 
                   {/* Quick Decision Buttons - Show when decision is needed */}
                   {showDecisionButtons && (
-                    <div className="mb-4 p-3 bg-background rounded-lg border">
-                      <p className="text-xs text-muted-foreground mb-2">Como você gostaria de proceder?</p>
+                    <div className="mb-4 p-3 bg-muted/50 rounded-lg border border-dashed">
+                      <p className="text-xs text-muted-foreground mb-2 font-medium">
+                        {isOverdue ? '⏰ Prazo expirado - ' : ''}Como você gostaria de proceder?
+                      </p>
                       <div className="grid grid-cols-2 gap-2">
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-auto py-2 flex-col items-start text-left"
+                          className="h-9 text-xs"
                           disabled={isDeciding}
                           onClick={(e) => handleDecision(ticket.id, 'owner_will_fix', e)}
                         >
-                          <span className="text-xs font-medium">🔧 Assumir</span>
-                          <span className="text-[10px] text-muted-foreground">Você executa</span>
+                          🔧 Assumir execução
                         </Button>
                         <Button
                           size="sm"
-                          className="h-auto py-2 flex-col items-start text-left"
+                          className="h-9 text-xs"
                           disabled={isDeciding}
                           onClick={(e) => handleDecision(ticket.id, 'pm_will_fix', e)}
                         >
-                          <span className="text-xs font-medium">👥 Delegar</span>
-                          <span className="text-[10px] text-muted-foreground">Gestão cuida</span>
+                          👥 Delegar à gestão
                         </Button>
                       </div>
                     </div>
