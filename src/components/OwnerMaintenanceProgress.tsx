@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
-import { Wrench, Calendar, Clock, CheckCircle2, Building2, MessageSquare, ChevronRight } from "lucide-react";
+import { Wrench, Calendar, Clock, CheckCircle2, Building2, MessageSquare, ChevronRight, Users } from "lucide-react";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useChatPreloader } from "@/hooks/useChatPreloader";
 import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
@@ -288,19 +288,21 @@ export function OwnerMaintenanceProgress() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-9 text-xs"
+                          className="h-9 text-xs gap-1.5"
                           disabled={isDeciding}
                           onClick={(e) => handleDecision(ticket.id, 'owner_will_fix', e)}
                         >
-                          🔧 Assumir execução
+                          <Wrench className="h-3.5 w-3.5" />
+                          Assumir execução
                         </Button>
                         <Button
                           size="sm"
-                          className="h-9 text-xs"
+                          className="h-9 text-xs gap-1.5"
                           disabled={isDeciding}
                           onClick={(e) => handleDecision(ticket.id, 'pm_will_fix', e)}
                         >
-                          👥 Delegar à gestão
+                          <Users className="h-3.5 w-3.5" />
+                          Delegar à gestão
                         </Button>
                       </div>
                     </div>
