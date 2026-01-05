@@ -18,6 +18,8 @@ import { AttachmentBubble } from "@/components/AttachmentBubble";
 import { MediaGallery } from "@/components/MediaGallery";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { ReadReceiptDisplay } from "@/components/ReadReceiptDisplay";
+import { TicketBadges } from "@/components/TicketBadges";
+import OwnerMaintenanceDecision from "@/components/OwnerMaintenanceDecision";
 import { preloadMediaUrls } from "@/hooks/useMediaCache";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -35,6 +37,10 @@ interface Ticket {
   created_at: string;
   owner_id: string;
   property_id: string | null;
+  kind?: string;
+  essential?: boolean;
+  owner_decision?: string | null;
+  owner_action_due_at?: string | null;
   profiles: {
     name: string;
     photo_url: string | null;
@@ -724,13 +730,14 @@ export default function TicketDetalhes() {
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <CardTitle className="text-2xl mb-2">{ticket.subject}</CardTitle>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 mb-2">
                   <Badge variant="outline">{statusLabels[ticket.status as keyof typeof statusLabels]}</Badge>
                   <Badge>{ticket.priority}</Badge>
                   {ticket.properties && (
                     <Badge variant="secondary">Imóvel: {ticket.properties.name}</Badge>
                   )}
                 </div>
+                <TicketBadges ticket={ticket} />
               </div>
               {isTeamMember && (
                 <Select
@@ -773,6 +780,26 @@ export default function TicketDetalhes() {
               )}
             </div>
           </CardHeader>
+          
+          {/* Owner Decision Section - Show for maintenance tickets that need owner decision */}
+          {ticket.kind === 'maintenance' && 
+           !ticket.essential && 
+           ticket.owner_action_due_at && 
+           !isTeamMember && (
+            <CardContent className="pt-0">
+              <OwnerMaintenanceDecision 
+                ticket={{
+                  id: ticket.id,
+                  kind: ticket.kind || '',
+                  essential: ticket.essential || false,
+                  owner_decision: ticket.owner_decision || null,
+                  owner_action_due_at: ticket.owner_action_due_at || null,
+                  status: ticket.status,
+                }}
+                onUpdate={fetchTicketData}
+              />
+            </CardContent>
+          )}
         </Card>
 
         <div className="mb-6 flex justify-end gap-2">

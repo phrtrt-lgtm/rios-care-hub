@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Clock, AlertTriangle } from "lucide-react";
+import { Clock, AlertTriangle, CheckCircle2 } from "lucide-react";
 
 interface Ticket {
   id: string;
@@ -20,10 +20,28 @@ export default function OwnerMaintenanceDecision({ ticket, onUpdate }: { ticket:
   
   if (ticket.owner_decision) {
     return (
-      <div className="p-3 border rounded-xl bg-muted">
-        <p className="text-sm text-muted-foreground">
-          Decisão registrada: <b>{ticket.owner_decision === 'owner_will_fix' ? 'Proprietário executará' : 'Gestão executará'}</b>
-        </p>
+      <div className={`p-4 border rounded-xl ${
+        ticket.owner_decision === 'owner_will_fix' 
+          ? 'bg-blue-50 border-blue-200' 
+          : 'bg-green-50 border-green-200'
+      }`}>
+        <div className="flex items-start gap-3">
+          <CheckCircle2 className={`h-5 w-5 mt-0.5 ${
+            ticket.owner_decision === 'owner_will_fix' ? 'text-blue-600' : 'text-green-600'
+          }`} />
+          <div>
+            <p className="font-medium">
+              {ticket.owner_decision === 'owner_will_fix' 
+                ? '🔧 Você assumiu a execução' 
+                : '👥 Delegado à gestão'}
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {ticket.owner_decision === 'owner_will_fix' 
+                ? 'Você indicou que contratará ou executará esta manutenção por conta própria.'
+                : 'A gestão cuidará de tudo. Você pode acompanhar o andamento por aqui.'}
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -47,9 +65,26 @@ export default function OwnerMaintenanceDecision({ ticket, onUpdate }: { ticket:
 
       if (error) throw error;
 
+      // Notify team about the decision
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      
+      fetch(`${supabaseUrl}/functions/v1/notify-owner-decision`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseKey,
+        },
+        body: JSON.stringify({
+          type: 'decision_made',
+          ticketId: ticket.id,
+          decision,
+        }),
+      }).catch(err => console.error('Failed to notify team:', err));
+
       toast.success(decision === 'owner_will_fix' 
         ? 'Você assumiu a execução da manutenção' 
-        : 'Manutenção delegada à gestão'
+        : 'Manutenção delegada à gestão. Cuidaremos de tudo!'
       );
       
       if (onUpdate) onUpdate();
@@ -63,50 +98,59 @@ export default function OwnerMaintenanceDecision({ ticket, onUpdate }: { ticket:
 
   return (
     <div className={`p-4 border rounded-xl ${overdue ? 'bg-red-50 border-red-300' : 'bg-amber-50 border-amber-300'}`}>
-      <div className="flex items-start gap-2 mb-3">
+      <div className="flex items-start gap-3 mb-4">
         {overdue ? (
           <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
         ) : (
           <Clock className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
         )}
         <div className="flex-1">
-          <p className="text-sm font-medium mb-1">
-            {overdue ? 'Prazo expirado' : 'Aguardando sua decisão'}
+          <p className="font-medium">
+            {overdue ? '⚠️ Prazo expirado' : '⏰ Aguardando sua decisão'}
           </p>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground mt-1">
             {dueDate && (
               <>
-                Prazo: <b>{dueDate.toLocaleString('pt-BR', { 
+                Prazo: <strong>{dueDate.toLocaleString('pt-BR', { 
                   dateStyle: 'short', 
                   timeStyle: 'short' 
-                })}</b>
+                })}</strong>
               </>
             )}
+          </p>
+          <p className="text-sm mt-2">
+            Como você gostaria de proceder com esta manutenção?
           </p>
         </div>
       </div>
       
-      <div className="flex gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Button 
           variant="outline" 
           disabled={loading} 
           onClick={() => handleDecision('owner_will_fix')}
-          className="flex-1"
+          className="h-auto py-3 flex-col items-start text-left"
         >
-          Assumir execução
+          <span className="font-medium">🔧 Assumir execução</span>
+          <span className="text-xs text-muted-foreground font-normal mt-1">
+            Você contratará ou executará por conta própria
+          </span>
         </Button>
         <Button 
           disabled={loading} 
           onClick={() => handleDecision('pm_will_fix')}
-          className="flex-1"
+          className="h-auto py-3 flex-col items-start text-left"
         >
-          Delegar à gestão
+          <span className="font-medium">👥 Delegar à gestão</span>
+          <span className="text-xs text-muted-foreground font-normal mt-1">
+            Nós cuidaremos, com possibilidade de aporte
+          </span>
         </Button>
       </div>
       
       {overdue && (
-        <p className="text-xs text-red-600 mt-2">
-          Prazo expirado. A gestão poderá executar para evitar prejuízos operacionais.
+        <p className="text-xs text-red-600 mt-3">
+          ⚠️ Prazo expirado. A gestão poderá executar para evitar prejuízos operacionais.
         </p>
       )}
     </div>
