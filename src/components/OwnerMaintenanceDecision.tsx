@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Clock, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Clock, AlertTriangle, CheckCircle2, Wrench, Users } from "lucide-react";
 
 interface Ticket {
   id: string;
@@ -30,10 +30,10 @@ export default function OwnerMaintenanceDecision({ ticket, onUpdate }: { ticket:
             ticket.owner_decision === 'owner_will_fix' ? 'text-blue-600' : 'text-green-600'
           }`} />
           <div>
-            <p className="font-medium">
+            <p className="font-medium flex items-center gap-2">
               {ticket.owner_decision === 'owner_will_fix' 
-                ? '🔧 Você assumiu a execução' 
-                : '👥 Delegado à gestão'}
+                ? <><Wrench className="h-4 w-4" /> Você assumiu a execução</>
+                : <><Users className="h-4 w-4" /> Delegado à gestão</>}
             </p>
             <p className="text-sm text-muted-foreground mt-1">
               {ticket.owner_decision === 'owner_will_fix' 
@@ -129,20 +129,26 @@ export default function OwnerMaintenanceDecision({ ticket, onUpdate }: { ticket:
           variant="outline" 
           disabled={loading} 
           onClick={() => handleDecision('owner_will_fix')}
-          className="h-auto py-3 flex-col items-start text-left"
+          className="h-auto py-3 flex-col items-start text-left gap-1"
         >
-          <span className="font-medium">🔧 Assumir execução</span>
-          <span className="text-xs text-muted-foreground font-normal mt-1">
+          <span className="font-medium flex items-center gap-2">
+            <Wrench className="h-4 w-4" />
+            Assumir execução
+          </span>
+          <span className="text-xs text-muted-foreground font-normal">
             Você contratará ou executará por conta própria
           </span>
         </Button>
         <Button 
           disabled={loading} 
           onClick={() => handleDecision('pm_will_fix')}
-          className="h-auto py-3 flex-col items-start text-left"
+          className="h-auto py-3 flex-col items-start text-left gap-1"
         >
-          <span className="font-medium">👥 Delegar à gestão</span>
-          <span className="text-xs text-muted-foreground font-normal mt-1">
+          <span className="font-medium flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Delegar à gestão
+          </span>
+          <span className="text-xs text-muted-foreground font-normal">
             Nós cuidaremos, com possibilidade de aporte
           </span>
         </Button>
