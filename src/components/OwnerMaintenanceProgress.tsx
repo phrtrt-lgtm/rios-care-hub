@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
-import { Wrench, Calendar, Clock, CheckCircle2, Building2, MessageSquare, ChevronRight } from "lucide-react";
+import { Wrench, Calendar, Clock, CheckCircle2, Building2, MessageSquare, ChevronRight, AlertTriangle } from "lucide-react";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useChatPreloader } from "@/hooks/useChatPreloader";
 import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
@@ -20,6 +20,10 @@ interface MaintenanceTicket {
   status: string;
   created_at: string;
   scheduled_at: string | null;
+  kind?: string;
+  essential?: boolean;
+  owner_decision?: string | null;
+  owner_action_due_at?: string | null;
   property: {
     id: string;
     name: string;
@@ -56,6 +60,10 @@ export function OwnerMaintenanceProgress() {
           created_at,
           scheduled_at,
           cost_responsible,
+          kind,
+          essential,
+          owner_decision,
+          owner_action_due_at,
           property:properties(id, name, cover_photo_url)
         `)
         .eq("owner_id", user.id)
@@ -167,6 +175,37 @@ export function OwnerMaintenanceProgress() {
                       <p className="text-xs text-muted-foreground">
                         {ticket.property?.name}
                       </p>
+                      
+                      {/* Owner Decision Needed Badge */}
+                      {ticket.kind === 'maintenance' && 
+                       !ticket.essential && 
+                       !ticket.owner_decision && 
+                       ticket.owner_action_due_at && (
+                        <div className={`mt-1 inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
+                          new Date(ticket.owner_action_due_at) < new Date()
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-amber-100 text-amber-700'
+                        }`}>
+                          <AlertTriangle className="h-3 w-3" />
+                          {new Date(ticket.owner_action_due_at) < new Date()
+                            ? 'Prazo expirado'
+                            : `Decidir até ${new Date(ticket.owner_action_due_at).toLocaleDateString('pt-BR')}`
+                          }
+                        </div>
+                      )}
+                      
+                      {/* Decision Made Badge */}
+                      {ticket.owner_decision && (
+                        <div className={`mt-1 inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
+                          ticket.owner_decision === 'owner_will_fix'
+                            ? 'bg-blue-100 text-blue-700'
+                            : 'bg-green-100 text-green-700'
+                        }`}>
+                          <CheckCircle2 className="h-3 w-3" />
+                          {ticket.owner_decision === 'owner_will_fix' ? 'Você assumiu' : 'Delegado à gestão'}
+                        </div>
+                      )}
+                      
                       {ticket.scheduled_at && (
                         <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
