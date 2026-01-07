@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { LogOut, Users, Ticket, AlertTriangle, CheckCircle2, Plus, DollarSign, Building2, Bell, Settings, Sparkles, UserPlus, Vote, Shield, Wrench, List, Search, FileText, Mail } from "lucide-react";
+import { LogOut, Users, Ticket, AlertTriangle, CheckCircle2, Plus, DollarSign, Building2, Bell, Settings, Sparkles, UserPlus, Vote, Shield, Wrench, List, Search, FileText, Mail, BookOpen } from "lucide-react";
 import { UnifiedCalendarWidget } from "@/components/UnifiedCalendarWidget";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -117,6 +117,15 @@ export default function Painel() {
                   <Sparkles className="h-5 w-5" />
                 </Button>
               )}
+              
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate("/protocolo-trabalho")}
+                title="Protocolo de Manutenções"
+              >
+                <BookOpen className="h-5 w-5" />
+              </Button>
             </div>
             
             <div className="flex items-center gap-2">
