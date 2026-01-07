@@ -232,8 +232,8 @@ export default function ProtocoloTrabalho() {
           <CardContent className="space-y-4">
             <div className="p-4 rounded-lg bg-purple-50 dark:bg-purple-950/20 border border-purple-200 mb-4">
               <p className="text-sm text-muted-foreground">
-                Para alguns itens que <strong>não são essenciais</strong>, a gestão oferece ao proprietário a opção de tomar a frente, 
-                caso prefira usar seu próprio profissional ou tenha interesse em acompanhar de perto.
+                Para algumas <strong>questões pontuais</strong>, a gestão pode oferecer ao proprietário a possibilidade de assumir a frente, 
+                caso tenha interesse em acompanhar de perto ou prefira usar seu próprio profissional.
               </p>
             </div>
 
