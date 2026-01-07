@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Plus, LogOut, DollarSign, ClipboardCheck, Ticket } from "lucide-react";
+import { Plus, LogOut, DollarSign, ClipboardCheck, Ticket, BookOpen } from "lucide-react";
 import { TicketList } from "@/components/TicketList";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -108,6 +108,15 @@ export default function MinhaCaixa() {
                   <ClipboardCheck className="h-5 w-5" />
                 </Button>
               )}
+
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate("/protocolo-trabalho")}
+                title="Protocolo de Manutenções"
+              >
+                <BookOpen className="h-5 w-5" />
+              </Button>
             </div>
 
             <div className="flex items-center gap-2">
