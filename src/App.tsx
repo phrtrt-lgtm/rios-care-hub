@@ -56,6 +56,7 @@ import AdminManutencoesLista from "./pages/AdminManutencoesLista";
 import HistoricoComunicacao from "./pages/HistoricoComunicacao";
 import ResumoPropriedades from "./pages/ResumoPropriedades";
 import ResumoDiario from "./pages/ResumoDiario";
+import ProtocoloTrabalho from "./pages/ProtocoloTrabalho";
 
 const queryClient = new QueryClient();
 
@@ -227,6 +228,7 @@ const App = () => (
             <Route path="/configuracao-email" element={<ProtectedRoute allowedRoles={["admin"]}><ConfiguracaoEmail /></ProtectedRoute>} />
             <Route path="/configuracao-ia" element={<ProtectedRoute allowedRoles={["admin"]}><ConfiguracaoIA /></ProtectedRoute>} />
             <Route path="/regras-cobrancas" element={<ProtectedRoute allowedRoles={["admin"]}><RegrasCobrancas /></ProtectedRoute>} />
+            <Route path="/protocolo-trabalho" element={<ProtectedRoute allowedRoles={["owner", "agent", "admin", "maintenance", "cleaner"]}><ProtocoloTrabalho /></ProtectedRoute>} />
             <Route
               path="/manutencoes"
               element={
