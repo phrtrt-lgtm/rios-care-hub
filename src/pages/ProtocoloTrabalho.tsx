@@ -111,10 +111,6 @@ export default function ProtocoloTrabalho() {
                     <span className="text-blue-500 mt-0.5">•</span>
                     Registra via áudio, fotos ou texto no sistema
                   </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-blue-500 mt-0.5">•</span>
-                    Marca se é <strong>interno</strong> (só equipe vê) ou <strong>visível ao proprietário</strong>
-                  </li>
                 </ul>
               </div>
               <div className="p-4 rounded-lg bg-muted/50 space-y-3">
