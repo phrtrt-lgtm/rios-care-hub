@@ -504,6 +504,24 @@ export default function ProtocoloTrabalho() {
                 </div>
               </div>
             </div>
+
+            <Separator />
+
+            {/* Aporte da Gestão */}
+            <div className="p-4 rounded-lg bg-primary/5 border-2 border-primary/20">
+              <div className="flex items-start gap-3">
+                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <Banknote className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <h4 className="font-semibold mb-1">Aporte da Gestão</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Em muitos casos, a gestão contribui com um <strong>aporte financeiro</strong> para ajudar no custo da manutenção.
+                    Esse desconto aparece diretamente na cobrança, reduzindo o valor final para o proprietário.
+                  </p>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -548,6 +566,31 @@ export default function ProtocoloTrabalho() {
                   </tr>
                 </tbody>
               </table>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* HISTÓRICO E ARQUIVO */}
+        <Card className="mt-6 border-2 border-dashed border-muted-foreground/30 bg-muted/30">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-4">
+              <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                <FileText className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="font-semibold">Tudo fica registrado e arquivado</h3>
+                <p className="text-sm text-muted-foreground">
+                  Todo o trâmite de manutenção — desde a vistoria inicial até a conclusão e pagamento — fica 
+                  <strong> documentado e arquivado no histórico</strong>. Proprietários e equipe podem consultar 
+                  a qualquer momento: conversas, decisões, fotos, valores, comprovantes e datas.
+                </p>
+                <div className="flex flex-wrap gap-2 pt-2">
+                  <Badge variant="outline" className="text-xs">Histórico de conversas</Badge>
+                  <Badge variant="outline" className="text-xs">Fotos e anexos</Badge>
+                  <Badge variant="outline" className="text-xs">Valores e pagamentos</Badge>
+                  <Badge variant="outline" className="text-xs">Decisões registradas</Badge>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
