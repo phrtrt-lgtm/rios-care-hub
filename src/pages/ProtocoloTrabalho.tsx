@@ -45,6 +45,34 @@ export default function ProtocoloTrabalho() {
           </p>
         </div>
 
+        {/* Seção explicativa - Planejamento */}
+        <Card className="mb-6 border-2 border-dashed border-primary/30 bg-primary/5">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-4">
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <Calendar className="h-5 w-5 text-primary" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="font-semibold">Mais que urgências: um espaço de planejamento</h3>
+                <p className="text-sm text-muted-foreground">
+                  Uma manutenção não precisa ser executada imediatamente. Muitas vezes identificamos uma necessidade — como 
+                  <strong> pintura, troca de móveis ou decoração</strong> — mas o momento não é ideal (ex: alta temporada).
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Nesse caso, criamos o chamado e <strong>planejamos juntos</strong>: conversamos pelo sistema, escolhemos 
+                  profissionais, definimos datas (ex: maio/junho) e alinhamos expectativas. Tudo documentado e organizado.
+                </p>
+                <div className="flex flex-wrap gap-2 pt-2">
+                  <Badge variant="outline" className="text-xs">Planejamento de reformas</Badge>
+                  <Badge variant="outline" className="text-xs">Decoração</Badge>
+                  <Badge variant="outline" className="text-xs">Prestação de contas</Badge>
+                  <Badge variant="outline" className="text-xs">Orçamentos</Badge>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* ETAPA 1: VISTORIA */}
         <Card className="mb-6 border-l-4 border-l-blue-500">
           <CardHeader className="pb-4">
