@@ -201,11 +201,18 @@ export default function ProtocoloTrabalho() {
                   </Badge>
                   Decisão do Proprietário
                 </CardTitle>
-                <CardDescription>Para manutenções estruturais - prazo de 48-72h</CardDescription>
+                <CardDescription>Para itens selecionados pela gestão - prazo de 48-72h</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="p-4 rounded-lg bg-purple-50 dark:bg-purple-950/20 border border-purple-200 mb-4">
+              <p className="text-sm text-muted-foreground">
+                Para alguns itens que <strong>não são essenciais</strong>, a gestão oferece ao proprietário a opção de tomar a frente, 
+                caso prefira usar seu próprio profissional ou tenha interesse em acompanhar de perto.
+              </p>
+            </div>
+
             <div className="p-4 rounded-lg bg-muted/50 mb-4">
               <div className="flex items-center gap-2 mb-2">
                 <Bell className="h-4 w-4 text-purple-500" />
@@ -241,14 +248,25 @@ export default function ProtocoloTrabalho() {
                   <h4 className="font-medium">Delegar à gestão</h4>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  A equipe de gestão coordena a execução com profissionais parceiros.
+                  A gestão contrata profissionais parceiros e <strong>intermedia</strong> a execução do serviço.
                 </p>
                 <ul className="text-xs text-muted-foreground space-y-1">
-                  <li>• Gestão coordena tudo</li>
+                  <li>• Gestão coordena e acompanha</li>
+                  <li>• <strong>Responsabilidade do serviço:</strong> profissional contratado</li>
                   <li>• Cobrança gerada após execução</li>
-                  <li>• Prazo de 7 dias para pagamento</li>
                 </ul>
               </div>
+            </div>
+
+            <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle className="h-4 w-4 text-blue-600" />
+                <span className="font-medium text-blue-700 dark:text-blue-400">Importante sobre delegação</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Quando você delega à gestão, nós contratamos profissionais de confiança e intermediamos todo o processo. 
+                Porém, a <strong>responsabilidade técnica pelo serviço é do profissional que o executa</strong>, não da gestão.
+              </p>
             </div>
 
             <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200">
