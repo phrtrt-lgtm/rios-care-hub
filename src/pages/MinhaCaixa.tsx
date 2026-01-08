@@ -236,26 +236,6 @@ export default function MinhaCaixa() {
         </div>
 
 
-        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h2 className="text-xl md:text-2xl font-bold">Meus Chamados</h2>
-            <p className="text-sm text-muted-foreground">
-              Acompanhe seus tickets e solicitações
-            </p>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Button 
-              onClick={() => navigate("/novo-ticket")}
-              size="sm"
-              className="w-full sm:w-auto"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Novo Chamado
-            </Button>
-          </div>
-        </div>
-
-        <TicketList />
       </main>
       
       {/* Mobile Bottom Navigation */}
