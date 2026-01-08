@@ -151,7 +151,7 @@ export function ChamadosKanbanPreview() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-6 w-6 p-0"
+                        className="h-6 w-6 p-0 relative shrink-0"
                         onClick={(e) => openChatDialog(ticket, e)}
                       >
                         <MessageSquare className="h-3.5 w-3.5" />
@@ -161,7 +161,7 @@ export function ChamadosKanbanPreview() {
                           </span>
                         )}
                       </Button>
-                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                     </div>
                   ))}
                 </div>
@@ -191,7 +191,7 @@ export function ChamadosKanbanPreview() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-6 w-6 p-0 relative"
+                        className="h-6 w-6 p-0 relative shrink-0"
                         onClick={(e) => openChatDialog(ticket, e)}
                       >
                         <MessageSquare className="h-3.5 w-3.5" />
@@ -201,7 +201,7 @@ export function ChamadosKanbanPreview() {
                           </span>
                         )}
                       </Button>
-                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                     </div>
                   ))}
                 </div>
