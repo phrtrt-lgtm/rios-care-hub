@@ -55,8 +55,8 @@ export default function ProtocoloTrabalho() {
               <div className="space-y-2">
                 <h3 className="font-semibold">Mais que urgências: um espaço de planejamento</h3>
                 <p className="text-sm text-muted-foreground">
-                  Uma manutenção não precisa ser executada imediatamente. Muitas vezes identificamos uma necessidade — como 
-                  <strong> pintura, troca de móveis ou decoração</strong> — mas o momento não é ideal (ex: alta temporada).
+                  Uma manutenção não precisa ser executada imediatamente. Muitas vezes identificamos uma necessidade, como 
+                  <strong>pintura, troca de móveis ou decoração</strong>, mas o momento não é ideal (ex: alta temporada).
                 </p>
                 <p className="text-sm text-muted-foreground">
                   Nesse caso, criamos o chamado e <strong>planejamos juntos</strong>: conversamos pelo sistema, escolhemos 
@@ -580,8 +580,8 @@ export default function ProtocoloTrabalho() {
               <div className="space-y-2">
                 <h3 className="font-semibold">Tudo fica registrado e arquivado</h3>
                 <p className="text-sm text-muted-foreground">
-                  Todo o trâmite de manutenção — desde a vistoria inicial até a conclusão e pagamento — fica 
-                  <strong> documentado e arquivado no histórico</strong>. Proprietários e equipe podem consultar 
+                  Todo o trâmite de manutenção, desde a vistoria inicial até a conclusão e pagamento, fica 
+                  <strong>documentado e arquivado no histórico</strong>. Proprietários e equipe podem consultar 
                   a qualquer momento: conversas, decisões, fotos, valores, comprovantes e datas.
                 </p>
                 <div className="flex flex-wrap gap-2 pt-2">
