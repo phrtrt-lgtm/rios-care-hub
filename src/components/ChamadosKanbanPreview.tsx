@@ -146,7 +146,7 @@ export function ChamadosKanbanPreview() {
 
                       <div className="flex items-center gap-1.5 shrink-0">
                         {ticket.sla_due_at && (
-                          <span className={`text-[10px] font-medium whitespace-nowrap shrink-0 ${getSlaColor(ticket.sla_due_at)}`}>
+                          <span className={`hidden sm:inline text-[10px] font-medium whitespace-nowrap shrink-0 ${getSlaColor(ticket.sla_due_at)}`}>
                             {getSlaText(ticket.sla_due_at)}
                           </span>
                         )}
@@ -189,7 +189,7 @@ export function ChamadosKanbanPreview() {
 
                       <div className="flex items-center gap-1.5 shrink-0">
                         {ticket.sla_due_at && (
-                          <span className={`text-[10px] font-medium whitespace-nowrap shrink-0 ${getSlaColor(ticket.sla_due_at)}`}>
+                          <span className={`hidden sm:inline text-[10px] font-medium whitespace-nowrap shrink-0 ${getSlaColor(ticket.sla_due_at)}`}>
                             {getSlaText(ticket.sla_due_at)}
                           </span>
                         )}
