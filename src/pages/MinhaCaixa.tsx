@@ -213,6 +213,9 @@ export default function MinhaCaixa() {
         {/* Owner Maintenance Progress - for owners */}
         {profile?.role === "owner" && <OwnerMaintenanceProgress />}
 
+        {/* Owner Properties Section - entre manutenções e chamados */}
+        {profile?.role === "owner" && <OwnerPropertiesSection />}
+
         {/* Owner Tickets and Charges Preview - for owners - side by side */}
         {profile?.role === "owner" && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
@@ -220,9 +223,6 @@ export default function MinhaCaixa() {
             <OwnerChargesPreview />
           </div>
         )}
-
-        {/* Owner Properties Section */}
-        <OwnerPropertiesSection />
 
         {/* Score de Pagamentos - abaixo das unidades */}
         <div className="mb-6">
