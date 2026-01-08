@@ -4,7 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ClipboardCheck, AlertTriangle, CheckCircle2, Wrench, ChevronRight } from 'lucide-react';
+import { ClipboardCheck, AlertTriangle, CheckCircle2, Wrench, ChevronRight, Paperclip } from 'lucide-react';
+import { QuickInspectionAttachmentButton } from './QuickInspectionAttachmentButton';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CreateMaintenanceFromInspectionDialog } from './CreateMaintenanceFromInspectionDialog';
@@ -159,7 +160,11 @@ export function VistoriasKanbanPreview() {
                           </p>
                         </div>
 
-                        <div className="flex items-center gap-1.5 shrink-0">
+                        <div className="flex items-center gap-1 shrink-0">
+                          <QuickInspectionAttachmentButton 
+                            inspectionId={inspection.id} 
+                            onSuccess={fetchInspections}
+                          />
                           <Button
                             variant="ghost"
                             size="sm"
@@ -197,7 +202,13 @@ export function VistoriasKanbanPreview() {
                             {format(new Date(inspection.created_at), "dd/MM HH:mm", { locale: ptBR })}
                           </p>
                         </div>
-                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        <div className="flex items-center gap-1 shrink-0">
+                          <QuickInspectionAttachmentButton 
+                            inspectionId={inspection.id} 
+                            onSuccess={fetchInspections}
+                          />
+                          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        </div>
                       </div>
                     ))}
                   </div>
