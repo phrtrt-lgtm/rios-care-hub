@@ -4,8 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { ClipboardCheck, Building2, AlertTriangle, CheckCircle2, Wrench, Clock, ChevronRight, Building } from 'lucide-react';
+import { ClipboardCheck, AlertTriangle, CheckCircle2, Wrench, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CreateMaintenanceFromInspectionDialog } from './CreateMaintenanceFromInspectionDialog';
@@ -47,23 +46,17 @@ export function VistoriasKanbanPreview() {
 
   const fetchInspections = async () => {
     try {
-      // Fetch recent inspections (last 20)
       const { data, error } = await supabase
         .from('cleaning_inspections')
         .select(`
-          id,
-          property_id,
-          notes,
-          created_at,
-          transcript_summary,
+          id, property_id, notes, created_at, transcript_summary,
           property:properties(id, name, cover_photo_url, owner_id)
         `)
         .order('created_at', { ascending: false })
-        .limit(20);
+        .limit(15);
 
       if (error) throw error;
 
-      // Get attachments for all inspections
       const inspectionIds = (data || []).map(i => i.id);
       const attachmentsMap = new Map<string, Attachment[]>();
 
@@ -75,12 +68,7 @@ export function VistoriasKanbanPreview() {
 
         (attachmentsData || []).forEach(att => {
           const existing = attachmentsMap.get(att.inspection_id) || [];
-          existing.push({
-            id: att.id,
-            file_url: att.file_url,
-            file_name: att.file_name || undefined,
-            file_type: att.file_type || undefined,
-          });
+          existing.push({ id: att.id, file_url: att.file_url, file_name: att.file_name || undefined, file_type: att.file_type || undefined });
           attachmentsMap.set(att.inspection_id, existing);
         });
       }
@@ -99,185 +87,124 @@ export function VistoriasKanbanPreview() {
     }
   };
 
-  const okInspections = inspections.filter(i => i.notes === 'OK').slice(0, 3);
-  const problemInspections = inspections.filter(i => i.notes === 'NÃO').slice(0, 3);
+  const okInspections = inspections.filter(i => i.notes === 'OK');
+  const problemInspections = inspections.filter(i => i.notes === 'NÃO');
 
-  const handleNewMaintenance = (inspection: Inspection) => {
+  const handleNewMaintenance = (inspection: Inspection, e: React.MouseEvent) => {
+    e.stopPropagation();
     setSelectedInspection(inspection);
     setMaintenanceDialogOpen(true);
-  };
-
-  const renderInspectionCard = (inspection: Inspection, hasProblem: boolean) => {
-    const property = inspection.property;
-    
-    return (
-      <div
-        key={inspection.id}
-        className="p-3 rounded-xl border bg-card hover:bg-accent/50 transition-colors w-full overflow-hidden"
-      >
-        {/* Property thumbnail + Content */}
-        <div className="flex gap-3 min-w-0">
-          {/* Property photo thumbnail - clickable */}
-          <div 
-            className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-muted cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (property?.id) navigate(`/admin/vistorias/${property.id}`);
-            }}
-          >
-            {property?.cover_photo_url ? (
-              <img 
-                src={property.cover_photo_url} 
-                alt={property.name || "Imóvel"} 
-                className="w-12 h-12 object-cover"
-              />
-            ) : (
-              <div className="w-12 h-12 flex items-center justify-center">
-                <Building className="h-5 w-5 text-muted-foreground" />
-              </div>
-            )}
-          </div>
-          
-          {/* Text content */}
-          <div className="flex-1 min-w-0 overflow-hidden">
-            {/* Property name - clickable */}
-            <p 
-              className="text-sm font-semibold truncate cursor-pointer hover:text-primary hover:underline transition-colors"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (property?.id) navigate(`/admin/vistorias/${property.id}`);
-              }}
-            >
-              {property?.name || 'Imóvel'}
-            </p>
-            
-            {/* Time */}
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
-              <Clock className="h-3.5 w-3.5" />
-              {format(new Date(inspection.created_at), "dd/MM HH:mm", { locale: ptBR })}
-            </div>
-          </div>
-        </div>
-
-        {/* Actions - stacked vertically */}
-        <div className="flex flex-col gap-2 mt-3">
-          {hasProblem && (
-            <Button
-              variant="outline"
-              size="default"
-              className="w-full h-10 text-sm font-medium text-orange-600 border-orange-300"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleNewMaintenance(inspection);
-              }}
-            >
-              <Wrench className="h-4 w-4 mr-2" />
-              Criar Manutenção
-            </Button>
-          )}
-          <Button
-            variant="outline"
-            size="default"
-            className="w-full h-10 text-sm font-medium"
-            onClick={() => navigate(`/admin/vistoria/${inspection.id}`)}
-          >
-            <ChevronRight className="h-4 w-4 mr-2" />
-            Ver detalhes
-          </Button>
-        </div>
-      </div>
-    );
   };
 
   if (loading) {
     return (
       <Card>
         <CardHeader className="py-3 px-4">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <ClipboardCheck className="h-4 w-4" />
-            Vistorias
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-4 pt-0">
-          <div className="animate-pulse space-y-2">
-            <div className="h-12 bg-muted rounded" />
-            <div className="h-12 bg-muted rounded" />
+          <div className="flex items-center gap-2">
+            <ClipboardCheck className="h-4 w-4 animate-pulse" />
+            <div className="h-4 w-24 rounded bg-muted animate-pulse" />
           </div>
-        </CardContent>
+        </CardHeader>
       </Card>
     );
   }
 
   return (
     <>
-      <Card className="overflow-hidden">
+      <Card>
         <CardHeader className="py-3 px-4">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
-              <ClipboardCheck className="h-5 w-5" />
-              Vistorias
-            </CardTitle>
+            <div className="flex items-center gap-2">
+              <ClipboardCheck className="h-4 w-4" />
+              <CardTitle className="text-sm">Vistorias</CardTitle>
+              {inspections.length > 0 && (
+                <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+                  {inspections.length}
+                </Badge>
+              )}
+            </div>
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
-              className="h-8 text-sm"
               onClick={() => navigate('/admin/vistorias')}
+              className="h-7 text-xs"
             >
-              Ver todas
-              <ChevronRight className="h-4 w-4 ml-1" />
+              Ver todas <ChevronRight className="ml-1 h-3 w-3" />
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="p-3 pt-0 overflow-hidden">
-          <div className="flex flex-col gap-3 sm:grid sm:grid-cols-2 sm:gap-2 w-full max-w-full">
-            {/* Problemas Column */}
-            <div className="space-y-2 min-w-0 overflow-hidden w-full rounded-xl bg-red-50 dark:bg-red-950/30 p-3">
-              <div className="flex items-center gap-2 mb-2">
-                <AlertTriangle className="h-4 w-4 text-destructive" />
-                <span className="text-sm font-bold text-destructive">Problemas</span>
-                <Badge variant="destructive" className="h-5 px-1.5 text-xs">
-                  {problemInspections.length}
-                </Badge>
-              </div>
-              <ScrollArea className="h-[180px] sm:h-[140px]">
-                <div className="space-y-2 pr-2">
-                  {problemInspections.length === 0 ? (
-                    <p className="text-xs text-muted-foreground text-center py-4">
-                      Nenhum problema
-                    </p>
-                  ) : (
-                    problemInspections.map(insp => renderInspectionCard(insp, true))
-                  )}
+        <CardContent className="px-4 pb-3 pt-0">
+          {inspections.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-4">Nenhuma vistoria recente</p>
+          ) : (
+            <div className="space-y-3">
+              {/* Problemas primeiro */}
+              {problemInspections.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <AlertTriangle className="h-3.5 w-3.5 text-red-600" />
+                    <p className="text-xs font-semibold text-red-600">Problemas ({problemInspections.length})</p>
+                  </div>
+                  <div className="space-y-1">
+                    {problemInspections.slice(0, 5).map((inspection) => (
+                      <div
+                        key={inspection.id}
+                        className="flex items-center gap-2 p-2 rounded-lg bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 cursor-pointer transition-colors"
+                        onClick={() => navigate(`/admin/vistoria/${inspection.id}`)}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium truncate">{inspection.property?.name || 'Imóvel'}</p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {format(new Date(inspection.created_at), "dd/MM HH:mm", { locale: ptBR })}
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-[10px] text-orange-600"
+                          onClick={(e) => handleNewMaintenance(inspection, e)}
+                        >
+                          <Wrench className="h-3 w-3 mr-1" />
+                          Manutenção
+                        </Button>
+                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </ScrollArea>
-            </div>
+              )}
 
-            {/* OK Column */}
-            <div className="space-y-2 min-w-0 overflow-hidden w-full rounded-xl bg-green-50 dark:bg-green-950/30 p-3">
-              <div className="flex items-center gap-2 mb-2">
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
-                <span className="text-sm font-bold text-green-600">OK</span>
-                <Badge variant="secondary" className="h-5 px-1.5 text-xs bg-green-500/20 text-green-700">
-                  {okInspections.length}
-                </Badge>
-              </div>
-              <ScrollArea className="h-[180px] sm:h-[140px]">
-                <div className="space-y-2 pr-2">
-                  {okInspections.length === 0 ? (
-                    <p className="text-xs text-muted-foreground text-center py-4">
-                      Nenhuma vistoria OK
-                    </p>
-                  ) : (
-                    okInspections.map(insp => renderInspectionCard(insp, false))
-                  )}
+              {/* OK */}
+              {okInspections.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                    <p className="text-xs font-semibold text-green-600">OK ({okInspections.length})</p>
+                  </div>
+                  <div className="space-y-1">
+                    {okInspections.slice(0, 3).map((inspection) => (
+                      <div
+                        key={inspection.id}
+                        className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors"
+                        onClick={() => navigate(`/admin/vistoria/${inspection.id}`)}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium truncate">{inspection.property?.name || 'Imóvel'}</p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {format(new Date(inspection.created_at), "dd/MM HH:mm", { locale: ptBR })}
+                          </p>
+                        </div>
+                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </ScrollArea>
+              )}
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Maintenance Dialog */}
       {selectedInspection && selectedInspection.property && (
         <CreateMaintenanceFromInspectionDialog
           open={maintenanceDialogOpen}

@@ -9,8 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Wrench, ArrowRight, User, Calendar, ChevronRight, ChevronLeft, MessageSquare } from "lucide-react";
+import { Wrench, ArrowRight, Calendar, MessageSquare, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -23,11 +22,10 @@ type MaintenanceTicket = {
   id: string;
   subject: string;
   status: string;
-  created_at: string;
   scheduled_at: string | null;
   service_provider_id: string | null;
   cost_responsible: string | null;
-  property: { name: string; cover_photo_url: string | null } | null;
+  property: { name: string } | null;
   service_provider: { id: string; name: string; phone: string | null } | null;
 };
 
@@ -36,19 +34,6 @@ type ServiceProvider = {
   name: string;
   phone: string | null;
 };
-
-type KanbanColumn = {
-  key: string;
-  title: string;
-  color: string;
-  bgColor: string;
-};
-
-// Kanban columns (only Pendente and Agendado for preview)
-const columns: KanbanColumn[] = [
-  { key: "pendente", title: "Pendente", color: "text-yellow-600", bgColor: "bg-yellow-50 dark:bg-yellow-950/30" },
-  { key: "agendado", title: "Agendado", color: "text-blue-600", bgColor: "bg-blue-50 dark:bg-blue-950/30" },
-];
 
 export function MaintenanceKanbanPreview() {
   const navigate = useNavigate();
@@ -68,18 +53,14 @@ export function MaintenanceKanbanPreview() {
   const [chatDialogOpen, setChatDialogOpen] = useState(false);
   const [chatTicket, setChatTicket] = useState<MaintenanceTicket | null>(null);
 
-  // Get ticket IDs for unread message tracking and preloading
   const ticketIds = useMemo(() => tickets.map(t => t.id), [tickets]);
   const { unreadCounts, markAsRead } = useUnreadMessages(ticketIds);
-  
-  // Preload chat messages in background for instant opening
   useChatPreloader(ticketIds);
 
   const openChatDialog = (ticket: MaintenanceTicket, e: React.MouseEvent) => {
     e.stopPropagation();
     setChatTicket(ticket);
     setChatDialogOpen(true);
-    // Mark as read when opening
     markAsRead(ticket.id);
   };
 
@@ -93,23 +74,17 @@ export function MaintenanceKanbanPreview() {
       const { data, error } = await supabase
         .from("tickets")
         .select(`
-          id,
-          subject,
-          status,
-          created_at,
-          scheduled_at,
-          service_provider_id,
-          cost_responsible,
-          property:properties(name, cover_photo_url),
+          id, subject, status, scheduled_at, service_provider_id, cost_responsible,
+          property:properties(name),
           service_provider:service_providers(id, name, phone)
         `)
         .eq("ticket_type", "manutencao")
         .neq("status", "cancelado")
+        .neq("status", "concluido")
         .order("created_at", { ascending: false })
-        .limit(20);
+        .limit(15);
 
       if (error) throw error;
-      
       setTickets(data || []);
     } catch (error) {
       console.error("Error fetching maintenance tickets:", error);
@@ -132,37 +107,11 @@ export function MaintenanceKanbanPreview() {
     }
   };
 
-  const getTicketsForColumn = (columnKey: string) => {
-    // Filter out completed tickets - they have their own page
-    const activeTickets = tickets.filter(t => t.status !== "concluido");
-    
-    if (columnKey === "pendente") {
-      return activeTickets.filter(
-        (t) =>
-          ["novo", "em_analise", "aguardando_info"].includes(t.status) &&
-          !t.scheduled_at
-      );
-    }
-    if (columnKey === "agendado") {
-      return activeTickets.filter(
-        (t) =>
-          t.scheduled_at &&
-          !["em_execucao"].includes(t.status)
-      );
-    }
-    if (columnKey === "em_execucao") {
-      return activeTickets.filter((t) => t.status === "em_execucao");
-    }
-    return [];
-  };
-
   const openScheduleDialog = (ticket: MaintenanceTicket, e: React.MouseEvent) => {
     e.stopPropagation();
     setSelectedTicket(ticket);
     setScheduleData({
-      scheduled_at: ticket.scheduled_at 
-        ? format(new Date(ticket.scheduled_at), "yyyy-MM-dd'T'HH:mm")
-        : "",
+      scheduled_at: ticket.scheduled_at ? format(new Date(ticket.scheduled_at), "yyyy-MM-dd'T'HH:mm") : "",
       service_provider_id: ticket.service_provider_id || "",
       observation: "",
       cost_responsible: (ticket.cost_responsible as "owner" | "pm" | "guest") || "owner",
@@ -172,10 +121,8 @@ export function MaintenanceKanbanPreview() {
 
   const handleSchedule = async () => {
     if (!selectedTicket || !user) return;
-    
     setSaving(true);
     try {
-      // Update ticket with schedule info
       const { error: ticketError } = await supabase
         .from("tickets")
         .update({
@@ -187,292 +134,175 @@ export function MaintenanceKanbanPreview() {
 
       if (ticketError) throw ticketError;
 
-      // Create automatic message in ticket
       const provider = providers.find(p => p.id === scheduleData.service_provider_id);
       let messageBody = "📅 **Manutenção agendada**\n\n";
-      
       if (scheduleData.scheduled_at) {
-        const formattedDate = format(new Date(scheduleData.scheduled_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
-        messageBody += `**Data/Hora:** ${formattedDate}\n`;
+        messageBody += `**Data/Hora:** ${format(new Date(scheduleData.scheduled_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}\n`;
       }
-      
       if (provider) {
-        messageBody += `**Profissional:** ${provider.name}`;
-        if (provider.phone) {
-          messageBody += ` (${provider.phone})`;
-        }
-        messageBody += "\n";
+        messageBody += `**Profissional:** ${provider.name}${provider.phone ? ` (${provider.phone})` : ""}\n`;
       }
-      
       if (scheduleData.observation) {
         messageBody += `\n**Observação:** ${scheduleData.observation}`;
       }
 
-      const { error: messageError } = await supabase
-        .from("ticket_messages")
-        .insert({
-          ticket_id: selectedTicket.id,
-          author_id: user.id,
-          body: messageBody,
-          is_internal: false,
-        });
+      await supabase.from("ticket_messages").insert({
+        ticket_id: selectedTicket.id,
+        author_id: user.id,
+        body: messageBody,
+        is_internal: false,
+      });
 
-      if (messageError) throw messageError;
-
-      // Notify owner if cost_responsible is 'owner' (not guest/pm which are hidden from owner)
-      if (scheduleData.cost_responsible === 'owner') {
-        // Fetch ticket owner_id
-        const { data: ticketData } = await supabase
-          .from("tickets")
-          .select("owner_id, property:properties(name)")
-          .eq("id", selectedTicket.id)
-          .single();
-
-        if (ticketData?.owner_id) {
-          const formattedDate = scheduleData.scheduled_at 
-            ? format(new Date(scheduleData.scheduled_at), "dd/MM 'às' HH:mm", { locale: ptBR })
-            : "";
-          await supabase.from("notifications").insert({
-            owner_id: ticketData.owner_id,
-            title: "Manutenção Agendada",
-            message: `${(ticketData.property as any)?.name || "Sua unidade"} - ${formattedDate}`,
-            type: "maintenance",
-            reference_id: selectedTicket.id,
-            reference_url: `/manutencao/${selectedTicket.id}`,
-          });
-        }
-      }
-
-      toast.success("Manutenção agendada com sucesso!");
+      toast.success("Manutenção agendada!");
       setScheduleDialogOpen(false);
       setSelectedTicket(null);
       fetchMaintenanceTickets();
     } catch (error) {
-      console.error("Error scheduling maintenance:", error);
-      toast.error("Erro ao agendar manutenção");
+      console.error("Error scheduling:", error);
+      toast.error("Erro ao agendar");
     } finally {
       setSaving(false);
     }
   };
 
-  const moveToExecution = async (ticket: MaintenanceTicket, e: React.MouseEvent) => {
-    e.stopPropagation();
-    try {
-      const { error } = await supabase
-        .from("tickets")
-        .update({ status: "em_execucao" })
-        .eq("id", ticket.id);
-      if (error) throw error;
-      toast.success("Movido para execução!");
-      fetchMaintenanceTickets();
-    } catch (error) {
-      toast.error("Erro ao atualizar");
-    }
-  };
-
-  const moveBackToScheduled = async (ticket: MaintenanceTicket, e: React.MouseEvent) => {
-    e.stopPropagation();
-    try {
-      const { error } = await supabase
-        .from("tickets")
-        .update({ status: "em_analise" })
-        .eq("id", ticket.id);
-      if (error) throw error;
-      toast.success("Voltou para agendado!");
-      fetchMaintenanceTickets();
-    } catch (error) {
-      toast.error("Erro ao atualizar");
-    }
-  };
-
-  const goToKanbanForComplete = (ticket: MaintenanceTicket, e: React.MouseEvent) => {
-    e.stopPropagation();
-    // Navigate to full Kanban board for completion flow
-    navigate("/admin/manutencoes");
-  };
-
-  const totalPending = tickets.filter(
-    (t) =>
-      ["novo", "em_analise", "aguardando_info", "em_execucao"].includes(t.status) &&
-      t.status !== "concluido"
-  ).length;
+  const pendentes = tickets.filter(t => ["novo", "em_analise", "aguardando_info"].includes(t.status) && !t.scheduled_at);
+  const agendados = tickets.filter(t => t.scheduled_at && t.status !== "em_execucao");
 
   if (loading) {
     return (
-      <Card className="border-2 border-purple-200 dark:border-purple-800 overflow-hidden">
-        <CardHeader className="pb-3">
+      <Card className="border-purple-200 dark:border-purple-800">
+        <CardHeader className="py-3 px-4">
           <div className="flex items-center gap-2">
-            <Wrench className="h-5 w-5 text-purple-600 animate-pulse" />
-            <div className="h-5 w-40 rounded bg-muted shimmer" />
+            <Wrench className="h-4 w-4 text-purple-600 animate-pulse" />
+            <div className="h-4 w-36 rounded bg-muted animate-pulse" />
           </div>
         </CardHeader>
-        <CardContent className="pt-0">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {[1, 2].map((col) => (
-              <div key={col} className="rounded-lg bg-muted/30 p-2 space-y-2">
-                <div className="flex justify-between items-center mb-2">
-                  <div className="h-3 w-16 rounded bg-muted shimmer" />
-                  <div className="h-5 w-6 rounded-full bg-muted shimmer" />
-                </div>
-                {[1, 2, 3].map((i) => (
-                  <div 
-                    key={i} 
-                    className="rounded-lg bg-card p-2 space-y-2 animate-fade-in"
-                    style={{ animationDelay: `${(col * 3 + i) * 50}ms` }}
-                  >
-                    <div className="h-3 w-3/4 rounded bg-muted shimmer" />
-                    <div className="h-2 w-1/2 rounded bg-muted shimmer" />
-                    <div className="h-7 w-full rounded bg-muted shimmer mt-2" />
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className="border-2 border-purple-200 dark:border-purple-800 overflow-hidden">
-      <CardHeader className="pb-3">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <Wrench className="h-5 w-5 text-purple-600" />
-            <CardTitle className="text-lg">Quadro de Manutenções</CardTitle>
-            {totalPending > 0 && (
-              <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">
-                {totalPending} em aberto
+    <Card className="border-purple-200 dark:border-purple-800">
+      <CardHeader className="py-3 px-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Wrench className="h-4 w-4 text-purple-600" />
+            <CardTitle className="text-sm">Manutenções</CardTitle>
+            {tickets.length > 0 && (
+              <Badge variant="secondary" className="h-5 px-1.5 text-xs bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">
+                {tickets.length}
               </Badge>
             )}
           </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex gap-1">
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
               onClick={() => navigate("/admin/manutencoes-concluidas")}
-              className="text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-950 flex-1 sm:flex-none"
+              className="h-7 text-xs text-green-600"
             >
               Concluídas
             </Button>
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
               onClick={() => navigate("/admin/manutencoes")}
-              className="text-purple-600 border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950 flex-1 sm:flex-none"
+              className="h-7 text-xs text-purple-600"
             >
-              Ver completo
-              <ArrowRight className="ml-1 h-4 w-4" />
+              Completo <ArrowRight className="ml-1 h-3 w-3" />
             </Button>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="pt-0 overflow-hidden">
+      <CardContent className="px-4 pb-3 pt-0">
         {tickets.length === 0 ? (
-          <div className="text-center py-6 text-muted-foreground">
-            <Wrench className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">Nenhuma manutenção no momento</p>
-          </div>
+          <p className="text-xs text-muted-foreground text-center py-4">Nenhuma manutenção</p>
         ) : (
-          <div className="flex flex-col gap-3 sm:grid sm:grid-cols-2 sm:gap-2 w-full overflow-hidden">
-            {columns.map((column) => {
-              const columnTickets = getTicketsForColumn(column.key).slice(0, 3);
-              const totalTickets = getTicketsForColumn(column.key).length;
-
-              return (
-                <div key={column.key} className={`rounded-xl p-3 min-w-0 overflow-hidden ${column.bgColor}`}>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className={`text-sm font-bold ${column.color}`}>
-                      {column.title}
-                    </span>
-                    <Badge variant="outline" className="text-sm h-6 px-2 font-bold">
-                      {totalTickets}
-                    </Badge>
-                  </div>
-                  <div className="space-y-2 max-h-[220px] sm:max-h-[200px] overflow-hidden">
-                    {columnTickets.map((ticket) => (
-                      <div
-                        key={ticket.id}
-                        onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
-                        className="bg-card rounded-xl p-3 shadow-sm cursor-pointer hover:shadow-md transition-shadow overflow-hidden border"
-                      >
-                          {/* Property name */}
-                          <p className="font-semibold text-sm truncate">
-                            {ticket.property?.name || "Sem unidade"}
-                          </p>
-                          
-                          {/* Subject */}
-                          <p className="text-muted-foreground text-xs line-clamp-2 mt-1">
-                            {ticket.subject}
-                          </p>
-                          
-                          {/* Schedule info */}
-                          {ticket.scheduled_at && (
-                            <div className="flex items-center gap-1.5 mt-2 text-blue-600 text-xs font-medium">
-                              <Calendar className="h-3.5 w-3.5 flex-shrink-0" />
-                              <span className="truncate">
-                                {format(new Date(ticket.scheduled_at), "dd/MM HH:mm", { locale: ptBR })}
-                              </span>
-                            </div>
-                          )}
-                          
-                          {/* Actions */}
-                          <div className="flex flex-col gap-2 mt-3">
-                            <Button
-                              size="default"
-                              variant="outline"
-                              className="w-full h-10 text-sm font-medium"
-                              onClick={(e) => openChatDialog(ticket, e)}
-                            >
-                              <MessageSquare className="h-4 w-4 mr-2" />
-                              Chat
-                              {unreadCounts[ticket.id] > 0 && (
-                                <Badge variant="destructive" className="ml-2 h-5 px-1.5 text-xs">
-                                  {unreadCounts[ticket.id] > 9 ? "9+" : unreadCounts[ticket.id]}
-                                </Badge>
-                              )}
-                            </Button>
-                            {column.key === "pendente" && (
-                              <Button
-                                size="default"
-                                className="w-full h-10 text-sm font-medium"
-                                onClick={(e) => openScheduleDialog(ticket, e)}
-                              >
-                                Agendar
-                              </Button>
-                            )}
-                            {column.key === "agendado" && (
-                              <div className="flex gap-2">
-                                <Button
-                                  size="default"
-                                  variant="outline"
-                                  className="flex-1 h-10 text-sm font-medium"
-                                  onClick={(e) => openScheduleDialog(ticket, e)}
-                                >
-                                  Editar
-                                </Button>
-                                <Button
-                                  size="default"
-                                  className="flex-1 h-10 text-sm font-medium"
-                                  onClick={(e) => moveToExecution(ticket, e)}
-                                >
-                                  Executar
-                                  <ChevronRight className="h-4 w-4 ml-1" />
-                                </Button>
-                              </div>
-                            )}
-                          </div>
+          <div className="space-y-3">
+            {/* Pendentes */}
+            {pendentes.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-yellow-600 mb-1.5">Pendentes ({pendentes.length})</p>
+                <div className="space-y-1">
+                  {pendentes.slice(0, 5).map((ticket) => (
+                    <div
+                      key={ticket.id}
+                      className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors"
+                      onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium truncate">{ticket.property?.name || "Sem unidade"}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{ticket.subject}</p>
                       </div>
-                    ))}
-                    {columnTickets.length === 0 && (
-                      <p className="text-xs text-muted-foreground text-center py-4">
-                        Nenhum item
-                      </p>
-                    )}
-                  </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 relative"
+                        onClick={(e) => openChatDialog(ticket, e)}
+                      >
+                        <MessageSquare className="h-3.5 w-3.5" />
+                        {unreadCounts[ticket.id] > 0 && (
+                          <span className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-destructive text-[9px] text-white flex items-center justify-center">
+                            {unreadCounts[ticket.id]}
+                          </span>
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-6 px-2 text-[10px]"
+                        onClick={(e) => openScheduleDialog(ticket, e)}
+                      >
+                        <Calendar className="h-3 w-3 mr-1" />
+                        Agendar
+                      </Button>
+                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                    </div>
+                  ))}
                 </div>
-              );
-            })}
+              </div>
+            )}
+
+            {/* Agendados */}
+            {agendados.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-blue-600 mb-1.5">Agendados ({agendados.length})</p>
+                <div className="space-y-1">
+                  {agendados.slice(0, 5).map((ticket) => (
+                    <div
+                      key={ticket.id}
+                      className="flex items-center gap-2 p-2 rounded-lg bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50 cursor-pointer transition-colors"
+                      onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium truncate">{ticket.property?.name || "Sem unidade"}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{ticket.subject}</p>
+                      </div>
+                      {ticket.scheduled_at && (
+                        <span className="text-[10px] font-medium text-blue-600 flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {format(new Date(ticket.scheduled_at), "dd/MM HH:mm", { locale: ptBR })}
+                        </span>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 relative"
+                        onClick={(e) => openChatDialog(ticket, e)}
+                      >
+                        <MessageSquare className="h-3.5 w-3.5" />
+                        {unreadCounts[ticket.id] > 0 && (
+                          <span className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-destructive text-[9px] text-white flex items-center justify-center">
+                            {unreadCounts[ticket.id]}
+                          </span>
+                        )}
+                      </Button>
+                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </CardContent>
@@ -483,115 +313,71 @@ export function MaintenanceKanbanPreview() {
           <DialogHeader>
             <DialogTitle>Agendar Manutenção</DialogTitle>
           </DialogHeader>
-          {selectedTicket && (
-            <div className="space-y-4">
-              <div className="bg-muted/50 rounded-lg p-3">
-                <p className="font-medium">{selectedTicket.subject}</p>
-                <p className="text-sm text-muted-foreground">
-                  {selectedTicket.property?.name}
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="scheduled_at">Data e Horário</Label>
-                <Input
-                  id="scheduled_at"
-                  type="datetime-local"
-                  value={scheduleData.scheduled_at}
-                  onChange={(e) =>
-                    setScheduleData((prev) => ({ ...prev, scheduled_at: e.target.value }))
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="provider">Profissional</Label>
-                <Select
-                  value={scheduleData.service_provider_id || "none"}
-                  onValueChange={(value) =>
-                    setScheduleData((prev) => ({ ...prev, service_provider_id: value === "none" ? "" : value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um profissional" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhum</SelectItem>
-                    {providers.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.name}
-                        {p.phone && ` - ${p.phone}`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Responsável pelo custo</Label>
-                <Select
-                  value={scheduleData.cost_responsible}
-                  onValueChange={(value: "owner" | "pm" | "guest") =>
-                    setScheduleData((prev) => ({ ...prev, cost_responsible: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="owner">Proprietário</SelectItem>
-                    <SelectItem value="pm">Gestão</SelectItem>
-                    <SelectItem value="guest">Hóspede (invisível pro proprietário)</SelectItem>
-                  </SelectContent>
-                </Select>
-                {scheduleData.cost_responsible === "guest" && (
-                  <p className="text-xs text-orange-600 dark:text-orange-400">
-                    ⚠️ Manutenções de hóspede não aparecem para o proprietário
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="observation">Observação (opcional)</Label>
-                <Textarea
-                  id="observation"
-                  placeholder="Adicione informações relevantes sobre a visita..."
-                  value={scheduleData.observation}
-                  onChange={(e) =>
-                    setScheduleData((prev) => ({ ...prev, observation: e.target.value }))
-                  }
-                  rows={3}
-                />
-              </div>
-
-              <div className="flex gap-2 pt-4">
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => setScheduleDialogOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  className="flex-1"
-                  onClick={handleSchedule}
-                  disabled={saving}
-                >
-                  {saving ? "Salvando..." : "Salvar"}
-                </Button>
-              </div>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label>Data e Hora</Label>
+              <Input
+                type="datetime-local"
+                value={scheduleData.scheduled_at}
+                onChange={(e) => setScheduleData({ ...scheduleData, scheduled_at: e.target.value })}
+              />
             </div>
-          )}
+            <div>
+              <Label>Profissional</Label>
+              <Select
+                value={scheduleData.service_provider_id}
+                onValueChange={(v) => setScheduleData({ ...scheduleData, service_provider_id: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {providers.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Responsável pelo custo</Label>
+              <Select
+                value={scheduleData.cost_responsible}
+                onValueChange={(v) => setScheduleData({ ...scheduleData, cost_responsible: v as "owner" | "pm" | "guest" })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="owner">Proprietário</SelectItem>
+                  <SelectItem value="pm">Gestão</SelectItem>
+                  <SelectItem value="guest">Hóspede</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Observação (opcional)</Label>
+              <Textarea
+                value={scheduleData.observation}
+                onChange={(e) => setScheduleData({ ...scheduleData, observation: e.target.value })}
+                placeholder="Adicione uma observação..."
+                rows={2}
+              />
+            </div>
+            <Button onClick={handleSchedule} disabled={saving} className="w-full">
+              {saving ? "Salvando..." : "Confirmar Agendamento"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
-      {/* Chat Dialog */}
       <MaintenanceChatDialog
         open={chatDialogOpen}
         onOpenChange={setChatDialogOpen}
         ticketId={chatTicket?.id || null}
-        ticketSubject={chatTicket?.subject}
-        propertyName={chatTicket?.property?.name}
+        ticketSubject={chatTicket?.subject || ""}
+        propertyName={chatTicket?.property?.name || "Sem unidade"}
       />
     </Card>
   );
