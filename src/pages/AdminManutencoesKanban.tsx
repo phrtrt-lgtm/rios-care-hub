@@ -561,7 +561,7 @@ const AdminManutencoesKanban = () => {
                           </div>
 
                           {/* Action buttons */}
-                          <div className="flex gap-1 pt-1">
+                          <div className="flex flex-wrap gap-1 pt-1">
                             {/* Chat button - always visible */}
                             <Button
                               size="sm"
