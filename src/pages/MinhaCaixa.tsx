@@ -12,7 +12,7 @@ import { NotificationButton } from "@/components/NotificationButton";
 import TopChargesRules from "@/components/TopChargesRules";
 import { PropostasPendentesCompletas } from "@/components/PropostasPendentesCompletas";
 import { supabase } from "@/integrations/supabase/client";
-import OwnerMaintenancePolicyBanner from "@/components/OwnerMaintenancePolicyBanner";
+
 import { OwnerPropertiesSection } from "@/components/OwnerPropertiesSection";
 import { OwnerScoreDisplay } from "@/components/OwnerScoreDisplay";
 import { MaintenanceKanbanPreview } from "@/components/MaintenanceKanbanPreview";
@@ -230,8 +230,6 @@ export default function MinhaCaixa() {
           <OwnerScoreDisplay />
         </div>
 
-        {/* Maintenance Policy Banner */}
-        <OwnerMaintenancePolicyBanner />
         
         {/* Alert Banner */}
         <div className="mb-6">
