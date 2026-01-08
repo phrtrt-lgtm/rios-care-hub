@@ -235,9 +235,9 @@ export default function MinhaCaixa() {
           <AlertBanner />
         </div>
 
-        {/* Atalhos para Relatórios - apenas para owners */}
+        {/* Atalhos para Relatórios - apenas para owners em desktop */}
         {profile?.role === "owner" && (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="hidden md:grid grid-cols-2 gap-3">
             <Button
               variant="outline"
               className="h-auto py-4 flex flex-col items-center gap-2"
