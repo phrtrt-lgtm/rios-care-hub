@@ -207,22 +207,22 @@ export function ChamadosKanbanPreview() {
             <p className="text-sm">Nenhum chamado pendente</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-2 w-full max-w-full">
+          <div className="flex flex-col gap-3 sm:grid sm:grid-cols-2 sm:gap-2 w-full max-w-full">
             {columns.map((column) => {
               const columnTickets = getTicketsForColumn(column.key);
 
               return (
-                <div key={column.key} className={`rounded-lg p-2 min-w-0 overflow-hidden w-full ${column.bgColor}`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className={`text-xs font-semibold ${column.color}`}>
+                <div key={column.key} className={`rounded-xl p-3 min-w-0 overflow-hidden w-full ${column.bgColor}`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className={`text-sm font-bold ${column.color}`}>
                       {column.title}
                     </span>
-                    <Badge variant="outline" className="text-xs h-5 px-1.5">
+                    <Badge variant="outline" className="text-sm h-6 px-2 font-bold">
                       {columnTickets.length}
                     </Badge>
                   </div>
-                  <ScrollArea className="h-[180px]">
-                    <div className="space-y-1 pr-1">
+                  <ScrollArea className="h-[200px] sm:h-[180px]">
+                    <div className="space-y-2 pr-1">
                       {columnTickets.map((ticket) => {
                         const slaInfo = getSlaInfo(ticket.sla_due_at);
                         
@@ -230,42 +230,43 @@ export function ChamadosKanbanPreview() {
                           <div
                             key={ticket.id}
                             onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
-                            className="bg-card rounded-lg p-2 shadow-sm cursor-pointer hover:shadow-md transition-shadow w-full"
+                            className="bg-card rounded-xl p-3 shadow-sm cursor-pointer hover:shadow-md transition-shadow w-full border"
                           >
                             {/* Property + Type */}
-                            <div className="flex items-center gap-1">
-                              <p className="font-medium text-xs truncate flex-1">
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold text-sm truncate flex-1">
                                 {ticket.property?.name || "Sem unidade"}
                               </p>
-                              <span className="text-[10px] px-1 py-0.5 bg-muted rounded flex-shrink-0">
+                              <span className="text-xs px-1.5 py-0.5 bg-muted rounded-full flex-shrink-0 flex items-center gap-1">
                                 {TICKET_TYPE_ICONS[ticket.ticket_type]}
+                                <span className="hidden sm:inline">{TICKET_TYPE_LABELS[ticket.ticket_type]}</span>
                               </span>
                             </div>
                             
                             {/* Subject */}
-                            <p className="text-muted-foreground text-[10px] truncate mt-0.5">
+                            <p className="text-muted-foreground text-xs line-clamp-2 mt-1">
                               {ticket.subject}
                             </p>
                             
                             {/* SLA */}
                             {slaInfo && (
-                              <p className={`text-[10px] mt-1 ${slaInfo.colorClass}`}>
-                                SLA: {slaInfo.display}
+                              <p className={`text-xs font-medium mt-2 ${slaInfo.colorClass}`}>
+                                ⏱ SLA: {slaInfo.display}
                               </p>
                             )}
                             
                             {/* Actions */}
-                            <div className="mt-2">
+                            <div className="mt-3">
                               <Button
-                                size="sm"
+                                size="default"
                                 variant="outline"
-                                className="w-full h-8 text-xs"
+                                className="w-full h-10 text-sm font-medium"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   openChatDialog(ticket, e);
                                 }}
                               >
-                                <MessageSquare className="h-3.5 w-3.5 mr-1" />
+                                <MessageSquare className="h-4 w-4 mr-2" />
                                 Abrir Chat
                               </Button>
                             </div>
@@ -273,7 +274,7 @@ export function ChamadosKanbanPreview() {
                         );
                       })}
                       {columnTickets.length === 0 && (
-                        <p className="text-[8px] text-muted-foreground text-center py-2">
+                        <p className="text-xs text-muted-foreground text-center py-4">
                           Nenhum item
                         </p>
                       )}
