@@ -138,8 +138,6 @@ export function MobileBottomNav() {
         </div>
       </nav>
 
-      {/* Spacer for content */}
-      <div className="h-16 md:hidden" />
     </>
   );
 }
