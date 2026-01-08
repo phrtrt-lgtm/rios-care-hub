@@ -225,15 +225,10 @@ export default function MinhaCaixa() {
         )}
 
         {/* Score de Pagamentos - abaixo das unidades */}
-        <div className="mb-6">
-          <OwnerScoreDisplay />
-        </div>
+        <OwnerScoreDisplay />
 
-        
         {/* Alert Banner */}
-        <div className="mb-6">
-          <AlertBanner />
-        </div>
+        <AlertBanner />
 
         {/* Atalhos para Relatórios - apenas para owners em desktop */}
         {profile?.role === "owner" && (
@@ -256,10 +251,7 @@ export default function MinhaCaixa() {
             </Button>
           </div>
         )}
-
-
       </main>
-      
       {/* Mobile Bottom Navigation */}
       <MobileBottomNav />
     </div>
