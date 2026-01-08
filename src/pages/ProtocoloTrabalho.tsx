@@ -545,7 +545,7 @@ export default function ProtocoloTrabalho() {
                 </thead>
                 <tbody>
                   <tr className="border-b">
-                    <td className="py-3 px-4">Decisão do proprietário (estrutural)</td>
+                    <td className="py-3 px-4">Decisão do proprietário</td>
                     <td className="py-3 px-4">48-72h</td>
                     <td className="py-3 px-4">Assumir ou delegar</td>
                   </tr>
