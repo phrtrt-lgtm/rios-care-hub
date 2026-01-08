@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { Home, Ticket, DollarSign, Wrench, Plus, Menu, X } from "lucide-react";
+import { Home, Ticket, DollarSign, Wrench, Plus, Menu, X, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useState } from "react";
@@ -25,6 +25,8 @@ const quickActions: NavItem[] = [
   { icon: Ticket, label: "Novo Ticket", path: "/novo-ticket-massa", roles: ["admin", "maintenance", "agent"] },
   { icon: Ticket, label: "Novo Chamado", path: "/novo-ticket", roles: ["owner"] },
   { icon: Wrench, label: "Nova Manutenção", path: "/admin/nova-manutencao", roles: ["admin", "maintenance"] },
+  { icon: Wrench, label: "Relatório Manutenções", path: "/manutencoes", roles: ["owner"] },
+  { icon: BarChart3, label: "Resumo Propriedades", path: "/resumo-propriedades", roles: ["owner"] },
 ];
 
 export function MobileBottomNav() {
