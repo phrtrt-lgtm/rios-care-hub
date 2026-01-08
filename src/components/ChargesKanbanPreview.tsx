@@ -1,19 +1,11 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  DollarSign, 
-  ArrowRight, 
-  MessageSquare, 
-  CreditCard
-} from "lucide-react";
-
-import { format, differenceInDays, isPast } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { DollarSign, ArrowRight, MessageSquare, ChevronRight } from "lucide-react";
+import { differenceInDays, isPast } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 import { formatBRL } from "@/lib/format";
 import { ChargeChatDialog } from "./ChargeChatDialog";
@@ -25,33 +17,8 @@ type Charge = {
   management_contribution_cents: number;
   due_date: string | null;
   status: string;
-  created_at: string;
-  payment_link_url: string | null;
-  service_type: string | null;
-  property: { name: string; cover_photo_url: string | null } | null;
+  property: { name: string } | null;
   owner: { name: string } | null;
-  _count?: { messages: number };
-};
-
-type KanbanColumn = {
-  key: string;
-  title: string;
-  color: string;
-  bgColor: string;
-};
-
-const columns: KanbanColumn[] = [
-  { key: "pendente", title: "Pendentes", color: "text-yellow-600", bgColor: "bg-yellow-50 dark:bg-yellow-950/30" },
-  { key: "vencida", title: "Vencidas", color: "text-red-600", bgColor: "bg-red-50 dark:bg-red-950/30" },
-];
-
-const SERVICE_TYPE_LABELS: Record<string, string> = {
-  hidraulica: "Hidráulica",
-  eletrica: "Elétrica",
-  marcenaria: "Marcenaria",
-  itens: "Itens",
-  estrutural: "Estrutural",
-  refrigeracao: "Refrigeração",
 };
 
 export function ChargesKanbanPreview() {
@@ -64,56 +31,25 @@ export function ChargesKanbanPreview() {
 
   const isOwner = profile?.role === "owner";
 
-  const openChatDialog = (charge: Charge, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setChatCharge(charge);
-    setChatDialogOpen(true);
-  };
-
   useEffect(() => {
     fetchCharges();
   }, []);
 
   const fetchCharges = async () => {
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from("charges")
         .select(`
-          id,
-          title,
-          amount_cents,
-          management_contribution_cents,
-          due_date,
-          status,
-          created_at,
-          payment_link_url,
-          service_type,
-          property:properties(name, cover_photo_url),
+          id, title, amount_cents, management_contribution_cents, due_date, status,
+          property:properties(name),
           owner:profiles!charges_owner_id_fkey(name)
         `)
         .in("status", ["sent", "overdue"])
-        .order("due_date", { ascending: true, nullsFirst: false });
-
-      const { data, error } = await query;
+        .order("due_date", { ascending: true, nullsFirst: false })
+        .limit(15);
 
       if (error) throw error;
-
-      // Fetch message counts
-      const enrichedCharges = await Promise.all(
-        (data || []).map(async (charge) => {
-          const { count } = await supabase
-            .from("charge_messages")
-            .select("id", { count: "exact", head: true })
-            .eq("charge_id", charge.id);
-
-          return {
-            ...charge,
-            _count: { messages: count || 0 },
-          } as Charge;
-        })
-      );
-
-      setCharges(enrichedCharges);
+      setCharges((data || []) as Charge[]);
     } catch (error) {
       console.error("Error fetching charges:", error);
     } finally {
@@ -121,182 +57,155 @@ export function ChargesKanbanPreview() {
     }
   };
 
-  const getChargesForColumn = (columnKey: string) => {
-    if (columnKey === "pendente") {
-      return charges.filter((c) => {
-        if (c.status !== "sent") return false;
-        if (!c.due_date) return true;
-        return !isPast(new Date(c.due_date));
-      });
-    }
-    if (columnKey === "vencida") {
-      return charges.filter((c) => {
-        if (c.status === "overdue") return true;
-        if (c.status === "sent" && c.due_date && isPast(new Date(c.due_date))) return true;
-        return false;
-      });
-    }
-    return [];
+  const openChatDialog = (charge: Charge, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setChatCharge(charge);
+    setChatDialogOpen(true);
   };
 
-  const getDueDateInfo = (due_date: string | null, status: string) => {
-    if (!due_date) return null;
-    
+  const getDueInfo = (due_date: string | null, status: string) => {
+    if (!due_date) return { text: "", color: "" };
     const dueDate = new Date(due_date);
-    const now = new Date();
-    const daysLeft = differenceInDays(dueDate, now);
+    const daysLeft = differenceInDays(dueDate, new Date());
     const isOverdue = isPast(dueDate) || status === "overdue";
     
-    let colorClass = "text-muted-foreground";
-    let text = format(dueDate, "dd/MM", { locale: ptBR });
-    
-    if (isOverdue) {
-      colorClass = "text-red-600";
-      text = `Vencida há ${Math.abs(daysLeft)} dias`;
-    } else if (daysLeft <= 2) {
-      colorClass = "text-orange-600";
-      text = `Vence em ${daysLeft}d`;
-    } else if (daysLeft <= 7) {
-      colorClass = "text-yellow-600";
-      text = `Vence em ${daysLeft}d`;
-    }
-    
-    return { text, colorClass };
+    if (isOverdue) return { text: `${Math.abs(daysLeft)}d atrás`, color: "text-red-600" };
+    if (daysLeft <= 2) return { text: `${daysLeft}d`, color: "text-orange-600" };
+    if (daysLeft <= 7) return { text: `${daysLeft}d`, color: "text-yellow-600" };
+    return { text: `${daysLeft}d`, color: "text-muted-foreground" };
   };
 
-  const getDueAmount = (charge: Charge) => {
-    return charge.amount_cents - (charge.management_contribution_cents || 0);
-  };
+  const getDueAmount = (charge: Charge) => charge.amount_cents - (charge.management_contribution_cents || 0);
 
-  const totalPending = charges.length;
-  const totalOverdue = charges.filter(c => 
-    c.status === "overdue" || (c.status === "sent" && c.due_date && isPast(new Date(c.due_date)))
-  ).length;
+  const pendentes = charges.filter(c => {
+    if (c.status !== "sent") return false;
+    if (!c.due_date) return true;
+    return !isPast(new Date(c.due_date));
+  });
+
+  const vencidas = charges.filter(c => {
+    if (c.status === "overdue") return true;
+    if (c.status === "sent" && c.due_date && isPast(new Date(c.due_date))) return true;
+    return false;
+  });
 
   if (loading) {
     return (
-      <Card className="border-2 border-green-200 dark:border-green-800">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <Card className="border-green-200 dark:border-green-800">
+        <CardHeader className="py-3 px-4">
+          <div className="flex items-center gap-2">
+            <DollarSign className="h-4 w-4 text-green-600 animate-pulse" />
+            <div className="h-4 w-32 rounded bg-muted animate-pulse" />
           </div>
-        </CardContent>
+        </CardHeader>
       </Card>
     );
   }
 
   return (
-    <Card className="border-2 border-green-200 dark:border-green-800 overflow-hidden">
-      <CardHeader className="pb-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <DollarSign className="h-5 w-5 text-green-600" />
-            <CardTitle className="text-lg">Quadro de Cobranças</CardTitle>
-            {totalPending > 0 && (
-              <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
-                {totalPending} em aberto
+    <Card className="border-green-200 dark:border-green-800">
+      <CardHeader className="py-3 px-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <DollarSign className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-sm">Cobranças</CardTitle>
+            {charges.length > 0 && (
+              <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+                {charges.length}
               </Badge>
             )}
-            {totalOverdue > 0 && (
-              <Badge variant="destructive">
-                {totalOverdue} vencidas
+            {vencidas.length > 0 && (
+              <Badge variant="destructive" className="h-5 px-1.5 text-xs">
+                {vencidas.length} vencidas
               </Badge>
             )}
           </div>
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={() => navigate(isOwner ? "/minhas-cobrancas" : "/gerenciar-cobrancas")}
-            className="text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-950 w-full sm:w-auto"
+            className="h-7 text-xs text-green-600"
           >
-            Ver todas
-            <ArrowRight className="ml-2 h-4 w-4" />
+            Ver todas <ArrowRight className="ml-1 h-3 w-3" />
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="pt-0 overflow-hidden">
+      <CardContent className="px-4 pb-3 pt-0">
         {charges.length === 0 ? (
-          <div className="text-center py-6 text-muted-foreground">
-            <DollarSign className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">Nenhuma cobrança pendente</p>
-          </div>
+          <p className="text-xs text-muted-foreground text-center py-4">Nenhuma cobrança pendente</p>
         ) : (
-          <div className="flex flex-col gap-3 sm:grid sm:grid-cols-2 sm:gap-2 w-full max-w-full">
-            {columns.map((column) => {
-              const columnCharges = getChargesForColumn(column.key);
-
-              return (
-                <div key={column.key} className={`rounded-xl p-3 min-w-0 overflow-hidden w-full ${column.bgColor}`}>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className={`text-sm font-bold ${column.color}`}>
-                      {column.title}
-                    </span>
-                    <Badge variant="outline" className="text-sm h-6 px-2 font-bold">
-                      {columnCharges.length}
-                    </Badge>
-                  </div>
-                  <ScrollArea className="h-[200px] sm:h-[180px]">
-                    <div className="space-y-2 pr-1">
-                      {columnCharges.map((charge) => {
-                        const dueDateInfo = getDueDateInfo(charge.due_date, charge.status);
-                        const dueAmount = getDueAmount(charge);
-
-                        return (
-                          <div
-                            key={charge.id}
-                            onClick={() => navigate(`/cobranca/${charge.id}`)}
-                            className="bg-card rounded-xl p-3 shadow-sm cursor-pointer hover:shadow-md transition-shadow border"
-                          >
-                            {/* Property name */}
-                            <p className="font-semibold text-sm truncate">
-                              {charge.property?.name || charge.owner?.name || "Sem prop."}
-                            </p>
-                            
-                            {/* Amount + Due date */}
-                            <div className="flex items-center justify-between mt-2">
-                              <span className="font-bold text-green-600 text-base">
-                                {formatBRL(dueAmount)}
-                              </span>
-                              {dueDateInfo && (
-                                <span className={`text-xs font-medium ${dueDateInfo.colorClass}`}>
-                                  {dueDateInfo.text}
-                                </span>
-                              )}
-                            </div>
-                            
-                            {/* Chat button */}
-                            <Button
-                              size="default"
-                              variant="outline"
-                              className="w-full h-10 text-sm font-medium mt-3"
-                              onClick={(e) => openChatDialog(charge, e)}
-                            >
-                              <MessageSquare className="h-4 w-4 mr-2" />
-                              Chat
-                              {(charge._count?.messages || 0) > 0 && (
-                                <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
-                                  {charge._count?.messages}
-                                </Badge>
-                              )}
-                            </Button>
-                          </div>
-                        );
-                      })}
-                      {columnCharges.length === 0 && (
-                        <p className="text-xs text-muted-foreground text-center py-4">
-                          Nenhum item
-                        </p>
-                      )}
-                    </div>
-                  </ScrollArea>
+          <div className="space-y-3">
+            {/* Vencidas primeiro */}
+            {vencidas.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-red-600 mb-1.5">Vencidas ({vencidas.length})</p>
+                <div className="space-y-1">
+                  {vencidas.slice(0, 5).map((charge) => {
+                    const dueInfo = getDueInfo(charge.due_date, charge.status);
+                    return (
+                      <div
+                        key={charge.id}
+                        className="flex items-center gap-2 p-2 rounded-lg bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 cursor-pointer transition-colors"
+                        onClick={() => navigate(`/cobranca/${charge.id}`)}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium truncate">{charge.property?.name || charge.owner?.name}</p>
+                        </div>
+                        <span className="text-xs font-bold text-green-600">{formatBRL(getDueAmount(charge))}</span>
+                        <span className={`text-[10px] font-medium ${dueInfo.color}`}>{dueInfo.text}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                          onClick={(e) => openChatDialog(charge, e)}
+                        >
+                          <MessageSquare className="h-3.5 w-3.5" />
+                        </Button>
+                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
+              </div>
+            )}
+
+            {/* Pendentes */}
+            {pendentes.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-yellow-600 mb-1.5">Pendentes ({pendentes.length})</p>
+                <div className="space-y-1">
+                  {pendentes.slice(0, 5).map((charge) => {
+                    const dueInfo = getDueInfo(charge.due_date, charge.status);
+                    return (
+                      <div
+                        key={charge.id}
+                        className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors"
+                        onClick={() => navigate(`/cobranca/${charge.id}`)}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium truncate">{charge.property?.name || charge.owner?.name}</p>
+                        </div>
+                        <span className="text-xs font-bold text-green-600">{formatBRL(getDueAmount(charge))}</span>
+                        <span className={`text-[10px] font-medium ${dueInfo.color}`}>{dueInfo.text}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                          onClick={(e) => openChatDialog(charge, e)}
+                        >
+                          <MessageSquare className="h-3.5 w-3.5" />
+                        </Button>
+                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </CardContent>
 
-      {/* Chat Dialog */}
       <ChargeChatDialog
         open={chatDialogOpen}
         onOpenChange={setChatDialogOpen}
