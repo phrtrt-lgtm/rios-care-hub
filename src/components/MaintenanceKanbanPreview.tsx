@@ -284,7 +284,7 @@ export function MaintenanceKanbanPreview() {
 
                       <div className="flex items-center gap-2 shrink-0">
                         {ticket.scheduled_at && (
-                          <span className="text-[10px] font-medium text-blue-600 flex items-center gap-1 whitespace-nowrap shrink-0">
+                          <span className="hidden sm:flex text-[10px] font-medium text-blue-600 items-center gap-1 whitespace-nowrap shrink-0">
                             <Calendar className="h-3 w-3" />
                             {format(new Date(ticket.scheduled_at), "dd/MM HH:mm", { locale: ptBR })}
                           </span>

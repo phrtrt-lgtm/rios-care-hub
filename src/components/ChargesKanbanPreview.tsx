@@ -154,11 +154,11 @@ export function ChargesKanbanPreview() {
                           </p>
                         </div>
 
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center gap-1.5 shrink-0">
                           <span className="text-xs font-bold text-green-600 whitespace-nowrap">
                             {formatBRL(getDueAmount(charge))}
                           </span>
-                          <span className={`text-[10px] font-medium whitespace-nowrap ${dueInfo.color}`}>{dueInfo.text}</span>
+                          <span className={`hidden sm:inline text-[10px] font-medium whitespace-nowrap ${dueInfo.color}`}>{dueInfo.text}</span>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -195,11 +195,11 @@ export function ChargesKanbanPreview() {
                           </p>
                         </div>
 
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center gap-1.5 shrink-0">
                           <span className="text-xs font-bold text-green-600 whitespace-nowrap">
                             {formatBRL(getDueAmount(charge))}
                           </span>
-                          <span className={`text-[10px] font-medium whitespace-nowrap ${dueInfo.color}`}>{dueInfo.text}</span>
+                          <span className={`hidden sm:inline text-[10px] font-medium whitespace-nowrap ${dueInfo.color}`}>{dueInfo.text}</span>
                           <Button
                             variant="ghost"
                             size="sm"
