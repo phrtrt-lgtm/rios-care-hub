@@ -161,13 +161,13 @@ export function VistoriasKanbanPreview() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-6 px-2 text-[10px] text-orange-600"
+                          className="h-6 px-2 text-[10px] text-orange-600 shrink-0"
                           onClick={(e) => handleNewMaintenance(inspection, e)}
                         >
                           <Wrench className="h-3 w-3 mr-1" />
                           Manutenção
                         </Button>
-                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                       </div>
                     ))}
                   </div>
@@ -194,7 +194,7 @@ export function VistoriasKanbanPreview() {
                             {format(new Date(inspection.created_at), "dd/MM HH:mm", { locale: ptBR })}
                           </p>
                         </div>
-                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                       </div>
                     ))}
                   </div>
