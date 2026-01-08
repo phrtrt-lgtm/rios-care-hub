@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Wrench, ArrowRight, Calendar, MessageSquare, ChevronRight } from "lucide-react";
+import { Wrench, ArrowRight, Calendar, MessageSquare, ChevronRight, Paperclip } from "lucide-react";
+import { QuickAttachmentButton } from "./QuickAttachmentButton";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -235,7 +236,11 @@ export function MaintenanceKanbanPreview() {
                         <p className="text-[10px] text-muted-foreground truncate">{ticket.subject}</p>
                       </div>
 
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center gap-1 shrink-0">
+                        <QuickAttachmentButton 
+                          ticketId={ticket.id} 
+                          onSuccess={fetchMaintenanceTickets}
+                        />
                         <Button
                           variant="ghost"
                           size="sm"
@@ -282,13 +287,17 @@ export function MaintenanceKanbanPreview() {
                         <p className="text-[10px] text-muted-foreground truncate">{ticket.subject}</p>
                       </div>
 
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center gap-1 shrink-0">
                         {ticket.scheduled_at && (
                           <span className="hidden sm:flex text-[10px] font-medium text-blue-600 items-center gap-1 whitespace-nowrap shrink-0">
                             <Calendar className="h-3 w-3" />
                             {format(new Date(ticket.scheduled_at), "dd/MM HH:mm", { locale: ptBR })}
                           </span>
                         )}
+                        <QuickAttachmentButton 
+                          ticketId={ticket.id} 
+                          onSuccess={fetchMaintenanceTickets}
+                        />
                         <Button
                           variant="ghost"
                           size="sm"

@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Ticket, ArrowRight, MessageSquare, ChevronRight } from "lucide-react";
+import { Ticket, ArrowRight, MessageSquare, ChevronRight, Paperclip } from "lucide-react";
+import { QuickAttachmentButton } from "./QuickAttachmentButton";
 import { differenceInHours } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
@@ -144,12 +145,16 @@ export function ChamadosKanbanPreview() {
                         <p className="text-[10px] text-muted-foreground truncate">{ticket.subject}</p>
                       </div>
 
-                      <div className="flex items-center gap-1.5 shrink-0">
+                      <div className="flex items-center gap-1 shrink-0">
                         {ticket.sla_due_at && (
                           <span className={`hidden sm:inline text-[10px] font-medium whitespace-nowrap shrink-0 ${getSlaColor(ticket.sla_due_at)}`}>
                             {getSlaText(ticket.sla_due_at)}
                           </span>
                         )}
+                        <QuickAttachmentButton 
+                          ticketId={ticket.id} 
+                          onSuccess={fetchTickets}
+                        />
                         <Button
                           variant="ghost"
                           size="sm"
@@ -187,12 +192,16 @@ export function ChamadosKanbanPreview() {
                         <p className="text-[10px] text-muted-foreground truncate">{ticket.subject}</p>
                       </div>
 
-                      <div className="flex items-center gap-1.5 shrink-0">
+                      <div className="flex items-center gap-1 shrink-0">
                         {ticket.sla_due_at && (
                           <span className={`hidden sm:inline text-[10px] font-medium whitespace-nowrap shrink-0 ${getSlaColor(ticket.sla_due_at)}`}>
                             {getSlaText(ticket.sla_due_at)}
                           </span>
                         )}
+                        <QuickAttachmentButton 
+                          ticketId={ticket.id} 
+                          onSuccess={fetchTickets}
+                        />
                         <Button
                           variant="ghost"
                           size="sm"
