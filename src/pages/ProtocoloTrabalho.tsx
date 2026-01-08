@@ -487,7 +487,7 @@ export default function ProtocoloTrabalho() {
                 <div className="p-4 rounded-lg border bg-card">
                   <div className="font-medium mb-2">MercadoPago</div>
                   <p className="text-sm text-muted-foreground">
-                    Cartão de crédito com opção de parcelamento.
+                    Cartão de crédito com parcelamento em <strong>até 12x</strong>.
                   </p>
                   <Badge variant="outline" className="mt-2 border-amber-400 text-amber-600">
                     Juros por conta do proprietário
