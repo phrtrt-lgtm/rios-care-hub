@@ -221,22 +221,22 @@ export function ChargesKanbanPreview() {
             <p className="text-sm">Nenhuma cobrança pendente</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-2 w-full max-w-full">
+          <div className="flex flex-col gap-3 sm:grid sm:grid-cols-2 sm:gap-2 w-full max-w-full">
             {columns.map((column) => {
               const columnCharges = getChargesForColumn(column.key);
 
               return (
-                <div key={column.key} className={`rounded-lg p-2 min-w-0 overflow-hidden w-full ${column.bgColor}`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className={`text-xs font-semibold ${column.color}`}>
+                <div key={column.key} className={`rounded-xl p-3 min-w-0 overflow-hidden w-full ${column.bgColor}`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className={`text-sm font-bold ${column.color}`}>
                       {column.title}
                     </span>
-                    <Badge variant="outline" className="text-xs h-5 px-1.5">
+                    <Badge variant="outline" className="text-sm h-6 px-2 font-bold">
                       {columnCharges.length}
                     </Badge>
                   </div>
-                  <ScrollArea className="h-[180px]">
-                    <div className="space-y-1 pr-1">
+                  <ScrollArea className="h-[200px] sm:h-[180px]">
+                    <div className="space-y-2 pr-1">
                       {columnCharges.map((charge) => {
                         const dueDateInfo = getDueDateInfo(charge.due_date, charge.status);
                         const dueAmount = getDueAmount(charge);
@@ -245,20 +245,20 @@ export function ChargesKanbanPreview() {
                           <div
                             key={charge.id}
                             onClick={() => navigate(`/cobranca/${charge.id}`)}
-                            className="bg-card rounded-lg p-2 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                            className="bg-card rounded-xl p-3 shadow-sm cursor-pointer hover:shadow-md transition-shadow border"
                           >
-                            {/* Property name - single line */}
-                            <p className="font-medium text-xs truncate">
+                            {/* Property name */}
+                            <p className="font-semibold text-sm truncate">
                               {charge.property?.name || charge.owner?.name || "Sem prop."}
                             </p>
                             
                             {/* Amount + Due date */}
-                            <div className="flex items-center justify-between mt-1">
-                              <span className="font-bold text-green-600 text-sm">
+                            <div className="flex items-center justify-between mt-2">
+                              <span className="font-bold text-green-600 text-base">
                                 {formatBRL(dueAmount)}
                               </span>
                               {dueDateInfo && (
-                                <span className={`text-[10px] ${dueDateInfo.colorClass}`}>
+                                <span className={`text-xs font-medium ${dueDateInfo.colorClass}`}>
                                   {dueDateInfo.text}
                                 </span>
                               )}
@@ -266,15 +266,15 @@ export function ChargesKanbanPreview() {
                             
                             {/* Chat button */}
                             <Button
-                              size="sm"
+                              size="default"
                               variant="outline"
-                              className="w-full h-7 text-xs mt-2"
+                              className="w-full h-10 text-sm font-medium mt-3"
                               onClick={(e) => openChatDialog(charge, e)}
                             >
-                              <MessageSquare className="h-3 w-3 mr-1" />
+                              <MessageSquare className="h-4 w-4 mr-2" />
                               Chat
                               {(charge._count?.messages || 0) > 0 && (
-                                <Badge variant="secondary" className="ml-1 h-4 px-1 text-[9px]">
+                                <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
                                   {charge._count?.messages}
                                 </Badge>
                               )}
@@ -283,7 +283,7 @@ export function ChargesKanbanPreview() {
                         );
                       })}
                       {columnCharges.length === 0 && (
-                        <p className="text-[8px] text-muted-foreground text-center py-2">
+                        <p className="text-xs text-muted-foreground text-center py-4">
                           Nenhum item
                         </p>
                       )}

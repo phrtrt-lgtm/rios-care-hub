@@ -374,42 +374,42 @@ export function MaintenanceKanbanPreview() {
             <p className="text-sm">Nenhuma manutenção no momento</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full overflow-hidden">
+          <div className="flex flex-col gap-3 sm:grid sm:grid-cols-2 sm:gap-2 w-full overflow-hidden">
             {columns.map((column) => {
-              const columnTickets = getTicketsForColumn(column.key).slice(0, 3); // Limit to 3 cards per column in preview
+              const columnTickets = getTicketsForColumn(column.key).slice(0, 3);
               const totalTickets = getTicketsForColumn(column.key).length;
 
               return (
-                <div key={column.key} className={`rounded-lg p-2 min-w-0 overflow-hidden ${column.bgColor}`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className={`text-xs font-semibold ${column.color}`}>
+                <div key={column.key} className={`rounded-xl p-3 min-w-0 overflow-hidden ${column.bgColor}`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className={`text-sm font-bold ${column.color}`}>
                       {column.title}
                     </span>
-                    <Badge variant="outline" className="text-xs h-5 px-1.5">
+                    <Badge variant="outline" className="text-sm h-6 px-2 font-bold">
                       {totalTickets}
                     </Badge>
                   </div>
-                  <div className="space-y-1.5 max-h-[200px] overflow-hidden">
+                  <div className="space-y-2 max-h-[220px] sm:max-h-[200px] overflow-hidden">
                     {columnTickets.map((ticket) => (
                       <div
                         key={ticket.id}
                         onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
-                        className="bg-card rounded-lg p-2 shadow-sm cursor-pointer hover:shadow-md transition-shadow overflow-hidden"
+                        className="bg-card rounded-xl p-3 shadow-sm cursor-pointer hover:shadow-md transition-shadow overflow-hidden border"
                       >
                           {/* Property name */}
-                          <p className="font-medium text-xs truncate">
+                          <p className="font-semibold text-sm truncate">
                             {ticket.property?.name || "Sem unidade"}
                           </p>
                           
                           {/* Subject */}
-                          <p className="text-muted-foreground text-[10px] truncate mt-0.5">
+                          <p className="text-muted-foreground text-xs line-clamp-2 mt-1">
                             {ticket.subject}
                           </p>
                           
                           {/* Schedule info */}
                           {ticket.scheduled_at && (
-                            <div className="flex items-center gap-1 mt-1 text-blue-600 text-[10px]">
-                              <Calendar className="h-3 w-3 flex-shrink-0" />
+                            <div className="flex items-center gap-1.5 mt-2 text-blue-600 text-xs font-medium">
+                              <Calendar className="h-3.5 w-3.5 flex-shrink-0" />
                               <span className="truncate">
                                 {format(new Date(ticket.scheduled_at), "dd/MM HH:mm", { locale: ptBR })}
                               </span>
@@ -417,46 +417,47 @@ export function MaintenanceKanbanPreview() {
                           )}
                           
                           {/* Actions */}
-                          <div className="flex flex-col gap-1 mt-2">
+                          <div className="flex flex-col gap-2 mt-3">
                             <Button
-                              size="sm"
+                              size="default"
                               variant="outline"
-                              className="w-full h-7 text-xs"
+                              className="w-full h-10 text-sm font-medium"
                               onClick={(e) => openChatDialog(ticket, e)}
                             >
-                              <MessageSquare className="h-3 w-3 mr-1" />
+                              <MessageSquare className="h-4 w-4 mr-2" />
                               Chat
                               {unreadCounts[ticket.id] > 0 && (
-                                <Badge variant="destructive" className="ml-1 h-4 px-1 text-[10px]">
+                                <Badge variant="destructive" className="ml-2 h-5 px-1.5 text-xs">
                                   {unreadCounts[ticket.id] > 9 ? "9+" : unreadCounts[ticket.id]}
                                 </Badge>
                               )}
                             </Button>
                             {column.key === "pendente" && (
                               <Button
-                                size="sm"
-                                className="w-full h-7 text-xs"
+                                size="default"
+                                className="w-full h-10 text-sm font-medium"
                                 onClick={(e) => openScheduleDialog(ticket, e)}
                               >
                                 Agendar
                               </Button>
                             )}
                             {column.key === "agendado" && (
-                              <div className="flex gap-1">
+                              <div className="flex gap-2">
                                 <Button
-                                  size="sm"
+                                  size="default"
                                   variant="outline"
-                                  className="flex-1 h-7 text-xs"
+                                  className="flex-1 h-10 text-sm font-medium"
                                   onClick={(e) => openScheduleDialog(ticket, e)}
                                 >
                                   Editar
                                 </Button>
                                 <Button
-                                  size="sm"
-                                  className="flex-1 h-7 text-xs"
+                                  size="default"
+                                  className="flex-1 h-10 text-sm font-medium"
                                   onClick={(e) => moveToExecution(ticket, e)}
                                 >
-                                  <ChevronRight className="h-4 w-4" />
+                                  Executar
+                                  <ChevronRight className="h-4 w-4 ml-1" />
                                 </Button>
                               </div>
                             )}
@@ -464,7 +465,7 @@ export function MaintenanceKanbanPreview() {
                       </div>
                     ))}
                     {columnTickets.length === 0 && (
-                      <p className="text-[10px] text-muted-foreground text-center py-2">
+                      <p className="text-xs text-muted-foreground text-center py-4">
                         Nenhum item
                       </p>
                     )}
