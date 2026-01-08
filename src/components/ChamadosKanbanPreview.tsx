@@ -143,25 +143,28 @@ export function ChamadosKanbanPreview() {
                         <p className="text-xs font-medium truncate">{ticket.property?.name || "Sem unidade"}</p>
                         <p className="text-[10px] text-muted-foreground truncate">{ticket.subject}</p>
                       </div>
-                      {ticket.sla_due_at && (
-                        <span className={`text-[10px] font-medium ${getSlaColor(ticket.sla_due_at)}`}>
-                          {getSlaText(ticket.sla_due_at)}
-                        </span>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0 relative shrink-0"
-                        onClick={(e) => openChatDialog(ticket, e)}
-                      >
-                        <MessageSquare className="h-3.5 w-3.5" />
-                        {unreadCounts[ticket.id] > 0 && (
-                          <span className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-destructive text-[9px] text-white flex items-center justify-center">
-                            {unreadCounts[ticket.id]}
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {ticket.sla_due_at && (
+                          <span className={`text-[10px] font-medium whitespace-nowrap shrink-0 ${getSlaColor(ticket.sla_due_at)}`}>
+                            {getSlaText(ticket.sla_due_at)}
                           </span>
                         )}
-                      </Button>
-                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 relative shrink-0"
+                          onClick={(e) => openChatDialog(ticket, e)}
+                        >
+                          <MessageSquare className="h-3.5 w-3.5" />
+                          {unreadCounts[ticket.id] > 0 && (
+                            <span className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-destructive text-[9px] text-white flex items-center justify-center">
+                              {unreadCounts[ticket.id]}
+                            </span>
+                          )}
+                        </Button>
+                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -183,25 +186,28 @@ export function ChamadosKanbanPreview() {
                         <p className="text-xs font-medium truncate">{ticket.property?.name || "Sem unidade"}</p>
                         <p className="text-[10px] text-muted-foreground truncate">{ticket.subject}</p>
                       </div>
-                      {ticket.sla_due_at && (
-                        <span className={`text-[10px] font-medium ${getSlaColor(ticket.sla_due_at)}`}>
-                          {getSlaText(ticket.sla_due_at)}
-                        </span>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0 relative shrink-0"
-                        onClick={(e) => openChatDialog(ticket, e)}
-                      >
-                        <MessageSquare className="h-3.5 w-3.5" />
-                        {unreadCounts[ticket.id] > 0 && (
-                          <span className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-destructive text-[9px] text-white flex items-center justify-center">
-                            {unreadCounts[ticket.id]}
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {ticket.sla_due_at && (
+                          <span className={`text-[10px] font-medium whitespace-nowrap shrink-0 ${getSlaColor(ticket.sla_due_at)}`}>
+                            {getSlaText(ticket.sla_due_at)}
                           </span>
                         )}
-                      </Button>
-                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 relative shrink-0"
+                          onClick={(e) => openChatDialog(ticket, e)}
+                        >
+                          <MessageSquare className="h-3.5 w-3.5" />
+                          {unreadCounts[ticket.id] > 0 && (
+                            <span className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-destructive text-[9px] text-white flex items-center justify-center">
+                              {unreadCounts[ticket.id]}
+                            </span>
+                          )}
+                        </Button>
+                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      </div>
                     </div>
                   ))}
                 </div>
