@@ -224,9 +224,9 @@ export default function Painel() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium">Protocolo de Manutenções</p>
-            <p className="text-xs text-muted-foreground truncate">Fluxo completo de vistorias, manutenções e cobranças</p>
+            <p className="text-xs text-muted-foreground">Fluxo de vistorias, manutenções e cobranças</p>
           </div>
-          <span className="text-xs text-primary font-medium hidden sm:block">Ver →</span>
+          <span className="text-xs text-primary font-medium flex-shrink-0">Ver →</span>
         </div>
 
         <div className="mb-6 md:mb-8">
