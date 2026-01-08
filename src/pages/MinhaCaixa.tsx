@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Plus, LogOut, DollarSign, ClipboardCheck, Ticket, BookOpen } from "lucide-react";
+import { Plus, LogOut, DollarSign, ClipboardCheck, Ticket, BookOpen, Wrench, BarChart3 } from "lucide-react";
 import { TicketList } from "@/components/TicketList";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -234,6 +234,28 @@ export default function MinhaCaixa() {
         <div className="mb-6">
           <AlertBanner />
         </div>
+
+        {/* Atalhos para Relatórios - apenas para owners */}
+        {profile?.role === "owner" && (
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              variant="outline"
+              className="h-auto py-4 flex flex-col items-center gap-2"
+              onClick={() => navigate("/manutencoes")}
+            >
+              <Wrench className="h-5 w-5 text-primary" />
+              <span className="text-sm font-medium">Relatório de Manutenções</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-auto py-4 flex flex-col items-center gap-2"
+              onClick={() => navigate("/resumo-propriedades")}
+            >
+              <BarChart3 className="h-5 w-5 text-primary" />
+              <span className="text-sm font-medium">Resumo por Propriedade</span>
+            </Button>
+          </div>
+        )}
 
 
       </main>
