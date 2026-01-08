@@ -182,7 +182,7 @@ export function MaintenanceKanbanPreview() {
   }
 
   return (
-    <Card className="border-purple-200 dark:border-purple-800">
+    <Card className="border-purple-200 dark:border-purple-800 overflow-hidden">
       <CardHeader className="py-3 px-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -227,7 +227,7 @@ export function MaintenanceKanbanPreview() {
                   {pendentes.slice(0, 5).map((ticket) => (
                     <div
                       key={ticket.id}
-                      className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors"
+                      className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors overflow-hidden"
                       onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
                     >
                       <div className="flex-1 min-w-0">
@@ -274,7 +274,7 @@ export function MaintenanceKanbanPreview() {
                   {agendados.slice(0, 5).map((ticket) => (
                     <div
                       key={ticket.id}
-                      className="flex items-center gap-2 p-2 rounded-lg bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50 cursor-pointer transition-colors"
+                      className="flex items-center gap-2 p-2 rounded-lg bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50 cursor-pointer transition-colors overflow-hidden"
                       onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
                     >
                       <div className="flex-1 min-w-0">

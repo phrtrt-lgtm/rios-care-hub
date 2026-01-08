@@ -111,7 +111,7 @@ export function VistoriasKanbanPreview() {
 
   return (
     <>
-      <Card>
+      <Card className="overflow-hidden">
         <CardHeader className="py-3 px-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -149,7 +149,7 @@ export function VistoriasKanbanPreview() {
                     {problemInspections.slice(0, 5).map((inspection) => (
                       <div
                         key={inspection.id}
-                        className="flex items-center gap-2 p-2 rounded-lg bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 cursor-pointer transition-colors"
+                        className="flex items-center gap-2 p-2 rounded-lg bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 cursor-pointer transition-colors overflow-hidden"
                         onClick={() => navigate(`/admin/vistoria/${inspection.id}`)}
                       >
                         <div className="flex-1 min-w-0">
@@ -188,7 +188,7 @@ export function VistoriasKanbanPreview() {
                     {okInspections.slice(0, 3).map((inspection) => (
                       <div
                         key={inspection.id}
-                        className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors"
+                        className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors overflow-hidden"
                         onClick={() => navigate(`/admin/vistoria/${inspection.id}`)}
                       >
                         <div className="flex-1 min-w-0">
