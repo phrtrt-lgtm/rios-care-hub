@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Star, TrendingUp, TrendingDown, Minus, Info, ChevronDown, ChevronUp, Gift, Clock, AlertTriangle, Zap, DollarSign } from "lucide-react";
+import { Star, TrendingUp, TrendingDown, Minus, Info, ChevronDown, ChevronUp, Gift, Clock, AlertTriangle, Zap, DollarSign, BarChart3 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useOwnerScore } from "@/hooks/useOwnerScore";
 import { useAuth } from "@/hooks/useAuth";
@@ -243,15 +243,25 @@ export const OwnerScoreDisplay = () => {
             </CollapsibleContent>
           </Collapsible>
 
-          {/* Link para cobranças */}
-          <Button
-            variant="outline"
-            className="w-full mt-2"
-            onClick={() => navigate("/minhas-cobrancas")}
-          >
-            <DollarSign className="h-4 w-4 mr-2" />
-            Ver Minhas Cobranças
-          </Button>
+          {/* Atalhos */}
+          <div className="flex flex-col gap-2 mt-2">
+            <Button
+              variant="default"
+              className="w-full"
+              onClick={() => navigate("/manutencoes")}
+            >
+              <BarChart3 className="h-4 w-4 mr-2" />
+              Relatório
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => navigate("/minhas-cobrancas")}
+            >
+              <DollarSign className="h-4 w-4 mr-2" />
+              Minhas Cobranças
+            </Button>
+          </div>
         </CardContent>
       </Card>
     );
@@ -505,15 +515,25 @@ export const OwnerScoreDisplay = () => {
           </div>
         )}
 
-        {/* Link para cobranças */}
-        <Button
-          variant="outline"
-          className="w-full"
-          onClick={() => navigate("/minhas-cobrancas")}
-        >
-          <DollarSign className="h-4 w-4 mr-2" />
-          Ver Minhas Cobranças
-        </Button>
+        {/* Atalhos */}
+        <div className="flex flex-col gap-2">
+          <Button
+            variant="default"
+            className="w-full"
+            onClick={() => navigate("/manutencoes")}
+          >
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Relatório
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => navigate("/minhas-cobrancas")}
+          >
+            <DollarSign className="h-4 w-4 mr-2" />
+            Minhas Cobranças
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

@@ -9,7 +9,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertBanner } from "@/components/AlertBanner";
 import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
 import { NotificationButton } from "@/components/NotificationButton";
-import TopChargesRules from "@/components/TopChargesRules";
 import { PropostasPendentesCompletas } from "@/components/PropostasPendentesCompletas";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -236,10 +235,6 @@ export default function MinhaCaixa() {
           <AlertBanner />
         </div>
 
-        {/* Top Charges Rules Section */}
-        <div className="mb-6">
-          <TopChargesRules />
-        </div>
 
         <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
