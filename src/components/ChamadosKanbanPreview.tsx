@@ -101,7 +101,7 @@ export function ChamadosKanbanPreview() {
   }
 
   return (
-    <Card className="border-blue-200 dark:border-blue-800">
+    <Card className="border-blue-200 dark:border-blue-800 overflow-hidden">
       <CardHeader className="py-3 px-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -136,7 +136,7 @@ export function ChamadosKanbanPreview() {
                   {novos.slice(0, 5).map((ticket) => (
                     <div
                       key={ticket.id}
-                      className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors"
+                      className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors overflow-hidden"
                       onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
                     >
                       <div className="flex-1 min-w-0">
@@ -179,7 +179,7 @@ export function ChamadosKanbanPreview() {
                   {emAndamento.slice(0, 5).map((ticket) => (
                     <div
                       key={ticket.id}
-                      className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors"
+                      className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors overflow-hidden"
                       onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
                     >
                       <div className="flex-1 min-w-0">
