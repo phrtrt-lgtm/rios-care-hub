@@ -234,29 +234,32 @@ export function MaintenanceKanbanPreview() {
                         <p className="text-xs font-medium truncate">{ticket.property?.name || "Sem unidade"}</p>
                         <p className="text-[10px] text-muted-foreground truncate">{ticket.subject}</p>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0 relative"
-                        onClick={(e) => openChatDialog(ticket, e)}
-                      >
-                        <MessageSquare className="h-3.5 w-3.5" />
-                        {unreadCounts[ticket.id] > 0 && (
-                          <span className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-destructive text-[9px] text-white flex items-center justify-center">
-                            {unreadCounts[ticket.id]}
-                          </span>
-                        )}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-6 px-2 text-[10px]"
-                        onClick={(e) => openScheduleDialog(ticket, e)}
-                      >
-                        <Calendar className="h-3 w-3 mr-1" />
-                        Agendar
-                      </Button>
-                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 relative shrink-0"
+                          onClick={(e) => openChatDialog(ticket, e)}
+                        >
+                          <MessageSquare className="h-3.5 w-3.5" />
+                          {unreadCounts[ticket.id] > 0 && (
+                            <span className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-destructive text-[9px] text-white flex items-center justify-center">
+                              {unreadCounts[ticket.id]}
+                            </span>
+                          )}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-6 px-2 text-[10px] shrink-0"
+                          onClick={(e) => openScheduleDialog(ticket, e)}
+                        >
+                          <Calendar className="h-3 w-3 mr-1" />
+                          Agendar
+                        </Button>
+                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -278,26 +281,29 @@ export function MaintenanceKanbanPreview() {
                         <p className="text-xs font-medium truncate">{ticket.property?.name || "Sem unidade"}</p>
                         <p className="text-[10px] text-muted-foreground truncate">{ticket.subject}</p>
                       </div>
-                      {ticket.scheduled_at && (
-                        <span className="text-[10px] font-medium text-blue-600 flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {format(new Date(ticket.scheduled_at), "dd/MM HH:mm", { locale: ptBR })}
-                        </span>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0 relative"
-                        onClick={(e) => openChatDialog(ticket, e)}
-                      >
-                        <MessageSquare className="h-3.5 w-3.5" />
-                        {unreadCounts[ticket.id] > 0 && (
-                          <span className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-destructive text-[9px] text-white flex items-center justify-center">
-                            {unreadCounts[ticket.id]}
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        {ticket.scheduled_at && (
+                          <span className="text-[10px] font-medium text-blue-600 flex items-center gap-1 whitespace-nowrap shrink-0">
+                            <Calendar className="h-3 w-3" />
+                            {format(new Date(ticket.scheduled_at), "dd/MM HH:mm", { locale: ptBR })}
                           </span>
                         )}
-                      </Button>
-                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 relative shrink-0"
+                          onClick={(e) => openChatDialog(ticket, e)}
+                        >
+                          <MessageSquare className="h-3.5 w-3.5" />
+                          {unreadCounts[ticket.id] > 0 && (
+                            <span className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-destructive text-[9px] text-white flex items-center justify-center">
+                              {unreadCounts[ticket.id]}
+                            </span>
+                          )}
+                        </Button>
+                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      </div>
                     </div>
                   ))}
                 </div>

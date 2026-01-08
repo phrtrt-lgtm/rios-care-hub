@@ -149,19 +149,26 @@ export function ChargesKanbanPreview() {
                         onClick={() => navigate(`/cobranca/${charge.id}`)}
                       >
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium truncate">{charge.property?.name || charge.owner?.name}</p>
+                          <p className="text-xs font-medium truncate">
+                            {charge.property?.name || charge.owner?.name}
+                          </p>
                         </div>
-                        <span className="text-xs font-bold text-green-600">{formatBRL(getDueAmount(charge))}</span>
-                        <span className={`text-[10px] font-medium ${dueInfo.color}`}>{dueInfo.text}</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0"
-                          onClick={(e) => openChatDialog(charge, e)}
-                        >
-                          <MessageSquare className="h-3.5 w-3.5" />
-                        </Button>
-                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-xs font-bold text-green-600 whitespace-nowrap">
+                            {formatBRL(getDueAmount(charge))}
+                          </span>
+                          <span className={`text-[10px] font-medium whitespace-nowrap ${dueInfo.color}`}>{dueInfo.text}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 relative shrink-0"
+                            onClick={(e) => openChatDialog(charge, e)}
+                          >
+                            <MessageSquare className="h-3.5 w-3.5" />
+                          </Button>
+                          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        </div>
                       </div>
                     );
                   })}
@@ -183,19 +190,26 @@ export function ChargesKanbanPreview() {
                         onClick={() => navigate(`/cobranca/${charge.id}`)}
                       >
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium truncate">{charge.property?.name || charge.owner?.name}</p>
+                          <p className="text-xs font-medium truncate">
+                            {charge.property?.name || charge.owner?.name}
+                          </p>
                         </div>
-                        <span className="text-xs font-bold text-green-600">{formatBRL(getDueAmount(charge))}</span>
-                        <span className={`text-[10px] font-medium ${dueInfo.color}`}>{dueInfo.text}</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0"
-                          onClick={(e) => openChatDialog(charge, e)}
-                        >
-                          <MessageSquare className="h-3.5 w-3.5" />
-                        </Button>
-                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-xs font-bold text-green-600 whitespace-nowrap">
+                            {formatBRL(getDueAmount(charge))}
+                          </span>
+                          <span className={`text-[10px] font-medium whitespace-nowrap ${dueInfo.color}`}>{dueInfo.text}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 relative shrink-0"
+                            onClick={(e) => openChatDialog(charge, e)}
+                          >
+                            <MessageSquare className="h-3.5 w-3.5" />
+                          </Button>
+                          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        </div>
                       </div>
                     );
                   })}
