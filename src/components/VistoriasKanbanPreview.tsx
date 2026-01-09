@@ -4,7 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ClipboardCheck, AlertTriangle, CheckCircle2, Wrench, ChevronRight, Paperclip } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ClipboardCheck, AlertTriangle, CheckCircle2, Wrench, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { QuickInspectionAttachmentButton } from './QuickInspectionAttachmentButton';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -40,6 +41,11 @@ export function VistoriasKanbanPreview() {
   const [loading, setLoading] = useState(true);
   const [maintenanceDialogOpen, setMaintenanceDialogOpen] = useState(false);
   const [selectedInspection, setSelectedInspection] = useState<Inspection | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  const COLLAPSED_PROBLEM_LIMIT = 3;
+  const COLLAPSED_OK_LIMIT = 2;
+  const EXPANDED_LIMIT = 20;
 
   useEffect(() => {
     fetchInspections();
@@ -110,36 +116,60 @@ export function VistoriasKanbanPreview() {
     );
   }
 
+  const problemLimit = isExpanded ? EXPANDED_LIMIT : COLLAPSED_PROBLEM_LIMIT;
+  const okLimit = isExpanded ? EXPANDED_LIMIT : COLLAPSED_OK_LIMIT;
+  const hasMoreItems = problemInspections.length > COLLAPSED_PROBLEM_LIMIT || okInspections.length > COLLAPSED_OK_LIMIT;
+
   return (
     <>
-      <Card className="overflow-hidden">
-        <CardHeader className="py-3 px-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <ClipboardCheck className="h-4 w-4" />
-              <CardTitle className="text-sm">Vistorias</CardTitle>
-              {inspections.length > 0 && (
-                <Badge variant="secondary" className="h-5 px-1.5 text-xs">
-                  {inspections.length}
-                </Badge>
-              )}
+      <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+        <Card className="overflow-hidden">
+          <CardHeader className="py-3 px-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ClipboardCheck className="h-4 w-4" />
+                <CardTitle className="text-sm">Vistorias</CardTitle>
+                {inspections.length > 0 && (
+                  <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+                    {inspections.length}
+                  </Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-1">
+                {hasMoreItems && (
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-7 text-xs gap-1">
+                      {isExpanded ? (
+                        <>
+                          <ChevronUp className="h-3 w-3" />
+                          Recolher
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="h-3 w-3" />
+                          Expandir
+                        </>
+                      )}
+                    </Button>
+                  </CollapsibleTrigger>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate('/admin/vistorias')}
+                  className="h-7 text-xs"
+                >
+                  Ver todas <ChevronRight className="ml-1 h-3 w-3" />
+                </Button>
+              </div>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate('/admin/vistorias')}
-              className="h-7 text-xs"
-            >
-              Ver todas <ChevronRight className="ml-1 h-3 w-3" />
-            </Button>
-          </div>
-        </CardHeader>
+          </CardHeader>
         <CardContent className="px-4 pb-3 pt-0">
           {inspections.length === 0 ? (
             <p className="text-xs text-muted-foreground text-center py-4">Nenhuma vistoria recente</p>
           ) : (
             <div className="space-y-3">
-              {/* Problemas primeiro */}
+              {/* Problemas primeiro - sempre visíveis (colapsado) */}
               {problemInspections.length > 0 && (
                 <div>
                   <div className="flex items-center gap-1.5 mb-1.5">
@@ -147,7 +177,7 @@ export function VistoriasKanbanPreview() {
                     <p className="text-xs font-semibold text-red-600">Problemas ({problemInspections.length})</p>
                   </div>
                   <div className="space-y-1">
-                    {problemInspections.slice(0, 5).map((inspection) => (
+                    {problemInspections.slice(0, COLLAPSED_PROBLEM_LIMIT).map((inspection) => (
                       <div
                         key={inspection.id}
                         className="flex items-center gap-2 p-2 rounded-lg bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 cursor-pointer transition-colors overflow-hidden"
@@ -178,11 +208,46 @@ export function VistoriasKanbanPreview() {
                         </div>
                       </div>
                     ))}
+                    
+                    {/* Itens expandidos de problemas */}
+                    <CollapsibleContent className="space-y-1">
+                      {problemInspections.slice(COLLAPSED_PROBLEM_LIMIT, EXPANDED_LIMIT).map((inspection) => (
+                        <div
+                          key={inspection.id}
+                          className="flex items-center gap-2 p-2 rounded-lg bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 cursor-pointer transition-colors overflow-hidden"
+                          onClick={() => navigate(`/admin/vistoria/${inspection.id}`)}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium truncate">{inspection.property?.name || 'Imóvel'}</p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {format(new Date(inspection.created_at), "dd/MM HH:mm", { locale: ptBR })}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-1 shrink-0">
+                            <QuickInspectionAttachmentButton 
+                              inspectionId={inspection.id} 
+                              onSuccess={fetchInspections}
+                            />
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-2 text-[10px] text-orange-600 shrink-0 whitespace-nowrap"
+                              onClick={(e) => handleNewMaintenance(inspection, e)}
+                            >
+                              <Wrench className="h-3 w-3" />
+                              <span className="hidden sm:inline ml-1">Manutenção</span>
+                            </Button>
+                            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          </div>
+                        </div>
+                      ))}
+                    </CollapsibleContent>
                   </div>
                 </div>
               )}
 
-              {/* OK */}
+              {/* OK - sempre visíveis (colapsado) */}
               {okInspections.length > 0 && (
                 <div>
                   <div className="flex items-center gap-1.5 mb-1.5">
@@ -190,7 +255,7 @@ export function VistoriasKanbanPreview() {
                     <p className="text-xs font-semibold text-green-600">OK ({okInspections.length})</p>
                   </div>
                   <div className="space-y-1">
-                    {okInspections.slice(0, 3).map((inspection) => (
+                    {okInspections.slice(0, COLLAPSED_OK_LIMIT).map((inspection) => (
                       <div
                         key={inspection.id}
                         className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors overflow-hidden"
@@ -211,13 +276,39 @@ export function VistoriasKanbanPreview() {
                         </div>
                       </div>
                     ))}
+                    
+                    {/* Itens expandidos de OK */}
+                    <CollapsibleContent className="space-y-1">
+                      {okInspections.slice(COLLAPSED_OK_LIMIT, EXPANDED_LIMIT).map((inspection) => (
+                        <div
+                          key={inspection.id}
+                          className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors overflow-hidden"
+                          onClick={() => navigate(`/admin/vistoria/${inspection.id}`)}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium truncate">{inspection.property?.name || 'Imóvel'}</p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {format(new Date(inspection.created_at), "dd/MM HH:mm", { locale: ptBR })}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <QuickInspectionAttachmentButton 
+                              inspectionId={inspection.id} 
+                              onSuccess={fetchInspections}
+                            />
+                            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          </div>
+                        </div>
+                      ))}
+                    </CollapsibleContent>
                   </div>
                 </div>
               )}
             </div>
           )}
         </CardContent>
-      </Card>
+        </Card>
+      </Collapsible>
 
       {selectedInspection && selectedInspection.property && (
         <CreateMaintenanceFromInspectionDialog
