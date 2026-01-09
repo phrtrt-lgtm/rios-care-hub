@@ -4,11 +4,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, ArrowRight, MessageSquare, ChevronRight } from "lucide-react";
+import { DollarSign, ArrowRight, MessageSquare, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
 import { differenceInDays, isPast } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 import { formatBRL } from "@/lib/format";
 import { ChargeChatDialog } from "./ChargeChatDialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+
+const COLLAPSED_LIMIT = 3;
+const EXPANDED_LIMIT = 20;
 
 type Charge = {
   id: string;
@@ -28,6 +32,8 @@ export function ChargesKanbanPreview() {
   const [loading, setLoading] = useState(true);
   const [chatDialogOpen, setChatDialogOpen] = useState(false);
   const [chatCharge, setChatCharge] = useState<Charge | null>(null);
+  const [vencidasExpanded, setVencidasExpanded] = useState(false);
+  const [pendentesExpanded, setPendentesExpanded] = useState(false);
 
   const isOwner = profile?.role === "owner";
 
@@ -46,7 +52,7 @@ export function ChargesKanbanPreview() {
         `)
         .in("status", ["sent", "overdue"])
         .order("due_date", { ascending: true, nullsFirst: false })
-        .limit(15);
+        .limit(50);
 
       if (error) throw error;
       setCharges((data || []) as Charge[]);
@@ -88,6 +94,46 @@ export function ChargesKanbanPreview() {
     if (c.status === "sent" && c.due_date && isPast(new Date(c.due_date))) return true;
     return false;
   });
+
+  const vencidasLimit = vencidasExpanded ? EXPANDED_LIMIT : COLLAPSED_LIMIT;
+  const pendentesLimit = pendentesExpanded ? EXPANDED_LIMIT : COLLAPSED_LIMIT;
+
+  const renderChargeItem = (charge: Charge, isOverdue: boolean = false) => {
+    const dueInfo = getDueInfo(charge.due_date, charge.status);
+    return (
+      <div
+        key={charge.id}
+        className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${
+          isOverdue 
+            ? "bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50" 
+            : "bg-muted/50 hover:bg-muted"
+        }`}
+        onClick={() => navigate(`/cobranca/${charge.id}`)}
+      >
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-medium truncate">
+            {charge.property?.name || charge.owner?.name}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="text-xs font-bold text-green-600 whitespace-nowrap">
+            {formatBRL(getDueAmount(charge))}
+          </span>
+          <span className={`hidden sm:inline text-[10px] font-medium whitespace-nowrap ${dueInfo.color}`}>{dueInfo.text}</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 w-6 p-0 relative shrink-0"
+            onClick={(e) => openChatDialog(charge, e)}
+          >
+            <MessageSquare className="h-3.5 w-3.5" />
+          </Button>
+          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+        </div>
+      </div>
+    );
+  };
 
   if (loading) {
     return (
@@ -137,84 +183,48 @@ export function ChargesKanbanPreview() {
           <div className="space-y-3">
             {/* Vencidas primeiro */}
             {vencidas.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-red-600 mb-1.5">Vencidas ({vencidas.length})</p>
-                <div className="space-y-1">
-                  {vencidas.slice(0, 5).map((charge) => {
-                    const dueInfo = getDueInfo(charge.due_date, charge.status);
-                    return (
-                      <div
-                        key={charge.id}
-                        className="flex items-center gap-2 p-2 rounded-lg bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 cursor-pointer transition-colors"
-                        onClick={() => navigate(`/cobranca/${charge.id}`)}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium truncate">
-                            {charge.property?.name || charge.owner?.name}
-                          </p>
-                        </div>
-
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <span className="text-xs font-bold text-green-600 whitespace-nowrap">
-                            {formatBRL(getDueAmount(charge))}
-                          </span>
-                          <span className={`hidden sm:inline text-[10px] font-medium whitespace-nowrap ${dueInfo.color}`}>{dueInfo.text}</span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 relative shrink-0"
-                            onClick={(e) => openChatDialog(charge, e)}
-                          >
-                            <MessageSquare className="h-3.5 w-3.5" />
-                          </Button>
-                          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                        </div>
-                      </div>
-                    );
-                  })}
+              <Collapsible open={vencidasExpanded} onOpenChange={setVencidasExpanded}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <p className="text-xs font-semibold text-red-600">Vencidas ({vencidas.length})</p>
+                  {vencidas.length > COLLAPSED_LIMIT && (
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-5 px-1.5 text-xs text-muted-foreground">
+                        {vencidasExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                        {vencidasExpanded ? "Recolher" : `+${vencidas.length - COLLAPSED_LIMIT}`}
+                      </Button>
+                    </CollapsibleTrigger>
+                  )}
                 </div>
-              </div>
+                <div className="space-y-1">
+                  {vencidas.slice(0, COLLAPSED_LIMIT).map(c => renderChargeItem(c, true))}
+                </div>
+                <CollapsibleContent className="space-y-1 mt-1">
+                  {vencidas.slice(COLLAPSED_LIMIT, vencidasLimit).map(c => renderChargeItem(c, true))}
+                </CollapsibleContent>
+              </Collapsible>
             )}
 
             {/* Pendentes */}
             {pendentes.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-yellow-600 mb-1.5">Pendentes ({pendentes.length})</p>
-                <div className="space-y-1">
-                  {pendentes.slice(0, 5).map((charge) => {
-                    const dueInfo = getDueInfo(charge.due_date, charge.status);
-                    return (
-                      <div
-                        key={charge.id}
-                        className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors"
-                        onClick={() => navigate(`/cobranca/${charge.id}`)}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium truncate">
-                            {charge.property?.name || charge.owner?.name}
-                          </p>
-                        </div>
-
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <span className="text-xs font-bold text-green-600 whitespace-nowrap">
-                            {formatBRL(getDueAmount(charge))}
-                          </span>
-                          <span className={`hidden sm:inline text-[10px] font-medium whitespace-nowrap ${dueInfo.color}`}>{dueInfo.text}</span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 relative shrink-0"
-                            onClick={(e) => openChatDialog(charge, e)}
-                          >
-                            <MessageSquare className="h-3.5 w-3.5" />
-                          </Button>
-                          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                        </div>
-                      </div>
-                    );
-                  })}
+              <Collapsible open={pendentesExpanded} onOpenChange={setPendentesExpanded}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <p className="text-xs font-semibold text-yellow-600">Pendentes ({pendentes.length})</p>
+                  {pendentes.length > COLLAPSED_LIMIT && (
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-5 px-1.5 text-xs text-muted-foreground">
+                        {pendentesExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                        {pendentesExpanded ? "Recolher" : `+${pendentes.length - COLLAPSED_LIMIT}`}
+                      </Button>
+                    </CollapsibleTrigger>
+                  )}
                 </div>
-              </div>
+                <div className="space-y-1">
+                  {pendentes.slice(0, COLLAPSED_LIMIT).map(c => renderChargeItem(c, false))}
+                </div>
+                <CollapsibleContent className="space-y-1 mt-1">
+                  {pendentes.slice(COLLAPSED_LIMIT, pendentesLimit).map(c => renderChargeItem(c, false))}
+                </CollapsibleContent>
+              </Collapsible>
             )}
           </div>
         )}
