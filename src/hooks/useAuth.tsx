@@ -183,12 +183,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       },
     });
 
-    // TODO: Send notification email (edge function temporarily disabled)
-    // if (!error && data.user) {
-    //   await supabase.functions.invoke("notify-ticket", {
-    //     body: { type: "approval_request", userId: data.user.id },
-    //   });
-    // }
+    // Notificar admins sobre nova solicitação de cadastro
+    if (!error && data.user) {
+      try {
+        await supabase.functions.invoke("notify-ticket", {
+          body: { type: "approval_request", userId: data.user.id },
+        });
+      } catch (notifyError) {
+        console.error("Erro ao notificar admins:", notifyError);
+        // Não bloqueia o cadastro se falhar a notificação
+      }
+    }
 
     return { error };
   };

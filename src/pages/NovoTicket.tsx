@@ -295,6 +295,19 @@ export default function NovoTicket() {
         }
       }
 
+      // Enviar notificação por email e push
+      try {
+        await supabase.functions.invoke('notify-ticket', {
+          body: {
+            type: 'ticket_created',
+            ticketId: ticket.id,
+          },
+        });
+      } catch (notifyError) {
+        console.error('Erro ao enviar notificação:', notifyError);
+        // Não bloqueia a criação do ticket se falhar a notificação
+      }
+
       toast.success("Chamado criado com sucesso!");
       navigate(`/minha-caixa`);
     } catch (error: any) {
