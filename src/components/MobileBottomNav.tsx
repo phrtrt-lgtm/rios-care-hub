@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { Home, Ticket, DollarSign, Wrench, Plus, Menu, X, BarChart3 } from "lucide-react";
+import { Home, Ticket, DollarSign, Wrench, Plus, Menu, X, BarChart3, ClipboardCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useState } from "react";
@@ -18,7 +18,7 @@ const mainItems: NavItem[] = [
   { icon: Ticket, label: "Tickets", path: "/todos-tickets" },
   { icon: Wrench, label: "Manutenções", path: "/admin/manutencoes-lista", roles: ["admin", "maintenance"] },
   { icon: Wrench, label: "Relatório", path: "/manutencoes", roles: ["owner"] },
-  { icon: DollarSign, label: "Cobranças", path: "/gerenciar-cobrancas", roles: ["admin", "maintenance"] },
+  { icon: ClipboardCheck, label: "Vistorias", path: "/admin/vistorias-todas", roles: ["admin", "maintenance", "agent"] },
   { icon: DollarSign, label: "Cobranças", path: "/minhas-cobrancas", roles: ["owner"] },
 ];
 
