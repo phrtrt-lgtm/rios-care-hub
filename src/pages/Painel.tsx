@@ -192,6 +192,15 @@ export default function Painel() {
                   </div>
                   
                   <ChangePasswordDialog />
+
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => navigate("/debug-app")}
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Debug do App
+                  </Button>
                   
                   {/* Push Notifications - Native only */}
                   <EnablePushNative />
