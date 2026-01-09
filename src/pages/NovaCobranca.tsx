@@ -196,9 +196,24 @@ export default function NovaCobranca() {
         if (dbError) throw dbError;
       }
 
+      // Enviar notificação por email e push se não for rascunho
+      if (!asDraft) {
+        try {
+          await supabase.functions.invoke('send-charge-email', {
+            body: {
+              type: 'charge_created',
+              chargeId: charge.id,
+            },
+          });
+        } catch (notifyError) {
+          console.error('Erro ao enviar notificação:', notifyError);
+          // Não bloqueia a criação se falhar a notificação
+        }
+      }
+
       toast({
         title: asDraft ? "Rascunho salvo!" : "Cobrança criada!",
-        description: asDraft ? "A cobrança foi salva como rascunho." : "A cobrança foi criada e enviada.",
+        description: asDraft ? "A cobrança foi salva como rascunho." : "A cobrança foi criada e o proprietário foi notificado.",
       });
 
       navigate('/painel');

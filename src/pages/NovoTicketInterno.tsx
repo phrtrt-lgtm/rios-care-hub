@@ -149,11 +149,24 @@ export default function NovoTicketInterno() {
                 attachments: [],
               }),
             });
+
+            // Enviar notificação para o membro da equipe
+            try {
+              await supabase.functions.invoke('notify-ticket', {
+                body: {
+                  type: 'ticket_created',
+                  ticketId: ticket.id,
+                },
+              });
+            } catch (notifyError) {
+              console.error('Erro ao enviar notificação:', notifyError);
+            }
+
             successCount++;
           }
         }
         
-        toast.success(`${successCount} ticket(s) criado(s) para a equipe!`);
+        toast.success(`${successCount} ticket(s) criado(s) e equipe notificada!`);
         navigate("/painel");
       } else {
         const { data: ticket, error } = await supabase
@@ -192,7 +205,19 @@ export default function NovoTicketInterno() {
           }),
         });
 
-        toast.success("Ticket interno criado com sucesso!");
+        // Enviar notificação para o membro da equipe
+        try {
+          await supabase.functions.invoke('notify-ticket', {
+            body: {
+              type: 'ticket_created',
+              ticketId: ticket.id,
+            },
+          });
+        } catch (notifyError) {
+          console.error('Erro ao enviar notificação:', notifyError);
+        }
+
+        toast.success("Ticket interno criado e equipe notificada!");
         navigate(`/ticket-detalhes/${ticket.id}`);
       }
     } catch (error: any) {
