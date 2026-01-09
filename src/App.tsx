@@ -57,6 +57,7 @@ import HistoricoComunicacao from "./pages/HistoricoComunicacao";
 import ResumoPropriedades from "./pages/ResumoPropriedades";
 import ResumoDiario from "./pages/ResumoDiario";
 import ProtocoloTrabalho from "./pages/ProtocoloTrabalho";
+import DebugApp from "./pages/DebugApp";
 
 const queryClient = new QueryClient();
 
@@ -413,6 +414,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route path="/debug-app" element={<DebugApp />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
