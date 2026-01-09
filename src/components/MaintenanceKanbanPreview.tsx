@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Wrench, ArrowRight, Calendar, MessageSquare, ChevronRight, Paperclip } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Wrench, ArrowRight, Calendar, MessageSquare, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
 import { QuickAttachmentButton } from "./QuickAttachmentButton";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -53,6 +54,10 @@ export function MaintenanceKanbanPreview() {
   });
   const [chatDialogOpen, setChatDialogOpen] = useState(false);
   const [chatTicket, setChatTicket] = useState<MaintenanceTicket | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  const COLLAPSED_LIMIT = 3;
+  const EXPANDED_LIMIT = 20;
 
   const ticketIds = useMemo(() => tickets.map(t => t.id), [tickets]);
   const { unreadCounts, markAsRead } = useUnreadMessages(ticketIds);
@@ -168,6 +173,7 @@ export function MaintenanceKanbanPreview() {
 
   const pendentes = tickets.filter(t => ["novo", "em_analise", "aguardando_info"].includes(t.status) && !t.scheduled_at);
   const agendados = tickets.filter(t => t.scheduled_at && t.status !== "em_execucao");
+  const hasMoreItems = pendentes.length > COLLAPSED_LIMIT || agendados.length > COLLAPSED_LIMIT;
 
   if (loading) {
     return (
@@ -183,38 +189,56 @@ export function MaintenanceKanbanPreview() {
   }
 
   return (
-    <Card className="border-purple-200 dark:border-purple-800 overflow-hidden">
-      <CardHeader className="py-3 px-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Wrench className="h-4 w-4 text-purple-600" />
-            <CardTitle className="text-sm">Manutenções</CardTitle>
-            {tickets.length > 0 && (
-              <Badge variant="secondary" className="h-5 px-1.5 text-xs bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">
-                {tickets.length}
-              </Badge>
-            )}
+    <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+      <Card className="border-purple-200 dark:border-purple-800 overflow-hidden">
+        <CardHeader className="py-3 px-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Wrench className="h-4 w-4 text-purple-600" />
+              <CardTitle className="text-sm">Manutenções</CardTitle>
+              {tickets.length > 0 && (
+                <Badge variant="secondary" className="h-5 px-1.5 text-xs bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">
+                  {tickets.length}
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-1">
+              {hasMoreItems && (
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-7 text-xs gap-1">
+                    {isExpanded ? (
+                      <>
+                        <ChevronUp className="h-3 w-3" />
+                        Recolher
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="h-3 w-3" />
+                        Expandir
+                      </>
+                    )}
+                  </Button>
+                </CollapsibleTrigger>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate("/admin/manutencoes-concluidas")}
+                className="h-7 text-xs text-green-600"
+              >
+                Concluídas
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate("/admin/manutencoes")}
+                className="h-7 text-xs text-purple-600"
+              >
+                Completo <ArrowRight className="ml-1 h-3 w-3" />
+              </Button>
+            </div>
           </div>
-          <div className="flex gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/admin/manutencoes-concluidas")}
-              className="h-7 text-xs text-green-600"
-            >
-              Concluídas
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/admin/manutencoes")}
-              className="h-7 text-xs text-purple-600"
-            >
-              Completo <ArrowRight className="ml-1 h-3 w-3" />
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
+        </CardHeader>
       <CardContent className="px-4 pb-3 pt-0">
         {tickets.length === 0 ? (
           <p className="text-xs text-muted-foreground text-center py-4">Nenhuma manutenção</p>
@@ -225,7 +249,7 @@ export function MaintenanceKanbanPreview() {
               <div>
                 <p className="text-xs font-semibold text-yellow-600 mb-1.5">Pendentes ({pendentes.length})</p>
                 <div className="space-y-1">
-                  {pendentes.slice(0, 5).map((ticket) => (
+                  {pendentes.slice(0, COLLAPSED_LIMIT).map((ticket) => (
                     <div
                       key={ticket.id}
                       className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors overflow-hidden"
@@ -267,6 +291,52 @@ export function MaintenanceKanbanPreview() {
                       </div>
                     </div>
                   ))}
+                  
+                  {/* Itens expandidos de pendentes */}
+                  <CollapsibleContent className="space-y-1">
+                    {pendentes.slice(COLLAPSED_LIMIT, EXPANDED_LIMIT).map((ticket) => (
+                      <div
+                        key={ticket.id}
+                        className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors overflow-hidden"
+                        onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium truncate">{ticket.property?.name || "Sem unidade"}</p>
+                          <p className="text-[10px] text-muted-foreground truncate">{ticket.subject}</p>
+                        </div>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          <QuickAttachmentButton 
+                            ticketId={ticket.id} 
+                            onSuccess={fetchMaintenanceTickets}
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 relative shrink-0"
+                            onClick={(e) => openChatDialog(ticket, e)}
+                          >
+                            <MessageSquare className="h-3.5 w-3.5" />
+                            {unreadCounts[ticket.id] > 0 && (
+                              <span className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-destructive text-[9px] text-white flex items-center justify-center">
+                                {unreadCounts[ticket.id]}
+                              </span>
+                            )}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-6 px-2 text-[10px] shrink-0 whitespace-nowrap"
+                            onClick={(e) => openScheduleDialog(ticket, e)}
+                          >
+                            <Calendar className="h-3 w-3" />
+                            <span className="hidden sm:inline ml-1">Agendar</span>
+                          </Button>
+                          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        </div>
+                      </div>
+                    ))}
+                  </CollapsibleContent>
                 </div>
               </div>
             )}
@@ -276,7 +346,7 @@ export function MaintenanceKanbanPreview() {
               <div>
                 <p className="text-xs font-semibold text-blue-600 mb-1.5">Agendados ({agendados.length})</p>
                 <div className="space-y-1">
-                  {agendados.slice(0, 5).map((ticket) => (
+                  {agendados.slice(0, COLLAPSED_LIMIT).map((ticket) => (
                     <div
                       key={ticket.id}
                       className="flex items-center gap-2 p-2 rounded-lg bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50 cursor-pointer transition-colors overflow-hidden"
@@ -315,6 +385,49 @@ export function MaintenanceKanbanPreview() {
                       </div>
                     </div>
                   ))}
+                  
+                  {/* Itens expandidos de agendados */}
+                  <CollapsibleContent className="space-y-1">
+                    {agendados.slice(COLLAPSED_LIMIT, EXPANDED_LIMIT).map((ticket) => (
+                      <div
+                        key={ticket.id}
+                        className="flex items-center gap-2 p-2 rounded-lg bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50 cursor-pointer transition-colors overflow-hidden"
+                        onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium truncate">{ticket.property?.name || "Sem unidade"}</p>
+                          <p className="text-[10px] text-muted-foreground truncate">{ticket.subject}</p>
+                        </div>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          {ticket.scheduled_at && (
+                            <span className="hidden sm:flex text-[10px] font-medium text-blue-600 items-center gap-1 whitespace-nowrap shrink-0">
+                              <Calendar className="h-3 w-3" />
+                              {format(new Date(ticket.scheduled_at), "dd/MM HH:mm", { locale: ptBR })}
+                            </span>
+                          )}
+                          <QuickAttachmentButton 
+                            ticketId={ticket.id} 
+                            onSuccess={fetchMaintenanceTickets}
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 relative shrink-0"
+                            onClick={(e) => openChatDialog(ticket, e)}
+                          >
+                            <MessageSquare className="h-3.5 w-3.5" />
+                            {unreadCounts[ticket.id] > 0 && (
+                              <span className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-destructive text-[9px] text-white flex items-center justify-center">
+                                {unreadCounts[ticket.id]}
+                              </span>
+                            )}
+                          </Button>
+                          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        </div>
+                      </div>
+                    ))}
+                  </CollapsibleContent>
                 </div>
               </div>
             )}
@@ -395,5 +508,6 @@ export function MaintenanceKanbanPreview() {
         propertyName={chatTicket?.property?.name || "Sem unidade"}
       />
     </Card>
+    </Collapsible>
   );
 }
