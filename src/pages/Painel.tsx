@@ -255,7 +255,7 @@ export default function Painel() {
 
         {/* Kanban Boards - 2 columns layout */}
         {(profile?.role === "admin" || profile?.role === "maintenance" || profile?.role === "agent") && (
-          <div className="mb-6 grid gap-4 lg:grid-cols-2">
+          <div className="mb-6 grid gap-4 min-w-0 grid-cols-1 lg:grid-cols-2">
             <MaintenanceKanbanPreview />
             <ChargesKanbanPreview />
             <VistoriasKanbanPreview />

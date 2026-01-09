@@ -103,7 +103,7 @@ export function ChargesKanbanPreview() {
     return (
       <div
         key={charge.id}
-        className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${
+        className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors overflow-hidden min-w-0 ${
           isOverdue 
             ? "bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50" 
             : "bg-muted/50 hover:bg-muted"
@@ -149,10 +149,10 @@ export function ChargesKanbanPreview() {
   }
 
   return (
-    <Card className="border-green-200 dark:border-green-800">
+    <Card className="border-green-200 dark:border-green-800 w-full min-w-0 overflow-hidden">
       <CardHeader className="py-3 px-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2 min-w-0 flex-wrap">
             <DollarSign className="h-4 w-4 text-green-600" />
             <CardTitle className="text-sm">Cobranças</CardTitle>
             {charges.length > 0 && (
@@ -172,7 +172,9 @@ export function ChargesKanbanPreview() {
             onClick={() => navigate(isOwner ? "/minhas-cobrancas" : "/gerenciar-cobrancas")}
             className="h-7 text-xs text-green-600"
           >
-            Ver todas <ArrowRight className="ml-1 h-3 w-3" />
+            <span className="hidden sm:inline">Ver todas</span>
+            <span className="sm:hidden">Ver</span>
+            <ArrowRight className="ml-1 h-3 w-3" />
           </Button>
         </div>
       </CardHeader>

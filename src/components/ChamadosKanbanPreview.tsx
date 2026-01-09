@@ -150,10 +150,10 @@ export function ChamadosKanbanPreview() {
   }
 
   return (
-    <Card className="border-blue-200 dark:border-blue-800 overflow-hidden">
+    <Card className="border-blue-200 dark:border-blue-800 overflow-hidden w-full min-w-0">
       <CardHeader className="py-3 px-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2 min-w-0">
             <Ticket className="h-4 w-4 text-blue-600" />
             <CardTitle className="text-sm">Chamados</CardTitle>
             {tickets.length > 0 && (
@@ -168,7 +168,9 @@ export function ChamadosKanbanPreview() {
             onClick={() => navigate("/admin/chamados")}
             className="h-7 text-xs text-blue-600"
           >
-            Ver todos <ArrowRight className="ml-1 h-3 w-3" />
+            <span className="hidden sm:inline">Ver todos</span>
+            <span className="sm:hidden">Ver</span>
+            <ArrowRight className="ml-1 h-3 w-3" />
           </Button>
         </div>
       </CardHeader>

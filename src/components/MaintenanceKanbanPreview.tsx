@@ -190,7 +190,7 @@ export function MaintenanceKanbanPreview() {
 
   return (
     <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-      <Card className="border-purple-200 dark:border-purple-800 overflow-hidden">
+      <Card className="border-purple-200 dark:border-purple-800 overflow-hidden w-full min-w-0">
         <CardHeader className="py-3 px-4">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-2 min-w-0">
