@@ -125,8 +125,8 @@ export function VistoriasKanbanPreview() {
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         <Card className="overflow-hidden">
           <CardHeader className="py-3 px-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2 min-w-0">
                 <ClipboardCheck className="h-4 w-4" />
                 <CardTitle className="text-sm">Vistorias</CardTitle>
                 {inspections.length > 0 && (
@@ -135,7 +135,7 @@ export function VistoriasKanbanPreview() {
                   </Badge>
                 )}
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 flex-wrap justify-end">
                 {hasMoreItems && (
                   <CollapsibleTrigger asChild>
                     <Button variant="ghost" size="sm" className="h-7 text-xs gap-1">
@@ -159,7 +159,9 @@ export function VistoriasKanbanPreview() {
                   onClick={() => navigate('/admin/vistorias')}
                   className="h-7 text-xs"
                 >
-                  Ver todas <ChevronRight className="ml-1 h-3 w-3" />
+                  <span className="hidden sm:inline">Ver todas</span>
+                  <span className="sm:hidden">Ver</span>
+                  <ChevronRight className="ml-1 h-3 w-3" />
                 </Button>
               </div>
             </div>

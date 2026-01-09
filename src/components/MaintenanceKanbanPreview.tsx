@@ -192,8 +192,8 @@ export function MaintenanceKanbanPreview() {
     <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
       <Card className="border-purple-200 dark:border-purple-800 overflow-hidden">
         <CardHeader className="py-3 px-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2 min-w-0">
               <Wrench className="h-4 w-4 text-purple-600" />
               <CardTitle className="text-sm">Manutenções</CardTitle>
               {tickets.length > 0 && (
@@ -202,7 +202,7 @@ export function MaintenanceKanbanPreview() {
                 </Badge>
               )}
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 flex-wrap justify-end">
               {hasMoreItems && (
                 <CollapsibleTrigger asChild>
                   <Button variant="ghost" size="sm" className="h-7 text-xs gap-1">
@@ -226,7 +226,8 @@ export function MaintenanceKanbanPreview() {
                 onClick={() => navigate("/admin/manutencoes-concluidas")}
                 className="h-7 text-xs text-green-600"
               >
-                Concluídas
+                <span className="hidden sm:inline">Concluídas</span>
+                <span className="sm:hidden">OK</span>
               </Button>
               <Button
                 variant="ghost"
@@ -234,7 +235,9 @@ export function MaintenanceKanbanPreview() {
                 onClick={() => navigate("/admin/manutencoes")}
                 className="h-7 text-xs text-purple-600"
               >
-                Completo <ArrowRight className="ml-1 h-3 w-3" />
+                <span className="hidden sm:inline">Completo</span>
+                <span className="sm:hidden">Ver</span>
+                <ArrowRight className="ml-1 h-3 w-3" />
               </Button>
             </div>
           </div>
