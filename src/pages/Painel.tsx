@@ -164,11 +164,11 @@ export default function Painel() {
                   <span className="text-sm font-medium hidden sm:inline">{profile?.name}</span>
                 </div>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-xs sm:max-w-sm">
                 <DialogHeader>
-                  <DialogTitle>Meu Perfil</DialogTitle>
+                  <DialogTitle className="text-base">Meu Perfil</DialogTitle>
                 </DialogHeader>
-                  <div className="space-y-4 py-4">
+                  <div className="space-y-3 py-2">
                     <AvatarUpload 
                       userId={user?.id || ''}
                       currentPhotoUrl={photoUrl}
@@ -177,18 +177,18 @@ export default function Painel() {
                     />
                   
                   <div>
-                    <label className="text-sm font-medium">Nome</label>
-                    <p className="text-base mt-1">{profile?.name}</p>
+                    <label className="text-xs font-medium text-muted-foreground">Nome</label>
+                    <p className="text-sm">{profile?.name}</p>
                   </div>
                   
                   <div>
-                    <label className="text-sm font-medium">Email</label>
-                    <p className="text-base mt-1">{profile?.email}</p>
+                    <label className="text-xs font-medium text-muted-foreground">Email</label>
+                    <p className="text-sm">{profile?.email}</p>
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium">Telefone</label>
-                    <p className="text-base mt-1">{profile?.phone || "Não informado"}</p>
+                    <label className="text-xs font-medium text-muted-foreground">Telefone</label>
+                    <p className="text-sm">{profile?.phone || "Não informado"}</p>
                   </div>
                   
                   <ChangePasswordDialog />
