@@ -1,8 +1,9 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { Home, Ticket, DollarSign, Wrench, Plus, Menu, X, BarChart3, ClipboardCheck } from "lucide-react";
+import { Home, Ticket, DollarSign, Wrench, Plus, X, BarChart3, ClipboardCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
 type NavItem = {
@@ -36,21 +37,28 @@ export function MobileBottomNav() {
   const { profile } = useAuth();
   const [showQuickActions, setShowQuickActions] = useState(false);
 
-  if (!profile) return null;
-
-  const userRole = profile.role;
-
-  const filteredMainItems = mainItems.filter(
-    (item) => !item.roles || item.roles.includes(userRole)
-  ).slice(0, 4);
-
-  const filteredQuickActions = quickActions.filter(
-    (item) => !item.roles || item.roles.includes(userRole)
-  );
-
   const isActive = (path: string) => location.pathname === path;
 
-  return (
+  const userRole = profile?.role;
+
+  const filteredMainItems = useMemo(() => {
+    if (!userRole) return [];
+    return mainItems
+      .filter((item) => !item.roles || item.roles.includes(userRole))
+      .slice(0, 4);
+  }, [userRole]);
+
+  const filteredQuickActions = useMemo(() => {
+    if (!userRole) return [];
+    return quickActions.filter((item) => !item.roles || item.roles.includes(userRole));
+  }, [userRole]);
+
+  if (!profile) return null;
+  if (typeof document === "undefined") return null;
+
+  // Render in a portal to escape any transformed/scrolling ancestors (common in mobile WebViews)
+  // that can break `position: fixed`.
+  return createPortal(
     <>
       {/* Backdrop for quick actions */}
       <AnimatePresence>
@@ -110,15 +118,10 @@ export function MobileBottomNav() {
             onClick={() => setShowQuickActions(!showQuickActions)}
             className={cn(
               "relative -mt-6 h-14 w-14 rounded-full flex items-center justify-center shadow-lg transition-all duration-300",
-              showQuickActions
-                ? "bg-destructive rotate-45"
-                : "bg-primary hover:bg-primary/90"
+              showQuickActions ? "bg-destructive rotate-45" : "bg-primary hover:bg-primary/90"
             )}
           >
-            <motion.div
-              animate={{ rotate: showQuickActions ? 45 : 0 }}
-              transition={{ duration: 0.2 }}
-            >
+            <motion.div animate={{ rotate: showQuickActions ? 45 : 0 }} transition={{ duration: 0.2 }}>
               {showQuickActions ? (
                 <X className="h-6 w-6 text-white" />
               ) : (
@@ -137,8 +140,8 @@ export function MobileBottomNav() {
           ))}
         </div>
       </nav>
-
-    </>
+    </>,
+    document.body
   );
 }
 
@@ -155,10 +158,8 @@ function NavButton({
     <button
       onClick={onClick}
       className={cn(
-        "flex flex-col items-center justify-center py-2 px-3 rounded-xl transition-all duration-200 min-w-[60px]",
-        isActive
-          ? "text-primary"
-          : "text-muted-foreground hover:text-foreground"
+        "relative flex flex-col items-center justify-center py-2 px-3 rounded-xl transition-all duration-200 min-w-[60px]",
+        isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
       )}
     >
       <motion.div
@@ -167,12 +168,7 @@ function NavButton({
       >
         <item.icon className={cn("h-5 w-5", isActive && "text-primary")} />
       </motion.div>
-      <span
-        className={cn(
-          "text-[10px] mt-0.5 font-medium",
-          isActive && "text-primary"
-        )}
-      >
+      <span className={cn("text-[10px] mt-0.5 font-medium", isActive && "text-primary")}>
         {item.label}
       </span>
       {isActive && (
@@ -185,3 +181,4 @@ function NavButton({
     </button>
   );
 }
+
