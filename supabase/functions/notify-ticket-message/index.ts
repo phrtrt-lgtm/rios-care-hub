@@ -84,7 +84,7 @@ const handler = async (req: Request): Promise<Response> => {
         });
       }
 
-      // Create notification record for owner (this triggers push via database trigger)
+      // Create notification record for owner
       await supabase.from("notifications").insert({
         owner_id: ticket.owner_id,
         title: `Nova resposta no ticket #${ticket.id.slice(0, 8)}`,
@@ -93,7 +93,24 @@ const handler = async (req: Request): Promise<Response> => {
         reference_id: ticketId,
         reference_url: `/ticket-detalhes/${ticketId}`,
       });
-      console.log("Notification created for owner");
+
+      // Send push notification to owner
+      try {
+        await supabase.functions.invoke("send-push", {
+          body: {
+            ownerId: ticket.owner_id,
+            payload: {
+              title: `💬 Nova resposta no ticket`,
+              body: `${message.author.name}: ${message.body.substring(0, 80)}${message.body.length > 80 ? '...' : ''}`,
+              url: `/ticket-detalhes/${ticketId}`,
+              tag: `ticket_message_${messageId}`,
+            },
+          },
+        });
+        console.log("Push notification sent to owner");
+      } catch (pushError) {
+        console.error("Push error (non-critical):", pushError);
+      }
 
     } else {
       // Owner sent message, notify team - filter by ticket type permissions
@@ -154,6 +171,26 @@ const handler = async (req: Request): Promise<Response> => {
 
           await supabase.from("notifications").insert(notifications);
           console.log(`Created ${notifications.length} notification records for team members`);
+
+          // Send push notifications to team members
+          for (const member of eligibleMembers) {
+            try {
+              await supabase.functions.invoke("send-push", {
+                body: {
+                  ownerId: member.id,
+                  payload: {
+                    title: `💬 Nova mensagem no ticket #${ticket.id.slice(0, 8)}`,
+                    body: `${ticket.owner.name}: ${message.body.substring(0, 80)}${message.body.length > 80 ? '...' : ''}`,
+                    url: `/ticket-detalhes/${ticketId}`,
+                    tag: `ticket_message_${messageId}`,
+                  },
+                },
+              });
+            } catch (pushError) {
+              console.error("Push error for team member:", pushError);
+            }
+          }
+          console.log("Push notifications sent to team members");
         }
       }
     }
