@@ -74,6 +74,34 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       console.log("Reserve checkin reminder sent to:", adminEmails);
+
+      // Send push notification to admin/maintenance team members
+      try {
+        const { data: teamMembers } = await supabaseClient
+          .from("profiles")
+          .select("id")
+          .in("role", ["admin", "maintenance"]);
+
+        if (teamMembers) {
+          for (const member of teamMembers) {
+            await supabaseClient.functions.invoke("send-push", {
+              body: {
+                ownerId: member.id,
+                payload: {
+                  title: `⚠️ Check-in Amanhã: ${propertyName}`,
+                  body: `Alterar comissão para ${commission?.toFixed(0)}% - ${chargeTitles}`,
+                  url: "/debitos-reserva",
+                  tag: `checkin_reminder_${chargeId}`,
+                },
+              },
+            });
+          }
+          console.log("Push notifications sent to team members");
+        }
+      } catch (pushError) {
+        console.error("Push notification error (non-critical):", pushError);
+      }
+
       return new Response(
         JSON.stringify({ success: true }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
