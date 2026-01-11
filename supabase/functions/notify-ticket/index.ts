@@ -91,7 +91,7 @@ const handler = async (req: Request): Promise<Response> => {
             console.log("Owner notification sent (ticket created by team)");
           }
 
-          // Create notification record for owner (this triggers push via database trigger)
+          // Create notification record for owner
           await supabase.from("notifications").insert({
             owner_id: ticket.owner_id,
             title: `Novo Ticket: ${ticket.subject}`,
@@ -100,7 +100,24 @@ const handler = async (req: Request): Promise<Response> => {
             reference_id: ticketId,
             reference_url: `/ticket-detalhes/${ticketId}`,
           });
-          console.log("Notification created for owner");
+
+          // Send push notification to owner
+          try {
+            await supabase.functions.invoke("send-push", {
+              body: {
+                ownerId: ticket.owner_id,
+                payload: {
+                  title: `📋 Novo Ticket Criado`,
+                  body: `${ticket.subject}`,
+                  url: `/ticket-detalhes/${ticketId}`,
+                  tag: `ticket_created_${ticketId}`,
+                },
+              },
+            });
+            console.log("Push notification sent to owner");
+          } catch (pushError) {
+            console.error("Push error (non-critical):", pushError);
+          }
 
         } else {
           // Ticket created by owner → Notify TEAM only
@@ -159,6 +176,26 @@ const handler = async (req: Request): Promise<Response> => {
 
               await supabase.from("notifications").insert(notifications);
               console.log(`Created ${notifications.length} notification records for team members`);
+
+              // Send push notifications to team members
+              for (const member of eligibleMembers) {
+                try {
+                  await supabase.functions.invoke("send-push", {
+                    body: {
+                      ownerId: member.id,
+                      payload: {
+                        title: `📋 Novo ticket de ${ticket.profiles.name}`,
+                        body: `${ticket.subject}`,
+                        url: `/ticket-detalhes/${ticketId}`,
+                        tag: `ticket_created_${ticketId}`,
+                      },
+                    },
+                  });
+                } catch (pushError) {
+                  console.error("Push error for team member:", pushError);
+                }
+              }
+              console.log("Push notifications sent to team members");
             } else {
               console.log("No eligible team members for this ticket type");
             }
@@ -223,6 +260,26 @@ const handler = async (req: Request): Promise<Response> => {
           }));
           await supabase.from("notifications").insert(notifications);
           console.log(`Created ${notifications.length} notification records for admins`);
+
+          // Send push notifications to admins
+          for (const admin of admins) {
+            try {
+              await supabase.functions.invoke("send-push", {
+                body: {
+                  ownerId: admin.id,
+                  payload: {
+                    title: `👤 Nova solicitação de cadastro`,
+                    body: `${user.name} (${user.email}) solicitou aprovação`,
+                    url: `/aprovacoes`,
+                    tag: `approval_request_${userId}`,
+                  },
+                },
+              });
+            } catch (pushError) {
+              console.error("Push error for admin:", pushError);
+            }
+          }
+          console.log("Push notifications sent to admins");
         }
         break;
       }
@@ -256,7 +313,7 @@ const handler = async (req: Request): Promise<Response> => {
           });
         }
 
-        // Create notification for the approved user (triggers push via database trigger)
+        // Create notification for the approved user
         await supabase.from("notifications").insert({
           owner_id: userId,
           title: "Conta Aprovada! ✅",
@@ -264,7 +321,24 @@ const handler = async (req: Request): Promise<Response> => {
           type: "alert",
           reference_url: "/",
         });
-        console.log("Approval notification created for user");
+
+        // Send push notification to approved user
+        try {
+          await supabase.functions.invoke("send-push", {
+            body: {
+              ownerId: userId,
+              payload: {
+                title: `✅ Conta Aprovada!`,
+                body: `Sua conta foi aprovada! Você já pode acessar o sistema.`,
+                url: `/`,
+                tag: `approval_approved_${userId}`,
+              },
+            },
+          });
+          console.log("Push notification sent to approved user");
+        } catch (pushError) {
+          console.error("Push error (non-critical):", pushError);
+        }
         break;
       }
 

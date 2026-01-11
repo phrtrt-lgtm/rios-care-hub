@@ -85,7 +85,7 @@ const handler = async (req: Request): Promise<Response> => {
         });
       }
 
-      // Create notification record for owner (this triggers push via database trigger)
+      // Create notification record for owner
       await supabase.from("notifications").insert({
         owner_id: charge.owner_id,
         title: `Nova mensagem em ${charge.title}`,
@@ -94,7 +94,24 @@ const handler = async (req: Request): Promise<Response> => {
         reference_id: chargeId,
         reference_url: `/cobranca/${chargeId}`,
       });
-      console.log("Notification created for owner");
+
+      // Send push notification to owner
+      try {
+        await supabase.functions.invoke("send-push", {
+          body: {
+            ownerId: charge.owner_id,
+            payload: {
+              title: `💰 Nova mensagem em cobrança`,
+              body: `${message.author.name}: ${message.body.substring(0, 80)}${message.body.length > 80 ? '...' : ''}`,
+              url: `/cobranca/${chargeId}`,
+              tag: `charge_message_${messageId}`,
+            },
+          },
+        });
+        console.log("Push notification sent to owner");
+      } catch (pushError) {
+        console.error("Push error (non-critical):", pushError);
+      }
 
     } else {
       // Owner sent message, notify team - only maintenance and admin can see charges
@@ -133,6 +150,26 @@ const handler = async (req: Request): Promise<Response> => {
 
           await supabase.from("notifications").insert(notifications);
           console.log(`Created ${notifications.length} notification records for team members`);
+
+          // Send push notifications to team members
+          for (const member of eligibleMembers) {
+            try {
+              await supabase.functions.invoke("send-push", {
+                body: {
+                  ownerId: member.id,
+                  payload: {
+                    title: `💰 Nova mensagem em cobrança`,
+                    body: `${charge.owner.name}: ${message.body.substring(0, 80)}${message.body.length > 80 ? '...' : ''}`,
+                    url: `/cobranca/${chargeId}`,
+                    tag: `charge_message_${messageId}`,
+                  },
+                },
+              });
+            } catch (pushError) {
+              console.error("Push error for team member:", pushError);
+            }
+          }
+          console.log("Push notifications sent to team members");
         }
       }
     }

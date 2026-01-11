@@ -99,7 +99,7 @@ const handler = async (req: Request): Promise<Response> => {
           html: emailHtml,
         });
 
-        // Create notification (triggers push)
+        // Create notification
         await supabase.from("notifications").insert({
           owner_id: ticket.owner_id,
           title: "⚠️ Decisão necessária - Manutenção",
@@ -108,6 +108,24 @@ const handler = async (req: Request): Promise<Response> => {
           reference_id: ticketId,
           reference_url: `/ticket-detalhes/${ticketId}`,
         });
+
+        // Send push notification
+        try {
+          await supabase.functions.invoke("send-push", {
+            body: {
+              ownerId: ticket.owner_id,
+              payload: {
+                title: `⚠️ Decisão necessária - Manutenção`,
+                body: `Você tem 72h para decidir: ${ticket.subject}`,
+                url: `/ticket-detalhes/${ticketId}`,
+                tag: `decision_pending_${ticketId}`,
+              },
+            },
+          });
+          console.log("Push notification sent to owner");
+        } catch (pushError) {
+          console.error("Push error (non-critical):", pushError);
+        }
 
         console.log("Decision pending notification sent");
         break;
@@ -144,7 +162,7 @@ const handler = async (req: Request): Promise<Response> => {
           html: emailHtml,
         });
 
-        // Create notification (triggers push)
+        // Create notification
         await supabase.from("notifications").insert({
           owner_id: ticket.owner_id,
           title: "🔔 Lembrete: Menos de 24h!",
@@ -153,6 +171,24 @@ const handler = async (req: Request): Promise<Response> => {
           reference_id: ticketId,
           reference_url: `/ticket-detalhes/${ticketId}`,
         });
+
+        // Send push notification
+        try {
+          await supabase.functions.invoke("send-push", {
+            body: {
+              ownerId: ticket.owner_id,
+              payload: {
+                title: `🔔 URGENTE: Menos de 24h!`,
+                body: `Decida sobre: ${ticket.subject}`,
+                url: `/ticket-detalhes/${ticketId}`,
+                tag: `decision_reminder_${ticketId}`,
+              },
+            },
+          });
+          console.log("Push notification sent to owner");
+        } catch (pushError) {
+          console.error("Push error (non-critical):", pushError);
+        }
 
         console.log("24h reminder sent");
         break;
@@ -211,6 +247,26 @@ const handler = async (req: Request): Promise<Response> => {
             reference_url: `/ticket-detalhes/${ticketId}`,
           }));
           await supabase.from("notifications").insert(notifications);
+
+          // Send push notifications to team members
+          for (const member of teamMembers) {
+            try {
+              await supabase.functions.invoke("send-push", {
+                body: {
+                  ownerId: member.id,
+                  payload: {
+                    title: `${decisionEmoji} Decisão do proprietário`,
+                    body: `${ticket.profiles.name} ${decisionText}: ${ticket.subject}`,
+                    url: `/ticket-detalhes/${ticketId}`,
+                    tag: `decision_made_${ticketId}`,
+                  },
+                },
+              });
+            } catch (pushError) {
+              console.error("Push error for team member:", pushError);
+            }
+          }
+          console.log("Push notifications sent to team members");
         }
 
         console.log("Decision notification sent to team");
