@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Trash2, CheckCircle2, XCircle, Camera, Video, Mic, Sparkles } from 'lucide-react';
+import { Loader2, Trash2, CheckCircle2, XCircle, Camera, Video, Mic, Sparkles, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import AudioRecorder from '@/components/AudioRecorder';
 import AudioPlayer from '@/components/AudioPlayer';
@@ -10,7 +10,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { isVideoFile, FileUploadProgress } from '@/lib/fileUpload';
 import { processFileForUpload } from '@/lib/processVideoForUpload';
 import { VideoCompressionProgress } from '@/components/VideoCompressionProgress';
-
+import { useNativeMedia } from '@/hooks/useNativeMedia';
+import { Capacitor } from '@capacitor/core';
 interface CleanerInspectionFormProps {
   propertyId: string;
   propertyName: string;
@@ -37,10 +38,14 @@ interface AudioFile {
 
 export default function CleanerInspectionForm({ propertyId, propertyName, onBack }: CleanerInspectionFormProps) {
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [inspectionStatus, setInspectionStatus] = useState<'OK' | 'NÃO' | ''>('');
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [audioFiles, setAudioFiles] = useState<AudioFile[]>([]);
   const [sending, setSending] = useState(false);
+  
+  const isNative = Capacitor.isNativePlatform();
+  const { takePhoto, pickImages, webPathToFile } = useNativeMedia();
 
   const uploadFile = async (file: File): Promise<string> => {
     const ext = (file.name || '').split('.').pop()?.toLowerCase();
@@ -134,6 +139,87 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
 
   const handleRemoveFile = (file: File) => {
     setUploadedFiles(prev => prev.filter(f => f.file !== file));
+  };
+
+  // Handle native camera photo
+  const handleTakePhoto = async () => {
+    try {
+      const result = await takePhoto();
+      if (!result) return; // User cancelled
+
+      const file = await webPathToFile(result.webPath, `photo_${Date.now()}.${result.format}`, `image/${result.format}`);
+      await processAndUploadFile(file);
+    } catch (error: any) {
+      console.error('Error taking photo:', error);
+      toast.error('Erro ao tirar foto: ' + error.message);
+    }
+  };
+
+  // Handle native gallery picker
+  const handlePickFromGallery = async () => {
+    try {
+      const results = await pickImages(10);
+      if (results.length === 0) return; // User cancelled
+
+      for (const result of results) {
+        const file = await webPathToFile(result.webPath, `image_${Date.now()}.${result.format}`, `image/${result.format}`);
+        await processAndUploadFile(file);
+      }
+    } catch (error: any) {
+      console.error('Error picking from gallery:', error);
+      toast.error('Erro ao selecionar imagens: ' + error.message);
+    }
+  };
+
+  // Common file processing and upload logic
+  const processAndUploadFile = async (file: File) => {
+    const newFile: UploadedFile = {
+      file,
+      url: '',
+      uploading: !isVideoFile(file),
+      compressing: isVideoFile(file),
+    };
+    
+    setUploadedFiles(prev => [...prev, newFile]);
+
+    try {
+      let fileToUpload = file;
+      
+      // Compress video if needed
+      if (isVideoFile(file)) {
+        fileToUpload = await processFileForUpload(file, (progress) => {
+          setUploadedFiles(prev =>
+            prev.map(f =>
+              f.file === file ? { ...f, compressionProgress: progress } : f
+            )
+          );
+        });
+
+        // Update state: compression done, now uploading
+        setUploadedFiles(prev =>
+          prev.map(f =>
+            f.file === file ? { ...f, compressing: false, uploading: true, file: fileToUpload } : f
+          )
+        );
+      }
+      
+      const url = await uploadFile(fileToUpload);
+      setUploadedFiles(prev => 
+        prev.map(f => 
+          (f.file === file || f.file === fileToUpload) 
+            ? { ...f, url, uploading: false, compressing: false } 
+            : f
+        )
+      );
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      setUploadedFiles(prev => 
+        prev.map(f => 
+          f.file === file ? { ...f, uploading: false, compressing: false, error: error.message } : f
+        )
+      );
+      toast.error(`Erro no upload de ${file.name}`);
+    }
   };
 
   const handleAudioReady = async (file: File, transcriptText: string, summaryText: string, transcribing: boolean) => {
@@ -444,28 +530,57 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
           </div>
         </div>
         
-        <label 
-          htmlFor="files" 
-          className="cursor-pointer border-2 border-dashed rounded-xl p-6 flex flex-col items-center gap-3 hover:border-primary transition-colors bg-muted/30"
-        >
-          <div className="flex gap-4">
-            <Camera className="h-12 w-12 text-primary" />
-            <Video className="h-12 w-12 text-primary" />
+        {isNative ? (
+          // Native: Show separate buttons for camera and gallery
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-auto py-6 flex flex-col items-center gap-3 border-2 border-dashed hover:border-primary"
+              onClick={handleTakePhoto}
+            >
+              <Camera className="h-12 w-12 text-primary" />
+              <span className="text-lg font-bold">Tirar foto</span>
+            </Button>
+            
+            <Button
+              type="button"
+              variant="outline"
+              className="h-auto py-6 flex flex-col items-center gap-3 border-2 border-dashed hover:border-primary"
+              onClick={handlePickFromGallery}
+            >
+              <ImageIcon className="h-12 w-12 text-primary" />
+              <span className="text-lg font-bold">Galeria</span>
+            </Button>
           </div>
-          <div className="text-center">
-            <p className="text-lg font-bold mb-1">Toque aqui para tirar foto ou vídeo</p>
-            <p className="text-sm text-muted-foreground">Ou escolha da galeria</p>
-          </div>
-        </label>
-        
-        <input
-          id="files"
-          type="file"
-          accept="image/*,video/*,video/mp4,video/quicktime,video/x-msvideo"
-          multiple
-          onChange={handleFileChange}
-          className="sr-only"
-        />
+        ) : (
+          // Web: Use file input
+          <>
+            <label 
+              htmlFor="files" 
+              className="cursor-pointer border-2 border-dashed rounded-xl p-6 flex flex-col items-center gap-3 hover:border-primary transition-colors bg-muted/30"
+            >
+              <div className="flex gap-4">
+                <Camera className="h-12 w-12 text-primary" />
+                <Video className="h-12 w-12 text-primary" />
+              </div>
+              <div className="text-center">
+                <p className="text-lg font-bold mb-1">Toque aqui para tirar foto ou vídeo</p>
+                <p className="text-sm text-muted-foreground">Ou escolha da galeria</p>
+              </div>
+            </label>
+            
+            <input
+              ref={fileInputRef}
+              id="files"
+              type="file"
+              accept="image/*,video/*,video/mp4,video/quicktime,video/x-msvideo"
+              multiple
+              onChange={handleFileChange}
+              className="sr-only"
+            />
+          </>
+        )}
         
         {uploadedFiles.length > 0 && (
           <div className="space-y-2">
