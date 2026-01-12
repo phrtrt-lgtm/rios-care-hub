@@ -110,7 +110,7 @@ const handler = async (req: Request): Promise<Response> => {
                   title: `📋 Novo Ticket Criado`,
                   body: `${ticket.subject}`,
                   url: `/ticket-detalhes/${ticketId}`,
-                  tag: `ticket_created_${ticketId}`,
+                  tag: `ticket_${ticketId}`, // Use consistent tag per ticket to group notifications
                 },
               },
             });
@@ -180,17 +180,17 @@ const handler = async (req: Request): Promise<Response> => {
               // Send push notifications to team members
               for (const member of eligibleMembers) {
                 try {
-                  await supabase.functions.invoke("send-push", {
-                    body: {
-                      ownerId: member.id,
-                      payload: {
-                        title: `📋 Novo ticket de ${ticket.profiles.name}`,
-                        body: `${ticket.subject}`,
-                        url: `/ticket-detalhes/${ticketId}`,
-                        tag: `ticket_created_${ticketId}`,
-                      },
-                    },
-                  });
+                      await supabase.functions.invoke("send-push", {
+                        body: {
+                          ownerId: member.id,
+                          payload: {
+                            title: `📋 Novo ticket de ${ticket.profiles.name}`,
+                            body: `${ticket.subject}`,
+                            url: `/ticket-detalhes/${ticketId}`,
+                            tag: `ticket_${ticketId}`, // Use consistent tag per ticket to group notifications
+                          },
+                        },
+                      });
                 } catch (pushError) {
                   console.error("Push error for team member:", pushError);
                 }
