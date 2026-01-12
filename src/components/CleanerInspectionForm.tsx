@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Trash2, CheckCircle2, XCircle, Camera, Video, Mic, Sparkles, Image as ImageIcon } from 'lucide-react';
+import { Loader2, Trash2, CheckCircle2, XCircle, Camera, Video, Mic, Sparkles, Image as ImageIcon, FolderOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import AudioRecorder from '@/components/AudioRecorder';
 import AudioPlayer from '@/components/AudioPlayer';
@@ -12,6 +12,7 @@ import { processFileForUpload } from '@/lib/processVideoForUpload';
 import { VideoCompressionProgress } from '@/components/VideoCompressionProgress';
 import { useNativeMedia } from '@/hooks/useNativeMedia';
 import { Capacitor } from '@capacitor/core';
+
 interface CleanerInspectionFormProps {
   propertyId: string;
   propertyName: string;
@@ -45,7 +46,7 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
   const [sending, setSending] = useState(false);
   
   const isNative = Capacitor.isNativePlatform();
-  const { takePhoto, pickImages, webPathToFile } = useNativeMedia();
+  const { takePhoto, pickImages, pickVideos, pickMedia, recordVideo, webPathToFile } = useNativeMedia();
 
   const uploadFile = async (file: File): Promise<string> => {
     const ext = (file.name || '').split('.').pop()?.toLowerCase();
@@ -147,7 +148,7 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
       const result = await takePhoto();
       if (!result) return; // User cancelled
 
-      const file = await webPathToFile(result.webPath, `photo_${Date.now()}.${result.format}`, `image/${result.format}`);
+      const file = await webPathToFile(result.webPath, `photo_${Date.now()}.${result.format}`, result.mimeType);
       await processAndUploadFile(file);
     } catch (error: any) {
       console.error('Error taking photo:', error);
@@ -155,19 +156,37 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
     }
   };
 
-  // Handle native gallery picker
+  // Handle native video recording
+  const handleRecordVideo = async () => {
+    try {
+      const result = await recordVideo();
+      if (!result) return; // User cancelled
+
+      const file = await webPathToFile(result.webPath, `video_${Date.now()}.${result.format}`, result.mimeType);
+      await processAndUploadFile(file);
+    } catch (error: any) {
+      console.error('Error recording video:', error);
+      toast.error('Erro ao gravar vídeo: ' + error.message);
+    }
+  };
+
+  // Handle native gallery picker (images and videos)
   const handlePickFromGallery = async () => {
     try {
-      const results = await pickImages(10);
+      const results = await pickMedia(30);
       if (results.length === 0) return; // User cancelled
 
       for (const result of results) {
-        const file = await webPathToFile(result.webPath, `image_${Date.now()}.${result.format}`, `image/${result.format}`);
+        const file = await webPathToFile(
+          result.webPath, 
+          `${result.isVideo ? 'video' : 'image'}_${Date.now()}.${result.format}`, 
+          result.mimeType
+        );
         await processAndUploadFile(file);
       }
     } catch (error: any) {
       console.error('Error picking from gallery:', error);
-      toast.error('Erro ao selecionar imagens: ' + error.message);
+      toast.error('Erro ao selecionar arquivos: ' + error.message);
     }
   };
 
@@ -531,26 +550,39 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
         </div>
         
         {isNative ? (
-          // Native: Show separate buttons for camera and gallery
-          <div className="grid grid-cols-2 gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              className="h-auto py-6 flex flex-col items-center gap-3 border-2 border-dashed hover:border-primary"
-              onClick={handleTakePhoto}
-            >
-              <Camera className="h-12 w-12 text-primary" />
-              <span className="text-lg font-bold">Tirar foto</span>
-            </Button>
+          // Native: Show separate buttons for camera, video, and gallery
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-auto py-5 flex flex-col items-center gap-2 border-2 border-dashed hover:border-primary"
+                onClick={handleTakePhoto}
+              >
+                <Camera className="h-10 w-10 text-primary" />
+                <span className="text-base font-bold">Tirar foto</span>
+              </Button>
+              
+              <Button
+                type="button"
+                variant="outline"
+                className="h-auto py-5 flex flex-col items-center gap-2 border-2 border-dashed hover:border-red-500"
+                onClick={handleRecordVideo}
+              >
+                <Video className="h-10 w-10 text-red-500" />
+                <span className="text-base font-bold">Gravar vídeo</span>
+              </Button>
+            </div>
             
             <Button
               type="button"
               variant="outline"
-              className="h-auto py-6 flex flex-col items-center gap-3 border-2 border-dashed hover:border-primary"
+              className="w-full h-auto py-5 flex flex-col items-center gap-2 border-2 border-dashed hover:border-primary"
               onClick={handlePickFromGallery}
             >
-              <ImageIcon className="h-12 w-12 text-primary" />
-              <span className="text-lg font-bold">Galeria</span>
+              <FolderOpen className="h-10 w-10 text-primary" />
+              <span className="text-base font-bold">Galeria (fotos e vídeos)</span>
+              <span className="text-xs text-muted-foreground">Selecione até 30 arquivos</span>
             </Button>
           </div>
         ) : (
@@ -566,7 +598,7 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
               </div>
               <div className="text-center">
                 <p className="text-lg font-bold mb-1">Toque aqui para tirar foto ou vídeo</p>
-                <p className="text-sm text-muted-foreground">Ou escolha da galeria</p>
+                <p className="text-sm text-muted-foreground">Ou escolha da galeria (até 30 arquivos)</p>
               </div>
             </label>
             

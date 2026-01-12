@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ResponseTemplatesPicker } from "@/components/ResponseTemplatesPicker";
 import { ConversationSummaryButton } from "@/components/ConversationSummaryButton";
 import { processFileForUpload } from "@/lib/processVideoForUpload";
+import { NativeMediaPicker } from "@/components/NativeMediaPicker";
 
 interface MaintenanceChatDialogProps {
   open: boolean;
@@ -492,16 +493,6 @@ export function MaintenanceChatDialog({
 
           {/* Input area */}
           <div className="p-3 border-t flex-shrink-0 space-y-2">
-            {/* Hidden file input */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              onChange={handleFileSelect}
-              className="hidden"
-              accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx"
-            />
-            
             {/* Row 1: Microphone + AI Command + Generate Button (team only) */}
             {isTeamMember && (
               <div className="flex gap-2 items-end">
@@ -543,17 +534,12 @@ export function MaintenanceChatDialog({
                 disabled={sending}
               />
               
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="h-9 w-9 flex-shrink-0"
-                onClick={() => fileInputRef.current?.click()}
+              <NativeMediaPicker
+                onFilesSelected={(files) => setSelectedFiles(prev => [...prev, ...files])}
                 disabled={sending}
-                title="Anexar arquivo"
-              >
-                <Paperclip className="h-4 w-4" />
-              </Button>
+                buttonSize="icon"
+                className="h-9 w-9 flex-shrink-0"
+              />
               
               <Textarea
                 ref={textareaRef}
