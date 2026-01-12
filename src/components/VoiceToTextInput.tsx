@@ -1,8 +1,9 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Mic, Square, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useNativeAudio } from "@/hooks/useNativeAudio";
 
 interface VoiceToTextInputProps {
   onTranscript: (text: string) => void;
@@ -10,52 +11,33 @@ interface VoiceToTextInputProps {
 }
 
 export function VoiceToTextInput({ onTranscript, disabled }: VoiceToTextInputProps) {
-  const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
+  const {
+    isRecording,
+    startRecording: nativeStartRecording,
+    stopRecording: nativeStopRecording,
+  } = useNativeAudio();
 
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus'
-      });
-
-      chunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          chunksRef.current.push(event.data);
-        }
-      };
-
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
-        await transcribeAudio(audioBlob);
-        
-        // Stop all tracks
-        stream.getTracks().forEach(track => track.stop());
-      };
-
-      mediaRecorderRef.current = mediaRecorder;
-      mediaRecorder.start();
-      setIsRecording(true);
-      toast.info("Gravando áudio... Clique para parar");
-    } catch (error: any) {
-      console.error('Error starting recording:', error);
-      toast.error("Erro ao acessar microfone: " + error.message);
+  const handleStartRecording = async () => {
+    const success = await nativeStartRecording();
+    if (!success) {
+      toast.error("Erro ao acessar microfone. Verifique as permissões do aplicativo.");
+      return;
     }
+    toast.info("Gravando áudio... Clique para parar");
   };
 
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
+  const handleStopRecording = async () => {
+    const result = await nativeStopRecording();
+    if (!result) {
+      toast.error("Erro ao gravar áudio");
+      return;
     }
+
+    await transcribeAudio(result.blob, result.mimeType);
   };
 
-  const transcribeAudio = async (audioBlob: Blob) => {
+  const transcribeAudio = async (audioBlob: Blob, mimeType: string) => {
     setIsTranscribing(true);
     try {
       // Convert blob to base64
@@ -76,7 +58,7 @@ export function VoiceToTextInput({ onTranscript, disabled }: VoiceToTextInputPro
       const { data, error } = await supabase.functions.invoke('transcribe-audio', {
         body: {
           audio: base64Audio,
-          mimeType: 'audio/webm'
+          mimeType: mimeType
         }
       });
 
@@ -101,7 +83,7 @@ export function VoiceToTextInput({ onTranscript, disabled }: VoiceToTextInputPro
       type="button"
       variant="outline"
       size="icon"
-      onClick={isRecording ? stopRecording : startRecording}
+      onClick={isRecording ? handleStopRecording : handleStartRecording}
       disabled={disabled || isTranscribing}
       className={isRecording ? "bg-red-500 hover:bg-red-600 text-white" : ""}
       title={isRecording ? "Parar gravação" : "Gravar áudio"}

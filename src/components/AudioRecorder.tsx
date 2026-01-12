@@ -1,21 +1,26 @@
-import React, { useState, useRef } from 'react';
-import { Mic, Square } from 'lucide-react';
+import React, { useState } from 'react';
+import { Mic, Square, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useNativeAudio } from '@/hooks/useNativeAudio';
 
 interface AudioRecorderProps {
   onAudioReady: (file: File, transcript: string, summary: string, transcribing: boolean) => void;
 }
 
 export default function AudioRecorder({ onAudioReady }: AudioRecorderProps) {
-  const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<BlobPart[]>([]);
   const { toast } = useToast();
+  const { 
+    isRecording, 
+    hasPermission,
+    requestPermissions,
+    startRecording: nativeStartRecording, 
+    stopRecording: nativeStopRecording 
+  } = useNativeAudio();
 
-  const transcribeAudio = async (audioBlob: Blob): Promise<{ text: string; summary: string }> => {
+  const transcribeAudio = async (audioBlob: Blob, mimeType: string): Promise<{ text: string; summary: string }> => {
     try {
       // Convert blob to base64
       const reader = new FileReader();
@@ -30,13 +35,13 @@ export default function AudioRecorder({ onAudioReady }: AudioRecorderProps) {
       reader.readAsDataURL(audioBlob);
       const base64Audio = await base64Promise;
 
-      console.log('Sending audio to Whisper API, size:', audioBlob.size);
+      console.log('Sending audio to Whisper API, size:', audioBlob.size, 'mimeType:', mimeType);
 
       // Call edge function for transcription
       const { data, error } = await supabase.functions.invoke('transcribe-audio', {
         body: {
           audio: base64Audio,
-          mimeType: audioBlob.type
+          mimeType: mimeType
         }
       });
 
@@ -56,73 +61,62 @@ export default function AudioRecorder({ onAudioReady }: AudioRecorderProps) {
     }
   };
 
-
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      chunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          chunksRef.current.push(e.data);
-        }
-      };
-
-      mediaRecorder.onstop = async () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/mp4' });
-        const file = new File([blob], `audio_${Date.now()}.m4a`, { type: 'audio/mp4' });
-        
-        // Envia o arquivo imediatamente, transcrição em background
-        onAudioReady(file, '', '', true);
-        
-        // Inicia transcrição em background (silenciosamente)
-        setTranscribing(true);
-        const { text, summary } = await transcribeAudio(blob);
-        
-        // Atualiza com a transcrição e resumo quando prontos
-        onAudioReady(file, text, summary, false);
-        setTranscribing(false);
-        
-        stream.getTracks().forEach(track => track.stop());
-      };
-
-
-      mediaRecorder.start();
-      setRecording(true);
-    } catch (error) {
-      console.error('Error starting recording:', error);
+  const handleStartRecording = async () => {
+    const success = await nativeStartRecording();
+    if (!success) {
       toast({
         title: "Erro ao acessar microfone",
-        description: "Verifique as permissões do navegador",
+        description: "Verifique as permissões do aplicativo nas configurações do dispositivo",
         variant: "destructive",
       });
     }
   };
 
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      mediaRecorderRef.current.stop();
+  const handleStopRecording = async () => {
+    const result = await nativeStopRecording();
+    
+    if (!result) {
+      toast({
+        title: "Erro na gravação",
+        description: "Não foi possível salvar o áudio",
+        variant: "destructive",
+      });
+      return;
     }
-    setRecording(false);
+
+    const { file, blob, mimeType } = result;
+    
+    // Envia o arquivo imediatamente, transcrição em background
+    onAudioReady(file, '', '', true);
+    
+    // Inicia transcrição em background
+    setTranscribing(true);
+    const { text, summary } = await transcribeAudio(blob, mimeType);
+    
+    // Atualiza com a transcrição e resumo quando prontos
+    onAudioReady(file, text, summary, false);
+    setTranscribing(false);
   };
 
   return (
     <div className="flex flex-col gap-2">
-      {!recording ? (
+      {!isRecording ? (
         <Button 
           type="button" 
-          onClick={startRecording} 
+          onClick={handleStartRecording} 
           variant="outline" 
           className="gap-2"
           disabled={transcribing}
         >
-          <Mic className="h-4 w-4" />
-          Gravar áudio
+          {transcribing ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Mic className="h-4 w-4" />
+          )}
+          {transcribing ? 'Processando...' : 'Gravar áudio'}
         </Button>
       ) : (
-        <Button type="button" onClick={stopRecording} variant="destructive" className="gap-2">
+        <Button type="button" onClick={handleStopRecording} variant="destructive" className="gap-2">
           <Square className="h-4 w-4" />
           Parar gravação
         </Button>
