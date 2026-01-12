@@ -103,7 +103,7 @@ const handler = async (req: Request): Promise<Response> => {
               title: `💬 Nova resposta no ticket`,
               body: `${message.author.name}: ${message.body.substring(0, 80)}${message.body.length > 80 ? '...' : ''}`,
               url: `/ticket-detalhes/${ticketId}`,
-              tag: `ticket_message_${messageId}`,
+              tag: `ticket_${ticketId}`, // Use consistent tag per ticket to replace previous notifications
             },
           },
         });
@@ -182,7 +182,7 @@ const handler = async (req: Request): Promise<Response> => {
                     title: `💬 Nova mensagem no ticket #${ticket.id.slice(0, 8)}`,
                     body: `${ticket.owner.name}: ${message.body.substring(0, 80)}${message.body.length > 80 ? '...' : ''}`,
                     url: `/ticket-detalhes/${ticketId}`,
-                    tag: `ticket_message_${messageId}`,
+                    tag: `ticket_${ticketId}`, // Use consistent tag per ticket to replace previous notifications
                   },
                 },
               });
