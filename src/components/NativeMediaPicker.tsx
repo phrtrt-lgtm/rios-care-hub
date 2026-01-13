@@ -36,13 +36,15 @@ export function NativeMediaPicker({
 }: NativeMediaPickerProps) {
   const isNative = Capacitor.isNativePlatform();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
-  const { takePhoto, recordVideo, pickMedia, webPathToFile } = useNativeMedia();
+  const { takePhoto, pickMedia, webPathToFile } = useNativeMedia();
 
   const maxSize = maxSizeMB * 1024 * 1024;
 
-  // Handle web file input
-  const handleWebFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle file selection from input
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
@@ -62,76 +64,69 @@ export function NativeMediaPicker({
     e.target.value = '';
   };
 
-  // Handle native photo
+  // Handle native photo using Capacitor Camera
   const handleTakePhoto = async () => {
-    setLoading(true);
-    try {
-      const result = await takePhoto();
-      if (result) {
-        const file = await webPathToFile(
-          result.webPath, 
-          `photo_${Date.now()}.${result.format}`, 
-          result.mimeType
-        );
-        onFilesSelected([file]);
+    if (isNative) {
+      setLoading(true);
+      try {
+        const result = await takePhoto();
+        if (result) {
+          const file = await webPathToFile(
+            result.webPath, 
+            `photo_${Date.now()}.${result.format}`, 
+            result.mimeType
+          );
+          onFilesSelected([file]);
+        }
+      } catch (error: any) {
+        console.error('Error taking photo:', error);
+        toast.error('Erro ao tirar foto');
+      } finally {
+        setLoading(false);
       }
-    } catch (error: any) {
-      console.error('Error taking photo:', error);
-      toast.error('Erro ao tirar foto');
-    } finally {
-      setLoading(false);
+    } else {
+      // Fallback to input for web
+      photoInputRef.current?.click();
     }
   };
 
-  // Handle native video
-  const handleRecordVideo = async () => {
-    setLoading(true);
-    try {
-      const result = await recordVideo();
-      if (result) {
-        const file = await webPathToFile(
-          result.webPath, 
-          `video_${Date.now()}.${result.format}`, 
-          result.mimeType
-        );
-        onFilesSelected([file]);
-      }
-    } catch (error: any) {
-      console.error('Error recording video:', error);
-      toast.error('Erro ao gravar vídeo');
-    } finally {
-      setLoading(false);
-    }
+  // Handle video recording - use input with capture attribute
+  const handleRecordVideo = () => {
+    videoInputRef.current?.click();
   };
 
   // Handle native gallery
   const handlePickFromGallery = async () => {
-    setLoading(true);
-    try {
-      const results = await pickMedia(multiple ? 30 : 1);
-      if (results.length > 0) {
-        const files: File[] = [];
-        for (const result of results) {
-          const file = await webPathToFile(
-            result.webPath, 
-            `${result.isVideo ? 'video' : 'image'}_${Date.now()}.${result.format}`, 
-            result.mimeType
-          );
-          if (file.size <= maxSize) {
-            files.push(file);
-          } else {
-            toast.error(`${file.name} excede ${maxSizeMB}MB`);
+    if (isNative) {
+      setLoading(true);
+      try {
+        const results = await pickMedia(multiple ? 30 : 1);
+        if (results.length > 0) {
+          const files: File[] = [];
+          for (const result of results) {
+            const file = await webPathToFile(
+              result.webPath, 
+              `${result.isVideo ? 'video' : 'image'}_${Date.now()}.${result.format}`, 
+              result.mimeType
+            );
+            if (file.size <= maxSize) {
+              files.push(file);
+            } else {
+              toast.error(`${file.name} excede ${maxSizeMB}MB`);
+            }
+          }
+          if (files.length > 0) {
+            onFilesSelected(files);
           }
         }
-        if (files.length > 0) {
-          onFilesSelected(files);
-        }
+      } catch (error: any) {
+        console.error('Error picking from gallery:', error);
+        toast.error('Erro ao selecionar arquivos');
+      } finally {
+        setLoading(false);
       }
-    } catch (error: any) {
-      console.error('Error picking from gallery:', error);
-      toast.error('Erro ao selecionar arquivos');
-    } finally {
-      setLoading(false);
+    } else {
+      fileInputRef.current?.click();
     }
   };
 
@@ -148,37 +143,65 @@ export function NativeMediaPicker({
     );
   }
 
-  // Native: Show dropdown menu with options
+  // Native or mobile: Show dropdown menu with options
   if (isNative) {
     return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant={buttonVariant}
-            size={buttonSize}
-            disabled={disabled}
-            className={className}
-            title="Anexar arquivo"
-          >
-            <Paperclip className="h-4 w-4" />
-            {!iconOnly && <span className="ml-2">Anexar</span>}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-48 bg-popover">
-          <DropdownMenuItem onClick={handleTakePhoto} className="cursor-pointer">
-            <Camera className="h-4 w-4 mr-2 text-primary" />
-            Tirar foto
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleRecordVideo} className="cursor-pointer">
-            <Video className="h-4 w-4 mr-2 text-red-500" />
-            Gravar vídeo
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={handlePickFromGallery} className="cursor-pointer">
-            <FolderOpen className="h-4 w-4 mr-2 text-primary" />
-            Galeria
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <>
+        {/* Hidden inputs for camera capture */}
+        <input
+          type="file"
+          ref={videoInputRef}
+          onChange={handleFileChange}
+          className="hidden"
+          accept="video/*"
+          capture="environment"
+        />
+        <input
+          type="file"
+          ref={photoInputRef}
+          onChange={handleFileChange}
+          className="hidden"
+          accept="image/*"
+          capture="environment"
+        />
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          className="hidden"
+          multiple={multiple}
+          accept={accept}
+        />
+        
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant={buttonVariant}
+              size={buttonSize}
+              disabled={disabled}
+              className={className}
+              title="Anexar arquivo"
+            >
+              <Paperclip className="h-4 w-4" />
+              {!iconOnly && <span className="ml-2">Anexar</span>}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-48 bg-popover">
+            <DropdownMenuItem onClick={handleTakePhoto} className="cursor-pointer">
+              <Camera className="h-4 w-4 mr-2 text-primary" />
+              Tirar foto
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleRecordVideo} className="cursor-pointer">
+              <Video className="h-4 w-4 mr-2 text-red-500" />
+              Gravar vídeo
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handlePickFromGallery} className="cursor-pointer">
+              <FolderOpen className="h-4 w-4 mr-2 text-primary" />
+              Galeria
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </>
     );
   }
 
@@ -188,7 +211,7 @@ export function NativeMediaPicker({
       <input
         type="file"
         ref={fileInputRef}
-        onChange={handleWebFileChange}
+        onChange={handleFileChange}
         className="hidden"
         multiple={multiple}
         accept={accept}

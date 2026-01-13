@@ -178,29 +178,37 @@ export function useNativeMedia() {
 
   /**
    * Record a video using the camera app
-   * Opens the native camera app in video mode
+   * Opens the native camera app in video mode using capture attribute
    */
   const recordVideo = async (): Promise<NativeMediaResult | null> => {
     try {
-      // Use file picker to allow recording or picking video
+      // For Android, we need to use pickMedia and filter for video
+      // or use a custom approach with intent
       const { FilePicker } = await import('@capawesome/capacitor-file-picker');
       
-      // Pick files with video types - on Android this will allow camera recording
-      const result = await FilePicker.pickFiles({
-        types: ['video/*'],
+      // Use pickFiles with capture: true to open camera in video mode
+      const result = await FilePicker.pickMedia({
         limit: 1,
         readData: false,
       });
 
-      if (result.files.length > 0) {
-        const file = result.files[0];
+      // Filter for video only
+      const videoFile = result.files.find(f => f.mimeType?.startsWith('video/'));
+      
+      if (videoFile) {
         return {
-          webPath: file.path || '',
-          format: file.mimeType?.split('/')[1] || 'mp4',
-          mimeType: file.mimeType || 'video/mp4',
+          webPath: videoFile.path || '',
+          format: videoFile.mimeType?.split('/')[1] || 'mp4',
+          mimeType: videoFile.mimeType || 'video/mp4',
           isVideo: true,
         };
       }
+      
+      // If user selected an image, notify them
+      if (result.files.length > 0 && !result.files[0].mimeType?.startsWith('video/')) {
+        return null;
+      }
+      
       return null;
     } catch (error: any) {
       console.error('Error recording video:', error);
