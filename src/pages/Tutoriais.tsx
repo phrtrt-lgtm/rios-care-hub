@@ -93,6 +93,10 @@ function TutorialManutencao() {
                     <p className="font-medium text-blue-700">📋 Consequência:</p>
                     <p className="text-muted-foreground">Abrimos chamado para o proprietário decidir: assumir execução ou delegar à gestão.</p>
                   </div>
+                  <div className="pt-2 border-t mt-2 bg-amber-50 -mx-4 px-4 py-2 rounded-b">
+                    <p className="font-medium text-amber-700">⚠️ Pode virar Essencial:</p>
+                    <p className="text-muted-foreground">Se o proprietário <span className="font-medium">demorar a responder</span> ou houver <span className="font-medium">hóspede chegando</span> com risco de prejuízo (avaliação negativa, cancelamento), a gestão pode executar sem aprovação para proteger a renda do imóvel.</p>
+                  </div>
                 </CardContent>
               </Card>
             </div>
