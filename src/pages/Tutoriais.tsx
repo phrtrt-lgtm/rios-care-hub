@@ -61,10 +61,15 @@ function TutorialManutencao() {
                     <li>Fechadura/portas quebradas</li>
                     <li>Piscina inutilizável</li>
                     <li>Infiltração grave</li>
+                    <li>Substituição de itens essenciais</li>
                   </ul>
                   <div className="pt-2 border-t mt-2">
                     <p className="font-medium text-red-700">⚡ Consequência:</p>
                     <p className="text-muted-foreground">Pode ser executada IMEDIATAMENTE pela gestão, especialmente com check-in no mesmo dia.</p>
+                  </div>
+                  <div className="pt-2 border-t mt-2 bg-green-50 -mx-4 px-4 py-2 rounded-b">
+                    <p className="font-medium text-green-700">🎁 Por conta da gestão:</p>
+                    <p className="text-muted-foreground">Substituições básicas como <span className="font-medium">copos e lâmpadas comuns</span> são assumidas pela gestão, sem custo ao proprietário.</p>
                   </div>
                 </CardContent>
               </Card>
