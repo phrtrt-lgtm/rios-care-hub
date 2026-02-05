@@ -202,11 +202,52 @@ function TutorialManutencao() {
             </div>
           </div>
 
+          {/* Criar Manutenção a partir de Vistoria */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg flex items-center gap-2">
+              <ClipboardCheck className="h-5 w-5 text-emerald-500" />
+              Criar Manutenção a partir de Vistoria
+            </h3>
+
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 space-y-3">
+              <p className="text-sm">
+                <span className="font-medium text-emerald-700">💡 Dica:</span> Quando uma vistoria identifica problemas, 
+                você pode criar manutenções diretamente a partir dela, com informações pré-preenchidas.
+              </p>
+              
+              <div className="space-y-2 text-sm">
+                <p className="font-medium">Fluxo Vistoria → Manutenção:</p>
+                <ol className="list-decimal list-inside space-y-1 text-muted-foreground ml-2">
+                  <li>Acesse a vistoria com problemas (status "NÃO")</li>
+                  <li>Clique em <span className="font-medium">"Nova Manutenção"</span></li>
+                  <li>Os dados são pré-preenchidos automaticamente:
+                    <ul className="list-disc list-inside ml-4 mt-1">
+                      <li>Imóvel e proprietário já vinculados</li>
+                      <li>Descrição baseada no resumo da IA</li>
+                      <li>Opção de selecionar anexos da vistoria</li>
+                    </ul>
+                  </li>
+                  <li>Defina prioridade e responsabilidade de custo</li>
+                  <li>Confirme a criação</li>
+                </ol>
+              </div>
+
+              <div className="pt-2 border-t border-emerald-200">
+                <p className="text-sm font-medium text-emerald-700">Kanban de Itens da Vistoria:</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Na página do imóvel, use o <span className="font-medium">Kanban de itens</span> para organizar 
+                  problemas detectados. Você pode arrastar itens entre colunas (Pendente, Gestão, Proprietário, Hóspede, Concluído) 
+                  e criar manutenções em lote selecionando múltiplos itens.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Passo a passo para criar */}
           <div className="space-y-4">
             <h3 className="font-semibold text-lg flex items-center gap-2">
               <HelpCircle className="h-5 w-5 text-cyan-500" />
-              Como Criar uma Manutenção
+              Como Criar uma Manutenção (Manual)
             </h3>
 
             <ol className="space-y-3">
