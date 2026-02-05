@@ -1,0 +1,437 @@
+import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { 
+  Wrench, 
+  DollarSign, 
+  ClipboardCheck, 
+  Vote, 
+  ChevronRight,
+  Users,
+  Home,
+  Eye,
+  EyeOff,
+  AlertTriangle,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  HelpCircle
+} from "lucide-react";
+import { MobileHeader } from "@/components/MobileHeader";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
+
+// Tutorial sobre Manutenção
+function TutorialManutencao() {
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Wrench className="h-5 w-5" />
+            Como Funciona o Sistema de Manutenção
+          </CardTitle>
+          <CardDescription>
+            Guia completo sobre criação, tipos e consequências das manutenções
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Classificação */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-500" />
+              Tipos de Manutenção
+            </h3>
+            
+            <div className="grid gap-4 md:grid-cols-2">
+              <Card className="border-red-200 bg-red-50">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2 text-red-700">
+                    🚨 Essencial
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm space-y-2">
+                  <p className="font-medium">Atendimento IMEDIATO</p>
+                  <p>Itens que inviabilizam a estadia do hóspede:</p>
+                  <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                    <li>Geladeira, fogão, micro-ondas</li>
+                    <li>Água quente, energia elétrica</li>
+                    <li>Fechadura/portas quebradas</li>
+                    <li>Piscina inutilizável</li>
+                    <li>Infiltração grave</li>
+                  </ul>
+                  <div className="pt-2 border-t mt-2">
+                    <p className="font-medium text-red-700">⚡ Consequência:</p>
+                    <p className="text-muted-foreground">Pode ser executada IMEDIATAMENTE pela gestão, especialmente com check-in no mesmo dia.</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-blue-200 bg-blue-50">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2 text-blue-700">
+                    🔧 Estrutural
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm space-y-2">
+                  <p className="font-medium">Pode aguardar entre estadias</p>
+                  <p>Itens que não impedem a estadia:</p>
+                  <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                    <li>Piso, reformas, pintura</li>
+                    <li>Mobília danificada</li>
+                    <li>Melhorias estéticas</li>
+                    <li>Reparos não urgentes</li>
+                  </ul>
+                  <div className="pt-2 border-t mt-2">
+                    <p className="font-medium text-blue-700">📋 Consequência:</p>
+                    <p className="text-muted-foreground">Abrimos chamado para o proprietário decidir: assumir execução ou delegar à gestão.</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          {/* Visibilidade */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg flex items-center gap-2">
+              <Eye className="h-5 w-5 text-purple-500" />
+              Visibilidade e Responsabilidade de Custo
+            </h3>
+
+            <div className="space-y-3">
+              <Card className="border-l-4 border-l-green-500">
+                <CardContent className="pt-4">
+                  <div className="flex items-start gap-3">
+                    <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">
+                      <Home className="h-3 w-3 mr-1" />
+                      Proprietário
+                    </Badge>
+                    <div className="flex-1">
+                      <p className="font-medium">Custo do Proprietário</p>
+                      <p className="text-sm text-muted-foreground">
+                        Visível para: <span className="font-medium">Gestão + Proprietário</span>
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        O proprietário vê o chamado, pode acompanhar e será cobrado após execução.
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-l-4 border-l-orange-500">
+                <CardContent className="pt-4">
+                  <div className="flex items-start gap-3">
+                    <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-300">
+                      <Users className="h-3 w-3 mr-1" />
+                      Hóspede
+                    </Badge>
+                    <div className="flex-1">
+                      <p className="font-medium">Custo do Hóspede</p>
+                      <p className="text-sm text-muted-foreground">
+                        Visível para: <span className="font-medium">Apenas Gestão</span>
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        <EyeOff className="h-3 w-3 inline mr-1" />
+                        Proprietário NÃO vê este chamado. Usado para danos causados por hóspedes.
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-l-4 border-l-blue-500">
+                <CardContent className="pt-4">
+                  <div className="flex items-start gap-3">
+                    <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">
+                      <Wrench className="h-3 w-3 mr-1" />
+                      Gestão
+                    </Badge>
+                    <div className="flex-1">
+                      <p className="font-medium">Custo da Gestão</p>
+                      <p className="text-sm text-muted-foreground">
+                        Visível para: <span className="font-medium">Apenas Gestão</span>
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Manutenções internas assumidas pela gestão sem repasse ao proprietário.
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          {/* Fluxo de Decisão do Proprietário */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg flex items-center gap-2">
+              <Clock className="h-5 w-5 text-amber-500" />
+              Decisão do Proprietário (Manutenção Estrutural)
+            </h3>
+
+            <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+              <p className="text-sm">Quando uma manutenção estrutural é aberta, o proprietário tem duas opções:</p>
+              
+              <div className="grid gap-3 md:grid-cols-2">
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      <span className="font-medium">Assumir Execução</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      O proprietário informa prazo e fornecedor próprio. Gestão apenas acompanha.
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Users className="h-5 w-5 text-blue-500" />
+                      <span className="font-medium">Delegar à Gestão</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      A gestão executa e depois cobra via sistema de cobranças (contestação 7 dias, pagamento/offset).
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </div>
+
+          {/* Passo a passo para criar */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg flex items-center gap-2">
+              <HelpCircle className="h-5 w-5 text-cyan-500" />
+              Como Criar uma Manutenção
+            </h3>
+
+            <ol className="space-y-3">
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">1</span>
+                <div>
+                  <p className="font-medium">Acesse "Nova Manutenção"</p>
+                  <p className="text-sm text-muted-foreground">Menu → Manutenções → Nova Manutenção</p>
+                </div>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">2</span>
+                <div>
+                  <p className="font-medium">Selecione o Imóvel</p>
+                  <p className="text-sm text-muted-foreground">O proprietário será automaticamente vinculado</p>
+                </div>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">3</span>
+                <div>
+                  <p className="font-medium">Marque se é "Essencial"</p>
+                  <p className="text-sm text-muted-foreground">Ativa execução imediata sem aguardar decisão do proprietário</p>
+                </div>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">4</span>
+                <div>
+                  <p className="font-medium">Defina a Responsabilidade de Custo</p>
+                  <p className="text-sm text-muted-foreground">Proprietário (visível) ou Hóspede/Gestão (oculto do proprietário)</p>
+                </div>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">5</span>
+                <div>
+                  <p className="font-medium">Descreva o Problema</p>
+                  <p className="text-sm text-muted-foreground">Use IA para gerar descrição profissional ou digite manualmente</p>
+                </div>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">6</span>
+                <div>
+                  <p className="font-medium">Anexe Fotos/Vídeos</p>
+                  <p className="text-sm text-muted-foreground">Documente o problema com evidências visuais</p>
+                </div>
+              </li>
+            </ol>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Lista de tutoriais disponíveis
+const tutoriaisFuncionarios = [
+  {
+    id: "manutencao",
+    title: "Sistema de Manutenção",
+    description: "Tipos, visibilidade e como criar chamados",
+    icon: Wrench,
+    component: TutorialManutencao,
+    available: true,
+  },
+  {
+    id: "cobrancas",
+    title: "Sistema de Cobranças",
+    description: "Fluxo completo de cobrança, contestação e pagamento",
+    icon: DollarSign,
+    component: null,
+    available: false,
+  },
+  {
+    id: "vistorias",
+    title: "Vistorias e Inspeções",
+    description: "Como registrar, anexar e gerenciar vistorias",
+    icon: ClipboardCheck,
+    component: null,
+    available: false,
+  },
+  {
+    id: "votacoes",
+    title: "Propostas e Votações",
+    description: "Como criar e gerenciar aprovações coletivas",
+    icon: Vote,
+    component: null,
+    available: false,
+  },
+];
+
+const tutoriaisProprietarios = [
+  {
+    id: "manutencao-prop",
+    title: "Entendendo Manutenções",
+    description: "Como acompanhar e decidir sobre manutenções",
+    icon: Wrench,
+    component: null,
+    available: false,
+  },
+  {
+    id: "cobrancas-prop",
+    title: "Suas Cobranças",
+    description: "Como visualizar, contestar e pagar cobranças",
+    icon: DollarSign,
+    component: null,
+    available: false,
+  },
+];
+
+export default function Tutoriais() {
+  const { profile } = useAuth();
+  const [selectedTutorial, setSelectedTutorial] = useState<string | null>(null);
+  
+  const isTeamMember = profile?.role === 'admin' || profile?.role === 'maintenance' || profile?.role === 'agent';
+
+  const currentTutorial = [...tutoriaisFuncionarios, ...tutoriaisProprietarios].find(t => t.id === selectedTutorial);
+  const TutorialComponent = currentTutorial?.component;
+
+  if (selectedTutorial && TutorialComponent) {
+    return (
+      <div className="min-h-screen bg-background pb-20 md:pb-6">
+        <MobileHeader />
+        <main className="container mx-auto px-4 py-6">
+          <Button 
+            variant="ghost" 
+            onClick={() => setSelectedTutorial(null)}
+            className="mb-4"
+          >
+            ← Voltar aos Tutoriais
+          </Button>
+          <TutorialComponent />
+        </main>
+        <MobileBottomNav />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background pb-20 md:pb-6">
+      <MobileHeader />
+      <main className="container mx-auto px-4 py-6">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold">Central de Tutoriais</h1>
+          <p className="text-muted-foreground">Aprenda como usar cada funcionalidade do sistema</p>
+        </div>
+
+        <Tabs defaultValue={isTeamMember ? "funcionarios" : "proprietarios"}>
+          <TabsList className="mb-6">
+            {isTeamMember && (
+              <TabsTrigger value="funcionarios">
+                <Users className="h-4 w-4 mr-2" />
+                Para Funcionários
+              </TabsTrigger>
+            )}
+            <TabsTrigger value="proprietarios">
+              <Home className="h-4 w-4 mr-2" />
+              Para Proprietários
+            </TabsTrigger>
+          </TabsList>
+
+          {isTeamMember && (
+            <TabsContent value="funcionarios">
+              <div className="grid gap-4 md:grid-cols-2">
+                {tutoriaisFuncionarios.map((tutorial) => (
+                  <Card 
+                    key={tutorial.id}
+                    className={`cursor-pointer transition-all hover:shadow-md ${!tutorial.available && 'opacity-60'}`}
+                    onClick={() => tutorial.available && setSelectedTutorial(tutorial.id)}
+                  >
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-primary/10">
+                            <tutorial.icon className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <CardTitle className="text-base">{tutorial.title}</CardTitle>
+                            <CardDescription>{tutorial.description}</CardDescription>
+                          </div>
+                        </div>
+                        {tutorial.available ? (
+                          <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                        ) : (
+                          <Badge variant="secondary">Em breve</Badge>
+                        )}
+                      </div>
+                    </CardHeader>
+                  </Card>
+                ))}
+              </div>
+            </TabsContent>
+          )}
+
+          <TabsContent value="proprietarios">
+            <div className="grid gap-4 md:grid-cols-2">
+              {tutoriaisProprietarios.map((tutorial) => (
+                <Card 
+                  key={tutorial.id}
+                  className={`cursor-pointer transition-all hover:shadow-md ${!tutorial.available && 'opacity-60'}`}
+                  onClick={() => tutorial.available && setSelectedTutorial(tutorial.id)}
+                >
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          <tutorial.icon className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-base">{tutorial.title}</CardTitle>
+                          <CardDescription>{tutorial.description}</CardDescription>
+                        </div>
+                      </div>
+                      {tutorial.available ? (
+                        <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                      ) : (
+                        <Badge variant="secondary">Em breve</Badge>
+                      )}
+                    </div>
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+        </Tabs>
+      </main>
+      <MobileBottomNav />
+    </div>
+  );
+}
