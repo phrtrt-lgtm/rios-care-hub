@@ -58,6 +58,7 @@ import ResumoPropriedades from "./pages/ResumoPropriedades";
 import ResumoDiario from "./pages/ResumoDiario";
 import ProtocoloTrabalho from "./pages/ProtocoloTrabalho";
 import DebugApp from "./pages/DebugApp";
+import Tutoriais from "./pages/Tutoriais";
 
 const queryClient = new QueryClient();
 
@@ -415,6 +416,14 @@ const App = () => (
               }
             />
             <Route path="/debug-app" element={<DebugApp />} />
+            <Route
+              path="/tutoriais"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'agent', 'admin', 'maintenance']}>
+                  <Tutoriais />
+                </ProtectedRoute>
+              }
+            />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
