@@ -310,6 +310,233 @@ function TutorialManutencao() {
   );
 }
 
+// Tutorial de Manutenção para Proprietários
+function TutorialManutencaoProprietario() {
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Wrench className="h-5 w-5" />
+            Como Funciona a Manutenção do Seu Imóvel
+          </CardTitle>
+          <CardDescription>
+            Entenda os tipos de manutenção, quando você será consultado e como acompanhar
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Classificação */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-500" />
+              Tipos de Manutenção
+            </h3>
+            
+            <div className="grid gap-4 md:grid-cols-2">
+              <Card className="border-red-200 bg-red-50">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2 text-red-700">
+                    🚨 Essencial (Urgente)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm space-y-2">
+                  <p className="font-medium">Atendimento IMEDIATO</p>
+                  <p>Problemas que impedem o hóspede de usar o imóvel normalmente:</p>
+                  <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                    <li>Geladeira, fogão, micro-ondas</li>
+                    <li>Água quente, energia elétrica</li>
+                    <li>Fechadura/portas quebradas</li>
+                    <li>Piscina inutilizável</li>
+                    <li>Infiltração grave</li>
+                    <li>Substituição de itens essenciais</li>
+                  </ul>
+                  <div className="pt-2 border-t mt-2">
+                    <p className="font-medium text-red-700">⚡ O que acontece:</p>
+                    <p className="text-muted-foreground">A gestão resolve <span className="font-medium">imediatamente</span> para evitar avaliações negativas e cancelamentos. Você é notificado, mas não precisa aprovar antes.</p>
+                  </div>
+                  <div className="pt-2 border-t mt-2 bg-green-50 -mx-4 px-4 py-2 rounded-b">
+                    <p className="font-medium text-green-700">🎁 Sem custo para você:</p>
+                    <p className="text-muted-foreground">Substituições básicas como <span className="font-medium">copos e lâmpadas comuns</span> são assumidas pela gestão.</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-blue-200 bg-blue-50">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2 text-blue-700">
+                    🔧 Estrutural (Pode Aguardar)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm space-y-2">
+                  <p className="font-medium">Você decide quando e como fazer</p>
+                  <p>Problemas que não impedem a estadia:</p>
+                  <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                    <li>Piso, reformas, pintura</li>
+                    <li>Mobília danificada</li>
+                    <li>Melhorias estéticas</li>
+                    <li>Reparos não urgentes</li>
+                  </ul>
+                  <div className="pt-2 border-t mt-2">
+                    <p className="font-medium text-blue-700">📋 O que acontece:</p>
+                    <p className="text-muted-foreground">Abrimos um chamado e você escolhe: fazer você mesmo ou delegar para a gestão.</p>
+                  </div>
+                  <div className="pt-2 border-t mt-2 bg-amber-50 -mx-4 px-4 py-2 rounded-b">
+                    <p className="font-medium text-amber-700">⚠️ Atenção:</p>
+                    <p className="text-muted-foreground">Se você <span className="font-medium">demorar a responder</span> ou houver <span className="font-medium">hóspede chegando</span>, a gestão pode executar para evitar prejuízos ao seu imóvel.</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          {/* Suas opções de decisão */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg flex items-center gap-2">
+              <Clock className="h-5 w-5 text-amber-500" />
+              Suas Opções (Manutenção Estrutural)
+            </h3>
+
+            <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+              <p className="text-sm">Quando identificamos um problema estrutural, você receberá uma notificação para decidir:</p>
+              
+              <div className="grid gap-3 md:grid-cols-2">
+                <Card className="border-green-200">
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      <span className="font-medium">Eu Resolvo</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Você contrata seu próprio profissional e nos informa o prazo. 
+                      <span className="font-medium"> Sem custo de gestão.</span>
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-blue-200">
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Users className="h-5 w-5 text-blue-500" />
+                      <span className="font-medium">Delegar à Gestão</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Resolvemos para você e depois enviamos a cobrança. 
+                      <span className="font-medium"> Prazo de 7 dias para contestar.</span>
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </div>
+
+          {/* Fluxo de cobrança */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-green-500" />
+              Como Funciona a Cobrança
+            </h3>
+
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
+              <ol className="space-y-3">
+                <li className="flex gap-3">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-green-600 text-white flex items-center justify-center text-sm font-medium">1</span>
+                  <div>
+                    <p className="font-medium">Manutenção Executada</p>
+                    <p className="text-sm text-muted-foreground">A gestão resolve o problema e documenta com fotos/vídeos</p>
+                  </div>
+                </li>
+                <li className="flex gap-3">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-green-600 text-white flex items-center justify-center text-sm font-medium">2</span>
+                  <div>
+                    <p className="font-medium">Cobrança Enviada</p>
+                    <p className="text-sm text-muted-foreground">Você recebe detalhes do serviço, valor e comprovantes</p>
+                  </div>
+                </li>
+                <li className="flex gap-3">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-green-600 text-white flex items-center justify-center text-sm font-medium">3</span>
+                  <div>
+                    <p className="font-medium">7 Dias para Contestar</p>
+                    <p className="text-sm text-muted-foreground">Se discordar, pode contestar pelo chat da cobrança</p>
+                  </div>
+                </li>
+                <li className="flex gap-3">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-green-600 text-white flex items-center justify-center text-sm font-medium">4</span>
+                  <div>
+                    <p className="font-medium">Pagamento</p>
+                    <p className="text-sm text-muted-foreground">Pague via PIX, cartão (até 12x), ou desconte dos repasses</p>
+                  </div>
+                </li>
+              </ol>
+            </div>
+          </div>
+
+          {/* Acompanhamento */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg flex items-center gap-2">
+              <Eye className="h-5 w-5 text-purple-500" />
+              Acompanhe pelo Painel
+            </h3>
+
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 space-y-3">
+              <p className="text-sm">No seu painel principal você pode ver:</p>
+              
+              <div className="space-y-2 text-sm">
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-purple-600 mt-0.5" />
+                  <div>
+                    <span className="font-medium">Progresso da Manutenção</span>
+                    <p className="text-muted-foreground">Barra visual mostrando: Pendente → Agendado → Em Execução → Concluído</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-purple-600 mt-0.5" />
+                  <div>
+                    <span className="font-medium">Data Agendada</span>
+                    <p className="text-muted-foreground">Quando o profissional vai ao imóvel</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-purple-600 mt-0.5" />
+                  <div>
+                    <span className="font-medium">Chat com a Gestão</span>
+                    <p className="text-muted-foreground">Tire dúvidas e acompanhe em tempo real</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Por que agimos rápido */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg flex items-center gap-2">
+              <HelpCircle className="h-5 w-5 text-cyan-500" />
+              Por Que Agimos Rápido?
+            </h3>
+
+            <Card className="border-amber-200 bg-amber-50">
+              <CardContent className="pt-4 space-y-3">
+                <p className="text-sm">
+                  <span className="font-medium">Avaliações negativas derrubam a renda do seu imóvel.</span> 
+                  Por isso, em situações urgentes, agimos para proteger:
+                </p>
+                <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+                  <li>Sua reputação nas plataformas (Airbnb, Booking, etc.)</li>
+                  <li>Taxa de ocupação do imóvel</li>
+                  <li>Valor do preço por diária</li>
+                  <li>Evitar cancelamentos e reembolsos</li>
+                </ul>
+                <p className="text-sm pt-2 border-t border-amber-200">
+                  <span className="font-medium text-amber-700">💡 Lembre-se:</span> Um hóspede insatisfeito pode custar muito mais do que o reparo em si.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 // Lista de tutoriais disponíveis
 const tutoriaisFuncionarios = [
   {
@@ -352,8 +579,8 @@ const tutoriaisProprietarios = [
     title: "Entendendo Manutenções",
     description: "Como acompanhar e decidir sobre manutenções",
     icon: Wrench,
-    component: null,
-    available: false,
+    component: TutorialManutencaoProprietario,
+    available: true,
   },
   {
     id: "cobrancas-prop",
