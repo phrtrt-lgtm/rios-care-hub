@@ -129,6 +129,50 @@ export function TutorialCobrancasProprietario() {
             </Card>
           </div>
 
+          {/* Débito em Reserva - Explicação para Proprietário */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg flex items-center gap-2">
+              <TrendingDown className="h-5 w-5 text-red-500" />
+              O que é Débito em Reserva?
+            </h3>
+
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3">
+              <p className="text-sm">
+                Se você não pagar uma cobrança dentro do prazo de 7 dias, o valor será automaticamente 
+                descontado das suas próximas reservas no Airbnb.
+              </p>
+              
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Como funciona:</p>
+                <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 ml-2">
+                  <li>Na próxima reserva do seu imóvel, a gestão aumenta temporariamente a comissão</li>
+                  <li>A diferença cobre o valor da cobrança não paga</li>
+                  <li>Você recebe menos nessa reserva específica</li>
+                </ul>
+              </div>
+
+              <Card className="border-red-300 bg-red-100/50">
+                <CardContent className="pt-3 pb-3">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-red-700">Impacto na sua pontuação</p>
+                      <p className="text-sm text-red-600">
+                        Débito em reserva resulta em <span className="font-bold">-30 pontos</span> na sua pontuação de pagamentos. 
+                        Isso é muito mais do que pagar com atraso (-15 pts).
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <p className="text-sm pt-2 border-t border-red-200">
+                <span className="font-medium text-red-700">💡 Evite o débito:</span> Pague suas cobranças em dia 
+                ou entre em contato pelo chat se precisar de mais tempo. A gestão pode ajudar a encontrar uma solução.
+              </p>
+            </div>
+          </div>
+
           {/* Formas de Pagamento */}
           <div className="space-y-4">
             <h3 className="font-semibold text-lg flex items-center gap-2">
