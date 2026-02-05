@@ -18,7 +18,8 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
-  HelpCircle
+  HelpCircle,
+  MessageSquare
 } from "lucide-react";
 import { MobileHeader } from "@/components/MobileHeader";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
@@ -26,7 +27,9 @@ import {
   TutorialCobrancas, 
   TutorialVistorias, 
   TutorialVotacoes,
-  TutorialCobrancasProprietario 
+  TutorialCobrancasProprietario,
+  TutorialTicketsChat,
+  TutorialTicketsChatProprietario
 } from "@/components/tutorials";
 
 // Tutorial sobre Manutenção
@@ -577,6 +580,14 @@ const tutoriaisFuncionarios = [
     component: TutorialVotacoes,
     available: true,
   },
+  {
+    id: "tickets-chat",
+    title: "Tickets e Chat",
+    description: "Sistema de chamados, mensagens e notificações",
+    icon: MessageSquare,
+    component: TutorialTicketsChat,
+    available: true,
+  },
 ];
 
 const tutoriaisProprietarios = [
@@ -594,6 +605,14 @@ const tutoriaisProprietarios = [
     description: "Como visualizar, contestar e pagar cobranças",
     icon: DollarSign,
     component: TutorialCobrancasProprietario,
+    available: true,
+  },
+  {
+    id: "tickets-chat-prop",
+    title: "Chamados e Chat",
+    description: "Como abrir chamados e se comunicar com a equipe",
+    icon: MessageSquare,
+    component: TutorialTicketsChatProprietario,
     available: true,
   },
 ];
