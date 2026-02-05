@@ -22,6 +22,12 @@ import {
 } from "lucide-react";
 import { MobileHeader } from "@/components/MobileHeader";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
+import { 
+  TutorialCobrancas, 
+  TutorialVistorias, 
+  TutorialVotacoes,
+  TutorialCobrancasProprietario 
+} from "@/components/tutorials";
 
 // Tutorial sobre Manutenção
 function TutorialManutencao() {
@@ -552,24 +558,24 @@ const tutoriaisFuncionarios = [
     title: "Sistema de Cobranças",
     description: "Fluxo completo de cobrança, contestação e pagamento",
     icon: DollarSign,
-    component: null,
-    available: false,
+    component: TutorialCobrancas,
+    available: true,
   },
   {
     id: "vistorias",
     title: "Vistorias e Inspeções",
     description: "Como registrar, anexar e gerenciar vistorias",
     icon: ClipboardCheck,
-    component: null,
-    available: false,
+    component: TutorialVistorias,
+    available: true,
   },
   {
     id: "votacoes",
     title: "Propostas e Votações",
     description: "Como criar e gerenciar aprovações coletivas",
     icon: Vote,
-    component: null,
-    available: false,
+    component: TutorialVotacoes,
+    available: true,
   },
 ];
 
@@ -587,8 +593,8 @@ const tutoriaisProprietarios = [
     title: "Suas Cobranças",
     description: "Como visualizar, contestar e pagar cobranças",
     icon: DollarSign,
-    component: null,
-    available: false,
+    component: TutorialCobrancasProprietario,
+    available: true,
   },
 ];
 
