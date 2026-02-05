@@ -41,6 +41,24 @@ export function TutorialCobrancas() {
                 executadas até compras e serviços. Cada cobrança passa por um fluxo estruturado com prazos definidos.
               </p>
             </div>
+
+            <Card className="border-primary/30 bg-primary/5">
+              <CardContent className="pt-4">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-full bg-primary/10">
+                    <TrendingUp className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-primary mb-1">Manutenção → Cobrança</p>
+                    <p className="text-sm text-muted-foreground">
+                      Quando uma manutenção é concluída, ela automaticamente se torna uma cobrança para o proprietário 
+                      (exceto manutenções de responsabilidade do hóspede ou da gestão). O valor, categoria e anexos 
+                      são transferidos da manutenção para a cobrança.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Fluxo de Status */}
