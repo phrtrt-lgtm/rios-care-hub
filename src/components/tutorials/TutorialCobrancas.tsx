@@ -200,6 +200,79 @@ export function TutorialCobrancas() {
             </Card>
           </div>
 
+          {/* Débito em Reserva */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg flex items-center gap-2">
+              <TrendingDown className="h-5 w-5 text-red-500" />
+              Débito em Reserva
+            </h3>
+
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3">
+              <p className="text-sm">
+                <span className="font-medium text-red-700">O que é:</span> Quando o proprietário não paga dentro do 
+                prazo de 7 dias, o valor pode ser descontado automaticamente das próximas reservas do imóvel.
+              </p>
+              
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Como funciona:</p>
+                <ol className="list-decimal list-inside text-sm text-muted-foreground space-y-1 ml-2">
+                  <li>Cobrança vence e não é paga</li>
+                  <li>Após 7 dias, a opção "Debitar em Reserva" fica disponível</li>
+                  <li>A equipe clica no botão para executar o débito</li>
+                  <li>O valor é registrado para desconto na próxima reserva</li>
+                  <li>Proprietário perde <span className="font-medium text-red-600">-30 pontos</span> na pontuação</li>
+                </ol>
+              </div>
+
+              <div className="pt-2 border-t border-red-200">
+                <p className="text-sm">
+                  <AlertTriangle className="h-4 w-4 inline mr-1 text-amber-500" />
+                  <span className="font-medium">Atenção:</span> Antes de debitar, sempre tente contato com o proprietário 
+                  via chat da cobrança para dar mais uma chance de pagamento voluntário.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Calculadora de Débito */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-teal-500" />
+              Calculadora de Débito em Reserva
+            </h3>
+
+            <div className="bg-teal-50 border border-teal-200 rounded-lg p-4 space-y-3">
+              <p className="text-sm">
+                A calculadora ajuda a simular quanto será descontado do proprietário considerando as comissões 
+                e valores da próxima reserva.
+              </p>
+              
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Campos da calculadora:</p>
+                <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 ml-2">
+                  <li><span className="font-medium">Valor da Reserva:</span> Quanto o hóspede pagou pela estadia</li>
+                  <li><span className="font-medium">Comissão Base (%):</span> Porcentagem padrão da gestão</li>
+                  <li><span className="font-medium">Comissão Extra (%):</span> Adicional para cobrir o débito</li>
+                  <li><span className="font-medium">Valor a Debitar:</span> Quanto precisa ser descontado</li>
+                </ul>
+              </div>
+
+              <div className="pt-2 border-t border-teal-200 space-y-2">
+                <p className="text-sm font-medium">O que a calculadora mostra:</p>
+                <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 ml-2">
+                  <li><span className="font-medium">Comissão Total:</span> Base + Extra combinadas</li>
+                  <li><span className="font-medium">Proprietário Recebe:</span> Valor final após todas as deduções</li>
+                  <li><span className="font-medium">Se cobre:</span> Indica se a comissão extra cobre o débito pendente</li>
+                </ul>
+              </div>
+
+              <p className="text-sm pt-2 border-t border-teal-200">
+                <span className="font-medium text-teal-700">💡 Dica:</span> Use a calculadora antes de confirmar 
+                o débito para ter certeza de que a próxima reserva cobrirá o valor devido.
+              </p>
+            </div>
+          </div>
+
           {/* Cobrança de Hóspedes */}
           <div className="space-y-4">
             <h3 className="font-semibold text-lg flex items-center gap-2">
