@@ -1,4 +1,4 @@
-export const MAINTENANCE_POLICY_VERSION = "2026-01-01";
+export const MAINTENANCE_POLICY_VERSION = "2026-02-05";
 
 export const MAINTENANCE_POLICY_HTML = `
 <h2 style="margin:0 0 8px 0; font-size: 16px; color: #1f2937;">🏠 Política de Manutenção</h2>
@@ -13,14 +13,24 @@ export const MAINTENANCE_POLICY_HTML = `
 <div style="background: #fef3c7; padding: 8px; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #f59e0b;">
   <p style="margin: 0 0 6px 0; font-size: 13px; font-weight: bold; color: #92400e;">⚡ Classificação</p>
   <p style="margin: 0 0 4px 0; font-size: 12px; font-weight: bold; color: #dc2626;">🚨 Essencial (atendimento imediato)</p>
-  <p style="margin: 0 0 6px 0; font-size: 12px; line-height: 1.4;">Geladeira, fogão, micro-ondas, água quente, energia, infiltração grave, fechadura, piscina não utilizável. Podem ser executados <b>de imediato</b> pela gestão.</p>
+  <p style="margin: 0 0 6px 0; font-size: 12px; line-height: 1.4;">Geladeira, fogão, micro-ondas, água quente, energia, infiltração grave, fechadura, piscina não utilizável, <b>substituição de itens essenciais</b>. Podem ser executados <b>de imediato</b> pela gestão.</p>
   <p style="margin: 0 0 4px 0; font-size: 12px; font-weight: bold; color: #2563eb;">🔧 Estrutural (pode aguardar)</p>
   <p style="margin: 0; font-size: 12px; line-height: 1.4;">Piso, mobília, pintura etc. Abriremos chamado e você decide.</p>
+</div>
+
+<div style="background: #dcfce7; padding: 8px; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #22c55e;">
+  <p style="margin: 0 0 4px 0; font-size: 13px; font-weight: bold; color: #166534;">🎁 Por Conta da Gestão</p>
+  <p style="margin: 0; font-size: 12px; line-height: 1.4;">Substituições básicas como <b>copos e lâmpadas comuns</b> são assumidas pela gestão, sem custo ao proprietário.</p>
 </div>
 
 <div style="background: #f9fafb; padding: 8px; border-radius: 6px; margin-bottom: 8px;">
   <p style="margin: 0 0 4px 0; font-size: 13px; font-weight: bold;">⏱️ Decisão</p>
   <p style="margin: 0; font-size: 12px; line-height: 1.4;">Para itens estruturais: <b>✅ Assumir execução</b> (informar prazo/fornecedor) ou <b>🤝 Delegar à gestão</b>.</p>
+</div>
+
+<div style="background: #fef9c3; padding: 8px; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #eab308;">
+  <p style="margin: 0 0 4px 0; font-size: 13px; font-weight: bold; color: #854d0e;">⚠️ Estrutural Pode Virar Essencial</p>
+  <p style="margin: 0; font-size: 12px; line-height: 1.4;">Se o proprietário <b>demorar a responder</b> ou houver <b>hóspede chegando</b> com risco de prejuízo (avaliação negativa, cancelamento), a gestão pode executar sem aprovação para proteger a renda do imóvel.</p>
 </div>
 
 <div style="background: #fee2e2; padding: 8px; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #dc2626;">
@@ -40,6 +50,6 @@ export const MAINTENANCE_POLICY_HTML = `
 `;
 
 export const MAINTENANCE_POLICY_TEXT = `Política de Manutenção
-Essencial (atendimento imediato): itens que inviabilizam a estadia (geladeira, fogão, micro-ondas, água quente, energia, fechadura/portas, piscina inutilizável, infiltração grave). Podem ser executados de imediato pela gestão, sobretudo em check-in no mesmo dia.
-Estrutural (pode aguardar entre estadias): piso/reformas/pintura etc. Abriremos chamado para você decidir: assumir a execução (com prazo e fornecedor) ou delegar à gestão.
-Avaliações negativas derrubam a renda; protegemos o desempenho do ecossistema. As manutenções feitas pela gestão vão para a área de cobranças, gerando cobrança conforme regras já publicadas (contestação 7 dias, pagamento/offset). Ao aceitar, você registra ciência desta política (versão 2026-01-01).`;
+Essencial (atendimento imediato): itens que inviabilizam a estadia (geladeira, fogão, micro-ondas, água quente, energia, fechadura/portas, piscina inutilizável, infiltração grave, substituição de itens essenciais). Podem ser executados de imediato pela gestão, sobretudo em check-in no mesmo dia. Substituições básicas como copos e lâmpadas comuns são por conta da gestão.
+Estrutural (pode aguardar entre estadias): piso/reformas/pintura etc. Abriremos chamado para você decidir: assumir a execução (com prazo e fornecedor) ou delegar à gestão. IMPORTANTE: Se o proprietário demorar a responder ou houver hóspede chegando com risco de prejuízo, a gestão pode executar sem aprovação.
+Avaliações negativas derrubam a renda; protegemos o desempenho do ecossistema. As manutenções feitas pela gestão vão para a área de cobranças, gerando cobrança conforme regras já publicadas (contestação 7 dias, pagamento/offset). Ao aceitar, você registra ciência desta política (versão 2026-02-05).`;
