@@ -19,7 +19,8 @@ import {
   CheckCircle2,
   XCircle,
   HelpCircle,
-  MessageSquare
+  MessageSquare,
+  LayoutList
 } from "lucide-react";
 import { MobileHeader } from "@/components/MobileHeader";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
@@ -29,7 +30,8 @@ import {
   TutorialVotacoes,
   TutorialCobrancasProprietario,
   TutorialTicketsChat,
-  TutorialTicketsChatProprietario
+  TutorialTicketsChatProprietario,
+  TutorialQuadroManutencoes
 } from "@/components/tutorials";
 
 // Tutorial sobre Manutenção
@@ -586,6 +588,14 @@ const tutoriaisFuncionarios = [
     description: "Sistema de chamados, mensagens e notificações",
     icon: MessageSquare,
     component: TutorialTicketsChat,
+    available: true,
+  },
+  {
+    id: "quadro-manutencoes",
+    title: "Quadro de Manutenções",
+    description: "Lista central com edição inline, vistorias e cobranças",
+    icon: LayoutList,
+    component: TutorialQuadroManutencoes,
     available: true,
   },
 ];
