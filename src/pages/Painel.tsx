@@ -405,6 +405,23 @@ export default function Painel() {
           <div>
             <h3 className="mb-4 text-xl font-semibold">Outras Ações</h3>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {/* Tutoriais */}
+              <Card className="cursor-pointer hover-lift group border-transparent hover:border-primary/20" onClick={() => navigate("/tutoriais")}>
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors">
+                      <BookOpen className="h-5 w-5 text-emerald-600" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">Tutoriais</CardTitle>
+                      <CardDescription className="text-xs">
+                        Guias completos do sistema
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+
               {/* Templates de Resposta */}
               <ResponseTemplatesPanel 
                 triggerElement={
