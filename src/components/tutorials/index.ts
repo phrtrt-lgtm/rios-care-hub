@@ -4,3 +4,4 @@ export { TutorialVotacoes } from './TutorialVotacoes';
 export { TutorialCobrancasProprietario } from './TutorialCobrancasProprietario';
 export { TutorialTicketsChat } from './TutorialTicketsChat';
 export { TutorialTicketsChatProprietario } from './TutorialTicketsChatProprietario';
+export { TutorialQuadroManutencoes } from './TutorialQuadroManutencoes';
