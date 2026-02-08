@@ -58,10 +58,12 @@ export interface ChecklistData {
   stove_oven_working: 'ok' | 'problema' | 'na' | '';
   stove_oven_notes: string;
   
+  cutlery_ok: 'ok' | 'problema' | 'na' | '';
+  cutlery_notes: string;
+  
   // Contagens
   glasses_count: number | null;
   pillows_count: number | null;
-  cutlery_count: number | null;
 }
 
 export const defaultChecklistData: ChecklistData = {
@@ -85,9 +87,10 @@ export const defaultChecklistData: ChecklistData = {
   kitchen_notes: '',
   stove_oven_working: '',
   stove_oven_notes: '',
+  cutlery_ok: '',
+  cutlery_notes: '',
   glasses_count: null,
   pillows_count: null,
-  cutlery_count: null,
 };
 
 interface Props {
@@ -374,22 +377,25 @@ export default function RoutineInspectionChecklist({ data, onChange }: Props) {
               onChange={(e) => updateField('pillows_count', e.target.value ? parseInt(e.target.value) : null)}
             />
           </div>
-          
-          <div className="p-3 border rounded-lg bg-card">
-            <Label htmlFor="cutlery-count" className="flex items-center gap-2 mb-2">
-              <UtensilsCrossed className="h-4 w-4 text-primary" />
-              Quantidade de Talheres
-            </Label>
-            <Input
-              id="cutlery-count"
-              type="number"
-              min="0"
-              placeholder="Ex: 24"
-              value={data.cutlery_count ?? ''}
-              onChange={(e) => updateField('cutlery_count', e.target.value ? parseInt(e.target.value) : null)}
-            />
-          </div>
         </div>
+      </div>
+
+      {/* Verificação de Talheres */}
+      <div className="space-y-3">
+        <h3 className="font-semibold text-base flex items-center gap-2">
+          <UtensilsCrossed className="h-5 w-5 text-primary" />
+          Talheres
+        </h3>
+        
+        <CheckItem
+          icon={<UtensilsCrossed className="h-5 w-5" />}
+          label="Talheres em quantidade correta"
+          value={data.cutlery_ok}
+          notes={data.cutlery_notes}
+          onValueChange={(v) => updateField('cutlery_ok', v)}
+          onNotesChange={(v) => updateField('cutlery_notes', v)}
+          fieldId="cutlery"
+        />
       </div>
     </div>
   );
