@@ -55,6 +55,7 @@ export interface ChecklistData {
   // Contagens
   glasses_count: number | null;
   pillows_count: number | null;
+  cutlery_count: number | null;
 }
 
 export const defaultChecklistData: ChecklistData = {
@@ -78,6 +79,7 @@ export const defaultChecklistData: ChecklistData = {
   kitchen_notes: '',
   glasses_count: null,
   pillows_count: null,
+  cutlery_count: null,
 };
 
 interface Props {
@@ -236,7 +238,7 @@ export default function RoutineInspectionChecklist({ data, onChange }: Props) {
           
           <CheckItem
             icon={<Plug className="h-5 w-5" />}
-            label="Tomadas e Interruptores"
+            label="Tomadas, Interruptores e Lâmpadas"
             value={data.outlets_switches_working}
             notes={data.outlets_switches_notes}
             onValueChange={(v) => updateField('outlets_switches_working', v)}
@@ -331,6 +333,21 @@ export default function RoutineInspectionChecklist({ data, onChange }: Props) {
               placeholder="Ex: 4"
               value={data.pillows_count ?? ''}
               onChange={(e) => updateField('pillows_count', e.target.value ? parseInt(e.target.value) : null)}
+            />
+          </div>
+          
+          <div className="p-3 border rounded-lg bg-card">
+            <Label htmlFor="cutlery-count" className="flex items-center gap-2 mb-2">
+              <UtensilsCrossed className="h-4 w-4 text-primary" />
+              Quantidade de Talheres
+            </Label>
+            <Input
+              id="cutlery-count"
+              type="number"
+              min="0"
+              placeholder="Ex: 24"
+              value={data.cutlery_count ?? ''}
+              onChange={(e) => updateField('cutlery_count', e.target.value ? parseInt(e.target.value) : null)}
             />
           </div>
         </div>

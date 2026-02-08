@@ -31,6 +31,7 @@ interface ChecklistData {
   kitchen_notes?: string;
   glasses_count?: number | null;
   pillows_count?: number | null;
+  cutlery_count?: number | null;
 }
 
 interface InspectionPayload {
@@ -133,6 +134,7 @@ serve(async (req) => {
           kitchen_notes: payload.checklist_data.kitchen_notes || null,
           glasses_count: payload.checklist_data.glasses_count ?? null,
           pillows_count: payload.checklist_data.pillows_count ?? null,
+          cutlery_count: payload.checklist_data.cutlery_count ?? null,
         });
 
       if (checklistError) {
