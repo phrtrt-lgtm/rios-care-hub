@@ -801,6 +801,7 @@ export type Database = {
           created_at: string
           id: string
           internal_only: boolean
+          is_routine: boolean | null
           monday_item_id: string | null
           notes: string | null
           property_id: string
@@ -815,6 +816,7 @@ export type Database = {
           created_at?: string
           id?: string
           internal_only?: boolean
+          is_routine?: boolean | null
           monday_item_id?: string | null
           notes?: string | null
           property_id: string
@@ -829,6 +831,7 @@ export type Database = {
           created_at?: string
           id?: string
           internal_only?: boolean
+          is_routine?: boolean | null
           monday_item_id?: string | null
           notes?: string | null
           property_id?: string
@@ -1619,6 +1622,92 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      routine_inspection_checklists: {
+        Row: {
+          ac_filters_cleaned: boolean | null
+          ac_notes: string | null
+          ac_working: string | null
+          bathroom_notes: string | null
+          bathroom_working: string | null
+          batteries_replaced: boolean | null
+          created_at: string
+          curtains_rods_notes: string | null
+          curtains_rods_working: string | null
+          doors_locks_notes: string | null
+          doors_locks_working: string | null
+          furniture_notes: string | null
+          furniture_working: string | null
+          glasses_count: number | null
+          id: string
+          inspection_id: string
+          kitchen_notes: string | null
+          kitchen_working: string | null
+          outlets_switches_notes: string | null
+          outlets_switches_working: string | null
+          pillows_count: number | null
+          tv_internet_notes: string | null
+          tv_internet_working: string | null
+        }
+        Insert: {
+          ac_filters_cleaned?: boolean | null
+          ac_notes?: string | null
+          ac_working?: string | null
+          bathroom_notes?: string | null
+          bathroom_working?: string | null
+          batteries_replaced?: boolean | null
+          created_at?: string
+          curtains_rods_notes?: string | null
+          curtains_rods_working?: string | null
+          doors_locks_notes?: string | null
+          doors_locks_working?: string | null
+          furniture_notes?: string | null
+          furniture_working?: string | null
+          glasses_count?: number | null
+          id?: string
+          inspection_id: string
+          kitchen_notes?: string | null
+          kitchen_working?: string | null
+          outlets_switches_notes?: string | null
+          outlets_switches_working?: string | null
+          pillows_count?: number | null
+          tv_internet_notes?: string | null
+          tv_internet_working?: string | null
+        }
+        Update: {
+          ac_filters_cleaned?: boolean | null
+          ac_notes?: string | null
+          ac_working?: string | null
+          bathroom_notes?: string | null
+          bathroom_working?: string | null
+          batteries_replaced?: boolean | null
+          created_at?: string
+          curtains_rods_notes?: string | null
+          curtains_rods_working?: string | null
+          doors_locks_notes?: string | null
+          doors_locks_working?: string | null
+          furniture_notes?: string | null
+          furniture_working?: string | null
+          glasses_count?: number | null
+          id?: string
+          inspection_id?: string
+          kitchen_notes?: string | null
+          kitchen_working?: string | null
+          outlets_switches_notes?: string | null
+          outlets_switches_working?: string | null
+          pillows_count?: number | null
+          tv_internet_notes?: string | null
+          tv_internet_working?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "routine_inspection_checklists_inspection_id_fkey"
+            columns: ["inspection_id"]
+            isOneToOne: false
+            referencedRelation: "cleaning_inspections"
             referencedColumns: ["id"]
           },
         ]
