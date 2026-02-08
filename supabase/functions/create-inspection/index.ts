@@ -10,12 +10,37 @@ const corsHeaders = {
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
+interface ChecklistData {
+  ac_filters_cleaned?: boolean;
+  batteries_replaced?: boolean;
+  ac_working?: string;
+  ac_notes?: string;
+  tv_internet_working?: string;
+  tv_internet_notes?: string;
+  outlets_switches_working?: string;
+  outlets_switches_notes?: string;
+  doors_locks_working?: string;
+  doors_locks_notes?: string;
+  curtains_rods_working?: string;
+  curtains_rods_notes?: string;
+  bathroom_working?: string;
+  bathroom_notes?: string;
+  furniture_working?: string;
+  furniture_notes?: string;
+  kitchen_working?: string;
+  kitchen_notes?: string;
+  glasses_count?: number | null;
+  pillows_count?: number | null;
+}
+
 interface InspectionPayload {
   property_id: string;
   cleaner_name?: string;
   cleaner_phone?: string;
   notes?: string;
   internal_only?: boolean;
+  is_routine?: boolean;
+  checklist_data?: ChecklistData | null;
   audio_data?: Array<{
     audio_url: string;
     transcript: string;
@@ -74,6 +99,7 @@ serve(async (req) => {
         transcript_summary: transcriptSummary,
         audio_url: firstAudioUrl,
         internal_only: payload.internal_only ?? false,
+        is_routine: payload.is_routine ?? false,
       })
       .select()
       .single();
@@ -81,7 +107,42 @@ serve(async (req) => {
     if (inspError) throw inspError;
     console.log('Inspection created:', inspection.id);
 
-    // 2) Create attachments
+    // 2) Create routine checklist if this is a routine inspection
+    if (payload.is_routine && payload.checklist_data) {
+      const { error: checklistError } = await supabase
+        .from('routine_inspection_checklists')
+        .insert({
+          inspection_id: inspection.id,
+          ac_filters_cleaned: payload.checklist_data.ac_filters_cleaned ?? false,
+          batteries_replaced: payload.checklist_data.batteries_replaced ?? false,
+          ac_working: payload.checklist_data.ac_working || null,
+          ac_notes: payload.checklist_data.ac_notes || null,
+          tv_internet_working: payload.checklist_data.tv_internet_working || null,
+          tv_internet_notes: payload.checklist_data.tv_internet_notes || null,
+          outlets_switches_working: payload.checklist_data.outlets_switches_working || null,
+          outlets_switches_notes: payload.checklist_data.outlets_switches_notes || null,
+          doors_locks_working: payload.checklist_data.doors_locks_working || null,
+          doors_locks_notes: payload.checklist_data.doors_locks_notes || null,
+          curtains_rods_working: payload.checklist_data.curtains_rods_working || null,
+          curtains_rods_notes: payload.checklist_data.curtains_rods_notes || null,
+          bathroom_working: payload.checklist_data.bathroom_working || null,
+          bathroom_notes: payload.checklist_data.bathroom_notes || null,
+          furniture_working: payload.checklist_data.furniture_working || null,
+          furniture_notes: payload.checklist_data.furniture_notes || null,
+          kitchen_working: payload.checklist_data.kitchen_working || null,
+          kitchen_notes: payload.checklist_data.kitchen_notes || null,
+          glasses_count: payload.checklist_data.glasses_count ?? null,
+          pillows_count: payload.checklist_data.pillows_count ?? null,
+        });
+
+      if (checklistError) {
+        console.error('Error creating checklist:', checklistError);
+      } else {
+        console.log('Routine checklist created for inspection:', inspection.id);
+      }
+    }
+
+    // 3) Create attachments
     if (payload.attachments?.length) {
       const attachmentRecords = payload.attachments.map(att => ({
         inspection_id: inspection.id,
@@ -98,7 +159,7 @@ serve(async (req) => {
       if (attError) console.error('Error creating attachments:', attError);
     }
 
-    // 3) Get property and settings
+    // 4) Get property and settings
     const { data: property } = await supabase
       .from('properties')
       .select('*, profiles!properties_owner_id_fkey(*)')
@@ -113,7 +174,7 @@ serve(async (req) => {
 
     console.log('Property:', property?.name, 'Owner:', property?.profiles?.name, 'Settings:', settings);
 
-    // 4) Create Monday item
+    // 5) Create Monday item
     let mondayItemId: string | null = null;
     const mondayEnabled = Deno.env.get('MONDAY_ENABLED') === 'true';
     
