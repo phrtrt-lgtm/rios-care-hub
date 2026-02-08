@@ -31,9 +31,10 @@ interface ChecklistData {
   kitchen_notes?: string;
   stove_oven_working?: string;
   stove_oven_notes?: string;
+  cutlery_ok?: string;
+  cutlery_notes?: string;
   glasses_count?: number | null;
   pillows_count?: number | null;
-  cutlery_count?: number | null;
 }
 
 interface InspectionPayload {
@@ -138,7 +139,8 @@ serve(async (req) => {
           stove_oven_notes: payload.checklist_data.stove_oven_notes || null,
           glasses_count: payload.checklist_data.glasses_count ?? null,
           pillows_count: payload.checklist_data.pillows_count ?? null,
-          cutlery_count: payload.checklist_data.cutlery_count ?? null,
+          cutlery_ok: payload.checklist_data.cutlery_ok || null,
+          cutlery_notes: payload.checklist_data.cutlery_notes || null,
         });
 
       if (checklistError) {
