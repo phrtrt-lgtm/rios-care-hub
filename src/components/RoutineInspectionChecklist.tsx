@@ -316,6 +316,16 @@ export default function RoutineInspectionChecklist({ data, onChange }: Props) {
             onNotesChange={(v) => updateField('stove_oven_notes', v)}
             fieldId="stove"
           />
+          
+          <CheckItem
+            icon={<UtensilsCrossed className="h-5 w-5" />}
+            label="Talheres em quantidade correta"
+            value={data.cutlery_ok}
+            notes={data.cutlery_notes}
+            onValueChange={(v) => updateField('cutlery_ok', v)}
+            onNotesChange={(v) => updateField('cutlery_notes', v)}
+            fieldId="cutlery"
+          />
         </div>
         
         {/* Orientação sobre Áudios */}
@@ -380,23 +390,6 @@ export default function RoutineInspectionChecklist({ data, onChange }: Props) {
         </div>
       </div>
 
-      {/* Verificação de Talheres */}
-      <div className="space-y-3">
-        <h3 className="font-semibold text-base flex items-center gap-2">
-          <UtensilsCrossed className="h-5 w-5 text-primary" />
-          Talheres
-        </h3>
-        
-        <CheckItem
-          icon={<UtensilsCrossed className="h-5 w-5" />}
-          label="Talheres em quantidade correta"
-          value={data.cutlery_ok}
-          notes={data.cutlery_notes}
-          onValueChange={(v) => updateField('cutlery_ok', v)}
-          onNotesChange={(v) => updateField('cutlery_notes', v)}
-          fieldId="cutlery"
-        />
-      </div>
     </div>
   );
 }
