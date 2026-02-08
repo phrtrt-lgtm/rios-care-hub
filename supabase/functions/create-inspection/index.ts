@@ -29,6 +29,8 @@ interface ChecklistData {
   furniture_notes?: string;
   kitchen_working?: string;
   kitchen_notes?: string;
+  stove_oven_working?: string;
+  stove_oven_notes?: string;
   glasses_count?: number | null;
   pillows_count?: number | null;
   cutlery_count?: number | null;
@@ -132,6 +134,8 @@ serve(async (req) => {
           furniture_notes: payload.checklist_data.furniture_notes || null,
           kitchen_working: payload.checklist_data.kitchen_working || null,
           kitchen_notes: payload.checklist_data.kitchen_notes || null,
+          stove_oven_working: payload.checklist_data.stove_oven_working || null,
+          stove_oven_notes: payload.checklist_data.stove_oven_notes || null,
           glasses_count: payload.checklist_data.glasses_count ?? null,
           pillows_count: payload.checklist_data.pillows_count ?? null,
           cutlery_count: payload.checklist_data.cutlery_count ?? null,

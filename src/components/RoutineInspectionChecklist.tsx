@@ -19,7 +19,10 @@ import {
   BedDouble,
   CheckCircle2,
   AlertCircle,
-  MinusCircle
+  MinusCircle,
+  Flame,
+  Mic,
+  Info
 } from 'lucide-react';
 
 export interface ChecklistData {
@@ -52,6 +55,9 @@ export interface ChecklistData {
   kitchen_working: 'ok' | 'problema' | 'na' | '';
   kitchen_notes: string;
   
+  stove_oven_working: 'ok' | 'problema' | 'na' | '';
+  stove_oven_notes: string;
+  
   // Contagens
   glasses_count: number | null;
   pillows_count: number | null;
@@ -77,6 +83,8 @@ export const defaultChecklistData: ChecklistData = {
   furniture_notes: '',
   kitchen_working: '',
   kitchen_notes: '',
+  stove_oven_working: '',
+  stove_oven_notes: '',
   glasses_count: null,
   pillows_count: null,
   cutlery_count: null,
@@ -295,6 +303,37 @@ export default function RoutineInspectionChecklist({ data, onChange }: Props) {
             onNotesChange={(v) => updateField('kitchen_notes', v)}
             fieldId="kitchen"
           />
+          
+          <CheckItem
+            icon={<Flame className="h-5 w-5" />}
+            label="Bocas do Fogão e Forno"
+            value={data.stove_oven_working}
+            notes={data.stove_oven_notes}
+            onValueChange={(v) => updateField('stove_oven_working', v)}
+            onNotesChange={(v) => updateField('stove_oven_notes', v)}
+            fieldId="stove"
+          />
+        </div>
+        
+        {/* Orientação sobre Áudios */}
+        <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <div className="flex gap-3">
+            <div className="flex-shrink-0">
+              <Mic className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-medium text-blue-900 dark:text-blue-100 flex items-center gap-2">
+                <Info className="h-4 w-4" />
+                Importante: Gravação de Áudios
+              </h4>
+              <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-disc list-inside">
+                <li>Para cada item marcado como <strong>"Problema"</strong>, grave um áudio explicando o que foi encontrado</li>
+                <li>Grave também áudios de <strong>outros problemas</strong> encontrados no imóvel que não estão na lista</li>
+                <li>Você pode gravar <strong>vários áudios curtos</strong>, um para cada problema — isso facilita organizar a lista de manutenções</li>
+                <li>Quanto mais detalhado, melhor será a identificação dos serviços necessários</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
 

@@ -1650,6 +1650,8 @@ export type Database = {
           outlets_switches_notes: string | null
           outlets_switches_working: string | null
           pillows_count: number | null
+          stove_oven_notes: string | null
+          stove_oven_working: string | null
           tv_internet_notes: string | null
           tv_internet_working: string | null
         }
@@ -1676,6 +1678,8 @@ export type Database = {
           outlets_switches_notes?: string | null
           outlets_switches_working?: string | null
           pillows_count?: number | null
+          stove_oven_notes?: string | null
+          stove_oven_working?: string | null
           tv_internet_notes?: string | null
           tv_internet_working?: string | null
         }
@@ -1702,6 +1706,8 @@ export type Database = {
           outlets_switches_notes?: string | null
           outlets_switches_working?: string | null
           pillows_count?: number | null
+          stove_oven_notes?: string | null
+          stove_oven_working?: string | null
           tv_internet_notes?: string | null
           tv_internet_working?: string | null
         }
