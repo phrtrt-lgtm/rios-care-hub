@@ -1637,6 +1637,7 @@ export type Database = {
           created_at: string
           curtains_rods_notes: string | null
           curtains_rods_working: string | null
+          cutlery_count: number | null
           doors_locks_notes: string | null
           doors_locks_working: string | null
           furniture_notes: string | null
@@ -1662,6 +1663,7 @@ export type Database = {
           created_at?: string
           curtains_rods_notes?: string | null
           curtains_rods_working?: string | null
+          cutlery_count?: number | null
           doors_locks_notes?: string | null
           doors_locks_working?: string | null
           furniture_notes?: string | null
@@ -1687,6 +1689,7 @@ export type Database = {
           created_at?: string
           curtains_rods_notes?: string | null
           curtains_rods_working?: string | null
+          cutlery_count?: number | null
           doors_locks_notes?: string | null
           doors_locks_working?: string | null
           furniture_notes?: string | null
