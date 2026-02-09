@@ -57,7 +57,7 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
     if (draftRestoredRef.current) return;
     draftRestoredRef.current = true;
 
-    const draft = loadDraft(propertyId, 'cleaner');
+    loadDraft(propertyId, 'cleaner').then(draft => {
     if (!draft) return;
 
     if (draft.inspectionStatus) {
@@ -89,6 +89,7 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
     }
 
     toast.info('Rascunho restaurado automaticamente');
+    });
   }, [propertyId]);
 
   // Auto-save callback
