@@ -13,6 +13,7 @@ import { MediaThumbnail } from '@/components/MediaThumbnail';
 import { MediaGallery } from '@/components/MediaGallery';
 import { CreateMaintenanceFromInspectionDialog } from '@/components/CreateMaintenanceFromInspectionDialog';
 import EditInspectionDialog from '@/components/EditInspectionDialog';
+import { RoutineChecklistDisplay } from '@/components/RoutineChecklistDisplay';
 import { preloadMediaUrls } from '@/hooks/useMediaCache';
 import { ArrowLeft, Calendar, User, CheckCircle2, AlertTriangle, Headphones, FileText, Building2, Wrench, Plus, Sparkles, Loader2, Pencil, RefreshCw, Import } from 'lucide-react';
 import { format } from 'date-fns';
@@ -114,6 +115,7 @@ export default function AdminVistoriaDetalhes() {
   const [regenerateDialogOpen, setRegenerateDialogOpen] = useState(false);
   const [extraPrompt, setExtraPrompt] = useState('');
   const [importingToKanban, setImportingToKanban] = useState(false);
+  const [routineChecklist, setRoutineChecklist] = useState<any>(null);
 
   useEffect(() => {
     if (!authLoading) {
@@ -158,6 +160,16 @@ export default function AdminVistoriaDetalhes() {
         if (attachError) throw attachError;
         const attachmentsList = attachData || [];
         setAttachments(attachmentsList);
+
+        // Fetch routine checklist if is_routine
+        if (inspData.is_routine) {
+          const { data: checklistData } = await supabase
+            .from('routine_inspection_checklists')
+            .select('*')
+            .eq('inspection_id', inspectionId!)
+            .maybeSingle();
+          setRoutineChecklist(checklistData);
+        }
 
         // Preload all media
         const mediaUrls = attachmentsList
@@ -410,6 +422,11 @@ export default function AdminVistoriaDetalhes() {
               )}
             </div>
           </Card>
+
+          {/* Routine Checklist */}
+          {routineChecklist && (
+            <RoutineChecklistDisplay checklist={routineChecklist} />
+          )}
 
           {/* Audio Section */}
           {audioAttachments.length > 0 && (
