@@ -136,9 +136,27 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files) return;
+    const fileList = e.target.files;
+    if (!fileList || fileList.length === 0) {
+      console.warn('[CleanerInspection] No files selected or fileList empty');
+      return;
+    }
     
-    const selectedFiles = Array.from(e.target.files);
+    // Samsung Internet fix: copy files immediately before browser clears the reference
+    const selectedFiles: File[] = [];
+    for (let i = 0; i < fileList.length; i++) {
+      const f = fileList[i];
+      if (f && f.size > 0) {
+        selectedFiles.push(f);
+      }
+    }
+    
+    if (selectedFiles.length === 0) {
+      console.warn('[CleanerInspection] All files were empty or invalid');
+      return;
+    }
+    
+    console.log('[CleanerInspection] Files selected:', selectedFiles.length, selectedFiles.map(f => `${f.name} (${f.size}b, ${f.type})`));
     const maxSize = 100 * 1024 * 1024; // 100MB (before compression)
     const oversizedFiles = selectedFiles.filter(f => f.size > maxSize);
     
