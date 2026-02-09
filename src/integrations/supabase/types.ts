@@ -884,6 +884,44 @@ export type Database = {
         }
         Relationships: []
       }
+      inspection_drafts: {
+        Row: {
+          created_at: string
+          draft_data: Json
+          form_type: string
+          id: string
+          property_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          draft_data?: Json
+          form_type: string
+          id?: string
+          property_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          draft_data?: Json
+          form_type?: string
+          id?: string
+          property_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inspection_drafts_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inspection_items: {
         Row: {
           category: string

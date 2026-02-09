@@ -62,7 +62,7 @@ export default function TeamInspectionDialog({
   // Restore draft on mount / property change
   useEffect(() => {
     if (!open) return;
-    const draft = loadDraft(propertyId, 'team');
+    loadDraft(propertyId, 'team').then(draft => {
     if (!draft) {
       draftRestoredRef.current = true;
       return;
@@ -95,6 +95,7 @@ export default function TeamInspectionDialog({
 
     draftRestoredRef.current = true;
     toast.info('Rascunho restaurado automaticamente');
+    });
   }, [open, propertyId]);
 
   // Auto-save
