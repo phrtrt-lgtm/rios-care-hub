@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Trash2, CheckCircle2, XCircle, Camera, Video, Mic, Sparkles, Image as ImageIcon, FolderOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import { processFileForUpload } from '@/lib/processVideoForUpload';
 import { VideoCompressionProgress } from '@/components/VideoCompressionProgress';
 import { useNativeMedia } from '@/hooks/useNativeMedia';
 import { Capacitor } from '@capacitor/core';
+import { loadDraft, saveDraft, clearDraft, createPlaceholderFile, useAutoSave, type InspectionDraft } from '@/hooks/useInspectionDraft';
 
 interface CleanerInspectionFormProps {
   propertyId: string;
@@ -47,6 +48,69 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
   
   const isNative = Capacitor.isNativePlatform();
   const { takePhoto, pickImages, pickVideos, pickMedia, recordVideo, webPathToFile } = useNativeMedia();
+
+  // --- Draft auto-save ---
+  const draftRestoredRef = useRef(false);
+
+  // Restore draft on mount
+  useEffect(() => {
+    if (draftRestoredRef.current) return;
+    draftRestoredRef.current = true;
+
+    const draft = loadDraft(propertyId, 'cleaner');
+    if (!draft) return;
+
+    if (draft.inspectionStatus) {
+      setInspectionStatus(draft.inspectionStatus);
+    }
+
+    // Restore already-uploaded files
+    if (draft.uploadedFiles?.length) {
+      const restored: UploadedFile[] = draft.uploadedFiles.map(f => ({
+        file: createPlaceholderFile(f),
+        url: f.url,
+        uploading: false,
+        compressing: false,
+      }));
+      setUploadedFiles(restored);
+    }
+
+    // Restore already-uploaded audio
+    if (draft.audioFiles?.length) {
+      const restored: AudioFile[] = draft.audioFiles.map(a => ({
+        file: createPlaceholderFile(a),
+        url: a.url,
+        transcript: a.transcript,
+        summary: a.summary,
+        transcribing: false,
+        uploading: false,
+      }));
+      setAudioFiles(restored);
+    }
+
+    toast.info('Rascunho restaurado automaticamente');
+  }, [propertyId]);
+
+  // Auto-save callback
+  const triggerAutoSave = useAutoSave(() => {
+    const draftData: Omit<InspectionDraft, 'savedAt'> = {
+      inspectionStatus,
+      uploadedFiles: uploadedFiles
+        .filter(f => f.url && !f.error)
+        .map(f => ({ url: f.url, fileName: f.file.name, fileType: f.file.type, sizeBytes: f.file.size })),
+      audioFiles: audioFiles
+        .filter(a => a.url)
+        .map(a => ({ url: a.url, fileName: a.file.name, fileType: a.file.type, sizeBytes: a.file.size, transcript: a.transcript, summary: a.summary })),
+    };
+    saveDraft(propertyId, 'cleaner', draftData);
+  }, 800);
+
+  // Trigger auto-save on state changes
+  useEffect(() => {
+    if (draftRestoredRef.current) {
+      triggerAutoSave();
+    }
+  }, [inspectionStatus, uploadedFiles, audioFiles, triggerAutoSave]);
 
   const uploadFile = async (file: File): Promise<string> => {
     const ext = (file.name || '').split('.').pop()?.toLowerCase();
@@ -382,6 +446,7 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
       if (!data?.ok) throw new Error(data?.error || 'Falha no envio');
 
       toast.success('Vistoria enviada com sucesso!');
+      clearDraft(propertyId, 'cleaner');
       setInspectionStatus('');
       setUploadedFiles([]);
       setAudioFiles([]);
@@ -655,7 +720,7 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
                 >
                   {uploadedFile.file.type.startsWith('image/') ? (
                     <img 
-                      src={URL.createObjectURL(uploadedFile.file)} 
+                      src={uploadedFile.url || URL.createObjectURL(uploadedFile.file)} 
                       alt={`Preview ${index + 1}`}
                       className={`w-full h-full object-cover ${uploadedFile.uploading ? 'opacity-50' : ''}`}
                     />
