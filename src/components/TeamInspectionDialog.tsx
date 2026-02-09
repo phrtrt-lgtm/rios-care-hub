@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Loader2, Trash2, CheckCircle2, XCircle, Camera, Video, Mic, Sparkles, Eye, EyeOff, ClipboardList, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -13,6 +13,7 @@ import { isVideoFile, FileUploadProgress } from '@/lib/fileUpload';
 import { processFileForUpload } from '@/lib/processVideoForUpload';
 import { VideoCompressionProgress } from '@/components/VideoCompressionProgress';
 import RoutineInspectionChecklist, { ChecklistData, defaultChecklistData } from '@/components/RoutineInspectionChecklist';
+import { loadDraft, saveDraft, clearDraft, createPlaceholderFile, useAutoSave, type InspectionDraft } from '@/hooks/useInspectionDraft';
 
 interface TeamInspectionDialogProps {
   open: boolean;
@@ -56,6 +57,68 @@ export default function TeamInspectionDialog({
   const [internalOnly, setInternalOnly] = useState(true);
   const [sending, setSending] = useState(false);
   const [checklistData, setChecklistData] = useState<ChecklistData>(defaultChecklistData);
+  const draftRestoredRef = React.useRef(false);
+
+  // Restore draft on mount / property change
+  useEffect(() => {
+    if (!open) return;
+    const draft = loadDraft(propertyId, 'team');
+    if (!draft) {
+      draftRestoredRef.current = true;
+      return;
+    }
+
+    if (draft.inspectionStatus) setInspectionStatus(draft.inspectionStatus);
+    if (draft.inspectionType) setInspectionType(draft.inspectionType as InspectionType);
+    if (draft.internalOnly !== undefined) setInternalOnly(draft.internalOnly);
+    if (draft.checklistData) setChecklistData(draft.checklistData as unknown as ChecklistData);
+
+    if (draft.uploadedFiles?.length) {
+      setUploadedFiles(draft.uploadedFiles.map(f => ({
+        file: createPlaceholderFile(f),
+        url: f.url,
+        uploading: false,
+        compressing: false,
+      })));
+    }
+
+    if (draft.audioFiles?.length) {
+      setAudioFiles(draft.audioFiles.map(a => ({
+        file: createPlaceholderFile(a),
+        url: a.url,
+        transcript: a.transcript,
+        summary: a.summary,
+        transcribing: false,
+        uploading: false,
+      })));
+    }
+
+    draftRestoredRef.current = true;
+    toast.info('Rascunho restaurado automaticamente');
+  }, [open, propertyId]);
+
+  // Auto-save
+  const triggerAutoSave = useAutoSave(() => {
+    const draftData: Omit<InspectionDraft, 'savedAt'> = {
+      inspectionStatus,
+      inspectionType,
+      internalOnly,
+      checklistData: checklistData as unknown as Record<string, unknown>,
+      uploadedFiles: uploadedFiles
+        .filter(f => f.url && !f.error)
+        .map(f => ({ url: f.url, fileName: f.file.name, fileType: f.file.type, sizeBytes: f.file.size })),
+      audioFiles: audioFiles
+        .filter(a => a.url)
+        .map(a => ({ url: a.url, fileName: a.file.name, fileType: a.file.type, sizeBytes: a.file.size, transcript: a.transcript, summary: a.summary })),
+    };
+    saveDraft(propertyId, 'team', draftData);
+  }, 800);
+
+  useEffect(() => {
+    if (draftRestoredRef.current) {
+      triggerAutoSave();
+    }
+  }, [inspectionStatus, inspectionType, internalOnly, checklistData, uploadedFiles, audioFiles, triggerAutoSave]);
 
   const resetForm = () => {
     setInspectionType('standard');
@@ -64,6 +127,7 @@ export default function TeamInspectionDialog({
     setAudioFiles([]);
     setInternalOnly(true);
     setChecklistData(defaultChecklistData);
+    clearDraft(propertyId, 'team');
   };
 
   const uploadFile = async (file: File): Promise<string> => {
@@ -600,7 +664,7 @@ export default function TeamInspectionDialog({
                     >
                       {uploadedFile.file.type.startsWith('image/') ? (
                         <img 
-                          src={URL.createObjectURL(uploadedFile.file)} 
+                          src={uploadedFile.url || URL.createObjectURL(uploadedFile.file)} 
                           alt="" 
                           className="w-full h-full object-cover"
                         />
