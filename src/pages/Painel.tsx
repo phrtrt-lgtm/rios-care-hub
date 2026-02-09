@@ -70,8 +70,8 @@ export default function Painel() {
       {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1 sm:gap-3 min-w-0 flex-shrink overflow-x-auto">
               <img src="/logo.png" alt="RIOS" className="h-6 object-contain" />
               
               {profile?.role === "admin" && (
@@ -119,7 +119,7 @@ export default function Painel() {
               )}
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
               {/* Search Button */}
               <Button
                 variant="outline"
