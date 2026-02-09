@@ -94,8 +94,8 @@ export async function compressVideo(
   file: File, 
   onProgress?: ProgressCallback
 ): Promise<File> {
-  // Check if it's a video file
-  if (!file.type.startsWith('video/')) {
+  // Check if it's a video file (using robust check)
+  if (!isVideoFile(file)) {
     return file;
   }
 
@@ -269,7 +269,10 @@ function normalizeMp4FileName(originalName: string): string {
 
 // Check if file is a video
 export function isVideoFile(file: File): boolean {
-  return file.type.startsWith('video/');
+  if (file.type && file.type.startsWith('video/')) return true;
+  // Samsung Internet sometimes returns empty type - check extension
+  const ext = (file.name || '').split('.').pop()?.toLowerCase();
+  return ['mp4', 'mov', 'avi', 'webm', 'mkv', '3gp', '3gpp'].includes(ext || '');
 }
 
 // Process a single file (compress if video, return as-is otherwise)
