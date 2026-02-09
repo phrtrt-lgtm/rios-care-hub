@@ -512,6 +512,7 @@ interface InspectionItem {
   transcript_summary: string | null;
   audio_url: string | null;
   internal_only: boolean;
+  is_routine: boolean;
   is_team_inspection: boolean;
   attachments: Array<{ id: string; file_url: string; file_name?: string; file_type?: string }>;
 }
@@ -1061,6 +1062,7 @@ export default function AdminManutencoesLista() {
           transcript_summary,
           audio_url,
           internal_only,
+          is_routine,
           property:properties!cleaning_inspections_property_id_fkey(id, name, owner_id)
         `)
         .is("archived_at", null)
@@ -1112,6 +1114,7 @@ export default function AdminManutencoesLista() {
           transcript_summary: i.transcript_summary,
           audio_url: i.audio_url,
           internal_only: i.internal_only,
+          is_routine: !!(i as any).is_routine,
           is_team_inspection: isTeamInspection,
           attachments: (attachmentsByInspection[i.id] || []).map(a => ({
             id: a.id,
@@ -1746,7 +1749,7 @@ export default function AdminManutencoesLista() {
 
   // Handle generating summary for inspection
   const handleGenerateSummary = useCallback(async (inspection: InspectionItem) => {
-    if (!inspection.transcript) {
+    if (!inspection.transcript && !inspection.is_routine) {
       toast.error("Não há transcrição para resumir");
       return;
     }
@@ -1754,10 +1757,53 @@ export default function AdminManutencoesLista() {
     setGeneratingSummaryIds(prev => new Set(prev).add(inspection.id));
 
     try {
+      // If routine inspection, fetch checklist data to include in analysis
+      let checklistNotes: Record<string, string> | undefined;
+      if (inspection.is_routine) {
+        const { data: checklist } = await supabase
+          .from('routine_inspection_checklists')
+          .select('*')
+          .eq('inspection_id', inspection.id)
+          .maybeSingle();
+        
+        if (checklist) {
+          checklistNotes = {};
+          const labels: Record<string, string> = {
+            ac: 'Ar-condicionado',
+            tv_internet: 'TV / Internet',
+            outlets_switches: 'Tomadas, Interruptores e Lâmpadas',
+            doors_locks: 'Portas, Fechaduras, Dobradiças',
+            curtains_rods: 'Cortinas e Varões',
+            bathroom: 'Banheiro',
+            furniture: 'Móveis',
+            kitchen: 'Cozinha / Utensílios',
+            stove_oven: 'Bocas do Fogão e Forno',
+            cutlery: 'Talheres',
+          };
+
+          for (const [key, label] of Object.entries(labels)) {
+            const statusKey = key === 'cutlery' ? 'cutlery_ok' : `${key}_working`;
+            const notesKey = `${key}_notes`;
+            const status = (checklist as any)[statusKey] as string;
+            const notes = (checklist as any)[notesKey] as string;
+            if (status) {
+              checklistNotes[label] = `Status: ${status.toUpperCase()}${notes ? ` | Observação: ${notes}` : ''}`;
+            }
+          }
+
+          // Add services and counts
+          if (checklist.ac_filters_cleaned) checklistNotes['Filtros AC'] = 'Limpeza realizada';
+          if (checklist.batteries_replaced) checklistNotes['Pilhas'] = 'Substituídas';
+          if (checklist.glasses_count != null) checklistNotes['Copos'] = `Quantidade: ${checklist.glasses_count}`;
+          if (checklist.pillows_count != null) checklistNotes['Travesseiros'] = `Quantidade: ${checklist.pillows_count}`;
+        }
+      }
+
       const { data, error } = await supabase.functions.invoke("summarize-inspection", {
         body: { 
           transcript: inspection.transcript,
           inspectionId: inspection.id,
+          checklistNotes,
         },
       });
 

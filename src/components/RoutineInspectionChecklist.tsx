@@ -161,9 +161,13 @@ function CheckItem({ icon, label, value, notes, onValueChange, onNotesChange, fi
         </label>
       </RadioGroup>
       
-      {value === 'problema' && (
+      {(value === 'problema' || value === 'ok' || value === 'na') && (
         <Textarea
-          placeholder="Descreva o problema encontrado..."
+          placeholder={
+            value === 'problema' 
+              ? "Descreva o problema encontrado..." 
+              : "Observações (opcional)..."
+          }
           value={notes}
           onChange={(e) => onNotesChange(e.target.value)}
           className="text-sm min-h-[60px]"

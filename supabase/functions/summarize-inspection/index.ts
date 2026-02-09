@@ -5,17 +5,39 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+function buildUserPrompt(transcript: string | null, checklistNotes: Record<string, string> | null): string {
+  const parts: string[] = [];
+
+  if (checklistNotes && Object.keys(checklistNotes).length > 0) {
+    parts.push("DADOS DO CHECKLIST DE ROTINA:");
+    for (const [item, info] of Object.entries(checklistNotes)) {
+      parts.push(`- ${item}: ${info}`);
+    }
+    parts.push("");
+  }
+
+  if (transcript) {
+    parts.push("TRANSCRIÇÃO DOS ÁUDIOS:");
+    parts.push(transcript);
+    parts.push("");
+  }
+
+  parts.push("Com base nas informações acima (checklist e/ou áudios), faça um resumo dos problemas do imóvel e o que precisamos fazer.");
+
+  return parts.join("\n");
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { transcript, inspectionId } = await req.json();
+    const { transcript, inspectionId, checklistNotes } = await req.json();
 
-    if (!transcript) {
+    if (!transcript && !checklistNotes) {
       return new Response(
-        JSON.stringify({ error: "Transcript is required" }),
+        JSON.stringify({ error: "Transcript or checklist notes required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -51,7 +73,7 @@ Não inclua comentários pessoais da faxineira que não sejam relevantes para a 
           { role: "system", content: systemPrompt },
           { 
             role: "user", 
-            content: `Este é um áudio de uma faxineira de Airbnb. Faça um resumo dos problemas do imóvel, o que ela disse e o que precisamos fazer:\n\n${transcript}` 
+            content: buildUserPrompt(transcript, checklistNotes),
           },
         ],
       }),
