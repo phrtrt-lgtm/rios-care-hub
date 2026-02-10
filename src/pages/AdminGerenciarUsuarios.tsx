@@ -102,8 +102,40 @@ export default function AdminGerenciarUsuarios() {
       filtered = filtered.filter((user) => user.status === statusFilter);
     }
 
+    // Sort alphabetically by name within each group
+    filtered.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+
     setFilteredUsers(filtered);
   };
+
+  const roleOrder: Record<string, number> = {
+    admin: 0,
+    agent: 1,
+    maintenance: 2,
+    owner: 3,
+    pending_owner: 4,
+    cleaner: 5,
+  };
+
+  const roleLabels: Record<string, string> = {
+    admin: "Administradores",
+    agent: "Atendentes",
+    maintenance: "Manutenção",
+    owner: "Proprietários",
+    pending_owner: "Proprietários Pendentes",
+    cleaner: "Faxineiras",
+  };
+
+  const groupedUsers = filteredUsers.reduce<Record<string, UserProfile[]>>((acc, user) => {
+    const role = user.role;
+    if (!acc[role]) acc[role] = [];
+    acc[role].push(user);
+    return acc;
+  }, {});
+
+  const sortedRoleKeys = Object.keys(groupedUsers).sort(
+    (a, b) => (roleOrder[a] ?? 99) - (roleOrder[b] ?? 99)
+  );
 
   const handleApprove = async (userId: string) => {
     try {
@@ -500,73 +532,84 @@ export default function AdminGerenciarUsuarios() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredUsers.map((user) => (
-                      <TableRow 
-                        key={user.id}
-                        className={selectedUsers.has(user.id) ? "bg-primary/5" : ""}
-                      >
-                        <TableCell>
-                          {user.role !== "admin" && (
-                            <Checkbox
-                              checked={selectedUsers.has(user.id)}
-                              onCheckedChange={() => toggleUserSelection(user.id)}
-                              aria-label={`Selecionar ${user.name}`}
-                            />
-                          )}
-                        </TableCell>
-                        <TableCell className="font-medium">{user.name}</TableCell>
-                        <TableCell>{user.email}</TableCell>
-                        <TableCell>{user.phone || "-"}</TableCell>
-                        <TableCell>{getRoleBadge(user.role)}</TableCell>
-                        <TableCell>{getStatusBadge(user.status)}</TableCell>
-                        <TableCell>
-                          {new Date(user.created_at).toLocaleDateString("pt-BR")}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            {user.status === "pending" && user.role === "pending_owner" && (
-                              <>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleApprove(user.id)}
-                                  title="Aprovar"
-                                >
-                                  <UserCheck className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleReject(user.id)}
-                                  title="Recusar"
-                                >
-                                  <UserX className="h-4 w-4" />
-                                </Button>
-                              </>
-                            )}
-                            {(user.role === "owner" || user.role === "pending_owner") && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => navigate(`/historico-comunicacao/${user.id}`)}
-                                title="Ver histórico de comunicação"
-                              >
-                                <History className="h-4 w-4" />
-                              </Button>
-                            )}
-                            {user.role !== "admin" && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => confirmDelete(user)}
-                                title="Deletar"
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
+                    sortedRoleKeys.map((role) => (
+                      <>
+                        <TableRow key={`header-${role}`} className="bg-muted/50 hover:bg-muted/50">
+                          <TableCell colSpan={8} className="py-2">
+                            <span className="text-sm font-semibold text-muted-foreground">
+                              {roleLabels[role] || role} ({groupedUsers[role].length})
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                        {groupedUsers[role].map((user) => (
+                          <TableRow 
+                            key={user.id}
+                            className={selectedUsers.has(user.id) ? "bg-primary/5" : ""}
+                          >
+                            <TableCell>
+                              {user.role !== "admin" && (
+                                <Checkbox
+                                  checked={selectedUsers.has(user.id)}
+                                  onCheckedChange={() => toggleUserSelection(user.id)}
+                                  aria-label={`Selecionar ${user.name}`}
+                                />
+                              )}
+                            </TableCell>
+                            <TableCell className="font-medium">{user.name}</TableCell>
+                            <TableCell>{user.email}</TableCell>
+                            <TableCell>{user.phone || "-"}</TableCell>
+                            <TableCell>{getRoleBadge(user.role)}</TableCell>
+                            <TableCell>{getStatusBadge(user.status)}</TableCell>
+                            <TableCell>
+                              {new Date(user.created_at).toLocaleDateString("pt-BR")}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
+                                {user.status === "pending" && user.role === "pending_owner" && (
+                                  <>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleApprove(user.id)}
+                                      title="Aprovar"
+                                    >
+                                      <UserCheck className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleReject(user.id)}
+                                      title="Recusar"
+                                    >
+                                      <UserX className="h-4 w-4" />
+                                    </Button>
+                                  </>
+                                )}
+                                {(user.role === "owner" || user.role === "pending_owner") && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => navigate(`/historico-comunicacao/${user.id}`)}
+                                    title="Ver histórico de comunicação"
+                                  >
+                                    <History className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                {user.role !== "admin" && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => confirmDelete(user)}
+                                    title="Deletar"
+                                  >
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </>
                     ))
                   )}
                 </TableBody>
