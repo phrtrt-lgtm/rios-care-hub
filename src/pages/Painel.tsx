@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { LogOut, Users, Ticket, AlertTriangle, CheckCircle2, Plus, DollarSign, Building2, Bell, Settings, Sparkles, UserPlus, Vote, Shield, Wrench, List, Search, FileText, Mail, BookOpen } from "lucide-react";
+import { LogOut, Users, Ticket, AlertTriangle, CheckCircle2, Plus, DollarSign, Building2, Bell, Settings, Sparkles, UserPlus, Vote, Shield, Wrench, List, Search, FileText, Mail, BookOpen, Download } from "lucide-react";
+import { toast } from "sonner";
 import { UnifiedCalendarWidget } from "@/components/UnifiedCalendarWidget";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -551,6 +552,64 @@ export default function Painel() {
                       <CardTitle className="text-base">Gerenciar Unidades</CardTitle>
                       <CardDescription className="text-xs">
                         Cadastrar e gerenciar propriedades
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+
+              <Card className="cursor-pointer hover-lift group border-transparent hover:border-primary/20" onClick={async () => {
+                try {
+                  const { data, error } = await supabase
+                    .from("profiles")
+                    .select("name, phone")
+                    .in("role", ["owner", "pending_owner"])
+                    .not("phone", "is", null)
+                    .neq("phone", "")
+                    .order("name");
+                  
+                  if (error) throw error;
+                  if (!data || data.length === 0) {
+                    toast.error("Nenhum contato encontrado");
+                    return;
+                  }
+
+                  const vcards = data.map(p => {
+                    const fullName = `${p.name} Proprietário`;
+                    const phone = (p.phone || "").replace(/[^\d+]/g, "");
+                    return [
+                      "BEGIN:VCARD",
+                      "VERSION:3.0",
+                      `FN:${fullName}`,
+                      `N:Proprietário;${p.name};;;`,
+                      `TEL;TYPE=CELL:${phone}`,
+                      `ORG:RIOS`,
+                      "END:VCARD"
+                    ].join("\r\n");
+                  }).join("\r\n");
+
+                  const blob = new Blob([vcards], { type: "text/vcard;charset=utf-8" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = "proprietarios-rios.vcf";
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  toast.success(`${data.length} contatos exportados!`);
+                } catch (err) {
+                  console.error("Erro ao exportar contatos:", err);
+                  toast.error("Erro ao exportar contatos");
+                }
+              }}>
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center group-hover:bg-green-500/20 transition-colors">
+                      <Download className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">Exportar Contatos</CardTitle>
+                      <CardDescription className="text-xs">
+                        Baixar vCard dos proprietários
                       </CardDescription>
                     </div>
                   </div>
