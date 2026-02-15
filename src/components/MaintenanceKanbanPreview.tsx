@@ -509,6 +509,7 @@ export function MaintenanceKanbanPreview() {
         ticketId={chatTicket?.id || null}
         ticketSubject={chatTicket?.subject || ""}
         propertyName={chatTicket?.property?.name || "Sem unidade"}
+        onTicketUpdated={fetchMaintenanceTickets}
       />
     </Card>
     </Collapsible>
