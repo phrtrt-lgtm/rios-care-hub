@@ -83,36 +83,7 @@ Deno.serve(async (req) => {
       tickets = data || [];
     }
 
-    // 4. Get open charges with service types (maintenance needs)
-    let chargeQuery = supabase
-      .from("charges")
-      .select("id, title, service_type, property_id, status, amount_cents, description")
-      .in("property_id", allPropertyIds)
-      .not("paid_at", "is", null)
-      .is("archived_at", null);
-
-    if (reportType !== "all") {
-      chargeQuery = chargeQuery.eq("service_type", reportType);
-    }
-
-    const { data: charges } = await chargeQuery;
-
-    // Also get unpaid charges (no paid_at)
-    let unpaidChargeQuery = supabase
-      .from("charges")
-      .select("id, title, service_type, property_id, status, amount_cents, description")
-      .in("property_id", allPropertyIds)
-      .is("paid_at", null)
-      .is("archived_at", null);
-
-    if (reportType !== "all") {
-      unpaidChargeQuery = unpaidChargeQuery.eq("service_type", reportType);
-    }
-
-    const { data: unpaidCharges } = await unpaidChargeQuery;
-    const allCharges = [...(charges || []), ...(unpaidCharges || [])];
-
-    // 5. Get inspection items that need attention
+    // 4. Get inspection items that need attention
     let inspectionItems: any[] = [];
     if (sources.includes("inspection")) {
       const { data } = await supabase
@@ -128,7 +99,7 @@ Deno.serve(async (req) => {
       inspectionItems = data || [];
     }
 
-    // 6. Calculate availability windows per property
+    // 5. Calculate availability windows per property
     const propertyAvailability: Record<string, Array<{ start: string; end: string }>> = {};
 
     for (const prop of properties) {
@@ -161,7 +132,6 @@ Deno.serve(async (req) => {
 
     for (const prop of properties) {
       const propTickets = (tickets || []).filter((t) => t.property_id === prop.id);
-      const propCharges = allCharges.filter((c) => c.property_id === prop.id);
       const propInspectionItems = (inspectionItems || []).filter(
         (item: any) => item.inspection?.property_id === prop.id
       );
@@ -179,11 +149,8 @@ ${gaps.length > 0 ? gaps.map((g) => `- ${g.start} a ${g.end}`).join("\n") : "- N
 
 **Próximo check-in:** ${nextReservation ? `${nextReservation.check_in} (${nextReservation.guest_name || "Hóspede"})` : "Nenhum agendado"}
 
-**Chamados pendentes (${propTickets.length}):**
-${propTickets.map((t) => `- [${t.priority}] ${t.subject}: ${t.description?.slice(0, 100)}`).join("\n") || "- Nenhum"}
-
-**Cobranças de serviço pendentes (${propCharges.length}):**
-${propCharges.map((c) => `- [${c.service_type || "Geral"}] ${c.title}: R$${((c.amount_cents || 0) / 100).toFixed(2)}`).join("\n") || "- Nenhuma"}
+**Chamados de manutenção pendentes (${propTickets.length}):**
+${propTickets.map((t) => `- [${t.priority}] [${t.kind || 'Geral'}] ${t.subject}: ${t.description?.slice(0, 100)}`).join("\n") || "- Nenhum"}
 
 **Itens de vistoria pendentes (${propInspectionItems.length}):**
 ${propInspectionItems.map((item: any) => `- [${item.category}] ${item.description}`).join("\n") || "- Nenhum"}
@@ -207,7 +174,6 @@ ${propInspectionItems.map((item: any) => `- [${item.category}] ${item.descriptio
     console.log("Report context:", {
       properties: properties.length,
       tickets: tickets.length,
-      charges: allCharges.length,
       inspectionItems: inspectionItems.length,
       reportType,
       sources,
