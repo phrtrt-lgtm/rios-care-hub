@@ -16,11 +16,13 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { 
   ArrowLeft, Calendar, Link2, Plus, RefreshCw, Trash2, Building2, 
   Sparkles, ShoppingCart, AlertCircle, Clock, CheckCircle2, Loader2,
-  Wrench, CalendarDays, Filter, SlidersHorizontal, BarChart3, ArrowUpDown, ArrowUp, ArrowDown, BrainCircuit
+  Wrench, CalendarDays, Filter, SlidersHorizontal, BarChart3, ArrowUpDown, ArrowUp, ArrowDown, BrainCircuit,
+  TrendingDown, TrendingUp, Heart, Zap, Shield
 } from "lucide-react";
 import { toast } from "sonner";
-import { format, parseISO, differenceInDays, addDays, eachDayOfInterval, isSameDay, startOfDay, isWithinInterval, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { format, parseISO, differenceInDays, addDays, addMonths, eachDayOfInterval, isSameDay, startOfDay, isWithinInterval, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Progress } from "@/components/ui/progress";
 
 interface IcalLink {
   id: string;
@@ -162,6 +164,130 @@ export default function CalendarioReservas() {
 
   const getOccColor = (rate: number) => rate >= 70 ? "text-green-600" : rate >= 40 ? "text-yellow-600" : "text-red-600";
   const getProgressBg = (rate: number) => rate >= 70 ? "bg-green-500" : rate >= 40 ? "bg-yellow-500" : "bg-red-500";
+
+  // Portfolio health & price alerts data
+  const [openTicketsCount, setOpenTicketsCount] = useState<Record<string, number>>({});
+  const [pendingInspectionItems, setPendingInspectionItems] = useState<Record<string, number>>({});
+  const [openChargesCount, setOpenChargesCount] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    async function fetchHealthData() {
+      // Open maintenance tickets per property
+      const { data: tickets } = await supabase
+        .from("tickets")
+        .select("property_id")
+        .in("status", ["novo", "em_analise", "em_execucao", "aguardando_info"])
+        .not("property_id", "is", null);
+      if (tickets) {
+        const counts: Record<string, number> = {};
+        tickets.forEach(t => { if (t.property_id) counts[t.property_id] = (counts[t.property_id] || 0) + 1; });
+        setOpenTicketsCount(counts);
+      }
+
+      // Pending inspection items per property (via cleaning_inspections)
+      const { data: items } = await supabase
+        .from("inspection_items")
+        .select("inspection_id, status, cleaning_inspections:inspection_id(property_id)")
+        .eq("status", "pending");
+      if (items) {
+        const counts: Record<string, number> = {};
+        items.forEach((item: any) => {
+          const pid = item.cleaning_inspections?.property_id;
+          if (pid) counts[pid] = (counts[pid] || 0) + 1;
+        });
+        setPendingInspectionItems(counts);
+      }
+
+      // Open charges per property
+      const { data: charges } = await supabase
+        .from("charges")
+        .select("property_id")
+        .in("status", ["pending", "overdue"])
+        .not("property_id", "is", null);
+      if (charges) {
+        const counts: Record<string, number> = {};
+        charges.forEach(c => { if (c.property_id) counts[c.property_id] = (counts[c.property_id] || 0) + 1; });
+        setOpenChargesCount(counts);
+      }
+    }
+    fetchHealthData();
+  }, []);
+
+  // Price alerts: properties with <40% occupancy in next 30 days
+  const priceAlerts = useMemo(() => {
+    if (!properties.length) return [];
+    const start = startOfDay(new Date());
+    const end30 = addDays(start, 30);
+    const end60 = addDays(start, 60);
+    const allDays30 = eachDayOfInterval({ start, end: end30 });
+    const allDays60 = eachDayOfInterval({ start: addDays(end30, 1), end: end60 });
+
+    return properties.map(property => {
+      const propRes = reservations.filter(r => r.property_id === property.id);
+      
+      const occ30 = allDays30.filter(day => propRes.some(r => isWithinInterval(day, { start: parseISO(r.check_in), end: parseISO(r.check_out) }))).length;
+      const occ60 = allDays60.filter(day => propRes.some(r => isWithinInterval(day, { start: parseISO(r.check_in), end: parseISO(r.check_out) }))).length;
+      
+      const rate30 = (occ30 / allDays30.length) * 100;
+      const rate60 = (occ60 / allDays60.length) * 100;
+
+      const alerts: string[] = [];
+      let severity: "critical" | "warning" | "ok" = "ok";
+
+      if (rate30 < 20) { alerts.push(`Apenas ${rate30.toFixed(0)}% ocupado nos próx. 30 dias`); severity = "critical"; }
+      else if (rate30 < 40) { alerts.push(`${rate30.toFixed(0)}% ocupado nos próx. 30 dias`); severity = "warning"; }
+
+      if (rate60 < 15) { alerts.push(`Apenas ${rate60.toFixed(0)}% ocupado entre 30-60 dias`); severity = severity === "ok" ? "warning" : severity; }
+
+      return { property, rate30, rate60, alerts, severity };
+    }).filter(a => a.alerts.length > 0).sort((a, b) => a.rate30 - b.rate30);
+  }, [properties, reservations]);
+
+  // Portfolio health score per property
+  const healthScores = useMemo(() => {
+    return properties.map(property => {
+      // Occupancy score (0-40 points) - based on current period occupancy
+      const occData = occupancyData.find(d => d.property.id === property.id);
+      const occScore = Math.min(40, (occData?.occupancyRate || 0) * 0.4);
+
+      // Maintenance score (0-25 points) - fewer open tickets = better
+      const openTickets = openTicketsCount[property.id] || 0;
+      const maintScore = Math.max(0, 25 - (openTickets * 8));
+
+      // Inspection score (0-20 points) - fewer pending items = better
+      const pendingItems = pendingInspectionItems[property.id] || 0;
+      const inspScore = Math.max(0, 20 - (pendingItems * 5));
+
+      // Financial score (0-15 points) - fewer open charges = better
+      const openChrg = openChargesCount[property.id] || 0;
+      const finScore = Math.max(0, 15 - (openChrg * 5));
+
+      const total = Math.round(occScore + maintScore + inspScore + finScore);
+
+      return {
+        property,
+        total,
+        occupancy: Math.round(occScore),
+        maintenance: Math.round(maintScore),
+        inspection: Math.round(inspScore),
+        financial: Math.round(finScore),
+        openTickets,
+        pendingItems,
+        openCharges: openChrg,
+        occupancyRate: occData?.occupancyRate || 0,
+      };
+    }).sort((a, b) => a.total - b.total);
+  }, [properties, occupancyData, openTicketsCount, pendingInspectionItems, openChargesCount]);
+
+  const portfolioAvgScore = useMemo(() => {
+    if (!healthScores.length) return 0;
+    return Math.round(healthScores.reduce((s, h) => s + h.total, 0) / healthScores.length);
+  }, [healthScores]);
+
+  const getHealthColor = (score: number) => score >= 70 ? "text-green-600" : score >= 40 ? "text-yellow-600" : "text-red-600";
+  const getHealthBg = (score: number) => score >= 70 ? "bg-green-500" : score >= 40 ? "bg-yellow-500" : "bg-red-500";
+  const getHealthLabel = (score: number) => score >= 70 ? "Saudável" : score >= 40 ? "Atenção" : "Crítico";
+
   const [calendarMonth, setCalendarMonth] = useState(new Date());
 
   // Report state
@@ -1190,6 +1316,103 @@ export default function CalendarioReservas() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Smart Price Alerts */}
+            {priceAlerts.length > 0 && (
+              <Card className="border-orange-200 dark:border-orange-800">
+                <CardHeader className="py-3 px-4">
+                  <div className="flex items-center gap-2">
+                    <Zap className="h-5 w-5 text-orange-500" />
+                    <CardTitle className="text-sm">Alertas de Preço</CardTitle>
+                    <Badge variant="destructive" className="text-xs ml-auto">{priceAlerts.length}</Badge>
+                  </div>
+                  <CardDescription className="text-xs">Imóveis com baixa ocupação futura — considere ajustar preços</CardDescription>
+                </CardHeader>
+                <CardContent className="px-4 pb-4 space-y-2">
+                  {priceAlerts.map((alert) => (
+                    <div
+                      key={alert.property.id}
+                      className={`flex items-start gap-3 p-3 rounded-lg border ${
+                        alert.severity === "critical" ? "border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950/30" : "border-yellow-300 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950/30"
+                      }`}
+                    >
+                      <TrendingDown className={`h-4 w-4 mt-0.5 shrink-0 ${alert.severity === "critical" ? "text-red-500" : "text-yellow-500"}`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{alert.property.name}</p>
+                        {alert.alerts.map((msg, i) => (
+                          <p key={i} className="text-xs text-muted-foreground">{msg}</p>
+                        ))}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-xs text-muted-foreground">30d</p>
+                        <p className={`text-sm font-bold ${getOccColor(alert.rate30)}`}>{alert.rate30.toFixed(0)}%</p>
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Portfolio Health Score */}
+            <Card>
+              <CardHeader className="py-3 px-4">
+                <div className="flex items-center gap-2">
+                  <Heart className="h-5 w-5 text-primary" />
+                  <CardTitle className="text-sm">Saúde do Portfólio</CardTitle>
+                  <div className="ml-auto flex items-center gap-2">
+                    <span className={`text-2xl font-bold ${getHealthColor(portfolioAvgScore)}`}>{portfolioAvgScore}</span>
+                    <span className="text-xs text-muted-foreground">/100</span>
+                  </div>
+                </div>
+                <CardDescription className="text-xs">
+                  Score baseado em ocupação (40pts), manutenções (25pts), vistorias (20pts) e financeiro (15pts)
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="px-4 pb-4">
+                <div className="space-y-3">
+                  {healthScores.map((item) => (
+                    <div key={item.property.id} className="border rounded-lg p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <span className="text-sm font-medium truncate">{item.property.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Badge variant="outline" className={`text-xs ${getHealthColor(item.total)}`}>
+                            {getHealthLabel(item.total)}
+                          </Badge>
+                          <span className={`text-lg font-bold ${getHealthColor(item.total)}`}>{item.total}</span>
+                        </div>
+                      </div>
+                      <div className="h-2 bg-muted rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full transition-all ${getHealthBg(item.total)}`} style={{ width: `${item.total}%` }} />
+                      </div>
+                      <div className="grid grid-cols-4 gap-2 text-center">
+                        <div>
+                          <p className="text-[10px] text-muted-foreground">Ocupação</p>
+                          <p className="text-xs font-medium">{item.occupancy}/40</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-muted-foreground">Manutenção</p>
+                          <p className="text-xs font-medium">{item.maintenance}/25</p>
+                          {item.openTickets > 0 && <p className="text-[10px] text-red-500">{item.openTickets} abertas</p>}
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-muted-foreground">Vistoria</p>
+                          <p className="text-xs font-medium">{item.inspection}/20</p>
+                          {item.pendingItems > 0 && <p className="text-[10px] text-red-500">{item.pendingItems} pendentes</p>}
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-muted-foreground">Financeiro</p>
+                          <p className="text-xs font-medium">{item.financial}/15</p>
+                          {item.openCharges > 0 && <p className="text-[10px] text-red-500">{item.openCharges} cobranças</p>}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
