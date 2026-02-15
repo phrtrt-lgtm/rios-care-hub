@@ -19,6 +19,7 @@ import {
   Clock
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { goBack } from "@/lib/navigation";
 
 export default function ProtocoloTrabalho() {
   const navigate = useNavigate();
@@ -28,7 +29,7 @@ export default function ProtocoloTrabalho() {
       <div className="container max-w-4xl mx-auto py-8 px-4">
         <Button
           variant="ghost"
-          onClick={() => navigate(-1)}
+          onClick={() => goBack(navigate)}
           className="mb-6"
         >
           <ChevronLeft className="h-4 w-4 mr-2" />

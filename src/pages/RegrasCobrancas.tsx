@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { goBack } from "@/lib/navigation";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -55,7 +56,7 @@ export default function RegrasCobrancas() {
       <div className="container max-w-4xl mx-auto py-8 px-4">
         <Button
           variant="ghost"
-          onClick={() => navigate(-1)}
+          onClick={() => goBack(navigate)}
           className="mb-6"
         >
           <ChevronLeft className="h-4 w-4 mr-2" />

@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { goBack } from "@/lib/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -394,7 +395,7 @@ export default function CalendarioReservas() {
       <div className="mx-auto max-w-6xl">
         {/* Header */}
         <div className="mb-6 flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <Button variant="ghost" size="icon" onClick={() => goBack(navigate)}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1">
