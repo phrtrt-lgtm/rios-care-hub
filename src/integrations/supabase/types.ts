@@ -1289,6 +1289,47 @@ export type Database = {
           },
         ]
       }
+      property_ical_links: {
+        Row: {
+          created_at: string
+          ical_url: string
+          id: string
+          last_synced_at: string | null
+          property_id: string
+          source_label: string | null
+          sync_error: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          ical_url: string
+          id?: string
+          last_synced_at?: string | null
+          property_id: string
+          source_label?: string | null
+          sync_error?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          ical_url?: string
+          id?: string
+          last_synced_at?: string | null
+          property_id?: string
+          source_label?: string | null
+          sync_error?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_ical_links_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposal_attachments: {
         Row: {
           created_at: string
@@ -1617,6 +1658,66 @@ export type Database = {
           },
         ]
       }
+      reservations: {
+        Row: {
+          check_in: string
+          check_out: string
+          created_at: string
+          guest_name: string | null
+          ical_link_id: string | null
+          ical_uid: string | null
+          id: string
+          property_id: string
+          raw_data: Json | null
+          status: string | null
+          summary: string | null
+          updated_at: string
+        }
+        Insert: {
+          check_in: string
+          check_out: string
+          created_at?: string
+          guest_name?: string | null
+          ical_link_id?: string | null
+          ical_uid?: string | null
+          id?: string
+          property_id: string
+          raw_data?: Json | null
+          status?: string | null
+          summary?: string | null
+          updated_at?: string
+        }
+        Update: {
+          check_in?: string
+          check_out?: string
+          created_at?: string
+          guest_name?: string | null
+          ical_link_id?: string | null
+          ical_uid?: string | null
+          id?: string
+          property_id?: string
+          raw_data?: Json | null
+          status?: string | null
+          summary?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservations_ical_link_id_fkey"
+            columns: ["ical_link_id"]
+            isOneToOne: false
+            referencedRelation: "property_ical_links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservations_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       response_templates: {
         Row: {
           category: string | null
@@ -1761,6 +1862,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      service_availability_reports: {
+        Row: {
+          created_at: string
+          generated_at: string
+          generated_by: string | null
+          id: string
+          report_data: Json
+          report_type: string
+          shopping_list: Json | null
+        }
+        Insert: {
+          created_at?: string
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          report_data: Json
+          report_type: string
+          shopping_list?: Json | null
+        }
+        Update: {
+          created_at?: string
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          report_data?: Json
+          report_type?: string
+          shopping_list?: Json | null
+        }
+        Relationships: []
       }
       service_providers: {
         Row: {

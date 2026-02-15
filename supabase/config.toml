@@ -56,3 +56,9 @@ verify_jwt = false
 
 [functions.owner-decision-cron]
 verify_jwt = false
+
+[functions.sync-ical]
+verify_jwt = false
+
+[functions.generate-service-summary]
+verify_jwt = false
