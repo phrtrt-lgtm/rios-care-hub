@@ -262,27 +262,9 @@ REGRAS:
       reportData = { raw_response: aiContent, parse_error: true };
     }
 
-    // 9. Store report
-    const { data: report, error: reportError } = await supabase
-      .from("service_availability_reports")
-      .insert({
-        report_type: reportType,
-        report_data: reportData.service_summaries || reportData,
-        shopping_list: reportData.shopping_lists || null,
-        generated_by: user.id,
-      })
-      .select()
-      .single();
-
-    if (reportError) {
-      console.error("Error saving report:", reportError);
-    }
-
+    // 9. Return report (not persisted - cleared on page exit)
     return new Response(
-      JSON.stringify({
-        report_id: report?.id,
-        ...reportData,
-      }),
+      JSON.stringify(reportData),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
