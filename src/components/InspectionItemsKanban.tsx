@@ -13,6 +13,7 @@ import { Loader2, Wrench, GripVertical, Plus, Import, Check, ChevronDown, Chevro
 import { Textarea } from '@/components/ui/textarea';
 import { CreateMaintenanceFromInspectionDialog } from './CreateMaintenanceFromInspectionDialog';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 
 interface InspectionItem {
   id: string;
@@ -66,6 +67,7 @@ export function PropertyInspectionItemsKanban({
   isAdmin = false,
 }: PropertyInspectionItemsKanbanProps) {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [items, setItems] = useState<InspectionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
@@ -638,19 +640,58 @@ export function PropertyInspectionItemsKanban({
                   </Button>
                   <Button
                     onClick={async () => {
+                      if (!user) return;
                       setCompletingItems(true);
                       try {
+                        // Create a completed maintenance ticket for each selected item (grouped)
+                        const selectedItemsList = items.filter(item => selectedItems.has(item.id));
+                        const description = selectedItemsList
+                          .map(item => `${getCategoryEmoji(item.category)} ${item.category}: ${item.description}`)
+                          .join('\n');
+                        const subject = selectedItemsList
+                          .map(item => {
+                            const desc = item.description.trim();
+                            return `[${desc.charAt(0).toUpperCase() + desc.slice(1)}]`;
+                          })
+                          .join(' ');
+
+                        // Create completed maintenance ticket visible to owner
+                        const { data: ticket, error: ticketError } = await supabase
+                          .from('tickets')
+                          .insert({
+                            subject: subject.substring(0, 200),
+                            description,
+                            ticket_type: 'manutencao' as const,
+                            priority: 'normal' as const,
+                            status: 'concluido' as const,
+                            owner_id: ownerId,
+                            property_id: propertyId,
+                            created_by: user.id,
+                            cost_responsible: 'owner',
+                            kind: 'preventiva',
+                          })
+                          .select('id')
+                          .single();
+
+                        if (ticketError) throw ticketError;
+
+                        // Mark inspection items as completed and link to ticket
                         const { error } = await supabase
                           .from('inspection_items')
-                          .update({ status: 'completed', completed_at: new Date().toISOString() })
+                          .update({ 
+                            status: 'completed', 
+                            completed_at: new Date().toISOString(),
+                            maintenance_ticket_id: ticket.id,
+                          })
                           .in('id', Array.from(selectedItems));
                         if (error) throw error;
+
                         setItems(prev => prev.map(i => 
                           selectedItems.has(i.id) 
-                            ? { ...i, status: 'completed' as const, completed_at: new Date().toISOString() } 
+                            ? { ...i, status: 'completed' as const, completed_at: new Date().toISOString(), maintenance_ticket_id: ticket.id } 
                             : i
                         ));
-                        toast.success(`${selectedItems.size} itens concluídos`);
+                        toast.success(`${selectedItems.size} itens concluídos e manutenção registrada`);
                         setSelectedItems(new Set());
                       } catch (error) {
                         console.error('Error completing items:', error);
