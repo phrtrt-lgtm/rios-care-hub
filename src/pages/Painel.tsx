@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { LogOut, Users, Ticket, AlertTriangle, CheckCircle2, Plus, DollarSign, Building2, Bell, Settings, Sparkles, UserPlus, Vote, Shield, Wrench, List, Search, FileText, Mail, BookOpen, Download, Calendar, BrainCircuit } from "lucide-react";
+import { LogOut, Users, Ticket, AlertTriangle, CheckCircle2, Plus, DollarSign, Building2, Bell, Settings, Sparkles, UserPlus, Vote, Shield, Wrench, List, Search, FileText, Mail, BookOpen, Download, Calendar, BrainCircuit, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import { UnifiedCalendarWidget } from "@/components/UnifiedCalendarWidget";
 import { supabase } from "@/integrations/supabase/client";
@@ -295,6 +295,24 @@ export default function Painel() {
                       <CardTitle className="text-sm">Calendário de Reservas</CardTitle>
                       <CardDescription className="text-xs">
                         iCal, disponibilidade e relatório IA
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+              <Card 
+                className="cursor-pointer hover-lift group border-purple-200 dark:border-purple-800 hover:border-purple-400 dark:hover:border-purple-600 transition-colors"
+                onClick={() => navigate("/insights")}
+              >
+                <CardHeader className="py-3 px-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-purple-500/10 flex items-center justify-center group-hover:bg-purple-500/20 transition-colors">
+                      <BarChart3 className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-sm">Análise de Ocupação</CardTitle>
+                      <CardDescription className="text-xs">
+                        Dias vagos, taxa de ocupação e desempenho
                       </CardDescription>
                     </div>
                   </div>
