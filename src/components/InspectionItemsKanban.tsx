@@ -668,7 +668,7 @@ export function PropertyInspectionItemsKanban({
                             property_id: propertyId,
                             created_by: user.id,
                             cost_responsible: 'owner',
-                            kind: 'preventiva',
+                            kind: 'maintenance',
                           })
                           .select('id')
                           .single();
