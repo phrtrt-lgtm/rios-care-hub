@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,13 +11,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { 
   ArrowLeft, Calendar, Link2, Plus, RefreshCw, Trash2, Building2, 
   Sparkles, ShoppingCart, AlertCircle, Clock, CheckCircle2, Loader2,
   Wrench, CalendarDays, Filter, SlidersHorizontal
 } from "lucide-react";
 import { toast } from "sonner";
-import { format, parseISO, differenceInDays, addDays } from "date-fns";
+import { format, parseISO, differenceInDays, addDays, eachDayOfInterval, isSameDay, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface IcalLink {
@@ -93,6 +94,10 @@ export default function CalendarioReservas() {
   const [newUrl, setNewUrl] = useState("");
   const [newPropertyId, setNewPropertyId] = useState("");
   const [newSourceLabel, setNewSourceLabel] = useState("channel_manager");
+
+  // Calendar view state
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
 
   // Report state
   const [serviceSummaries, setServiceSummaries] = useState<ServiceSummary[]>([]);
@@ -341,6 +346,41 @@ export default function CalendarioReservas() {
     return acc;
   }, {});
 
+  // Properties that have reservations (for the sidebar)
+  const propertiesWithReservations = useMemo(() => {
+    const propIds = new Set(reservations.map(r => r.property_id));
+    return properties.filter(p => propIds.has(p.id));
+  }, [reservations, properties]);
+
+  // Calculate reserved days for the selected property
+  const selectedReservations = useMemo(() => {
+    if (!selectedPropertyId) return reservations;
+    return reservations.filter(r => r.property_id === selectedPropertyId);
+  }, [selectedPropertyId, reservations]);
+
+  const reservedDays = useMemo(() => {
+    const days: Date[] = [];
+    selectedReservations.forEach(r => {
+      try {
+        const interval = eachDayOfInterval({
+          start: parseISO(r.check_in),
+          end: addDays(parseISO(r.check_out), -1), // check_out day is free
+        });
+        days.push(...interval);
+      } catch { /* skip invalid intervals */ }
+    });
+    return days;
+  }, [selectedReservations]);
+
+  // Find which reservation a clicked date belongs to
+  const getReservationForDate = (date: Date) => {
+    return selectedReservations.find(r => {
+      const checkIn = startOfDay(parseISO(r.check_in));
+      const checkOut = startOfDay(parseISO(r.check_out));
+      return date >= checkIn && date < checkOut;
+    });
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -393,7 +433,7 @@ export default function CalendarioReservas() {
 
           {/* Calendar Tab */}
           <TabsContent value="calendar" className="space-y-4">
-            {Object.keys(reservationsByProperty).length === 0 ? (
+            {propertiesWithReservations.length === 0 && properties.length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center">
                   <Calendar className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
@@ -404,29 +444,104 @@ export default function CalendarioReservas() {
                 </CardContent>
               </Card>
             ) : (
-              Object.entries(reservationsByProperty).map(([propId, propReservations]) => {
-                const prop = properties.find((p) => p.id === propId);
-                return (
-                  <Card key={propId}>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="flex items-center gap-2 text-base">
-                        <Building2 className="h-4 w-4 text-primary" />
-                        {prop?.name || "Propriedade"}
+              <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-4">
+                {/* Property sidebar */}
+                <Card className="h-fit">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">Imóveis</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-1 p-3 pt-0">
+                    {/* All properties option */}
+                    <Button
+                      variant={selectedPropertyId === null ? "default" : "ghost"}
+                      size="sm"
+                      className="w-full justify-start text-xs h-8"
+                      onClick={() => setSelectedPropertyId(null)}
+                    >
+                      <Building2 className="h-3 w-3 mr-2 flex-shrink-0" />
+                      Todos os imóveis
+                      <Badge variant="secondary" className="ml-auto text-[10px]">
+                        {reservations.length}
+                      </Badge>
+                    </Button>
+                    {propertiesWithReservations.map((p) => {
+                      const count = reservationsByProperty[p.id]?.length || 0;
+                      return (
+                        <Button
+                          key={p.id}
+                          variant={selectedPropertyId === p.id ? "default" : "ghost"}
+                          size="sm"
+                          className="w-full justify-start text-xs h-8"
+                          onClick={() => setSelectedPropertyId(p.id)}
+                        >
+                          <Building2 className="h-3 w-3 mr-2 flex-shrink-0" />
+                          <span className="truncate">{p.name}</span>
+                          <Badge variant="secondary" className="ml-auto text-[10px]">
+                            {count}
+                          </Badge>
+                        </Button>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+
+                {/* Calendar + details */}
+                <div className="space-y-4">
+                  <Card>
+                    <CardContent className="p-3">
+                      <CalendarComponent
+                        mode="single"
+                        month={calendarMonth}
+                        onMonthChange={setCalendarMonth}
+                        numberOfMonths={2}
+                        locale={ptBR}
+                        className="pointer-events-auto w-full"
+                        modifiers={{
+                          reserved: reservedDays,
+                        }}
+                        modifiersClassNames={{
+                          reserved: "bg-primary/20 text-primary font-semibold rounded-md",
+                        }}
+                        classNames={{
+                          months: "flex flex-col sm:flex-row gap-4",
+                          month: "flex-1",
+                        }}
+                      />
+                    </CardContent>
+                  </Card>
+
+                  {/* Selected property reservations list */}
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium flex items-center gap-2">
+                        <CalendarDays className="h-4 w-4 text-primary" />
+                        {selectedPropertyId 
+                          ? `Reservas — ${properties.find(p => p.id === selectedPropertyId)?.name}`
+                          : "Todas as Reservas"
+                        }
                       </CardTitle>
-                      {prop?.address && (
-                        <CardDescription className="text-xs">{prop.address}</CardDescription>
-                      )}
                     </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        {propReservations.map((res) => {
+                    <CardContent className="space-y-2">
+                      {(selectedPropertyId 
+                        ? reservations.filter(r => r.property_id === selectedPropertyId)
+                        : reservations
+                      ).length === 0 ? (
+                        <p className="text-xs text-muted-foreground py-4 text-center">
+                          Nenhuma reserva para este imóvel
+                        </p>
+                      ) : (
+                        (selectedPropertyId 
+                          ? reservations.filter(r => r.property_id === selectedPropertyId)
+                          : reservations
+                        ).map((res) => {
                           const daysUntil = differenceInDays(parseISO(res.check_in), new Date());
                           const isActive = daysUntil <= 0 && differenceInDays(parseISO(res.check_out), new Date()) > 0;
+                          const prop = properties.find(p => p.id === res.property_id);
                           return (
                             <div
                               key={res.id}
                               className={`flex items-center justify-between p-3 rounded-lg border ${
-                                isActive ? "bg-primary/5 border-primary/20" : daysUntil <= 3 ? "bg-yellow-50 border-yellow-200 dark:bg-yellow-500/5 dark:border-yellow-500/20" : "bg-muted/30"
+                                isActive ? "bg-primary/5 border-primary/20" : daysUntil <= 3 && daysUntil >= 0 ? "bg-accent/50 border-accent" : "bg-muted/30"
                               }`}
                             >
                               <div className="flex-1 min-w-0">
@@ -438,10 +553,13 @@ export default function CalendarioReservas() {
                                     <Badge variant="default" className="text-xs">Ativo</Badge>
                                   )}
                                   {!isActive && daysUntil <= 3 && daysUntil >= 0 && (
-                                    <Badge variant="outline" className="text-xs text-yellow-600">Em {daysUntil}d</Badge>
+                                    <Badge variant="outline" className="text-xs">Em {daysUntil}d</Badge>
                                   )}
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-0.5">
+                                  {!selectedPropertyId && prop && (
+                                    <span className="font-medium text-foreground mr-1">{prop.name} •</span>
+                                  )}
                                   {format(parseISO(res.check_in), "dd MMM", { locale: ptBR })} → {format(parseISO(res.check_out), "dd MMM yyyy", { locale: ptBR })}
                                 </p>
                               </div>
@@ -449,13 +567,13 @@ export default function CalendarioReservas() {
                                 {differenceInDays(parseISO(res.check_out), parseISO(res.check_in))} noites
                               </div>
                             </div>
-                           );
-                        })}
-                      </div>
+                          );
+                        })
+                      )}
                     </CardContent>
                   </Card>
-                );
-              })
+                </div>
+              </div>
             )}
 
             {/* Serviços Pendentes com Datas Disponíveis */}
@@ -480,7 +598,6 @@ export default function CalendarioReservas() {
                       )}
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      {/* Available windows */}
                       {ps.available_windows.length > 0 && (
                         <div>
                           <p className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1">
@@ -489,7 +606,7 @@ export default function CalendarioReservas() {
                           </p>
                           <div className="flex flex-wrap gap-1.5">
                             {ps.available_windows.map((w, i) => (
-                              <Badge key={i} variant="outline" className="text-xs bg-green-500/10 text-green-700 dark:text-green-400 border-green-200 dark:border-green-500/20">
+                              <Badge key={i} variant="outline" className="text-xs">
                                 {format(parseISO(w.start), "dd/MM")} → {format(parseISO(w.end), "dd/MM")}
                                 <span className="ml-1 opacity-70">({w.days}d)</span>
                               </Badge>
@@ -503,8 +620,6 @@ export default function CalendarioReservas() {
                           Sem janelas disponíveis nos próximos 60 dias
                         </p>
                       )}
-
-                      {/* Services grouped by category */}
                       <div className="space-y-1.5">
                         {Object.entries(
                           ps.services.reduce<Record<string, PendingService[]>>((acc, s) => {
