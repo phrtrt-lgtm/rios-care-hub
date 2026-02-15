@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { LogOut, Users, Ticket, AlertTriangle, CheckCircle2, Plus, DollarSign, Building2, Bell, Settings, Sparkles, UserPlus, Vote, Shield, Wrench, List, Search, FileText, Mail, BookOpen, Download, Calendar } from "lucide-react";
+import { LogOut, Users, Ticket, AlertTriangle, CheckCircle2, Plus, DollarSign, Building2, Bell, Settings, Sparkles, UserPlus, Vote, Shield, Wrench, List, Search, FileText, Mail, BookOpen, Download, Calendar, BrainCircuit } from "lucide-react";
 import { toast } from "sonner";
 import { UnifiedCalendarWidget } from "@/components/UnifiedCalendarWidget";
 import { supabase } from "@/integrations/supabase/client";
@@ -273,6 +273,36 @@ export default function Painel() {
           </div>
         )}
 
+
+        {/* Insights IA */}
+        {(profile?.role === "admin" || profile?.role === "maintenance" || profile?.role === "agent") && (
+          <div className="mb-6">
+            <h3 className="mb-4 text-lg font-semibold flex items-center gap-2">
+              <BrainCircuit className="h-5 w-5 text-primary" />
+              Insights
+            </h3>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <Card 
+                className="cursor-pointer hover-lift group border-blue-200 dark:border-blue-800 hover:border-blue-400 dark:hover:border-blue-600 transition-colors"
+                onClick={() => navigate("/calendario-reservas")}
+              >
+                <CardHeader className="py-3 px-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center group-hover:bg-blue-500/20 transition-colors">
+                      <Calendar className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-sm">Calendário de Reservas</CardTitle>
+                      <CardDescription className="text-xs">
+                        iCal, disponibilidade e relatório IA
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+            </div>
+          </div>
+        )}
 
         {/* Ações de Criar */}
         {(profile?.role === "admin" || profile?.role === "maintenance" || profile?.role === "agent") && (
@@ -558,21 +588,7 @@ export default function Painel() {
                 </CardHeader>
               </Card>
 
-              <Card className="cursor-pointer hover-lift group border-transparent hover:border-primary/20" onClick={() => navigate("/calendario-reservas")}>
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center group-hover:bg-blue-500/20 transition-colors">
-                      <Calendar className="h-5 w-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-base">Calendário de Reservas</CardTitle>
-                      <CardDescription className="text-xs">
-                        iCal, disponibilidade e relatório IA
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-              </Card>
+              {/* Calendário de Reservas moved to Insights section */}
 
               <Card className="cursor-pointer hover-lift group border-transparent hover:border-primary/20" onClick={async () => {
                 try {

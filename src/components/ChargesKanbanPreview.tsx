@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, ArrowRight, MessageSquare, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
+import { DollarSign, ArrowRight, MessageSquare, ChevronRight, ChevronDown, ChevronUp, Package } from "lucide-react";
 import { differenceInDays, isPast } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 import { formatBRL } from "@/lib/format";
@@ -166,16 +166,26 @@ export function ChargesKanbanPreview() {
               </Badge>
             )}
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate(isOwner ? "/minhas-cobrancas" : "/gerenciar-cobrancas")}
-            className="h-7 text-xs text-green-600"
-          >
-            <span className="hidden sm:inline">Ver todas</span>
-            <span className="sm:hidden">Ver</span>
-            <ArrowRight className="ml-1 h-3 w-3" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/nova-cobranca?reposicao=true")}
+              className="h-7 text-xs gap-1"
+            >
+              <Package className="h-3 w-3" />
+              <span className="hidden sm:inline">Reposição</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate(isOwner ? "/minhas-cobrancas" : "/gerenciar-cobrancas")}
+              className="h-7 text-xs text-green-600"
+            >
+              <span className="hidden sm:inline">Ver</span>
+              <ArrowRight className="ml-1 h-3 w-3" />
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="px-4 pb-3 pt-0">
