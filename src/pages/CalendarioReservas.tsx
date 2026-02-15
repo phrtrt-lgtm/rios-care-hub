@@ -12,10 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   ArrowLeft, Calendar, Link2, Plus, RefreshCw, Trash2, Building2, 
-  Sparkles, ShoppingCart, AlertCircle, Clock, CheckCircle2, Loader2 
+  Sparkles, ShoppingCart, AlertCircle, Clock, CheckCircle2, Loader2,
+  Wrench, CalendarDays
 } from "lucide-react";
 import { toast } from "sonner";
-import { format, parseISO, differenceInDays } from "date-fns";
+import { format, parseISO, differenceInDays, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface IcalLink {
@@ -66,6 +67,22 @@ interface Alert {
   deadline: string;
 }
 
+interface PendingService {
+  id: string;
+  category: string;
+  description: string;
+  source: 'inspection' | 'ticket';
+  property_id: string;
+}
+
+interface PropertyServiceData {
+  property_id: string;
+  property_name: string;
+  property_address: string | null;
+  services: PendingService[];
+  available_windows: Array<{ start: string; end: string; days: number }>;
+}
+
 export default function CalendarioReservas() {
   const { profile } = useAuth();
   const navigate = useNavigate();
@@ -89,24 +106,125 @@ export default function CalendarioReservas() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [reportType, setReportType] = useState("all");
 
+  // Property services state
+  const [propertyServices, setPropertyServices] = useState<PropertyServiceData[]>([]);
+
+  // Calculate availability windows for properties that have reservations
+  const calculateAvailabilityWindows = useCallback((
+    propId: string, 
+    propReservations: Reservation[]
+  ): Array<{ start: string; end: string; days: number }> => {
+    const today = new Date().toISOString().split("T")[0];
+    const sixtyDays = format(addDays(new Date(), 60), "yyyy-MM-dd");
+    
+    const sorted = [...propReservations]
+      .filter(r => r.check_out >= today)
+      .sort((a, b) => a.check_in.localeCompare(b.check_in));
+    
+    const gaps: Array<{ start: string; end: string; days: number }> = [];
+    let cursor = today;
+    
+    for (const res of sorted) {
+      if (res.check_in > cursor) {
+        const days = differenceInDays(parseISO(res.check_in), parseISO(cursor));
+        if (days >= 1) {
+          gaps.push({ start: cursor, end: res.check_in, days });
+        }
+      }
+      if (res.check_out > cursor) cursor = res.check_out;
+    }
+    
+    if (cursor < sixtyDays) {
+      const days = differenceInDays(parseISO(sixtyDays), parseISO(cursor));
+      if (days >= 1) {
+        gaps.push({ start: cursor, end: sixtyDays, days });
+      }
+    }
+    
+    return gaps.slice(0, 5);
+  }, []);
+
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const [linksRes, reservationsRes, propertiesRes] = await Promise.all([
+      const [linksRes, reservationsRes, propertiesRes, inspectionItemsRes, ticketsRes] = await Promise.all([
         supabase.from("property_ical_links").select("*, property:property_id(name, address)"),
         supabase.from("reservations").select("*, property:property_id(name, address)").gte("check_out", new Date().toISOString().split("T")[0]).order("check_in"),
         supabase.from("properties").select("id, name, address").order("name"),
+        supabase.from("inspection_items").select("id, description, category, status, inspection:inspection_id(property_id)").in("status", ["pending", "management", "owner", "guest"]),
+        supabase.from("tickets").select("id, subject, description, property_id, kind").in("status", ["novo", "em_analise", "aguardando_info", "em_execucao"]),
       ]);
 
-      setIcalLinks((linksRes.data as any) || []);
-      setReservations((reservationsRes.data as any) || []);
-      setProperties(propertiesRes.data || []);
+      const links = (linksRes.data as any) || [];
+      const res = (reservationsRes.data as any) || [];
+      const props = propertiesRes.data || [];
+      
+      setIcalLinks(links);
+      setReservations(res);
+      setProperties(props);
+
+      // Build services per property (only for properties with iCal links)
+      const linkedPropertyIds = new Set(links.map((l: any) => l.property_id));
+      
+      const services: PendingService[] = [];
+      
+      // From inspection items
+      (inspectionItemsRes.data || []).forEach((item: any) => {
+        const propId = item.inspection?.property_id;
+        if (propId && linkedPropertyIds.has(propId)) {
+          services.push({
+            id: item.id,
+            category: item.category,
+            description: item.description,
+            source: 'inspection',
+            property_id: propId,
+          });
+        }
+      });
+      
+      // From tickets
+      (ticketsRes.data || []).forEach((t: any) => {
+        if (t.property_id && linkedPropertyIds.has(t.property_id)) {
+          services.push({
+            id: t.id,
+            category: t.kind || 'Manutenção',
+            description: t.subject,
+            source: 'ticket',
+            property_id: t.property_id,
+          });
+        }
+      });
+
+      // Group by property and calculate windows
+      const resByProp = res.reduce((acc: Record<string, Reservation[]>, r: Reservation) => {
+        if (!acc[r.property_id]) acc[r.property_id] = [];
+        acc[r.property_id].push(r);
+        return acc;
+      }, {} as Record<string, Reservation[]>);
+
+      const propServiceData: PropertyServiceData[] = [];
+      linkedPropertyIds.forEach((propId: string) => {
+        const prop = props.find((p) => p.id === propId);
+        const propServices = services.filter(s => s.property_id === propId);
+        if (propServices.length === 0) return;
+        
+        const windows = calculateAvailabilityWindows(propId, resByProp[propId] || []);
+        propServiceData.push({
+          property_id: propId,
+          property_name: prop?.name || "Propriedade",
+          property_address: prop?.address || null,
+          services: propServices,
+          available_windows: windows,
+        });
+      });
+      
+      setPropertyServices(propServiceData);
     } catch (err) {
       console.error("Error fetching data:", err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [calculateAvailabilityWindows]);
 
   useEffect(() => {
     fetchData();
@@ -324,13 +442,88 @@ export default function CalendarioReservas() {
                                 {differenceInDays(parseISO(res.check_out), parseISO(res.check_in))} noites
                               </div>
                             </div>
-                          );
+                           );
                         })}
                       </div>
                     </CardContent>
                   </Card>
                 );
               })
+            )}
+
+            {/* Serviços Pendentes com Datas Disponíveis */}
+            {propertyServices.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Wrench className="h-5 w-5 text-primary" />
+                  Serviços Pendentes & Datas Disponíveis
+                </h3>
+                {propertyServices.map((ps) => (
+                  <Card key={ps.property_id}>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <Building2 className="h-4 w-4 text-primary" />
+                        {ps.property_name}
+                        <Badge variant="secondary" className="text-xs ml-auto">
+                          {ps.services.length} serviço(s)
+                        </Badge>
+                      </CardTitle>
+                      {ps.property_address && (
+                        <CardDescription className="text-xs">{ps.property_address}</CardDescription>
+                      )}
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {/* Available windows */}
+                      {ps.available_windows.length > 0 && (
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1">
+                            <CalendarDays className="h-3 w-3" />
+                            Próximas janelas disponíveis
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {ps.available_windows.map((w, i) => (
+                              <Badge key={i} variant="outline" className="text-xs bg-green-500/10 text-green-700 dark:text-green-400 border-green-200 dark:border-green-500/20">
+                                {format(parseISO(w.start), "dd/MM")} → {format(parseISO(w.end), "dd/MM")}
+                                <span className="ml-1 opacity-70">({w.days}d)</span>
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {ps.available_windows.length === 0 && (
+                        <p className="text-xs text-destructive flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" />
+                          Sem janelas disponíveis nos próximos 60 dias
+                        </p>
+                      )}
+
+                      {/* Services grouped by category */}
+                      <div className="space-y-1.5">
+                        {Object.entries(
+                          ps.services.reduce<Record<string, PendingService[]>>((acc, s) => {
+                            if (!acc[s.category]) acc[s.category] = [];
+                            acc[s.category].push(s);
+                            return acc;
+                          }, {})
+                        ).map(([category, items]) => (
+                          <div key={category} className="p-2.5 rounded-lg border bg-muted/30">
+                            <p className="text-xs font-semibold mb-1">{category}</p>
+                            {items.map((item) => (
+                              <p key={item.id} className="text-xs text-muted-foreground flex items-start gap-1.5">
+                                <span className="text-primary mt-0.5">•</span>
+                                {item.description}
+                                {item.source === 'ticket' && (
+                                  <Badge variant="outline" className="text-[10px] ml-1 py-0">chamado</Badge>
+                                )}
+                              </p>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             )}
           </TabsContent>
 
