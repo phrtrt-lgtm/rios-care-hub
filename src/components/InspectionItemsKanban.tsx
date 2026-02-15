@@ -9,9 +9,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Wrench, GripVertical, Plus, Import, Check, ChevronDown, ChevronUp, AlertTriangle, Trash2, Send, Sparkles, Pencil, X } from 'lucide-react';
+import { Loader2, Wrench, GripVertical, Plus, Import, Check, ChevronDown, ChevronUp, AlertTriangle, Trash2, Send, Sparkles, Pencil, X, CheckCircle2, DollarSign } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { CreateMaintenanceFromInspectionDialog } from './CreateMaintenanceFromInspectionDialog';
+import { useNavigate } from 'react-router-dom';
 
 interface InspectionItem {
   id: string;
@@ -64,6 +65,7 @@ export function PropertyInspectionItemsKanban({
   isOwnerView = false,
   isAdmin = false,
 }: PropertyInspectionItemsKanbanProps) {
+  const navigate = useNavigate();
   const [items, setItems] = useState<InspectionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
@@ -77,6 +79,7 @@ export function PropertyInspectionItemsKanban({
   const [editingText, setEditingText] = useState('');
   const [editingCategory, setEditingCategory] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
+  const [completingItems, setCompletingItems] = useState(false);
 
   const CATEGORY_OPTIONS = CATEGORY_PATTERNS.map(p => ({ value: p.category, emoji: p.emoji }));
 
@@ -632,6 +635,61 @@ export function PropertyInspectionItemsKanban({
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Nova Manutenção ({selectedItems.size})
+                  </Button>
+                  <Button
+                    onClick={async () => {
+                      setCompletingItems(true);
+                      try {
+                        const { error } = await supabase
+                          .from('inspection_items')
+                          .update({ status: 'completed', completed_at: new Date().toISOString() })
+                          .in('id', Array.from(selectedItems));
+                        if (error) throw error;
+                        setItems(prev => prev.map(i => 
+                          selectedItems.has(i.id) 
+                            ? { ...i, status: 'completed' as const, completed_at: new Date().toISOString() } 
+                            : i
+                        ));
+                        toast.success(`${selectedItems.size} itens concluídos`);
+                        setSelectedItems(new Set());
+                      } catch (error) {
+                        console.error('Error completing items:', error);
+                        toast.error('Erro ao concluir itens');
+                      } finally {
+                        setCompletingItems(false);
+                      }
+                    }}
+                    size="sm"
+                    variant="success"
+                    disabled={completingItems}
+                  >
+                    {completingItems ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                    )}
+                    Concluir ({selectedItems.size})
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      const selectedItemsList = items.filter(item => selectedItems.has(item.id));
+                      const description = selectedItemsList
+                        .map(item => `${getCategoryEmoji(item.category)} ${item.category}: ${item.description}`)
+                        .join('\n');
+                      const title = selectedItemsList
+                        .map(item => {
+                          const desc = item.description.trim();
+                          return desc.charAt(0).toUpperCase() + desc.slice(1);
+                        })
+                        .join(' / ');
+                      // Navigate to new charge page with prefilled data
+                      navigate(`/nova-cobranca?owner_id=${ownerId}&property_id=${propertyId}&title=${encodeURIComponent(title.substring(0, 100))}&description=${encodeURIComponent(description)}`);
+                    }}
+                    size="sm"
+                    variant="warning"
+                  >
+                    <DollarSign className="h-4 w-4 mr-2" />
+                    Cobrar ({selectedItems.size})
                   </Button>
                   {isAdmin && (
                     <Button

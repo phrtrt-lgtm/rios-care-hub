@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ interface Property {
 
 export default function NovaCobranca() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { profile } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -39,10 +40,10 @@ export default function NovaCobranca() {
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [formData, setFormData] = useState({
-    owner_id: "",
-    property_id: "",
-    title: "",
-    description: "",
+    owner_id: searchParams.get("owner_id") || "",
+    property_id: searchParams.get("property_id") || "",
+    title: searchParams.get("title") || "",
+    description: searchParams.get("description") || "",
     category: "",
     amount_cents: "",
     management_contribution_cents: "",
@@ -58,6 +59,13 @@ export default function NovaCobranca() {
     }
     fetchOwners();
   }, [isTeamMember]);
+
+  // If owner_id comes from query params, load their properties
+  useEffect(() => {
+    if (formData.owner_id) {
+      fetchProperties(formData.owner_id);
+    }
+  }, []);
 
   const fetchOwners = async () => {
     const { data, error } = await supabase
