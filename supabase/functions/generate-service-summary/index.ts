@@ -224,7 +224,7 @@ REGRAS:
 - Considere janelas de disponibilidade reais (quando não há hóspede)
 - Responda APENAS com o JSON, sem texto adicional`;
 
-    const aiResponse = await fetch("https://lovable.dev/ai/chat", {
+    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
