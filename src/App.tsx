@@ -60,7 +60,7 @@ import ProtocoloTrabalho from "./pages/ProtocoloTrabalho";
 import DebugApp from "./pages/DebugApp";
 import Tutoriais from "./pages/Tutoriais";
 import CalendarioReservas from "./pages/CalendarioReservas";
-import Insights from "./pages/Insights";
+
 
 const queryClient = new QueryClient();
 
@@ -425,14 +425,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/insights"
-              element={
-                <ProtectedRoute allowedRoles={['admin', 'maintenance', 'agent']}>
-                  <Insights />
-                </ProtectedRoute>
-              }
-            />
+            
             <Route path="/debug-app" element={<DebugApp />} />
             <Route
               path="/tutoriais"

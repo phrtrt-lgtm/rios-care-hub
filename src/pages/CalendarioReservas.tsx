@@ -16,10 +16,10 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { 
   ArrowLeft, Calendar, Link2, Plus, RefreshCw, Trash2, Building2, 
   Sparkles, ShoppingCart, AlertCircle, Clock, CheckCircle2, Loader2,
-  Wrench, CalendarDays, Filter, SlidersHorizontal
+  Wrench, CalendarDays, Filter, SlidersHorizontal, BarChart3, ArrowUpDown, ArrowUp, ArrowDown, BrainCircuit
 } from "lucide-react";
 import { toast } from "sonner";
-import { format, parseISO, differenceInDays, addDays, eachDayOfInterval, isSameDay, startOfDay } from "date-fns";
+import { format, parseISO, differenceInDays, addDays, eachDayOfInterval, isSameDay, startOfDay, isWithinInterval, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface IcalLink {
@@ -98,6 +98,70 @@ export default function CalendarioReservas() {
 
   // Calendar view state
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
+
+  // Occupancy analysis state
+  type SortField = "name" | "vacant_days" | "occupancy";
+  type SortDir = "asc" | "desc";
+  const today = new Date();
+  const [occStartDate, setOccStartDate] = useState(format(startOfMonth(today), "yyyy-MM-dd"));
+  const [occEndDate, setOccEndDate] = useState(format(endOfMonth(today), "yyyy-MM-dd"));
+  const [sortField, setSortField] = useState<SortField>("vacant_days");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  const setOccPeriod = (months: number) => {
+    const start = subMonths(today, months - 1);
+    setOccStartDate(format(startOfMonth(start), "yyyy-MM-dd"));
+    setOccEndDate(format(endOfMonth(today), "yyyy-MM-dd"));
+  };
+
+  const occupancyData = useMemo(() => {
+    if (!properties.length) return [];
+    const start = parseISO(occStartDate);
+    const end = parseISO(occEndDate);
+    const totalDays = differenceInDays(end, start) + 1;
+    if (totalDays <= 0) return [];
+    const allDays = eachDayOfInterval({ start, end });
+
+    return properties.map((property) => {
+      const propRes = reservations.filter(r => r.property_id === property.id);
+      const occupiedDays = allDays.filter(day =>
+        propRes.some(r => {
+          const ci = parseISO(r.check_in);
+          const co = parseISO(r.check_out);
+          return isWithinInterval(day, { start: ci, end: co });
+        })
+      ).length;
+      const vacantDays = totalDays - occupiedDays;
+      const occupancyRate = totalDays > 0 ? (occupiedDays / totalDays) * 100 : 0;
+      return { property, totalDays, occupiedDays, vacantDays, occupancyRate, reservationCount: propRes.length, hasIcal: propRes.length > 0 };
+    });
+  }, [properties, reservations, occStartDate, occEndDate]);
+
+  const sortedOccData = useMemo(() => {
+    return [...occupancyData].sort((a, b) => {
+      let cmp = 0;
+      if (sortField === "name") cmp = a.property.name.localeCompare(b.property.name);
+      else if (sortField === "vacant_days") cmp = a.vacantDays - b.vacantDays;
+      else if (sortField === "occupancy") cmp = a.occupancyRate - b.occupancyRate;
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [occupancyData, sortField, sortDir]);
+
+  const occSummary = useMemo(() => {
+    const withIcal = occupancyData.filter(d => d.hasIcal);
+    const avgOcc = withIcal.length > 0 ? withIcal.reduce((s, d) => s + d.occupancyRate, 0) / withIcal.length : 0;
+    const worst = withIcal.length > 0 ? withIcal.reduce((w, d) => d.vacantDays > w.vacantDays ? d : w, withIcal[0]) : null;
+    const best = withIcal.length > 0 ? withIcal.reduce((b, d) => d.occupancyRate > b.occupancyRate ? d : b, withIcal[0]) : null;
+    return { withIcalCount: withIcal.length, avgOcc, worst, best };
+  }, [occupancyData]);
+
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortField(field); setSortDir(field === "name" ? "asc" : "desc"); }
+  };
+
+  const getOccColor = (rate: number) => rate >= 70 ? "text-green-600" : rate >= 40 ? "text-yellow-600" : "text-red-600";
+  const getProgressBg = (rate: number) => rate >= 70 ? "bg-green-500" : rate >= 40 ? "bg-yellow-500" : "bg-red-500";
   const [calendarMonth, setCalendarMonth] = useState(new Date());
 
   // Report state
@@ -421,6 +485,10 @@ export default function CalendarioReservas() {
             <TabsTrigger value="calendar">
               <Calendar className="h-4 w-4 mr-2" />
               Calendário
+            </TabsTrigger>
+            <TabsTrigger value="occupancy">
+              <BarChart3 className="h-4 w-4 mr-2" />
+              Ocupação
             </TabsTrigger>
             <TabsTrigger value="links">
               <Link2 className="h-4 w-4 mr-2" />
@@ -1003,6 +1071,130 @@ export default function CalendarioReservas() {
               </div>
             )}
           </TabsContent>
+
+          {/* Occupancy Tab */}
+          <TabsContent value="occupancy" className="space-y-4">
+            <Card>
+              <CardHeader className="py-3 px-4">
+                <CardTitle className="text-sm">Período de Análise</CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 pb-4 space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" onClick={() => { setOccStartDate(format(startOfMonth(today), "yyyy-MM-dd")); setOccEndDate(format(endOfMonth(today), "yyyy-MM-dd")); }}>Este mês</Button>
+                  <Button size="sm" variant="outline" onClick={() => setOccPeriod(3)}>3 meses</Button>
+                  <Button size="sm" variant="outline" onClick={() => setOccPeriod(6)}>6 meses</Button>
+                  <Button size="sm" variant="outline" onClick={() => setOccPeriod(12)}>12 meses</Button>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Início</Label>
+                    <Input type="date" value={occStartDate} onChange={(e) => setOccStartDate(e.target.value)} className="h-9" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Fim</Label>
+                    <Input type="date" value={occEndDate} onChange={(e) => setOccEndDate(e.target.value)} className="h-9" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <Card className="border-l-4 border-l-blue-500">
+                <CardContent className="py-3 px-4">
+                  <p className="text-xs text-muted-foreground">Imóveis c/ iCal</p>
+                  <p className="text-2xl font-bold">{occSummary.withIcalCount}</p>
+                  <p className="text-xs text-muted-foreground">de {properties.length}</p>
+                </CardContent>
+              </Card>
+              <Card className="border-l-4 border-l-yellow-500">
+                <CardContent className="py-3 px-4">
+                  <p className="text-xs text-muted-foreground">Ocupação Média</p>
+                  <p className={`text-2xl font-bold ${getOccColor(occSummary.avgOcc)}`}>{occSummary.avgOcc.toFixed(0)}%</p>
+                </CardContent>
+              </Card>
+              <Card className="border-l-4 border-l-green-500">
+                <CardContent className="py-3 px-4">
+                  <p className="text-xs text-muted-foreground">Melhor Imóvel</p>
+                  <p className="text-sm font-bold truncate">{occSummary.best?.property.name || "-"}</p>
+                  <p className="text-xs text-green-600">{occSummary.best?.occupancyRate.toFixed(0)}% ocupado</p>
+                </CardContent>
+              </Card>
+              <Card className="border-l-4 border-l-red-500">
+                <CardContent className="py-3 px-4">
+                  <p className="text-xs text-muted-foreground">Mais Vago</p>
+                  <p className="text-sm font-bold truncate">{occSummary.worst?.property.name || "-"}</p>
+                  <p className="text-xs text-red-600">{occSummary.worst?.vacantDays || 0} dias vagos</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card>
+              <CardHeader className="py-3 px-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm">Dias Vagos por Imóvel</CardTitle>
+                  <Badge variant="secondary" className="text-xs">
+                    {differenceInDays(parseISO(occEndDate), parseISO(occStartDate)) + 1} dias no período
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="px-0 pb-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/50">
+                      <tr>
+                        <th className="text-left p-3">
+                          <button className="flex items-center gap-1 font-medium" onClick={() => toggleSort("name")}>
+                            Imóvel
+                            {sortField === "name" ? (sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 text-muted-foreground" />}
+                          </button>
+                        </th>
+                        <th className="text-center p-3">
+                          <button className="flex items-center gap-1 font-medium mx-auto" onClick={() => toggleSort("occupancy")}>
+                            Ocupação
+                            {sortField === "occupancy" ? (sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 text-muted-foreground" />}
+                          </button>
+                        </th>
+                        <th className="text-center p-3">
+                          <button className="flex items-center gap-1 font-medium mx-auto" onClick={() => toggleSort("vacant_days")}>
+                            Dias Vagos
+                            {sortField === "vacant_days" ? (sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 text-muted-foreground" />}
+                          </button>
+                        </th>
+                        <th className="text-center p-3 hidden sm:table-cell">Reservas</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sortedOccData.map((item) => (
+                        <tr key={item.property.id} className="border-t hover:bg-accent/50 transition-colors">
+                          <td className="p-3">
+                            <div className="flex items-center gap-2">
+                              <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                              <span className="font-medium truncate">{item.property.name}</span>
+                              {!item.hasIcal && <Badge variant="outline" className="text-[10px] shrink-0">Sem iCal</Badge>}
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <div className="flex flex-col items-center gap-1">
+                              <span className={`text-sm font-bold ${getOccColor(item.occupancyRate)}`}>{item.occupancyRate.toFixed(0)}%</span>
+                              <div className="w-full max-w-[80px] h-1.5 bg-muted rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full ${getProgressBg(item.occupancyRate)}`} style={{ width: `${item.occupancyRate}%` }} />
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-3 text-center">
+                            <span className={`font-bold ${item.vacantDays > item.totalDays * 0.5 ? "text-red-600" : "text-foreground"}`}>{item.vacantDays}</span>
+                            <span className="text-muted-foreground text-xs">/{item.totalDays}</span>
+                          </td>
+                          <td className="p-3 text-center hidden sm:table-cell text-muted-foreground">{item.reservationCount}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
         </Tabs>
 
         {/* Add iCal Dialog */}
