@@ -448,13 +448,13 @@ export default function AdminVistoriasImovel() {
               </div>
             </Card>
 
-            {/* Problem Items Kanban */}
-            {problemCount > 0 && statusFilter !== "arquivadas" && (
+            {/* Problem Items Kanban - show when there are problem inspections OR inspections with AI summaries */}
+            {statusFilter !== "arquivadas" && activeInspections.some(i => i.notes === 'NÃO' || i.transcript_summary) && (
               <PropertyInspectionItemsKanban
                 propertyId={property.id}
                 ownerId={property.owner_id}
                 inspections={activeInspections
-                  .filter(i => i.notes === 'NÃO' && i.transcript_summary)
+                  .filter(i => i.transcript_summary)
                   .map(i => ({ id: i.id, transcript_summary: i.transcript_summary || null }))}
                 isAdmin={profile?.role === 'admin'}
               />
