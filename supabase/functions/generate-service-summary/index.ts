@@ -35,12 +35,17 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json().catch(() => ({}));
-    const reportType = body.report_type || "all"; // 'pintura', 'hidraulica', 'eletrica', 'all'
+    const reportType = body.report_type || "all";
+    const propertyIds = body.property_ids || null; // optional array of property IDs
+    const sources = body.sources || ["inspection", "ticket"]; // filter by source
+    const sections = body.sections || ["services", "availability", "shopping", "alerts"];
 
     // 1. Get all properties with addresses
-    const { data: properties } = await supabase
-      .from("properties")
-      .select("id, name, address");
+    let propsQuery = supabase.from("properties").select("id, name, address");
+    if (propertyIds && propertyIds.length > 0) {
+      propsQuery = propsQuery.in("id", propertyIds);
+    }
+    const { data: properties } = await propsQuery;
 
     if (!properties || properties.length === 0) {
       return new Response(
@@ -49,7 +54,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const propertyIds = properties.map((p) => p.id);
+    const allPropertyIds = properties.map((p) => p.id);
 
     // 2. Get upcoming reservations (next 60 days) to find availability gaps
     const today = new Date().toISOString().split("T")[0];
@@ -60,26 +65,31 @@ Deno.serve(async (req) => {
     const { data: reservations } = await supabase
       .from("reservations")
       .select("property_id, check_in, check_out, guest_name")
-      .in("property_id", propertyIds)
+      .in("property_id", allPropertyIds)
       .gte("check_out", today)
       .lte("check_in", sixtyDays)
       .order("check_in");
 
     // 3. Get open maintenance tickets (pending services)
-    let ticketQuery = supabase
-      .from("tickets")
-      .select("id, subject, description, property_id, status, priority, kind")
-      .in("property_id", propertyIds)
-      .in("status", ["aberto", "em_andamento", "aguardando_proprietario"]);
+    let tickets: any[] = [];
+    if (sources.includes("ticket")) {
+      let ticketQuery = supabase
+        .from("tickets")
+        .select("id, subject, description, property_id, status, priority, kind")
+        .in("property_id", allPropertyIds)
+        .in("status", ["novo", "em_analise", "aguardando_info", "em_execucao"]);
 
-    const { data: tickets } = await ticketQuery;
+      const { data } = await ticketQuery;
+      tickets = data || [];
+    }
 
     // 4. Get open charges with service types (maintenance needs)
     let chargeQuery = supabase
       .from("charges")
       .select("id, title, service_type, property_id, status, amount_cents, description")
-      .in("property_id", propertyIds)
-      .in("status", ["pendente", "atrasado"]);
+      .in("property_id", allPropertyIds)
+      .not("paid_at", "is", null)
+      .is("archived_at", null);
 
     if (reportType !== "all") {
       chargeQuery = chargeQuery.eq("service_type", reportType);
@@ -87,17 +97,36 @@ Deno.serve(async (req) => {
 
     const { data: charges } = await chargeQuery;
 
+    // Also get unpaid charges (no paid_at)
+    let unpaidChargeQuery = supabase
+      .from("charges")
+      .select("id, title, service_type, property_id, status, amount_cents, description")
+      .in("property_id", allPropertyIds)
+      .is("paid_at", null)
+      .is("archived_at", null);
+
+    if (reportType !== "all") {
+      unpaidChargeQuery = unpaidChargeQuery.eq("service_type", reportType);
+    }
+
+    const { data: unpaidCharges } = await unpaidChargeQuery;
+    const allCharges = [...(charges || []), ...(unpaidCharges || [])];
+
     // 5. Get inspection items that need attention
-    const { data: inspectionItems } = await supabase
-      .from("inspection_items")
-      .select(`
-        id, description, category, status,
-        inspection:inspection_id (
-          property_id,
-          created_at
-        )
-      `)
-      .in("status", ["pendente", "em_andamento"]);
+    let inspectionItems: any[] = [];
+    if (sources.includes("inspection")) {
+      const { data } = await supabase
+        .from("inspection_items")
+        .select(`
+          id, description, category, status,
+          inspection:inspection_id (
+            property_id,
+            created_at
+          )
+        `)
+        .in("status", ["pending", "management", "owner", "guest"]);
+      inspectionItems = data || [];
+    }
 
     // 6. Calculate availability windows per property
     const propertyAvailability: Record<string, Array<{ start: string; end: string }>> = {};
@@ -132,7 +161,7 @@ Deno.serve(async (req) => {
 
     for (const prop of properties) {
       const propTickets = (tickets || []).filter((t) => t.property_id === prop.id);
-      const propCharges = (charges || []).filter((c) => c.property_id === prop.id);
+      const propCharges = allCharges.filter((c) => c.property_id === prop.id);
       const propInspectionItems = (inspectionItems || []).filter(
         (item: any) => item.inspection?.property_id === prop.id
       );
@@ -174,8 +203,20 @@ ${propInspectionItems.map((item: any) => `- [${item.category}] ${item.descriptio
       ? "TODOS os tipos de serviço"
       : `o tipo de serviço: ${reportType}`;
 
+    const sectionsToInclude = sections.join(", ");
+    console.log("Report context:", {
+      properties: properties.length,
+      tickets: tickets.length,
+      charges: allCharges.length,
+      inspectionItems: inspectionItems.length,
+      reportType,
+      sources,
+      sections,
+    });
+
     const aiPrompt = `Você é um assistente de gestão de propriedades de aluguel por temporada. 
 Analise os dados abaixo de todas as unidades e gere um relatório estruturado para ${serviceTypeFilter}.
+Seções solicitadas: ${sectionsToInclude}
 
 DADOS DAS UNIDADES:
 ${contextParts.join("\n---\n")}
