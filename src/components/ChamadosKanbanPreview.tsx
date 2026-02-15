@@ -234,6 +234,7 @@ export function ChamadosKanbanPreview() {
         ticketId={chatTicket?.id || null}
         ticketSubject={chatTicket?.subject || ""}
         propertyName={chatTicket?.property?.name || "Sem unidade"}
+        onTicketUpdated={fetchTickets}
       />
     </Card>
   );

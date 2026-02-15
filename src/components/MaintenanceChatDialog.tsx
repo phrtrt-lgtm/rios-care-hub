@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useMaintenanceChat, ChatMessage, ChatAttachment } from "@/hooks/useMaintenanceChat";
 import { useAuth } from "@/hooks/useAuth";
 import { useReadReceipts } from "@/hooks/useReadReceipts";
+import { useQueryClient } from "@tanstack/react-query";
 import { AttachmentBubble } from "@/components/AttachmentBubble";
 import { MediaGallery } from "@/components/MediaGallery";
 import { VoiceToTextInput } from "@/components/VoiceToTextInput";
@@ -52,6 +53,7 @@ export function MaintenanceChatDialog({
   onTicketUpdated,
 }: MaintenanceChatDialogProps) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user, profile } = useAuth();
   const { messages, loading, sending, typingUsers, allMediaItems, sendMessage, setTyping } = useMaintenanceChat(
@@ -132,6 +134,12 @@ export function MaintenanceChatDialog({
       if (error) throw error;
       setTicketDetails(prev => prev ? { ...prev, status: 'concluido' } : prev);
       sonnerToast.success('Chamado concluído!');
+      // Invalidate all ticket/maintenance queries to update lists in real-time
+      queryClient.invalidateQueries({ queryKey: ["maintenance-tickets-kanban"] });
+      queryClient.invalidateQueries({ queryKey: ["owner-tickets-kanban"] });
+      queryClient.invalidateQueries({ queryKey: ["maintenance-list-view"] });
+      queryClient.invalidateQueries({ queryKey: ["completed-maintenances"] });
+      queryClient.invalidateQueries({ queryKey: ["all-tickets"] });
       onTicketUpdated?.();
     } catch (error) {
       console.error('Error completing ticket:', error);
