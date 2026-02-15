@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { LogOut, Users, Ticket, AlertTriangle, CheckCircle2, Plus, DollarSign, Building2, Bell, Settings, Sparkles, UserPlus, Vote, Shield, Wrench, List, Search, FileText, Mail, BookOpen, Download } from "lucide-react";
+import { LogOut, Users, Ticket, AlertTriangle, CheckCircle2, Plus, DollarSign, Building2, Bell, Settings, Sparkles, UserPlus, Vote, Shield, Wrench, List, Search, FileText, Mail, BookOpen, Download, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { UnifiedCalendarWidget } from "@/components/UnifiedCalendarWidget";
 import { supabase } from "@/integrations/supabase/client";
@@ -552,6 +552,22 @@ export default function Painel() {
                       <CardTitle className="text-base">Gerenciar Unidades</CardTitle>
                       <CardDescription className="text-xs">
                         Cadastrar e gerenciar propriedades
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+
+              <Card className="cursor-pointer hover-lift group border-transparent hover:border-primary/20" onClick={() => navigate("/calendario-reservas")}>
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center group-hover:bg-blue-500/20 transition-colors">
+                      <Calendar className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">Calendário de Reservas</CardTitle>
+                      <CardDescription className="text-xs">
+                        iCal, disponibilidade e relatório IA
                       </CardDescription>
                     </div>
                   </div>

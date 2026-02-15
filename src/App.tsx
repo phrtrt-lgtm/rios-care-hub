@@ -59,6 +59,7 @@ import ResumoDiario from "./pages/ResumoDiario";
 import ProtocoloTrabalho from "./pages/ProtocoloTrabalho";
 import DebugApp from "./pages/DebugApp";
 import Tutoriais from "./pages/Tutoriais";
+import CalendarioReservas from "./pages/CalendarioReservas";
 
 const queryClient = new QueryClient();
 
@@ -412,6 +413,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['owner', 'agent', 'admin', 'maintenance']}>
                   <ResumoDiario />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/calendario-reservas"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'maintenance', 'agent']}>
+                  <CalendarioReservas />
                 </ProtectedRoute>
               }
             />
