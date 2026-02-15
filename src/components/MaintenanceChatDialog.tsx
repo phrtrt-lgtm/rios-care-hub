@@ -16,13 +16,14 @@ import OwnerMaintenanceDecision from "@/components/OwnerMaintenanceDecision";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Send, Loader2, MessageSquare, Building, ExternalLink, Paperclip, X, Sparkles } from "lucide-react";
+import { Send, Loader2, MessageSquare, Building, ExternalLink, Paperclip, X, Sparkles, CheckCircle2, DollarSign } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { ResponseTemplatesPicker } from "@/components/ResponseTemplatesPicker";
 import { ConversationSummaryButton } from "@/components/ConversationSummaryButton";
 import { processFileForUpload } from "@/lib/processVideoForUpload";
 import { NativeMediaPicker } from "@/components/NativeMediaPicker";
+import { toast as sonnerToast } from "sonner";
 
 interface MaintenanceChatDialogProps {
   open: boolean;
@@ -30,6 +31,7 @@ interface MaintenanceChatDialogProps {
   ticketId: string | null;
   ticketSubject?: string;
   propertyName?: string;
+  onTicketUpdated?: () => void;
 }
 
 type OwnerDecisionTicket = {
@@ -47,6 +49,7 @@ export function MaintenanceChatDialog({
   ticketId,
   ticketSubject,
   propertyName,
+  onTicketUpdated,
 }: MaintenanceChatDialogProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -62,6 +65,8 @@ export function MaintenanceChatDialog({
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryStartIndex, setGalleryStartIndex] = useState(0);
   const [decisionTicket, setDecisionTicket] = useState<OwnerDecisionTicket | null>(null);
+  const [ticketDetails, setTicketDetails] = useState<{ owner_id: string; property_id: string | null; status: string; description: string } | null>(null);
+  const [completingTicket, setCompletingTicket] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -98,6 +103,49 @@ export function MaintenanceChatDialog({
     if (open) fetchDecisionTicket();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, ticketId, isTeamMember]);
+
+  // Fetch ticket details for action buttons
+  useEffect(() => {
+    if (!open || !ticketId || !isTeamMember) {
+      setTicketDetails(null);
+      return;
+    }
+    const fetchDetails = async () => {
+      const { data } = await supabase
+        .from('tickets')
+        .select('owner_id, property_id, status, description')
+        .eq('id', ticketId)
+        .maybeSingle();
+      if (data) setTicketDetails(data);
+    };
+    fetchDetails();
+  }, [open, ticketId, isTeamMember]);
+
+  const handleCompleteTicket = async () => {
+    if (!ticketId) return;
+    setCompletingTicket(true);
+    try {
+      const { error } = await supabase
+        .from('tickets')
+        .update({ status: 'concluido' })
+        .eq('id', ticketId);
+      if (error) throw error;
+      setTicketDetails(prev => prev ? { ...prev, status: 'concluido' } : prev);
+      sonnerToast.success('Chamado concluído!');
+      onTicketUpdated?.();
+    } catch (error) {
+      console.error('Error completing ticket:', error);
+      sonnerToast.error('Erro ao concluir chamado');
+    } finally {
+      setCompletingTicket(false);
+    }
+  };
+
+  const handleCreateCharge = () => {
+    if (!ticketId || !ticketDetails) return;
+    onOpenChange(false);
+    navigate(`/nova-cobranca?owner_id=${ticketDetails.owner_id}&property_id=${ticketDetails.property_id || ''}&title=${encodeURIComponent((ticketSubject || '').substring(0, 100))}&description=${encodeURIComponent(ticketDetails.description || '')}`);
+  };
 
   // Read receipts for messages
   const messageIds = useMemo(() => messages.map(m => m.id), [messages]);
@@ -407,6 +455,40 @@ export function MaintenanceChatDialog({
                   </Button>
                 </div>
               </div>
+              {/* Team action buttons */}
+              {isTeamMember && ticketDetails && ticketDetails.status !== 'concluido' && ticketDetails.status !== 'cancelado' && (
+                <div className="flex items-center gap-1.5 mt-1.5">
+                  <Button
+                    variant="success"
+                    size="sm"
+                    className="h-7 text-xs px-2"
+                    onClick={handleCompleteTicket}
+                    disabled={completingTicket}
+                  >
+                    {completingTicket ? (
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                    )}
+                    Concluir
+                  </Button>
+                  <Button
+                    variant="warning"
+                    size="sm"
+                    className="h-7 text-xs px-2"
+                    onClick={handleCreateCharge}
+                  >
+                    <DollarSign className="h-3 w-3 mr-1" />
+                    Cobrar
+                  </Button>
+                </div>
+              )}
+              {isTeamMember && ticketDetails?.status === 'concluido' && (
+                <Badge variant="secondary" className="mt-1.5 bg-green-500/20 text-green-700 dark:text-green-400 text-xs">
+                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                  Concluído
+                </Badge>
+              )}
             </div>
           </DialogHeader>
 
