@@ -39,16 +39,27 @@ export default function NovaCobranca() {
   const [attachments, setAttachments] = useState<File[]>([]);
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const isReposicao = searchParams.get("reposicao") === "true";
+
   const [formData, setFormData] = useState({
     owner_id: searchParams.get("owner_id") || "",
     property_id: searchParams.get("property_id") || "",
-    title: searchParams.get("title") || "",
+    title: searchParams.get("title") || (isReposicao ? "Reposição de Item" : ""),
     description: searchParams.get("description") || "",
-    category: "",
+    category: isReposicao ? "itens" : "",
     amount_cents: "",
     management_contribution_cents: "",
     due_date: "",
   });
+
+  // Auto-sync management contribution = amount when reposicao mode
+  const handleAmountChange = (value: string) => {
+    if (isReposicao) {
+      setFormData({ ...formData, amount_cents: value, management_contribution_cents: value });
+    } else {
+      setFormData({ ...formData, amount_cents: value });
+    }
+  };
 
   const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance';
 
@@ -250,7 +261,12 @@ export default function NovaCobranca() {
       <main className="container mx-auto px-4 py-8 max-w-2xl">
         <Card>
           <CardHeader>
-            <CardTitle>Nova Cobrança</CardTitle>
+            <CardTitle>{isReposicao ? "Reposição de Item" : "Nova Cobrança"}</CardTitle>
+            {isReposicao && (
+              <p className="text-sm text-muted-foreground">
+                Registre a compra de itens para o imóvel. O aporte da gestão cobre 100% automaticamente.
+              </p>
+            )}
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -380,7 +396,7 @@ export default function NovaCobranca() {
                     step="0.01"
                     min="0"
                     value={formData.amount_cents}
-                    onChange={(e) => setFormData({ ...formData, amount_cents: e.target.value })}
+                    onChange={(e) => handleAmountChange(e.target.value)}
                     placeholder="0.00"
                     required
                   />
