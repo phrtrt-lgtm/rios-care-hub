@@ -10,10 +10,11 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
   ArrowLeft, Calendar, Link2, Plus, RefreshCw, Trash2, Building2, 
   Sparkles, ShoppingCart, AlertCircle, Clock, CheckCircle2, Loader2,
-  Wrench, CalendarDays
+  Wrench, CalendarDays, Filter, SlidersHorizontal
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, parseISO, differenceInDays, addDays } from "date-fns";
@@ -105,6 +106,12 @@ export default function CalendarioReservas() {
   const [shoppingLists, setShoppingLists] = useState<ShoppingItem[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [reportType, setReportType] = useState("all");
+
+  // Report customization
+  const [selectedProperties, setSelectedProperties] = useState<string[]>([]);
+  const [selectedSources, setSelectedSources] = useState<string[]>(["inspection", "ticket"]);
+  const [showSections, setShowSections] = useState<string[]>(["services", "availability", "shopping", "alerts"]);
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
 
   // Property services state
   const [propertyServices, setPropertyServices] = useState<PropertyServiceData[]>([]);
@@ -300,7 +307,12 @@ export default function CalendarioReservas() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session?.access_token}`,
           },
-          body: JSON.stringify({ report_type: reportType }),
+          body: JSON.stringify({ 
+            report_type: reportType,
+            property_ids: selectedProperties.length > 0 ? selectedProperties : undefined,
+            sources: selectedSources,
+            sections: showSections,
+          }),
         }
       );
 
@@ -609,46 +621,182 @@ export default function CalendarioReservas() {
           <TabsContent value="reports" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Gerar Relatório Inteligente</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <SlidersHorizontal className="h-4 w-4" />
+                  Personalizar Relatório
+                </CardTitle>
                 <CardDescription className="text-xs">
-                  A IA analisa reservas, chamados e vistorias para gerar um resumo por tipo de serviço
+                  Configure os filtros antes de gerar o relatório com IA
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex gap-3">
-                  <div className="flex-1">
-                    <Label className="text-xs">Tipo de Serviço</Label>
-                    <Select value={reportType} onValueChange={setReportType}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos os tipos</SelectItem>
-                        <SelectItem value="Hidráulica">Hidráulica</SelectItem>
-                        <SelectItem value="Elétrica">Elétrica</SelectItem>
-                        <SelectItem value="Marcenaria">Marcenaria</SelectItem>
-                        <SelectItem value="Itens">Itens</SelectItem>
-                        <SelectItem value="Estrutural">Estrutural</SelectItem>
-                        <SelectItem value="Refrigeração">Refrigeração</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex items-end">
-                    <Button onClick={handleGenerateReport} disabled={generating}>
-                      {generating ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <Sparkles className="h-4 w-4 mr-2" />
-                      )}
-                      {generating ? "Gerando..." : "Gerar Relatório"}
-                    </Button>
-                  </div>
+                {/* Service Type Filter */}
+                <div>
+                  <Label className="text-xs font-medium">Tipo de Serviço</Label>
+                  <Select value={reportType} onValueChange={setReportType}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os tipos</SelectItem>
+                      <SelectItem value="Hidráulica">Hidráulica</SelectItem>
+                      <SelectItem value="Elétrica">Elétrica</SelectItem>
+                      <SelectItem value="Marcenaria">Marcenaria</SelectItem>
+                      <SelectItem value="Itens">Itens</SelectItem>
+                      <SelectItem value="Estrutural">Estrutural</SelectItem>
+                      <SelectItem value="Refrigeração">Refrigeração</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+
+                {/* Advanced filters toggle */}
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-xs text-muted-foreground px-0 h-auto"
+                  onClick={() => setFiltersExpanded(!filtersExpanded)}
+                >
+                  <Filter className="h-3 w-3 mr-1" />
+                  {filtersExpanded ? "Ocultar filtros avançados" : "Filtros avançados"}
+                </Button>
+
+                {filtersExpanded && (
+                  <div className="space-y-4 p-3 rounded-lg border bg-muted/30">
+                    {/* Property Filter */}
+                    <div>
+                      <Label className="text-xs font-medium mb-2 block">Imóveis</Label>
+                      <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                        <div className="flex items-center gap-2">
+                          <Checkbox 
+                            id="all-properties"
+                            checked={selectedProperties.length === 0}
+                            onCheckedChange={() => setSelectedProperties([])}
+                          />
+                          <label htmlFor="all-properties" className="text-xs font-medium cursor-pointer">
+                            Todos os imóveis
+                          </label>
+                        </div>
+                        {properties.map((p) => (
+                          <div key={p.id} className="flex items-center gap-2">
+                            <Checkbox 
+                              id={`prop-${p.id}`}
+                              checked={selectedProperties.includes(p.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedProperties(prev => [...prev, p.id]);
+                                } else {
+                                  setSelectedProperties(prev => prev.filter(id => id !== p.id));
+                                }
+                              }}
+                            />
+                            <label htmlFor={`prop-${p.id}`} className="text-xs cursor-pointer">
+                              {p.name}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Source Filter */}
+                    <div>
+                      <Label className="text-xs font-medium mb-2 block">Fonte dos Itens</Label>
+                      <div className="flex flex-wrap gap-3">
+                        <div className="flex items-center gap-2">
+                          <Checkbox 
+                            id="source-inspection"
+                            checked={selectedSources.includes("inspection")}
+                            onCheckedChange={(checked) => {
+                              if (checked) setSelectedSources(prev => [...prev, "inspection"]);
+                              else setSelectedSources(prev => prev.filter(s => s !== "inspection"));
+                            }}
+                          />
+                          <label htmlFor="source-inspection" className="text-xs cursor-pointer">
+                            Itens de Vistoria
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Checkbox 
+                            id="source-ticket"
+                            checked={selectedSources.includes("ticket")}
+                            onCheckedChange={(checked) => {
+                              if (checked) setSelectedSources(prev => [...prev, "ticket"]);
+                              else setSelectedSources(prev => prev.filter(s => s !== "ticket"));
+                            }}
+                          />
+                          <label htmlFor="source-ticket" className="text-xs cursor-pointer">
+                            Tickets de Manutenção
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Sections Filter */}
+                    <div>
+                      <Label className="text-xs font-medium mb-2 block">Seções do Relatório</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { id: "services", label: "Serviços Pendentes" },
+                          { id: "availability", label: "Datas Disponíveis" },
+                          { id: "shopping", label: "Lista de Compras" },
+                          { id: "alerts", label: "Alertas" },
+                        ].map((section) => (
+                          <div key={section.id} className="flex items-center gap-2">
+                            <Checkbox 
+                              id={`section-${section.id}`}
+                              checked={showSections.includes(section.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) setShowSections(prev => [...prev, section.id]);
+                                else setShowSections(prev => prev.filter(s => s !== section.id));
+                              }}
+                            />
+                            <label htmlFor={`section-${section.id}`} className="text-xs cursor-pointer">
+                              {section.label}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Generate button */}
+                <Button onClick={handleGenerateReport} disabled={generating} className="w-full">
+                  {generating ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-4 w-4 mr-2" />
+                  )}
+                  {generating ? "Gerando..." : "Gerar Relatório"}
+                </Button>
+
+                {/* Active filters summary */}
+                {(selectedProperties.length > 0 || reportType !== "all" || selectedSources.length < 2 || showSections.length < 4) && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {reportType !== "all" && (
+                      <Badge variant="secondary" className="text-xs">{reportType}</Badge>
+                    )}
+                    {selectedProperties.length > 0 && (
+                      <Badge variant="secondary" className="text-xs">
+                        {selectedProperties.length} imóvel(is)
+                      </Badge>
+                    )}
+                    {selectedSources.length === 1 && (
+                      <Badge variant="secondary" className="text-xs">
+                        Só {selectedSources[0] === "inspection" ? "vistorias" : "tickets"}
+                      </Badge>
+                    )}
+                    {showSections.length < 4 && (
+                      <Badge variant="secondary" className="text-xs">
+                        {showSections.length} seção(ões)
+                      </Badge>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
             {/* Alerts */}
-            {alerts.length > 0 && (
+            {showSections.includes("alerts") && alerts.length > 0 && (
               <Card className="border-yellow-200 dark:border-yellow-500/20">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base flex items-center gap-2 text-yellow-600">
@@ -673,7 +821,7 @@ export default function CalendarioReservas() {
             )}
 
             {/* Service Summaries */}
-            {serviceSummaries.length > 0 && (
+            {showSections.includes("services") && serviceSummaries.length > 0 && (
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-primary" />
@@ -731,7 +879,7 @@ export default function CalendarioReservas() {
             )}
 
             {/* Shopping Lists */}
-            {shoppingLists.length > 0 && (
+            {showSections.includes("shopping") && shoppingLists.length > 0 && (
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold flex items-center gap-2">
                   <ShoppingCart className="h-5 w-5 text-primary" />
