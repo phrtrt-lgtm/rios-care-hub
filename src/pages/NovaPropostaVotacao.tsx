@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { goBack } from "@/lib/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -387,7 +388,7 @@ export default function NovaPropostaVotacao() {
       <div className="max-w-3xl mx-auto">
         <Button
           variant="ghost"
-          onClick={() => navigate(-1)}
+          onClick={() => goBack(navigate)}
           className="mb-4"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -830,7 +831,7 @@ export default function NovaPropostaVotacao() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => navigate(-1)}
+                    onClick={() => goBack(navigate)}
                     className="flex-1"
                   >
                     Cancelar

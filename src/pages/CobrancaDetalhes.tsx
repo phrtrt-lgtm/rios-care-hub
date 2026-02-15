@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { goBack } from "@/lib/navigation";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useReadReceipts } from "@/hooks/useReadReceipts";
@@ -897,7 +898,7 @@ export default function CobrancaDetalhes() {
         description: "A cobrança foi excluída com sucesso",
       });
 
-      navigate(-1);
+      goBack(navigate);
     } catch (error: any) {
       toast({
         title: "Erro ao excluir cobrança",
