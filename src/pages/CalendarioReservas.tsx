@@ -61,13 +61,6 @@ interface ShoppingItem {
   notes: string;
 }
 
-interface Alert {
-  type: string;
-  property_name: string;
-  message: string;
-  deadline: string;
-}
-
 interface PendingService {
   id: string;
   category: string;
@@ -104,13 +97,12 @@ export default function CalendarioReservas() {
   // Report state
   const [serviceSummaries, setServiceSummaries] = useState<ServiceSummary[]>([]);
   const [shoppingLists, setShoppingLists] = useState<ShoppingItem[]>([]);
-  const [alerts, setAlerts] = useState<Alert[]>([]);
   const [reportType, setReportType] = useState("all");
 
   // Report customization
   const [selectedProperties, setSelectedProperties] = useState<string[]>([]);
   const [selectedSources, setSelectedSources] = useState<string[]>(["inspection", "ticket"]);
-  const [showSections, setShowSections] = useState<string[]>(["services", "availability", "shopping", "alerts"]);
+  const [showSections, setShowSections] = useState<string[]>(["services", "availability", "shopping"]);
   const [filtersExpanded, setFiltersExpanded] = useState(false);
 
   // Property services state
@@ -235,6 +227,10 @@ export default function CalendarioReservas() {
 
   useEffect(() => {
     fetchData();
+    return () => {
+      setServiceSummaries([]);
+      setShoppingLists([]);
+    };
   }, [fetchData]);
 
   const handleAddLink = async () => {
@@ -321,7 +317,6 @@ export default function CalendarioReservas() {
 
       setServiceSummaries(data.service_summaries || []);
       setShoppingLists(data.shopping_lists || []);
-      setAlerts(data.alerts || []);
       toast.success("Relatório gerado com sucesso!");
     } catch (err: any) {
       toast.error("Erro ao gerar relatório: " + err.message);
@@ -738,7 +733,6 @@ export default function CalendarioReservas() {
                           { id: "services", label: "Serviços Pendentes" },
                           { id: "availability", label: "Datas Disponíveis" },
                           { id: "shopping", label: "Lista de Compras" },
-                          { id: "alerts", label: "Alertas" },
                         ].map((section) => (
                           <div key={section.id} className="flex items-center gap-2">
                             <Checkbox 
@@ -770,7 +764,7 @@ export default function CalendarioReservas() {
                 </Button>
 
                 {/* Active filters summary */}
-                {(selectedProperties.length > 0 || reportType !== "all" || selectedSources.length < 2 || showSections.length < 4) && (
+                {(selectedProperties.length > 0 || reportType !== "all" || selectedSources.length < 2 || showSections.length < 3) && (
                   <div className="flex flex-wrap gap-1.5">
                     {reportType !== "all" && (
                       <Badge variant="secondary" className="text-xs">{reportType}</Badge>
@@ -785,7 +779,7 @@ export default function CalendarioReservas() {
                         Só {selectedSources[0] === "inspection" ? "vistorias" : "tickets"}
                       </Badge>
                     )}
-                    {showSections.length < 4 && (
+                    {showSections.length < 3 && (
                       <Badge variant="secondary" className="text-xs">
                         {showSections.length} seção(ões)
                       </Badge>
@@ -794,31 +788,6 @@ export default function CalendarioReservas() {
                 )}
               </CardContent>
             </Card>
-
-            {/* Alerts */}
-            {showSections.includes("alerts") && alerts.length > 0 && (
-              <Card className="border-yellow-200 dark:border-yellow-500/20">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base flex items-center gap-2 text-yellow-600">
-                    <AlertCircle className="h-4 w-4" />
-                    Alertas ({alerts.length})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {alerts.map((alert, i) => (
-                    <div key={i} className="p-3 rounded-lg bg-yellow-50 dark:bg-yellow-500/5 border border-yellow-200 dark:border-yellow-500/20">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-sm">{alert.property_name}</span>
-                        <Badge variant="outline" className="text-xs">
-                          {alert.deadline ? format(parseISO(alert.deadline), "dd/MM") : ""}
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">{alert.message}</p>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
 
             {/* Service Summaries */}
             {showSections.includes("services") && serviceSummaries.length > 0 && (
