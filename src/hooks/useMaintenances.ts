@@ -157,7 +157,7 @@ export const useMaintenanceSummary = (ownerId?: string, year?: number) => {
       const openCount = data.filter(m => ['draft', 'pending'].includes(m.status)).length;
       const completedCount = data.filter(m => m.status === 'paid').length;
       const paidCount = data.filter(m => m.status === 'paid').length;
-      const totalCents = data.reduce((sum, m) => sum + (m.amount_cents || 0), 0);
+      const totalCents = data.reduce((sum, m) => sum + ((m.amount_cents || 0) - (m.management_contribution_cents || 0)), 0);
       const avgOrderCents = data.length > 0 ? totalCents / data.length : 0;
 
       // Próximos pagamentos (30 dias)
