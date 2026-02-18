@@ -114,7 +114,7 @@ const handler = async (req: Request): Promise<Response> => {
             message: `${property?.name || "Imóvel"} - ${inspection.cleaner_name || "Faxineira"}`,
             type: "maintenance",
             reference_id: inspectionId,
-            reference_url: `/admin/vistorias/${inspectionId}`,
+            reference_url: `/admin/vistoria/${inspectionId}`,
           }));
           await supabase.from("notifications").insert(notifications);
           console.log(`Created ${notifications.length} notification records for team`);
@@ -169,7 +169,7 @@ const handler = async (req: Request): Promise<Response> => {
           message: `Vistoria registrada para ${property.name}`,
           type: "maintenance",
           reference_id: inspectionId,
-          reference_url: `/vistorias/${inspectionId}`,
+          reference_url: `/vistoria/${inspectionId}`,
         });
         console.log("Notification created for owner");
 

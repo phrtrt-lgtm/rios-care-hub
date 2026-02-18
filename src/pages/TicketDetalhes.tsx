@@ -615,7 +615,15 @@ export default function TicketDetalhes() {
   }
 
   if (!ticket) {
-    return <div>Ticket não encontrado</div>;
+    return (
+      <div className="container mx-auto p-4 flex flex-col items-center justify-center min-h-[50vh] gap-4">
+        <p className="text-muted-foreground">Ticket não encontrado.</p>
+        <Button variant="outline" onClick={() => navigate(-1)}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Voltar
+        </Button>
+      </div>
+    );
   }
 
   const statusLabels = {
