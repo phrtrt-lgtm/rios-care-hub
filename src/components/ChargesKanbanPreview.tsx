@@ -51,6 +51,7 @@ export function ChargesKanbanPreview() {
           owner:profiles!charges_owner_id_fkey(name)
         `)
         .in("status", ["pendente", "sent", "overdue"])
+        .is("archived_at", null)
         .order("due_date", { ascending: true, nullsFirst: false })
         .limit(50);
 

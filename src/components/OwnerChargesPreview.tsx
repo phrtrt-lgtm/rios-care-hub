@@ -97,6 +97,7 @@ export function OwnerChargesPreview() {
         `)
         .eq("owner_id", user.id)
         .in("status", ["pendente", "sent", "overdue"])
+        .is("archived_at", null)
         .order("due_date", { ascending: true })
         .limit(10);
 
