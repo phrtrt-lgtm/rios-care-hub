@@ -319,7 +319,7 @@ const GerenciarCobrancas = () => {
       
       const { error } = await supabase
         .from('charges')
-        .update({ archived_at: new Date().toISOString(), status: 'cancelled' })
+        .update({ archived_at: new Date().toISOString(), status: 'arquivado' })
         .in('id', Array.from(selectedCharges));
 
       if (error) throw error;
