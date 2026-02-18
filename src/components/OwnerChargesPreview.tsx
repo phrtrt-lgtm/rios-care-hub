@@ -283,9 +283,25 @@ export function OwnerChargesPreview() {
               </Button>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            💡 Selecione várias cobranças para gerar um pagamento único
-          </p>
+          <div className="flex items-center justify-between mt-1">
+            <p className="text-xs text-muted-foreground">
+              💡 Selecione várias cobranças para gerar um pagamento único
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs"
+              onClick={() => {
+                if (selectedCharges.length === charges.length) {
+                  setSelectedCharges([]);
+                } else {
+                  setSelectedCharges(charges.map(c => c.id));
+                }
+              }}
+            >
+              {selectedCharges.length === charges.length ? "Desmarcar todas" : "Selecionar todas"}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="pt-3 px-3">
           {/* Bulk payment panel */}
