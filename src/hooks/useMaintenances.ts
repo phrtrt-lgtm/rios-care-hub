@@ -413,10 +413,10 @@ export const useMaintenanceCharts = (ownerId?: string, year?: number, propertyId
           value,
         }));
 
-      // Linha acumulada
+      // Linha acumulada (apenas parte do proprietário)
       const line = monthly.map((m, idx) => ({
         month: m.month,
-        ytd_cents: monthly.slice(0, idx + 1).reduce((sum, item) => sum + item.total_cents, 0),
+        ytd_cents: monthly.slice(0, idx + 1).reduce((sum, item) => sum + item.owner_cents, 0),
       }));
 
       return { monthly, pie, line };
