@@ -1,55 +1,38 @@
-export const MAINTENANCE_POLICY_VERSION = "2026-02-05";
+export const MAINTENANCE_POLICY_VERSION = "2026-02-18";
 
 export const MAINTENANCE_POLICY_HTML = `
-<h2 style="margin:0 0 8px 0; font-size: 16px; color: #1f2937;">🏠 Política de Manutenção</h2>
+<div style="display:flex;flex-direction:column;gap:10px;">
 
-<p style="margin-bottom: 8px; font-size: 13px; line-height: 1.5;">Para garantir qualidade, segurança e desempenho nas plataformas, a manutenção preventiva e corretiva passa a seguir estas regras:</p>
+  <div style="background:#eff6ff;padding:10px;border-radius:8px;border-left:3px solid #3b82f6;">
+    <p style="margin:0 0 4px;font-size:13px;font-weight:bold;color:#1e40af;">💬 Como funciona?</p>
+    <p style="margin:0;font-size:12px;line-height:1.5;">A equipe RIOS identifica problemas no imóvel e abre um <b>chamado de manutenção</b>. Você acompanha tudo pelo app: status, chat com a equipe, fotos e atualizações em tempo real.</p>
+  </div>
 
-<div style="background: #f9fafb; padding: 8px; border-radius: 6px; margin-bottom: 8px;">
-  <p style="margin: 0 0 4px 0; font-size: 13px; font-weight: bold;">💬 Chamados de Manutenção</p>
-  <p style="margin: 0; font-size: 12px; line-height: 1.4;">Tanto o <b>proprietário</b> quanto a <b>gestão</b> podem abrir chamados. Dentro deles, poderemos conversar, enviar anexos e você receberá <b>notificações por e-mail</b>.</p>
-</div>
+  <div style="background:#fef3c7;padding:10px;border-radius:8px;border-left:3px solid #f59e0b;">
+    <p style="margin:0 0 4px;font-size:13px;font-weight:bold;color:#92400e;">⚡ Essencial vs. Estrutural</p>
+    <p style="margin:0 0 4px;font-size:12px;line-height:1.5;"><b style="color:#dc2626;">Essencial</b> (geladeira, fogão, energia, água quente, fechadura, infiltração grave) → a gestão resolve <b>de imediato</b> para não prejudicar hóspedes.</p>
+    <p style="margin:0;font-size:12px;line-height:1.5;"><b style="color:#2563eb;">Estrutural</b> (piso, pintura, mobília) → abrimos chamado e <b>você decide</b>: resolver por conta própria ou delegar à gestão.</p>
+  </div>
 
-<div style="background: #fef3c7; padding: 8px; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #f59e0b;">
-  <p style="margin: 0 0 6px 0; font-size: 13px; font-weight: bold; color: #92400e;">⚡ Classificação</p>
-  <p style="margin: 0 0 4px 0; font-size: 12px; font-weight: bold; color: #dc2626;">🚨 Essencial (atendimento imediato)</p>
-  <p style="margin: 0 0 6px 0; font-size: 12px; line-height: 1.4;">Geladeira, fogão, micro-ondas, água quente, energia, infiltração grave, fechadura, piscina não utilizável, <b>substituição de itens essenciais</b>. Podem ser executados <b>de imediato</b> pela gestão.</p>
-  <p style="margin: 0 0 4px 0; font-size: 12px; font-weight: bold; color: #2563eb;">🔧 Estrutural (pode aguardar)</p>
-  <p style="margin: 0; font-size: 12px; line-height: 1.4;">Piso, mobília, pintura etc. Abriremos chamado e você decide.</p>
-</div>
+  <div style="background:#dcfce7;padding:10px;border-radius:8px;border-left:3px solid #22c55e;">
+    <p style="margin:0 0 4px;font-size:13px;font-weight:bold;color:#166534;">🎁 Sem custo pra você</p>
+    <p style="margin:0;font-size:12px;line-height:1.5;">Itens básicos como <b>copos e lâmpadas</b> são repostos pela gestão, sem cobrança.</p>
+  </div>
 
-<div style="background: #dcfce7; padding: 8px; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #22c55e;">
-  <p style="margin: 0 0 4px 0; font-size: 13px; font-weight: bold; color: #166534;">🎁 Por Conta da Gestão</p>
-  <p style="margin: 0; font-size: 12px; line-height: 1.4;">Substituições básicas como <b>copos e lâmpadas comuns</b> são assumidas pela gestão, sem custo ao proprietário.</p>
-</div>
+  <div style="background:#fef9c3;padding:10px;border-radius:8px;border-left:3px solid #eab308;">
+    <p style="margin:0 0 4px;font-size:13px;font-weight:bold;color:#854d0e;">⚠️ Responda rápido</p>
+    <p style="margin:0;font-size:12px;line-height:1.5;">Se demorar a responder e houver hóspede chegando, a gestão pode executar o serviço para proteger sua renda e evitar avaliações negativas.</p>
+  </div>
 
-<div style="background: #f9fafb; padding: 8px; border-radius: 6px; margin-bottom: 8px;">
-  <p style="margin: 0 0 4px 0; font-size: 13px; font-weight: bold;">⏱️ Decisão</p>
-  <p style="margin: 0; font-size: 12px; line-height: 1.4;">Para itens estruturais: <b>✅ Assumir execução</b> (informar prazo/fornecedor) ou <b>🤝 Delegar à gestão</b>.</p>
-</div>
+  <div style="background:#f0f9ff;padding:10px;border-radius:8px;border-left:3px solid #0ea5e9;">
+    <p style="margin:0 0 4px;font-size:13px;font-weight:bold;color:#0c4a6e;">💰 E o pagamento?</p>
+    <p style="margin:0;font-size:12px;line-height:1.5;">Serviços feitos pela gestão viram uma <b>cobrança</b>. Você tem <b>7 dias</b> para pagar (PIX ou cartão) ou contestar. Se não pagar, o valor é descontado das próximas reservas. Pagar em dia melhora sua pontuação!</p>
+  </div>
 
-<div style="background: #fef9c3; padding: 8px; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #eab308;">
-  <p style="margin: 0 0 4px 0; font-size: 13px; font-weight: bold; color: #854d0e;">⚠️ Estrutural Pode Virar Essencial</p>
-  <p style="margin: 0; font-size: 12px; line-height: 1.4;">Se o proprietário <b>demorar a responder</b> ou houver <b>hóspede chegando</b> com risco de prejuízo (avaliação negativa, cancelamento), a gestão pode executar sem aprovação para proteger a renda do imóvel.</p>
-</div>
-
-<div style="background: #fee2e2; padding: 8px; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #dc2626;">
-  <p style="margin: 0 0 4px 0; font-size: 13px; font-weight: bold; color: #991b1b;">⚠️ VOCÊ é o Maior Prejudicado</p>
-  <p style="margin: 0; font-size: 12px; line-height: 1.4;">Avaliações negativas <b>derrubam drasticamente</b> o desempenho. Uma avaliação ruim pode reduzir receita em <b>+R$ 500/mês</b>, prejudicar posição nas plataformas e afastar hóspedes. Itens essenciais podem ser executados imediatamente para proteger <b>sua renda</b>.</p>
-</div>
-
-<div style="background: #f9fafb; padding: 8px; border-radius: 6px; margin-bottom: 8px;">
-  <p style="margin: 0 0 4px 0; font-size: 13px; font-weight: bold;">🌟 Ecossistema RIOS</p>
-  <p style="margin: 0; font-size: 12px; line-height: 1.4;">Cada imóvel impacta todos. Negligências prejudicam seu resultado e dos demais.</p>
-</div>
-
-<div style="background: #f9fafb; padding: 8px; border-radius: 6px;">
-  <p style="margin: 0 0 4px 0; font-size: 13px; font-weight: bold;">💰 Pós-Execução</p>
-  <p style="margin: 0; font-size: 12px; line-height: 1.4;">As manutenções feitas pela gestão vão para a <b>área de cobranças</b>, onde será gerada uma cobrança conforme regras publicadas (contestação 7 dias, pagamento/offset).</p>
 </div>
 `;
 
 export const MAINTENANCE_POLICY_TEXT = `Política de Manutenção
 Essencial (atendimento imediato): itens que inviabilizam a estadia (geladeira, fogão, micro-ondas, água quente, energia, fechadura/portas, piscina inutilizável, infiltração grave, substituição de itens essenciais). Podem ser executados de imediato pela gestão, sobretudo em check-in no mesmo dia. Substituições básicas como copos e lâmpadas comuns são por conta da gestão.
 Estrutural (pode aguardar entre estadias): piso/reformas/pintura etc. Abriremos chamado para você decidir: assumir a execução (com prazo e fornecedor) ou delegar à gestão. IMPORTANTE: Se o proprietário demorar a responder ou houver hóspede chegando com risco de prejuízo, a gestão pode executar sem aprovação.
-Avaliações negativas derrubam a renda; protegemos o desempenho do ecossistema. As manutenções feitas pela gestão vão para a área de cobranças, gerando cobrança conforme regras já publicadas (contestação 7 dias, pagamento/offset). Ao aceitar, você registra ciência desta política (versão 2026-02-05).`;
+Serviços feitos pela gestão viram cobrança com prazo de 7 dias para pagamento ou contestação. Se não pagar, o valor é descontado das reservas. Ao aceitar, você registra ciência desta política (versão 2026-02-18).`;
