@@ -371,9 +371,8 @@ export function OwnerChargesPreview() {
                     className="p-2.5 cursor-pointer hover:bg-muted/50 transition-colors"
                     onClick={() => navigate(`/cobranca/${charge.id}`)}
                   >
-                    {/* Single row: checkbox, photo, info, actions */}
+                    {/* Top row: checkbox + photo + info */}
                     <div className="flex items-center gap-2">
-                      {/* Checkbox */}
                       <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           checked={isSelected}
@@ -381,7 +380,6 @@ export function OwnerChargesPreview() {
                         />
                       </div>
 
-                      {/* Property photo */}
                       <div className="w-8 h-8 rounded overflow-hidden bg-muted flex-shrink-0">
                         {charge.property?.cover_photo_url ? (
                           <img
@@ -396,10 +394,9 @@ export function OwnerChargesPreview() {
                         )}
                       </div>
 
-                      {/* Info */}
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-xs line-clamp-1">{charge.title}</p>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           {charge.management_contribution_cents > 0 ? (
                             <>
                               <span className="text-[10px] text-muted-foreground line-through">
@@ -417,52 +414,52 @@ export function OwnerChargesPreview() {
                           </span>
                         </div>
                       </div>
+                    </div>
 
-                      {/* Compact actions */}
-                      <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 w-7 p-0"
-                          onClick={(e) => handleOpenPix(charge, e)}
-                          disabled={generatingPixFor === charge.id}
-                          title="PIX"
-                        >
-                          {generatingPixFor === charge.id ? (
-                            <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full" />
-                          ) : (
-                            <QrCode className="h-3.5 w-3.5" />
-                          )}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 w-7 p-0"
-                          onClick={(e) => handleOpenPaymentLink(charge, e)}
-                          disabled={generatingLinkFor === charge.id}
-                          title="Cartão até 12x"
-                        >
-                          {generatingLinkFor === charge.id ? (
-                            <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full" />
-                          ) : (
-                            <CreditCard className="h-3.5 w-3.5" />
-                          )}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 w-7 p-0 relative"
-                          onClick={(e) => handleOpenChat(charge, e)}
-                          title="Chat"
-                        >
-                          <MessageSquare className="h-3.5 w-3.5" />
-                          {unreadCount > 0 && (
-                            <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full min-w-[14px] h-[14px] flex items-center justify-center px-0.5">
-                              {unreadCount > 9 ? "9+" : unreadCount}
-                            </span>
-                          )}
-                        </Button>
-                      </div>
+                    {/* Bottom row: action buttons */}
+                    <div className="flex items-center justify-end gap-1 mt-1.5 pl-10" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-xs gap-1"
+                        onClick={(e) => handleOpenPix(charge, e)}
+                        disabled={generatingPixFor === charge.id}
+                      >
+                        {generatingPixFor === charge.id ? (
+                          <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full" />
+                        ) : (
+                          <QrCode className="h-3 w-3" />
+                        )}
+                        PIX
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-xs gap-1"
+                        onClick={(e) => handleOpenPaymentLink(charge, e)}
+                        disabled={generatingLinkFor === charge.id}
+                      >
+                        {generatingLinkFor === charge.id ? (
+                          <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full" />
+                        ) : (
+                          <CreditCard className="h-3 w-3" />
+                        )}
+                        12x
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-xs gap-1 relative"
+                        onClick={(e) => handleOpenChat(charge, e)}
+                      >
+                        <MessageSquare className="h-3 w-3" />
+                        Chat
+                        {unreadCount > 0 && (
+                          <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full min-w-[14px] h-[14px] flex items-center justify-center px-0.5">
+                            {unreadCount > 9 ? "9+" : unreadCount}
+                          </span>
+                        )}
+                      </Button>
                     </div>
                   </div>
                 </div>
