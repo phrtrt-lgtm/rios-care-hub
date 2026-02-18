@@ -1,22 +1,23 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMaintenances, useMaintenanceCharts } from "@/hooks/useMaintenances";
 import { MaintenanceCharts } from "@/components/MaintenanceCharts";
+import { MaintenanceSummaryCards } from "@/components/MaintenanceSummaryCards";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { formatBRL, formatDateTime, formatDate } from "@/lib/format";
+import { formatBRL, formatDateTime } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
-import { CalendarIcon, Plus, Filter } from "lucide-react";
+import { Plus, Filter, Building2 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Manutencoes() {
   const { profile, user } = useAuth();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [status, setStatus] = useState<string>("");
   const [search, setSearch] = useState<string>("");
@@ -24,10 +25,13 @@ export default function Manutencoes() {
   const [activeFilters, setActiveFilters] = useState({ status: "", search: "", serviceType: "" });
   const [serviceTypeData, setServiceTypeData] = useState<any[]>([]);
   const [serviceTypes, setServiceTypes] = useState<string[]>([]);
+  const [properties, setProperties] = useState<any[]>([]);
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>(searchParams.get('property') || "");
 
   const isOwner = profile?.role === 'owner';
+  const isTeam = profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance';
   const ownerId = isOwner ? profile?.id : undefined;
-  const propertyId = searchParams.get('property') || undefined;
+  const propertyId = selectedPropertyId || undefined;
 
   const { data: maintenances, isLoading } = useMaintenances({
     ownerId,
@@ -36,6 +40,14 @@ export default function Manutencoes() {
     search: activeFilters.search || undefined,
   });
   const { data: charts } = useMaintenanceCharts(ownerId, year, propertyId);
+
+  // Fetch properties for team filter
+  useEffect(() => {
+    if (isTeam) {
+      supabase.from('properties').select('id, name, owner:profiles!properties_owner_id_fkey(name)').order('name')
+        .then(({ data }) => setProperties(data || []));
+    }
+  }, [isTeam]);
 
   useEffect(() => {
     if (user) {
@@ -62,7 +74,6 @@ export default function Manutencoes() {
 
       if (error) throw error;
 
-      // Group by service type and calculate totals
       const grouped = (data || []).reduce((acc: any, charge: any) => {
         const type = charge.service_type || 'Outros';
         if (!acc[type]) {
@@ -81,8 +92,54 @@ export default function Manutencoes() {
     }
   };
 
+  // Summary computed from maintenances
+  const summary = useMemo(() => {
+    if (!maintenances) return null;
+    const yearData = maintenances.filter((m: any) => new Date(m.created_at).getFullYear() === year);
+    const openCount = yearData.filter((m: any) => ['draft', 'pending'].includes(m.status)).length;
+    const completedCount = yearData.filter((m: any) => m.status === 'paid').length;
+    const paidCount = completedCount;
+    const totalCents = yearData.reduce((sum: number, m: any) => sum + (m.amount_cents || 0), 0);
+    const avgOrderCents = yearData.length > 0 ? totalCents / yearData.length : 0;
+    return { openCount, completedCount, paidCount, totalCents, avgOrderCents };
+  }, [maintenances, year]);
+
+  // Per-property summaries for team overview
+  const propertyReports = useMemo(() => {
+    if (!isTeam || !maintenances || selectedPropertyId) return [];
+    const yearData = maintenances.filter((m: any) => new Date(m.created_at).getFullYear() === year);
+    const byProperty: Record<string, { name: string; ownerName: string; items: any[] }> = {};
+    yearData.forEach((m: any) => {
+      const pid = m.property_id || 'sem-imovel';
+      if (!byProperty[pid]) {
+        byProperty[pid] = {
+          name: m.property?.name || 'Sem imóvel',
+          ownerName: m.owner?.name || '-',
+          items: [],
+        };
+      }
+      byProperty[pid].items.push(m);
+    });
+    return Object.entries(byProperty).map(([id, data]) => {
+      const totalCents = data.items.reduce((s: number, m: any) => s + (m.amount_cents || 0), 0);
+      const openCount = data.items.filter((m: any) => ['draft', 'pending'].includes(m.status)).length;
+      const paidCount = data.items.filter((m: any) => m.status === 'paid').length;
+      return { id, ...data, totalCents, openCount, paidCount, count: data.items.length };
+    }).sort((a, b) => b.totalCents - a.totalCents);
+  }, [isTeam, maintenances, year, selectedPropertyId]);
+
   const handleFilter = () => {
     setActiveFilters({ status, search, serviceType: serviceTypeFilter });
+  };
+
+  const handlePropertyChange = (value: string) => {
+    const pid = value === "all" ? "" : value;
+    setSelectedPropertyId(pid);
+    if (pid) {
+      setSearchParams({ property: pid });
+    } else {
+      setSearchParams({});
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -121,6 +178,28 @@ export default function Manutencoes() {
       <Card>
         <CardContent className="pt-6">
           <div className="flex flex-wrap gap-3 items-end">
+            {isTeam && (
+              <div className="space-y-2 w-56">
+                <label className="text-sm font-medium flex items-center gap-1">
+                  <Building2 className="h-3 w-3" />
+                  Unidade
+                </label>
+                <Select value={selectedPropertyId || "all"} onValueChange={handlePropertyChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as unidades</SelectItem>
+                    {properties.map((p: any) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name} {p.owner?.name ? `(${p.owner.name})` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="space-y-2 w-32">
               <label className="text-sm font-medium">Ano</label>
               <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
@@ -192,87 +271,160 @@ export default function Manutencoes() {
         </CardContent>
       </Card>
 
-      {/* Lista de manutenções */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Lista de Manutenções</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50">
-                <tr>
-                  <th className="text-left p-3">Data</th>
-                  <th className="text-left p-3">Imóvel</th>
-                  <th className="text-left p-3">Título / Categoria</th>
-                  <th className="text-right p-3">Valor Total</th>
-                  <th className="text-right p-3">Aporte Gestão</th>
-                  <th className="text-right p-3">Valor Devido</th>
-                  <th className="text-center p-3">Responsável</th>
-                  <th className="text-right p-3">Pago</th>
-                  <th className="text-center p-3">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={9} className="text-center p-8 text-muted-foreground">
-                      Carregando...
-                    </td>
-                  </tr>
-                ) : maintenances && maintenances.length > 0 ? (
-                  maintenances
-                    .filter((m: any) => !activeFilters.serviceType || m.service_type === activeFilters.serviceType)
-                    .map((m: any) => (
-                    <tr
-                      key={m.id}
-                      className="border-t hover:bg-accent cursor-pointer transition-colors"
-                      onClick={() => navigate(`/cobranca/${m.id}`)}
-                    >
-                      <td className="p-3">{formatDateTime(m.created_at)}</td>
-                      <td className="p-3">{m.property?.name || '-'}</td>
-                      <td className="p-3">
-                        <div className="font-medium">{m.title}</div>
-                        {m.category && (
-                          <div className="text-xs text-muted-foreground">{m.category}</div>
-                        )}
-                        {m.service_type && (
-                          <div className="text-xs text-purple-600">🏷️ {m.service_type}</div>
-                        )}
-                      </td>
-                      <td className="p-3 text-right font-medium">
-                        {formatBRL(m.amount_cents)}
-                      </td>
-                      <td className="p-3 text-right text-green-600 font-medium">
-                        {m.management_contribution_cents > 0 ? formatBRL(m.management_contribution_cents) : '-'}
-                      </td>
-                      <td className="p-3 text-right font-bold">
-                        {formatBRL(m.amount_cents - (m.management_contribution_cents || 0))}
-                      </td>
-                      <td className="p-3 text-center text-xs">
-                        {getResponsibleLabel(m.cost_responsible, m.split_owner_percent)}
-                      </td>
-                      <td className="p-3 text-right">
-                        {formatBRL(m.paid_cents)}
-                      </td>
-                      <td className="p-3 text-center">{getStatusBadge(m.status)}</td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={9} className="text-center p-8 text-muted-foreground">
-                      Nenhuma manutenção encontrada
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="relatorio" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="relatorio">Relatório</TabsTrigger>
+          <TabsTrigger value="lista">Lista</TabsTrigger>
+          {isTeam && !selectedPropertyId && (
+            <TabsTrigger value="por-unidade">Por Unidade</TabsTrigger>
+          )}
+        </TabsList>
 
-      {/* Gráficos */}
-      <MaintenanceCharts charts={charts} serviceTypeData={serviceTypeData} />
+        {/* Tab Relatório - Summary + Charts */}
+        <TabsContent value="relatorio" className="space-y-4">
+          <MaintenanceSummaryCards summary={summary} />
+          <MaintenanceCharts charts={charts} serviceTypeData={serviceTypeData} />
+        </TabsContent>
+
+        {/* Tab Lista */}
+        <TabsContent value="lista">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Lista de Manutenções</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50">
+                    <tr>
+                      <th className="text-left p-3">Data</th>
+                      <th className="text-left p-3">Imóvel</th>
+                      <th className="text-left p-3">Título / Categoria</th>
+                      <th className="text-right p-3">Valor Total</th>
+                      <th className="text-right p-3">Aporte Gestão</th>
+                      <th className="text-right p-3">Valor Devido</th>
+                      <th className="text-center p-3">Responsável</th>
+                      <th className="text-right p-3">Pago</th>
+                      <th className="text-center p-3">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {isLoading ? (
+                      <tr>
+                        <td colSpan={9} className="text-center p-8 text-muted-foreground">
+                          Carregando...
+                        </td>
+                      </tr>
+                    ) : maintenances && maintenances.length > 0 ? (
+                      maintenances
+                        .filter((m: any) => !activeFilters.serviceType || m.service_type === activeFilters.serviceType)
+                        .map((m: any) => (
+                        <tr
+                          key={m.id}
+                          className="border-t hover:bg-accent cursor-pointer transition-colors"
+                          onClick={() => navigate(`/cobranca/${m.id}`)}
+                        >
+                          <td className="p-3">{formatDateTime(m.created_at)}</td>
+                          <td className="p-3">{m.property?.name || '-'}</td>
+                          <td className="p-3">
+                            <div className="font-medium">{m.title}</div>
+                            {m.category && (
+                              <div className="text-xs text-muted-foreground">{m.category}</div>
+                            )}
+                            {m.service_type && (
+                              <div className="text-xs text-purple-600">🏷️ {m.service_type}</div>
+                            )}
+                          </td>
+                          <td className="p-3 text-right font-medium">
+                            {formatBRL(m.amount_cents)}
+                          </td>
+                          <td className="p-3 text-right text-green-600 font-medium">
+                            {m.management_contribution_cents > 0 ? formatBRL(m.management_contribution_cents) : '-'}
+                          </td>
+                          <td className="p-3 text-right font-bold">
+                            {formatBRL(m.amount_cents - (m.management_contribution_cents || 0))}
+                          </td>
+                          <td className="p-3 text-center text-xs">
+                            {getResponsibleLabel(m.cost_responsible, m.split_owner_percent)}
+                          </td>
+                          <td className="p-3 text-right">
+                            {formatBRL(m.paid_cents)}
+                          </td>
+                          <td className="p-3 text-center">{getStatusBadge(m.status)}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={9} className="text-center p-8 text-muted-foreground">
+                          Nenhuma manutenção encontrada
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab Por Unidade - Team only */}
+        {isTeam && !selectedPropertyId && (
+          <TabsContent value="por-unidade" className="space-y-4">
+            {propertyReports.length === 0 ? (
+              <Card>
+                <CardContent className="pt-6 text-center text-muted-foreground">
+                  Nenhuma manutenção encontrada no período
+                </CardContent>
+              </Card>
+            ) : (
+              propertyReports.map((prop) => (
+                <Card key={prop.id} className="overflow-hidden">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <Building2 className="h-4 w-4 text-primary" />
+                          {prop.name}
+                        </CardTitle>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Proprietário: {prop.ownerName}
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePropertyChange(prop.id)}
+                      >
+                        Ver detalhes
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="bg-muted/50 rounded-lg p-3">
+                        <div className="text-xs text-muted-foreground">Total Gasto</div>
+                        <div className="text-lg font-bold">{formatBRL(prop.totalCents)}</div>
+                      </div>
+                      <div className="bg-muted/50 rounded-lg p-3">
+                        <div className="text-xs text-muted-foreground">Manutenções</div>
+                        <div className="text-lg font-bold">{prop.count}</div>
+                      </div>
+                      <div className="bg-muted/50 rounded-lg p-3">
+                        <div className="text-xs text-muted-foreground">Abertas</div>
+                        <div className="text-lg font-bold text-orange-600">{prop.openCount}</div>
+                      </div>
+                      <div className="bg-muted/50 rounded-lg p-3">
+                        <div className="text-xs text-muted-foreground">Pagas</div>
+                        <div className="text-lg font-bold text-green-600">{prop.paidCount}</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </TabsContent>
+        )}
+      </Tabs>
     </div>
   );
 }
