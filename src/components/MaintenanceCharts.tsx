@@ -34,7 +34,7 @@ interface MaintenanceChartsProps {
 
 const PIE_COLORS: Record<string, string> = {
   'Proprietário': 'hsl(var(--primary))',
-  'Gestão': 'hsl(210, 80%, 55%)',
+  'Gestão': 'hsl(var(--rios-blue))',
   'Dividido': 'hsl(var(--accent))',
 };
 
@@ -95,7 +95,7 @@ export function MaintenanceCharts({ charts, serviceTypeData }: MaintenanceCharts
               />
               <Legend formatter={(value) => value === 'owner_cents' ? 'Proprietário' : 'Gestão'} />
               <Bar dataKey="owner_cents" stackId="a" fill="hsl(var(--primary))" radius={[0, 0, 0, 0]} name="owner_cents" />
-              <Bar dataKey="management_cents" stackId="a" fill="hsl(210, 80%, 55%)" radius={[4, 4, 0, 0]} name="management_cents" />
+              <Bar dataKey="management_cents" stackId="a" fill="hsl(var(--rios-blue))" radius={[4, 4, 0, 0]} name="management_cents" />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>

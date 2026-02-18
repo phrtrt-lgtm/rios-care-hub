@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatBRL, formatDateTime } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Filter, Building2 } from "lucide-react";
+import { Plus, Filter, Building2, ArrowLeft } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -99,7 +99,7 @@ export default function Manutencoes() {
     const openCount = yearData.filter((m: any) => ['draft', 'pending'].includes(m.status)).length;
     const completedCount = yearData.filter((m: any) => m.status === 'paid').length;
     const paidCount = completedCount;
-    const totalCents = yearData.reduce((sum: number, m: any) => sum + (m.amount_cents || 0), 0);
+    const totalCents = yearData.reduce((sum: number, m: any) => sum + ((m.amount_cents || 0) - (m.management_contribution_cents || 0)), 0);
     const avgOrderCents = yearData.length > 0 ? totalCents / yearData.length : 0;
     return { openCount, completedCount, paidCount, totalCents, avgOrderCents };
   }, [maintenances, year]);
@@ -165,7 +165,12 @@ export default function Manutencoes() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Manutenções</h1>
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-3xl font-bold">Manutenções</h1>
+        </div>
         {isOwner && (
           <Button onClick={() => navigate('/novo-manutencao')}>
             <Plus className="h-4 w-4 mr-2" />
