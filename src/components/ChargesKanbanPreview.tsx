@@ -50,7 +50,7 @@ export function ChargesKanbanPreview() {
           property:properties(name),
           owner:profiles!charges_owner_id_fkey(name)
         `)
-        .in("status", ["sent", "overdue"])
+        .in("status", ["pendente", "sent", "overdue"])
         .order("due_date", { ascending: true, nullsFirst: false })
         .limit(50);
 
@@ -84,14 +84,14 @@ export function ChargesKanbanPreview() {
   const getDueAmount = (charge: Charge) => charge.amount_cents - (charge.management_contribution_cents || 0);
 
   const pendentes = charges.filter(c => {
-    if (c.status !== "sent") return false;
+    if (c.status !== "sent" && c.status !== "pendente") return false;
     if (!c.due_date) return true;
     return !isPast(new Date(c.due_date));
   });
 
   const vencidas = charges.filter(c => {
     if (c.status === "overdue") return true;
-    if (c.status === "sent" && c.due_date && isPast(new Date(c.due_date))) return true;
+    if ((c.status === "sent" || c.status === "pendente") && c.due_date && isPast(new Date(c.due_date))) return true;
     return false;
   });
 
