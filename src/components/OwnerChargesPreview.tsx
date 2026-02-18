@@ -264,39 +264,39 @@ export function OwnerChargesPreview() {
       <Card className="overflow-hidden border-green-500/20">
         <CardHeader className="pb-2 bg-gradient-to-r from-green-500/5 to-transparent">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="text-lg flex items-center gap-2">
+            <CardTitle className="text-base flex items-center gap-2">
               <DollarSign className="h-5 w-5 text-green-500" />
               Cobranças em Aberto
             </CardTitle>
             <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="font-medium">
+              <Badge variant="secondary" className="font-medium text-xs">
                 {charges.length}
               </Badge>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => navigate("/minhas-cobrancas")}
-                className="w-full sm:w-auto"
+                className="h-7 text-xs"
               >
-                <ExternalLink className="h-4 w-4 mr-1" />
+                <ExternalLink className="h-3 w-3 mr-1" />
                 Ver todas
               </Button>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            💡 Selecione várias cobranças para gerar um pagamento único e facilitar!
+          <p className="text-xs text-muted-foreground mt-1">
+            💡 Selecione várias cobranças para gerar um pagamento único
           </p>
         </CardHeader>
-        <CardContent className="pt-4">
+        <CardContent className="pt-3 px-3">
           {/* Bulk payment panel */}
           {selectedCharges.length > 0 && (
-            <div className="mb-4 p-3 rounded-lg border-2 border-primary/20 bg-primary/5 space-y-3">
+            <div className="mb-3 p-2.5 rounded-lg border-2 border-primary/20 bg-primary/5 space-y-2">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-muted-foreground">
                     {selectedCharges.length} {selectedCharges.length === 1 ? 'cobrança' : 'cobranças'}
                   </p>
-                  <p className="text-lg font-bold text-primary">
+                  <p className="text-base font-bold text-primary">
                     {formatBRL(totalDue)}
                   </p>
                 </div>
@@ -304,6 +304,7 @@ export function OwnerChargesPreview() {
                   onClick={handleGenerateGroupPayment}
                   disabled={generatingPayment}
                   size="sm"
+                  className="h-7 text-xs"
                 >
                   {generatingPayment ? "Gerando..." : "Gerar Pagamento"}
                 </Button>
@@ -315,7 +316,7 @@ export function OwnerChargesPreview() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="flex-1"
+                      className="flex-1 h-7 text-xs"
                       onClick={() => {
                         setPixCharge({
                           id: 'group',
@@ -323,7 +324,7 @@ export function OwnerChargesPreview() {
                           amount_cents: groupPayment.total_amount,
                           management_contribution_cents: 0,
                           due_date: null,
-                          status: 'sent',
+                          status: 'pendente',
                           payment_link_url: groupPayment.payment_link,
                           pix_qr_code: groupPayment.pix_qr_code,
                           pix_qr_code_base64: groupPayment.pix_qr_code_base64,
@@ -339,7 +340,7 @@ export function OwnerChargesPreview() {
                   <Button
                     variant="default"
                     size="sm"
-                    className="flex-1"
+                    className="flex-1 h-7 text-xs"
                     onClick={() => window.open(groupPayment.payment_link, '_blank')}
                   >
                     <CreditCard className="h-3 w-3 mr-1" />
@@ -350,9 +351,10 @@ export function OwnerChargesPreview() {
             </div>
           )}
 
-          <div className="space-y-2">
+          {/* Scrollable charge list - max 3 visible */}
+          <div className="max-h-[360px] overflow-y-auto space-y-1.5 pr-1">
             {charges.map((charge) => {
-              const statusConfig = STATUS_CONFIG[charge.status] || STATUS_CONFIG.sent;
+              const statusConfig = STATUS_CONFIG[charge.status] || STATUS_CONFIG.pendente;
               const unreadCount = unreadCounts[charge.id] || 0;
               const dueDateInfo = getDueDateInfo(charge.due_date);
               const dueAmount = charge.amount_cents - (charge.management_contribution_cents || 0);
@@ -365,15 +367,14 @@ export function OwnerChargesPreview() {
                     isSelected ? 'border-primary bg-primary/5' : ''
                   }`}
                 >
-                  {/* Card content */}
                   <div
-                    className="p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                    className="p-2.5 cursor-pointer hover:bg-muted/50 transition-colors"
                     onClick={() => navigate(`/cobranca/${charge.id}`)}
                   >
-                    {/* Top row: checkbox, photo, title and amount */}
-                    <div className="flex items-start gap-2">
+                    {/* Single row: checkbox, photo, info, actions */}
+                    <div className="flex items-center gap-2">
                       {/* Checkbox */}
-                      <div className="flex items-center pt-0.5" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           checked={isSelected}
                           onCheckedChange={() => toggleChargeSelection(charge.id, { stopPropagation: () => {} } as React.MouseEvent)}
@@ -381,7 +382,7 @@ export function OwnerChargesPreview() {
                       </div>
 
                       {/* Property photo */}
-                      <div className="w-10 h-10 rounded overflow-hidden bg-muted flex-shrink-0">
+                      <div className="w-8 h-8 rounded overflow-hidden bg-muted flex-shrink-0">
                         {charge.property?.cover_photo_url ? (
                           <img
                             src={charge.property.cover_photo_url}
@@ -390,82 +391,78 @@ export function OwnerChargesPreview() {
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
-                            <Building2 className="h-4 w-4 text-muted-foreground" />
+                            <Building2 className="h-3 w-3 text-muted-foreground" />
                           </div>
                         )}
                       </div>
 
-                      {/* Info - stacked layout */}
+                      {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm line-clamp-1">{charge.title}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
+                        <p className="font-medium text-xs line-clamp-1">{charge.title}</p>
+                        <div className="flex items-center gap-1.5">
                           {charge.management_contribution_cents > 0 ? (
                             <>
-                              <span className="text-xs text-muted-foreground line-through">
+                              <span className="text-[10px] text-muted-foreground line-through">
                                 {formatBRL(charge.amount_cents)}
                               </span>
-                              <span className="text-sm font-bold text-primary">
+                              <span className="text-xs font-bold text-primary">
                                 {formatBRL(dueAmount)}
                               </span>
                             </>
                           ) : (
-                            <span className="text-sm font-bold text-primary">{formatBRL(dueAmount)}</span>
+                            <span className="text-xs font-bold text-primary">{formatBRL(dueAmount)}</span>
                           )}
-                        </div>
-                        <span className={`text-xs ${dueDateInfo.color}`}>
-                          {dueDateInfo.text}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Quick actions - separate row on mobile */}
-                    <div className="flex items-center gap-2 mt-3 ml-7" onClick={(e) => e.stopPropagation()}>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 px-3 text-xs flex-1"
-                        onClick={(e) => handleOpenPix(charge, e)}
-                        disabled={generatingPixFor === charge.id}
-                      >
-                        {generatingPixFor === charge.id ? (
-                          <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full" />
-                        ) : (
-                          <>
-                            <QrCode className="h-4 w-4 mr-1" />
-                            PIX
-                          </>
-                        )}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 px-3 text-xs flex-1"
-                        onClick={(e) => handleOpenPaymentLink(charge, e)}
-                        disabled={generatingLinkFor === charge.id}
-                      >
-                        {generatingLinkFor === charge.id ? (
-                          <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full" />
-                        ) : (
-                          <>
-                            <CreditCard className="h-4 w-4 mr-1" />
-                            12x
-                          </>
-                        )}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 px-3 text-xs flex-1 relative"
-                        onClick={(e) => handleOpenChat(charge, e)}
-                      >
-                        <MessageSquare className="h-4 w-4 mr-1" />
-                        Chat
-                        {unreadCount > 0 && (
-                          <span className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
-                            {unreadCount > 9 ? "9+" : unreadCount}
+                          <span className={`text-[10px] ${dueDateInfo.color}`}>
+                            • {dueDateInfo.text}
                           </span>
-                        )}
-                      </Button>
+                        </div>
+                      </div>
+
+                      {/* Compact actions */}
+                      <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          onClick={(e) => handleOpenPix(charge, e)}
+                          disabled={generatingPixFor === charge.id}
+                          title="PIX"
+                        >
+                          {generatingPixFor === charge.id ? (
+                            <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full" />
+                          ) : (
+                            <QrCode className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          onClick={(e) => handleOpenPaymentLink(charge, e)}
+                          disabled={generatingLinkFor === charge.id}
+                          title="Cartão até 12x"
+                        >
+                          {generatingLinkFor === charge.id ? (
+                            <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full" />
+                          ) : (
+                            <CreditCard className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 w-7 p-0 relative"
+                          onClick={(e) => handleOpenChat(charge, e)}
+                          title="Chat"
+                        >
+                          <MessageSquare className="h-3.5 w-3.5" />
+                          {unreadCount > 0 && (
+                            <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full min-w-[14px] h-[14px] flex items-center justify-center px-0.5">
+                              {unreadCount > 9 ? "9+" : unreadCount}
+                            </span>
+                          )}
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
