@@ -91,9 +91,26 @@ export default function AdminVistoriasImovel() {
         .from('properties')
         .select('id, name, address, cover_photo_url, owner_id')
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
       if (propError) throw propError;
+
+      // If not a property, check if it's an inspection ID and redirect
+      if (!propData) {
+        const { data: inspData } = await supabase
+          .from('cleaning_inspections')
+          .select('id')
+          .eq('id', id)
+          .maybeSingle();
+
+        if (inspData) {
+          navigate(`/admin/vistoria/${id}`, { replace: true });
+          return;
+        }
+        setLoading(false);
+        return;
+      }
+
       setProperty(propData);
 
       // Fetch inspections (including archived)
@@ -293,8 +310,12 @@ export default function AdminVistoriasImovel() {
 
   if (!property) {
     return (
-      <div className="container mx-auto p-4">
-        <p>Imóvel não encontrado.</p>
+      <div className="container mx-auto p-4 flex flex-col items-center justify-center min-h-[50vh] gap-4">
+        <p className="text-muted-foreground">Imóvel não encontrado.</p>
+        <Button variant="outline" onClick={() => navigate(-1)}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Voltar
+        </Button>
       </div>
     );
   }
