@@ -50,6 +50,7 @@ interface OwnerCharge {
 
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   draft: { label: "Rascunho", variant: "secondary" },
+  pendente: { label: "Pendente", variant: "default" },
   sent: { label: "Enviada", variant: "default" },
   overdue: { label: "Vencida", variant: "destructive" },
   paid: { label: "Paga", variant: "outline" },
@@ -95,7 +96,7 @@ export function OwnerChargesPreview() {
           property:properties(id, name, cover_photo_url)
         `)
         .eq("owner_id", user.id)
-        .in("status", ["sent", "overdue"])
+        .in("status", ["pendente", "sent", "overdue"])
         .order("due_date", { ascending: true })
         .limit(10);
 
