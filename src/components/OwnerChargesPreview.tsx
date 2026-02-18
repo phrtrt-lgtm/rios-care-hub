@@ -367,8 +367,8 @@ export function OwnerChargesPreview() {
             </div>
           )}
 
-          {/* Scrollable charge list - max 3 visible */}
-          <div className="max-h-[360px] overflow-y-auto space-y-1.5 pr-1">
+          {/* Scrollable charge list - max 2 visible */}
+          <div className="max-h-[200px] overflow-y-auto space-y-1.5 pr-1">
             {charges.map((charge) => {
               const statusConfig = STATUS_CONFIG[charge.status] || STATUS_CONFIG.pendente;
               const unreadCount = unreadCounts[charge.id] || 0;
