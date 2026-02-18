@@ -176,6 +176,8 @@ serve(async (req) => {
       'Itens': 'itens',
       'Estrutural': 'estrutural',
       'Refrigeração': 'refrigeracao',
+      'Vidraçaria': 'vidracaria',
+      'Serviço Misto': 'servico_misto',
     };
     
     const category = categoryLabel ? categoryMapping[categoryLabel] || null : null;
