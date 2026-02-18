@@ -25,7 +25,7 @@ interface ServiceTypeData {
 
 interface MaintenanceChartsProps {
   charts: {
-    monthly: Array<{ month: number; total_cents: number }>;
+    monthly: Array<{ month: number; total_cents: number; owner_cents: number; management_cents: number }>;
     pie: Array<{ name: string; value: number }>;
     line: Array<{ month: number; ytd_cents: number }>;
   } | null;
@@ -82,14 +82,16 @@ export function MaintenanceCharts({ charts, serviceTypeData }: MaintenanceCharts
                 fontSize={12}
               />
               <Tooltip 
-                formatter={(v: number) => formatBRL(v)}
+                formatter={(v: number, name: string) => [formatBRL(v), name === 'owner_cents' ? 'Proprietário' : 'Gestão']}
                 contentStyle={{
                   backgroundColor: 'hsl(var(--popover))',
                   border: '1px solid hsl(var(--border))',
                   borderRadius: '6px',
                 }}
               />
-              <Bar dataKey="total_cents" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+              <Legend formatter={(value) => value === 'owner_cents' ? 'Proprietário' : 'Gestão'} />
+              <Bar dataKey="owner_cents" stackId="a" fill="hsl(var(--primary))" radius={[0, 0, 0, 0]} name="owner_cents" />
+              <Bar dataKey="management_cents" stackId="a" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} name="management_cents" />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>

@@ -48,6 +48,7 @@ export const useMaintenances = (filters?: MaintenanceFilters) => {
           property:properties(id, name),
           owner:profiles!charges_owner_id_fkey(id, name)
         `)
+        .is("archived_at", null)
         .order("created_at", { ascending: false });
 
       if (filters?.ownerId) {
@@ -142,6 +143,7 @@ export const useMaintenanceSummary = (ownerId?: string, year?: number) => {
       let query = supabase
         .from("charges")
         .select("*")
+        .is("archived_at", null)
         .gte("created_at", `${currentYear}-01-01`)
         .lte("created_at", `${currentYear}-12-31`);
 
@@ -345,6 +347,7 @@ export const useMaintenanceCharts = (ownerId?: string, year?: number, propertyId
       let query = supabase
         .from("charges")
         .select("*")
+        .is("archived_at", null)
         .gte("created_at", `${currentYear}-01-01`)
         .lte("created_at", `${currentYear}-12-31`);
 
@@ -354,15 +357,21 @@ export const useMaintenanceCharts = (ownerId?: string, year?: number, propertyId
       const { data, error } = await query;
       if (error) throw error;
 
-      // Barras mensais
+      // Barras mensais com split proprietário/gestão
       const monthly = Array.from({ length: 12 }, (_, i) => ({
         month: i + 1,
         total_cents: 0,
+        owner_cents: 0,
+        management_cents: 0,
       }));
 
       data.forEach(m => {
         const month = new Date(m.created_at).getMonth();
-        monthly[month].total_cents += m.amount_cents || 0;
+        const total = m.amount_cents || 0;
+        const mgmt = m.management_contribution_cents || 0;
+        monthly[month].total_cents += total;
+        monthly[month].management_cents += mgmt;
+        monthly[month].owner_cents += (total - mgmt);
       });
 
       // Pizza por responsável
