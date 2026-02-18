@@ -32,7 +32,11 @@ interface MaintenanceChartsProps {
   serviceTypeData: ServiceTypeData[];
 }
 
-const COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', 'hsl(var(--accent))'];
+const PIE_COLORS: Record<string, string> = {
+  'Proprietário': 'hsl(var(--primary))',
+  'Gestão': 'hsl(210, 80%, 55%)',
+  'Dividido': 'hsl(var(--accent))',
+};
 
 const MONTH_NAMES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
@@ -91,7 +95,7 @@ export function MaintenanceCharts({ charts, serviceTypeData }: MaintenanceCharts
               />
               <Legend formatter={(value) => value === 'owner_cents' ? 'Proprietário' : 'Gestão'} />
               <Bar dataKey="owner_cents" stackId="a" fill="hsl(var(--primary))" radius={[0, 0, 0, 0]} name="owner_cents" />
-              <Bar dataKey="management_cents" stackId="a" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} name="management_cents" />
+              <Bar dataKey="management_cents" stackId="a" fill="hsl(210, 80%, 55%)" radius={[4, 4, 0, 0]} name="management_cents" />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
@@ -115,8 +119,8 @@ export function MaintenanceCharts({ charts, serviceTypeData }: MaintenanceCharts
                 label={(entry) => `${entry.name}: ${formatBRL(entry.value)}`}
                 labelLine={false}
               >
-                {pieData.map((_, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                {pieData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={PIE_COLORS[entry.name] || 'hsl(var(--muted))'} />
                 ))}
               </Pie>
               <Tooltip 
