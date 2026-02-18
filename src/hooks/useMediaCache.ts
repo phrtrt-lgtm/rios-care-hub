@@ -16,7 +16,18 @@ const CACHE_EXPIRATION = 30 * 60 * 1000;
 // Get cached session token
 let cachedToken: string | null = null;
 let tokenTimestamp = 0;
-const TOKEN_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const TOKEN_CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
+
+// Invalidate cached token on auth state changes (login/logout)
+supabase.auth.onAuthStateChange((_event, session) => {
+  if (session?.access_token) {
+    cachedToken = session.access_token;
+    tokenTimestamp = Date.now();
+  } else {
+    cachedToken = null;
+    tokenTimestamp = 0;
+  }
+});
 
 const getAccessToken = async (): Promise<string | null> => {
   const now = Date.now();
