@@ -226,7 +226,9 @@ export function OpenChargesTable({
               {renderSortableHeader("Imóvel", "property", "text-left")}
               {renderSortableHeader("Proprietário", "owner", "text-left")}
               {renderSortableHeader("Vencimento", "due_date", "text-center w-[100px]")}
-              {renderSortableHeader("Valor", "amount", "text-right w-[120px]")}
+              <th className="text-right px-2 py-2 font-medium w-[100px]">Total</th>
+              <th className="text-right px-2 py-2 font-medium w-[100px]">Aporte</th>
+              {renderSortableHeader("Valor Devido", "amount", "text-right w-[120px]")}
               {renderSortableHeader("Status", "status", "text-center w-[120px]")}
               <th className="text-center px-2 py-2 font-medium w-[80px]">Qtd</th>
               <th className="text-center px-2 py-2 font-medium w-[80px]">Ações</th>
@@ -239,6 +241,8 @@ export function OpenChargesTable({
               <td className="px-2 py-3">{sortedGroups.length} imóveis</td>
               <td className="px-2 py-3 text-muted-foreground">—</td>
               <td className="px-2 py-3 text-center text-muted-foreground">—</td>
+              <td className="px-2 py-3 text-right text-muted-foreground">{formatBRL(propertyGroups.reduce((acc, g) => acc + g.charges.reduce((s, c) => s + c.amount_cents, 0), 0))}</td>
+              <td className="px-2 py-3 text-right text-muted-foreground">{formatBRL(propertyGroups.reduce((acc, g) => acc + g.charges.reduce((s, c) => s + (c.management_contribution_cents || 0), 0), 0))}</td>
               <td className="px-2 py-3 text-right text-primary font-bold">{formatBRL(totalAmount)}</td>
               <td className="px-2 py-3 text-center">
                 <div className="flex justify-center gap-1">
@@ -323,6 +327,12 @@ export function OpenChargesTable({
                         <span className="text-muted-foreground">—</span>
                       )}
                     </td>
+                    <td className="px-2 py-2 text-right text-muted-foreground text-xs">
+                      {formatBRL(group.charges.reduce((s, c) => s + c.amount_cents, 0))}
+                    </td>
+                    <td className="px-2 py-2 text-right text-muted-foreground text-xs">
+                      {formatBRL(group.charges.reduce((s, c) => s + (c.management_contribution_cents || 0), 0))}
+                    </td>
                     <td className="px-2 py-2 text-right font-medium">
                       {formatBRL(group.totalDueCents)}
                     </td>
@@ -394,15 +404,16 @@ export function OpenChargesTable({
                           <span className="text-muted-foreground text-xs">—</span>
                         )}
                       </td>
+                      <td className="px-2 py-2 text-right text-xs text-muted-foreground">
+                        {formatBRL(charge.amount_cents)}
+                      </td>
+                      <td className="px-2 py-2 text-right text-xs text-muted-foreground">
+                        {charge.management_contribution_cents > 0 ? formatBRL(charge.management_contribution_cents) : '—'}
+                      </td>
                       <td className="px-2 py-2 text-right">
-                        <div className="text-sm">
+                        <span className="text-sm font-medium">
                           {formatBRL(charge.amount_cents - (charge.management_contribution_cents || 0))}
-                          {charge.management_contribution_cents > 0 && (
-                            <div className="text-xs text-muted-foreground">
-                              (aporte: {formatBRL(charge.management_contribution_cents)})
-                            </div>
-                          )}
-                        </div>
+                        </span>
                       </td>
                       <td className="px-2 py-2 text-center">
                         {getStatusBadge(charge.status)}

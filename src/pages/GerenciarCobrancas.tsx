@@ -110,6 +110,7 @@ const GerenciarCobrancas = () => {
         .from('charges')
         .select('*')
         .not('status', 'in', '(paid,pago_no_vencimento,cancelled,pago_antecipado)')
+        .is('archived_at', null)
         .order('due_date', { ascending: true });
 
       if (error) throw error;
@@ -154,6 +155,7 @@ const GerenciarCobrancas = () => {
         .from('charges')
         .select('*')
         .in('status', ['overdue', 'debited'])
+        .is('archived_at', null)
         .order('due_date', { ascending: true });
 
       if (error) throw error;
@@ -317,24 +319,25 @@ const GerenciarCobrancas = () => {
       
       const { error } = await supabase
         .from('charges')
-        .delete()
+        .update({ archived_at: new Date().toISOString(), status: 'cancelled' })
         .in('id', Array.from(selectedCharges));
 
       if (error) throw error;
 
       toast({
-        title: "Cobranças excluídas",
-        description: `${selectedCharges.size} cobrança(s) excluída(s) permanentemente.`,
+        title: "Cobranças movidas para lixeira",
+        description: `${selectedCharges.size} cobrança(s) movida(s) para a lixeira.`,
       });
       
       setSelectedCharges(new Set());
       setDeleteDialogOpen(false);
       fetchCharges();
+      fetchDebitoCharges();
     } catch (error) {
-      console.error('Erro ao excluir cobranças:', error);
+      console.error('Erro ao arquivar cobranças:', error);
       toast({
         title: "Erro ao excluir",
-        description: "Não foi possível excluir as cobranças selecionadas.",
+        description: "Não foi possível mover as cobranças para a lixeira.",
         variant: "destructive"
       });
     } finally {
@@ -447,7 +450,7 @@ const GerenciarCobrancas = () => {
                     onClick={() => setDeleteDialogOpen(true)}
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Excluir ({selectedCharges.size})
+                    Lixeira ({selectedCharges.size})
                   </Button>
                 )}
               </div>
@@ -582,10 +585,10 @@ const GerenciarCobrancas = () => {
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Excluir cobranças permanentemente?</AlertDialogTitle>
+              <AlertDialogTitle>Mover cobranças para a lixeira?</AlertDialogTitle>
               <AlertDialogDescription>
-                Você está prestes a excluir <strong>{selectedCharges.size} cobrança(s)</strong> permanentemente. 
-                Esta ação não pode ser desfeita.
+                Você está prestes a mover <strong>{selectedCharges.size} cobrança(s)</strong> para a lixeira. 
+                Elas não serão mais cobradas nem aparecerão nos relatórios.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -595,7 +598,7 @@ const GerenciarCobrancas = () => {
                 disabled={deleting}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
-                {deleting ? "Excluindo..." : "Excluir permanentemente"}
+                {deleting ? "Movendo..." : "Mover para lixeira"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
