@@ -527,7 +527,9 @@ export function OwnerChargesPreview() {
       </Card>
 
       {/* Free Maintenances Section */}
-      {freeMaintenances && freeMaintenances.length > 0 && (
+      {freeMaintenances && freeMaintenances.length > 0 && (() => {
+        const totalFreeCents = freeMaintenances.reduce((sum, c) => sum + (c.amount_cents || 0), 0);
+        return (
         <Card className="overflow-hidden border-emerald-500/20 mt-4">
           <CardHeader className="pb-2 bg-gradient-to-r from-emerald-500/5 to-transparent">
             <CardTitle className="text-base flex items-center gap-2">
@@ -540,6 +542,10 @@ export function OwnerChargesPreview() {
             <p className="text-xs text-muted-foreground">
               Serviços realizados com aporte integral da gestão nos últimos 7 dias
             </p>
+            <div className="mt-2 flex items-center gap-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-3 py-2">
+              <span className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">Total investido pela gestão:</span>
+              <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{formatBRL(totalFreeCents)}</span>
+            </div>
           </CardHeader>
           <CardContent className="pt-3 px-3">
             <div className="space-y-1.5">
@@ -588,7 +594,8 @@ export function OwnerChargesPreview() {
             </div>
           </CardContent>
         </Card>
-      )}
+        );
+      })()}
 
       {/* PIX Dialog */}
       <Dialog open={pixDialogOpen} onOpenChange={setPixDialogOpen}>
