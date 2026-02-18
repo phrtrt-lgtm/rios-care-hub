@@ -57,7 +57,7 @@ serve(async (req) => {
     }
 
     // Validate all charges are open
-    const invalidCharges = charges.filter(c => c.status !== 'sent' && c.status !== 'overdue');
+    const invalidCharges = charges.filter(c => c.status !== 'sent' && c.status !== 'overdue' && c.status !== 'pendente');
     if (invalidCharges.length > 0) {
       throw new Error('Algumas cobranças selecionadas não estão em aberto');
     }
