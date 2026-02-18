@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,7 +20,8 @@ import {
   XCircle,
   HelpCircle,
   MessageSquare,
-  LayoutList
+  LayoutList,
+  ArrowLeft
 } from "lucide-react";
 import { MobileHeader } from "@/components/MobileHeader";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
@@ -31,7 +32,9 @@ import {
   TutorialCobrancasProprietario,
   TutorialTicketsChat,
   TutorialTicketsChatProprietario,
-  TutorialQuadroManutencoes
+  TutorialQuadroManutencoes,
+  TutorialVistoriasProprietario,
+  TutorialAlertasVotacoesProprietario
 } from "@/components/tutorials";
 
 // Tutorial sobre Manutenção
@@ -625,13 +628,43 @@ const tutoriaisProprietarios = [
     component: TutorialTicketsChatProprietario,
     available: true,
   },
+  {
+    id: "vistorias-prop",
+    title: "Vistorias do Imóvel",
+    description: "Vistorias de limpeza e rotina: como protegem seu imóvel",
+    icon: ClipboardCheck,
+    component: TutorialVistoriasProprietario,
+    available: true,
+  },
+  {
+    id: "alertas-votacoes-prop",
+    title: "Alertas, Propostas e Votações",
+    description: "Comunicados, aprovações coletivas e compras em grupo",
+    icon: Vote,
+    component: TutorialAlertasVotacoesProprietario,
+    available: true,
+  },
 ];
 
 export default function Tutoriais() {
   const { profile } = useAuth();
   const [selectedTutorial, setSelectedTutorial] = useState<string | null>(null);
+  const scrollPositionRef = useRef(0);
   
   const isTeamMember = profile?.role === 'admin' || profile?.role === 'maintenance' || profile?.role === 'agent';
+
+  const handleSelectTutorial = useCallback((id: string) => {
+    scrollPositionRef.current = window.scrollY;
+    setSelectedTutorial(id);
+    window.scrollTo(0, 0);
+  }, []);
+
+  const handleBack = useCallback(() => {
+    setSelectedTutorial(null);
+    requestAnimationFrame(() => {
+      window.scrollTo(0, scrollPositionRef.current);
+    });
+  }, []);
 
   const currentTutorial = [...tutoriaisFuncionarios, ...tutoriaisProprietarios].find(t => t.id === selectedTutorial);
   const TutorialComponent = currentTutorial?.component;
@@ -643,10 +676,11 @@ export default function Tutoriais() {
         <main className="container mx-auto px-4 py-6">
           <Button 
             variant="ghost" 
-            onClick={() => setSelectedTutorial(null)}
+            onClick={handleBack}
             className="mb-4"
           >
-            ← Voltar aos Tutoriais
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Voltar aos Tutoriais
           </Button>
           <TutorialComponent />
         </main>
@@ -685,7 +719,7 @@ export default function Tutoriais() {
                   <Card 
                     key={tutorial.id}
                     className={`cursor-pointer transition-all hover:shadow-md ${!tutorial.available && 'opacity-60'}`}
-                    onClick={() => tutorial.available && setSelectedTutorial(tutorial.id)}
+                    onClick={() => tutorial.available && handleSelectTutorial(tutorial.id)}
                   >
                     <CardHeader>
                       <div className="flex items-center justify-between">
@@ -717,7 +751,7 @@ export default function Tutoriais() {
                 <Card 
                   key={tutorial.id}
                   className={`cursor-pointer transition-all hover:shadow-md ${!tutorial.available && 'opacity-60'}`}
-                  onClick={() => tutorial.available && setSelectedTutorial(tutorial.id)}
+                  onClick={() => tutorial.available && handleSelectTutorial(tutorial.id)}
                 >
                   <CardHeader>
                     <div className="flex items-center justify-between">

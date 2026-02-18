@@ -5,3 +5,5 @@ export { TutorialCobrancasProprietario } from './TutorialCobrancasProprietario';
 export { TutorialTicketsChat } from './TutorialTicketsChat';
 export { TutorialTicketsChatProprietario } from './TutorialTicketsChatProprietario';
 export { TutorialQuadroManutencoes } from './TutorialQuadroManutencoes';
+export { TutorialVistoriasProprietario } from './TutorialVistoriasProprietario';
+export { TutorialAlertasVotacoesProprietario } from './TutorialAlertasVotacoesProprietario';

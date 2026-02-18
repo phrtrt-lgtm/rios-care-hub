@@ -5,6 +5,8 @@ export const CHARGE_CATEGORIES = {
   itens: 'Itens',
   estrutural: 'Estrutural',
   refrigeracao: 'Refrigeração',
+  vidracaria: 'Vidraçaria',
+  servico_misto: 'Serviço Misto',
 } as const;
 
 export type ChargeCategory = keyof typeof CHARGE_CATEGORIES;
