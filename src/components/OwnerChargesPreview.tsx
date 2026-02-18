@@ -24,7 +24,8 @@ import {
   AlertTriangle,
   ChevronRight,
   ChevronDown,
-  Paperclip
+  Paperclip,
+  Gift
 } from "lucide-react";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { ChargeChatDialog } from "@/components/ChargeChatDialog";
@@ -103,6 +104,45 @@ export function OwnerChargesPreview() {
 
       if (error) throw error;
       return data as unknown as OwnerCharge[];
+    },
+    enabled: !!user,
+  });
+
+  // Fetch free maintenances (100% covered by management) from last 7 days
+  const { data: freeMaintenances } = useQuery({
+    queryKey: ["owner-free-maintenances", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      const { data, error } = await supabase
+        .from("charges")
+        .select(`
+          id,
+          title,
+          amount_cents,
+          management_contribution_cents,
+          due_date,
+          status,
+          created_at,
+          description,
+          category,
+          property:properties(id, name, cover_photo_url)
+        `)
+        .eq("owner_id", user.id)
+        .in("status", ["pago_no_vencimento", "paid"])
+        .is("archived_at", null)
+        .gte("created_at", sevenDaysAgo.toISOString())
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      // Filter only those where management covers 100%
+      return (data || []).filter(
+        (c: any) => c.management_contribution_cents >= c.amount_cents
+      ) as unknown as (OwnerCharge & { created_at: string; description: string | null; category: string | null })[];
     },
     enabled: !!user,
   });
@@ -485,6 +525,70 @@ export function OwnerChargesPreview() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Free Maintenances Section */}
+      {freeMaintenances && freeMaintenances.length > 0 && (
+        <Card className="overflow-hidden border-emerald-500/20 mt-4">
+          <CardHeader className="pb-2 bg-gradient-to-r from-emerald-500/5 to-transparent">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Gift className="h-5 w-5 text-emerald-500" />
+              Manutenções Gratuitas
+              <Badge variant="secondary" className="font-medium text-xs ml-auto">
+                {freeMaintenances.length}
+              </Badge>
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Serviços realizados com aporte integral da gestão nos últimos 7 dias
+            </p>
+          </CardHeader>
+          <CardContent className="pt-3 px-3">
+            <div className="space-y-1.5">
+              {freeMaintenances.map((charge) => (
+                <div
+                  key={charge.id}
+                  className="rounded-lg border bg-card overflow-hidden cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => navigate(`/cobranca/${charge.id}`)}
+                >
+                  <div className="p-2.5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded overflow-hidden bg-muted flex-shrink-0">
+                        {charge.property?.cover_photo_url ? (
+                          <img
+                            src={charge.property.cover_photo_url}
+                            alt={charge.property?.name || ''}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Building2 className="h-3 w-3 text-muted-foreground" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-xs line-clamp-1">{charge.title}</p>
+                        <div className="flex items-center gap-1.5">
+                          <Badge variant="outline" className="text-[10px] h-4 border-emerald-500/30 text-emerald-600">
+                            Aporte integral
+                          </Badge>
+                          <span className="text-[10px] text-muted-foreground">
+                            {formatBRL(charge.amount_cents)}
+                          </span>
+                          {charge.property?.name && (
+                            <span className="text-[10px] text-muted-foreground">
+                              • {charge.property.name}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* PIX Dialog */}
       <Dialog open={pixDialogOpen} onOpenChange={setPixDialogOpen}>
