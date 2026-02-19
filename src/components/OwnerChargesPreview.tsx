@@ -160,10 +160,9 @@ export function OwnerChargesPreview() {
         .is("archived_at", null);
 
       if (error) throw error;
-      // Sum management_contribution_cents where it covers 100%
+      // Sum ALL management contributions (partial + full)
       return (data || [])
-        .filter((c: any) => c.management_contribution_cents >= c.amount_cents)
-        .reduce((sum: number, c: any) => sum + (c.amount_cents || 0), 0);
+        .reduce((sum: number, c: any) => sum + (c.management_contribution_cents || 0), 0);
     },
     enabled: !!user,
   });
