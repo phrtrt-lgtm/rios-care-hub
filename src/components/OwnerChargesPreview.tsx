@@ -572,11 +572,6 @@ export function OwnerChargesPreview() {
               </div>
             )}
 
-            {/* Recent 7-day total */}
-            <div className="mt-2 flex items-center justify-between rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-3 py-2">
-              <span className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">Últimos 7 dias:</span>
-              <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{formatBRL(totalFreeCents)}</span>
-            </div>
           </CardHeader>
           <CardContent className="pt-3 px-3">
             <div className="space-y-1.5">
@@ -622,6 +617,11 @@ export function OwnerChargesPreview() {
                   </div>
                 </div>
               ))}
+            </div>
+            {/* 7-day integral total below list */}
+            <div className="mt-3 flex items-center justify-between rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-3 py-2">
+              <span className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">Aportes integrais dos últimos 7 dias:</span>
+              <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{formatBRL(totalFreeCents)}</span>
             </div>
           </CardContent>
         </Card>
