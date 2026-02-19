@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -648,6 +649,7 @@ const tutoriaisProprietarios = [
 
 export default function Tutoriais() {
   const { profile } = useAuth();
+  const navigate = useNavigate();
   const [selectedTutorial, setSelectedTutorial] = useState<string | null>(null);
   const scrollPositionRef = useRef(0);
   
@@ -693,6 +695,14 @@ export default function Tutoriais() {
     <div className="min-h-screen bg-background pb-20 md:pb-6">
       <MobileHeader />
       <main className="container mx-auto px-4 py-6">
+        <Button 
+          variant="ghost" 
+          onClick={() => navigate(-1)}
+          className="mb-4"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Voltar
+        </Button>
         <div className="mb-6">
           <h1 className="text-2xl font-bold">Central de Tutoriais</h1>
           <p className="text-muted-foreground">Aprenda como usar cada funcionalidade do sistema</p>
