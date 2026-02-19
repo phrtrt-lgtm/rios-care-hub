@@ -147,6 +147,27 @@ export function OwnerChargesPreview() {
     enabled: !!user,
   });
 
+  // Fetch ALL-TIME total management investment for this owner
+  const { data: allTimeInvestmentCents } = useQuery({
+    queryKey: ["owner-alltime-investment", user?.id],
+    queryFn: async () => {
+      if (!user) return 0;
+
+      const { data, error } = await supabase
+        .from("charges")
+        .select("amount_cents, management_contribution_cents")
+        .eq("owner_id", user.id)
+        .is("archived_at", null);
+
+      if (error) throw error;
+      // Sum management_contribution_cents where it covers 100%
+      return (data || [])
+        .filter((c: any) => c.management_contribution_cents >= c.amount_cents)
+        .reduce((sum: number, c: any) => sum + (c.amount_cents || 0), 0);
+    },
+    enabled: !!user,
+  });
+
   // Use ticket IDs format for unread messages - charges use charge_messages table
   const chargeIds = charges?.map((c) => c.id) || [];
   const { unreadCounts, markAsRead } = useUnreadMessages(chargeIds);
@@ -539,12 +560,23 @@ export function OwnerChargesPreview() {
                 {freeMaintenances.length}
               </Badge>
             </CardTitle>
-            <p className="text-xs text-muted-foreground">
-              Serviços realizados com aporte integral da gestão nos últimos 7 dias
-            </p>
-            <div className="mt-2 flex items-center gap-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-3 py-2">
-              <span className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">Total investido pela gestão:</span>
-              <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{formatBRL(totalFreeCents)}</span>
+
+            {/* All-time total */}
+            {(allTimeInvestmentCents ?? 0) > 0 && (
+              <div className="mt-2 rounded-xl bg-gradient-to-r from-emerald-500/15 to-emerald-600/5 border border-emerald-500/25 px-4 py-3 text-center">
+                <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium tracking-wide uppercase">
+                  A RIOS já aportou no seu imóvel
+                </p>
+                <p className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                  {formatBRL(allTimeInvestmentCents ?? 0)}
+                </p>
+              </div>
+            )}
+
+            {/* Recent 7-day total */}
+            <div className="mt-2 flex items-center justify-between rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-3 py-2">
+              <span className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">Últimos 7 dias:</span>
+              <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{formatBRL(totalFreeCents)}</span>
             </div>
           </CardHeader>
           <CardContent className="pt-3 px-3">
