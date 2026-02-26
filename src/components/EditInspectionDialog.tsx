@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { compressVideo, isVideoFile, FileUploadProgress } from '@/lib/fileUpload';
 import { VideoCompressionProgress } from '@/components/VideoCompressionProgress';
+import RoutineInspectionChecklist, { ChecklistData, defaultChecklistData } from '@/components/RoutineInspectionChecklist';
 
 interface EditInspectionDialogProps {
   open: boolean;
@@ -20,6 +21,7 @@ interface EditInspectionDialogProps {
     transcript?: string;
     transcript_summary?: string;
     audio_url?: string;
+    is_routine?: boolean;
   };
   existingAttachments: Array<{
     id: string;
@@ -27,6 +29,7 @@ interface EditInspectionDialogProps {
     file_name?: string;
     file_type?: string;
   }>;
+  routineChecklist?: any;
   onSuccess?: () => void;
 }
 
@@ -53,6 +56,7 @@ export default function EditInspectionDialog({
   onOpenChange,
   inspection,
   existingAttachments,
+  routineChecklist,
   onSuccess 
 }: EditInspectionDialogProps) {
   const [inspectionStatus, setInspectionStatus] = useState<'OK' | 'NÃO' | ''>(inspection.notes as 'OK' | 'NÃO' || '');
@@ -60,6 +64,7 @@ export default function EditInspectionDialog({
   const [audioFiles, setAudioFiles] = useState<AudioFile[]>([]);
   const [attachmentsToDelete, setAttachmentsToDelete] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [checklistData, setChecklistData] = useState<ChecklistData>(defaultChecklistData);
 
   useEffect(() => {
     if (open) {
@@ -67,8 +72,39 @@ export default function EditInspectionDialog({
       setUploadedFiles([]);
       setAudioFiles([]);
       setAttachmentsToDelete([]);
+      // Load routine checklist data if available
+      if (routineChecklist) {
+        setChecklistData({
+          ac_filters_cleaned: routineChecklist.ac_filters_cleaned ?? false,
+          batteries_replaced: routineChecklist.batteries_replaced ?? false,
+          ac_working: routineChecklist.ac_working ?? '',
+          ac_notes: routineChecklist.ac_notes ?? '',
+          tv_internet_working: routineChecklist.tv_internet_working ?? '',
+          tv_internet_notes: routineChecklist.tv_internet_notes ?? '',
+          outlets_switches_working: routineChecklist.outlets_switches_working ?? '',
+          outlets_switches_notes: routineChecklist.outlets_switches_notes ?? '',
+          doors_locks_working: routineChecklist.doors_locks_working ?? '',
+          doors_locks_notes: routineChecklist.doors_locks_notes ?? '',
+          curtains_rods_working: routineChecklist.curtains_rods_working ?? '',
+          curtains_rods_notes: routineChecklist.curtains_rods_notes ?? '',
+          bathroom_working: routineChecklist.bathroom_working ?? '',
+          bathroom_notes: routineChecklist.bathroom_notes ?? '',
+          furniture_working: routineChecklist.furniture_working ?? '',
+          furniture_notes: routineChecklist.furniture_notes ?? '',
+          kitchen_working: routineChecklist.kitchen_working ?? '',
+          kitchen_notes: routineChecklist.kitchen_notes ?? '',
+          stove_oven_working: routineChecklist.stove_oven_working ?? '',
+          stove_oven_notes: routineChecklist.stove_oven_notes ?? '',
+          cutlery_ok: routineChecklist.cutlery_ok ?? '',
+          cutlery_notes: routineChecklist.cutlery_notes ?? '',
+          glasses_count: routineChecklist.glasses_count ?? null,
+          pillows_count: routineChecklist.pillows_count ?? null,
+        });
+      } else {
+        setChecklistData(defaultChecklistData);
+      }
     }
-  }, [open, inspection]);
+  }, [open, inspection, routineChecklist]);
 
   const uploadFile = async (file: File): Promise<string> => {
     const fileExt = file.name.split('.').pop();
@@ -260,6 +296,24 @@ export default function EditInspectionDialog({
 
       if (updateError) throw updateError;
 
+      // Update routine checklist if is_routine
+      if (inspection.is_routine) {
+        if (routineChecklist?.id) {
+          // Update existing
+          const { error: checklistError } = await supabase
+            .from('routine_inspection_checklists')
+            .update(checklistData)
+            .eq('id', routineChecklist.id);
+          if (checklistError) throw checklistError;
+        } else {
+          // Insert new
+          const { error: checklistError } = await supabase
+            .from('routine_inspection_checklists')
+            .insert({ ...checklistData, inspection_id: inspection.id });
+          if (checklistError) throw checklistError;
+        }
+      }
+
       // Delete removed attachments
       if (attachmentsToDelete.length > 0) {
         const { error: deleteError } = await supabase
@@ -369,6 +423,17 @@ export default function EditInspectionDialog({
               </div>
             </RadioGroup>
           </div>
+
+          {/* Routine Checklist */}
+          {inspection.is_routine && (
+            <div className="space-y-3 bg-card border rounded-xl p-4">
+              <h3 className="text-base font-bold">Checklist de Rotina</h3>
+              <RoutineInspectionChecklist
+                data={checklistData}
+                onChange={setChecklistData}
+              />
+            </div>
+          )}
 
           {/* Existing Attachments */}
           {existingAttachments.length > 0 && (
