@@ -629,8 +629,9 @@ export default function AdminVistoriaDetalhes() {
       <EditInspectionDialog
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
-        inspection={inspection}
+        inspection={{ ...inspection, is_routine: (inspection as any).is_routine }}
         existingAttachments={attachments}
+        routineChecklist={routineChecklist}
         onSuccess={fetchData}
       />
 
