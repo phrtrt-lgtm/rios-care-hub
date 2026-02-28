@@ -158,6 +158,19 @@ export default function MinhaCaixa() {
                   </div>
                   
                   <ChangePasswordDialog />
+
+                  {profile?.role === "owner" && (
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => {
+                        localStorage.removeItem("owner_onboarding_v1_done");
+                        window.location.reload();
+                      }}
+                    >
+                      Ver tour de boas-vindas
+                    </Button>
+                  )}
                   
                   <Button 
                     variant="destructive"
