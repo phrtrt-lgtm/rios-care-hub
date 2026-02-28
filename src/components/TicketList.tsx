@@ -138,28 +138,6 @@ export const TicketList = () => {
     return priority === "urgente" ? "destructive" : "secondary";
   };
 
-  const getTimeUntilSLA = (slaDueAt: string | null) => {
-    if (!slaDueAt) return null;
-    
-    const now = currentTime.getTime();
-    const slaTime = new Date(slaDueAt).getTime();
-    const diffMs = slaTime - now;
-    
-    if (diffMs < 0) {
-      return { expired: true, text: "SLA Expirado", hours: 0, minutes: 0 };
-    }
-    
-    const hours = Math.floor(diffMs / (1000 * 60 * 60));
-    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    
-    return {
-      expired: false,
-      text: `${hours}h ${minutes}m`,
-      hours,
-      minutes,
-      isUrgent: hours < 2
-    };
-  };
 
   if (loading) {
     return <LoadingScreen message="Carregando tickets..." />;
@@ -197,8 +175,6 @@ export const TicketList = () => {
       ) : (
         <div className="grid gap-3">
           {tickets.map((ticket) => {
-            const ticketIsOpen = ["novo", "em_analise", "aguardando_info", "em_execucao"].includes(ticket.status);
-            const slaInfo = ticketIsOpen ? getTimeUntilSLA(ticket.sla_due_at) : null;
             
             return (
               <Card
@@ -284,29 +260,6 @@ export const TicketList = () => {
                       </p>
                     </div>
 
-                    {/* SLA Countdown */}
-                    {slaInfo && (
-                      <div className={`text-right px-3 py-2 rounded-md ${
-                        slaInfo.expired 
-                          ? "bg-destructive/10 border border-destructive" 
-                          : slaInfo.isUrgent
-                          ? "bg-orange-500/10 border border-orange-500"
-                          : "bg-primary/10 border border-primary/20"
-                      }`}>
-                        <p className="text-xs text-muted-foreground mb-0.5">
-                          {slaInfo.expired ? "SLA" : "Expira em"}
-                        </p>
-                        <p className={`text-lg font-bold ${
-                          slaInfo.expired 
-                            ? "text-destructive" 
-                            : slaInfo.isUrgent
-                            ? "text-orange-600"
-                            : "text-primary"
-                        }`}>
-                          {slaInfo.expired ? "EXPIRADO" : slaInfo.text}
-                        </p>
-                      </div>
-                    )}
                   </div>
                 </div>
               </Card>
