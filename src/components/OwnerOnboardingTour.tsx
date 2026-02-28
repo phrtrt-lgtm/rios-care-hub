@@ -35,7 +35,7 @@ const steps = [
     title: "Votações & Alertas",
     emoji: "🗳️",
     description:
-      "Participe de decisões sobre o seu imóvel. Quando há uma proposta de melhoria ou manutenção importante, você vota aqui e acompanha o resultado.",
+      "Participe das decisões do seu imóvel: aprove propostas de melhorias, compra de itens e manutenções — e já pague pelo sistema em até 12x via MercadoPago. Desde outubro de 2025, realizamos manutenções preventivas para proteger seu patrimônio: no verão, com diárias mais altas, qualquer problema pode gerar avaliação negativa, cancelamento e reembolso de 30% ao hóspede — o que afeta diretamente seu rendimento. Boa parte dessas manutenções é custeada por nós (aporte de gestão). Quando há custo compartilhado, você vê exatamente cada parte.",
     tip: "Fique atento ao sino de notificações para não perder votações com prazo.",
   },
   {
