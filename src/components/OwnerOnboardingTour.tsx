@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Ticket, ClipboardCheck, DollarSign, Vote, Star, X, ChevronRight, ChevronLeft } from "lucide-react";
+import { Ticket, ClipboardCheck, DollarSign, Vote, BarChart3, X, ChevronRight, ChevronLeft } from "lucide-react";
 
-const STORAGE_KEY = "owner_onboarding_v1_done";
+const STORAGE_KEY = "owner_onboarding_v2_done";
 
 const steps = [
   {
@@ -39,12 +39,12 @@ const steps = [
     tip: "Fique atento ao sino de notificações para não perder votações com prazo.",
   },
   {
-    icon: <Star className="h-10 w-10 text-yellow-500" />,
-    title: "Score de Pagamento",
-    emoji: "⭐",
+    icon: <BarChart3 className="h-10 w-10 text-yellow-500" />,
+    title: "Relatório de Manutenções",
+    emoji: "📊",
     description:
-      "Seu score começa em 50 e sobe a cada pagamento pontual. Um score alto pode influenciar positivamente nos aportes da gestão em manutenções futuras.",
-    tip: "Pague em dia para manter seu score alto e fortalecer a parceria com a RIOS.",
+      "Acompanhe o histórico completo de manutenções do seu imóvel: quanto a RIOS já aportou, o valor que coube a você, gráficos mensais de gastos e distribuição por tipo de serviço.",
+    tip: "No relatório você também acessa os anexos (fotos, notas fiscais) de cada serviço realizado.",
   },
 ];
 
