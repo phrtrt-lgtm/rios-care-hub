@@ -2015,6 +2015,7 @@ export default function AdminManutencoesLista() {
               transcript: inspectionToEdit.transcript || undefined,
               transcript_summary: inspectionToEdit.transcript_summary || undefined,
               audio_url: inspectionToEdit.audio_url || undefined,
+              internal_only: (inspectionToEdit as any).internal_only ?? true,
             }}
             existingAttachments={inspectionToEdit.attachments}
             onSuccess={() => {
