@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, Trash2, CheckCircle2, XCircle, Camera, Video, Mic, Sparkles, Plus } from 'lucide-react';
+import { Loader2, Trash2, CheckCircle2, XCircle, Camera, Video, Mic, Sparkles, Plus, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Switch } from '@/components/ui/switch';
 import AudioRecorder from '@/components/AudioRecorder';
 import AudioPlayer from '@/components/AudioPlayer';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,6 +23,7 @@ interface EditInspectionDialogProps {
     transcript_summary?: string;
     audio_url?: string;
     is_routine?: boolean;
+    internal_only?: boolean;
   };
   existingAttachments: Array<{
     id: string;
@@ -65,6 +67,7 @@ export default function EditInspectionDialog({
   const [attachmentsToDelete, setAttachmentsToDelete] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [checklistData, setChecklistData] = useState<ChecklistData>(defaultChecklistData);
+  const [visibleToOwner, setVisibleToOwner] = useState(!inspection.internal_only);
 
   useEffect(() => {
     if (open) {
@@ -72,6 +75,7 @@ export default function EditInspectionDialog({
       setUploadedFiles([]);
       setAudioFiles([]);
       setAttachmentsToDelete([]);
+      setVisibleToOwner(!inspection.internal_only);
       // Load routine checklist data if available
       if (routineChecklist) {
         setChecklistData({
@@ -269,6 +273,7 @@ export default function EditInspectionDialog({
       // Update inspection record
       const updateData: any = {
         notes: inspectionStatus,
+        internal_only: !visibleToOwner,
       };
 
       // If we have new audio with transcripts, append to existing
@@ -422,6 +427,24 @@ export default function EditInspectionDialog({
                 </label>
               </div>
             </RadioGroup>
+          </div>
+
+          {/* Owner Visibility Toggle */}
+          <div className="flex items-center justify-between rounded-xl border bg-card p-4">
+            <div className="flex items-center gap-3">
+              {visibleToOwner ? (
+                <Eye className="h-5 w-5 text-primary" />
+              ) : (
+                <EyeOff className="h-5 w-5 text-muted-foreground" />
+              )}
+              <div>
+                <p className="text-sm font-medium">Visível para o proprietário</p>
+                <p className="text-xs text-muted-foreground">
+                  {visibleToOwner ? "O proprietário pode ver esta vistoria no portal" : "Vistoria interna — proprietário não verá"}
+                </p>
+              </div>
+            </div>
+            <Switch checked={visibleToOwner} onCheckedChange={setVisibleToOwner} />
           </div>
 
           {/* Routine Checklist */}
