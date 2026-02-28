@@ -385,7 +385,17 @@ export default function EditInspectionDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Editar Vistoria</DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle>Editar Vistoria</DialogTitle>
+            <Button
+              onClick={handleSave}
+              disabled={saving || isCompressing || isUploading || isTranscribing}
+              size="sm"
+            >
+              {saving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
+              Salvar
+            </Button>
+          </div>
         </DialogHeader>
 
         <div className="space-y-6">
