@@ -19,6 +19,7 @@ import { OwnerMaintenanceProgress } from "@/components/OwnerMaintenanceProgress"
 import { OwnerTicketsPreview } from "@/components/OwnerTicketsPreview";
 import { OwnerChargesPreview } from "@/components/OwnerChargesPreview";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
+import { OwnerOnboardingTour } from "@/components/OwnerOnboardingTour";
 import { motion } from "framer-motion";
 
 
@@ -275,6 +276,8 @@ export default function MinhaCaixa() {
       </main>
       {/* Mobile Bottom Navigation */}
       <MobileBottomNav />
+      {/* Onboarding Tour - only for owners */}
+      {profile?.role === "owner" && <OwnerOnboardingTour />}
     </div>
   );
 }
