@@ -145,28 +145,6 @@ export default function MeusChamados() {
     }
   };
 
-  const getTimeUntilSLA = (slaDueAt: string | null) => {
-    if (!slaDueAt) return null;
-    
-    const now = currentTime.getTime();
-    const slaTime = new Date(slaDueAt).getTime();
-    const diffMs = slaTime - now;
-    
-    if (diffMs < 0) {
-      return { expired: true, text: "Expirado", hours: 0, minutes: 0 };
-    }
-    
-    const hours = Math.floor(diffMs / (1000 * 60 * 60));
-    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    
-    return {
-      expired: false,
-      text: `${hours}h${minutes}m`,
-      hours,
-      minutes,
-      isUrgent: hours < 24
-    };
-  };
 
   const openChat = (ticket: any, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -245,8 +223,6 @@ export default function MeusChamados() {
           ) : (
             <div className="space-y-2">
               {tickets.map((ticket) => {
-                const ticketIsOpen = ["novo", "em_analise", "aguardando_info", "em_execucao"].includes(ticket.status);
-                const slaInfo = ticketIsOpen ? getTimeUntilSLA(ticket.sla_due_at) : null;
                 const unreadCount = unreadCounts[ticket.id] || 0;
                 
                 return (
@@ -286,19 +262,6 @@ export default function MeusChamados() {
                         <TicketBadges ticket={ticket} />
                       </div>
 
-                      {/* SLA */}
-                      {slaInfo && (
-                        <div className={`text-[10px] font-bold px-2 py-1 rounded shrink-0 ${
-                          slaInfo.expired 
-                            ? "bg-destructive/10 text-destructive border border-destructive/30" 
-                            : slaInfo.isUrgent
-                            ? "bg-primary/10 text-primary border border-primary/30"
-                            : "bg-secondary/10 text-secondary border border-secondary/30"
-                        }`}>
-                          <Clock className="h-3 w-3 inline mr-0.5" />
-                          {slaInfo.text}
-                        </div>
-                      )}
                     </div>
 
                     {/* Row 2: Subject */}

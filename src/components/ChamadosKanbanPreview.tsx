@@ -76,21 +76,6 @@ export function ChamadosKanbanPreview() {
     }
   };
 
-  const getSlaColor = (sla_due_at: string | null) => {
-    if (!sla_due_at) return "";
-    const hoursLeft = differenceInHours(new Date(sla_due_at), new Date());
-    if (hoursLeft < 0) return "text-red-600";
-    if (hoursLeft < 24) return "text-orange-600";
-    return "text-blue-600";
-  };
-
-  const getSlaText = (sla_due_at: string | null) => {
-    if (!sla_due_at) return "";
-    const hoursLeft = differenceInHours(new Date(sla_due_at), new Date());
-    if (hoursLeft < 0) return `${Math.abs(hoursLeft)}h atrás`;
-    return `${hoursLeft}h`;
-  };
-
   const novos = tickets.filter((t) => t.status === "novo");
   const emAndamento = tickets.filter((t) => ["em_analise", "aguardando_info", "em_execucao"].includes(t.status));
 
@@ -109,11 +94,6 @@ export function ChamadosKanbanPreview() {
       </div>
 
       <div className="flex items-center gap-1 shrink-0">
-        {ticket.sla_due_at && (
-          <span className={`hidden sm:inline text-[10px] font-medium whitespace-nowrap shrink-0 ${getSlaColor(ticket.sla_due_at)}`}>
-            {getSlaText(ticket.sla_due_at)}
-          </span>
-        )}
         <QuickAttachmentButton 
           ticketId={ticket.id} 
           onSuccess={fetchTickets}

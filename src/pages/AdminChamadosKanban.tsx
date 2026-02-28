@@ -199,27 +199,6 @@ const AdminChamadosKanban = () => {
     });
   }, [tickets, search, typeFilter]);
 
-  const getSlaInfo = (sla_due_at: string | null) => {
-    if (!sla_due_at) return null;
-    
-    const now = new Date();
-    const slaDue = new Date(sla_due_at);
-    const hoursLeft = differenceInHours(slaDue, now);
-    const minutesLeft = differenceInMinutes(slaDue, now) % 60;
-    
-    const isExpired = now > slaDue;
-    const isUrgent = hoursLeft < 24 && !isExpired;
-    
-    let colorClass = "text-blue-600";
-    if (isExpired) colorClass = "text-red-600";
-    else if (isUrgent) colorClass = "text-orange-600";
-    
-    const display = isExpired 
-      ? `Expirado há ${Math.abs(hoursLeft)}h${Math.abs(minutesLeft)}m`
-      : `${hoursLeft}h${minutesLeft}m`;
-    
-    return { display, colorClass, isExpired };
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 p-4 md:p-6">
@@ -296,8 +275,6 @@ const AdminChamadosKanban = () => {
                     </p>
                   ) : (
                     column.tickets.map((ticket) => {
-                      const slaInfo = getSlaInfo(ticket.sla_due_at);
-                      
                       return (
                         <Card
                           key={ticket.id}
@@ -344,13 +321,6 @@ const AdminChamadosKanban = () => {
                               </div>
                             )}
 
-                            {/* SLA */}
-                            {slaInfo && (
-                              <div className={`flex items-center gap-1 text-xs ${slaInfo.colorClass}`}>
-                                <Clock className="h-3 w-3" />
-                                {slaInfo.display}
-                              </div>
-                            )}
 
                             {/* Owner */}
                             <p className="text-xs text-muted-foreground">
