@@ -20,7 +20,9 @@ const SERVICE_TYPES = [
   'Elétrica',
   'Marcenaria',
   'Itens',
-  'Refrigeração'
+  'Refrigeração',
+  'Vidraçaria',
+  'Serviço Misto',
 ];
 
 export const ServiceTypeChart = ({ data }: ServiceTypeChartProps) => {
