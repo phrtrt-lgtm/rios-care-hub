@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, DollarSign, Search, Trash2, Calculator, CreditCard, Building2 } from "lucide-react";
+import { ArrowLeft, DollarSign, Search, Trash2, Calculator, CreditCard, Building2, BarChart3 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -395,6 +395,10 @@ const GerenciarCobrancas = () => {
           <Button onClick={() => navigate("/nova-cobranca")}>
             <DollarSign className="mr-2 h-4 w-4" />
             Nova Cobrança
+          </Button>
+          <Button variant="outline" onClick={() => navigate("/admin/relatorio-cobrancas")}>
+            <BarChart3 className="mr-2 h-4 w-4" />
+            Histórico Pago
           </Button>
         </div>
 

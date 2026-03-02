@@ -60,6 +60,7 @@ import ProtocoloTrabalho from "./pages/ProtocoloTrabalho";
 import DebugApp from "./pages/DebugApp";
 import Tutoriais from "./pages/Tutoriais";
 import CalendarioReservas from "./pages/CalendarioReservas";
+import AdminRelatorioCobrancas from "./pages/AdminRelatorioCobrancas";
 
 
 const queryClient = new QueryClient();
@@ -426,6 +427,14 @@ const App = () => (
               }
             />
             
+            <Route
+              path="/admin/relatorio-cobrancas"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'agent', 'maintenance']}>
+                  <AdminRelatorioCobrancas />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/debug-app" element={<DebugApp />} />
             <Route
               path="/tutoriais"
