@@ -274,6 +274,15 @@ export function VistoriasKanbanPreview() {
                             inspectionId={inspection.id} 
                             onSuccess={fetchInspections}
                           />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-[10px] text-orange-600 shrink-0 whitespace-nowrap"
+                            onClick={(e) => handleNewMaintenance(inspection, e)}
+                          >
+                            <Wrench className="h-3 w-3" />
+                            <span className="hidden sm:inline ml-1">Manutenção</span>
+                          </Button>
                           <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                         </div>
                       </div>
@@ -298,6 +307,15 @@ export function VistoriasKanbanPreview() {
                               inspectionId={inspection.id} 
                               onSuccess={fetchInspections}
                             />
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-2 text-[10px] text-orange-600 shrink-0 whitespace-nowrap"
+                              onClick={(e) => handleNewMaintenance(inspection, e)}
+                            >
+                              <Wrench className="h-3 w-3" />
+                              <span className="hidden sm:inline ml-1">Manutenção</span>
+                            </Button>
                             <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                           </div>
                         </div>
