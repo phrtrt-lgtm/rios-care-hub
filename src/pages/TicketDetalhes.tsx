@@ -8,11 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Send, Paperclip, Loader2, Sparkles, FileText, ChevronDown, X, Download, ZoomIn, Upload } from "lucide-react";
+import { ArrowLeft, Send, Paperclip, Loader2, Sparkles, FileText, ChevronDown, X, Download, ZoomIn, Upload, Calendar, CheckCircle } from "lucide-react";
+import { ptBR } from "date-fns/locale";
 import { ConversationSummaryButton } from "@/components/ConversationSummaryButton";
 import { AttachmentBubble } from "@/components/AttachmentBubble";
 import { MediaGallery } from "@/components/MediaGallery";
@@ -23,7 +25,6 @@ import OwnerMaintenanceDecision from "@/components/OwnerMaintenanceDecision";
 import { preloadMediaUrls } from "@/hooks/useMediaCache";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import JSZip from "jszip";
 import { processFileForUpload } from "@/lib/processVideoForUpload";
 
@@ -93,9 +94,27 @@ export default function TicketDetalhes() {
   const [galleryStartIndex, setGalleryStartIndex] = useState(0);
   const [allMediaItems, setAllMediaItems] = useState<Attachment[]>([]);
   const [exportingToMonday, setExportingToMonday] = useState(false);
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [scheduleData, setScheduleData] = useState({
+    scheduled_at: "",
+    service_provider_id: "",
+    observation: "",
+    cost_responsible: "owner" as "owner" | "pm" | "guest",
+  });
+  const [providers, setProviders] = useState<{ id: string; name: string; phone: string | null }[]>([]);
+  const [savingSchedule, setSavingSchedule] = useState(false);
+  const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
+  const [completeData, setCompleteData] = useState({
+    title: "",
+    amountCents: "",
+    managementContributionCents: "0",
+    createCharge: true,
+  });
+  const [completing, setCompleting] = useState(false);
 
   const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance';
   const canUpdate = ticket?.status !== 'concluido' && ticket?.status !== 'cancelado';
+  const isMaintenance = ticket?.ticket_type === 'manutencao';
 
   // Read receipts for messages
   const messageIds = useMemo(() => messages.map(m => m.id), [messages]);
@@ -162,6 +181,81 @@ export default function TicketDetalhes() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchProviders = async () => {
+    try {
+      const { data } = await supabase.from("service_providers").select("id, name, phone").eq("is_active", true).order("name");
+      setProviders(data || []);
+    } catch (e) { console.error(e); }
+  };
+
+  useEffect(() => { if (isMaintenance) fetchProviders(); }, [isMaintenance]);
+
+  const handleSchedule = async () => {
+    if (!ticket || !user) return;
+    setSavingSchedule(true);
+    try {
+      const { error: ticketError } = await supabase
+        .from("tickets")
+        .update({
+          scheduled_at: scheduleData.scheduled_at || null,
+          service_provider_id: scheduleData.service_provider_id || null,
+          cost_responsible: scheduleData.cost_responsible,
+        })
+        .eq("id", ticket.id);
+      if (ticketError) throw ticketError;
+
+      const provider = providers.find(p => p.id === scheduleData.service_provider_id);
+      let messageBody = "📅 **Manutenção agendada**\n\n";
+      if (scheduleData.scheduled_at) {
+        messageBody += `**Data/Hora:** ${format(new Date(scheduleData.scheduled_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}\n`;
+      }
+      if (provider) {
+        messageBody += `**Profissional:** ${provider.name}${provider.phone ? ` (${provider.phone})` : ""}\n`;
+      }
+      if (scheduleData.observation) messageBody += `\n**Observação:** ${scheduleData.observation}`;
+
+      await supabase.from("ticket_messages").insert({ ticket_id: ticket.id, author_id: user.id, body: messageBody, is_internal: false });
+      toast({ title: "Manutenção agendada!" });
+      setScheduleDialogOpen(false);
+      fetchTicketData();
+    } catch (error: any) {
+      toast({ title: "Erro ao agendar", description: error.message, variant: "destructive" });
+    } finally {
+      setSavingSchedule(false);
+    }
+  };
+
+  const handleComplete = async () => {
+    if (!ticket || !user) return;
+    setCompleting(true);
+    try {
+      const { error: ticketError } = await supabase.from("tickets").update({ status: "concluido" }).eq("id", ticket.id);
+      if (ticketError) throw ticketError;
+
+      if (completeData.createCharge && completeData.amountCents) {
+        const amountCents = Math.round(parseFloat(completeData.amountCents.replace(",", ".")) * 100);
+        const mgmtCents = Math.round(parseFloat((completeData.managementContributionCents || "0").replace(",", ".")) * 100);
+        await supabase.from("charges").insert({
+          owner_id: ticket.owner_id,
+          property_id: ticket.property_id,
+          ticket_id: ticket.id,
+          title: completeData.title,
+          amount_cents: amountCents,
+          management_contribution_cents: mgmtCents,
+          status: "sent",
+          cost_responsible: "owner",
+        });
+      }
+      toast({ title: "Manutenção concluída!" + (completeData.createCharge && completeData.amountCents ? " Cobrança criada." : "") });
+      setCompleteDialogOpen(false);
+      fetchTicketData();
+    } catch (error: any) {
+      toast({ title: "Erro ao concluir", description: error.message, variant: "destructive" });
+    } finally {
+      setCompleting(false);
     }
   };
 
@@ -747,29 +841,43 @@ export default function TicketDetalhes() {
                 </div>
                 <TicketBadges ticket={ticket} />
               </div>
-              {isTeamMember && (
+              {isTeamMember && isMaintenance && canUpdate && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setScheduleData({ scheduled_at: "", service_provider_id: "", observation: "", cost_responsible: "owner" });
+                      setScheduleDialogOpen(true);
+                    }}
+                  >
+                    <Calendar className="h-4 w-4 mr-1" />
+                    Agendar
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                    onClick={() => {
+                      setCompleteData({ title: ticket.subject, amountCents: "", managementContributionCents: "0", createCharge: true });
+                      setCompleteDialogOpen(true);
+                    }}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-1" />
+                    Concluir e Cobrar
+                  </Button>
+                </div>
+              )}
+              {isTeamMember && !isMaintenance && canUpdate && (
                 <Select
                   value={ticket.status}
                   onValueChange={async (newStatus: 'novo' | 'em_analise' | 'em_execucao' | 'aguardando_info' | 'concluido' | 'cancelado') => {
                     try {
-                      const { error } = await supabase
-                        .from('tickets')
-                        .update({ status: newStatus })
-                        .eq('id', id);
-
+                      const { error } = await supabase.from('tickets').update({ status: newStatus }).eq('id', id);
                       if (error) throw error;
-
                       setTicket({ ...ticket, status: newStatus });
-                      toast({
-                        title: "Status atualizado",
-                        description: "O status do ticket foi alterado com sucesso.",
-                      });
+                      toast({ title: "Status atualizado" });
                     } catch (error: any) {
-                      toast({
-                        title: "Erro ao atualizar status",
-                        description: error.message,
-                        variant: "destructive",
-                      });
+                      toast({ title: "Erro ao atualizar status", description: error.message, variant: "destructive" });
                     }
                   }}
                 >
@@ -1039,6 +1147,88 @@ export default function TicketDetalhes() {
         open={galleryOpen}
         onOpenChange={setGalleryOpen}
       />
+
+      {/* Schedule Dialog */}
+      <Dialog open={scheduleDialogOpen} onOpenChange={setScheduleDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Agendar Manutenção</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label>Data e Hora</Label>
+              <Input type="datetime-local" value={scheduleData.scheduled_at} onChange={(e) => setScheduleData({ ...scheduleData, scheduled_at: e.target.value })} />
+            </div>
+            <div>
+              <Label>Profissional</Label>
+              <Select value={scheduleData.service_provider_id} onValueChange={(v) => setScheduleData({ ...scheduleData, service_provider_id: v })}>
+                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                <SelectContent>
+                  {providers.map((p) => (<SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Responsável pelo custo</Label>
+              <Select value={scheduleData.cost_responsible} onValueChange={(v) => setScheduleData({ ...scheduleData, cost_responsible: v as "owner" | "pm" | "guest" })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="owner">Proprietário</SelectItem>
+                  <SelectItem value="pm">Gestão</SelectItem>
+                  <SelectItem value="guest">Hóspede</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Observação (opcional)</Label>
+              <Textarea value={scheduleData.observation} onChange={(e) => setScheduleData({ ...scheduleData, observation: e.target.value })} placeholder="Adicione uma observação..." rows={2} />
+            </div>
+            <Button onClick={handleSchedule} disabled={savingSchedule} className="w-full">
+              {savingSchedule ? "Salvando..." : "Confirmar Agendamento"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Complete & Charge Dialog */}
+      <Dialog open={completeDialogOpen} onOpenChange={setCompleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Concluir e Cobrar</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label>Título da cobrança</Label>
+              <Input value={completeData.title} onChange={(e) => setCompleteData({ ...completeData, title: e.target.value })} placeholder="Ex: Reparo elétrico" />
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" id="createChargeTD" checked={completeData.createCharge} onChange={(e) => setCompleteData({ ...completeData, createCharge: e.target.checked })} className="h-4 w-4" />
+              <Label htmlFor="createChargeTD" className="cursor-pointer">Criar cobrança para o proprietário</Label>
+            </div>
+            {completeData.createCharge && (
+              <>
+                <div>
+                  <Label>Valor total (R$)</Label>
+                  <Input type="number" min="0" step="0.01" value={completeData.amountCents} onChange={(e) => setCompleteData({ ...completeData, amountCents: e.target.value })} placeholder="0,00" />
+                </div>
+                <div>
+                  <Label>Aporte da gestão (R$)</Label>
+                  <p className="text-[11px] text-muted-foreground mb-1">💡 Se manutenção gratuita, coloque o aporte igual ao valor total — a cobrança zerará automaticamente.</p>
+                  <Input type="number" min="0" step="0.01" value={completeData.managementContributionCents} onChange={(e) => setCompleteData({ ...completeData, managementContributionCents: e.target.value })} placeholder="0,00" />
+                  {completeData.amountCents && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Proprietário pagará: R$ {Math.max(0, parseFloat(completeData.amountCents || "0") - parseFloat(completeData.managementContributionCents || "0")).toFixed(2).replace(".", ",")}
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
+            <Button onClick={handleComplete} disabled={completing} className="w-full">
+              {completing ? "Salvando..." : completeData.createCharge && completeData.amountCents ? "Concluir e Criar Cobrança" : "Concluir"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
