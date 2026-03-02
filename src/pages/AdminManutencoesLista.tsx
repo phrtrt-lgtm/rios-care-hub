@@ -1937,7 +1937,7 @@ export default function AdminManutencoesLista() {
                       key={group.id}
                       group={group}
                       items={groupedItems[group.id as keyof typeof groupedItems] || []}
-                      isExpanded={expandedGroups[group.id]}
+                      isExpanded={expandedGroups[group.id] ?? false}
                       onToggle={() => toggleGroup(group.id)}
                       onUpdateItem={handleUpdateItem}
                       onOpenChat={handleOpenChat}
