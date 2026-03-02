@@ -109,7 +109,7 @@ const GerenciarCobrancas = () => {
       const { data: chargesData, error } = await supabase
         .from('charges')
         .select('*')
-        .not('status', 'in', '(paid,pago_no_vencimento,cancelled,pago_antecipado)')
+        .not('status', 'in', '(paid,pago_no_vencimento,cancelled,pago_antecipado,pago_com_atraso,debited)')
         .is('archived_at', null)
         .order('due_date', { ascending: true });
 
