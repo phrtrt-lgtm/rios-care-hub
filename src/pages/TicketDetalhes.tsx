@@ -108,7 +108,6 @@ export default function TicketDetalhes() {
     title: "",
     amountCents: "",
     managementContributionCents: "0",
-    createCharge: true,
   });
   const [completing, setCompleting] = useState(false);
 
@@ -235,7 +234,7 @@ export default function TicketDetalhes() {
       const { error: ticketError } = await supabase.from("tickets").update({ status: "concluido" }).eq("id", ticket.id);
       if (ticketError) throw ticketError;
 
-      if (completeData.createCharge && completeData.amountCents) {
+      if (completeData.amountCents) {
         const amountCents = Math.round(parseFloat(completeData.amountCents.replace(",", ".")) * 100);
         const mgmtCents = Math.round(parseFloat((completeData.managementContributionCents || "0").replace(",", ".")) * 100);
         await supabase.from("charges").insert({
@@ -249,7 +248,7 @@ export default function TicketDetalhes() {
           cost_responsible: "owner",
         });
       }
-      toast({ title: "Manutenção concluída!" + (completeData.createCharge && completeData.amountCents ? " Cobrança criada." : "") });
+      toast({ title: "Manutenção concluída!" + (completeData.amountCents ? " Cobrança criada." : "") });
       setCompleteDialogOpen(false);
       fetchTicketData();
     } catch (error: any) {
@@ -858,7 +857,7 @@ export default function TicketDetalhes() {
                     size="sm"
                     className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     onClick={() => {
-                      setCompleteData({ title: ticket.subject, amountCents: "", managementContributionCents: "0", createCharge: true });
+                      setCompleteData({ title: ticket.subject, amountCents: "", managementContributionCents: "0" });
                       setCompleteDialogOpen(true);
                     }}
                   >
@@ -1201,30 +1200,22 @@ export default function TicketDetalhes() {
               <Label>Título da cobrança</Label>
               <Input value={completeData.title} onChange={(e) => setCompleteData({ ...completeData, title: e.target.value })} placeholder="Ex: Reparo elétrico" />
             </div>
-            <div className="flex items-center gap-2">
-              <input type="checkbox" id="createChargeTD" checked={completeData.createCharge} onChange={(e) => setCompleteData({ ...completeData, createCharge: e.target.checked })} className="h-4 w-4" />
-              <Label htmlFor="createChargeTD" className="cursor-pointer">Criar cobrança para o proprietário</Label>
+            <div>
+              <Label>Valor total (R$)</Label>
+              <Input type="number" min="0" step="0.01" value={completeData.amountCents} onChange={(e) => setCompleteData({ ...completeData, amountCents: e.target.value })} placeholder="0,00" />
             </div>
-            {completeData.createCharge && (
-              <>
-                <div>
-                  <Label>Valor total (R$)</Label>
-                  <Input type="number" min="0" step="0.01" value={completeData.amountCents} onChange={(e) => setCompleteData({ ...completeData, amountCents: e.target.value })} placeholder="0,00" />
-                </div>
-                <div>
-                  <Label>Aporte da gestão (R$)</Label>
-                  <p className="text-[11px] text-muted-foreground mb-1">💡 Se manutenção gratuita, coloque o aporte igual ao valor total — a cobrança zerará automaticamente.</p>
-                  <Input type="number" min="0" step="0.01" value={completeData.managementContributionCents} onChange={(e) => setCompleteData({ ...completeData, managementContributionCents: e.target.value })} placeholder="0,00" />
-                  {completeData.amountCents && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Proprietário pagará: R$ {Math.max(0, parseFloat(completeData.amountCents || "0") - parseFloat(completeData.managementContributionCents || "0")).toFixed(2).replace(".", ",")}
-                    </p>
-                  )}
-                </div>
-              </>
-            )}
+            <div>
+              <Label>Aporte da gestão (R$)</Label>
+              <p className="text-[11px] text-muted-foreground mb-1">💡 Se manutenção gratuita, coloque o aporte igual ao valor total — a cobrança zerará automaticamente.</p>
+              <Input type="number" min="0" step="0.01" value={completeData.managementContributionCents} onChange={(e) => setCompleteData({ ...completeData, managementContributionCents: e.target.value })} placeholder="0,00" />
+              {completeData.amountCents && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Proprietário pagará: R$ {Math.max(0, parseFloat(completeData.amountCents || "0") - parseFloat(completeData.managementContributionCents || "0")).toFixed(2).replace(".", ",")}
+                </p>
+              )}
+            </div>
             <Button onClick={handleComplete} disabled={completing} className="w-full">
-              {completing ? "Salvando..." : completeData.createCharge && completeData.amountCents ? "Concluir e Criar Cobrança" : "Concluir"}
+              {completing ? "Salvando..." : completeData.amountCents ? "Concluir e Criar Cobrança" : "Concluir"}
             </Button>
           </div>
         </DialogContent>
