@@ -40,6 +40,21 @@ export default function Painel() {
   });
   const navigate = useNavigate();
 
+  // Save scroll position when leaving, restore when returning
+  useEffect(() => {
+    const saved = sessionStorage.getItem('painel_scroll');
+    if (saved) {
+      requestAnimationFrame(() => {
+        window.scrollTo(0, parseInt(saved, 10));
+        sessionStorage.removeItem('painel_scroll');
+      });
+    }
+    // Save scroll on unmount (SPA navigation)
+    return () => {
+      sessionStorage.setItem('painel_scroll', String(window.scrollY));
+    };
+  }, []);
+
   useEffect(() => {
     fetchStats();
   }, []);
