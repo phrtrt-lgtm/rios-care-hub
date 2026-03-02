@@ -66,13 +66,29 @@ export function OwnerTicketsPreview() {
           status,
           ticket_type,
           created_at,
-          property:properties(id, name, cover_photo_url)
+          property:properties(id, name, cover_photo_url),
+          ticket_messages(created_at)
         `)
         .eq("owner_id", user.id)
         .neq("ticket_type", "manutencao")
         .in("status", ["novo", "em_analise", "aguardando_info"])
         .order("created_at", { ascending: false })
-        .limit(5);
+        .limit(20);
+
+      if (error) throw error;
+
+      // Sort by most recent message (or ticket creation if no messages)
+      const sorted = (data as any[]).sort((a, b) => {
+        const aLatest = a.ticket_messages?.length
+          ? Math.max(...a.ticket_messages.map((m: any) => new Date(m.created_at).getTime()))
+          : new Date(a.created_at).getTime();
+        const bLatest = b.ticket_messages?.length
+          ? Math.max(...b.ticket_messages.map((m: any) => new Date(m.created_at).getTime()))
+          : new Date(b.created_at).getTime();
+        return bLatest - aLatest;
+      });
+
+      return sorted.slice(0, 5) as unknown as OwnerTicket[];
 
       if (error) throw error;
       return data as unknown as OwnerTicket[];
