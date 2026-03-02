@@ -1494,7 +1494,7 @@ export default function AdminManutencoesLista() {
       // For tickets, fetch ticket attachments
       const { data, error } = await supabase
         .from("ticket_attachments")
-        .select("id, path, file_name, mime_type")
+        .select("id, file_url, file_name, file_type")
         .eq("ticket_id", item.id)
         .order("created_at", { ascending: false });
       
@@ -1506,9 +1506,9 @@ export default function AdminManutencoesLista() {
       if (data && data.length > 0) {
         const mediaItems = data.map(att => ({
           id: att.id,
-          file_url: getStorageUrl(att.path),
+          file_url: att.file_url,
           file_name: att.file_name,
-          file_type: att.mime_type,
+          file_type: att.file_type,
         }));
         setGalleryItems(mediaItems);
         setGalleryInitialIndex(0);
