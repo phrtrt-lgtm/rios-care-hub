@@ -991,9 +991,9 @@ export default function AdminManutencoesLista() {
   const { user } = useAuth();
   const [search, setSearch] = useState("");
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
-    em_progresso: true,
-    concluidas: true,
-    cobrancas_vencidas: true,
+    em_progresso: false,
+    concluidas: false,
+    cobrancas_vencidas: false,
     cobrancas: false,
   });
 
