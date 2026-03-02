@@ -16,7 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, Search, Phone, Calendar, Clock, Building, User, ChevronRight, ChevronLeft, Wrench, Plus, Receipt, AlertCircle, MessageSquare, Package } from "lucide-react";
+import { ArrowLeft, Search, Phone, Calendar, Clock, Building, User, ChevronRight, ChevronLeft, Wrench, Plus, Receipt, AlertCircle, MessageSquare, Package, BarChart3 } from "lucide-react";
 import { CHARGE_CATEGORY_OPTIONS } from "@/constants/chargeCategories";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
@@ -426,6 +426,10 @@ const AdminManutencoesKanban = () => {
           <Button variant="outline" onClick={() => navigate("/admin/profissionais")}>
             <User className="h-4 w-4 mr-2" />
             Profissionais
+          </Button>
+          <Button variant="outline" onClick={() => navigate("/admin/relatorio-cobrancas")}>
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Cobranças Pagas
           </Button>
         </div>
 
