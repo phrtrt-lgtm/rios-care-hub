@@ -53,7 +53,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("User profile:", { userId: user.id, profile });
 
-    if (!profile || !["admin", "agent"].includes(profile.role)) {
+    if (!profile || !["admin", "agent", "maintenance"].includes(profile.role)) {
       return new Response(
         JSON.stringify({ error: "Forbidden" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
