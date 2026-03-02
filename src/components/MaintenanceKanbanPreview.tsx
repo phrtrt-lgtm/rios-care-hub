@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Wrench, ArrowRight, Calendar, MessageSquare, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
+import { Wrench, ArrowRight, Calendar, MessageSquare, ChevronRight, ChevronDown, ChevronUp, CheckCircle } from "lucide-react";
 import { QuickAttachmentButton } from "./QuickAttachmentButton";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -55,6 +55,15 @@ export function MaintenanceKanbanPreview() {
   const [chatDialogOpen, setChatDialogOpen] = useState(false);
   const [chatTicket, setChatTicket] = useState<MaintenanceTicket | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
+  const [completeTicket, setCompleteTicket] = useState<MaintenanceTicket | null>(null);
+  const [completeData, setCompleteData] = useState({
+    title: "",
+    amountCents: "",
+    managementContributionCents: "",
+    createCharge: true,
+  });
+  const [completing, setCompleting] = useState(false);
   
   const COLLAPSED_LIMIT = 3;
   const EXPANDED_LIMIT = 20;
@@ -168,6 +177,59 @@ export function MaintenanceKanbanPreview() {
       toast.error("Erro ao agendar");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const openCompleteDialog = (ticket: MaintenanceTicket, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCompleteTicket(ticket);
+    setCompleteData({ title: ticket.subject, amountCents: "", managementContributionCents: "0", createCharge: true });
+    setCompleteDialogOpen(true);
+  };
+
+  const handleComplete = async () => {
+    if (!completeTicket || !user) return;
+    setCompleting(true);
+    try {
+      const { error: ticketError } = await supabase
+        .from("tickets")
+        .update({ status: "concluido" })
+        .eq("id", completeTicket.id);
+      if (ticketError) throw ticketError;
+
+      if (completeData.createCharge && completeData.amountCents) {
+        const amountCents = Math.round(parseFloat(completeData.amountCents.replace(",", ".")) * 100);
+        const mgmtCents = Math.round(parseFloat((completeData.managementContributionCents || "0").replace(",", ".")) * 100);
+
+        // Get owner_id from ticket
+        const { data: ticketData } = await supabase
+          .from("tickets")
+          .select("owner_id, property_id, cost_responsible")
+          .eq("id", completeTicket.id)
+          .single();
+
+        if (ticketData) {
+          await supabase.from("charges").insert({
+            owner_id: ticketData.owner_id,
+            property_id: ticketData.property_id,
+            ticket_id: completeTicket.id,
+            title: completeData.title,
+            amount_cents: amountCents,
+            management_contribution_cents: mgmtCents,
+            status: "sent",
+            cost_responsible: ticketData.cost_responsible || "owner",
+          });
+        }
+      }
+
+      toast.success("Manutenção concluída!" + (completeData.createCharge && completeData.amountCents ? " Cobrança criada." : ""));
+      setCompleteDialogOpen(false);
+      fetchMaintenanceTickets();
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao concluir manutenção");
+    } finally {
+      setCompleting(false);
     }
   };
 
@@ -384,6 +446,15 @@ export function MaintenanceKanbanPreview() {
                             </span>
                           )}
                         </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-6 px-2 text-[10px] shrink-0 whitespace-nowrap text-green-700 border-green-300 hover:bg-green-50"
+                          onClick={(e) => openCompleteDialog(ticket, e)}
+                        >
+                          <CheckCircle className="h-3 w-3" />
+                          <span className="hidden sm:inline ml-1">Concluir</span>
+                        </Button>
                         <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                       </div>
                     </div>
@@ -425,6 +496,15 @@ export function MaintenanceKanbanPreview() {
                                 {unreadCounts[ticket.id]}
                               </span>
                             )}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-6 px-2 text-[10px] shrink-0 whitespace-nowrap text-green-700 border-green-300 hover:bg-green-50"
+                            onClick={(e) => openCompleteDialog(ticket, e)}
+                          >
+                            <CheckCircle className="h-3 w-3" />
+                            <span className="hidden sm:inline ml-1">Concluir</span>
                           </Button>
                           <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                         </div>
@@ -498,6 +578,76 @@ export function MaintenanceKanbanPreview() {
             </div>
             <Button onClick={handleSchedule} disabled={saving} className="w-full">
               {saving ? "Salvando..." : "Confirmar Agendamento"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Complete & Charge Dialog */}
+      <Dialog open={completeDialogOpen} onOpenChange={setCompleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Concluir e Cobrar</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label>Título da cobrança</Label>
+              <Input
+                value={completeData.title}
+                onChange={(e) => setCompleteData({ ...completeData, title: e.target.value })}
+                placeholder="Ex: Reparo elétrico"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="createCharge"
+                checked={completeData.createCharge}
+                onChange={(e) => setCompleteData({ ...completeData, createCharge: e.target.checked })}
+                className="h-4 w-4"
+              />
+              <Label htmlFor="createCharge" className="cursor-pointer">Criar cobrança para o proprietário</Label>
+            </div>
+            {completeData.createCharge && (
+              <>
+                <div>
+                  <Label>Valor total (R$)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={completeData.amountCents}
+                    onChange={(e) => setCompleteData({ ...completeData, amountCents: e.target.value })}
+                    placeholder="0,00"
+                  />
+                </div>
+                <div>
+                  <Label>Aporte da gestão (R$)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={completeData.managementContributionCents}
+                    onChange={(e) => setCompleteData({ ...completeData, managementContributionCents: e.target.value })}
+                    placeholder="0,00"
+                  />
+                  {completeData.amountCents && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Proprietário pagará: R$ {(
+                        parseFloat(completeData.amountCents || "0") - parseFloat(completeData.managementContributionCents || "0")
+                      ).toFixed(2).replace(".", ",")}
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
+            <Button
+              onClick={handleComplete}
+              disabled={completing}
+              className="w-full"
+              variant="success"
+            >
+              {completing ? "Salvando..." : completeData.createCharge && completeData.amountCents ? "Concluir e Criar Cobrança" : "Concluir"}
             </Button>
           </div>
         </DialogContent>
