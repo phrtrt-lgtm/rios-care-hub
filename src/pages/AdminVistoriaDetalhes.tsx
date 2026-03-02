@@ -381,6 +381,19 @@ export default function AdminVistoriaDetalhes() {
 
       <main className="container mx-auto px-4 py-6 max-w-4xl">
         <div className="space-y-6">
+          {/* Quick Maintenance Button at Top */}
+          <div className="flex justify-end">
+            <Button
+              onClick={() => setMaintenanceDialogOpen(true)}
+              variant="outline"
+              size="sm"
+              className="gap-2"
+            >
+              <Wrench className="h-4 w-4" />
+              Nova Manutenção
+            </Button>
+          </div>
+
           {/* Property & Date Info */}
           <Card className="p-4">
             <div className="flex items-center gap-4">
