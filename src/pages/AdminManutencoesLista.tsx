@@ -998,8 +998,8 @@ export default function AdminManutencoesLista() {
   });
 
   // Vistorias state
-  const [vistoriasFaxineirasExpanded, setVistoriasFaxineirasExpanded] = useState(true);
-  const [vistoriasEquipeExpanded, setVistoriasEquipeExpanded] = useState(true);
+  const [vistoriasFaxineirasExpanded, setVistoriasFaxineirasExpanded] = useState(false);
+  const [vistoriasEquipeExpanded, setVistoriasEquipeExpanded] = useState(false);
   const [generatingSummaryIds, setGeneratingSummaryIds] = useState<Set<string>>(new Set());
   const [maintenanceDialogOpen, setMaintenanceDialogOpen] = useState(false);
   const [selectedInspection, setSelectedInspection] = useState<InspectionItem | null>(null);
