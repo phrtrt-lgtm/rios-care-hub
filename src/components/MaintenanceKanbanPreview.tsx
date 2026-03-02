@@ -352,6 +352,15 @@ export function MaintenanceKanbanPreview() {
                           <Calendar className="h-3 w-3" />
                           <span className="hidden sm:inline ml-1">Agendar</span>
                         </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-6 px-2 text-[10px] shrink-0 whitespace-nowrap text-green-700 border-green-300 hover:bg-green-50"
+                          onClick={(e) => openCompleteDialog(ticket, e)}
+                        >
+                          <CheckCircle className="h-3 w-3" />
+                          <span className="hidden sm:inline ml-1">Concluir</span>
+                        </Button>
                         <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                       </div>
                     </div>
@@ -396,6 +405,15 @@ export function MaintenanceKanbanPreview() {
                           >
                             <Calendar className="h-3 w-3" />
                             <span className="hidden sm:inline ml-1">Agendar</span>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-6 px-2 text-[10px] shrink-0 whitespace-nowrap text-green-700 border-green-300 hover:bg-green-50"
+                            onClick={(e) => openCompleteDialog(ticket, e)}
+                          >
+                            <CheckCircle className="h-3 w-3" />
+                            <span className="hidden sm:inline ml-1">Concluir</span>
                           </Button>
                           <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                         </div>
