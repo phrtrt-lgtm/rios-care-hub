@@ -154,7 +154,7 @@ const GerenciarCobrancas = () => {
       const { data: chargesData, error } = await supabase
         .from('charges')
         .select('*')
-        .in('status', ['overdue', 'debited'])
+        .eq('status', 'overdue')
         .is('archived_at', null)
         .order('due_date', { ascending: true });
 
