@@ -579,27 +579,27 @@ export default function AdminVistoriaDetalhes() {
             </Card>
           )}
 
-          {/* Create Maintenance Section - Always show for inspections with problems */}
-          {inspection.notes === 'NÃO' && (
-            <Card className="p-4 border-destructive/50 bg-destructive/5">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                  <h3 className="font-semibold text-destructive">Criar Manutenção Manual</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Crie uma manutenção manualmente com anexos da vistoria. Para triagem automática, use o Kanban acima.
-                  </p>
-                </div>
-                <Button 
-                  onClick={() => setMaintenanceDialogOpen(true)}
-                  variant="outline"
-                  className="gap-2 w-full sm:w-auto"
-                >
-                  <Plus className="h-4 w-4" />
-                  Nova Manutenção
-                </Button>
+          {/* Create Maintenance Section - Always show for all inspections */}
+          <Card className={`p-4 ${inspection.notes === 'NÃO' ? 'border-destructive/50 bg-destructive/5' : 'border-orange-500/30 bg-orange-500/5'}`}>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h3 className={`font-semibold ${inspection.notes === 'NÃO' ? 'text-destructive' : 'text-orange-600'}`}>Criar Manutenção</h3>
+                <p className="text-sm text-muted-foreground">
+                  {inspection.notes === 'NÃO'
+                    ? 'Crie uma manutenção com anexos da vistoria. Para triagem automática, use o Kanban acima.'
+                    : 'Crie uma manutenção preventiva a partir desta vistoria.'}
+                </p>
               </div>
-            </Card>
-          )}
+              <Button 
+                onClick={() => setMaintenanceDialogOpen(true)}
+                variant="outline"
+                className="gap-2 w-full sm:w-auto"
+              >
+                <Plus className="h-4 w-4" />
+                Nova Manutenção
+              </Button>
+            </div>
+          </Card>
         </div>
       </main>
 
