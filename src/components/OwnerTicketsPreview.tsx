@@ -89,9 +89,6 @@ export function OwnerTicketsPreview() {
       });
 
       return sorted.slice(0, 5) as unknown as OwnerTicket[];
-
-      if (error) throw error;
-      return data as unknown as OwnerTicket[];
     },
     enabled: !!user,
   });
