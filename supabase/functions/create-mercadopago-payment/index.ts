@@ -127,6 +127,15 @@ const handler = async (req: Request): Promise<Response> => {
         installments: 12, // Permite parcelamento em até 12x
         default_installments: 1,
       },
+      // Parcelamento sem juros para proprietários específicos (custo absorvido pela gestão)
+      ...(charge.owner_id === 'dfe67361-061f-4e95-8a44-e19606a59321' ? {
+        payment_methods: {
+          installments: 4,
+          default_installments: 1,
+          default_payment_method_id: null,
+          installments_cost: 'seller', // gestão absorve os juros
+        }
+      } : {}),
       back_urls: {
         success: 'https://portal.rioshospedagens.com.br/minhas-cobrancas',
         failure: 'https://portal.rioshospedagens.com.br/minhas-cobrancas',
