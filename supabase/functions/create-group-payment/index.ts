@@ -108,8 +108,13 @@ serve(async (req) => {
         email: owner.email,
       },
       payment_methods: {
-        installments: 12, // Permite parcelamento em até 12x
+        installments: 12,
         default_installments: 1,
+        // Parcelamento sem juros para Rodrigo Azevedo (custo absorvido pela gestão)
+        ...(user.id === 'dfe67361-061f-4e95-8a44-e19606a59321' ? {
+          installments: 4,
+          installments_cost: 'seller',
+        } : {}),
       },
       metadata: {
         charge_ids: chargeIds,
