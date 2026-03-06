@@ -1248,7 +1248,7 @@ export default function AdminManutencoesLista() {
             // Check if a charge already exists for this ticket
             const { data: existingCharge } = await supabase
               .from("charges")
-              .select("id, status")
+              .select("id, status, amount_cents")
               .eq("ticket_id", id)
               .maybeSingle();
 
@@ -1258,7 +1258,7 @@ export default function AdminManutencoesLista() {
                 .from("charges")
                 .update({
                   status: "sent",
-                  amount_cents: ticket.amount_cents || existingCharge.amount_cents || 0,
+                  amount_cents: ticket.amount_cents || (existingCharge as any).amount_cents || 0,
                   management_contribution_cents: ticket.management_contribution_cents ?? 0,
                   service_type: ticket.service_type || null,
                 })
