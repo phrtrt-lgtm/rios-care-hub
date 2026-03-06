@@ -1245,13 +1245,6 @@ export default function AdminManutencoesLista() {
         if (field === "list_status" && value === "enviar_proprietario") {
           const ticket = tickets?.find(t => t.id === id);
           if (ticket && ticket.owner) {
-            // First mark ticket as concluded
-            const { error: ticketError } = await supabase
-              .from("tickets")
-              .update({ status: "concluido" })
-              .eq("id", id);
-            if (ticketError) throw ticketError;
-
             // Check if a charge already exists for this ticket
             const { data: existingCharge } = await supabase
               .from("charges")
