@@ -1241,7 +1241,7 @@ export default function AdminManutencoesLista() {
           .eq("id", id);
         if (error) throw error;
       } else {
-        // If updating status to "enviar_proprietario", create or update charge
+        // If updating status to "enviar_proprietario", create/update charge AND close ticket
         if (field === "list_status" && value === "enviar_proprietario") {
           const ticket = tickets?.find(t => t.id === id);
           if (ticket && ticket.owner) {
@@ -1276,6 +1276,13 @@ export default function AdminManutencoesLista() {
                 });
               if (chargeError) throw chargeError;
             }
+
+            // Mark ticket as concluido so list_status persists as "feito" after refetch
+            const { error: ticketError } = await supabase
+              .from("tickets")
+              .update({ status: "concluido" })
+              .eq("id", id);
+            if (ticketError) throw ticketError;
 
             toast.success("Cobrança enviada ao proprietário!");
             return;
