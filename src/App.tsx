@@ -61,6 +61,7 @@ import DebugApp from "./pages/DebugApp";
 import Tutoriais from "./pages/Tutoriais";
 import CalendarioReservas from "./pages/CalendarioReservas";
 import AdminRelatorioCobrancas from "./pages/AdminRelatorioCobrancas";
+import RotinaProfissional from "./pages/RotinaProfissional";
 
 
 const queryClient = new QueryClient();
@@ -432,6 +433,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['admin', 'agent', 'maintenance']}>
                   <AdminRelatorioCobrancas />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/rotina-profissional"
+              element={
+                <ProtectedRoute allowedRoles={['agent', 'admin', 'maintenance']}>
+                  <RotinaProfissional />
                 </ProtectedRoute>
               }
             />

@@ -239,19 +239,34 @@ export default function Painel() {
 
       {/* Content */}
       <main className="container mx-auto px-4 py-6 md:py-8">
-        {/* Banner Protocolo de Manutenções */}
-        <div 
-          onClick={() => navigate("/protocolo-trabalho")}
-          className="mb-6 flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20 cursor-pointer hover:bg-primary/10 transition-colors"
-        >
-          <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <BookOpen className="h-4 w-4 text-primary" />
+        {/* Banners de acesso rápido */}
+        <div className="grid sm:grid-cols-2 gap-3 mb-6">
+          <div 
+            onClick={() => navigate("/rotina-profissional")}
+            className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20 cursor-pointer hover:bg-primary/10 transition-colors"
+          >
+            <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <BookOpen className="h-4 w-4 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium">Rotina do Profissional RIOS</p>
+              <p className="text-xs text-muted-foreground">Guia completo de organização e manutenção</p>
+            </div>
+            <span className="text-xs text-primary font-medium flex-shrink-0">Ver →</span>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium">Protocolo de Manutenções</p>
-            <p className="text-xs text-muted-foreground">Fluxo de vistorias, manutenções e cobranças</p>
+          <div 
+            onClick={() => navigate("/protocolo-trabalho")}
+            className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border border-border cursor-pointer hover:bg-muted transition-colors"
+          >
+            <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+              <BookOpen className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium">Protocolo de Manutenções</p>
+              <p className="text-xs text-muted-foreground">Fluxo de vistorias, manutenções e cobranças</p>
+            </div>
+            <span className="text-xs text-muted-foreground font-medium flex-shrink-0">Ver →</span>
           </div>
-          <span className="text-xs text-primary font-medium flex-shrink-0">Ver →</span>
         </div>
 
         <div className="mb-6 md:mb-8">
