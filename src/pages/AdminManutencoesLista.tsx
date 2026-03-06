@@ -1280,7 +1280,7 @@ export default function AdminManutencoesLista() {
             .from("charges")
             .select("id")
             .eq("ticket_id", id)
-            .single();
+            .maybeSingle();
 
           if (existingCharge) {
             const { error } = await supabase
