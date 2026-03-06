@@ -201,7 +201,8 @@ export function MaintenanceChatDialog({
           
           // Compress video if it's a video file
           const processedFile = await processFileForUpload(file);
-          const filePath = `${ticketId}/${Date.now()}_${processedFile.name}`;
+          const safeName = sanitizeFilename(processedFile.name);
+          const filePath = `${ticketId}/${Date.now()}_${safeName}`;
           
           const { error: uploadError } = await supabase.storage
             .from('attachments')
