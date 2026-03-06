@@ -97,7 +97,7 @@ export function AttachmentBubble({
     return (
       <div className="relative group">
         <div 
-          onClick={() => onPreview?.(file_url, file_name || (isVideo ? 'Vídeo' : 'Imagem'))}
+          onClick={() => onPreview?.(file_url, isVideo ? 'Vídeo' : 'Imagem')}
           className="cursor-pointer relative overflow-hidden rounded-lg border border-border hover:border-primary transition-colors"
         >
           {loading ? (
@@ -105,7 +105,7 @@ export function AttachmentBubble({
           ) : thumbnailUrl ? (
             <img 
               src={thumbnailUrl} 
-              alt={file_name || 'Anexo'} 
+              alt="Anexo" 
               className="w-full h-32 object-cover"
             />
           ) : (
@@ -125,9 +125,9 @@ export function AttachmentBubble({
             )}
           </div>
         </div>
-        {file_name && (
-          <div className="text-xs text-muted-foreground mt-1 truncate">
-            {file_name} {size_bytes && `(${formatSize(size_bytes)})`}
+        {size_bytes && (
+          <div className="text-xs text-muted-foreground mt-1">
+            {formatSize(size_bytes)}
           </div>
         )}
       </div>
@@ -141,7 +141,7 @@ export function AttachmentBubble({
           <FileTextIcon className="h-8 w-8 text-destructive flex-shrink-0" />
           <div className="flex-1 min-w-0">
             <div className="font-medium text-sm truncate">
-              {file_name || 'Documento PDF'}
+              Documento PDF
             </div>
             {size_bytes && (
               <div className="text-xs text-muted-foreground">
@@ -169,7 +169,7 @@ export function AttachmentBubble({
         <FileIcon className="h-8 w-8 text-muted-foreground flex-shrink-0" />
         <div className="flex-1 min-w-0">
           <div className="font-medium text-sm truncate">
-            {file_name || 'Arquivo'}
+            Arquivo anexo
           </div>
           {size_bytes && (
             <div className="text-xs text-muted-foreground">
@@ -179,7 +179,7 @@ export function AttachmentBubble({
         </div>
         <a
           href={file_url}
-          download={file_name}
+          download="anexo"
           className="flex-shrink-0"
           aria-label="Baixar arquivo"
         >
