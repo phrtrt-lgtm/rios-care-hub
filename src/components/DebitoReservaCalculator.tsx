@@ -76,29 +76,36 @@ export const DebitoReservaCalculator = ({
   const baseCommissionNum = parseValue(baseCommission);
   const totalDebt = totalDebtCents / 100;
 
-  // Se o proprietário recebe X reais, e temos uma dívida de Y,
-  // precisamos descontar Y do valor X do proprietário
-  // Isso significa que precisamos adicionar (Y/X)*100% à nossa comissão base
-  const extraPercentNeededExact = ownerValueNum > 0 
-    ? (totalDebt / ownerValueNum) * 100 
+  // O "valor do proprietário" no Airbnb é o valor LÍQUIDO (já descontada a comissão base).
+  // Para calcular o extra, precisamos reverter para o valor BRUTO da reserva:
+  // valorBruto = ownerValue / (1 - baseCommission/100)
+  const grossReservationValue = ownerValueNum > 0 && baseCommissionNum < 100
+    ? ownerValueNum / (1 - baseCommissionNum / 100)
     : 0;
 
-  // Arredondar para o mais próximo (Airbnb só aceita % inteira)
-  const extraPercentRounded = Math.round(extraPercentNeededExact);
+  // Extra % necessário = dívida / valorBruto * 100
+  const extraPercentNeededExact = grossReservationValue > 0
+    ? (totalDebt / grossReservationValue) * 100
+    : 0;
+
+  // Arredondar para cima (garantir que cubra a dívida)
+  const extraPercentRounded = Math.ceil(extraPercentNeededExact);
 
   // Total de comissão a configurar na reserva (base + extra arredondado)
   const totalCommissionToSet = baseCommissionNum + extraPercentRounded;
 
-  // Valor que será descontado do proprietário (usando % arredondado)
-  const debtCoverage = ownerValueNum > 0 
-    ? Math.min(totalDebt, (extraPercentRounded / 100) * ownerValueNum) 
+  // Valor efetivamente descontado do proprietário com % arredondado
+  const debtCoverage = grossReservationValue > 0
+    ? Math.min(totalDebt, (extraPercentRounded / 100) * grossReservationValue)
     : 0;
 
-  // Valor extra que cobramos devido ao arredondamento
-  const extraFromRounding = (extraPercentRounded - extraPercentNeededExact) / 100 * ownerValueNum;
+  // Valor extra devido ao arredondamento para cima
+  const extraFromRounding = grossReservationValue > 0
+    ? ((extraPercentRounded - extraPercentNeededExact) / 100) * grossReservationValue
+    : 0;
 
   // Quanto ficará para o proprietário depois do desconto
-  const ownerReceivesAfter = ownerValueNum - debtCoverage;
+  const ownerReceivesAfter = ownerValueNum - Math.min(totalDebt, debtCoverage);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
