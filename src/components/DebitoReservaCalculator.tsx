@@ -88,8 +88,8 @@ export const DebitoReservaCalculator = ({
     ? (totalDebt / grossReservationValue) * 100
     : 0;
 
-  // Arredondar para cima (garantir que cubra a dívida)
-  const extraPercentRounded = Math.ceil(extraPercentNeededExact);
+  // Arredondar para baixo (proprietário não fica no prejuízo)
+  const extraPercentRounded = Math.floor(extraPercentNeededExact);
 
   // Total de comissão a configurar na reserva (base + extra arredondado)
   const totalCommissionToSet = baseCommissionNum + extraPercentRounded;
