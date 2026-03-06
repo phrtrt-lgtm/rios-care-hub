@@ -18,6 +18,7 @@ import { Send, Loader2, MessageSquare, Building, ExternalLink, Paperclip, X, Spa
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { processFileForUpload } from "@/lib/processVideoForUpload";
+import { sanitizeFilename } from "@/lib/storage";
 
 interface ChargeMessage {
   id: string;

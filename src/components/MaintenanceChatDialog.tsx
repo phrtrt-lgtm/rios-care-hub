@@ -23,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ResponseTemplatesPicker } from "@/components/ResponseTemplatesPicker";
 import { ConversationSummaryButton } from "@/components/ConversationSummaryButton";
 import { processFileForUpload } from "@/lib/processVideoForUpload";
+import { sanitizeFilename } from "@/lib/storage";
 import { NativeMediaPicker } from "@/components/NativeMediaPicker";
 import { toast as sonnerToast } from "sonner";
 
