@@ -1248,15 +1248,20 @@ export default function AdminManutencoesLista() {
             // Check if a charge already exists for this ticket
             const { data: existingCharge } = await supabase
               .from("charges")
-              .select("id")
+              .select("id, status")
               .eq("ticket_id", id)
               .maybeSingle();
 
             if (existingCharge) {
-              // Update existing charge to "sent"
+              // Update existing charge to "sent" with correct amounts
               const { error: updateError } = await supabase
                 .from("charges")
-                .update({ status: "sent" })
+                .update({
+                  status: "sent",
+                  amount_cents: ticket.amount_cents || existingCharge.amount_cents || 0,
+                  management_contribution_cents: ticket.management_contribution_cents ?? 0,
+                  service_type: ticket.service_type || null,
+                })
                 .eq("id", existingCharge.id);
               if (updateError) throw updateError;
             } else {
@@ -1277,12 +1282,15 @@ export default function AdminManutencoesLista() {
               if (chargeError) throw chargeError;
             }
 
-            // Mark ticket as concluido so list_status persists as "feito" after refetch
-            const { error: ticketError } = await supabase
-              .from("tickets")
-              .update({ status: "concluido" })
-              .eq("id", id);
-            if (ticketError) throw ticketError;
+            // Only update ticket to concluido if it isn't already
+            // (RLS blocks updates on concluido tickets)
+            if (ticket.status !== "concluido") {
+              const { error: ticketError } = await supabase
+                .from("tickets")
+                .update({ status: "concluido" })
+                .eq("id", id);
+              if (ticketError) throw ticketError;
+            }
 
             toast.success("Cobrança enviada ao proprietário!");
             return;
