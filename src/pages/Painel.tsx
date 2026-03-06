@@ -24,6 +24,7 @@ import { TeamChatWidget } from "@/components/TeamChatWidget";
 import { GlobalSearch, useGlobalSearch } from "@/components/GlobalSearch";
 import { ResponseTemplatesPanel } from "@/components/ResponseTemplatesPanel";
 import { EnablePushNative } from "@/components/EnablePushNative";
+import { AIConsultaWidget } from "@/components/AIConsultaWidget";
 
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { StatsCard } from "@/components/StatsCard";
@@ -83,6 +84,10 @@ export default function Painel() {
       
       {/* Team Chat Widget - Only for team members */}
       <TeamChatWidget />
+      {/* AI Consulta Widget - team members */}
+      {(profile?.role === "admin" || profile?.role === "maintenance" || profile?.role === "agent") && (
+        <AIConsultaWidget />
+      )}
       {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-3">

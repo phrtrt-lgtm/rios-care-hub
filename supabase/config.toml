@@ -62,3 +62,6 @@ verify_jwt = false
 
 [functions.generate-service-summary]
 verify_jwt = false
+
+[functions.ai-consulta]
+verify_jwt = true
