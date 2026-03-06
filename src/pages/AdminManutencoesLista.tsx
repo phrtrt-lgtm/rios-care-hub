@@ -1244,67 +1244,78 @@ export default function AdminManutencoesLista() {
         // If updating status to "enviar_proprietario", create/update charge AND close ticket
         if (field === "list_status" && value === "enviar_proprietario") {
           const ticket = tickets?.find(t => t.id === id);
-          if (ticket && ticket.owner) {
-            // Check if a charge already exists for this ticket
-            const { data: existingCharge } = await supabase
-              .from("charges")
-              .select("id, status, amount_cents")
-              .eq("ticket_id", id)
-              .maybeSingle();
-
-            if (existingCharge) {
-              // Update existing charge to "sent" with correct amounts
-              const { error: updateError } = await supabase
-                .from("charges")
-                .update({
-                  status: "sent",
-                  amount_cents: ticket.amount_cents || (existingCharge as any).amount_cents || 0,
-                  management_contribution_cents: ticket.management_contribution_cents ?? 0,
-                  service_type: ticket.service_type || null,
-                })
-                .eq("id", existingCharge.id);
-              if (updateError) throw updateError;
-            } else {
-              // Create new charge with valid status "sent"
-              const { error: chargeError } = await supabase
-                .from("charges")
-                .insert({
-                  owner_id: ticket.owner.id,
-                  property_id: ticket.property?.id || null,
-                  ticket_id: id,
-                  title: ticket.subject,
-                  amount_cents: ticket.amount_cents || 0,
-                  management_contribution_cents: ticket.management_contribution_cents || 0,
-                  service_type: ticket.service_type || null,
-                  cost_responsible: "owner",
-                  status: "sent",
-                });
-              if (chargeError) throw chargeError;
-            }
-
-            // Only update ticket to concluido if it isn't already
-            // (RLS blocks updates on concluido tickets)
-            if (ticket.status !== "concluido") {
-              const { error: ticketError } = await supabase
-                .from("tickets")
-                .update({ status: "concluido" })
-                .eq("id", id);
-              if (ticketError) throw ticketError;
-            }
-
-            toast.success("Cobrança enviada ao proprietário!");
-            return;
+          if (!ticket || !ticket.owner) {
+            throw new Error("Proprietário não encontrado para este ticket");
           }
+
+          // Use limit+order to safely get the most recent charge (avoids maybeSingle error on multiple rows)
+          const { data: existingCharges, error: chargeQueryError } = await supabase
+            .from("charges")
+            .select("id, amount_cents")
+            .eq("ticket_id", id)
+            .is("archived_at", null)
+            .order("created_at", { ascending: false })
+            .limit(1);
+
+          if (chargeQueryError) throw chargeQueryError;
+
+          const existingCharge = existingCharges?.[0] ?? null;
+
+          if (existingCharge) {
+            // Update existing charge to "sent" with the values visible in the list
+            const { error: updateError } = await supabase
+              .from("charges")
+              .update({
+                status: "sent",
+                amount_cents: ticket.amount_cents || existingCharge.amount_cents || 0,
+                management_contribution_cents: ticket.management_contribution_cents ?? 0,
+                service_type: ticket.service_type || null,
+              })
+              .eq("id", existingCharge.id);
+            if (updateError) throw updateError;
+          } else {
+            // Create new charge with status "sent"
+            const { error: chargeError } = await supabase
+              .from("charges")
+              .insert({
+                owner_id: ticket.owner.id,
+                property_id: ticket.property?.id || null,
+                ticket_id: id,
+                title: ticket.subject,
+                amount_cents: ticket.amount_cents || 0,
+                management_contribution_cents: ticket.management_contribution_cents || 0,
+                service_type: ticket.service_type || null,
+                cost_responsible: "owner",
+                status: "sent",
+              });
+            if (chargeError) throw chargeError;
+          }
+
+          // Only update ticket to concluido if not already (RLS blocks updates on concluido tickets)
+          if (ticket.status !== "concluido") {
+            const { error: ticketError } = await supabase
+              .from("tickets")
+              .update({ status: "concluido" })
+              .eq("id", id);
+            if (ticketError) throw ticketError;
+          }
+
+          toast.success("Cobrança enviada ao proprietário!");
+          return;
         }
 
         // Regular update - check if it's a charge field or ticket field
         if (["amount_cents", "management_contribution_cents", "service_type"].includes(field)) {
-          // Check if charge exists for this ticket
-          const { data: existingCharge } = await supabase
+          // Use limit to avoid maybeSingle error on multiple rows
+          const { data: existingCharges } = await supabase
             .from("charges")
             .select("id")
             .eq("ticket_id", id)
-            .maybeSingle();
+            .is("archived_at", null)
+            .order("created_at", { ascending: false })
+            .limit(1);
+
+          const existingCharge = existingCharges?.[0] ?? null;
 
           if (existingCharge) {
             const { error } = await supabase
@@ -1350,11 +1361,20 @@ export default function AdminManutencoesLista() {
       const previousTickets = queryClient.getQueryData(["maintenance-list-view"]);
       const previousCharges = queryClient.getQueryData(["pending-charges-list"]);
 
-      // Optimistically update
-      queryClient.setQueryData(["maintenance-list-view"], (old: MaintenanceItem[] | undefined) => {
-        if (!old) return old;
-        return old.map(t => t.id === id ? { ...t, [field]: value } : t);
-      });
+      if (field === "list_status" && value === "enviar_proprietario") {
+        // Optimistically REMOVE the ticket from the maintenance list —
+        // it will appear in "Cobranças Pendentes" after refetch
+        queryClient.setQueryData(["maintenance-list-view"], (old: MaintenanceItem[] | undefined) => {
+          if (!old) return old;
+          return old.filter(t => t.id !== id);
+        });
+      } else {
+        // Regular optimistic update
+        queryClient.setQueryData(["maintenance-list-view"], (old: MaintenanceItem[] | undefined) => {
+          if (!old) return old;
+          return old.map(t => t.id === id ? { ...t, [field]: value } : t);
+        });
+      }
 
       return { previousTickets, previousCharges };
     },
