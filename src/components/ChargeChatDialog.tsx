@@ -18,6 +18,7 @@ import { Send, Loader2, MessageSquare, Building, ExternalLink, Paperclip, X, Spa
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { processFileForUpload } from "@/lib/processVideoForUpload";
+import { sanitizeFilename } from "@/lib/storage";
 
 interface ChargeMessage {
   id: string;
@@ -266,7 +267,8 @@ export function ChargeChatDialog({
           for (const file of filesToUpload) {
             // Compress video if it's a video file
             const processedFile = await processFileForUpload(file);
-            const filePath = `${chargeId}/${Date.now()}_${processedFile.name}`;
+            const safeName = sanitizeFilename(processedFile.name);
+            const filePath = `${chargeId}/${Date.now()}_${safeName}`;
             
             const { error: uploadError } = await supabase.storage
               .from('charge-attachments')
