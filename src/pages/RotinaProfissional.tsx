@@ -204,11 +204,30 @@ export default function RotinaProfissional() {
 
           {/* ETAPA 2 */}
           <Step number={2} color="bg-amber-500" bgColor="bg-amber-50" borderColor="border-l-amber-500"
-            icon={<ClipboardCheck className="h-4 w-4" />} title="Triagem de Vistorias e Faxinas" subtitle="A cada vistoria">
+            icon={<ClipboardCheck className="h-4 w-4" />} title="Identificar e Criar Manutenções" subtitle="A qualquer momento">
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Ao receber uma vistoria (pelo app ou WhatsApp), você deve <strong>decidir</strong> quais problemas geram manutenção, quem paga e com qual urgência.
+                Uma manutenção pode surgir de qualquer origem: vistoria, relato de faxineira, pedido de proprietário, visita da equipe de rua, ou percepção própria. <strong>Você pode criar uma manutenção a qualquer momento</strong>, sem precisar de uma vistoria.
               </p>
+
+              <div className="p-3 rounded-lg border bg-card space-y-2">
+                <p className="font-medium text-sm">De onde podem vir as manutenções</p>
+                <div className="grid sm:grid-cols-2 gap-2">
+                  {[
+                    { icon: "📋", label: "Vistoria de faxina ou rotina" },
+                    { icon: "💬", label: "Relato pelo WhatsApp (faxineira, equipe de rua)" },
+                    { icon: "👤", label: "Solicitação de proprietário (via chat)" },
+                    { icon: "🔍", label: "Visita/inspeção da equipe de campo" },
+                    { icon: "📅", label: "Planejamento preventivo (baixa temporada)" },
+                    { icon: "⚡", label: "Urgência detectada na hora" },
+                  ].map((item) => (
+                    <div key={item.label} className="flex items-center gap-2 text-xs text-muted-foreground p-2 rounded bg-muted/50">
+                      <span>{item.icon}</span>
+                      {item.label}
+                    </div>
+                  ))}
+                </div>
+              </div>
 
               <div className="p-3 rounded-lg border bg-card">
                 <p className="font-medium text-sm mb-2">Prioridade de atendimento</p>
