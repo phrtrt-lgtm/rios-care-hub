@@ -436,6 +436,14 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/rotina-profissional"
+              element={
+                <ProtectedRoute allowedRoles={['agent', 'admin', 'maintenance']}>
+                  <RotinaProfissional />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/debug-app" element={<DebugApp />} />
             <Route
               path="/tutoriais"
