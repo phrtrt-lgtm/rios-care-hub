@@ -1241,7 +1241,7 @@ export default function AdminManutencoesLista() {
           .eq("id", id);
         if (error) throw error;
       } else {
-        // If updating status to "enviar_proprietario", create charge
+        // If updating status to "enviar_proprietario", create or update charge
         if (field === "list_status" && value === "enviar_proprietario") {
           const ticket = tickets?.find(t => t.id === id);
           if (ticket && ticket.owner) {
@@ -1252,23 +1252,39 @@ export default function AdminManutencoesLista() {
               .eq("id", id);
             if (ticketError) throw ticketError;
 
-            // Then create charge
-            const { error: chargeError } = await supabase
+            // Check if a charge already exists for this ticket
+            const { data: existingCharge } = await supabase
               .from("charges")
-              .insert({
-                owner_id: ticket.owner.id,
-                property_id: ticket.property?.id || null,
-                ticket_id: id,
-                title: ticket.subject,
-                amount_cents: ticket.amount_cents || 0,
-                management_contribution_cents: ticket.management_contribution_cents || 0,
-                service_type: ticket.service_type || null,
-                cost_responsible: "owner",
-                status: "pending",
-              });
-            if (chargeError) throw chargeError;
+              .select("id")
+              .eq("ticket_id", id)
+              .maybeSingle();
 
-            toast.success("Cobrança criada e enviada ao proprietário!");
+            if (existingCharge) {
+              // Update existing charge to "sent"
+              const { error: updateError } = await supabase
+                .from("charges")
+                .update({ status: "sent" })
+                .eq("id", existingCharge.id);
+              if (updateError) throw updateError;
+            } else {
+              // Create new charge with valid status "sent"
+              const { error: chargeError } = await supabase
+                .from("charges")
+                .insert({
+                  owner_id: ticket.owner.id,
+                  property_id: ticket.property?.id || null,
+                  ticket_id: id,
+                  title: ticket.subject,
+                  amount_cents: ticket.amount_cents || 0,
+                  management_contribution_cents: ticket.management_contribution_cents || 0,
+                  service_type: ticket.service_type || null,
+                  cost_responsible: "owner",
+                  status: "sent",
+                });
+              if (chargeError) throw chargeError;
+            }
+
+            toast.success("Cobrança enviada ao proprietário!");
             return;
           }
         }
