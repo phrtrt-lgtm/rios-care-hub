@@ -410,8 +410,9 @@ export const DebitoReservaCalculator = ({
 
           {/* Legenda */}
           <div className="text-xs text-muted-foreground bg-muted/30 rounded p-2">
-            <strong>Como funciona:</strong> Sua comissão base é {baseCommissionNum.toFixed(0)}%. 
-            O extra é arredondado para cima ({extraPercentRounded}%) porque o Airbnb só aceita % inteira.
+            <strong>Como funciona:</strong> O valor do proprietário no Airbnb já é líquido (após comissão base de {baseCommissionNum.toFixed(0)}%).
+            O sistema calcula o valor bruto da reserva e aplica o percentual extra sobre ele.
+            O arredondamento é sempre para cima para garantir cobertura da dívida.
             {hasCharges && (
               <span className="block mt-1">
                 <strong>Ao confirmar:</strong> O proprietário receberá email e notificação com todos os detalhes do cálculo.
