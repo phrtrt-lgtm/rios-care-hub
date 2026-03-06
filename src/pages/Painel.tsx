@@ -84,6 +84,10 @@ export default function Painel() {
       
       {/* Team Chat Widget - Only for team members */}
       <TeamChatWidget />
+      {/* AI Consulta Widget - team members */}
+      {(profile?.role === "admin" || profile?.role === "maintenance" || profile?.role === "agent") && (
+        <AIConsultaWidget />
+      )}
       {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-3">
