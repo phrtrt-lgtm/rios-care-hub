@@ -62,6 +62,10 @@ import Tutoriais from "./pages/Tutoriais";
 import CalendarioReservas from "./pages/CalendarioReservas";
 import AdminRelatorioCobrancas from "./pages/AdminRelatorioCobrancas";
 import RotinaProfissional from "./pages/RotinaProfissional";
+import BookingComissoes from "./pages/BookingComissoes";
+import NovaComissaoBooking from "./pages/NovaComissaoBooking";
+import ComissaoBookingDetalhes from "./pages/ComissaoBookingDetalhes";
+import AdminRelatorioBooking from "./pages/AdminRelatorioBooking";
 
 
 const queryClient = new QueryClient();
@@ -450,6 +454,39 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['owner', 'agent', 'admin', 'maintenance']}>
                   <Tutoriais />
+                </ProtectedRoute>
+              }
+            />
+            {/* Booking Comissões */}
+            <Route
+              path="/booking-comissoes"
+              element={
+                <ProtectedRoute allowedRoles={['agent', 'admin', 'maintenance']}>
+                  <BookingComissoes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/nova-comissao-booking"
+              element={
+                <ProtectedRoute allowedRoles={['agent', 'admin', 'maintenance']}>
+                  <NovaComissaoBooking />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/comissao-booking/:id"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'agent', 'admin', 'maintenance']}>
+                  <ComissaoBookingDetalhes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/relatorio-booking"
+              element={
+                <ProtectedRoute allowedRoles={['agent', 'admin', 'maintenance']}>
+                  <AdminRelatorioBooking />
                 </ProtectedRoute>
               }
             />

@@ -308,6 +308,40 @@ export default function Painel() {
           </div>
         )}
 
+        {/* Booking Comissões */}
+        {(profile?.role === "admin" || profile?.role === "agent") && (
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-base font-semibold flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                Comissões Booking
+              </h3>
+              <Button variant="ghost" size="sm" className="text-xs text-primary" onClick={() => navigate("/booking-comissoes")}>
+                Ver tudo →
+              </Button>
+            </div>
+            <Card
+              className="cursor-pointer hover:shadow-md transition-all border-primary/20 bg-primary/5"
+              onClick={() => navigate("/booking-comissoes")}
+            >
+              <CardContent className="py-4 px-4">
+                <p className="text-sm text-muted-foreground">
+                  Gerencie cobranças de comissão e taxa de limpeza de reservas recebidas diretamente pelos proprietários via Booking.com.
+                </p>
+                <div className="flex gap-2 mt-3">
+                  <Button size="sm" variant="default" onClick={(e) => { e.stopPropagation(); navigate("/nova-comissao-booking"); }}>
+                    <Plus className="mr-1 h-3.5 w-3.5" />
+                    Nova Comissão
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); navigate("/admin/relatorio-booking"); }}>
+                    Relatório
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
 
         {/* Insights IA */}
         {(profile?.role === "admin" || profile?.role === "maintenance" || profile?.role === "agent") && (
