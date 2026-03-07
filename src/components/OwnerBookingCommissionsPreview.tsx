@@ -211,16 +211,11 @@ export function OwnerBookingCommissionsPreview() {
                       <div className="flex flex-col items-end gap-1 shrink-0">
                         <span className="text-sm font-semibold">{formatBRL(c.total_due_cents)}</span>
                         <Badge className={`text-xs px-1.5 py-0 ${cfg.className}`}>{cfg.label}</Badge>
-                        <div className="flex items-center gap-0.5 text-xs text-primary font-medium">
-                          <QrCode className="h-3 w-3" />
-                          <span>PIX</span>
-                        </div>
                       </div>
                     </div>
                   );
                 })}
 
-                {/* Botão Pagar via PIX */}
                 {selected.length > 0 && (
                   <Button
                     className="w-full gap-2 mt-1"
@@ -228,9 +223,9 @@ export function OwnerBookingCommissionsPreview() {
                     disabled={generating}
                   >
                     {generating ? (
-                      <><Loader2 className="h-4 w-4 animate-spin" /> Gerando PIX...</>
+                      <><Loader2 className="h-4 w-4 animate-spin" /> Gerando código de pagamento...</>
                     ) : (
-                      <><QrCode className="h-4 w-4" /> Gerar PIX · {formatBRL(totalSelected)}</>
+                      <><QrCode className="h-4 w-4" /> Pagar · {formatBRL(totalSelected)}</>
                     )}
                   </Button>
                 )}
@@ -281,13 +276,12 @@ export function OwnerBookingCommissionsPreview() {
         </CardContent>
       </Card>
 
-      {/* Popup PIX */}
       <Dialog open={pixOpen} onOpenChange={setPixOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <QrCode className="h-5 w-5 text-primary" />
-              Pagar via PIX
+              Pagamento
             </DialogTitle>
           </DialogHeader>
 
@@ -308,7 +302,7 @@ export function OwnerBookingCommissionsPreview() {
 
               <Button variant="outline" className="w-full gap-2" onClick={copyPix}>
                 <Copy className="h-4 w-4" />
-                Copiar código PIX copia e cola
+                Copiar código copia e cola
               </Button>
 
               <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 text-xs text-muted-foreground">
