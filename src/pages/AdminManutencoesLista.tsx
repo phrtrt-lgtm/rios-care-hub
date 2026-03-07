@@ -1312,16 +1312,16 @@ export default function AdminManutencoesLista() {
           // Copy ticket attachments to the charge
           const { data: ticketAttachments } = await supabase
             .from("ticket_attachments")
-            .select("file_path, file_name, file_type, file_url, mime_type, file_size")
+            .select("path, file_name, file_type, file_url, mime_type, file_size, size_bytes")
             .eq("ticket_id", id);
 
           if (ticketAttachments && ticketAttachments.length > 0) {
             const chargeAttachmentsToInsert = ticketAttachments.map(a => ({
               charge_id: chargeId,
-              file_path: a.file_path,
-              file_name: a.file_name || "anexo",
+              file_path: a.path,
+              file_name: a.file_name || a.path.split("/").pop() || "anexo",
               mime_type: a.mime_type || a.file_type || null,
-              file_size: a.file_size || null,
+              file_size: a.file_size || a.size_bytes || null,
             }));
             await supabase.from("charge_attachments").insert(chargeAttachmentsToInsert);
           }
