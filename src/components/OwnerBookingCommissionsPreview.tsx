@@ -218,19 +218,6 @@ export function OwnerBookingCommissionsPreview() {
                   })}
                 </div>
 
-                {selected.length > 0 && (
-                  <Button
-                    className="w-full gap-2 mt-1"
-                    onClick={handleGeneratePix}
-                    disabled={generating}
-                  >
-                    {generating ? (
-                      <><Loader2 className="h-4 w-4 animate-spin" /> Gerando código de pagamento...</>
-                    ) : (
-                      <><QrCode className="h-4 w-4" /> Pagar · {formatBRL(totalSelected)}</>
-                    )}
-                  </Button>
-                )}
               </CollapsibleContent>
             </Collapsible>
           )}
@@ -267,14 +254,29 @@ export function OwnerBookingCommissionsPreview() {
             </Collapsible>
           )}
 
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full text-xs"
-            onClick={() => navigate("/minhas-comissoes-booking")}
-          >
-            Ver todas as comissões Booking
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 text-xs"
+              onClick={() => navigate("/minhas-comissoes-booking")}
+            >
+              Ver todas
+            </Button>
+            <Button
+              size="sm"
+              className="flex-1 text-xs gap-1"
+              disabled={selected.length === 0 || generating}
+              onClick={handleGeneratePix}
+            >
+              {generating ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <QrCode className="h-3 w-3" />
+              )}
+              Pagar selecionadas
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
