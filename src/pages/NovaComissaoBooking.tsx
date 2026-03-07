@@ -29,7 +29,8 @@ export default function NovaComissaoBooking() {
     guest_name: "",
     check_in: "",
     check_out: "",
-    reservation_amount: "",
+    reservation_amount: "",      // valor bruto
+    channel_commission: "",      // comissão do canal (Booking.com etc.)
     commission_percent: "",
     cleaning_fee: "",
     due_date: "",
