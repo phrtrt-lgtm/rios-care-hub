@@ -1273,21 +1273,24 @@ export default function AdminManutencoesLista() {
 
           const existingCharge = existingCharges?.[0] ?? null;
 
+          let chargeId: string;
+
           if (existingCharge) {
-            // Update existing charge to "sent" with the values visible in the list
+            // Update existing charge to "pendente" with the values visible in the list
             const { error: updateError } = await supabase
               .from("charges")
               .update({
-                status: "sent",
+                status: "pendente",
                 amount_cents: ticket.amount_cents || existingCharge.amount_cents || 0,
                 management_contribution_cents: ticket.management_contribution_cents ?? 0,
                 service_type: ticket.service_type || null,
               })
               .eq("id", existingCharge.id);
             if (updateError) throw updateError;
+            chargeId = existingCharge.id;
           } else {
-            // Create new charge with status "sent"
-            const { error: chargeError } = await supabase
+            // Create new charge with status "pendente"
+            const { data: newCharge, error: chargeError } = await supabase
               .from("charges")
               .insert({
                 owner_id: ticket.owner.id,
@@ -1298,9 +1301,29 @@ export default function AdminManutencoesLista() {
                 management_contribution_cents: ticket.management_contribution_cents || 0,
                 service_type: ticket.service_type || null,
                 cost_responsible: "owner",
-                status: "sent",
-              });
+                status: "pendente",
+              })
+              .select("id")
+              .single();
             if (chargeError) throw chargeError;
+            chargeId = newCharge.id;
+          }
+
+          // Copy ticket attachments to the charge
+          const { data: ticketAttachments } = await supabase
+            .from("ticket_attachments")
+            .select("path, file_name, file_type, file_url, mime_type, file_size, size_bytes")
+            .eq("ticket_id", id);
+
+          if (ticketAttachments && ticketAttachments.length > 0) {
+            const chargeAttachmentsToInsert = ticketAttachments.map(a => ({
+              charge_id: chargeId,
+              file_path: a.path,
+              file_name: a.file_name || a.path.split("/").pop() || "anexo",
+              mime_type: a.mime_type || a.file_type || null,
+              file_size: a.file_size || a.size_bytes || null,
+            }));
+            await supabase.from("charge_attachments").insert(chargeAttachmentsToInsert);
           }
 
           // Only update ticket to concluido if not already (RLS blocks updates on concluido tickets)
@@ -1312,7 +1335,7 @@ export default function AdminManutencoesLista() {
             if (ticketError) throw ticketError;
           }
 
-          toast.success("Cobrança enviada ao proprietário!");
+          toast.success("Cobrança criada e enviada ao proprietário!");
           return;
         }
 
