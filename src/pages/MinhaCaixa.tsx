@@ -21,6 +21,7 @@ import { OwnerChargesPreview } from "@/components/OwnerChargesPreview";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { OwnerOnboardingTour } from "@/components/OwnerOnboardingTour";
 import { motion } from "framer-motion";
+import { OwnerBookingCommissionsPreview } from "@/components/OwnerBookingCommissionsPreview";
 
 
 export default function MinhaCaixa() {
