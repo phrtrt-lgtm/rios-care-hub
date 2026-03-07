@@ -49,10 +49,14 @@ serve(async (req) => {
     const totalCents = commissions.reduce((s, c) => s + c.total_due_cents, 0);
     const totalAmount = totalCents / 100;
 
-    const firstCheckIn = commissions[0].check_in;
+    // Montar slug da unidade para identificação no extrato
+    const firstProperty = (commissions[0] as any).property;
+    const unitSlug = firstProperty?.name
+      ? firstProperty.name.replace(/\s+/g, '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').substring(0, 20)
+      : 'SemUnidade';
     const description = commissions.length === 1
-      ? `Comissão Booking – ${commissions[0].guest_name || "hóspede"}`
-      : `Comissões Booking (${commissions.length} reservas)`;
+      ? `comissao${unitSlug}`
+      : `comissao${unitSlug}x${commissions.length}`;
 
     // Chave de idempotência única por conjunto de IDs
     const idempotencyKey = uuidv4();
