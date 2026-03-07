@@ -267,14 +267,29 @@ export function OwnerBookingCommissionsPreview() {
             </Collapsible>
           )}
 
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full text-xs"
-            onClick={() => navigate("/minhas-comissoes-booking")}
-          >
-            Ver todas as comissões Booking
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 text-xs"
+              onClick={() => navigate("/minhas-comissoes-booking")}
+            >
+              Ver todas
+            </Button>
+            <Button
+              size="sm"
+              className="flex-1 text-xs gap-1"
+              disabled={selected.length === 0 || generating}
+              onClick={handleGeneratePix}
+            >
+              {generating ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <QrCode className="h-3 w-3" />
+              )}
+              Pagar selecionadas
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
