@@ -174,47 +174,49 @@ export function OwnerBookingCommissionsPreview() {
                   )}
                 </div>
 
-                {pending.map(c => {
-                  const cfg = STATUS_CONFIG[c.status] || { label: c.status, className: "bg-muted text-muted-foreground" };
-                  return (
-                    <div
-                      key={c.id}
-                      className={`flex items-start gap-3 p-3 rounded-lg border transition-colors cursor-pointer ${selected.includes(c.id) ? "bg-primary/5 border-primary/30" : "hover:bg-accent/50"}`}
-                      onClick={() => toggle(c.id)}
-                    >
-                      <Checkbox
-                        checked={selected.includes(c.id)}
-                        onCheckedChange={() => toggle(c.id)}
-                        onClick={e => e.stopPropagation()}
-                        className="mt-0.5 shrink-0"
-                      />
+                <div className="overflow-y-auto max-h-[5.5rem] space-y-2 pr-1">
+                  {pending.map(c => {
+                    const cfg = STATUS_CONFIG[c.status] || { label: c.status, className: "bg-muted text-muted-foreground" };
+                    return (
                       <div
-                        className="flex-1 min-w-0 space-y-0.5"
-                        onClick={e => { e.stopPropagation(); navigate(`/minha-comissao-booking/${c.id}`); }}
+                        key={c.id}
+                        className={`flex items-start gap-3 p-3 rounded-lg border transition-colors cursor-pointer ${selected.includes(c.id) ? "bg-primary/5 border-primary/30" : "hover:bg-accent/50"}`}
+                        onClick={() => toggle(c.id)}
                       >
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <User className="h-3 w-3 shrink-0" />
-                          <span className="truncate font-medium">{c.guest_name || "Hóspede"}</span>
+                        <Checkbox
+                          checked={selected.includes(c.id)}
+                          onCheckedChange={() => toggle(c.id)}
+                          onClick={e => e.stopPropagation()}
+                          className="mt-0.5 shrink-0"
+                        />
+                        <div
+                          className="flex-1 min-w-0 space-y-0.5"
+                          onClick={e => { e.stopPropagation(); navigate(`/minha-comissao-booking/${c.id}`); }}
+                        >
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <User className="h-3 w-3 shrink-0" />
+                            <span className="truncate font-medium">{c.guest_name || "Hóspede"}</span>
+                          </div>
+                          {c.property?.name && (
+                            <p className="text-xs text-muted-foreground truncate">{c.property.name}</p>
+                          )}
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <CalendarDays className="h-3 w-3 shrink-0" />
+                            <span>
+                              {format(new Date(c.check_in + "T12:00:00"), "dd/MM", { locale: ptBR })}
+                              {" – "}
+                              {format(new Date(c.check_out + "T12:00:00"), "dd/MM/yy", { locale: ptBR })}
+                            </span>
+                          </div>
                         </div>
-                        {c.property?.name && (
-                          <p className="text-xs text-muted-foreground truncate">{c.property.name}</p>
-                        )}
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <CalendarDays className="h-3 w-3 shrink-0" />
-                          <span>
-                            {format(new Date(c.check_in + "T12:00:00"), "dd/MM", { locale: ptBR })}
-                            {" – "}
-                            {format(new Date(c.check_out + "T12:00:00"), "dd/MM/yy", { locale: ptBR })}
-                          </span>
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          <span className="text-sm font-semibold">{formatBRL(c.total_due_cents)}</span>
+                          <Badge className={`text-xs px-1.5 py-0 ${cfg.className}`}>{cfg.label}</Badge>
                         </div>
                       </div>
-                      <div className="flex flex-col items-end gap-1 shrink-0">
-                        <span className="text-sm font-semibold">{formatBRL(c.total_due_cents)}</span>
-                        <Badge className={`text-xs px-1.5 py-0 ${cfg.className}`}>{cfg.label}</Badge>
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
 
                 {selected.length > 0 && (
                   <Button
