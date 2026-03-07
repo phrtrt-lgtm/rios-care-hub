@@ -191,7 +191,7 @@ export default function NovaComissaoBooking() {
 
               {/* Valor da Reserva */}
               <div className="space-y-2">
-                <Label>Valor Total da Reserva (R$) *</Label>
+                <Label>Valor Bruto da Reserva (R$) *</Label>
                 <Input
                   type="number" step="0.01" min="0"
                   value={form.reservation_amount}
@@ -200,19 +200,33 @@ export default function NovaComissaoBooking() {
                   required
                 />
                 <p className="text-xs text-muted-foreground">
-                  Valor que o proprietário recebeu da Booking
+                  Valor total que aparece na reserva (antes da comissão do canal)
+                </p>
+              </div>
+
+              {/* Comissão do canal */}
+              <div className="space-y-2">
+                <Label>Comissão do Canal (R$)</Label>
+                <Input
+                  type="number" step="0.01" min="0"
+                  value={form.channel_commission}
+                  onChange={(e) => set("channel_commission", e.target.value)}
+                  placeholder="0,00"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Valor cobrado pelo canal (Booking.com, Airbnb etc.). A comissão RIOS incide sobre o valor líquido.
                 </p>
               </div>
 
               {/* Comissão % + Taxa Limpeza */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Comissão (%) *</Label>
+                  <Label>Comissão RIOS (%) *</Label>
                   <Input
                     type="number" step="0.01" min="0" max="100"
                     value={form.commission_percent}
                     onChange={(e) => set("commission_percent", e.target.value)}
-                    placeholder="Ex: 15"
+                    placeholder="Ex: 22"
                     required
                   />
                 </div>
@@ -228,7 +242,7 @@ export default function NovaComissaoBooking() {
               </div>
 
               {/* Preview do cálculo */}
-              {(reservationCents > 0 || cleaningFeeCents > 0) && (
+              {(reservationGrossCents > 0 || cleaningFeeCents > 0) && (
                 <Card className="bg-primary/5 border-primary/20">
                   <CardContent className="py-3 px-4">
                     <div className="flex items-center gap-2 mb-2">
@@ -237,11 +251,21 @@ export default function NovaComissaoBooking() {
                     </div>
                     <div className="space-y-1 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Reserva:</span>
-                        <span>{formatBRL(reservationCents)}</span>
+                        <span className="text-muted-foreground">Valor bruto:</span>
+                        <span>{formatBRL(reservationGrossCents)}</span>
+                      </div>
+                      {channelCommissionCents > 0 && (
+                        <div className="flex justify-between text-destructive/80">
+                          <span>(-) Comissão canal:</span>
+                          <span>- {formatBRL(channelCommissionCents)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between border-t pt-1">
+                        <span className="text-muted-foreground">Valor líquido (base):</span>
+                        <span className="font-medium">{formatBRL(reservationNetCents)}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Comissão ({commissionPercent}%):</span>
+                        <span className="text-muted-foreground">Comissão RIOS ({commissionPercent}%):</span>
                         <span>{formatBRL(commissionCents)}</span>
                       </div>
                       <div className="flex justify-between">
