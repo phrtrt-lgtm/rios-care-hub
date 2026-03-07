@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
-import { generateChargeEmailHTML } from "../_shared/email-utils.ts";
+import { renderTemplate, getTemplate } from "../_shared/template-renderer.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -40,12 +40,12 @@ serve(async (req) => {
     const owner = commission.owner;
     const propertyName = commission.property?.name || "Imóvel";
 
-    const totalBRL = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" })
-      .format(commission.total_due_cents / 100);
-    const commissionBRL = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" })
-      .format(commission.commission_cents / 100);
-    const cleaningBRL = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" })
-      .format(commission.cleaning_fee_cents / 100);
+    const fmt = (cents: number) =>
+      new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
+
+    const totalBRL = fmt(commission.total_due_cents);
+    const commissionBRL = fmt(commission.commission_cents);
+    const cleaningBRL = fmt(commission.cleaning_fee_cents);
 
     const checkIn = new Intl.DateTimeFormat("pt-BR").format(new Date(commission.check_in + "T12:00:00"));
     const checkOut = new Intl.DateTimeFormat("pt-BR").format(new Date(commission.check_out + "T12:00:00"));
@@ -56,33 +56,35 @@ serve(async (req) => {
 
     const dueDate = commission.due_date
       ? new Intl.DateTimeFormat("pt-BR").format(new Date(commission.due_date + "T12:00:00"))
-      : "A definir";
+      : "";
 
     const notificationTitle = "Nova Cobrança Booking";
     const notificationMessage = `${propertyName} – ${guestName} (${checkIn} a ${checkOut}) · ${totalBRL}`;
 
-    // ── E-mail usando o layout padrão de cobranças ──────────────
-    const emailHtml = generateChargeEmailHTML({
-      ownerName: owner.name,
-      chargeTitle: `Comissão Booking – ${propertyName}`,
-      amountBRL: totalBRL,
-      totalAmount: totalBRL,
-      managementContribution: undefined,
-      dueAmount: totalBRL,
-      maintenanceDate: `${checkIn} a ${checkOut} · Hóspede: ${guestName}`,
-      dueDate,
-      paymentLink: commission.payment_link_url || undefined,
-      description: `Comissão (${commission.commission_percent}%): ${commissionBRL} · Taxa de limpeza: ${cleaningBRL}`,
-      contestDeadline: undefined,
-      portalUrl: commissionUrl,
-    });
+    // ── E-mail via template do banco ────────────────────────────
+    const template = await getTemplate(supabase, "booking_commission_created");
+    if (!template) throw new Error("Template booking_commission_created não encontrado");
+
+    const variables = {
+      owner_name: owner.name,
+      property_name: propertyName,
+      guest_name: guestName,
+      check_in: checkIn,
+      check_out: checkOut,
+      commission_percent: commission.commission_percent,
+      commission_amount: commissionBRL,
+      cleaning_fee: cleaningBRL,
+      total_due: totalBRL,
+      due_date: dueDate,
+      commission_url: commissionUrl,
+    };
 
     const { error: emailError } = await resend.emails.send({
       from: "RIOS <sistema@rioshospedagens.com.br>",
       reply_to: "rioslagoon@gmail.com",
       to: [owner.email],
-      subject: `Nova Cobrança Booking – ${propertyName} (${checkIn} a ${checkOut})`,
-      html: emailHtml,
+      subject: renderTemplate(template.subject, variables),
+      html: renderTemplate(template.body_html, variables),
     });
 
     if (emailError) {
