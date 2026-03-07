@@ -276,13 +276,12 @@ export function OwnerBookingCommissionsPreview() {
         </CardContent>
       </Card>
 
-      {/* Popup PIX */}
       <Dialog open={pixOpen} onOpenChange={setPixOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <QrCode className="h-5 w-5 text-primary" />
-              Pagar via PIX
+              Pagamento
             </DialogTitle>
           </DialogHeader>
 
