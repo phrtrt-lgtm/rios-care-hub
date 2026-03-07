@@ -268,13 +268,12 @@ export default function MinhaComissaoBookingDetalhes() {
           Tirar dúvidas sobre esta cobrança
         </Button>
 
-        {chatOpen && (
-          <BookingCommissionChatDialog
-            commissionId={commission.id}
-            open={chatOpen}
-            onClose={() => setChatOpen(false)}
-          />
-        )}
+        <BookingCommissionChatDialog
+          commissionId={commission.id}
+          open={chatOpen}
+          onOpenChange={setChatOpen}
+          title={`${commission.guest_name || "Hóspede"} — ${commission.property?.name || ""}`}
+        />
       </main>
     </div>
   );
