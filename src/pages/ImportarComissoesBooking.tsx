@@ -129,7 +129,7 @@ export default function ImportarComissoesBooking() {
         return {
           spreadsheetName: name,
           systemPropertyId: matched ? matched.id : null,
-          commissionPercent: 0,
+          commissionPercent: 22,
           autoMatched: !!matched,
         };
       });
