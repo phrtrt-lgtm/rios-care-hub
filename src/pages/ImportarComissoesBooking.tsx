@@ -193,7 +193,21 @@ export default function ImportarComissoesBooking() {
     if (!profile?.id) return;
     setGenerating(true);
     try {
-      const inserts: object[] = [];
+  type CommissionInsert = {
+    property_id: string;
+    owner_id: string;
+    guest_name: string | null;
+    check_in: string;
+    check_out: string;
+    reservation_amount_cents: number;
+    commission_percent: number;
+    cleaning_fee_cents: number;
+    status: string;
+    created_by: string;
+    due_date: null;
+    notes: string | null;
+  };
+  const inserts: CommissionInsert[] = [];
 
       for (const mapping of linkedMappings) {
         if (!mapping.systemPropertyId || mapping.systemPropertyId === "skip") continue;
