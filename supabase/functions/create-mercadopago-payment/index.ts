@@ -69,6 +69,12 @@ const handler = async (req: Request): Promise<Response> => {
 
     const property = charge.properties;
 
+    // Montar slug da unidade para identificação no extrato (sem espaços/acentos)
+    const unitSlug = property?.name
+      ? property.name.replace(/\s+/g, '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').substring(0, 20)
+      : 'SemUnidade';
+    const manutencaoLabel = `manutencao${unitSlug}`;
+
     // Buscar pagamentos já feitos para calcular o valor devido
     const { data: payments, error: paymentsError } = await supabase
       .from('charge_payments')
