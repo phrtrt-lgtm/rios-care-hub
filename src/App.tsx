@@ -62,6 +62,10 @@ import Tutoriais from "./pages/Tutoriais";
 import CalendarioReservas from "./pages/CalendarioReservas";
 import AdminRelatorioCobrancas from "./pages/AdminRelatorioCobrancas";
 import RotinaProfissional from "./pages/RotinaProfissional";
+import BookingComissoes from "./pages/BookingComissoes";
+import NovaComissaoBooking from "./pages/NovaComissaoBooking";
+import ComissaoBookingDetalhes from "./pages/ComissaoBookingDetalhes";
+import AdminRelatorioBooking from "./pages/AdminRelatorioBooking";
 
 
 const queryClient = new QueryClient();
