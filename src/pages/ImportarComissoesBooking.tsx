@@ -216,13 +216,16 @@ export default function ImportarComissoesBooking() {
 
         const propReservations = filteredReservations.filter(r => r.property_name === mapping.spreadsheetName);
         for (const r of propReservations) {
+          // reservation_amount_cents deve ser o valor líquido (bruto - comissão canal)
+          // para que o trigger calcule: commission = net * % + limpeza
+          const netAmount = r.reservation_amount - r.channel_commission;
           inserts.push({
             property_id: sysProp.id,
             owner_id: sysProp.owner_id,
             guest_name: r.guest_name || null,
             check_in: r.checkin_date,
             check_out: r.checkout_date,
-            reservation_amount_cents: Math.round(r.reservation_amount * 100),
+            reservation_amount_cents: Math.round(netAmount * 100),
             commission_percent: mapping.commissionPercent,
             cleaning_fee_cents: Math.round(r.cleaning_fee * 100),
             status: "sent",
