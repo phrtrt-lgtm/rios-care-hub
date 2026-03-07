@@ -293,7 +293,20 @@ export default function ConfiguracaoEmail() {
         owner_name: "João Silva",
         message_body: "Não concordo com essa cobrança. A toalha já estava velha e precisava ser trocada mesmo. Por favor, verifiquem.",
         message_date: new Date().toLocaleString("pt-BR"),
-        charge_url: `${baseUrl}/gerenciar-cobrancas`,
+      charge_url: `${baseUrl}/gerenciar-cobrancas`,
+      },
+      booking_commission_created: {
+        owner_name: "João Silva",
+        property_name: "Apto 301 - Edifício Vista Mar",
+        guest_name: "Carlos Mendes",
+        check_in: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString("pt-BR"),
+        check_out: new Date(Date.now() + 9 * 24 * 60 * 60 * 1000).toLocaleDateString("pt-BR"),
+        commission_percent: 22,
+        commission_amount: "R$ 330,00",
+        cleaning_fee: "R$ 150,00",
+        total_due: "R$ 480,00",
+        due_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString("pt-BR"),
+        commission_url: `${baseUrl}/minha-comissao-booking/exemplo`,
       },
     };
 
