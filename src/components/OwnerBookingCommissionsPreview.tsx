@@ -218,19 +218,6 @@ export function OwnerBookingCommissionsPreview() {
                   })}
                 </div>
 
-                {selected.length > 0 && (
-                  <Button
-                    className="w-full gap-2 mt-1"
-                    onClick={handleGeneratePix}
-                    disabled={generating}
-                  >
-                    {generating ? (
-                      <><Loader2 className="h-4 w-4 animate-spin" /> Gerando código de pagamento...</>
-                    ) : (
-                      <><QrCode className="h-4 w-4" /> Pagar · {formatBRL(totalSelected)}</>
-                    )}
-                  </Button>
-                )}
               </CollapsibleContent>
             </Collapsible>
           )}
