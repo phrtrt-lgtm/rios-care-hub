@@ -185,7 +185,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Criar pagamento PIX para gerar QR code
     const pixPaymentPayload = {
       transaction_amount: dueAmount,
-      description: charge.title || 'Cobrança de Manutenção',
+      description: manutencaoLabel,
       payment_method_id: 'pix',
       payer: {
         email: owner.email || 'noreply@example.com',
