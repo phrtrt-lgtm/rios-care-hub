@@ -1260,36 +1260,34 @@ export default function AdminManutencoesLista() {
             throw new Error("Proprietário não encontrado para este ticket");
           }
 
-          // Use limit+order to safely get the most recent charge (avoids maybeSingle error on multiple rows)
+          // Buscar TODAS as cobranças vinculadas (pode haver múltiplas)
           const { data: existingCharges, error: chargeQueryError } = await supabase
             .from("charges")
             .select("id, amount_cents")
             .eq("ticket_id", id)
             .is("archived_at", null)
-            .order("created_at", { ascending: false })
-            .limit(1);
+            .order("created_at", { ascending: false });
 
           if (chargeQueryError) throw chargeQueryError;
 
-          const existingCharge = existingCharges?.[0] ?? null;
-
           let chargeId: string;
 
-          if (existingCharge) {
-            // Update existing charge to "pendente" with the values visible in the list
+          if (existingCharges && existingCharges.length > 0) {
+            // Atualizar TODAS as cobranças vinculadas para "pendente"
             const { error: updateError } = await supabase
               .from("charges")
               .update({
                 status: "pendente",
-                amount_cents: ticket.amount_cents || existingCharge.amount_cents || 0,
+                amount_cents: ticket.amount_cents || existingCharges[0].amount_cents || 0,
                 management_contribution_cents: ticket.management_contribution_cents ?? 0,
                 service_type: ticket.service_type || null,
               })
-              .eq("id", existingCharge.id);
+              .eq("ticket_id", id)
+              .is("archived_at", null);
             if (updateError) throw updateError;
-            chargeId = existingCharge.id;
+            chargeId = existingCharges[0].id;
           } else {
-            // Create new charge with status "pendente"
+            // Criar nova cobrança com status "pendente"
             const { data: newCharge, error: chargeError } = await supabase
               .from("charges")
               .insert({
