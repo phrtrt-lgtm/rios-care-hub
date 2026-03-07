@@ -563,8 +563,8 @@ export default function ImportarComissoesBooking() {
         {step === 3 && generated && (
           <Card className="max-w-lg mx-auto">
             <CardContent className="pt-10 pb-8 text-center space-y-4">
-              <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto">
-                <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
+              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                <CheckCircle2 className="h-8 w-8 text-primary" />
               </div>
               <div>
                 <h2 className="text-xl font-bold">Cobranças geradas!</h2>
