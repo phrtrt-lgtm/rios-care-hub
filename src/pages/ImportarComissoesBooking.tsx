@@ -422,13 +422,13 @@ export default function ImportarComissoesBooking() {
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <p className="font-semibold text-sm">{mapping.spreadsheetName}</p>
                                   {mapping.autoMatched && !isSkipped && (
-                                    <Badge variant="outline" className="border-green-500 text-green-700 dark:text-green-400 text-xs">
+                                    <Badge variant="outline" className="border-primary/50 text-primary text-xs">
                                       <CheckCircle2 className="h-3 w-3 mr-1" />
                                       Vinculado automaticamente
                                     </Badge>
                                   )}
                                   {!mapping.autoMatched && !isSkipped && (
-                                    <Badge variant="outline" className="border-yellow-500 text-yellow-700 dark:text-yellow-400 text-xs">
+                                    <Badge variant="outline" className="text-xs">
                                       <AlertCircle className="h-3 w-3 mr-1" />
                                       Vincular manualmente
                                     </Badge>
