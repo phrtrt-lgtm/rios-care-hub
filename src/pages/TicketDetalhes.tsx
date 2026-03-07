@@ -169,6 +169,23 @@ export default function TicketDetalhes() {
         .single();
 
       if (ticketError) throw ticketError;
+
+      // Se é manutenção concluída, redireciona para a cobrança vinculada
+      if (ticketData.ticket_type === 'manutencao' && ticketData.status === 'concluido') {
+        const { data: charges } = await supabase
+          .from('charges')
+          .select('id, status, archived_at')
+          .eq('ticket_id', id)
+          .is('archived_at', null)
+          .order('created_at', { ascending: false })
+          .limit(1);
+        
+        if (charges && charges.length > 0) {
+          navigate(`/manutencao-detalhes/${charges[0].id}`, { replace: true });
+          return;
+        }
+      }
+
       setTicket(ticketData);
 
       await fetchMessages();

@@ -281,7 +281,18 @@ const AdminManutencoesConluidas = () => {
                         <div
                           key={maintenance.id}
                           className="p-4 hover:bg-muted/30 cursor-pointer transition-colors"
-                          onClick={() => navigate(`/ticket-detalhes/${maintenance.id}`)}
+                          onClick={() => {
+                            // Se tem cobrança ativa, navega para a cobrança; senão para o ticket
+                            const activeCharge = maintenance.charges?.find(c => ['pendente','sent','overdue','contested'].includes(c.status));
+                            const anyCharge = maintenance.charges?.[0];
+                            if (activeCharge) {
+                              navigate(`/manutencao-detalhes/${activeCharge.id}`);
+                            } else if (anyCharge) {
+                              navigate(`/manutencao-detalhes/${anyCharge.id}`);
+                            } else {
+                              navigate(`/ticket-detalhes/${maintenance.id}`);
+                            }
+                          }}
                         >
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1 min-w-0 space-y-2">
