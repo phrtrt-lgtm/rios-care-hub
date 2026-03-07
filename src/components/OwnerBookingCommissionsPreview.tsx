@@ -211,10 +211,6 @@ export function OwnerBookingCommissionsPreview() {
                       <div className="flex flex-col items-end gap-1 shrink-0">
                         <span className="text-sm font-semibold">{formatBRL(c.total_due_cents)}</span>
                         <Badge className={`text-xs px-1.5 py-0 ${cfg.className}`}>{cfg.label}</Badge>
-                        <div className="flex items-center gap-0.5 text-xs text-primary font-medium">
-                          <QrCode className="h-3 w-3" />
-                          <span>PIX</span>
-                        </div>
                       </div>
                     </div>
                   );
