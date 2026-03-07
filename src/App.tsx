@@ -491,6 +491,14 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/importar-comissoes-booking"
+              element={
+                <ProtectedRoute allowedRoles={['agent', 'admin', 'maintenance']}>
+                  <ImportarComissoesBooking />
+                </ProtectedRoute>
+              }
+            />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
