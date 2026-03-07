@@ -457,6 +457,39 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            {/* Booking Comissões */}
+            <Route
+              path="/booking-comissoes"
+              element={
+                <ProtectedRoute allowedRoles={['agent', 'admin', 'maintenance']}>
+                  <BookingComissoes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/nova-comissao-booking"
+              element={
+                <ProtectedRoute allowedRoles={['agent', 'admin', 'maintenance']}>
+                  <NovaComissaoBooking />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/comissao-booking/:id"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'agent', 'admin', 'maintenance']}>
+                  <ComissaoBookingDetalhes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/relatorio-booking"
+              element={
+                <ProtectedRoute allowedRoles={['agent', 'admin', 'maintenance']}>
+                  <AdminRelatorioBooking />
+                </ProtectedRoute>
+              }
+            />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
