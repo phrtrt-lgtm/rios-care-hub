@@ -69,6 +69,12 @@ const handler = async (req: Request): Promise<Response> => {
 
     const property = charge.properties;
 
+    // Montar slug da unidade para identificação no extrato (sem espaços/acentos)
+    const unitSlug = property?.name
+      ? property.name.replace(/\s+/g, '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').substring(0, 20)
+      : 'SemUnidade';
+    const manutencaoLabel = `manutencao${unitSlug}`;
+
     // Buscar pagamentos já feitos para calcular o valor devido
     const { data: payments, error: paymentsError } = await supabase
       .from('charge_payments')
@@ -108,7 +114,7 @@ const handler = async (req: Request): Promise<Response> => {
     const preferencePayload = {
       items: [
         {
-          title: charge.title || 'Cobrança de Manutenção',
+      title: manutencaoLabel,
           description: charge.description || '',
           quantity: 1,
           currency_id: 'BRL',
@@ -179,7 +185,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Criar pagamento PIX para gerar QR code
     const pixPaymentPayload = {
       transaction_amount: dueAmount,
-      description: charge.title || 'Cobrança de Manutenção',
+      description: manutencaoLabel,
       payment_method_id: 'pix',
       payer: {
         email: owner.email || 'noreply@example.com',
