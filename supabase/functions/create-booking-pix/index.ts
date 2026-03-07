@@ -30,7 +30,7 @@ serve(async (req) => {
     // Buscar comissões — valida que pertencem ao owner
     const { data: commissions, error: comErr } = await supabase
       .from("booking_commissions")
-      .select("id, guest_name, check_in, check_out, total_due_cents, status, owner_id")
+      .select("id, guest_name, check_in, check_out, total_due_cents, status, owner_id, property:property_id(name)")
       .in("id", commissionIds)
       .eq("owner_id", user.id);
 
