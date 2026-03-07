@@ -501,6 +501,22 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/minhas-comissoes-booking"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <MinhasComissoesBooking />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/minha-comissao-booking/:id"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <MinhaComissaoBookingDetalhes />
+                </ProtectedRoute>
+              }
+            />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
