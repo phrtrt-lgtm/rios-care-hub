@@ -221,7 +221,7 @@ export default function MinhaComissaoBookingDetalhes() {
               {commission.pix_qr_code_base64 ? (
                 <>
                   <div className="flex justify-center p-3 bg-white rounded-lg border">
-                    <img src={commission.pix_qr_code_base64} alt="QR Code PIX" className="w-48 h-48" />
+                  <img src={commission.pix_qr_code_base64} alt="QR Code PIX" className="w-48 h-48" />
                   </div>
                   <Button variant="outline" className="w-full gap-2" onClick={copyPix}>
                     <Copy className="h-4 w-4" />
