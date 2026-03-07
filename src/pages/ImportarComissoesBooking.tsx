@@ -241,8 +241,18 @@ export default function ImportarComissoesBooking() {
         return;
       }
 
-      const { error } = await supabase.from("booking_commissions").insert(inserts);
+      const { data: inserted, error } = await supabase
+        .from("booking_commissions")
+        .insert(inserts)
+        .select("id");
       if (error) throw error;
+
+      // Disparar notificação para cada comissão gerada (fire-and-forget)
+      for (const row of inserted || []) {
+        supabase.functions.invoke("notify-booking-commission", {
+          body: { commissionId: row.id },
+        }).catch(e => console.warn("notify-booking-commission error:", e));
+      }
 
       setGenerated(true);
       setStep(3);

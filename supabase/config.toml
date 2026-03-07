@@ -1,5 +1,8 @@
 project_id = "ktzfovzwayfqczytmhno"
 
+[functions.notify-booking-commission]
+verify_jwt = false
+
 [functions.get-ticket-messages]
 verify_jwt = true
 
