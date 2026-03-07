@@ -72,6 +72,11 @@ export default function ImportarComissoesBooking() {
 
   const isTeam = ["admin", "agent", "maintenance"].includes(profile?.role || "");
 
+  if (!isTeam) {
+    navigate("/");
+    return null;
+  }
+
   // ─── Etapa 1: Upload ───────────────────────────────────────────
   const handleFile = async (f: File) => {
     setFile(f);
