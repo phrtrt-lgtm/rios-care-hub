@@ -216,7 +216,6 @@ export function OwnerBookingCommissionsPreview() {
                   );
                 })}
 
-                {/* Botão Pagar via PIX */}
                 {selected.length > 0 && (
                   <Button
                     className="w-full gap-2 mt-1"
@@ -224,9 +223,9 @@ export function OwnerBookingCommissionsPreview() {
                     disabled={generating}
                   >
                     {generating ? (
-                      <><Loader2 className="h-4 w-4 animate-spin" /> Gerando PIX...</>
+                      <><Loader2 className="h-4 w-4 animate-spin" /> Gerando código de pagamento...</>
                     ) : (
-                      <><QrCode className="h-4 w-4" /> Gerar PIX · {formatBRL(totalSelected)}</>
+                      <><QrCode className="h-4 w-4" /> Pagar · {formatBRL(totalSelected)}</>
                     )}
                   </Button>
                 )}
