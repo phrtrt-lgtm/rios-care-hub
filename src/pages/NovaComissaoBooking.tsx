@@ -91,7 +91,7 @@ export default function NovaComissaoBooking() {
           guest_name: form.guest_name || null,
           check_in: form.check_in,
           check_out: form.check_out,
-          reservation_amount_cents: reservationCents,
+          reservation_amount_cents: reservationNetCents,
           commission_percent: commissionPercent,
           cleaning_fee_cents: cleaningFeeCents,
           due_date: form.due_date || null,
