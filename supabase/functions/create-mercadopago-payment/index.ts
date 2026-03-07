@@ -114,7 +114,7 @@ const handler = async (req: Request): Promise<Response> => {
     const preferencePayload = {
       items: [
         {
-          title: charge.title || 'Cobrança de Manutenção',
+      title: manutencaoLabel,
           description: charge.description || '',
           quantity: 1,
           currency_id: 'BRL',
