@@ -67,6 +67,8 @@ import NovaComissaoBooking from "./pages/NovaComissaoBooking";
 import ComissaoBookingDetalhes from "./pages/ComissaoBookingDetalhes";
 import AdminRelatorioBooking from "./pages/AdminRelatorioBooking";
 import ImportarComissoesBooking from "./pages/ImportarComissoesBooking";
+import MinhasComissoesBooking from "./pages/MinhasComissoesBooking";
+import MinhaComissaoBookingDetalhes from "./pages/MinhaComissaoBookingDetalhes";
 
 
 const queryClient = new QueryClient();
