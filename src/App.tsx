@@ -66,6 +66,7 @@ import BookingComissoes from "./pages/BookingComissoes";
 import NovaComissaoBooking from "./pages/NovaComissaoBooking";
 import ComissaoBookingDetalhes from "./pages/ComissaoBookingDetalhes";
 import AdminRelatorioBooking from "./pages/AdminRelatorioBooking";
+import ImportarComissoesBooking from "./pages/ImportarComissoesBooking";
 
 
 const queryClient = new QueryClient();
@@ -487,6 +488,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['agent', 'admin', 'maintenance']}>
                   <AdminRelatorioBooking />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/importar-comissoes-booking"
+              element={
+                <ProtectedRoute allowedRoles={['agent', 'admin', 'maintenance']}>
+                  <ImportarComissoesBooking />
                 </ProtectedRoute>
               }
             />

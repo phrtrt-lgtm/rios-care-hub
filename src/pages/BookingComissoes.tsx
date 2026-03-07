@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ArrowLeft, Plus, Search, MessageSquare, ChevronRight, BarChart3,
-  CalendarDays, Building2, User, Percent, Sparkles, DollarSign
+  CalendarDays, Building2, User, Percent, Sparkles, DollarSign, FileSpreadsheet
 } from "lucide-react";
 import { formatBRL, formatDate } from "@/lib/format";
 import { differenceInDays, isPast, format } from "date-fns";
@@ -169,6 +169,15 @@ const BookingComissoes = () => {
             >
               <BarChart3 className="mr-2 h-4 w-4" />
               Relatório
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/importar-comissoes-booking")}
+              className="hidden sm:flex"
+            >
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
+              Importar Planilha
             </Button>
             <Button size="sm" onClick={() => navigate("/nova-comissao-booking")}>
               <Plus className="mr-2 h-4 w-4" />
