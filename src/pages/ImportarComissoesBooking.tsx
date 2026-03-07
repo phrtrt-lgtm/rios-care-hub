@@ -339,10 +339,10 @@ export default function ImportarComissoesBooking() {
               </div>
 
               {/* Info sobre colunas esperadas */}
-              <div className="flex gap-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
-                <Info className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                <div className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
-                  <p className="font-medium">Colunas detectadas automaticamente:</p>
+              <div className="flex gap-2 p-3 rounded-lg bg-accent border border-border">
+                <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <p className="font-medium text-foreground">Colunas detectadas automaticamente:</p>
                   <p>Alojamento · Estado · Hóspede · Checkin · Checkout · Valor Reserva · Comissão Canal · Taxa de Limpeza · Canal</p>
                 </div>
               </div>
