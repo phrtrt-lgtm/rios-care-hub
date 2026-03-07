@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
+import { renderTemplate, getTemplate } from '../_shared/template-renderer.ts';
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -47,54 +48,44 @@ serve(async (req) => {
     const portalUrl = Deno.env.get("PORTAL_URL") || "https://portal.rioshospedagens.com.br";
     const commissionUrl = `${portalUrl}/minha-comissao-booking/${commissionId}`;
 
-    const subject = `Nova Comissão Booking – ${propertyName}`;
     const notificationTitle = "Nova Cobrança Booking";
     const notificationMessage = `${propertyName} – ${guestName} (${checkIn} a ${checkOut}) · ${totalBRL}`;
 
-    // ── E-mail ao proprietário ──────────────────────────────────
-    const emailHtml = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
-        <div style="background: #1a1a2e; padding: 24px; text-align: center;">
-          <h1 style="color: #ffffff; margin: 0; font-size: 20px;">RIOS Hospedagens</h1>
-        </div>
-        <div style="padding: 32px 24px;">
-          <h2 style="color: #1a1a2e; margin-top: 0;">Nova Comissão Booking</h2>
-          <p>Olá, <strong>${owner.name}</strong>!</p>
-          <p>Uma nova cobrança de comissão foi registrada para o imóvel <strong>${propertyName}</strong>.</p>
+    // ── E-mail ao proprietário via template padrão ──────────────
+    const template = await getTemplate(supabase, "booking_commission_created");
 
-          <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 24px 0; border-left: 4px solid #1a1a2e;">
-            <p style="margin: 6px 0;"><strong>Imóvel:</strong> ${propertyName}</p>
-            <p style="margin: 6px 0;"><strong>Hóspede:</strong> ${guestName}</p>
-            <p style="margin: 6px 0;"><strong>Check-in:</strong> ${checkIn}</p>
-            <p style="margin: 6px 0;"><strong>Check-out:</strong> ${checkOut}</p>
-            <p style="margin: 12px 0 0; font-size: 18px;"><strong>Total devido: <span style="color: #e65100;">${totalBRL}</span></strong></p>
-          </div>
+    if (!template) {
+      console.error("Template booking_commission_created não encontrado");
+      throw new Error("Template de e-mail não encontrado");
+    }
 
-          <p>Acesse o portal para visualizar os detalhes e realizar o pagamento:</p>
-          <div style="text-align: center; margin: 24px 0;">
-            <a href="${commissionUrl}" style="background: #1a1a2e; color: #ffffff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block;">
-              Ver Cobrança
-            </a>
-          </div>
-        </div>
-        <div style="background: #f0f0f0; padding: 16px; text-align: center; font-size: 12px; color: #666;">
-          RIOS Hospedagens · sistema@rioshospedagens.com.br
-        </div>
-      </div>
-    `;
+    const variables = {
+      owner_name: owner.name,
+      property_name: propertyName,
+      guest_name: guestName,
+      check_in: checkIn,
+      check_out: checkOut,
+      total_due: totalBRL,
+      commission_url: commissionUrl,
+    };
 
-    await resend.emails.send({
+    const { error: emailError } = await resend.emails.send({
       from: "RIOS <sistema@rioshospedagens.com.br>",
       reply_to: "rioslagoon@gmail.com",
       to: [owner.email],
-      subject,
-      html: emailHtml,
+      subject: renderTemplate(template.subject, variables),
+      html: renderTemplate(template.body_html, variables),
     });
+
+    if (emailError) {
+      console.error("Erro ao enviar e-mail:", emailError);
+      throw emailError;
+    }
 
     console.log(`E-mail enviado para ${owner.email}`);
 
     // ── Notificação in-app ──────────────────────────────────────
-    await supabase.from("notifications").insert({
+    const { error: notifError } = await supabase.from("notifications").insert({
       owner_id: owner.id,
       title: notificationTitle,
       message: notificationMessage,
@@ -103,6 +94,10 @@ serve(async (req) => {
       reference_url: `/minha-comissao-booking/${commissionId}`,
       read: false,
     });
+
+    if (notifError) {
+      console.error("Erro ao criar notificação (non-critical):", notifError);
+    }
 
     // ── Push ────────────────────────────────────────────────────
     try {
