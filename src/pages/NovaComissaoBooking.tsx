@@ -29,7 +29,8 @@ export default function NovaComissaoBooking() {
     guest_name: "",
     check_in: "",
     check_out: "",
-    reservation_amount: "",
+    reservation_amount: "",      // valor bruto
+    channel_commission: "",      // comissão do canal (Booking.com etc.)
     commission_percent: "",
     cleaning_fee: "",
     due_date: "",
@@ -64,11 +65,13 @@ export default function NovaComissaoBooking() {
 
   const set = (key: string, value: string) => setForm((f) => ({ ...f, [key]: value }));
 
-  // Calculated preview
-  const reservationCents = Math.round(parseFloat(form.reservation_amount || "0") * 100);
+  // Calculated preview — base = bruto - comissão canal
+  const reservationGrossCents = Math.round(parseFloat(form.reservation_amount || "0") * 100);
+  const channelCommissionCents = Math.round(parseFloat(form.channel_commission || "0") * 100);
+  const reservationNetCents = Math.max(0, reservationGrossCents - channelCommissionCents);
   const commissionPercent = parseFloat(form.commission_percent || "0");
   const cleaningFeeCents = Math.round(parseFloat(form.cleaning_fee || "0") * 100);
-  const commissionCents = Math.round(reservationCents * commissionPercent / 100);
+  const commissionCents = Math.round(reservationNetCents * commissionPercent / 100);
   const totalDueCents = commissionCents + cleaningFeeCents;
 
   const handleSubmit = async (e: React.FormEvent, asDraft = false) => {
@@ -88,7 +91,7 @@ export default function NovaComissaoBooking() {
           guest_name: form.guest_name || null,
           check_in: form.check_in,
           check_out: form.check_out,
-          reservation_amount_cents: reservationCents,
+          reservation_amount_cents: reservationNetCents,
           commission_percent: commissionPercent,
           cleaning_fee_cents: cleaningFeeCents,
           due_date: form.due_date || null,
@@ -188,7 +191,7 @@ export default function NovaComissaoBooking() {
 
               {/* Valor da Reserva */}
               <div className="space-y-2">
-                <Label>Valor Total da Reserva (R$) *</Label>
+                <Label>Valor Bruto da Reserva (R$) *</Label>
                 <Input
                   type="number" step="0.01" min="0"
                   value={form.reservation_amount}
@@ -197,19 +200,33 @@ export default function NovaComissaoBooking() {
                   required
                 />
                 <p className="text-xs text-muted-foreground">
-                  Valor que o proprietário recebeu da Booking
+                  Valor total que aparece na reserva (antes da comissão do canal)
+                </p>
+              </div>
+
+              {/* Comissão do canal */}
+              <div className="space-y-2">
+                <Label>Comissão do Canal (R$)</Label>
+                <Input
+                  type="number" step="0.01" min="0"
+                  value={form.channel_commission}
+                  onChange={(e) => set("channel_commission", e.target.value)}
+                  placeholder="0,00"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Valor cobrado pelo canal (Booking.com, Airbnb etc.). A comissão RIOS incide sobre o valor líquido.
                 </p>
               </div>
 
               {/* Comissão % + Taxa Limpeza */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Comissão (%) *</Label>
+                  <Label>Comissão RIOS (%) *</Label>
                   <Input
                     type="number" step="0.01" min="0" max="100"
                     value={form.commission_percent}
                     onChange={(e) => set("commission_percent", e.target.value)}
-                    placeholder="Ex: 15"
+                    placeholder="Ex: 22"
                     required
                   />
                 </div>
@@ -225,7 +242,7 @@ export default function NovaComissaoBooking() {
               </div>
 
               {/* Preview do cálculo */}
-              {(reservationCents > 0 || cleaningFeeCents > 0) && (
+              {(reservationGrossCents > 0 || cleaningFeeCents > 0) && (
                 <Card className="bg-primary/5 border-primary/20">
                   <CardContent className="py-3 px-4">
                     <div className="flex items-center gap-2 mb-2">
@@ -234,11 +251,21 @@ export default function NovaComissaoBooking() {
                     </div>
                     <div className="space-y-1 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Reserva:</span>
-                        <span>{formatBRL(reservationCents)}</span>
+                        <span className="text-muted-foreground">Valor bruto:</span>
+                        <span>{formatBRL(reservationGrossCents)}</span>
+                      </div>
+                      {channelCommissionCents > 0 && (
+                        <div className="flex justify-between text-destructive/80">
+                          <span>(-) Comissão canal:</span>
+                          <span>- {formatBRL(channelCommissionCents)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between border-t pt-1">
+                        <span className="text-muted-foreground">Valor líquido (base):</span>
+                        <span className="font-medium">{formatBRL(reservationNetCents)}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Comissão ({commissionPercent}%):</span>
+                        <span className="text-muted-foreground">Comissão RIOS ({commissionPercent}%):</span>
                         <span>{formatBRL(commissionCents)}</span>
                       </div>
                       <div className="flex justify-between">
