@@ -1164,7 +1164,7 @@ export default function AdminManutencoesLista() {
       // Fetch associated charges for value/contribution data
       const { data: charges } = await supabase
         .from("charges")
-        .select("ticket_id, amount_cents, management_contribution_cents, service_type")
+        .select("ticket_id, amount_cents, management_contribution_cents, service_type, status")
         .in("ticket_id", ticketIds);
 
       const chargeMap: Record<string, any> = {};
@@ -1172,14 +1172,26 @@ export default function AdminManutencoesLista() {
         if (c.ticket_id) chargeMap[c.ticket_id] = c;
       });
 
-      return (data || []).map(t => ({
-        ...t,
-        attachments_count: attachmentCounts[t.id] || 0,
-        amount_cents: chargeMap[t.id]?.amount_cents || null,
-        management_contribution_cents: chargeMap[t.id]?.management_contribution_cents || null,
-        service_type: chargeMap[t.id]?.service_type || null,
-        list_status: t.status === "concluido" ? "feito" : "em_progresso",
-      })) as MaintenanceItem[];
+      // Tickets concluidos que já têm cobrança enviada/pendente não devem aparecer aqui
+      // (eles aparecem na seção de cobranças pendentes)
+      const CHARGE_SENT_STATUSES = ["sent", "pendente", "pending", "overdue", "contested"];
+
+      return (data || [])
+        .filter(t => {
+          // Se o ticket está concluido E tem uma cobrança já enviada ao proprietário, não mostrar aqui
+          if (t.status === "concluido" && chargeMap[t.id] && CHARGE_SENT_STATUSES.includes(chargeMap[t.id].status)) {
+            return false;
+          }
+          return true;
+        })
+        .map(t => ({
+          ...t,
+          attachments_count: attachmentCounts[t.id] || 0,
+          amount_cents: chargeMap[t.id]?.amount_cents || null,
+          management_contribution_cents: chargeMap[t.id]?.management_contribution_cents || null,
+          service_type: chargeMap[t.id]?.service_type || null,
+          list_status: t.status === "concluido" ? "feito" : "em_progresso",
+        })) as MaintenanceItem[];
     },
   });
 
