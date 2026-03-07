@@ -201,7 +201,7 @@ export default function MinhaComissaoBookingDetalhes() {
               </span>
             </div>
             {isPaid && commission.paid_at && (
-              <p className="text-xs text-green-600 text-right">
+              <p className="text-xs text-emerald-600 text-right">
                 Pago em {format(new Date(commission.paid_at), "dd/MM/yyyy", { locale: ptBR })}
               </p>
             )}
