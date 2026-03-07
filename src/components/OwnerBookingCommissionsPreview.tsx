@@ -302,7 +302,7 @@ export function OwnerBookingCommissionsPreview() {
 
               <Button variant="outline" className="w-full gap-2" onClick={copyPix}>
                 <Copy className="h-4 w-4" />
-                Copiar código PIX copia e cola
+                Copiar código copia e cola
               </Button>
 
               <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 text-xs text-muted-foreground">
