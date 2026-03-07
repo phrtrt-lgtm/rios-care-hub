@@ -308,6 +308,202 @@ export type Database = {
         }
         Relationships: []
       }
+      booking_commission_attachments: {
+        Row: {
+          commission_id: string
+          created_at: string
+          created_by: string | null
+          file_name: string
+          file_path: string
+          file_size: number | null
+          id: string
+          mime_type: string | null
+        }
+        Insert: {
+          commission_id: string
+          created_at?: string
+          created_by?: string | null
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+        }
+        Update: {
+          commission_id?: string
+          created_at?: string
+          created_by?: string | null
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_commission_attachments_commission_id_fkey"
+            columns: ["commission_id"]
+            isOneToOne: false
+            referencedRelation: "booking_commissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_commission_attachments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_commission_messages: {
+        Row: {
+          author_id: string
+          body: string
+          commission_id: string
+          created_at: string
+          id: string
+          is_internal: boolean
+        }
+        Insert: {
+          author_id: string
+          body: string
+          commission_id: string
+          created_at?: string
+          id?: string
+          is_internal?: boolean
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          commission_id?: string
+          created_at?: string
+          id?: string
+          is_internal?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_commission_messages_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_commission_messages_commission_id_fkey"
+            columns: ["commission_id"]
+            isOneToOne: false
+            referencedRelation: "booking_commissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_commissions: {
+        Row: {
+          archived_at: string | null
+          check_in: string
+          check_out: string
+          cleaning_fee_cents: number
+          commission_cents: number
+          commission_percent: number
+          created_at: string
+          created_by: string | null
+          debited_at: string | null
+          due_date: string | null
+          guest_name: string | null
+          id: string
+          mercadopago_payment_id: string | null
+          mercadopago_preference_id: string | null
+          notes: string | null
+          owner_id: string
+          paid_at: string | null
+          payment_link_url: string | null
+          pix_qr_code: string | null
+          pix_qr_code_base64: string | null
+          property_id: string | null
+          reservation_amount_cents: number
+          status: string
+          total_due_cents: number
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          check_in: string
+          check_out: string
+          cleaning_fee_cents?: number
+          commission_cents?: number
+          commission_percent?: number
+          created_at?: string
+          created_by?: string | null
+          debited_at?: string | null
+          due_date?: string | null
+          guest_name?: string | null
+          id?: string
+          mercadopago_payment_id?: string | null
+          mercadopago_preference_id?: string | null
+          notes?: string | null
+          owner_id: string
+          paid_at?: string | null
+          payment_link_url?: string | null
+          pix_qr_code?: string | null
+          pix_qr_code_base64?: string | null
+          property_id?: string | null
+          reservation_amount_cents?: number
+          status?: string
+          total_due_cents?: number
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string | null
+          check_in?: string
+          check_out?: string
+          cleaning_fee_cents?: number
+          commission_cents?: number
+          commission_percent?: number
+          created_at?: string
+          created_by?: string | null
+          debited_at?: string | null
+          due_date?: string | null
+          guest_name?: string | null
+          id?: string
+          mercadopago_payment_id?: string | null
+          mercadopago_preference_id?: string | null
+          notes?: string | null
+          owner_id?: string
+          paid_at?: string | null
+          payment_link_url?: string | null
+          pix_qr_code?: string | null
+          pix_qr_code_base64?: string | null
+          property_id?: string | null
+          reservation_amount_cents?: number
+          status?: string
+          total_due_cents?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_commissions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_commissions_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_commissions_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       broadcast_recipients: {
         Row: {
           broadcast_id: string
