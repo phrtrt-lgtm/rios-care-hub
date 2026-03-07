@@ -65,11 +65,13 @@ export default function NovaComissaoBooking() {
 
   const set = (key: string, value: string) => setForm((f) => ({ ...f, [key]: value }));
 
-  // Calculated preview
-  const reservationCents = Math.round(parseFloat(form.reservation_amount || "0") * 100);
+  // Calculated preview — base = bruto - comissão canal
+  const reservationGrossCents = Math.round(parseFloat(form.reservation_amount || "0") * 100);
+  const channelCommissionCents = Math.round(parseFloat(form.channel_commission || "0") * 100);
+  const reservationNetCents = Math.max(0, reservationGrossCents - channelCommissionCents);
   const commissionPercent = parseFloat(form.commission_percent || "0");
   const cleaningFeeCents = Math.round(parseFloat(form.cleaning_fee || "0") * 100);
-  const commissionCents = Math.round(reservationCents * commissionPercent / 100);
+  const commissionCents = Math.round(reservationNetCents * commissionPercent / 100);
   const totalDueCents = commissionCents + cleaningFeeCents;
 
   const handleSubmit = async (e: React.FormEvent, asDraft = false) => {
