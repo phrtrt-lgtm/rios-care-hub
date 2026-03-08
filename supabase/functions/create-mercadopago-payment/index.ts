@@ -55,8 +55,10 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('Proprietário não encontrado');
     }
 
-    // Verificar se já existe um payment_link
-    if (charge.payment_link) {
+    // Verificar se já existe um payment_link (não recria para proprietários comuns)
+    // Para Rodrigo Azevedo, sempre recria para garantir parcelamento correto em 4x sem juros
+    const isRodrigoAzevedoEarly = charge.owner_id === 'dfe67361-061f-4e95-8a44-e19606a59321';
+    if (charge.payment_link && !isRodrigoAzevedoEarly) {
       console.log('Payment link already exists:', charge.payment_link);
       return new Response(
         JSON.stringify({ payment_link: charge.payment_link }),
@@ -110,11 +112,14 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Parcelamento sem juros para Rodrigo Azevedo (custo absorvido pela gestão)
+    const isRodrigoAzevedo = charge.owner_id === 'dfe67361-061f-4e95-8a44-e19606a59321';
+
     // Criar preferência de pagamento no Mercado Pago
     const preferencePayload = {
       items: [
         {
-      title: manutencaoLabel,
+          title: manutencaoLabel,
           description: charge.description || '',
           quantity: 1,
           currency_id: 'BRL',
@@ -129,19 +134,16 @@ const handler = async (req: Request): Promise<Response> => {
           number: owner.phone?.substring(2) || '',
         }
       },
-      payment_methods: {
-        installments: 12, // Permite parcelamento em até 12x
-        default_installments: 1,
-      },
-      // Parcelamento sem juros para proprietários específicos (custo absorvido pela gestão)
-      ...(charge.owner_id === 'dfe67361-061f-4e95-8a44-e19606a59321' ? {
-        payment_methods: {
-          installments: 4,
-          default_installments: 1,
-          default_payment_method_id: null,
-          installments_cost: 'seller', // gestão absorve os juros
-        }
-      } : {}),
+      payment_methods: isRodrigoAzevedo
+        ? {
+            installments: 4,
+            default_installments: 1,
+            installments_cost: 'seller', // gestão absorve os juros
+          }
+        : {
+            installments: 12,
+            default_installments: 1,
+          },
       back_urls: {
         success: 'https://portal.rioshospedagens.com.br/minhas-cobrancas',
         failure: 'https://portal.rioshospedagens.com.br/minhas-cobrancas',
