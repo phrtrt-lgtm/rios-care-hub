@@ -147,6 +147,9 @@ const handler = async (req: Request): Promise<Response> => {
       const isProposalPayment = payment.metadata?.type === 'proposal_payment';
       const proposalId = payment.metadata?.proposal_id;
       const proposalOwnerId = payment.metadata?.owner_id;
+      // Group booking commission payment
+      const isGroupBookingPayment = payment.metadata?.is_group_booking_payment === true;
+      const commissionIds: string[] = payment.metadata?.commission_ids || [];
 
       if (!externalRef) {
         console.log('No external_reference in payment');
@@ -155,8 +158,10 @@ const handler = async (req: Request): Promise<Response> => {
 
       console.log('Processing payment:', paymentId, 'Status:', status);
       console.log('Is group payment:', isGroupPayment);
+      console.log('Is group booking payment:', isGroupBookingPayment);
       console.log('Is proposal payment:', isProposalPayment);
       console.log('Charge IDs from metadata:', chargeIds);
+      console.log('Commission IDs from metadata:', commissionIds);
 
       // Mapear status do Mercado Pago para status de cobrança
       // O status final de pagamento será determinado pela data
@@ -293,6 +298,69 @@ const handler = async (req: Request): Promise<Response> => {
           } catch (notifyError) {
             console.error('Error sending proposal payment notification:', notifyError);
           }
+        }
+
+        return new Response('OK', { status: 200 });
+      }
+
+      // Handle group BOOKING COMMISSION payment
+      if (isGroupBookingPayment && commissionIds.length > 0) {
+        console.log('Processing group booking payment for commissions:', commissionIds);
+
+        if (status === 'approved') {
+          const updatePromises = commissionIds.map(async (commissionId: string) => {
+            const { data: commission, error: commError } = await supabase
+              .from('booking_commissions')
+              .select('owner_id, due_date, total_due_cents')
+              .eq('id', commissionId)
+              .single();
+
+            if (commError || !commission) {
+              console.error(`Error fetching booking commission ${commissionId}:`, commError);
+              return;
+            }
+
+            const commStatus = getPaymentStatus(commission.due_date, paidAt);
+
+            const { error: updateError } = await supabase
+              .from('booking_commissions')
+              .update({
+                status: 'paid',
+                paid_at: paidAt,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', commissionId);
+
+            if (updateError) {
+              console.error(`Error updating booking commission ${commissionId}:`, updateError);
+            } else {
+              console.log(`Booking commission ${commissionId} marked as paid`);
+            }
+
+            // Notify owner and send email
+            try {
+              await supabase.functions.invoke('notify-booking-commission-paid', {
+                body: { commissionId, paymentId: String(paymentId) },
+              });
+            } catch (e) {
+              console.error(`Error sending paid notification for commission ${commissionId}:`, e);
+            }
+          });
+
+          await Promise.all(updatePromises);
+          console.log('All booking commissions marked as paid');
+        } else if (isPaymentExpired) {
+          // Clear PIX data so owner can generate a new one
+          await supabase
+            .from('booking_commissions')
+            .update({
+              pix_qr_code: null,
+              pix_qr_code_base64: null,
+              mercadopago_payment_id: null,
+              updated_at: new Date().toISOString(),
+            })
+            .in('id', commissionIds);
+          console.log('Expired booking commission PIX cleared');
         }
 
         return new Response('OK', { status: 200 });

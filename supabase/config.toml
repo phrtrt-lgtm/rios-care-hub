@@ -68,3 +68,6 @@ verify_jwt = false
 
 [functions.ai-consulta]
 verify_jwt = true
+
+[functions.notify-booking-commission-paid]
+verify_jwt = false
