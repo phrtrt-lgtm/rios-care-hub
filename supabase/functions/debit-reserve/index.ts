@@ -67,6 +67,7 @@ const handler = async (req: Request): Promise<Response> => {
         status, 
         title, 
         amount_cents,
+        management_contribution_cents,
         property_id
       `)
       .in('id', chargeIds);
