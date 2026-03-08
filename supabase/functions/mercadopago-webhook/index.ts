@@ -147,6 +147,9 @@ const handler = async (req: Request): Promise<Response> => {
       const isProposalPayment = payment.metadata?.type === 'proposal_payment';
       const proposalId = payment.metadata?.proposal_id;
       const proposalOwnerId = payment.metadata?.owner_id;
+      // Group booking commission payment
+      const isGroupBookingPayment = payment.metadata?.is_group_booking_payment === true;
+      const commissionIds: string[] = payment.metadata?.commission_ids || [];
 
       if (!externalRef) {
         console.log('No external_reference in payment');
@@ -155,8 +158,10 @@ const handler = async (req: Request): Promise<Response> => {
 
       console.log('Processing payment:', paymentId, 'Status:', status);
       console.log('Is group payment:', isGroupPayment);
+      console.log('Is group booking payment:', isGroupBookingPayment);
       console.log('Is proposal payment:', isProposalPayment);
       console.log('Charge IDs from metadata:', chargeIds);
+      console.log('Commission IDs from metadata:', commissionIds);
 
       // Mapear status do Mercado Pago para status de cobrança
       // O status final de pagamento será determinado pela data
