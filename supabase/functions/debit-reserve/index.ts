@@ -67,6 +67,7 @@ const handler = async (req: Request): Promise<Response> => {
         status, 
         title, 
         amount_cents,
+        management_contribution_cents,
         property_id
       `)
       .in('id', chargeIds);
@@ -147,8 +148,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`${chargeIdsToProcess.length} charges set to aguardando_reserva with check-in date: ${reserveDate}`);
 
-    // Calculate total debt amount
-    const totalDebtCents = chargesToProcess.reduce((sum, c) => sum + c.amount_cents, 0);
+    // Calculate total debt amount: only owner's portion (amount minus management contribution)
+    const totalDebtCents = chargesToProcess.reduce((sum, c) => {
+      const managementContribution = (c as any).management_contribution_cents ?? 0;
+      return sum + Math.max(0, c.amount_cents - managementContribution);
+    }, 0);
 
     // Process scores for each charge
     for (const charge of chargesToProcess) {
