@@ -303,6 +303,69 @@ const handler = async (req: Request): Promise<Response> => {
         return new Response('OK', { status: 200 });
       }
 
+      // Handle group BOOKING COMMISSION payment
+      if (isGroupBookingPayment && commissionIds.length > 0) {
+        console.log('Processing group booking payment for commissions:', commissionIds);
+
+        if (status === 'approved') {
+          const updatePromises = commissionIds.map(async (commissionId: string) => {
+            const { data: commission, error: commError } = await supabase
+              .from('booking_commissions')
+              .select('owner_id, due_date, total_due_cents')
+              .eq('id', commissionId)
+              .single();
+
+            if (commError || !commission) {
+              console.error(`Error fetching booking commission ${commissionId}:`, commError);
+              return;
+            }
+
+            const commStatus = getPaymentStatus(commission.due_date, paidAt);
+
+            const { error: updateError } = await supabase
+              .from('booking_commissions')
+              .update({
+                status: 'paid',
+                paid_at: paidAt,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', commissionId);
+
+            if (updateError) {
+              console.error(`Error updating booking commission ${commissionId}:`, updateError);
+            } else {
+              console.log(`Booking commission ${commissionId} marked as paid`);
+            }
+
+            // Notify owner and send email
+            try {
+              await supabase.functions.invoke('notify-booking-commission-paid', {
+                body: { commissionId, paymentId: String(paymentId) },
+              });
+            } catch (e) {
+              console.error(`Error sending paid notification for commission ${commissionId}:`, e);
+            }
+          });
+
+          await Promise.all(updatePromises);
+          console.log('All booking commissions marked as paid');
+        } else if (isPaymentExpired) {
+          // Clear PIX data so owner can generate a new one
+          await supabase
+            .from('booking_commissions')
+            .update({
+              pix_qr_code: null,
+              pix_qr_code_base64: null,
+              mercadopago_payment_id: null,
+              updated_at: new Date().toISOString(),
+            })
+            .in('id', commissionIds);
+          console.log('Expired booking commission PIX cleared');
+        }
+
+        return new Response('OK', { status: 200 });
+      }
+
       // Handle group payment
       if (isGroupPayment && chargeIds.length > 0) {
         console.log('Processing group payment for charges:', chargeIds);
