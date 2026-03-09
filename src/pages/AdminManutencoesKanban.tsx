@@ -431,6 +431,10 @@ const AdminManutencoesKanban = () => {
             <BarChart3 className="h-4 w-4 mr-2" />
             Cobranças Pagas
           </Button>
+          <Button variant="outline" onClick={() => navigate("/manutencoes")}>
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Relatório
+          </Button>
         </div>
 
         {/* Filters */}

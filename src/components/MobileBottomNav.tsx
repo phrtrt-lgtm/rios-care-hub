@@ -28,6 +28,7 @@ const quickActions: NavItem[] = [
   { icon: Ticket, label: "Novo Chamado", path: "/novo-ticket", roles: ["owner"] },
   { icon: Wrench, label: "Nova Manutenção", path: "/admin/nova-manutencao", roles: ["admin", "maintenance"] },
   { icon: Package, label: "Reposição de Item", path: "/nova-cobranca?reposicao=true", roles: ["admin", "maintenance"] },
+  { icon: BarChart3, label: "Relatório Manutenções", path: "/manutencoes", roles: ["admin", "maintenance", "agent"] },
   { icon: Wrench, label: "Relatório Manutenções", path: "/manutencoes", roles: ["owner"] },
   { icon: BarChart3, label: "Resumo Propriedades", path: "/resumo-propriedades", roles: ["owner"] },
 ];
