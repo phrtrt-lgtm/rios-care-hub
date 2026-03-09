@@ -7,6 +7,7 @@ export interface MaintenanceFilters {
   propertyId?: string;
   status?: string;
   category?: string;
+  serviceType?: string;
   fromDate?: string;
   toDate?: string;
   search?: string;
