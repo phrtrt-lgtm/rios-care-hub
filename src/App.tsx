@@ -69,6 +69,7 @@ import AdminRelatorioBooking from "./pages/AdminRelatorioBooking";
 import ImportarComissoesBooking from "./pages/ImportarComissoesBooking";
 import MinhasComissoesBooking from "./pages/MinhasComissoesBooking";
 import MinhaComissaoBookingDetalhes from "./pages/MinhaComissaoBookingDetalhes";
+import AdminManutencoesArquivo from "./pages/AdminManutencoesArquivo";
 
 
 const queryClient = new QueryClient();
@@ -399,6 +400,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['admin', 'maintenance']}>
                   <AdminManutencoesLista />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/manutencoes-arquivo"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'maintenance']}>
+                  <AdminManutencoesArquivo />
                 </ProtectedRoute>
               }
             />
