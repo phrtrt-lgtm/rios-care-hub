@@ -39,7 +39,7 @@ export default function Manutencoes() {
     status: activeFilters.status || undefined,
     search: activeFilters.search || undefined,
   });
-  const { data: charts } = useMaintenanceCharts(ownerId, year, propertyId);
+  const { data: charts } = useMaintenanceCharts(ownerId, year, propertyId, serviceTypeFilter || undefined);
 
   // Fetch properties for team filter
   useEffect(() => {
@@ -53,7 +53,7 @@ export default function Manutencoes() {
     if (user) {
       fetchServiceTypeData();
     }
-  }, [user, year, propertyId]);
+  }, [user, year, propertyId, serviceTypeFilter]);
 
   const fetchServiceTypeData = async () => {
     try {
