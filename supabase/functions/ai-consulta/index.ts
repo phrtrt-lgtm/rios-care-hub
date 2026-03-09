@@ -21,6 +21,9 @@ serve(async (req) => {
     const { messages } = await req.json();
 
     // ── Fetch all relevant data from the database ──────────────────────────
+    const today = new Date().toISOString().split("T")[0];
+    const in90days = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
     const [
       ticketsRes,
       chargesRes,
@@ -29,6 +32,7 @@ serve(async (req) => {
       bookingCommissionsRes,
       proposalsRes,
       profilesRes,
+      reservationsRes,
     ] = await Promise.all([
       // All non-closed tickets with property and owner info
       supabase
