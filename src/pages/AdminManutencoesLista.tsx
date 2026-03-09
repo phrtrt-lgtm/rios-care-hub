@@ -1932,6 +1932,10 @@ export default function AdminManutencoesLista() {
             <Archive className="h-4 w-4 mr-2" />
             Arquivo
           </Button>
+          <Button variant="outline" onClick={() => navigate("/manutencoes")}>
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Relatório
+          </Button>
           <Button variant="outline" onClick={() => navigate("/admin/manutencoes")}>
             Ver Kanban
           </Button>
