@@ -404,6 +404,14 @@ const App = () => (
               }
             />
             <Route
+              path="/admin/manutencoes-arquivo"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'maintenance']}>
+                  <AdminManutencoesArquivo />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/historico-comunicacao/:ownerId"
               element={
                 <ProtectedRoute allowedRoles={['admin', 'agent', 'maintenance']}>
