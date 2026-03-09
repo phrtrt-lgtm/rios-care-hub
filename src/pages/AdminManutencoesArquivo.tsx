@@ -489,10 +489,20 @@ export default function AdminManutencoesArquivo() {
                 ) : (
                   filteredAndSortedItems.map((item) => {
                     const serviceLabel = SERVICE_LABELS.find(s => s.value === item.service_type);
+                    const handleRowClick = (e: React.MouseEvent) => {
+                      // Don't navigate if clicking checkbox
+                      if ((e.target as HTMLElement).closest('[role="checkbox"]')) return;
+                      if (item.type === "charge" && item.charge_id) {
+                        navigate(`/manutencao-detalhes/${item.charge_id}`);
+                      } else if (item.type === "ticket") {
+                        navigate(`/manutencao-detalhes/${item.id}`);
+                      }
+                    };
                     return (
                       <tr 
                         key={item.id}
-                        className="border-b hover:bg-muted/30 transition-colors h-10"
+                        className="border-b hover:bg-muted/30 transition-colors h-10 cursor-pointer"
+                        onClick={handleRowClick}
                       >
                         <td className="px-2 py-2 w-[40px]">
                           <Checkbox
@@ -527,7 +537,7 @@ export default function AdminManutencoesArquivo() {
                         <td className="px-2 py-2 text-right font-medium w-[120px]">
                           {item.amount_cents ? formatBRL(item.amount_cents) : "—"}
                         </td>
-                        <td className="px-2 py-2 text-right text-green-600 w-[120px]">
+                        <td className="px-2 py-2 text-right text-green-700 w-[120px]">
                           {item.management_contribution_cents ? formatBRL(item.management_contribution_cents) : "—"}
                         </td>
                         <td className="px-2 py-2 text-center w-[100px]">
@@ -537,14 +547,23 @@ export default function AdminManutencoesArquivo() {
                         </td>
                         <td className="px-2 py-2 w-[60px]">
                           <div className="flex items-center justify-center gap-1">
-                            <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span className="text-muted-foreground">{item.attachments_count || 0}</span>
+                            {(item.attachments_count || 0) > 0 ? (
+                              <>
+                                <Paperclip className="h-3.5 w-3.5 text-primary" />
+                                <span className="font-medium text-primary">{item.attachments_count}</span>
+                              </>
+                            ) : (
+                              <>
+                                <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
+                                <span className="text-muted-foreground">0</span>
+                              </>
+                            )}
                           </div>
                         </td>
                         <td className="px-2 py-2 w-[130px]">
                           <div className="flex justify-center">
                             {serviceLabel ? (
-                              <Badge className={cn("text-white text-xs", serviceLabel.color)}>
+                              <Badge className={cn("text-primary-foreground text-xs", serviceLabel.color)}>
                                 {serviceLabel.label}
                               </Badge>
                             ) : (
