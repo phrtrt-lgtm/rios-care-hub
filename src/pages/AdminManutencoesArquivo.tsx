@@ -128,14 +128,14 @@ export default function AdminManutencoesArquivo() {
         if (c.ticket_id) chargeMap[c.ticket_id] = c;
       });
 
-      // Fetch attachments count
-      const { data: attachments } = await supabase
+      // Fetch ticket attachments count
+      const { data: ticketAttachments } = await supabase
         .from("ticket_attachments")
         .select("ticket_id")
         .in("ticket_id", ticketIds.length > 0 ? ticketIds : ["00000000-0000-0000-0000-000000000000"]);
 
       const attachmentCounts: Record<string, number> = {};
-      (attachments || []).forEach(a => {
+      (ticketAttachments || []).forEach(a => {
         attachmentCounts[a.ticket_id] = (attachmentCounts[a.ticket_id] || 0) + 1;
       });
 
