@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,13 +7,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from "@/components/ui/pagination";
+import {
   ArrowLeft, Calendar, Search, Building2, User,
   ChevronDown, ChevronUp, Headphones, FileText,
   Image, CheckCircle2, AlertTriangle, Loader2, ExternalLink
 } from "lucide-react";
-import { formatDateTime } from "@/lib/format";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+
+const PAGE_SIZE = 50;
 
 interface Inspection {
   id: string;
@@ -48,9 +58,11 @@ export default function AdminVistoriasTodas() {
   const { profile } = useAuth();
   const navigate = useNavigate();
   const [inspections, setInspections] = useState<Inspection[]>([]);
-  const [filteredInspections, setFilteredInspections] = useState<Inspection[]>([]);
   const [loading, setLoading] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [statusFilter, setStatusFilter] = useState<"todos" | "ok" | "nao">("todos");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [expandedData, setExpandedData] = useState<Record<string, ExpandedData>>({});
@@ -59,43 +71,56 @@ export default function AdminVistoriasTodas() {
   useEffect(() => {
     if (profile?.role !== "admin" && profile?.role !== "agent" && profile?.role !== "maintenance") {
       navigate("/painel");
-      return;
     }
-    fetchInspections();
   }, [profile, navigate]);
 
   useEffect(() => {
-    let filtered = inspections;
-    if (searchTerm.trim() !== "") {
-      filtered = filtered.filter((insp) =>
-        insp.property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        insp.cleaner_name?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-    if (statusFilter === "ok") {
-      filtered = filtered.filter((insp) => insp.notes === "OK");
-    } else if (statusFilter === "nao") {
-      filtered = filtered.filter((insp) => insp.notes !== "OK" && insp.notes !== null);
-    }
-    setFilteredInspections(filtered);
-  }, [searchTerm, statusFilter, inspections]);
+    fetchInspections();
+    setExpandedId(null);
+  }, [currentPage, searchTerm, statusFilter]);
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchTerm(searchInput);
+      setCurrentPage(1);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   const fetchInspections = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      const from = (currentPage - 1) * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
+      let query = supabase
         .from("cleaning_inspections")
-        .select(`*, property:properties!inner(name, cover_photo_url)`)
+        .select(`*, property:properties!inner(name, cover_photo_url)`, { count: "exact" })
         .order("created_at", { ascending: false })
-        .limit(200);
+        .range(from, to);
+
+      if (searchTerm.trim()) {
+        query = query.ilike("properties.name", `%${searchTerm}%`);
+      }
+      if (statusFilter === "ok") {
+        query = query.eq("notes", "OK");
+      } else if (statusFilter === "nao") {
+        query = query.neq("notes", "OK").not("notes", "is", null);
+      }
+
+      const { data, error, count } = await query;
       if (error) throw error;
       setInspections(data || []);
+      setTotalCount(count ?? 0);
     } catch (error) {
       console.error("Erro ao carregar vistorias:", error);
     } finally {
       setLoading(false);
     }
   };
+
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   const handleToggle = useCallback(async (id: string) => {
     if (expandedId === id) {
@@ -119,13 +144,23 @@ export default function AdminVistoriasTodas() {
     }
   }, [expandedId, expandedData]);
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
+  const handleFilterChange = (f: "todos" | "ok" | "nao") => {
+    setStatusFilter(f);
+    setCurrentPage(1);
+  };
+
+  // Generate page numbers to show
+  const pageNumbers = useMemo(() => {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    const pages: (number | "ellipsis")[] = [1];
+    if (currentPage > 3) pages.push("ellipsis");
+    for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+      pages.push(i);
+    }
+    if (currentPage < totalPages - 2) pages.push("ellipsis");
+    pages.push(totalPages);
+    return pages;
+  }, [totalPages, currentPage]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
@@ -137,7 +172,9 @@ export default function AdminVistoriasTodas() {
             </Button>
             <div className="flex-1">
               <h1 className="text-xl font-semibold">Todas as Vistorias</h1>
-              <p className="text-sm text-muted-foreground">{filteredInspections.length} vistorias</p>
+              <p className="text-sm text-muted-foreground">
+                {loading ? "Carregando..." : `${totalCount} vistorias • página ${currentPage} de ${totalPages || 1}`}
+              </p>
             </div>
           </div>
         </div>
@@ -149,9 +186,9 @@ export default function AdminVistoriasTodas() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Pesquisar por imóvel ou faxineira..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Pesquisar por imóvel..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               className="pl-10"
             />
           </div>
@@ -161,7 +198,7 @@ export default function AdminVistoriasTodas() {
                 key={f}
                 variant={statusFilter === f ? "default" : "outline"}
                 size="sm"
-                onClick={() => setStatusFilter(f)}
+                onClick={() => handleFilterChange(f)}
                 className={
                   statusFilter === f && f === "ok" ? "bg-green-600 hover:bg-green-700" :
                   statusFilter === f && f === "nao" ? "bg-red-600 hover:bg-red-700" : ""
@@ -174,179 +211,222 @@ export default function AdminVistoriasTodas() {
         </div>
 
         {/* Lista */}
-        <div className="space-y-2">
-          {filteredInspections.map((inspection) => {
-            const isOk = inspection.notes === "OK";
-            const isExpanded = expandedId === inspection.id;
-            const data = expandedData[inspection.id];
-            const isLoadingThis = loadingExpand === inspection.id;
+        {loading ? (
+          <div className="flex justify-center py-16">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <>
+            <div className="space-y-2">
+              {inspections.map((inspection) => {
+                const isOk = inspection.notes === "OK";
+                const isExpanded = expandedId === inspection.id;
+                const data = expandedData[inspection.id];
+                const isLoadingThis = loadingExpand === inspection.id;
 
-            const imageCount = data?.attachments.filter(a => a.file_type?.startsWith("image/")).length ?? 0;
-            const videoCount = data?.attachments.filter(a => a.file_type?.startsWith("video/")).length ?? 0;
-            const audioCount = data?.attachments.filter(a => a.file_type?.startsWith("audio/")).length ?? 0;
+                const imageCount = data?.attachments.filter(a => a.file_type?.startsWith("image/")).length ?? 0;
+                const videoCount = data?.attachments.filter(a => a.file_type?.startsWith("video/")).length ?? 0;
+                const audioCount = data?.attachments.filter(a => a.file_type?.startsWith("audio/")).length ?? 0;
 
-            return (
-              <Card key={inspection.id} className="overflow-hidden transition-shadow hover:shadow-md">
-                {/* Row principal — clicável para expandir */}
-                <CardContent className="p-0">
-                  <button
-                    className="w-full text-left"
-                    onClick={() => handleToggle(inspection.id)}
-                  >
-                    <div className="flex items-center gap-3 px-4 py-3">
-                      {/* Foto miniatura */}
-                      <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-                        {inspection.property.cover_photo_url ? (
-                          <img
-                            src={inspection.property.cover_photo_url}
-                            alt={inspection.property.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Building2 className="h-5 w-5 text-muted-foreground" />
+                return (
+                  <Card key={inspection.id} className="overflow-hidden transition-shadow hover:shadow-md">
+                    <CardContent className="p-0">
+                      <button
+                        className="w-full text-left"
+                        onClick={() => handleToggle(inspection.id)}
+                      >
+                        <div className="flex items-center gap-3 px-4 py-3">
+                          <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                            {inspection.property.cover_photo_url ? (
+                              <img
+                                src={inspection.property.cover_photo_url}
+                                alt={inspection.property.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Building2 className="h-5 w-5 text-muted-foreground" />
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
 
-                      {/* Info principal */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm truncate">{inspection.property.name}</span>
-                          {inspection.is_routine && (
-                            <Badge variant="outline" className="text-xs shrink-0">Rotina</Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {format(new Date(inspection.created_at), "dd/MM/yy HH:mm", { locale: ptBR })}
-                          </span>
-                          {inspection.cleaner_name && (
-                            <span className="flex items-center gap-1 truncate">
-                              <User className="h-3 w-3 shrink-0" />
-                              <span className="truncate">{inspection.cleaner_name}</span>
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Status badge + chevron */}
-                      <div className="flex items-center gap-2 shrink-0">
-                        {inspection.notes ? (
-                          <span className={`flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
-                            isOk
-                              ? "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400"
-                              : "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400"
-                          }`}>
-                            {isOk
-                              ? <CheckCircle2 className="h-3 w-3" />
-                              : <AlertTriangle className="h-3 w-3" />
-                            }
-                            {inspection.notes}
-                          </span>
-                        ) : null}
-                        {isLoadingThis
-                          ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                          : isExpanded
-                            ? <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                            : <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                        }
-                      </div>
-                    </div>
-                  </button>
-
-                  {/* Painel expandido */}
-                  {isExpanded && (
-                    <div className="border-t bg-muted/30 px-4 py-4 space-y-4">
-                      {/* Transcrição / Resumo */}
-                      {inspection.transcript && (
-                        <div>
-                          <div className="flex items-center gap-1.5 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                            <FileText className="h-3.5 w-3.5" />
-                            Transcrição / Resumo
-                          </div>
-                          <p className={`text-sm whitespace-pre-wrap rounded-lg p-3 ${
-                            isOk
-                              ? "bg-green-500/10 border border-green-500/20"
-                              : "bg-destructive/10 border border-destructive/20"
-                          }`}>
-                            {inspection.transcript}
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Áudios */}
-                      {inspection.audio_url && (
-                        <div>
-                          <div className="flex items-center gap-1.5 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                            <Headphones className="h-3.5 w-3.5" />
-                            Áudio
-                          </div>
-                          <audio controls src={inspection.audio_url} className="w-full h-10" />
-                        </div>
-                      )}
-
-                      {/* Resumo dos anexos */}
-                      {data?.loaded && (
-                        <div>
-                          <div className="flex items-center gap-1.5 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                            <Image className="h-3.5 w-3.5" />
-                            Anexos
-                          </div>
-                          {data.attachments.length === 0 ? (
-                            <p className="text-xs text-muted-foreground">Nenhum anexo</p>
-                          ) : (
-                            <div className="flex gap-2 flex-wrap">
-                              {imageCount > 0 && (
-                                <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 px-2 py-1 rounded-full">
-                                  🖼 {imageCount} foto{imageCount > 1 ? "s" : ""}
-                                </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm truncate">{inspection.property.name}</span>
+                              {inspection.is_routine && (
+                                <Badge variant="outline" className="text-xs shrink-0">Rotina</Badge>
                               )}
-                              {videoCount > 0 && (
-                                <span className="text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 px-2 py-1 rounded-full">
-                                  🎬 {videoCount} vídeo{videoCount > 1 ? "s" : ""}
-                                </span>
-                              )}
-                              {audioCount > 0 && (
-                                <span className="text-xs bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 px-2 py-1 rounded-full">
-                                  🎵 {audioCount} áudio{audioCount > 1 ? "s" : ""}
+                            </div>
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                              <span className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                {format(new Date(inspection.created_at), "dd/MM/yy HH:mm", { locale: ptBR })}
+                              </span>
+                              {inspection.cleaner_name && (
+                                <span className="flex items-center gap-1 truncate">
+                                  <User className="h-3 w-3 shrink-0" />
+                                  <span className="truncate">{inspection.cleaner_name}</span>
                                 </span>
                               )}
                             </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            {inspection.notes ? (
+                              <span className={`flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
+                                isOk
+                                  ? "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400"
+                                  : "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400"
+                              }`}>
+                                {isOk
+                                  ? <CheckCircle2 className="h-3 w-3" />
+                                  : <AlertTriangle className="h-3 w-3" />
+                                }
+                                {inspection.notes}
+                              </span>
+                            ) : null}
+                            {isLoadingThis
+                              ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                              : isExpanded
+                                ? <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                                : <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                            }
+                          </div>
+                        </div>
+                      </button>
+
+                      {isExpanded && (
+                        <div className="border-t bg-muted/30 px-4 py-4 space-y-4">
+                          {inspection.transcript && (
+                            <div>
+                              <div className="flex items-center gap-1.5 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                                <FileText className="h-3.5 w-3.5" />
+                                Transcrição / Resumo
+                              </div>
+                              <p className={`text-sm whitespace-pre-wrap rounded-lg p-3 ${
+                                isOk
+                                  ? "bg-green-500/10 border border-green-500/20"
+                                  : "bg-destructive/10 border border-destructive/20"
+                              }`}>
+                                {inspection.transcript}
+                              </p>
+                            </div>
                           )}
+
+                          {inspection.audio_url && (
+                            <div>
+                              <div className="flex items-center gap-1.5 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                                <Headphones className="h-3.5 w-3.5" />
+                                Áudio
+                              </div>
+                              <audio controls src={inspection.audio_url} className="w-full h-10" />
+                            </div>
+                          )}
+
+                          {data?.loaded && (
+                            <div>
+                              <div className="flex items-center gap-1.5 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                                <Image className="h-3.5 w-3.5" />
+                                Anexos
+                              </div>
+                              {data.attachments.length === 0 ? (
+                                <p className="text-xs text-muted-foreground">Nenhum anexo</p>
+                              ) : (
+                                <div className="flex gap-2 flex-wrap">
+                                  {imageCount > 0 && (
+                                    <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 px-2 py-1 rounded-full">
+                                      🖼 {imageCount} foto{imageCount > 1 ? "s" : ""}
+                                    </span>
+                                  )}
+                                  {videoCount > 0 && (
+                                    <span className="text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 px-2 py-1 rounded-full">
+                                      🎬 {videoCount} vídeo{videoCount > 1 ? "s" : ""}
+                                    </span>
+                                  )}
+                                  {audioCount > 0 && (
+                                    <span className="text-xs bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 px-2 py-1 rounded-full">
+                                      🎵 {audioCount} áudio{audioCount > 1 ? "s" : ""}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full gap-2"
+                            onClick={() => navigate(`/admin/vistoria/${inspection.id}`)}
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                            Ver vistoria completa
+                          </Button>
                         </div>
                       )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
 
-                      {/* Botão ver completo */}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full gap-2"
-                        onClick={() => navigate(`/admin/vistoria/${inspection.id}`)}
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                        Ver vistoria completa
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
+              {inspections.length === 0 && (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <Calendar className="mx-auto h-12 w-12 text-muted-foreground" />
+                    <h3 className="mt-4 text-lg font-semibold">Nenhuma vistoria encontrada</h3>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {searchTerm ? "Tente ajustar sua pesquisa" : "As vistorias aparecerão aqui quando forem registradas"}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
 
-          {filteredInspections.length === 0 && (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Calendar className="mx-auto h-12 w-12 text-muted-foreground" />
-                <h3 className="mt-4 text-lg font-semibold">Nenhuma vistoria encontrada</h3>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {searchTerm ? "Tente ajustar sua pesquisa" : "As vistorias aparecerão aqui quando forem registradas"}
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+            {/* Paginação */}
+            {totalPages > 1 && (
+              <div className="mt-6 pb-4">
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        href="#"
+                        onClick={(e) => { e.preventDefault(); if (currentPage > 1) setCurrentPage(p => p - 1); }}
+                        className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      />
+                    </PaginationItem>
+
+                    {pageNumbers.map((page, i) =>
+                      page === "ellipsis" ? (
+                        <PaginationItem key={`ellipsis-${i}`}>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      ) : (
+                        <PaginationItem key={page}>
+                          <PaginationLink
+                            href="#"
+                            isActive={currentPage === page}
+                            onClick={(e) => { e.preventDefault(); setCurrentPage(page); }}
+                            className="cursor-pointer"
+                          >
+                            {page}
+                          </PaginationLink>
+                        </PaginationItem>
+                      )
+                    )}
+
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        onClick={(e) => { e.preventDefault(); if (currentPage < totalPages) setCurrentPage(p => p + 1); }}
+                        className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
+          </>
+        )}
       </main>
     </div>
   );
