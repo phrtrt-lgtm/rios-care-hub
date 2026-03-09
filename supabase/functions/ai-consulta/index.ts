@@ -20,72 +20,198 @@ serve(async (req) => {
 
     const { messages } = await req.json();
 
-    // Fetch current data to give context to the AI
-    const [ticketsRes, chargesRes, propertiesRes] = await Promise.all([
+    // ── Fetch all relevant data from the database ──────────────────────────
+    const [
+      ticketsRes,
+      chargesRes,
+      propertiesRes,
+      inspectionsRes,
+      bookingCommissionsRes,
+      proposalsRes,
+      profilesRes,
+    ] = await Promise.all([
+      // All non-closed tickets with property and owner info
       supabase
         .from("tickets")
-        .select("id, subject, status, priority, ticket_type, cost_responsible, created_at, properties(name)")
+        .select("id, subject, status, priority, ticket_type, cost_responsible, created_at, updated_at, properties(name), profiles:owner_id(name)")
         .not("status", "in", '("concluido","cancelado")')
         .order("created_at", { ascending: false })
-        .limit(100),
+        .limit(150),
+
+      // Open charges with owner and property info
       supabase
         .from("charges")
-        .select("id, title, status, amount_cents, due_date, created_at, profiles(name), properties(name)")
+        .select("id, title, status, amount_cents, due_date, created_at, category, service_type, split_owner_percent, management_contribution_cents, profiles:owner_id(name), properties(name)")
         .not("status", "in", '("pago_no_vencimento","pago_com_atraso","debited")')
         .is("archived_at", null)
         .order("created_at", { ascending: false })
-        .limit(50),
+        .limit(100),
+
+      // All properties with owner info
       supabase
         .from("properties")
-        .select("id, name, owner_id")
+        .select("id, name, address, profiles:owner_id(name, email, phone, payment_score)")
+        .order("name"),
+
+      // Recent inspections (last 30 days)
+      supabase
+        .from("cleaning_inspections")
+        .select("id, created_at, is_routine, internal_only, cleaner_name, notes, transcript_summary, properties(name)")
+        .is("archived_at", null)
+        .order("created_at", { ascending: false })
+        .limit(60),
+
+      // Open booking commissions
+      supabase
+        .from("booking_commissions")
+        .select("id, status, check_in, check_out, guest_name, commission_cents, total_due_cents, due_date, created_at, profiles:owner_id(name), properties(name)")
+        .not("status", "in", '("pago","debited","arquivado")')
+        .is("archived_at", null)
+        .order("created_at", { ascending: false })
+        .limit(60),
+
+      // Active proposals/votações
+      supabase
+        .from("proposals")
+        .select("id, title, description, status, deadline, target_audience, category, created_at, properties(name)")
+        .eq("status", "active")
+        .order("deadline", { ascending: true })
+        .limit(30),
+
+      // All active profiles (owners, team)
+      supabase
+        .from("profiles")
+        .select("id, name, email, role, status, payment_score, phone")
+        .eq("status", "active")
         .order("name"),
     ]);
 
     const tickets = ticketsRes.data || [];
     const charges = chargesRes.data || [];
     const properties = propertiesRes.data || [];
+    const inspections = inspectionsRes.data || [];
+    const bookingCommissions = bookingCommissionsRes.data || [];
+    const proposals = proposalsRes.data || [];
+    const profiles = profilesRes.data || [];
 
-    // Build context summary
-    const ticketsByProperty: Record<string, typeof tickets> = {};
-    for (const t of tickets) {
-      const propName = (t.properties as any)?.name || "Sem imóvel";
-      if (!ticketsByProperty[propName]) ticketsByProperty[propName] = [];
-      ticketsByProperty[propName].push(t);
+    // ── Build structured context ──────────────────────────────────────────
+    const owners = profiles.filter((p: any) => p.role === "owner");
+    const teamMembers = profiles.filter((p: any) => ["admin", "agent", "maintenance"].includes(p.role));
+
+    const ctx: string[] = [];
+
+    // Properties summary
+    ctx.push(`=== IMÓVEIS CADASTRADOS (${properties.length}) ===`);
+    for (const p of properties) {
+      const owner = (p.profiles as any);
+      ctx.push(`• ${p.name} | Proprietário: ${owner?.name || "?"} | Tel: ${owner?.phone || "?"} | Score pagamento: ${owner?.payment_score ?? "?"}`);
     }
 
-    const contextLines: string[] = [];
-    contextLines.push(`=== IMÓVEIS (${properties.length}) ===`);
-    for (const p of properties) contextLines.push(`- ${p.name}`);
+    // Team members
+    ctx.push(`\n=== EQUIPE RIOS (${teamMembers.length} membros) ===`);
+    for (const t of teamMembers) {
+      const roleLabel: Record<string, string> = { admin: "Admin", agent: "Agente", maintenance: "Manutenção" };
+      ctx.push(`• ${t.name} | Função: ${roleLabel[t.role] || t.role} | Email: ${t.email}`);
+    }
 
-    contextLines.push(`\n=== MANUTENÇÕES/CHAMADOS PENDENTES (${tickets.length}) ===`);
-    for (const [propName, pts] of Object.entries(ticketsByProperty)) {
-      contextLines.push(`\n[${propName}]`);
-      for (const t of pts) {
-        const status = t.status;
+    // Owners summary
+    ctx.push(`\n=== PROPRIETÁRIOS ATIVOS (${owners.length}) ===`);
+    for (const o of owners) {
+      ctx.push(`• ${o.name} | Email: ${o.email} | Tel: ${o.phone || "?"} | Score: ${o.payment_score ?? 100}`);
+    }
+
+    // Tickets/Maintenance grouped by status
+    const byStatus: Record<string, typeof tickets> = {};
+    for (const t of tickets) {
+      if (!byStatus[t.status]) byStatus[t.status] = [];
+      byStatus[t.status].push(t);
+    }
+    ctx.push(`\n=== CHAMADOS/MANUTENÇÕES ABERTOS (${tickets.length} total) ===`);
+    for (const [status, items] of Object.entries(byStatus)) {
+      ctx.push(`\n[Status: ${status.toUpperCase()}] (${items.length} chamados)`);
+      for (const t of items) {
+        const propName = (t.properties as any)?.name || "Sem imóvel";
+        const ownerName = (t.profiles as any)?.name || "?";
         const priority = t.priority === "urgente" ? "🔴 URGENTE" : "normal";
-        contextLines.push(
-          `  • ${t.subject} | Status: ${status} | Prioridade: ${priority} | Tipo: ${t.ticket_type} | Responsável custo: ${t.cost_responsible || "?"}`
-        );
+        ctx.push(`  • [${propName}] ${t.subject} | Proprietário: ${ownerName} | Prioridade: ${priority} | Tipo: ${t.ticket_type} | Custo: ${t.cost_responsible || "?"}`);
       }
     }
 
-    contextLines.push(`\n=== COBRANÇAS EM ABERTO (${charges.length}) ===`);
+    // Charges
+    ctx.push(`\n=== COBRANÇAS EM ABERTO (${charges.length}) ===`);
     for (const c of charges) {
       const propName = (c.properties as any)?.name || "Sem imóvel";
       const ownerName = (c.profiles as any)?.name || "?";
       const value = (c.amount_cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-      contextLines.push(
-        `  • ${c.title} | Imóvel: ${propName} | Proprietário: ${ownerName} | Valor: ${value} | Status: ${c.status} | Vencimento: ${c.due_date || "?"}`
-      );
+      const contrib = c.management_contribution_cents > 0
+        ? ` | Aporte gestão: ${(c.management_contribution_cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`
+        : "";
+      ctx.push(`  • ${c.title} | Imóvel: ${propName} | Proprietário: ${ownerName} | Valor: ${value}${contrib} | Status: ${c.status} | Vencimento: ${c.due_date || "?"} | Categoria: ${c.category || c.service_type || "?"}`);
     }
 
-    const systemPrompt = `Você é o assistente interno da RIOS – Operação e Gestão de Hospedagens.
-Responda em português, de forma direta e clara. Você tem acesso aos dados atualizados do sistema.
-Se perguntarem sobre manutenções, imóveis, cobranças ou vistorias, use os dados abaixo.
-Se a pergunta não for sobre os dados, responda de forma geral mas mantendo o contexto da gestão de hospedagens.
+    // Inspections
+    ctx.push(`\n=== VISTORIAS RECENTES (${inspections.length}) ===`);
+    for (const ins of inspections) {
+      const propName = (ins.properties as any)?.name || "Sem imóvel";
+      const type = ins.is_routine ? "Rotina" : "Limpeza";
+      const visibility = ins.internal_only ? "Interna" : "Visível ao proprietário";
+      const date = new Date(ins.created_at).toLocaleDateString("pt-BR");
+      const summary = ins.transcript_summary ? ` | Resumo: ${ins.transcript_summary.slice(0, 120)}...` : "";
+      ctx.push(`  • [${propName}] Tipo: ${type} | Data: ${date} | Faxineira: ${ins.cleaner_name || "?"} | ${visibility}${summary}`);
+    }
 
-DADOS ATUAIS DO SISTEMA:
-${contextLines.join("\n")}`;
+    // Booking Commissions
+    ctx.push(`\n=== COMISSÕES BOOKING EM ABERTO (${bookingCommissions.length}) ===`);
+    for (const bc of bookingCommissions) {
+      const propName = (bc.properties as any)?.name || "Sem imóvel";
+      const ownerName = (bc.profiles as any)?.name || "?";
+      const total = (bc.total_due_cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+      ctx.push(`  • [${propName}] Hóspede: ${bc.guest_name || "?"} | Check-in: ${bc.check_in} | Check-out: ${bc.check_out} | Proprietário: ${ownerName} | Total: ${total} | Status: ${bc.status} | Vencimento: ${bc.due_date || "?"}`);
+    }
+
+    // Proposals/Votações
+    ctx.push(`\n=== VOTAÇÕES/PROPOSTAS ATIVAS (${proposals.length}) ===`);
+    for (const pr of proposals) {
+      const propName = (pr.properties as any)?.name || "Todos os proprietários";
+      ctx.push(`  • ${pr.title} | Imóvel: ${propName} | Prazo: ${pr.deadline} | Categoria: ${pr.category || "?"} | Público: ${pr.target_audience}`);
+    }
+
+    // ── System Prompt ─────────────────────────────────────────────────────
+    const systemPrompt = `Você é o assistente interno da RIOS – Operação e Gestão de Hospedagens.
+
+## SOBRE A RIOS
+A RIOS é uma empresa de gestão de hospedagens por temporada. Gerenciamos imóveis de proprietários que são alugados para hóspedes em plataformas como Airbnb, Booking, etc.
+
+## NOSSAS OPERAÇÕES PRINCIPAIS
+1. **Chamados/Manutenções**: Problemas nos imóveis relatados por hóspedes ou proprietários. Têm tipos (manutenção, limpeza, informação, financeiro, etc.), prioridades (normal/urgente) e responsáveis de custo (proprietário ou gestão).
+2. **Cobranças**: Valores a serem pagos pelos proprietários para manutenções, serviços, taxas. Podem ter aporte da gestão (a RIOS cobre parte do valor).
+3. **Vistorias**: Inspeções nos imóveis feitas após limpeza. Registram o estado do imóvel, problemas encontrados e comunicam ao proprietário quando relevante.
+4. **Comissões Booking**: Cobrança das comissões de reservas feitas pelas plataformas (Airbnb, etc.) que são devidas pelos proprietários à RIOS.
+5. **Votações/Propostas**: Consultas enviadas aos proprietários para aprovação de melhorias, compras coletivas ou decisões sobre os imóveis.
+6. **Score de Pagamento**: Proprietários têm uma pontuação (0-100+) que reflete seu histórico de pagamentos. Score alto = bom pagador.
+
+## FLUXO DE ATENDIMENTO
+- Chamados chegam com status: novo → em_andamento → aguardando → concluido/cancelado
+- Cobranças: draft → pendente → enviado → pago_no_vencimento/pago_com_atraso/debited/contestado
+- Vistorias podem ser rotina (checklist detalhado) ou limpeza simples
+- Proprietários aprovam manutenções caras antes de executar
+
+## EQUIPE
+- **Admin**: Acesso total, gerencia tudo
+- **Agente**: Atende chamados e cobranças financeiras/comunicação
+- **Manutenção**: Executa e acompanha serviços técnicos nos imóveis
+
+## COMO RESPONDER
+- Seja direto, objetivo e use os dados abaixo para responder com precisão
+- Quando listar itens, use bullet points ou tabelas simples
+- Se perguntarem sobre um imóvel específico, filtre pelos dados do imóvel
+- Se perguntarem sobre um proprietário, filtre pelos dados do proprietário  
+- Indique sempre o status atual e próximos passos quando relevante
+- Para cobranças, informe o valor, vencimento e se tem aporte da gestão
+- Use emojis com moderação para facilitar a leitura (🔴 urgente, ✅ pago, ⏳ pendente)
+
+## DADOS ATUAIS DO SISTEMA (${new Date().toLocaleDateString("pt-BR")})
+${ctx.join("\n")}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -94,11 +220,13 @@ ${contextLines.join("\n")}`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           ...messages,
         ],
+        max_tokens: 2000,
+        temperature: 0.2,
       }),
     });
 
