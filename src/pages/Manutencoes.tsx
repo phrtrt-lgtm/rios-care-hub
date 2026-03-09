@@ -71,6 +71,10 @@ export default function Manutencoes() {
         query = query.eq('property_id', propertyId);
       }
 
+      if (serviceTypeFilter) {
+        query = query.eq('service_type', serviceTypeFilter);
+      }
+
       const { data, error } = await query;
 
       if (error) throw error;
