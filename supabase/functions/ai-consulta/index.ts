@@ -21,6 +21,9 @@ serve(async (req) => {
     const { messages } = await req.json();
 
     // ── Fetch all relevant data from the database ──────────────────────────
+    const today = new Date().toISOString().split("T")[0];
+    const in90days = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
     const [
       ticketsRes,
       chargesRes,
@@ -29,6 +32,7 @@ serve(async (req) => {
       bookingCommissionsRes,
       proposalsRes,
       profilesRes,
+      reservationsRes,
     ] = await Promise.all([
       // All non-closed tickets with property and owner info
       supabase
@@ -84,6 +88,15 @@ serve(async (req) => {
         .select("id, name, email, role, status, payment_score, phone")
         .eq("status", "active")
         .order("name"),
+
+      // Reservations (next 90 days + recent past 30 days) for availability/gaps
+      supabase
+        .from("reservations")
+        .select("id, check_in, check_out, guest_name, summary, status, properties(name)")
+        .gte("check_out", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0])
+        .lte("check_in", in90days)
+        .order("check_in", { ascending: true })
+        .limit(300),
     ]);
 
     const tickets = ticketsRes.data || [];
@@ -93,6 +106,7 @@ serve(async (req) => {
     const bookingCommissions = bookingCommissionsRes.data || [];
     const proposals = proposalsRes.data || [];
     const profiles = profilesRes.data || [];
+    const reservations = reservationsRes.data || [];
 
     // ── Build structured context ──────────────────────────────────────────
     const owners = profiles.filter((p: any) => p.role === "owner");
@@ -176,11 +190,60 @@ serve(async (req) => {
       ctx.push(`  • ${pr.title} | Imóvel: ${propName} | Prazo: ${pr.deadline} | Categoria: ${pr.category || "?"} | Público: ${pr.target_audience}`);
     }
 
+    // Reservations grouped by property with gap analysis
+    const resByProp: Record<string, any[]> = {};
+    for (const r of reservations) {
+      const propName = (r.properties as any)?.name || "Sem imóvel";
+      if (!resByProp[propName]) resByProp[propName] = [];
+      resByProp[propName].push(r);
+    }
+
+    ctx.push(`\n=== CALENDÁRIO DE RESERVAS – PRÓXIMOS 90 DIAS (hoje: ${today}) ===`);
+    for (const [propName, rList] of Object.entries(resByProp)) {
+      ctx.push(`\n[${propName}]`);
+      const sorted = rList.sort((a, b) => a.check_in.localeCompare(b.check_in));
+      for (let i = 0; i < sorted.length; i++) {
+        const r = sorted[i];
+        const checkIn = r.check_in;
+        const checkOut = r.check_out;
+        const guest = r.guest_name || r.summary || "Hóspede";
+        ctx.push(`  📅 Reserva: ${checkIn} → ${checkOut} | ${guest}`);
+
+        // Calculate gap to next reservation
+        if (i < sorted.length - 1) {
+          const nextIn = sorted[i + 1].check_in;
+          const gapMs = new Date(nextIn).getTime() - new Date(checkOut).getTime();
+          const gapDays = Math.round(gapMs / (1000 * 60 * 60 * 24));
+          if (gapDays > 0) {
+            ctx.push(`  ⬜ Janela livre: ${checkOut} → ${nextIn} (${gapDays} dias)`);
+          }
+        }
+      }
+
+      // Check if first reservation is in the future - show gap from today
+      if (sorted.length > 0 && sorted[0].check_in > today) {
+        const gapMs = new Date(sorted[0].check_in).getTime() - new Date(today).getTime();
+        const gapDays = Math.round(gapMs / (1000 * 60 * 60 * 24));
+        ctx.push(`  ⬜ Disponível agora até ${sorted[0].check_in} (${gapDays} dias livres)`);
+      }
+
+      if (sorted.length === 0) {
+        ctx.push(`  ⬜ Sem reservas nos próximos 90 dias`);
+      }
+    }
+
+    // Properties with no reservations at all
+    for (const p of properties) {
+      if (!resByProp[(p as any).name]) {
+        ctx.push(`\n[${(p as any).name}]\n  ⬜ Sem reservas nos próximos 90 dias`);
+      }
+    }
+
     // ── System Prompt ─────────────────────────────────────────────────────
     const systemPrompt = `Você é o assistente interno da RIOS – Operação e Gestão de Hospedagens.
 
 ## SOBRE A RIOS
-A RIOS é uma empresa de gestão de hospedagens por temporada. Gerenciamos imóveis de proprietários que são alugados para hóspedes em plataformas como Airbnb, Booking, etc.
+A RIOS é uma empresa de gestão de hospedagens por temporada. Gerenciamos imóveis de proprietários que são alugados para hóspedes em plataformas como Airbnb, Booking, etc. Os calendários de reservas são sincronizados via iCal das plataformas (Airbnb, Booking.com, etc.) automaticamente.
 
 ## NOSSAS OPERAÇÕES PRINCIPAIS
 1. **Chamados/Manutenções**: Problemas nos imóveis relatados por hóspedes ou proprietários. Têm tipos (manutenção, limpeza, informação, financeiro, etc.), prioridades (normal/urgente) e responsáveis de custo (proprietário ou gestão).
@@ -189,12 +252,14 @@ A RIOS é uma empresa de gestão de hospedagens por temporada. Gerenciamos imóv
 4. **Comissões Booking**: Cobrança das comissões de reservas feitas pelas plataformas (Airbnb, etc.) que são devidas pelos proprietários à RIOS.
 5. **Votações/Propostas**: Consultas enviadas aos proprietários para aprovação de melhorias, compras coletivas ou decisões sobre os imóveis.
 6. **Score de Pagamento**: Proprietários têm uma pontuação (0-100+) que reflete seu histórico de pagamentos. Score alto = bom pagador.
+7. **Reservas/Calendário**: Todas as reservas são sincronizadas via links iCal das plataformas. Janelas livres entre reservas são oportunidades para manutenção.
 
 ## FLUXO DE ATENDIMENTO
 - Chamados chegam com status: novo → em_andamento → aguardando → concluido/cancelado
 - Cobranças: draft → pendente → enviado → pago_no_vencimento/pago_com_atraso/debited/contestado
 - Vistorias podem ser rotina (checklist detalhado) ou limpeza simples
 - Proprietários aprovam manutenções caras antes de executar
+- Manutenções urgentes devem ser agendadas nas janelas livres entre reservas
 
 ## EQUIPE
 - **Admin**: Acesso total, gerencia tudo
