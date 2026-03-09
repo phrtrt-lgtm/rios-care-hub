@@ -12,10 +12,12 @@ interface Message {
 }
 
 const SUGGESTIONS = [
-  "Quais manutenções pendentes temos na Mariah?",
-  "Quais manutenções pendentes temos em todos os imóveis?",
-  "Quais cobranças estão em aberto?",
-  "Quais vistorias foram feitas essa semana?",
+  "Quais manutenções urgentes temos agora?",
+  "Quais cobranças estão vencidas ou a vencer?",
+  "Resuma o status de todos os imóveis",
+  "Quais comissões de booking estão pendentes?",
+  "Quais proprietários têm score de pagamento baixo?",
+  "Há votações abertas aguardando resposta?",
 ];
 
 export function AIConsultaWidget() {
