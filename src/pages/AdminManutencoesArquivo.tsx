@@ -537,7 +537,7 @@ export default function AdminManutencoesArquivo() {
                         <td className="px-2 py-2 text-right font-medium w-[120px]">
                           {item.amount_cents ? formatBRL(item.amount_cents) : "—"}
                         </td>
-                        <td className="px-2 py-2 text-right text-green-700 w-[120px]">
+                        <td className="px-2 py-2 text-right text-primary w-[120px]">
                           {item.management_contribution_cents ? formatBRL(item.management_contribution_cents) : "—"}
                         </td>
                         <td className="px-2 py-2 text-center w-[100px]">
