@@ -38,6 +38,7 @@ export default function Manutencoes() {
     propertyId,
     status: activeFilters.status || undefined,
     search: activeFilters.search || undefined,
+    serviceType: serviceTypeFilter || undefined,
   });
   const { data: charts } = useMaintenanceCharts(ownerId, year, propertyId, serviceTypeFilter || undefined);
 
