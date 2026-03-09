@@ -338,11 +338,11 @@ export const useAddPayment = () => {
   });
 };
 
-export const useMaintenanceCharts = (ownerId?: string, year?: number, propertyId?: string) => {
+export const useMaintenanceCharts = (ownerId?: string, year?: number, propertyId?: string, serviceType?: string) => {
   const currentYear = year || new Date().getFullYear();
 
   return useQuery({
-    queryKey: ["maintenance-charts", ownerId, currentYear, propertyId],
+    queryKey: ["maintenance-charts", ownerId, currentYear, propertyId, serviceType],
     queryFn: async () => {
       let query = supabase
         .from("charges")
@@ -353,6 +353,7 @@ export const useMaintenanceCharts = (ownerId?: string, year?: number, propertyId
 
       if (ownerId) query = query.eq("owner_id", ownerId);
       if (propertyId) query = query.eq("property_id", propertyId);
+      if (serviceType) query = query.eq("service_type", serviceType);
 
       const { data, error } = await query;
       if (error) throw error;
