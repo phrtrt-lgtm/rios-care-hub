@@ -38,8 +38,9 @@ export default function Manutencoes() {
     propertyId,
     status: activeFilters.status || undefined,
     search: activeFilters.search || undefined,
+    serviceType: serviceTypeFilter || undefined,
   });
-  const { data: charts } = useMaintenanceCharts(ownerId, year, propertyId);
+  const { data: charts } = useMaintenanceCharts(ownerId, year, propertyId, serviceTypeFilter || undefined);
 
   // Fetch properties for team filter
   useEffect(() => {
@@ -53,7 +54,7 @@ export default function Manutencoes() {
     if (user) {
       fetchServiceTypeData();
     }
-  }, [user, year, propertyId]);
+  }, [user, year, propertyId, serviceTypeFilter]);
 
   const fetchServiceTypeData = async () => {
     try {
@@ -69,6 +70,10 @@ export default function Manutencoes() {
 
       if (propertyId) {
         query = query.eq('property_id', propertyId);
+      }
+
+      if (serviceTypeFilter) {
+        query = query.eq('service_type', serviceTypeFilter);
       }
 
       const { data, error } = await query;

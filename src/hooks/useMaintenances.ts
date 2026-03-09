@@ -7,6 +7,7 @@ export interface MaintenanceFilters {
   propertyId?: string;
   status?: string;
   category?: string;
+  serviceType?: string;
   fromDate?: string;
   toDate?: string;
   search?: string;
@@ -62,6 +63,9 @@ export const useMaintenances = (filters?: MaintenanceFilters) => {
       }
       if (filters?.category) {
         query = query.eq("category", filters.category);
+      }
+      if (filters?.serviceType) {
+        query = query.eq("service_type", filters.serviceType);
       }
       if (filters?.fromDate) {
         query = query.gte("created_at", filters.fromDate);
@@ -338,11 +342,11 @@ export const useAddPayment = () => {
   });
 };
 
-export const useMaintenanceCharts = (ownerId?: string, year?: number, propertyId?: string) => {
+export const useMaintenanceCharts = (ownerId?: string, year?: number, propertyId?: string, serviceType?: string) => {
   const currentYear = year || new Date().getFullYear();
 
   return useQuery({
-    queryKey: ["maintenance-charts", ownerId, currentYear, propertyId],
+    queryKey: ["maintenance-charts", ownerId, currentYear, propertyId, serviceType],
     queryFn: async () => {
       let query = supabase
         .from("charges")
@@ -353,6 +357,7 @@ export const useMaintenanceCharts = (ownerId?: string, year?: number, propertyId
 
       if (ownerId) query = query.eq("owner_id", ownerId);
       if (propertyId) query = query.eq("property_id", propertyId);
+      if (serviceType) query = query.eq("service_type", serviceType);
 
       const { data, error } = await query;
       if (error) throw error;
