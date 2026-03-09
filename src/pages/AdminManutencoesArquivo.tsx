@@ -158,6 +158,31 @@ export default function AdminManutencoesArquivo() {
 
       if (chargesError) throw chargesError;
 
+      // Fetch charge attachments count for archived charges
+      const archivedChargeIds = (archivedCharges || []).map(c => c.id);
+      const { data: chargeAttachments } = await supabase
+        .from("charge_attachments")
+        .select("charge_id")
+        .in("charge_id", archivedChargeIds.length > 0 ? archivedChargeIds : ["00000000-0000-0000-0000-000000000000"]);
+
+      const chargeAttachmentCounts: Record<string, number> = {};
+      (chargeAttachments || []).forEach(a => {
+        if (a.charge_id) chargeAttachmentCounts[a.charge_id] = (chargeAttachmentCounts[a.charge_id] || 0) + 1;
+      });
+
+      // Also fetch charge_attachments for charges linked to tickets
+      const linkedChargeIds = Object.values(chargeMap).map((c: any) => c.id).filter(Boolean);
+      const { data: linkedChargeAttachments } = await supabase
+        .from("charge_attachments")
+        .select("charge_id")
+        .in("charge_id", linkedChargeIds.length > 0 ? linkedChargeIds : ["00000000-0000-0000-0000-000000000000"]);
+
+      // Map linked charge attachments back to ticket IDs
+      const linkedChargeAttachmentCounts: Record<string, number> = {};
+      (linkedChargeAttachments || []).forEach(a => {
+        if (a.charge_id) linkedChargeAttachmentCounts[a.charge_id] = (linkedChargeAttachmentCounts[a.charge_id] || 0) + 1;
+      });
+
       // Combine and map results
       const items: ArchivedItem[] = [
         ...(tickets || []).map(t => ({
@@ -170,7 +195,8 @@ export default function AdminManutencoesArquivo() {
           scheduled_at: t.scheduled_at,
           archived_at: t.archived_at!,
           service_type: chargeMap[t.id]?.service_type || null,
-          attachments_count: attachmentCounts[t.id] || 0,
+          attachments_count: (attachmentCounts[t.id] || 0) + (linkedChargeAttachmentCounts[chargeMap[t.id]?.id] || 0),
+          charge_id: chargeMap[t.id]?.id || null,
         })),
         ...(archivedCharges || []).map(c => ({
           id: c.id,
@@ -182,7 +208,8 @@ export default function AdminManutencoesArquivo() {
           scheduled_at: c.due_date,
           archived_at: c.archived_at!,
           service_type: c.service_type,
-          attachments_count: 0,
+          attachments_count: chargeAttachmentCounts[c.id] || 0,
+          charge_id: c.id,
         })),
       ];
 
