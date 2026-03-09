@@ -64,6 +64,9 @@ export const useMaintenances = (filters?: MaintenanceFilters) => {
       if (filters?.category) {
         query = query.eq("category", filters.category);
       }
+      if (filters?.serviceType) {
+        query = query.eq("service_type", filters.serviceType);
+      }
       if (filters?.fromDate) {
         query = query.gte("created_at", filters.fromDate);
       }
