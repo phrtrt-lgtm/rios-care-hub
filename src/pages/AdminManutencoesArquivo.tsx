@@ -32,6 +32,7 @@ interface ArchivedItem {
   archived_at: string;
   service_type: string | null;
   attachments_count?: number;
+  charge_id?: string | null;
 }
 
 // ===== CONSTANTS =====
