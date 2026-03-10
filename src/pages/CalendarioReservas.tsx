@@ -81,6 +81,23 @@ interface PropertyServiceData {
   available_windows: Array<{ start: string; end: string; days: number }>;
 }
 
+/** Traduz summaries genéricos do channel manager para texto amigável */
+function formatReservationLabel(guest_name: string | null, summary: string | null): string {
+  const raw = guest_name || summary || "";
+  const lower = raw.toLowerCase();
+  // TalkGuest e outros channel managers enviam bloqueios sem nome do hóspede
+  if (!raw || lower.includes("unavailable") || lower.includes("blocked") || lower.includes("bloqueado") || lower.includes("not available") || lower.includes("indisponível")) {
+    // Tenta extrair a fonte (ex: "TalkGuest - Unavailable" → "TalkGuest")
+    const dashIdx = raw.indexOf(" - ");
+    if (dashIdx > 0) {
+      const source = raw.substring(0, dashIdx).trim();
+      return `Reservado (${source})`;
+    }
+    return "Reservado";
+  }
+  return raw;
+}
+
 export default function CalendarioReservas() {
   const { profile } = useAuth();
   const navigate = useNavigate();
@@ -742,7 +759,7 @@ export default function CalendarioReservas() {
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
                                   <span className="font-medium text-sm truncate">
-                                    {res.guest_name || res.summary || "Reserva"}
+                                    {formatReservationLabel(res.guest_name, res.summary)}
                                   </span>
                                   {isActive && (
                                     <Badge variant="default" className="text-xs">Ativo</Badge>
