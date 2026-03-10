@@ -198,16 +198,46 @@ serve(async (req) => {
       resByProp[propName].push(r);
     }
 
+    // Helper: is property occupied on a given date?
+    const isOccupied = (rList: any[], date: string) =>
+      rList.some((r) => r.check_in <= date && r.check_out > date);
+
+    // Helper: next checkout date if occupied today
+    const currentCheckout = (rList: any[], date: string) =>
+      rList.find((r) => r.check_in <= date && r.check_out > date)?.check_out ?? null;
+
     ctx.push(`\n=== CALENDÁRIO DE RESERVAS – PRÓXIMOS 90 DIAS (hoje: ${today}) ===`);
+    ctx.push(`IMPORTANTE: "OCUPADO HOJE" significa que existe uma reserva ativa cobrindo a data de hoje. "DISPONÍVEL" significa que não há nenhuma reserva cobrindo hoje.\n`);
+
     for (const [propName, rList] of Object.entries(resByProp)) {
-      ctx.push(`\n[${propName}]`);
+      const occupied = isOccupied(rList, today);
+      const checkout = currentCheckout(rList, today);
+      const statusLabel = occupied
+        ? `🔴 OCUPADO HOJE (checkout: ${checkout})`
+        : `🟢 DISPONÍVEL HOJE`;
+
+      ctx.push(`\n[${propName}] → STATUS ATUAL: ${statusLabel}`);
       const sorted = rList.sort((a, b) => a.check_in.localeCompare(b.check_in));
+
+      // Show gap from today to first future reservation (if not occupied)
+      const futureReservations = sorted.filter((r) => r.check_in > today);
+      if (!occupied && futureReservations.length > 0) {
+        const nextIn = futureReservations[0].check_in;
+        const gapMs = new Date(nextIn).getTime() - new Date(today).getTime();
+        const gapDays = Math.round(gapMs / (1000 * 60 * 60 * 24));
+        ctx.push(`  ⬜ Livre agora até próxima reserva em ${nextIn} (${gapDays} dias)`);
+      } else if (!occupied && futureReservations.length === 0) {
+        ctx.push(`  ⬜ Sem reservas futuras nos próximos 90 dias`);
+      }
+
       for (let i = 0; i < sorted.length; i++) {
         const r = sorted[i];
         const checkIn = r.check_in;
         const checkOut = r.check_out;
-        const guest = r.guest_name || r.summary || "Hóspede";
-        ctx.push(`  📅 Reserva: ${checkIn} → ${checkOut} | ${guest}`);
+        const isActive = checkIn <= today && checkOut > today;
+        const guest = r.guest_name || r.summary || "Bloqueado/Hóspede";
+        const activeTag = isActive ? " ← EM ANDAMENTO AGORA" : "";
+        ctx.push(`  📅 ${checkIn} → ${checkOut} | ${guest}${activeTag}`);
 
         // Calculate gap to next reservation
         if (i < sorted.length - 1) {
@@ -219,23 +249,12 @@ serve(async (req) => {
           }
         }
       }
-
-      // Check if first reservation is in the future - show gap from today
-      if (sorted.length > 0 && sorted[0].check_in > today) {
-        const gapMs = new Date(sorted[0].check_in).getTime() - new Date(today).getTime();
-        const gapDays = Math.round(gapMs / (1000 * 60 * 60 * 24));
-        ctx.push(`  ⬜ Disponível agora até ${sorted[0].check_in} (${gapDays} dias livres)`);
-      }
-
-      if (sorted.length === 0) {
-        ctx.push(`  ⬜ Sem reservas nos próximos 90 dias`);
-      }
     }
 
     // Properties with no reservations at all
     for (const p of properties) {
       if (!resByProp[(p as any).name]) {
-        ctx.push(`\n[${(p as any).name}]\n  ⬜ Sem reservas nos próximos 90 dias`);
+        ctx.push(`\n[${(p as any).name}] → STATUS ATUAL: 🟢 DISPONÍVEL HOJE\n  ⬜ Sem reservas nos próximos 90 dias`);
       }
     }
 
