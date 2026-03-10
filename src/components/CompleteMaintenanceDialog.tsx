@@ -154,7 +154,18 @@ export function CompleteMaintenanceDialog({
           chargeId = newCharge.id;
         }
 
-        // 4. Migrate ticket attachments → charge_attachments
+        // 4. Send charge_created email notification
+        if (chargeId) {
+          try {
+            await supabase.functions.invoke("send-charge-email", {
+              body: { type: "charge_created", chargeId },
+            });
+          } catch (emailErr) {
+            console.warn("Email notification failed (non-critical):", emailErr);
+          }
+        }
+
+        // 5. Migrate ticket attachments → charge_attachments
         if (chargeId) {
           const { data: ticketAttachments } = await supabase
             .from("ticket_attachments")
