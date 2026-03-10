@@ -95,13 +95,6 @@ const AdminManutencoesKanban = () => {
     observation: "",
     cost_responsible: "owner" as "owner" | "pm" | "guest",
   });
-  const [completeData, setCompleteData] = useState({
-    createCharge: true,
-    amount: "",
-    managementContribution: "",
-    category: "",
-    title: "",
-  });
   const [chatDialogOpen, setChatDialogOpen] = useState(false);
   const [chatTicket, setChatTicket] = useState<MaintenanceTicket | null>(null);
 
