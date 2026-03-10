@@ -639,15 +639,24 @@ export default function CalendarioReservas() {
               Sincronize calendários iCal e gere relatórios inteligentes
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => handleSync()} disabled={syncing}>
-              <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
-              {syncing ? "Sincronizando..." : "Sincronizar Todos"}
-            </Button>
-            <Button onClick={() => setAddDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar iCal
-            </Button>
+          <div className="flex flex-col gap-2 items-end">
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => handleSync()} disabled={syncing}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
+                {syncing && syncProgress
+                  ? `Sincronizando... ${syncProgress.done}/${syncProgress.total}`
+                  : syncing ? "Sincronizando..." : "Sincronizar Todos"}
+              </Button>
+              <Button onClick={() => setAddDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar iCal
+              </Button>
+            </div>
+            {syncing && syncProgress && (
+              <div className="w-48">
+                <Progress value={(syncProgress.done / syncProgress.total) * 100} className="h-1.5" />
+              </div>
+            )}
           </div>
         </div>
 
