@@ -483,13 +483,18 @@ export default function CalendarioReservas() {
   const handleSync = async (propertyId?: string) => {
     setSyncing(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const url = propertyId
         ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sync-ical?property_id=${propertyId}`
         : `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sync-ical`;
 
       const res = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          "Authorization": `Bearer ${session?.access_token}`,
+        },
       });
 
       const data = await res.json();
