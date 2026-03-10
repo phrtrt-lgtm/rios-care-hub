@@ -156,20 +156,33 @@ serve(async (req) => {
 
     console.log(`File path: ${filePath}, MIME: ${mimeType}`);
 
-    // Download file from storage
-    const { data: fileData, error: downloadError } = await supabase.storage
-      .from("attachments")
-      .download(filePath);
+    // Download file from storage — handle both full URLs and storage-relative paths
+    let fileBuffer: ArrayBuffer;
+    if (filePath.startsWith("https://") || filePath.startsWith("http://")) {
+      // file_path is a full public URL (e.g. migrated from ticket_attachments)
+      const fetchRes = await fetch(filePath);
+      if (!fetchRes.ok) {
+        console.error("Error fetching file by URL:", fetchRes.status, filePath);
+        return new Response(JSON.stringify({ error: "File not found" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      fileBuffer = await fetchRes.arrayBuffer();
+    } else {
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from("attachments")
+        .download(filePath);
 
-    if (downloadError || !fileData) {
-      console.error("Error downloading file:", downloadError);
-      return new Response(JSON.stringify({ error: "File not found" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      if (downloadError || !fileData) {
+        console.error("Error downloading file:", downloadError);
+        return new Response(JSON.stringify({ error: "File not found" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      fileBuffer = await fileData.arrayBuffer();
     }
-
-    const fileBuffer = await fileData.arrayBuffer();
     const totalSize = fileBuffer.byteLength;
 
     console.log(`File size: ${totalSize} bytes`);
