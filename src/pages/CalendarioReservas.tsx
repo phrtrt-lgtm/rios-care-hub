@@ -480,30 +480,53 @@ export default function CalendarioReservas() {
     }
   };
 
+  const [syncProgress, setSyncProgress] = useState<{ done: number; total: number } | null>(null);
+
   const handleSync = async (propertyId?: string) => {
     setSyncing(true);
+    setSyncProgress(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const url = propertyId
-        ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sync-ical?property_id=${propertyId}`
-        : `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sync-ical`;
+      const headers = {
+        "Content-Type": "application/json",
+        "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        "Authorization": `Bearer ${session?.access_token}`,
+      };
+      const baseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sync-ical`;
 
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          "Authorization": `Bearer ${session?.access_token}`,
-        },
-      });
+      if (propertyId) {
+        // Single property sync — fast, no batching needed
+        const res = await fetch(`${baseUrl}?property_id=${propertyId}`, { method: "POST", headers });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Sync failed");
+        toast.success("Sincronizado com sucesso!");
+      } else {
+        // Batch sync: get all property IDs and sync in batches of 5 to avoid timeout
+        const allIds = icalLinks.map(l => l.property_id);
+        const BATCH = 5;
+        let totalSynced = 0;
+        setSyncProgress({ done: 0, total: allIds.length });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Sync failed");
+        for (let i = 0; i < allIds.length; i += BATCH) {
+          const batch = allIds.slice(i, i + BATCH);
+          await Promise.all(
+            batch.map(pid =>
+              fetch(`${baseUrl}?property_id=${pid}`, { method: "POST", headers })
+                .then(r => r.json())
+                .catch(() => null)
+            )
+          );
+          totalSynced += batch.length;
+          setSyncProgress({ done: totalSynced, total: allIds.length });
+        }
+        toast.success(`${totalSynced} calendários sincronizados!`);
+      }
 
-      toast.success(data.message || "Sincronizado com sucesso!");
+      setSyncProgress(null);
       fetchData();
     } catch (err: any) {
       toast.error("Erro ao sincronizar: " + err.message);
+      setSyncProgress(null);
     } finally {
       setSyncing(false);
     }
