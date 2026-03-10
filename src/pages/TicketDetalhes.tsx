@@ -855,10 +855,7 @@ export default function TicketDetalhes() {
                   <Button
                     size="sm"
                     className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                    onClick={() => {
-                      setCompleteData({ title: ticket.subject, amountCents: "", managementContributionCents: "0" });
-                      setCompleteDialogOpen(true);
-                    }}
+                    onClick={() => setCompleteDialogOpen(true)}
                   >
                     <CheckCircle className="h-4 w-4 mr-1" />
                     Concluir e Cobrar
