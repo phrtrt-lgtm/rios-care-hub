@@ -759,7 +759,7 @@ export default function CalendarioReservas() {
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
                                   <span className="font-medium text-sm truncate">
-                                    {res.guest_name || res.summary || "Reserva"}
+                                    {formatReservationLabel(res.guest_name, res.summary)}
                                   </span>
                                   {isActive && (
                                     <Badge variant="default" className="text-xs">Ativo</Badge>
