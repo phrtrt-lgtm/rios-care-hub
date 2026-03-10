@@ -177,7 +177,7 @@ export default function TicketDetalhes() {
           .limit(1);
         
         if (charges && charges.length > 0) {
-          navigate(`/manutencao-detalhes/${charges[0].id}`, { replace: true });
+          navigate(`/cobranca/${charges[0].id}`, { replace: true });
           return;
         }
       }
@@ -1196,7 +1196,13 @@ export default function TicketDetalhes() {
           owner: { id: ticket.owner_id, name: ticket.profiles?.name || "" },
           property: ticket.properties ? { id: ticket.property_id!, name: ticket.properties.name } : null,
         } : null}
-        onSuccess={() => fetchTicketData()}
+        onSuccess={(chargeId) => {
+          if (chargeId) {
+            navigate(`/cobranca/${chargeId}`);
+          } else {
+            fetchTicketData();
+          }
+        }}
       />
     </div>
   );
