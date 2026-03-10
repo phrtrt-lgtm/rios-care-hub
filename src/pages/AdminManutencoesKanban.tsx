@@ -327,62 +327,7 @@ const AdminManutencoesKanban = () => {
 
   const openCompleteDialog = (ticket: MaintenanceTicket) => {
     setSelectedTicket(ticket);
-    setCompleteData({
-      createCharge: ticket.cost_responsible === "owner", // default to create charge only if owner is responsible
-      amount: "",
-      managementContribution: "",
-      category: "",
-      title: ticket.subject,
-    });
     setCompleteDialogOpen(true);
-  };
-
-  const handleComplete = async () => {
-    if (!selectedTicket || !user) return;
-    
-    try {
-      // Update ticket status to completed
-      const { error: ticketError } = await supabase
-        .from("tickets")
-        .update({ status: "concluido" })
-        .eq("id", selectedTicket.id);
-      
-      if (ticketError) throw ticketError;
-
-      // Create charge if requested
-      if (completeData.createCharge && completeData.amount && selectedTicket.owner?.id) {
-        const amountCents = Math.round(parseFloat(completeData.amount) * 100);
-        const contributionCents = completeData.managementContribution 
-          ? Math.round(parseFloat(completeData.managementContribution) * 100) 
-          : 0;
-
-        const { error: chargeError } = await supabase
-          .from("charges")
-          .insert({
-            owner_id: selectedTicket.owner.id,
-            property_id: selectedTicket.property?.id || null,
-            ticket_id: selectedTicket.id,
-            title: completeData.title || selectedTicket.subject,
-            category: completeData.category || null,
-            amount_cents: amountCents,
-            management_contribution_cents: contributionCents,
-            cost_responsible: selectedTicket.cost_responsible || "owner",
-            status: "draft",
-          });
-
-        if (chargeError) throw chargeError;
-        
-        toast.success("Manutenção concluída e cobrança criada!");
-      } else {
-        toast.success("Manutenção concluída!");
-      }
-
-      queryClient.invalidateQueries({ queryKey: ["maintenance-tickets-kanban"] });
-      setCompleteDialogOpen(false);
-      setSelectedTicket(null);
-    } catch (error: any) {
-      toast.error("Erro ao concluir manutenção: " + error.message);
-    }
   };
 
   const moveBackToScheduled = (ticket: MaintenanceTicket) => {
