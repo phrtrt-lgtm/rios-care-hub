@@ -105,11 +105,6 @@ export default function TicketDetalhes() {
   const [providers, setProviders] = useState<{ id: string; name: string; phone: string | null }[]>([]);
   const [savingSchedule, setSavingSchedule] = useState(false);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
-  const [completeData, setCompleteData] = useState({
-    title: "",
-    amountCents: "",
-    managementContributionCents: "0",
-  });
   const [completing, setCompleting] = useState(false);
 
   const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance';
