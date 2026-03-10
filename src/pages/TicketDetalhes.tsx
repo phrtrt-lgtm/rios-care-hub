@@ -177,7 +177,7 @@ export default function TicketDetalhes() {
           .limit(1);
         
         if (charges && charges.length > 0) {
-          navigate(`/manutencao-detalhes/${charges[0].id}`, { replace: true });
+          navigate(`/cobranca/${charges[0].id}`, { replace: true });
           return;
         }
       }
