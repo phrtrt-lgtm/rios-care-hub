@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowLeft, Send, Paperclip, Loader2, Sparkles, FileText, ChevronDown, X, Download, ZoomIn, Upload, Calendar, CheckCircle } from "lucide-react";
+import { CompleteMaintenanceDialog } from "@/components/CompleteMaintenanceDialog";
 import { ptBR } from "date-fns/locale";
 import { ConversationSummaryButton } from "@/components/ConversationSummaryButton";
 import { AttachmentBubble } from "@/components/AttachmentBubble";
