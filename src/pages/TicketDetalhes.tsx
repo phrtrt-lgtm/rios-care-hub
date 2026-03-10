@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowLeft, Send, Paperclip, Loader2, Sparkles, FileText, ChevronDown, X, Download, ZoomIn, Upload, Calendar, CheckCircle } from "lucide-react";
+import { CompleteMaintenanceDialog } from "@/components/CompleteMaintenanceDialog";
 import { ptBR } from "date-fns/locale";
 import { ConversationSummaryButton } from "@/components/ConversationSummaryButton";
 import { AttachmentBubble } from "@/components/AttachmentBubble";
@@ -104,11 +105,6 @@ export default function TicketDetalhes() {
   const [providers, setProviders] = useState<{ id: string; name: string; phone: string | null }[]>([]);
   const [savingSchedule, setSavingSchedule] = useState(false);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
-  const [completeData, setCompleteData] = useState({
-    title: "",
-    amountCents: "",
-    managementContributionCents: "0",
-  });
   const [completing, setCompleting] = useState(false);
 
   const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance';
@@ -251,21 +247,7 @@ export default function TicketDetalhes() {
       const { error: ticketError } = await supabase.from("tickets").update({ status: "concluido" }).eq("id", ticket.id);
       if (ticketError) throw ticketError;
 
-      if (completeData.amountCents) {
-        const amountCents = Math.round(parseFloat(completeData.amountCents.replace(",", ".")) * 100);
-        const mgmtCents = Math.round(parseFloat((completeData.managementContributionCents || "0").replace(",", ".")) * 100);
-        await supabase.from("charges").insert({
-          owner_id: ticket.owner_id,
-          property_id: ticket.property_id,
-          ticket_id: ticket.id,
-          title: completeData.title,
-          amount_cents: amountCents,
-          management_contribution_cents: mgmtCents,
-          status: "sent",
-          cost_responsible: "owner",
-        });
-      }
-      toast({ title: "Manutenção concluída!" + (completeData.amountCents ? " Cobrança criada." : "") });
+      toast({ title: "Manutenção concluída!" });
       setCompleteDialogOpen(false);
       fetchTicketData();
     } catch (error: any) {
@@ -873,10 +855,7 @@ export default function TicketDetalhes() {
                   <Button
                     size="sm"
                     className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                    onClick={() => {
-                      setCompleteData({ title: ticket.subject, amountCents: "", managementContributionCents: "0" });
-                      setCompleteDialogOpen(true);
-                    }}
+                    onClick={() => setCompleteDialogOpen(true)}
                   >
                     <CheckCircle className="h-4 w-4 mr-1" />
                     Concluir e Cobrar
@@ -1207,36 +1186,18 @@ export default function TicketDetalhes() {
       </Dialog>
 
       {/* Complete & Charge Dialog */}
-      <Dialog open={completeDialogOpen} onOpenChange={setCompleteDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Concluir e Cobrar</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div>
-              <Label>Título da cobrança</Label>
-              <Input value={completeData.title} onChange={(e) => setCompleteData({ ...completeData, title: e.target.value })} placeholder="Ex: Reparo elétrico" />
-            </div>
-            <div>
-              <Label>Valor total (R$)</Label>
-              <Input type="number" min="0" step="0.01" value={completeData.amountCents} onChange={(e) => setCompleteData({ ...completeData, amountCents: e.target.value })} placeholder="0,00" />
-            </div>
-            <div>
-              <Label>Aporte da gestão (R$)</Label>
-              <p className="text-[11px] text-muted-foreground mb-1">💡 Se manutenção gratuita, coloque o aporte igual ao valor total — a cobrança zerará automaticamente.</p>
-              <Input type="number" min="0" step="0.01" value={completeData.managementContributionCents} onChange={(e) => setCompleteData({ ...completeData, managementContributionCents: e.target.value })} placeholder="0,00" />
-              {completeData.amountCents && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Proprietário pagará: R$ {Math.max(0, parseFloat(completeData.amountCents || "0") - parseFloat(completeData.managementContributionCents || "0")).toFixed(2).replace(".", ",")}
-                </p>
-              )}
-            </div>
-            <Button onClick={handleComplete} disabled={completing} className="w-full">
-              {completing ? "Salvando..." : completeData.amountCents ? "Concluir e Criar Cobrança" : "Concluir"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <CompleteMaintenanceDialog
+        open={completeDialogOpen}
+        onOpenChange={setCompleteDialogOpen}
+        ticket={ticket ? {
+          id: ticket.id,
+          subject: ticket.subject,
+          cost_responsible: (ticket as any).cost_responsible || null,
+          owner: { id: ticket.owner_id, name: ticket.profiles?.name || "" },
+          property: ticket.properties ? { id: ticket.property_id!, name: ticket.properties.name } : null,
+        } : null}
+        onSuccess={() => fetchTicketData()}
+      />
     </div>
   );
 }

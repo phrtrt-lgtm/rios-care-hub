@@ -20,6 +20,7 @@ import { ArrowLeft, Search, Phone, Calendar, Clock, Building, User, ChevronRight
 import { CHARGE_CATEGORY_OPTIONS } from "@/constants/chargeCategories";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
+import { CompleteMaintenanceDialog } from "@/components/CompleteMaintenanceDialog";
 
 type TicketStatus = "novo" | "em_analise" | "aguardando_info" | "em_execucao" | "concluido" | "cancelado";
 
@@ -93,13 +94,6 @@ const AdminManutencoesKanban = () => {
     service_provider_id: "",
     observation: "",
     cost_responsible: "owner" as "owner" | "pm" | "guest",
-  });
-  const [completeData, setCompleteData] = useState({
-    createCharge: true,
-    amount: "",
-    managementContribution: "",
-    category: "",
-    title: "",
   });
   const [chatDialogOpen, setChatDialogOpen] = useState(false);
   const [chatTicket, setChatTicket] = useState<MaintenanceTicket | null>(null);
@@ -333,62 +327,7 @@ const AdminManutencoesKanban = () => {
 
   const openCompleteDialog = (ticket: MaintenanceTicket) => {
     setSelectedTicket(ticket);
-    setCompleteData({
-      createCharge: ticket.cost_responsible === "owner", // default to create charge only if owner is responsible
-      amount: "",
-      managementContribution: "",
-      category: "",
-      title: ticket.subject,
-    });
     setCompleteDialogOpen(true);
-  };
-
-  const handleComplete = async () => {
-    if (!selectedTicket || !user) return;
-    
-    try {
-      // Update ticket status to completed
-      const { error: ticketError } = await supabase
-        .from("tickets")
-        .update({ status: "concluido" })
-        .eq("id", selectedTicket.id);
-      
-      if (ticketError) throw ticketError;
-
-      // Create charge if requested
-      if (completeData.createCharge && completeData.amount && selectedTicket.owner?.id) {
-        const amountCents = Math.round(parseFloat(completeData.amount) * 100);
-        const contributionCents = completeData.managementContribution 
-          ? Math.round(parseFloat(completeData.managementContribution) * 100) 
-          : 0;
-
-        const { error: chargeError } = await supabase
-          .from("charges")
-          .insert({
-            owner_id: selectedTicket.owner.id,
-            property_id: selectedTicket.property?.id || null,
-            ticket_id: selectedTicket.id,
-            title: completeData.title || selectedTicket.subject,
-            category: completeData.category || null,
-            amount_cents: amountCents,
-            management_contribution_cents: contributionCents,
-            cost_responsible: selectedTicket.cost_responsible || "owner",
-            status: "draft",
-          });
-
-        if (chargeError) throw chargeError;
-        
-        toast.success("Manutenção concluída e cobrança criada!");
-      } else {
-        toast.success("Manutenção concluída!");
-      }
-
-      queryClient.invalidateQueries({ queryKey: ["maintenance-tickets-kanban"] });
-      setCompleteDialogOpen(false);
-      setSelectedTicket(null);
-    } catch (error: any) {
-      toast.error("Erro ao concluir manutenção: " + error.message);
-    }
   };
 
   const moveBackToScheduled = (ticket: MaintenanceTicket) => {
@@ -775,174 +714,22 @@ const AdminManutencoesKanban = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Complete Dialog */}
-        <Dialog open={completeDialogOpen} onOpenChange={setCompleteDialogOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Concluir Manutenção</DialogTitle>
-              <DialogDescription>
-                Finalize a manutenção e opcionalmente crie uma cobrança
-              </DialogDescription>
-            </DialogHeader>
-            {selectedTicket && (
-              <div className="space-y-4">
-                <div className="bg-muted/50 rounded-lg p-3">
-                  <p className="font-medium">{selectedTicket.subject}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedTicket.property?.name} • {selectedTicket.owner?.name}
-                  </p>
-                  {selectedTicket.cost_responsible && (
-                    <Badge 
-                      variant="outline" 
-                      className={`mt-2 text-xs ${
-                        selectedTicket.cost_responsible === "guest" 
-                          ? "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30"
-                          : selectedTicket.cost_responsible === "pm"
-                          ? "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30"
-                          : ""
-                      }`}
-                    >
-                      Custo: {selectedTicket.cost_responsible === "owner" ? "Proprietário" : selectedTicket.cost_responsible === "pm" ? "Gestão" : "Hóspede"}
-                    </Badge>
-                  )}
-                </div>
-
-                {selectedTicket.cost_responsible === "guest" && (
-                  <Alert>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      Esta manutenção é de responsabilidade do hóspede e não será cobrada do proprietário.
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {selectedTicket.cost_responsible !== "guest" && (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label htmlFor="createCharge">Criar cobrança</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Gerar cobrança para o proprietário
-                        </p>
-                      </div>
-                      <Switch
-                        id="createCharge"
-                        checked={completeData.createCharge}
-                        onCheckedChange={(checked) =>
-                          setCompleteData((prev) => ({ ...prev, createCharge: checked }))
-                        }
-                      />
-                    </div>
-
-                    {completeData.createCharge && (
-                      <div className="space-y-4 pt-2 border-t">
-                        <div className="space-y-2">
-                          <Label htmlFor="title">Título da cobrança</Label>
-                          <Input
-                            id="title"
-                            value={completeData.title}
-                            onChange={(e) =>
-                              setCompleteData((prev) => ({ ...prev, title: e.target.value }))
-                            }
-                            placeholder="Ex: Reparo torneira banheiro"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="category">Categoria do Serviço</Label>
-                          <Select
-                            value={completeData.category}
-                            onValueChange={(value) =>
-                              setCompleteData((prev) => ({ ...prev, category: value }))
-                            }
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione a categoria" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {CHARGE_CATEGORY_OPTIONS.map((option) => (
-                                <SelectItem key={option.value} value={option.value}>
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-2">
-                            <Label htmlFor="amount">Valor Total (R$) *</Label>
-                            <Input
-                              id="amount"
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={completeData.amount}
-                              onChange={(e) =>
-                                setCompleteData((prev) => ({ ...prev, amount: e.target.value }))
-                              }
-                              placeholder="0,00"
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="contribution">Aporte Gestão (R$)</Label>
-                            <Input
-                              id="contribution"
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={completeData.managementContribution}
-                              onChange={(e) =>
-                                setCompleteData((prev) => ({ ...prev, managementContribution: e.target.value }))
-                              }
-                              placeholder="0,00"
-                            />
-                          </div>
-                        </div>
-
-                        {completeData.amount && completeData.managementContribution && (
-                          <div className="bg-primary/10 rounded-lg p-3 text-sm">
-                            <p className="font-medium">Resumo da cobrança:</p>
-                            <p>Valor total: R$ {parseFloat(completeData.amount).toFixed(2)}</p>
-                            <p>Aporte gestão: R$ {parseFloat(completeData.managementContribution).toFixed(2)}</p>
-                            <p className="font-semibold mt-1">
-                              Valor devido: R$ {(parseFloat(completeData.amount) - parseFloat(completeData.managementContribution)).toFixed(2)}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </>
-                )}
-
-                <div className="flex gap-2 pt-4">
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => setCompleteDialogOpen(false)}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    className="flex-1 bg-green-600 hover:bg-green-700"
-                    onClick={handleComplete}
-                    disabled={
-                      completeData.createCharge && 
-                      selectedTicket.cost_responsible !== "guest" && 
-                      !completeData.amount
-                    }
-                  >
-                    {completeData.createCharge && selectedTicket.cost_responsible !== "guest"
-                      ? "Concluir e Cobrar"
-                      : "Concluir"
-                    }
-                  </Button>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
+        {/* Complete Maintenance Dialog */}
+        <CompleteMaintenanceDialog
+          open={completeDialogOpen}
+          onOpenChange={setCompleteDialogOpen}
+          ticket={selectedTicket ? {
+            id: selectedTicket.id,
+            subject: selectedTicket.subject,
+            cost_responsible: selectedTicket.cost_responsible,
+            owner: selectedTicket.owner,
+            property: selectedTicket.property,
+          } : null}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ["maintenance-tickets-kanban"] });
+            setSelectedTicket(null);
+          }}
+        />
 
         {/* Chat Dialog */}
         <MaintenanceChatDialog
