@@ -20,6 +20,7 @@ import { ArrowLeft, Search, Phone, Calendar, Clock, Building, User, ChevronRight
 import { CHARGE_CATEGORY_OPTIONS } from "@/constants/chargeCategories";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
+import { CompleteMaintenanceDialog } from "@/components/CompleteMaintenanceDialog";
 
 type TicketStatus = "novo" | "em_analise" | "aguardando_info" | "em_execucao" | "concluido" | "cancelado";
 
