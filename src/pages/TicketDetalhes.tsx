@@ -247,21 +247,7 @@ export default function TicketDetalhes() {
       const { error: ticketError } = await supabase.from("tickets").update({ status: "concluido" }).eq("id", ticket.id);
       if (ticketError) throw ticketError;
 
-      if (completeData.amountCents) {
-        const amountCents = Math.round(parseFloat(completeData.amountCents.replace(",", ".")) * 100);
-        const mgmtCents = Math.round(parseFloat((completeData.managementContributionCents || "0").replace(",", ".")) * 100);
-        await supabase.from("charges").insert({
-          owner_id: ticket.owner_id,
-          property_id: ticket.property_id,
-          ticket_id: ticket.id,
-          title: completeData.title,
-          amount_cents: amountCents,
-          management_contribution_cents: mgmtCents,
-          status: "sent",
-          cost_responsible: "owner",
-        });
-      }
-      toast({ title: "Manutenção concluída!" + (completeData.amountCents ? " Cobrança criada." : "") });
+      toast({ title: "Manutenção concluída!" });
       setCompleteDialogOpen(false);
       fetchTicketData();
     } catch (error: any) {
