@@ -183,7 +183,7 @@ export function ChargeChatDialog({
       const mediaItems: MediaItem[] = [];
       for (const msg of messagesWithAttachments) {
         for (const att of msg.attachments || []) {
-          if (att.mime_type?.startsWith('image/') || att.mime_type?.startsWith('video/')) {
+          if (att.mime_type?.startsWith('image/') || att.mime_type?.startsWith('video/') || att.mime_type === 'application/pdf') {
             const { data } = await supabase.storage
               .from('charge-attachments')
               .createSignedUrl(att.file_path, 3600);

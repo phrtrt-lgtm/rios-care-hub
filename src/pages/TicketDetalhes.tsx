@@ -275,7 +275,7 @@ export default function TicketDetalhes() {
       (data || []).forEach((msg: Message) => {
         msg.attachments?.forEach((att) => {
           allUrls.push(att.file_url);
-          if (att.file_type?.startsWith('image/') || att.file_type?.startsWith('video/')) {
+          if (att.file_type?.startsWith('image/') || att.file_type?.startsWith('video/') || att.file_type === 'application/pdf') {
             mediaItems.push(att);
           }
         });
@@ -992,7 +992,7 @@ export default function TicketDetalhes() {
                             key={attachment.id}
                             {...attachment}
                             onPreview={() => {
-                              if (attachment.file_type?.startsWith('image/') || attachment.file_type?.startsWith('video/')) {
+                              if (attachment.file_type?.startsWith('image/') || attachment.file_type?.startsWith('video/') || attachment.file_type === 'application/pdf') {
                                 const index = allMediaItems.findIndex(item => item.id === attachment.id);
                                 if (index !== -1) {
                                   setGalleryStartIndex(index);

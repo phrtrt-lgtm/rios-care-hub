@@ -1,5 +1,5 @@
 import { useState, useEffect, memo } from "react";
-import { Play, FileIcon } from "lucide-react";
+import { Play, FileIcon, FileTextIcon } from "lucide-react";
 import { useMediaCache, generateVideoThumbnail } from "@/hooks/useMediaCache";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -32,6 +32,7 @@ export const MediaThumbnail = memo(({
 
   const isVideo = fileType?.startsWith('video/');
   const isImage = fileType?.startsWith('image/');
+  const isPDF = fileType === 'application/pdf';
 
   useEffect(() => {
     let cancelled = false;
@@ -94,6 +95,20 @@ export const MediaThumbnail = memo(({
       <div className={`${sizeClass} rounded overflow-hidden`}>
         <Skeleton className="w-full h-full" />
       </div>
+    );
+  }
+
+  if (isPDF) {
+    return (
+      <button
+        onClick={onClick}
+        className={`${sizeClass} rounded overflow-hidden border-2 transition-all flex-shrink-0 flex flex-col items-center justify-center gap-0.5 bg-destructive/10 ${
+          isSelected ? 'border-primary scale-110' : 'border-border/30 hover:border-border/60'
+        }`}
+      >
+        <FileTextIcon className="w-5 h-5 text-destructive" />
+        <span className="text-[9px] font-bold text-destructive uppercase tracking-wider">PDF</span>
+      </button>
     );
   }
 
