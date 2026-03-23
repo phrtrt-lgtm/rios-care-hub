@@ -30,6 +30,7 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange }: MediaG
   const currentItem = items[currentIndex];
   const isVideo = currentItem?.file_type?.startsWith('video/');
   const isImage = currentItem?.file_type?.startsWith('image/');
+  const isPDF = currentItem?.file_type === 'application/pdf';
 
   // Memoize items URLs to avoid unnecessary re-renders
   const itemUrls = useMemo(() => items.map(item => item.file_url), [items]);
