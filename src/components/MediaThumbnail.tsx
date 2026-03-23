@@ -32,6 +32,7 @@ export const MediaThumbnail = memo(({
 
   const isVideo = fileType?.startsWith('video/');
   const isImage = fileType?.startsWith('image/');
+  const isPDF = fileType === 'application/pdf';
 
   useEffect(() => {
     let cancelled = false;

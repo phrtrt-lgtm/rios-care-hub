@@ -201,7 +201,15 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange }: MediaG
                     autoPlay
                   />
                 )}
-                {!isImage && !isVideo && (
+                {isPDF && (
+                  <iframe
+                    src={currentBlobUrl + '#toolbar=1&navpanes=1&scrollbar=1'}
+                    className="w-full h-full rounded"
+                    style={{ minHeight: '70vh', background: 'white' }}
+                    title="Visualização PDF"
+                  />
+                )}
+                {!isImage && !isVideo && !isPDF && (
                   <div className="text-white text-center">
                     <p className="mb-4">Visualização não disponível para este tipo de arquivo</p>
                     <Button onClick={handleDownload} variant="outline">
