@@ -209,12 +209,15 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange }: MediaG
                   />
                 )}
                 {isPDF && (
-                  <iframe
-                    src={currentBlobUrl + '#toolbar=1&navpanes=1&scrollbar=1'}
-                    className="w-full h-full rounded"
-                    style={{ minHeight: '70vh', background: 'white' }}
-                    title="Visualização PDF"
-                  />
+                  <div className="w-full h-full flex flex-col" style={{ minHeight: '75vh' }}>
+                    <iframe
+                      src={currentBlobUrl}
+                      className="w-full flex-1 rounded bg-white"
+                      style={{ minHeight: '70vh', border: 'none' }}
+                      title="Visualização PDF"
+                      sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                    />
+                  </div>
                 )}
                 {!isImage && !isVideo && !isPDF && (
                   <div className="text-white text-center">
