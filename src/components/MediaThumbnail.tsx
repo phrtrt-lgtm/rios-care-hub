@@ -98,6 +98,20 @@ export const MediaThumbnail = memo(({
     );
   }
 
+  if (isPDF) {
+    return (
+      <button
+        onClick={onClick}
+        className={`${sizeClass} rounded overflow-hidden border-2 transition-all flex-shrink-0 flex flex-col items-center justify-center gap-0.5 bg-destructive/10 ${
+          isSelected ? 'border-primary scale-110' : 'border-border/30 hover:border-border/60'
+        }`}
+      >
+        <FileTextIcon className="w-5 h-5 text-destructive" />
+        <span className="text-[9px] font-bold text-destructive uppercase tracking-wider">PDF</span>
+      </button>
+    );
+  }
+
   if (!isImage && !isVideo) {
     return (
       <button
