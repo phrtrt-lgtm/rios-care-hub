@@ -209,14 +209,34 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange }: MediaG
                   />
                 )}
                 {isPDF && (
-                  <div className="w-full h-full flex flex-col" style={{ minHeight: '75vh' }}>
-                    <iframe
-                      src={currentBlobUrl}
-                      className="w-full flex-1 rounded bg-white"
-                      style={{ minHeight: '70vh', border: 'none' }}
-                      title="Visualização PDF"
-                      sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-                    />
+                  <div className="w-full h-full flex flex-col items-center justify-center gap-4">
+                    <object
+                      data={currentBlobUrl}
+                      type="application/pdf"
+                      className="w-full rounded bg-white"
+                      style={{ height: '72vh', border: 'none' }}
+                    >
+                      {/* Fallback for browsers that block PDF in object tags */}
+                      <div className="text-white text-center p-8">
+                        <p className="mb-4 text-sm text-white/70">Seu navegador não suporta pré-visualização de PDF inline.</p>
+                        <Button
+                          onClick={() => window.open(currentBlobUrl, '_blank')}
+                          variant="outline"
+                          className="mr-2"
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Abrir PDF
+                        </Button>
+                      </div>
+                    </object>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-white/70 hover:text-white"
+                      onClick={() => window.open(currentBlobUrl, '_blank')}
+                    >
+                      Abrir em nova aba
+                    </Button>
                   </div>
                 )}
                 {!isImage && !isVideo && !isPDF && (
