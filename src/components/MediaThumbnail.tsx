@@ -1,5 +1,5 @@
 import { useState, useEffect, memo } from "react";
-import { Play, FileIcon } from "lucide-react";
+import { Play, FileIcon, FileTextIcon } from "lucide-react";
 import { useMediaCache, generateVideoThumbnail } from "@/hooks/useMediaCache";
 import { Skeleton } from "@/components/ui/skeleton";
 
