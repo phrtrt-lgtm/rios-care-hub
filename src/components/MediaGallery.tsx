@@ -51,6 +51,13 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange }: MediaG
   useEffect(() => {
     if (!open || !currentItem) return;
 
+    // PDFs use the original URL directly in iframe (blob URLs don't work in iframes)
+    if (currentItem.file_type === 'application/pdf') {
+      setCurrentBlobUrl(currentItem.file_url);
+      setLoading(false);
+      return;
+    }
+
     let cancelled = false;
     setLoading(true);
 
@@ -202,12 +209,35 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange }: MediaG
                   />
                 )}
                 {isPDF && (
-                  <iframe
-                    src={currentBlobUrl + '#toolbar=1&navpanes=1&scrollbar=1'}
-                    className="w-full h-full rounded"
-                    style={{ minHeight: '70vh', background: 'white' }}
-                    title="Visualização PDF"
-                  />
+                  <div className="w-full h-full flex flex-col items-center justify-center gap-4">
+                    <object
+                      data={currentBlobUrl}
+                      type="application/pdf"
+                      className="w-full rounded bg-white"
+                      style={{ height: '72vh', border: 'none' }}
+                    >
+                      {/* Fallback for browsers that block PDF in object tags */}
+                      <div className="text-white text-center p-8">
+                        <p className="mb-4 text-sm text-white/70">Seu navegador não suporta pré-visualização de PDF inline.</p>
+                        <Button
+                          onClick={() => window.open(currentBlobUrl, '_blank')}
+                          variant="outline"
+                          className="mr-2"
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Abrir PDF
+                        </Button>
+                      </div>
+                    </object>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-white/70 hover:text-white"
+                      onClick={() => window.open(currentBlobUrl, '_blank')}
+                    >
+                      Abrir em nova aba
+                    </Button>
+                  </div>
                 )}
                 {!isImage && !isVideo && !isPDF && (
                   <div className="text-white text-center">
