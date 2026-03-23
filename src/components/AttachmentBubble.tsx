@@ -136,30 +136,25 @@ export function AttachmentBubble({
 
   if (isPDF) {
     return (
-      <Card className="p-3 w-full">
-        <div className="flex items-center gap-3">
-          <FileTextIcon className="h-8 w-8 text-destructive flex-shrink-0" />
-          <div className="flex-1 min-w-0">
-            <div className="font-medium text-sm truncate">
-              Documento PDF
-            </div>
-            {size_bytes && (
-              <div className="text-xs text-muted-foreground">
-                {formatSize(size_bytes)}
-              </div>
-            )}
+      <div className="relative group">
+        <div
+          onClick={() => onPreview?.(file_url, 'PDF')}
+          className="cursor-pointer relative overflow-hidden rounded-lg border border-border hover:border-primary transition-colors"
+        >
+          <div className="w-full h-32 bg-muted flex flex-col items-center justify-center gap-2 relative">
+            <FileTextIcon className="h-10 w-10 text-destructive" />
+            <span className="text-xs font-semibold text-destructive uppercase tracking-wider">PDF</span>
           </div>
-          <a
-            href={file_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex-shrink-0"
-            aria-label="Abrir PDF"
-          >
-            <Download className="h-5 w-5 text-primary hover:text-primary/80" />
-          </a>
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+            <Eye className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
         </div>
-      </Card>
+        {size_bytes && (
+          <div className="text-xs text-muted-foreground mt-1">
+            {formatSize(size_bytes)}
+          </div>
+        )}
+      </div>
     );
   }
 
