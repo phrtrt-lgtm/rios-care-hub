@@ -275,7 +275,7 @@ export default function TicketDetalhes() {
       (data || []).forEach((msg: Message) => {
         msg.attachments?.forEach((att) => {
           allUrls.push(att.file_url);
-          if (att.file_type?.startsWith('image/') || att.file_type?.startsWith('video/')) {
+          if (att.file_type?.startsWith('image/') || att.file_type?.startsWith('video/') || att.file_type === 'application/pdf') {
             mediaItems.push(att);
           }
         });
