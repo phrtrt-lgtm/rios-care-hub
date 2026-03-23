@@ -93,7 +93,7 @@ export function useMaintenanceChat(ticketId: string | null) {
       messagesData.forEach((msg: any) => {
         msg.attachments?.forEach((att: any) => {
           allUrls.push(att.file_url);
-          if (att.file_type?.startsWith('image/') || att.file_type?.startsWith('video/')) {
+          if (att.file_type?.startsWith('image/') || att.file_type?.startsWith('video/') || att.file_type === 'application/pdf') {
             mediaItems.push(att);
           }
         });
