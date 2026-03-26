@@ -272,6 +272,14 @@ export default function AdminBloqueiosDatas() {
                           </div>
                         )}
 
+                        {/* Rejection reason */}
+                        {req.rejection_reason && req.status === "rejected" && (
+                          <div className="bg-red-50 dark:bg-red-950/30 rounded-md px-3 py-2 border border-red-200 dark:border-red-800">
+                            <p className="text-[10px] uppercase tracking-wider text-red-600 dark:text-red-400 font-semibold mb-0.5">Motivo da Rejeição</p>
+                            <p className="text-sm text-red-800 dark:text-red-200">{req.rejection_reason}</p>
+                          </div>
+                        )}
+
                         {/* Proof + metadata row */}
                         <div className="flex items-center justify-between gap-3 flex-wrap">
                           <div className="flex items-center gap-3">
@@ -326,6 +334,55 @@ export default function AdminBloqueiosDatas() {
           </div>
         )}
       </div>
+
+      {/* Rejection Dialog */}
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <XCircle className="h-5 w-5" />
+              Rejeitar Bloqueio
+            </DialogTitle>
+            <DialogDescription>
+              Informe o motivo pelo qual o bloqueio não pode ser realizado. O proprietário receberá essa justificativa.
+            </DialogDescription>
+          </DialogHeader>
+
+          {rejectingRequest && (
+            <div className="bg-muted/50 rounded-md p-3 text-sm space-y-1">
+              <p><strong>Unidade:</strong> {rejectingRequest.property?.name ?? "—"}</p>
+              <p><strong>Período:</strong> {format(new Date(rejectingRequest.start_date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })} → {format(new Date(rejectingRequest.end_date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })}</p>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="rejection-reason">Motivo da rejeição *</Label>
+            <Textarea
+              id="rejection-reason"
+              placeholder="Ex: Já existe uma reserva confirmada de 28/03 a 01/04 pelo Booking.com nesta unidade."
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              rows={4}
+              className="resize-none"
+            />
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => setRejectDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleReject}
+              disabled={!rejectionReason.trim() || updatingId === rejectingRequest?.id}
+            >
+              <XCircle className="h-3.5 w-3.5 mr-1" />
+              Confirmar Rejeição
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
