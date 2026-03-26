@@ -7,6 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 
@@ -44,7 +47,9 @@ export default function AdminBloqueiosDatas() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("pending");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [rejectingRequest, setRejectingRequest] = useState<BlockRequest | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
   const fetchRequests = async () => {
     setLoading(true);
     try {
@@ -93,15 +98,31 @@ export default function AdminBloqueiosDatas() {
     }
   };
 
-  const handleReject = async (id: string) => {
-    setUpdatingId(id);
+  const openRejectDialog = (req: BlockRequest) => {
+    setRejectingRequest(req);
+    setRejectionReason("");
+    setRejectDialogOpen(true);
+  };
+
+  const handleReject = async () => {
+    if (!rejectingRequest || !rejectionReason.trim()) {
+      toast({ title: "Informe o motivo da rejeição", variant: "destructive" });
+      return;
+    }
+    setUpdatingId(rejectingRequest.id);
     try {
       const { error } = await supabase
         .from("date_block_requests")
-        .update({ status: "rejected", processed_at: new Date().toISOString() })
-        .eq("id", id);
+        .update({
+          status: "rejected",
+          processed_at: new Date().toISOString(),
+          rejection_reason: rejectionReason.trim(),
+        })
+        .eq("id", rejectingRequest.id);
       if (error) throw error;
-      toast({ title: "Marcado como rejeitado" });
+      toast({ title: "Solicitação rejeitada com justificativa" });
+      setRejectDialogOpen(false);
+      setRejectingRequest(null);
       fetchRequests();
     } catch (err) {
       toast({ title: "Erro ao atualizar", variant: "destructive" });
@@ -251,6 +272,14 @@ export default function AdminBloqueiosDatas() {
                           </div>
                         )}
 
+                        {/* Rejection reason */}
+                        {req.rejection_reason && req.status === "rejected" && (
+                          <div className="bg-red-50 dark:bg-red-950/30 rounded-md px-3 py-2 border border-red-200 dark:border-red-800">
+                            <p className="text-[10px] uppercase tracking-wider text-red-600 dark:text-red-400 font-semibold mb-0.5">Motivo da Rejeição</p>
+                            <p className="text-sm text-red-800 dark:text-red-200">{req.rejection_reason}</p>
+                          </div>
+                        )}
+
                         {/* Proof + metadata row */}
                         <div className="flex items-center justify-between gap-3 flex-wrap">
                           <div className="flex items-center gap-3">
@@ -287,7 +316,7 @@ export default function AdminBloqueiosDatas() {
                                 size="sm"
                                 variant="destructive"
                                 className="h-8 px-3 text-xs"
-                                onClick={() => handleReject(req.id)}
+                                onClick={() => openRejectDialog(req)}
                                 disabled={updatingId === req.id}
                               >
                                 <XCircle className="h-3.5 w-3.5 mr-1" />
@@ -305,6 +334,55 @@ export default function AdminBloqueiosDatas() {
           </div>
         )}
       </div>
+
+      {/* Rejection Dialog */}
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <XCircle className="h-5 w-5" />
+              Rejeitar Bloqueio
+            </DialogTitle>
+            <DialogDescription>
+              Informe o motivo pelo qual o bloqueio não pode ser realizado. O proprietário receberá essa justificativa.
+            </DialogDescription>
+          </DialogHeader>
+
+          {rejectingRequest && (
+            <div className="bg-muted/50 rounded-md p-3 text-sm space-y-1">
+              <p><strong>Unidade:</strong> {rejectingRequest.property?.name ?? "—"}</p>
+              <p><strong>Período:</strong> {format(new Date(rejectingRequest.start_date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })} → {format(new Date(rejectingRequest.end_date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })}</p>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="rejection-reason">Motivo da rejeição *</Label>
+            <Textarea
+              id="rejection-reason"
+              placeholder="Ex: Já existe uma reserva confirmada de 28/03 a 01/04 pelo Booking.com nesta unidade."
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              rows={4}
+              className="resize-none"
+            />
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => setRejectDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleReject}
+              disabled={!rejectionReason.trim() || updatingId === rejectingRequest?.id}
+            >
+              <XCircle className="h-3.5 w-3.5 mr-1" />
+              Confirmar Rejeição
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
