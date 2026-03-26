@@ -258,7 +258,7 @@ export const DateBlockRequestDialog = ({
         {/* Step: Proof of cleaning fee */}
         {step === "proof" && (
           <div className="space-y-4">
-            <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800">
+            <div className="rounded-lg bg-warning/10 border border-warning/30 p-3 text-xs text-warning-foreground" style={{background:'hsl(38 92% 50% / 0.1)', borderColor:'hsl(38 92% 50% / 0.3)', color:'hsl(25 95% 25%)'}}>
               <strong>Taxa de limpeza obrigatória</strong>
               <p className="mt-0.5">Para visitas de familiares, é necessário anexar o comprovante de pagamento da taxa de limpeza.</p>
             </div>
