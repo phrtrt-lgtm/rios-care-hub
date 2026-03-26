@@ -1095,6 +1095,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "date_block_requests_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "date_block_requests_property_id_fkey"
             columns: ["property_id"]
             isOneToOne: false
