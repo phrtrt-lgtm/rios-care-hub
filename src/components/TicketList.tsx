@@ -156,7 +156,7 @@ export const TicketList = () => {
         <TabsList className="mb-6 flex-wrap h-auto">
           <TabsTrigger value="todos">Todos</TabsTrigger>
           <TabsTrigger value="manutencao">Manutenção</TabsTrigger>
-          <TabsTrigger value="bloqueio_data">Bloqueio de Datas</TabsTrigger>
+          
           <TabsTrigger value="duvida">Dúvida/Info</TabsTrigger>
           <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
           <TabsTrigger value="outros">Outros</TabsTrigger>

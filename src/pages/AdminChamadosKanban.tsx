@@ -55,7 +55,7 @@ const TICKET_TYPE_LABELS: Record<TicketType, string> = {
 const TICKET_TYPE_ICONS: Record<TicketType, React.ReactNode> = {
   duvida: <HelpCircle className="h-3 w-3" />,
   cobranca: <DollarSign className="h-3 w-3" />,
-  bloqueio_data: <Lock className="h-3 w-3" />,
+  
   financeiro: <DollarSign className="h-3 w-3" />,
   outros: <Info className="h-3 w-3" />,
   conversar_hospedes: <MessageCircle className="h-3 w-3" />,

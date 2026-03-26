@@ -199,7 +199,7 @@ export default function MeusChamados() {
             <TabsList className="flex-wrap h-auto gap-1 p-1">
               <TabsTrigger value="todos" className="text-xs h-7 px-2">Todos</TabsTrigger>
               <TabsTrigger value="manutencao" className="text-xs h-7 px-2">Manutenção</TabsTrigger>
-              <TabsTrigger value="bloqueio_data" className="text-xs h-7 px-2">Bloqueio</TabsTrigger>
+              
               <TabsTrigger value="duvida" className="text-xs h-7 px-2">Dúvida</TabsTrigger>
               <TabsTrigger value="financeiro" className="text-xs h-7 px-2">Financeiro</TabsTrigger>
               <TabsTrigger value="outros" className="text-xs h-7 px-2">Outros</TabsTrigger>

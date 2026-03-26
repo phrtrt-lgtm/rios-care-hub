@@ -348,7 +348,7 @@ export default function NovoTicket() {
                   <SelectContent>
                     <SelectItem value="duvida">Dúvida/Informação</SelectItem>
                     <SelectItem value="conversar_hospedes">Conversar com Hóspedes e Sugestões</SelectItem>
-                    <SelectItem value="bloqueio_data">Bloqueio de Datas</SelectItem>
+                    
                     <SelectItem value="manutencao">Manutenção</SelectItem>
                     <SelectItem value="melhorias_compras">Melhorias/Compras pro Imóvel</SelectItem>
                     <SelectItem value="financeiro">Financeiro</SelectItem>
