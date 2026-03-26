@@ -5,8 +5,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
-import { Building2, ClipboardCheck, Plus, MapPin, Wrench } from "lucide-react";
+import { Building2, ClipboardCheck, Plus, MapPin, Wrench, CalendarX } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DateBlockRequestDialog } from "@/components/DateBlockRequestDialog";
 
 interface Property {
   id: string;
