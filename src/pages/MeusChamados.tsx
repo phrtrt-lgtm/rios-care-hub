@@ -36,7 +36,7 @@ const typeLabels: Record<string, string> = {
 const typeColors: Record<string, string> = {
   duvida: "bg-secondary text-secondary-foreground",
   conversar_hospedes: "bg-secondary text-secondary-foreground",
-  bloqueio_data: "bg-secondary text-secondary-foreground",
+  
   manutencao: "bg-primary text-primary-foreground",
   melhorias_compras: "bg-primary text-primary-foreground",
   cobranca: "bg-destructive text-destructive-foreground",
