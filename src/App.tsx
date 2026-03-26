@@ -69,9 +69,7 @@ import AdminRelatorioBooking from "./pages/AdminRelatorioBooking";
 import ImportarComissoesBooking from "./pages/ImportarComissoesBooking";
 import MinhasComissoesBooking from "./pages/MinhasComissoesBooking";
 import MinhaComissaoBookingDetalhes from "./pages/MinhaComissaoBookingDetalhes";
-import AdminManutencoesArquivo from "./pages/AdminManutencoesArquivo";
-
-
+import AdminBloqueiosDatas from "./pages/AdminBloqueiosDatas";
 const queryClient = new QueryClient();
 
 const App = () => (
