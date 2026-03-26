@@ -41,6 +41,13 @@ export const DateBlockRequestDialog = ({
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // Safety: if we somehow land on "proof" with maintenance reason, skip to confirm
+  useEffect(() => {
+    if (step === "proof" && reason !== "family_visit") {
+      setStep("confirm");
+    }
+  }, [step, reason]);
+
   const reset = () => {
     setStep("dates");
     setStartDate(undefined);
