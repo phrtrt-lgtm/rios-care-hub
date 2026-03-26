@@ -47,7 +47,9 @@ export default function AdminBloqueiosDatas() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("pending");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [rejectingRequest, setRejectingRequest] = useState<BlockRequest | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
   const fetchRequests = async () => {
     setLoading(true);
     try {
