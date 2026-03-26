@@ -25,7 +25,7 @@ const statusLabels: Record<string, string> = {
 const typeLabels: Record<string, string> = {
   duvida: "Dúvida/Info",
   conversar_hospedes: "Hóspedes",
-  bloqueio_data: "Bloqueio",
+  
   manutencao: "Manutenção",
   melhorias_compras: "Melhorias",
   cobranca: "Cobrança",
