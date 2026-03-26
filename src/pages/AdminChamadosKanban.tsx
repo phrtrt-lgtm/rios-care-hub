@@ -15,7 +15,7 @@ import { ArrowLeft, Search, Building, Clock, MessageSquare, HelpCircle, Calendar
 import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
 
 type TicketStatus = "novo" | "em_analise" | "aguardando_info" | "em_execucao" | "concluido" | "cancelado";
-type TicketType = "duvida" | "cobranca" | "bloqueio_data" | "financeiro" | "outros" | "conversar_hospedes" | "melhorias_compras";
+type TicketType = "duvida" | "cobranca" | "financeiro" | "outros" | "conversar_hospedes" | "melhorias_compras";
 
 interface OwnerTicket {
   id: string;
