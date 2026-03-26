@@ -34,7 +34,7 @@ interface Property {
 export default function NovoTicket() {
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
-  const [ticketType, setTicketType] = useState<"duvida" | "conversar_hospedes" | "bloqueio_data" | "manutencao" | "melhorias_compras" | "financeiro" | "">("");
+  const [ticketType, setTicketType] = useState<"duvida" | "conversar_hospedes" | "manutencao" | "melhorias_compras" | "financeiro" | "">("");
   const [priority, setPriority] = useState<"normal" | "urgente">("normal");
   const [propertyId, setPropertyId] = useState<string>("");
   const [properties, setProperties] = useState<Property[]>([]);
@@ -254,7 +254,7 @@ export default function NovoTicket() {
         .insert([{
           owner_id: user?.id,
           created_by: user?.id,
-          ticket_type: ticketType as "duvida" | "conversar_hospedes" | "bloqueio_data" | "manutencao" | "melhorias_compras" | "financeiro",
+          ticket_type: ticketType as "duvida" | "conversar_hospedes" | "manutencao" | "melhorias_compras" | "financeiro",
           subject,
           description,
           priority,
@@ -348,7 +348,7 @@ export default function NovoTicket() {
                   <SelectContent>
                     <SelectItem value="duvida">Dúvida/Informação</SelectItem>
                     <SelectItem value="conversar_hospedes">Conversar com Hóspedes e Sugestões</SelectItem>
-                    <SelectItem value="bloqueio_data">Bloqueio de Datas</SelectItem>
+                    
                     <SelectItem value="manutencao">Manutenção</SelectItem>
                     <SelectItem value="melhorias_compras">Melhorias/Compras pro Imóvel</SelectItem>
                     <SelectItem value="financeiro">Financeiro</SelectItem>

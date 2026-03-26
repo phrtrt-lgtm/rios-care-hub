@@ -11,11 +11,11 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, differenceInHours, differenceInMinutes } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, Search, Building, Clock, MessageSquare, HelpCircle, Calendar, DollarSign, Lock, Info, MessageCircle, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Search, Building, Clock, MessageSquare, HelpCircle, Calendar, DollarSign, Info, MessageCircle, ShoppingBag } from "lucide-react";
 import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
 
 type TicketStatus = "novo" | "em_analise" | "aguardando_info" | "em_execucao" | "concluido" | "cancelado";
-type TicketType = "duvida" | "cobranca" | "bloqueio_data" | "financeiro" | "outros" | "conversar_hospedes" | "melhorias_compras";
+type TicketType = "duvida" | "cobranca" | "financeiro" | "outros" | "conversar_hospedes" | "melhorias_compras";
 
 interface OwnerTicket {
   id: string;
@@ -45,7 +45,7 @@ interface OwnerTicket {
 const TICKET_TYPE_LABELS: Record<TicketType, string> = {
   duvida: "Dúvida",
   cobranca: "Cobrança",
-  bloqueio_data: "Bloqueio de Data",
+  
   financeiro: "Financeiro",
   outros: "Outros",
   conversar_hospedes: "Conversar c/ Hóspedes",
@@ -55,7 +55,7 @@ const TICKET_TYPE_LABELS: Record<TicketType, string> = {
 const TICKET_TYPE_ICONS: Record<TicketType, React.ReactNode> = {
   duvida: <HelpCircle className="h-3 w-3" />,
   cobranca: <DollarSign className="h-3 w-3" />,
-  bloqueio_data: <Lock className="h-3 w-3" />,
+  
   financeiro: <DollarSign className="h-3 w-3" />,
   outros: <Info className="h-3 w-3" />,
   conversar_hospedes: <MessageCircle className="h-3 w-3" />,

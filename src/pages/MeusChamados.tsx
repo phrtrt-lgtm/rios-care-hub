@@ -25,7 +25,7 @@ const statusLabels: Record<string, string> = {
 const typeLabels: Record<string, string> = {
   duvida: "Dúvida/Info",
   conversar_hospedes: "Hóspedes",
-  bloqueio_data: "Bloqueio",
+  
   manutencao: "Manutenção",
   melhorias_compras: "Melhorias",
   cobranca: "Cobrança",
@@ -36,7 +36,7 @@ const typeLabels: Record<string, string> = {
 const typeColors: Record<string, string> = {
   duvida: "bg-secondary text-secondary-foreground",
   conversar_hospedes: "bg-secondary text-secondary-foreground",
-  bloqueio_data: "bg-secondary text-secondary-foreground",
+  
   manutencao: "bg-primary text-primary-foreground",
   melhorias_compras: "bg-primary text-primary-foreground",
   cobranca: "bg-destructive text-destructive-foreground",
@@ -199,7 +199,7 @@ export default function MeusChamados() {
             <TabsList className="flex-wrap h-auto gap-1 p-1">
               <TabsTrigger value="todos" className="text-xs h-7 px-2">Todos</TabsTrigger>
               <TabsTrigger value="manutencao" className="text-xs h-7 px-2">Manutenção</TabsTrigger>
-              <TabsTrigger value="bloqueio_data" className="text-xs h-7 px-2">Bloqueio</TabsTrigger>
+              
               <TabsTrigger value="duvida" className="text-xs h-7 px-2">Dúvida</TabsTrigger>
               <TabsTrigger value="financeiro" className="text-xs h-7 px-2">Financeiro</TabsTrigger>
               <TabsTrigger value="outros" className="text-xs h-7 px-2">Outros</TabsTrigger>
