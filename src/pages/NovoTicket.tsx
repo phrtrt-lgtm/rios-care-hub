@@ -34,7 +34,7 @@ interface Property {
 export default function NovoTicket() {
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
-  const [ticketType, setTicketType] = useState<"duvida" | "conversar_hospedes" | "bloqueio_data" | "manutencao" | "melhorias_compras" | "financeiro" | "">("");
+  const [ticketType, setTicketType] = useState<"duvida" | "conversar_hospedes" | "manutencao" | "melhorias_compras" | "financeiro" | "">("");
   const [priority, setPriority] = useState<"normal" | "urgente">("normal");
   const [propertyId, setPropertyId] = useState<string>("");
   const [properties, setProperties] = useState<Property[]>([]);
