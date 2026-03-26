@@ -308,7 +308,7 @@ export default function AdminBloqueiosDatas() {
                                 size="sm"
                                 variant="destructive"
                                 className="h-8 px-3 text-xs"
-                                onClick={() => handleReject(req.id)}
+                                onClick={() => openRejectDialog(req)}
                                 disabled={updatingId === req.id}
                               >
                                 <XCircle className="h-3.5 w-3.5 mr-1" />
