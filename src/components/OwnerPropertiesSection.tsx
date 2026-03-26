@@ -168,10 +168,29 @@ export const OwnerPropertiesSection = () => {
                 <Wrench className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 Manutenções
               </Button>
+
+              <Button
+                onClick={() => setBlockDialogProperty(property)}
+                variant="outline"
+                className="w-full text-xs sm:text-sm h-8 sm:h-9 border-dashed"
+                size="sm"
+              >
+                <CalendarX className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                Solicitar Bloqueio
+              </Button>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      {blockDialogProperty && (
+        <DateBlockRequestDialog
+          open={!!blockDialogProperty}
+          onOpenChange={(open) => { if (!open) setBlockDialogProperty(null); }}
+          propertyId={blockDialogProperty.id}
+          propertyName={blockDialogProperty.name}
+        />
+      )}
     </div>
   );
 };
