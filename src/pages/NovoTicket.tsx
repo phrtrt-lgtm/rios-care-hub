@@ -254,7 +254,7 @@ export default function NovoTicket() {
         .insert([{
           owner_id: user?.id,
           created_by: user?.id,
-          ticket_type: ticketType as "duvida" | "conversar_hospedes" | "bloqueio_data" | "manutencao" | "melhorias_compras" | "financeiro",
+          ticket_type: ticketType as "duvida" | "conversar_hospedes" | "manutencao" | "melhorias_compras" | "financeiro",
           subject,
           description,
           priority,
