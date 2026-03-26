@@ -45,7 +45,7 @@ interface OwnerTicket {
 const TICKET_TYPE_LABELS: Record<TicketType, string> = {
   duvida: "Dúvida",
   cobranca: "Cobrança",
-  bloqueio_data: "Bloqueio de Data",
+  
   financeiro: "Financeiro",
   outros: "Outros",
   conversar_hospedes: "Conversar c/ Hóspedes",
