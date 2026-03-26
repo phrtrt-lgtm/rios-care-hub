@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, differenceInHours, differenceInMinutes } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, Search, Building, Clock, MessageSquare, HelpCircle, Calendar, DollarSign, Lock, Info, MessageCircle, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Search, Building, Clock, MessageSquare, HelpCircle, Calendar, DollarSign, Info, MessageCircle, ShoppingBag } from "lucide-react";
 import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
 
 type TicketStatus = "novo" | "em_analise" | "aguardando_info" | "em_execucao" | "concluido" | "cancelado";

@@ -162,35 +162,34 @@ export function UnifiedCalendarWidget() {
         });
       }
 
-      // Fetch blocked dates
-      const { data: blockedTickets } = await supabase
-        .from('tickets')
-        .select('id, blocked_dates_start, blocked_dates_end, subject, properties(name)')
-        .eq('ticket_type', 'bloqueio_data')
-        .not('blocked_dates_start', 'is', null)
-        .is('archived_at', null)
+      // Fetch blocked dates from date_block_requests
+      const { data: blockRequests } = await supabase
+        .from('date_block_requests')
+        .select('id, start_date, end_date, reason, notes, properties:properties(name)')
+        .in('status', ['pending', 'processed'])
         .limit(100);
 
-      if (blockedTickets) {
-        blockedTickets.forEach(t => {
-          if (t.blocked_dates_start) {
+      if (blockRequests) {
+        blockRequests.forEach(b => {
+          const reasonLabel = b.reason === 'family_visit' ? 'Visita de Parente' : 'Manutenção';
+          if (b.start_date) {
             allEvents.push({
-              id: `${t.id}-start`,
-              date: startOfDay(parseISO(t.blocked_dates_start)),
+              id: `block-${b.id}-start`,
+              date: startOfDay(parseISO(b.start_date)),
               type: 'blocked',
-              title: t.subject,
-              subtitle: `${(t.properties as any)?.name} - Início`,
-              url: `/ticket/${t.id}`,
+              title: `Bloqueio: ${reasonLabel}`,
+              subtitle: `${(b.properties as any)?.name} - Início`,
+              url: `/admin/bloqueios-datas`,
             });
           }
-          if (t.blocked_dates_end) {
+          if (b.end_date) {
             allEvents.push({
-              id: `${t.id}-end`,
-              date: startOfDay(parseISO(t.blocked_dates_end)),
+              id: `block-${b.id}-end`,
+              date: startOfDay(parseISO(b.end_date)),
               type: 'blocked',
-              title: t.subject,
-              subtitle: `${(t.properties as any)?.name} - Fim`,
-              url: `/ticket/${t.id}`,
+              title: `Bloqueio: ${reasonLabel}`,
+              subtitle: `${(b.properties as any)?.name} - Fim`,
+              url: `/admin/bloqueios-datas`,
             });
           }
         });
