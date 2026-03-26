@@ -98,15 +98,31 @@ export default function AdminBloqueiosDatas() {
     }
   };
 
-  const handleReject = async (id: string) => {
-    setUpdatingId(id);
+  const openRejectDialog = (req: BlockRequest) => {
+    setRejectingRequest(req);
+    setRejectionReason("");
+    setRejectDialogOpen(true);
+  };
+
+  const handleReject = async () => {
+    if (!rejectingRequest || !rejectionReason.trim()) {
+      toast({ title: "Informe o motivo da rejeição", variant: "destructive" });
+      return;
+    }
+    setUpdatingId(rejectingRequest.id);
     try {
       const { error } = await supabase
         .from("date_block_requests")
-        .update({ status: "rejected", processed_at: new Date().toISOString() })
-        .eq("id", id);
+        .update({
+          status: "rejected",
+          processed_at: new Date().toISOString(),
+          rejection_reason: rejectionReason.trim(),
+        })
+        .eq("id", rejectingRequest.id);
       if (error) throw error;
-      toast({ title: "Marcado como rejeitado" });
+      toast({ title: "Solicitação rejeitada com justificativa" });
+      setRejectDialogOpen(false);
+      setRejectingRequest(null);
       fetchRequests();
     } catch (err) {
       toast({ title: "Erro ao atualizar", variant: "destructive" });
