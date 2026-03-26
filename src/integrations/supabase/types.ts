@@ -1044,6 +1044,65 @@ export type Database = {
           },
         ]
       }
+      date_block_requests: {
+        Row: {
+          cleaning_fee_proof_path: string | null
+          created_at: string
+          end_date: string
+          id: string
+          notes: string | null
+          owner_id: string
+          processed_at: string | null
+          processed_by: string | null
+          property_id: string
+          reason: string
+          rejection_reason: string | null
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          cleaning_fee_proof_path?: string | null
+          created_at?: string
+          end_date: string
+          id?: string
+          notes?: string | null
+          owner_id: string
+          processed_at?: string | null
+          processed_by?: string | null
+          property_id: string
+          reason: string
+          rejection_reason?: string | null
+          start_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          cleaning_fee_proof_path?: string | null
+          created_at?: string
+          end_date?: string
+          id?: string
+          notes?: string | null
+          owner_id?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          property_id?: string
+          reason?: string
+          rejection_reason?: string | null
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "date_block_requests_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_templates: {
         Row: {
           available_variables: Json

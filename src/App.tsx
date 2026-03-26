@@ -70,8 +70,7 @@ import ImportarComissoesBooking from "./pages/ImportarComissoesBooking";
 import MinhasComissoesBooking from "./pages/MinhasComissoesBooking";
 import MinhaComissaoBookingDetalhes from "./pages/MinhaComissaoBookingDetalhes";
 import AdminManutencoesArquivo from "./pages/AdminManutencoesArquivo";
-
-
+import AdminBloqueiosDatas from "./pages/AdminBloqueiosDatas";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -527,6 +526,14 @@ const App = () => (
               }
             />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route
+              path="/admin/bloqueios-datas"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'agent', 'maintenance']}>
+                  <AdminBloqueiosDatas />
+                </ProtectedRoute>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
           </SessionHandlerWrapper>

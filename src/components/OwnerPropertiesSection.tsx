@@ -5,8 +5,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
-import { Building2, ClipboardCheck, Plus, MapPin, Wrench } from "lucide-react";
+import { Building2, ClipboardCheck, Plus, MapPin, Wrench, CalendarX } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DateBlockRequestDialog } from "@/components/DateBlockRequestDialog";
 
 interface Property {
   id: string;
@@ -21,6 +22,7 @@ export const OwnerPropertiesSection = () => {
   const navigate = useNavigate();
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
+  const [blockDialogProperty, setBlockDialogProperty] = useState<Property | null>(null);
 
   useEffect(() => {
     const fetchProperties = async () => {
@@ -166,10 +168,29 @@ export const OwnerPropertiesSection = () => {
                 <Wrench className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 Manutenções
               </Button>
+
+              <Button
+                onClick={() => setBlockDialogProperty(property)}
+                variant="outline"
+                className="w-full text-xs sm:text-sm h-8 sm:h-9 border-dashed"
+                size="sm"
+              >
+                <CalendarX className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                Solicitar Bloqueio
+              </Button>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      {blockDialogProperty && (
+        <DateBlockRequestDialog
+          open={!!blockDialogProperty}
+          onOpenChange={(open) => { if (!open) setBlockDialogProperty(null); }}
+          propertyId={blockDialogProperty.id}
+          propertyName={blockDialogProperty.name}
+        />
+      )}
     </div>
   );
 };
