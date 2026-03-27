@@ -124,6 +124,7 @@ export function FinancialReportView({ data, onBack, hideBackButton = false, forc
   const [_isPrinting, setIsPrinting] = useState(false);
   const [observation, setObservation] = useState('');
   const isPrinting = forcePrintMode || _isPrinting;
+  const useStaticExportLayout = forcePrintMode;
 
   useEffect(() => {
     const before = () => setIsPrinting(true);
@@ -141,7 +142,6 @@ export function FinancialReportView({ data, onBack, hideBackButton = false, forc
   const handleExportPdf = async () => {
     if (!reportContentRef.current) return;
     setIsExporting(true);
-    setIsPrinting(true);
     await new Promise<void>(r => requestAnimationFrame(() => requestAnimationFrame(() => r())));
     await new Promise(r => setTimeout(r, 200));
     try {
@@ -151,7 +151,6 @@ export function FinancialReportView({ data, onBack, hideBackButton = false, forc
     } catch {
       toast.error('Erro ao gerar PDF', { id: 'pdf-export' });
     } finally {
-      setIsPrinting(false);
       setIsExporting(false);
     }
   };
