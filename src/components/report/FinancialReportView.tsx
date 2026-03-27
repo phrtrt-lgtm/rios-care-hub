@@ -405,7 +405,6 @@ export function FinancialReportView({ data, onBack, hideBackButton = false, forc
                 <div className="rounded-2xl border-2 border-primary/20 bg-primary/5 p-6 mb-5">
                   <div className="flex items-center justify-between flex-wrap gap-4">
                     <div><p className="text-sm text-muted-foreground mb-1">Receita Total do Período</p><p className="text-4xl font-bold text-foreground">{formatReportCurrency(totals.totalOwnerNet)}</p><p className="text-sm text-muted-foreground mt-2">{totals.reservationCount} reservas · {dateRangeText}</p></div>
-                    <div className="flex flex-col items-end gap-1"><span className="text-xs text-muted-foreground uppercase tracking-wider">Taxa de ocupação</span><span className="text-3xl font-bold text-primary">{kpis.occupancy}%</span><span className="text-xs text-muted-foreground">{kpis.totalNights} noites ocupadas</span></div>
                   </div>
                 </div>
                 <div className="grid gap-3 mb-8" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
