@@ -33,7 +33,7 @@ const formatPeriodLabel = (start: string | null, end: string | null): string => 
   if (!start) return "Sem período";
   try {
     const d = new Date(start + 'T00:00:00');
-    return format(d, "MMMM yyyy", { locale: ptBR }).replace(/^\w/, c => c.toUpperCase());
+    return format(d, "MMMM", { locale: ptBR }).replace(/^\w/, c => c.toUpperCase());
   } catch {
     return "Sem período";
   }
