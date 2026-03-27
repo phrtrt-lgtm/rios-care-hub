@@ -77,7 +77,11 @@ export default function RelatoriosPropriedade() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      <MobileHeader title="Relatórios Financeiros" showBack />
+      <MobileHeader title="Relatórios Financeiros" leftAction={
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+      } />
 
       <div className="p-4 max-w-2xl mx-auto space-y-4">
         <p className="text-sm text-muted-foreground">{propertyName}</p>
