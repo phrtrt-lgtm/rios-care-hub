@@ -553,6 +553,14 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/relatorios-propriedade/:propertyId"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'agent', 'admin', 'maintenance']}>
+                  <RelatoriosPropriedade />
+                </ProtectedRoute>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
           </SessionHandlerWrapper>
