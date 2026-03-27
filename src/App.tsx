@@ -535,6 +535,14 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/relatorio-financeiro"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'agent', 'admin', 'maintenance']}>
+                  <RelatorioFinanceiro />
+                </ProtectedRoute>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
           </SessionHandlerWrapper>
