@@ -11,6 +11,7 @@ import { ReportFileUpload } from '@/components/report/ReportFileUpload';
 import { ReportStepIndicator } from '@/components/report/ReportStepIndicator';
 import { ReportReservationsTable } from '@/components/report/ReportReservationsTable';
 import { FinancialReportView } from '@/components/report/FinancialReportView';
+import { ReportOwnerAssociation } from '@/components/report/ReportOwnerAssociation';
 import { parseReportFile } from '@/lib/report-file-parser';
 import { filterReservations, generateReport } from '@/lib/report-calculations';
 import { Reservation, ParsedFile, ReportType, ReportData } from '@/lib/report-types';
