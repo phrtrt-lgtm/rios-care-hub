@@ -10,8 +10,9 @@ export async function exportElementAsPdf(
 
   const originalWidth = element.style.width;
   const originalMaxWidth = element.style.maxWidth;
-  element.style.width = '1024px';
-  element.style.maxWidth = '1024px';
+  const currentWidth = Math.max(320, Math.round(element.getBoundingClientRect().width));
+  element.style.width = `${currentWidth}px`;
+  element.style.maxWidth = `${currentWidth}px`;
 
   await new Promise(r => setTimeout(r, 150));
 
