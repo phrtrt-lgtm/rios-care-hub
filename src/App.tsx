@@ -73,6 +73,7 @@ import AdminManutencoesArquivo from "./pages/AdminManutencoesArquivo";
 import AdminBloqueiosDatas from "./pages/AdminBloqueiosDatas";
 import RelatorioFinanceiro from "./pages/RelatorioFinanceiro";
 import OwnerRelatorioFinanceiro from "./pages/OwnerRelatorioFinanceiro";
+import RelatoriosPropriedade from "./pages/RelatoriosPropriedade";
 const queryClient = new QueryClient();
 
 const App = () => (
