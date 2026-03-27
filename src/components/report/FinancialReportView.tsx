@@ -344,8 +344,8 @@ export function FinancialReportView({ data, onBack, hideBackButton = false, forc
       <div className="mb-8">
         <SectionSeparator title={config.reportType === 'owner' ? 'Receita por Mês' : 'Desempenho Mensal'} />
         <div className="rounded-xl" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)', borderRadius: '12px', overflow: 'hidden' }}>
-          <div className={isPrinting ? '' : 'h-64 w-full'}>
-            {isPrinting ? (
+          <div className={useStaticExportLayout ? '' : 'h-64 w-full'}>
+            {useStaticExportLayout ? (
               <BarChart width={CHART_PRINT_W} height={CHART_PRINT_H} data={chartData} margin={{ top: 25, right: 10, left: 10, bottom: 10 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} />
