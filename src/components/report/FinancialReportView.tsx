@@ -614,43 +614,9 @@ export function FinancialReportView({ data, onBack, hideBackButton = false, forc
                   </div>
 
                   {/* Desktop: table | Mobile: cards */}
-                  <div className={isPrinting ? 'block' : 'hidden sm:block'}>
-                    <div className="border border-border rounded-lg w-full overflow-x-auto">
-                      <table className="w-full table-fixed border-collapse" style={{ fontSize: '10px' }}>
-                        <thead>
-                          <tr style={{ backgroundColor: 'hsl(var(--muted))' }}>
-                            {columns.map((col, idx) => (
-                              <th key={idx} className={`px-1 py-1 font-semibold border-b border-border text-[10px] uppercase tracking-tight whitespace-nowrap ${isOwnerType ? (idx === columns.length - 1 ? 'text-right' : idx >= 3 ? 'text-right' : 'text-left') : (idx >= 2 ? 'text-right' : 'text-left')}`}
-                                style={{ color: '#8B3A1F', ...(idx === columns.length - 1 ? { fontWeight: 700, color: '#C0522B' } : {}), ...(idx === 0 ? { borderLeft: '3px solid #C0522B' } : {}) }}>
-                                {col}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {group.reservations.map((reservation, rIdx) => {
-                            const values = getRowValues(reservation);
-                            return (
-                              <tr key={reservation.id} className="border-b border-border/30 last:border-0" style={{ backgroundColor: rIdx % 2 === 0 ? 'transparent' : 'hsl(var(--muted) / 0.3)' }}>
-                                {values.map((val, vIdx) => {
-                                  const isLastCol = vIdx === values.length - 1;
-                                  return (
-                                    <td key={vIdx} className={`px-1 py-1 text-[10px] ${isOwnerType ? (vIdx === 0 ? 'font-semibold text-foreground' : isLastCol ? 'text-right' : vIdx >= 3 ? 'text-right text-muted-foreground' : 'text-muted-foreground') : `${vIdx >= 2 ? 'text-right' : ''} ${vIdx === 0 ? 'font-medium text-foreground' : 'text-muted-foreground'}`}`}
-                                      style={{ fontVariantNumeric: 'tabular-nums', ...(isLastCol ? { fontWeight: 700, color: '#C0522B' } : {}), ...(vIdx === 0 ? { borderLeft: '3px solid #C0522B' } : {}) }}>
-                                      {val}
-                                    </td>
-                                  );
-                                })}
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  {/* Mobile: card layout */}
-                  <div className={isPrinting ? 'hidden' : 'sm:hidden space-y-2'}>
+                  <div className={useStaticExportLayout ? 'block' : 'hidden sm:block'}>
+...
+                  <div className={useStaticExportLayout ? 'hidden' : 'sm:hidden space-y-2'}>
                     {group.reservations.map((reservation) => (
                       <ReservationCard key={reservation.id} reservation={reservation} reportType={config.reportType} getNights={getNights} />
                     ))}
