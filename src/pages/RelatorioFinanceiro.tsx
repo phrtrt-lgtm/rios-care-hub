@@ -17,7 +17,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { toast } from 'sonner';
 import { CalendarIcon, ChevronRight, ChevronLeft, Loader2, FileText, Building2, Settings, BarChart3, FileArchive, Check, Pencil, X, ArrowLeft, Send, Eye } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import JSZip from 'jszip';
@@ -117,8 +117,8 @@ export default function RelatorioFinanceiro() {
       };
 
       setParsedFile(combined);
-      setStartDate(combined.dateRange.min);
-      setEndDate(combined.dateRange.max);
+      setStartDate(startOfMonth(combined.dateRange.min));
+      setEndDate(endOfMonth(combined.dateRange.max));
 
       if (combined.properties.length === 1) {
         setSelectedProperties([combined.properties[0]]);
@@ -165,8 +165,8 @@ export default function RelatorioFinanceiro() {
         dateRange: { min: minDate || new Date(), max: maxDate || new Date() },
       };
       setParsedFile(combined);
-      setStartDate(combined.dateRange.min);
-      setEndDate(combined.dateRange.max);
+      setStartDate(startOfMonth(combined.dateRange.min));
+      setEndDate(endOfMonth(combined.dateRange.max));
       setSelectedProperties(prev => prev.filter(p => combined.properties.includes(p)));
       toast.success(`${uniqueReservations.length} reservas restantes.`);
     } catch {
