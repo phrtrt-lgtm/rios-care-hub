@@ -651,7 +651,7 @@ export function FinancialReportView({ data, onBack, hideBackButton = false, forc
                   </div>
 
                   {/* Mobile: card layout */}
-                  <div className="sm:hidden space-y-2">
+                  <div className={isPrinting ? 'hidden' : 'sm:hidden space-y-2'}>
                     {group.reservations.map((reservation) => (
                       <ReservationCard key={reservation.id} reservation={reservation} reportType={config.reportType} getNights={getNights} />
                     ))}
