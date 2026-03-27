@@ -22,6 +22,7 @@ import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { OwnerOnboardingTour } from "@/components/OwnerOnboardingTour";
 import { motion } from "framer-motion";
 import { OwnerBookingCommissionsPreview } from "@/components/OwnerBookingCommissionsPreview";
+import { OwnerFinancialReportsPreview } from "@/components/OwnerFinancialReportsPreview";
 
 
 export default function MinhaCaixa() {
@@ -255,6 +256,7 @@ export default function MinhaCaixa() {
         {/* Owner Tickets and Charges Preview - for owners */}
         {profile?.role === "owner" && (
           <div className="grid grid-cols-1 gap-4 mb-6">
+            <OwnerFinancialReportsPreview />
             <OwnerBookingCommissionsPreview />
             <OwnerChargesPreview />
             <OwnerTicketsPreview />
