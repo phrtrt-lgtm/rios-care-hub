@@ -477,10 +477,9 @@ export function FinancialReportView({ data, onBack, hideBackButton = false, forc
                     <div className="text-right"><p className="text-primary-foreground/80 text-sm">Período</p><p className="font-medium mt-1">{dateRangeText}</p></div>
                   </div>
                 </div>
-                <div className="grid gap-3 mb-8" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
+                <div className="grid gap-3 mb-8" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
                   {[
                     { label: 'Diária Média', value: formatReportCurrency(kpis.avgNightly), sub: 'por noite', icon: DollarSign },
-                    { label: 'Ocupação', value: `${kpis.occupancy}%`, sub: `${kpis.totalNights} de ${kpis.periodDays} dias`, icon: Percent },
                     { label: 'Estadia Média', value: `${kpis.avgStay} noites`, sub: 'por hóspede', icon: BedDouble },
                     { label: 'Ticket Médio', value: formatReportCurrency(kpis.avgPerBooking), sub: 'por reserva', icon: Ticket },
                   ].map((kpi, i) => {
