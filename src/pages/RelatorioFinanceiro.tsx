@@ -117,8 +117,8 @@ export default function RelatorioFinanceiro() {
       };
 
       setParsedFile(combined);
-      setStartDate(combined.dateRange.min);
-      setEndDate(combined.dateRange.max);
+      setStartDate(startOfMonth(combined.dateRange.min));
+      setEndDate(endOfMonth(combined.dateRange.max));
 
       if (combined.properties.length === 1) {
         setSelectedProperties([combined.properties[0]]);
