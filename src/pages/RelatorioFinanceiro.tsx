@@ -165,8 +165,8 @@ export default function RelatorioFinanceiro() {
         dateRange: { min: minDate || new Date(), max: maxDate || new Date() },
       };
       setParsedFile(combined);
-      setStartDate(combined.dateRange.min);
-      setEndDate(combined.dateRange.max);
+      setStartDate(startOfMonth(combined.dateRange.min));
+      setEndDate(endOfMonth(combined.dateRange.max));
       setSelectedProperties(prev => prev.filter(p => combined.properties.includes(p)));
       toast.success(`${uniqueReservations.length} reservas restantes.`);
     } catch {
