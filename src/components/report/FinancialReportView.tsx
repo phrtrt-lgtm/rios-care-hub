@@ -615,7 +615,7 @@ export function FinancialReportView({ data, onBack, hideBackButton = false, forc
                   </div>
 
                   {/* Desktop: table | Mobile: cards */}
-                  <div className="hidden sm:block">
+                  <div className={isPrinting ? 'block' : 'hidden sm:block'}>
                     <div className="border border-border rounded-lg w-full overflow-x-auto">
                       <table className="w-full table-fixed border-collapse" style={{ fontSize: '10px' }}>
                         <thead>
