@@ -71,6 +71,7 @@ import MinhasComissoesBooking from "./pages/MinhasComissoesBooking";
 import MinhaComissaoBookingDetalhes from "./pages/MinhaComissaoBookingDetalhes";
 import AdminManutencoesArquivo from "./pages/AdminManutencoesArquivo";
 import AdminBloqueiosDatas from "./pages/AdminBloqueiosDatas";
+import RelatorioFinanceiro from "./pages/RelatorioFinanceiro";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -531,6 +532,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['admin', 'agent', 'maintenance']}>
                   <AdminBloqueiosDatas />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/relatorio-financeiro"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'agent', 'admin', 'maintenance']}>
+                  <RelatorioFinanceiro />
                 </ProtectedRoute>
               }
             />
