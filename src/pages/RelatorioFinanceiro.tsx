@@ -329,9 +329,35 @@ export default function RelatorioFinanceiro() {
 
         {/* Step 3: Report View */}
         {step === 3 && reportData && (
-          <FinancialReportView
-            data={reportData}
-            onBack={() => setStep(2)}
+          <div className="space-y-4">
+            <FinancialReportView
+              data={reportData}
+              onBack={() => setStep(2)}
+            />
+            {!isOwner && (
+              <div className="flex justify-end px-4">
+                <Button onClick={() => setStep(4)} size="lg">
+                  <Send className="mr-2 h-4 w-4" />
+                  Continuar para Publicação
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Step 4: Owner Association */}
+        {step === 4 && reportData && (
+          <ReportOwnerAssociation
+            reports={[{ propertyName: selectedProperty, reportData }]}
+            onBack={() => setStep(3)}
+            onPublished={() => {
+              toast.success('Relatório publicado com sucesso!');
+              setStep(1);
+              setFiles([]);
+              setParsedData(null);
+              setReservations([]);
+              setReportData(null);
+            }}
           />
         )}
       </div>
