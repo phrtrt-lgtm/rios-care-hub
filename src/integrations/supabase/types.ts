@@ -1146,6 +1146,62 @@ export type Database = {
         }
         Relationships: []
       }
+      financial_reports: {
+        Row: {
+          commission_percentage: number
+          created_at: string
+          created_by: string | null
+          id: string
+          owner_id: string
+          period_end: string | null
+          period_start: string | null
+          property_id: string | null
+          property_name: string
+          report_data: Json
+          report_type: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          commission_percentage?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          owner_id: string
+          period_end?: string | null
+          period_start?: string | null
+          property_id?: string | null
+          property_name: string
+          report_data: Json
+          report_type: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          commission_percentage?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          owner_id?: string
+          period_end?: string | null
+          period_start?: string | null
+          property_id?: string | null
+          property_name?: string
+          report_data?: Json
+          report_type?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_reports_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inspection_drafts: {
         Row: {
           created_at: string

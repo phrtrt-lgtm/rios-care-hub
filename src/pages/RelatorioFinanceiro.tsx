@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, FileSpreadsheet, Settings, Eye, Loader2 } from 'lucide-react';
+import { ArrowLeft, FileSpreadsheet, Settings, Eye, Loader2, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,7 @@ import { ReportFileUpload } from '@/components/report/ReportFileUpload';
 import { ReportStepIndicator } from '@/components/report/ReportStepIndicator';
 import { ReportReservationsTable } from '@/components/report/ReportReservationsTable';
 import { FinancialReportView } from '@/components/report/FinancialReportView';
+import { ReportOwnerAssociation } from '@/components/report/ReportOwnerAssociation';
 import { parseReportFile } from '@/lib/report-file-parser';
 import { filterReservations, generateReport } from '@/lib/report-calculations';
 import { Reservation, ParsedFile, ReportType, ReportData } from '@/lib/report-types';
@@ -21,6 +22,7 @@ const STEPS = [
   { id: 1, title: 'Upload', description: 'Importar dados' },
   { id: 2, title: 'Configurar', description: 'Ajustar parâmetros' },
   { id: 3, title: 'Relatório', description: 'Visualizar resultado' },
+  { id: 4, title: 'Associar', description: 'Vincular proprietários' },
 ];
 
 export default function RelatorioFinanceiro() {
@@ -165,7 +167,7 @@ export default function RelatorioFinanceiro() {
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-5xl px-4 py-6 space-y-6">
         {/* Header */}
-        {step !== 3 && (
+        {step !== 3 && step !== 4 && (
           <>
             <div className="flex items-center gap-3">
               <Button variant="ghost" size="icon" onClick={() => step === 1 ? navigate(-1) : setStep(step - 1)}>
@@ -327,9 +329,35 @@ export default function RelatorioFinanceiro() {
 
         {/* Step 3: Report View */}
         {step === 3 && reportData && (
-          <FinancialReportView
-            data={reportData}
-            onBack={() => setStep(2)}
+          <div className="space-y-4">
+            <FinancialReportView
+              data={reportData}
+              onBack={() => setStep(2)}
+            />
+            {!isOwner && (
+              <div className="flex justify-end px-4">
+                <Button onClick={() => setStep(4)} size="lg">
+                  <Send className="mr-2 h-4 w-4" />
+                  Continuar para Publicação
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Step 4: Owner Association */}
+        {step === 4 && reportData && (
+          <ReportOwnerAssociation
+            reports={[{ propertyName: selectedProperty, reportData }]}
+            onBack={() => setStep(3)}
+            onPublished={() => {
+              toast.success('Relatório publicado com sucesso!');
+              setStep(1);
+              setFiles([]);
+              setParsedData(null);
+              setReservations([]);
+              setReportData(null);
+            }}
           />
         )}
       </div>
