@@ -22,6 +22,7 @@ const STEPS = [
   { id: 1, title: 'Upload', description: 'Importar dados' },
   { id: 2, title: 'Configurar', description: 'Ajustar parâmetros' },
   { id: 3, title: 'Relatório', description: 'Visualizar resultado' },
+  { id: 4, title: 'Associar', description: 'Vincular proprietários' },
 ];
 
 export default function RelatorioFinanceiro() {
