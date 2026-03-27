@@ -167,7 +167,7 @@ export default function RelatorioFinanceiro() {
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-5xl px-4 py-6 space-y-6">
         {/* Header */}
-        {step !== 3 && (
+        {step !== 3 && step !== 4 && (
           <>
             <div className="flex items-center gap-3">
               <Button variant="ghost" size="icon" onClick={() => step === 1 ? navigate(-1) : setStep(step - 1)}>
