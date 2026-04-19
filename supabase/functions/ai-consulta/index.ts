@@ -225,9 +225,11 @@ serve(async (req) => {
       rList.find((r) => r.check_in <= date && r.check_out > date)?.check_out ?? null;
 
     ctx.push(`\n=== CALENDÁRIO DE RESERVAS – PRÓXIMOS 90 DIAS (hoje: ${today}) ===`);
-    ctx.push(`IMPORTANTE: "OCUPADO HOJE" significa que existe uma reserva ativa cobrindo a data de hoje. "DISPONÍVEL" significa que não há nenhuma reserva cobrindo hoje.\n`);
+    ctx.push(`IMPORTANTE: Apenas imóveis com iCal configurado têm dados de reservas/disponibilidade. Imóveis sem iCal NÃO devem ser consultados sobre datas, ocupação ou janelas livres — responda que não há dados de calendário para esses imóveis.\n`);
 
     for (const [propName, rList] of Object.entries(resByProp)) {
+      // Skip properties without iCal — não temos dados confiáveis de disponibilidade
+      if (!propertyNamesWithIcal.has(propName)) continue;
       const occupied = isOccupied(rList, today);
       const checkout = currentCheckout(rList, today);
       const statusLabel = occupied
