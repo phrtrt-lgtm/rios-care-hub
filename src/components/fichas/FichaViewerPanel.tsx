@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, Pencil, Copy, Check, FileText, Clock } from "lucide-react";
+import { Loader2, Pencil, Copy, Check, FileText, Clock, History } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { FichaHistoryDialog } from "./FichaHistoryDialog";
 
 interface Props {
   propertyId: string | null;
@@ -70,6 +71,7 @@ const CopyButton = ({ text, label }: { text: string; label?: string }) => {
 export const FichaViewerPanel = ({ propertyId, open, onOpenChange, onEdit }: Props) => {
   const [data, setData] = useState<FichaData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   useEffect(() => {
     if (!open || !propertyId) return;
@@ -142,10 +144,18 @@ export const FichaViewerPanel = ({ propertyId, open, onOpenChange, onEdit }: Pro
               )}
             </div>
             {propertyId && (
-              <Button size="sm" onClick={() => onEdit(propertyId)} className="shrink-0">
-                <Pencil className="mr-2 h-3.5 w-3.5" />
-                Editar
-              </Button>
+              <div className="flex items-center gap-1 shrink-0">
+                {data?.hasContent && data.version > 1 && (
+                  <Button size="sm" variant="ghost" onClick={() => setHistoryOpen(true)}>
+                    <History className="mr-1.5 h-3.5 w-3.5" />
+                    Histórico
+                  </Button>
+                )}
+                <Button size="sm" onClick={() => onEdit(propertyId)}>
+                  <Pencil className="mr-2 h-3.5 w-3.5" />
+                  Editar
+                </Button>
+              </div>
             )}
           </div>
         </SheetHeader>
@@ -283,6 +293,14 @@ export const FichaViewerPanel = ({ propertyId, open, onOpenChange, onEdit }: Pro
           </div>
         )}
       </SheetContent>
+
+      <FichaHistoryDialog
+        propertyId={propertyId}
+        propertyName={data?.propertyName || ""}
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        onRestored={() => propertyId && loadFicha(propertyId)}
+      />
     </Sheet>
   );
 };
