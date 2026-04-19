@@ -271,11 +271,20 @@ serve(async (req) => {
       }
     }
 
-    // Properties with no reservations at all
+    // Properties with no reservations at all (only show those WITH iCal — sem iCal não temos dados)
     for (const p of properties) {
-      if (!resByProp[(p as any).name]) {
-        ctx.push(`\n[${(p as any).name}] → STATUS ATUAL: 🟢 DISPONÍVEL HOJE\n  ⬜ Sem reservas nos próximos 90 dias`);
+      const pname = (p as any).name;
+      if (!resByProp[pname] && propertyNamesWithIcal.has(pname)) {
+        ctx.push(`\n[${pname}] → STATUS ATUAL: 🟢 DISPONÍVEL HOJE\n  ⬜ Sem reservas nos próximos 90 dias`);
       }
+    }
+
+    // List properties WITHOUT iCal so the AI knows it cannot answer date queries for them
+    const noIcalProps = properties.filter((p: any) => !propertiesWithIcal.has(p.id)).map((p: any) => p.name);
+    if (noIcalProps.length > 0) {
+      ctx.push(`\n=== IMÓVEIS SEM iCAL CONFIGURADO (${noIcalProps.length}) ===`);
+      ctx.push(`Para os imóveis abaixo NÃO há sincronização de calendário. NÃO responda perguntas sobre disponibilidade, ocupação, datas livres, próximas reservas ou janelas — informe que esses imóveis não possuem iCal configurado:`);
+      for (const n of noIcalProps) ctx.push(`  • ${n}`);
     }
 
     // ── Fichas dos imóveis (markdown) ─────────────────────────────────────
