@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import {
   ArrowLeft, Calendar, BarChart3, ArrowUpDown, ArrowUp, ArrowDown,
-  Building2, TrendingUp, TrendingDown, BrainCircuit, Wrench, DollarSign, AlertTriangle
+  Building2, TrendingUp, TrendingDown, BrainCircuit, Wrench, DollarSign, AlertTriangle, FileText
 } from "lucide-react";
 import { format, differenceInDays, eachDayOfInterval, parseISO, isWithinInterval, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
