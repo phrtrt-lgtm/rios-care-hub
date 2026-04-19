@@ -71,6 +71,7 @@ const CopyButton = ({ text, label }: { text: string; label?: string }) => {
 export const FichaViewerPanel = ({ propertyId, open, onOpenChange, onEdit }: Props) => {
   const [data, setData] = useState<FichaData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   useEffect(() => {
     if (!open || !propertyId) return;
