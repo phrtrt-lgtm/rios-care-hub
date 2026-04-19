@@ -172,7 +172,7 @@ export const BulkUploadFichasDialog = ({ open, onOpenChange, properties, onCompl
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) setMatches([]); onOpenChange(o); }}>
-      <DialogContent className="max-w-3xl h-[90vh] max-h-[90vh] min-h-0 overflow-hidden flex flex-col">
+      <DialogContent className="max-w-3xl h-[90vh] max-h-[90vh] min-h-0 overflow-hidden grid grid-rows-[auto_minmax(0,1fr)_auto]">
         <DialogHeader>
           <DialogTitle>Upload em massa de fichas</DialogTitle>
           <DialogDescription>
@@ -251,7 +251,7 @@ export const BulkUploadFichasDialog = ({ open, onOpenChange, properties, onCompl
           </div>
         )}
 
-        <DialogFooter className="flex items-center justify-between gap-2 sm:justify-between">
+        <DialogFooter className="shrink-0 flex items-center justify-between gap-2 sm:justify-between">
           <div className="text-xs text-muted-foreground">
             {matches.length > 0 && `${matchedCount} de ${matches.length} pronta(s) para envio`}
           </div>
