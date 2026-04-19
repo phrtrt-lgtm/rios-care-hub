@@ -190,20 +190,27 @@ const TodosTickets = () => {
       filtered = filtered.filter(ticket => ticket.ticket_type === typeFilter);
     }
 
-    // Sort: open tickets by SLA (closest to expiring first), closed tickets at the end
+    // Group: open tickets first, closed at the end. Within each group, apply selected sort.
     filtered.sort((a, b) => {
       const aIsOpen = isTicketOpen(a.status);
       const bIsOpen = isTicketOpen(b.status);
-      
-      // If one is closed and other is open, open comes first
+
       if (aIsOpen && !bIsOpen) return -1;
       if (!aIsOpen && bIsOpen) return 1;
-      
-      // Both open or both closed - sort by SLA
-      if (!a.sla_due_at && !b.sla_due_at) return 0;
-      if (!a.sla_due_at) return 1;
-      if (!b.sla_due_at) return -1;
-      return new Date(a.sla_due_at).getTime() - new Date(b.sla_due_at).getTime();
+
+      if (sortBy === "oldest") {
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      }
+
+      if (sortBy === "sla") {
+        if (!a.sla_due_at && !b.sla_due_at) return 0;
+        if (!a.sla_due_at) return 1;
+        if (!b.sla_due_at) return -1;
+        return new Date(a.sla_due_at).getTime() - new Date(b.sla_due_at).getTime();
+      }
+
+      // default: recent (most recent first)
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
 
     setFilteredTickets(filtered);
