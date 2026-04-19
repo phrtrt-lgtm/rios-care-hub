@@ -1607,6 +1607,109 @@ export type Database = {
           },
         ]
       }
+      property_file_versions: {
+        Row: {
+          change_reason: string | null
+          content_md: string
+          created_at: string
+          edited_by: string | null
+          id: string
+          property_file_id: string
+          property_id: string
+          version: number
+        }
+        Insert: {
+          change_reason?: string | null
+          content_md: string
+          created_at?: string
+          edited_by?: string | null
+          id?: string
+          property_file_id: string
+          property_id: string
+          version: number
+        }
+        Update: {
+          change_reason?: string | null
+          content_md?: string
+          created_at?: string
+          edited_by?: string | null
+          id?: string
+          property_file_id?: string
+          property_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_file_versions_edited_by_fkey"
+            columns: ["edited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "property_file_versions_property_file_id_fkey"
+            columns: ["property_file_id"]
+            isOneToOne: false
+            referencedRelation: "property_files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "property_file_versions_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      property_files: {
+        Row: {
+          content_md: string
+          created_at: string
+          id: string
+          property_id: string
+          summary: string | null
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          content_md?: string
+          created_at?: string
+          id?: string
+          property_id: string
+          summary?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Update: {
+          content_md?: string
+          created_at?: string
+          id?: string
+          property_id?: string
+          summary?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_files_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: true
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "property_files_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       property_ical_links: {
         Row: {
           created_at: string
