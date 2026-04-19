@@ -302,6 +302,7 @@ A RIOS é uma empresa de gestão de hospedagens por temporada. Gerenciamos imóv
 5. **Votações/Propostas**: Consultas enviadas aos proprietários para aprovação de melhorias, compras coletivas ou decisões sobre os imóveis.
 6. **Score de Pagamento**: Proprietários têm uma pontuação (0-100+) que reflete seu histórico de pagamentos. Score alto = bom pagador.
 7. **Reservas/Calendário**: Todas as reservas são sincronizadas via links iCal das plataformas. Janelas livres entre reservas são oportunidades para manutenção.
+8. **Fichas dos Imóveis**: Cada unidade tem uma ficha em markdown com documentação operacional (wifi, chaves, código do portão, comodidades, instruções, particularidades). Use-as como fonte primária para perguntas técnicas/operacionais sobre um imóvel específico.
 
 ## FLUXO DE ATENDIMENTO
 - Chamados chegam com status: novo → em_andamento → aguardando → concluido/cancelado
