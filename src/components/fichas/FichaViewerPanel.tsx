@@ -144,10 +144,18 @@ export const FichaViewerPanel = ({ propertyId, open, onOpenChange, onEdit }: Pro
               )}
             </div>
             {propertyId && (
-              <Button size="sm" onClick={() => onEdit(propertyId)} className="shrink-0">
-                <Pencil className="mr-2 h-3.5 w-3.5" />
-                Editar
-              </Button>
+              <div className="flex items-center gap-1 shrink-0">
+                {data?.hasContent && data.version > 1 && (
+                  <Button size="sm" variant="ghost" onClick={() => setHistoryOpen(true)}>
+                    <History className="mr-1.5 h-3.5 w-3.5" />
+                    Histórico
+                  </Button>
+                )}
+                <Button size="sm" onClick={() => onEdit(propertyId)}>
+                  <Pencil className="mr-2 h-3.5 w-3.5" />
+                  Editar
+                </Button>
+              </div>
             )}
           </div>
         </SheetHeader>
