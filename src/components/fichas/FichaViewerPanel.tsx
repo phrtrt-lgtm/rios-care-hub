@@ -293,6 +293,14 @@ export const FichaViewerPanel = ({ propertyId, open, onOpenChange, onEdit }: Pro
           </div>
         )}
       </SheetContent>
+
+      <FichaHistoryDialog
+        propertyId={propertyId}
+        propertyName={data?.propertyName || ""}
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        onRestored={() => propertyId && loadFicha(propertyId)}
+      />
     </Sheet>
   );
 };
