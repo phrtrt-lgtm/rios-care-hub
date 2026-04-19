@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Upload, FileText, CheckCircle2, AlertCircle, X, Loader2 } from "lucide-react";
@@ -173,7 +172,7 @@ export const BulkUploadFichasDialog = ({ open, onOpenChange, properties, onCompl
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) setMatches([]); onOpenChange(o); }}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-3xl h-[90vh] max-h-[90vh] min-h-0 overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Upload em massa de fichas</DialogTitle>
           <DialogDescription>
@@ -197,8 +196,8 @@ export const BulkUploadFichasDialog = ({ open, onOpenChange, properties, onCompl
             />
           </label>
         ) : (
-          <ScrollArea className="flex-1 min-h-0 max-h-[60vh] pr-2">
-            <div className="space-y-2">
+          <div className="flex-1 min-h-0 overflow-y-auto pr-2">
+            <div className="space-y-2 pb-1">
               {matches.map((m, i) => (
                 <div
                   key={i}
@@ -249,7 +248,7 @@ export const BulkUploadFichasDialog = ({ open, onOpenChange, properties, onCompl
                 </div>
               ))}
             </div>
-          </ScrollArea>
+          </div>
         )}
 
         <DialogFooter className="flex items-center justify-between gap-2 sm:justify-between">
