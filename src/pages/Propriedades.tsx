@@ -247,36 +247,41 @@ const Propriedades = () => {
     setDialogOpen(true);
   };
 
-  const handleDelete = async (propertyId: string) => {
-    // Only admins can delete
+  const handleArchiveToggle = async (property: Property) => {
     if (profile?.role !== 'admin') {
       toast({
         title: "Permissão negada",
-        description: "Apenas administradores podem excluir unidades",
+        description: "Apenas administradores podem arquivar unidades",
         variant: "destructive",
       });
       return;
     }
 
-    if (!confirm("Tem certeza que deseja excluir esta unidade?")) return;
+    const isArchiving = !property.archived_at;
+    const confirmMsg = isArchiving
+      ? `Arquivar a unidade "${property.name}"? Ela ficará oculta da listagem mas todo o histórico (cobranças, vistorias, chamados) será preservado.`
+      : `Restaurar a unidade "${property.name}" para a listagem ativa?`;
+    if (!confirm(confirmMsg)) return;
 
     try {
       const { error } = await supabase
         .from('properties')
-        .delete()
-        .eq('id', propertyId);
+        .update({ archived_at: isArchiving ? new Date().toISOString() : null })
+        .eq('id', property.id);
 
       if (error) throw error;
 
       toast({
-        title: "Unidade excluída!",
-        description: "A unidade foi excluída com sucesso."
+        title: isArchiving ? "Unidade arquivada!" : "Unidade restaurada!",
+        description: isArchiving
+          ? "A unidade foi ocultada da listagem ativa."
+          : "A unidade voltou para a listagem ativa."
       });
 
       fetchData();
     } catch (error: any) {
       toast({
-        title: "Erro ao excluir unidade",
+        title: "Erro ao atualizar unidade",
         description: error.message,
         variant: "destructive"
       });
