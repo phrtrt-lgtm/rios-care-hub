@@ -33,6 +33,7 @@ serve(async (req) => {
       proposalsRes,
       profilesRes,
       reservationsRes,
+      propertyFilesRes,
     ] = await Promise.all([
       // All non-closed tickets with property and owner info
       supabase
@@ -97,6 +98,11 @@ serve(async (req) => {
         .lte("check_in", in90days)
         .order("check_in", { ascending: true })
         .limit(300),
+
+      // Fichas (property_files) — documentação interna em markdown por imóvel
+      supabase
+        .from("property_files")
+        .select("property_id, content_md, version, updated_at"),
     ]);
 
     const tickets = ticketsRes.data || [];
@@ -107,6 +113,7 @@ serve(async (req) => {
     const proposals = proposalsRes.data || [];
     const profiles = profilesRes.data || [];
     const reservations = reservationsRes.data || [];
+    const propertyFiles = propertyFilesRes.data || [];
 
     // ── Build structured context ──────────────────────────────────────────
     const owners = profiles.filter((p: any) => p.role === "owner");
