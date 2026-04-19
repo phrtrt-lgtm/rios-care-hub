@@ -62,6 +62,7 @@ const TodosTickets = () => {
   const [chatOpen, setChatOpen] = useState(false);
   const [selectedTicketForChat, setSelectedTicketForChat] = useState<Ticket | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [sortBy, setSortBy] = useState<string>("recent"); // recent | oldest | sla
 
   useEffect(() => {
     if (!user || !['admin', 'agent'].includes(profile?.role || '')) {
@@ -73,7 +74,7 @@ const TodosTickets = () => {
 
   useEffect(() => {
     filterTickets();
-  }, [searchTerm, statusFilter, priorityFilter, typeFilter, tickets]);
+  }, [searchTerm, statusFilter, priorityFilter, typeFilter, sortBy, tickets]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -189,20 +190,27 @@ const TodosTickets = () => {
       filtered = filtered.filter(ticket => ticket.ticket_type === typeFilter);
     }
 
-    // Sort: open tickets by SLA (closest to expiring first), closed tickets at the end
+    // Group: open tickets first, closed at the end. Within each group, apply selected sort.
     filtered.sort((a, b) => {
       const aIsOpen = isTicketOpen(a.status);
       const bIsOpen = isTicketOpen(b.status);
-      
-      // If one is closed and other is open, open comes first
+
       if (aIsOpen && !bIsOpen) return -1;
       if (!aIsOpen && bIsOpen) return 1;
-      
-      // Both open or both closed - sort by SLA
-      if (!a.sla_due_at && !b.sla_due_at) return 0;
-      if (!a.sla_due_at) return 1;
-      if (!b.sla_due_at) return -1;
-      return new Date(a.sla_due_at).getTime() - new Date(b.sla_due_at).getTime();
+
+      if (sortBy === "oldest") {
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      }
+
+      if (sortBy === "sla") {
+        if (!a.sla_due_at && !b.sla_due_at) return 0;
+        if (!a.sla_due_at) return 1;
+        if (!b.sla_due_at) return -1;
+        return new Date(a.sla_due_at).getTime() - new Date(b.sla_due_at).getTime();
+      }
+
+      // default: recent (most recent first)
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
 
     setFilteredTickets(filtered);
@@ -426,8 +434,8 @@ const TodosTickets = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-4">
-              <div className="relative">
+            <div className="grid gap-4 md:grid-cols-5">
+              <div className="relative md:col-span-2">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Buscar por assunto, proprietário ou unidade..."
@@ -443,8 +451,9 @@ const TodosTickets = () => {
                 <SelectContent>
                   <SelectItem value="all">Todos os Status</SelectItem>
                   <SelectItem value="novo">Novo</SelectItem>
-                  <SelectItem value="em_andamento">Em Andamento</SelectItem>
-                  <SelectItem value="aguardando_resposta">Aguardando Resposta</SelectItem>
+                  <SelectItem value="em_analise">Em Análise</SelectItem>
+                  <SelectItem value="em_execucao">Em Execução</SelectItem>
+                  <SelectItem value="aguardando_info">Aguardando Info</SelectItem>
                   <SelectItem value="concluido">Concluído</SelectItem>
                   <SelectItem value="cancelado">Cancelado</SelectItem>
                 </SelectContent>
@@ -472,6 +481,16 @@ const TodosTickets = () => {
                   <SelectItem value="duvida">Dúvida</SelectItem>
                   <SelectItem value="reclamacao">Reclamação</SelectItem>
                   <SelectItem value="outro">Outro</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Ordenar por" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="recent">Mais recentes primeiro</SelectItem>
+                  <SelectItem value="oldest">Mais antigos primeiro</SelectItem>
+                  <SelectItem value="sla">SLA (vencendo antes)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
