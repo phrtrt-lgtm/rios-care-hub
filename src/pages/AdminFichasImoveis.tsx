@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, FileText, Search, Upload, CheckCircle2, AlertCircle, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { FichaEditorDialog } from "@/components/fichas/FichaEditorDialog";
+import { FichaViewerPanel } from "@/components/fichas/FichaViewerPanel";
 import { BulkUploadFichasDialog } from "@/components/fichas/BulkUploadFichasDialog";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -36,6 +37,7 @@ const AdminFichasImoveis = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [editingPropertyId, setEditingPropertyId] = useState<string | null>(null);
+  const [viewingPropertyId, setViewingPropertyId] = useState<string | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
 
   useEffect(() => {
@@ -183,7 +185,7 @@ const AdminFichasImoveis = () => {
             <Card
               key={p.id}
               className="cursor-pointer transition-colors hover:bg-accent/30"
-              onClick={() => setEditingPropertyId(p.id)}
+              onClick={() => (p.file?.has_content ? setViewingPropertyId(p.id) : setEditingPropertyId(p.id))}
             >
               <CardContent className="flex items-center gap-4 p-4">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
@@ -212,10 +214,31 @@ const AdminFichasImoveis = () => {
                     </p>
                   )}
                 </div>
-                <Button variant="ghost" size="sm">
-                  <FileText className="mr-2 h-4 w-4" />
-                  {p.file?.has_content ? "Editar" : "Criar"}
-                </Button>
+                <div className="flex items-center gap-1 shrink-0">
+                  {p.file?.has_content && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setViewingPropertyId(p.id);
+                      }}
+                    >
+                      <FileText className="mr-2 h-4 w-4" />
+                      Ver
+                    </Button>
+                  )}
+                  <Button
+                    variant={p.file?.has_content ? "outline" : "default"}
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingPropertyId(p.id);
+                    }}
+                  >
+                    {p.file?.has_content ? "Editar" : "Criar"}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -239,6 +262,18 @@ const AdminFichasImoveis = () => {
           onSaved={fetchData}
         />
       )}
+
+      <FichaViewerPanel
+        propertyId={viewingPropertyId}
+        open={!!viewingPropertyId}
+        onOpenChange={(open) => {
+          if (!open) setViewingPropertyId(null);
+        }}
+        onEdit={(id) => {
+          setViewingPropertyId(null);
+          setEditingPropertyId(id);
+        }}
+      />
 
       <BulkUploadFichasDialog
         open={bulkOpen}

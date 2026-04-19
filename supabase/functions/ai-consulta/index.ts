@@ -33,6 +33,7 @@ serve(async (req) => {
       proposalsRes,
       profilesRes,
       reservationsRes,
+      propertyFilesRes,
     ] = await Promise.all([
       // All non-closed tickets with property and owner info
       supabase
@@ -97,6 +98,11 @@ serve(async (req) => {
         .lte("check_in", in90days)
         .order("check_in", { ascending: true })
         .limit(300),
+
+      // Fichas (property_files) — documentação interna em markdown por imóvel
+      supabase
+        .from("property_files")
+        .select("property_id, content_md, version, updated_at"),
     ]);
 
     const tickets = ticketsRes.data || [];
@@ -107,6 +113,7 @@ serve(async (req) => {
     const proposals = proposalsRes.data || [];
     const profiles = profilesRes.data || [];
     const reservations = reservationsRes.data || [];
+    const propertyFiles = propertyFilesRes.data || [];
 
     // ── Build structured context ──────────────────────────────────────────
     const owners = profiles.filter((p: any) => p.role === "owner");
@@ -258,6 +265,29 @@ serve(async (req) => {
       }
     }
 
+    // ── Fichas dos imóveis (markdown) ─────────────────────────────────────
+    // Documentação técnica/operacional de cada unidade: wifi, chaves, comodidades,
+    // instruções, particularidades. Truncamos em ~3500 chars por ficha.
+    const fichasComConteudo = propertyFiles.filter(
+      (f: any) => f.content_md && f.content_md.trim().length > 0
+    );
+    if (fichasComConteudo.length > 0) {
+      ctx.push(
+        `\n=== FICHAS DOS IMÓVEIS – DOCUMENTAÇÃO INTERNA (${fichasComConteudo.length}) ===`
+      );
+      ctx.push(
+        `Use estas fichas SEMPRE que perguntarem sobre detalhes operacionais de um imóvel: wifi, senhas, chaves, código do portão, comodidades, instruções para hóspedes, peculiaridades, fornecedores, etc. Se a informação solicitada existir aqui, responda diretamente citando a fonte (ex.: "Conforme a ficha do imóvel X..."). Se não existir, diga que a ficha não tem aquela informação e sugira atualizar.\n`
+      );
+      for (const f of fichasComConteudo) {
+        const prop = properties.find((p: any) => p.id === (f as any).property_id);
+        const propName = (prop as any)?.name || "Imóvel desconhecido";
+        const content = (f as any).content_md as string;
+        const truncated =
+          content.length > 3500 ? content.slice(0, 3500) + "\n...[ficha truncada — consulte o portal para ver completa]" : content;
+        ctx.push(`\n--- FICHA: ${propName} (v${(f as any).version}) ---\n${truncated}\n--- FIM DA FICHA: ${propName} ---`);
+      }
+    }
+
     // ── System Prompt ─────────────────────────────────────────────────────
     const systemPrompt = `Você é o assistente interno da RIOS – Operação e Gestão de Hospedagens.
 
@@ -272,6 +302,7 @@ A RIOS é uma empresa de gestão de hospedagens por temporada. Gerenciamos imóv
 5. **Votações/Propostas**: Consultas enviadas aos proprietários para aprovação de melhorias, compras coletivas ou decisões sobre os imóveis.
 6. **Score de Pagamento**: Proprietários têm uma pontuação (0-100+) que reflete seu histórico de pagamentos. Score alto = bom pagador.
 7. **Reservas/Calendário**: Todas as reservas são sincronizadas via links iCal das plataformas. Janelas livres entre reservas são oportunidades para manutenção.
+8. **Fichas dos Imóveis**: Cada unidade tem uma ficha em markdown com documentação operacional (wifi, chaves, código do portão, comodidades, instruções, particularidades). Use-as como fonte primária para perguntas técnicas/operacionais sobre um imóvel específico.
 
 ## FLUXO DE ATENDIMENTO
 - Chamados chegam com status: novo → em_andamento → aguardando → concluido/cancelado
