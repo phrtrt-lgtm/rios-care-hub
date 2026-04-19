@@ -74,7 +74,7 @@ const TodosTickets = () => {
 
   useEffect(() => {
     filterTickets();
-  }, [searchTerm, statusFilter, priorityFilter, typeFilter, tickets]);
+  }, [searchTerm, statusFilter, priorityFilter, typeFilter, sortBy, tickets]);
 
   useEffect(() => {
     const interval = setInterval(() => {
