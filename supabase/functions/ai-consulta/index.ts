@@ -34,6 +34,7 @@ serve(async (req) => {
       profilesRes,
       reservationsRes,
       propertyFilesRes,
+      icalLinksRes,
     ] = await Promise.all([
       // All non-closed tickets with property and owner info
       supabase
@@ -103,6 +104,11 @@ serve(async (req) => {
       supabase
         .from("property_files")
         .select("property_id, content_md, version, updated_at"),
+
+      // iCal links — só consultamos datas/disponibilidade de imóveis com iCal configurado
+      supabase
+        .from("property_ical_links")
+        .select("property_id"),
     ]);
 
     const tickets = ticketsRes.data || [];
@@ -114,6 +120,11 @@ serve(async (req) => {
     const profiles = profilesRes.data || [];
     const reservations = reservationsRes.data || [];
     const propertyFiles = propertyFilesRes.data || [];
+    const icalLinks = icalLinksRes.data || [];
+    const propertiesWithIcal = new Set<string>(icalLinks.map((l: any) => l.property_id));
+    const propertyNamesWithIcal = new Set<string>(
+      properties.filter((p: any) => propertiesWithIcal.has(p.id)).map((p: any) => p.name)
+    );
 
     // ── Build structured context ──────────────────────────────────────────
     const owners = profiles.filter((p: any) => p.role === "owner");
@@ -214,9 +225,11 @@ serve(async (req) => {
       rList.find((r) => r.check_in <= date && r.check_out > date)?.check_out ?? null;
 
     ctx.push(`\n=== CALENDÁRIO DE RESERVAS – PRÓXIMOS 90 DIAS (hoje: ${today}) ===`);
-    ctx.push(`IMPORTANTE: "OCUPADO HOJE" significa que existe uma reserva ativa cobrindo a data de hoje. "DISPONÍVEL" significa que não há nenhuma reserva cobrindo hoje.\n`);
+    ctx.push(`IMPORTANTE: Apenas imóveis com iCal configurado têm dados de reservas/disponibilidade. Imóveis sem iCal NÃO devem ser consultados sobre datas, ocupação ou janelas livres — responda que não há dados de calendário para esses imóveis.\n`);
 
     for (const [propName, rList] of Object.entries(resByProp)) {
+      // Skip properties without iCal — não temos dados confiáveis de disponibilidade
+      if (!propertyNamesWithIcal.has(propName)) continue;
       const occupied = isOccupied(rList, today);
       const checkout = currentCheckout(rList, today);
       const statusLabel = occupied
@@ -258,11 +271,20 @@ serve(async (req) => {
       }
     }
 
-    // Properties with no reservations at all
+    // Properties with no reservations at all (only show those WITH iCal — sem iCal não temos dados)
     for (const p of properties) {
-      if (!resByProp[(p as any).name]) {
-        ctx.push(`\n[${(p as any).name}] → STATUS ATUAL: 🟢 DISPONÍVEL HOJE\n  ⬜ Sem reservas nos próximos 90 dias`);
+      const pname = (p as any).name;
+      if (!resByProp[pname] && propertyNamesWithIcal.has(pname)) {
+        ctx.push(`\n[${pname}] → STATUS ATUAL: 🟢 DISPONÍVEL HOJE\n  ⬜ Sem reservas nos próximos 90 dias`);
       }
+    }
+
+    // List properties WITHOUT iCal so the AI knows it cannot answer date queries for them
+    const noIcalProps = properties.filter((p: any) => !propertiesWithIcal.has(p.id)).map((p: any) => p.name);
+    if (noIcalProps.length > 0) {
+      ctx.push(`\n=== IMÓVEIS SEM iCAL CONFIGURADO (${noIcalProps.length}) ===`);
+      ctx.push(`Para os imóveis abaixo NÃO há sincronização de calendário. NÃO responda perguntas sobre disponibilidade, ocupação, datas livres, próximas reservas ou janelas — informe que esses imóveis não possuem iCal configurado:`);
+      for (const n of noIcalProps) ctx.push(`  • ${n}`);
     }
 
     // ── Fichas dos imóveis (markdown) ─────────────────────────────────────
