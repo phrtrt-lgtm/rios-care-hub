@@ -657,6 +657,22 @@ export default function Painel() {
                 </CardHeader>
               </Card>
 
+              <Card className="cursor-pointer hover-lift group border-transparent hover:border-primary/20" onClick={() => navigate("/admin/fichas-imoveis")}>
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                      <FileText className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">Fichas dos Imóveis</CardTitle>
+                      <CardDescription className="text-xs">
+                        Documentação completa em Markdown (contexto da IA)
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+
               {/* Calendário de Reservas moved to Insights section */}
 
               <Card className="cursor-pointer hover-lift group border-transparent hover:border-primary/20" onClick={async () => {
