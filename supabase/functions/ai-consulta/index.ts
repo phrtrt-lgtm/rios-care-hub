@@ -120,7 +120,11 @@ serve(async (req) => {
     const profiles = profilesRes.data || [];
     const reservations = reservationsRes.data || [];
     const propertyFiles = propertyFilesRes.data || [];
-    const icalLinks = (await Promise.resolve(arguments[0])) as any; // placeholder removed below
+    const icalLinks = icalLinksRes.data || [];
+    const propertiesWithIcal = new Set<string>(icalLinks.map((l: any) => l.property_id));
+    const propertyNamesWithIcal = new Set<string>(
+      properties.filter((p: any) => propertiesWithIcal.has(p.id)).map((p: any) => p.name)
+    );
 
     // ── Build structured context ──────────────────────────────────────────
     const owners = profiles.filter((p: any) => p.role === "owner");
