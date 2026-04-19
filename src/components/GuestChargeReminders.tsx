@@ -4,9 +4,20 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, DollarSign, Building2, AlertCircle, ChevronRight } from 'lucide-react';
+import { Calendar, DollarSign, Building2, AlertCircle, ChevronRight, X } from 'lucide-react';
 import { format, differenceInDays, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { toast } from 'sonner';
 
 interface GuestChargePending {
   id: string;
@@ -23,10 +34,31 @@ export function GuestChargeReminders() {
   const navigate = useNavigate();
   const [pendingCharges, setPendingCharges] = useState<GuestChargePending[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dismissingId, setDismissingId] = useState<string | null>(null);
+  const [confirmDismiss, setConfirmDismiss] = useState<GuestChargePending | null>(null);
 
   useEffect(() => {
     fetchGuestCharges();
   }, []);
+
+  const handleDismiss = async (charge: GuestChargePending) => {
+    setDismissingId(charge.id);
+    try {
+      const { error } = await supabase
+        .from('tickets')
+        .update({ guest_checkout_date: null })
+        .eq('id', charge.id);
+      if (error) throw error;
+      setPendingCharges(prev => prev.filter(c => c.id !== charge.id));
+      toast.success('Cobrança removida (será feita pelo Airbnb)');
+    } catch (err) {
+      console.error('Error dismissing guest charge:', err);
+      toast.error('Erro ao remover cobrança');
+    } finally {
+      setDismissingId(null);
+      setConfirmDismiss(null);
+    }
+  };
 
   const fetchGuestCharges = async () => {
     try {
@@ -138,6 +170,19 @@ export function GuestChargeReminders() {
                     Check-out: {format(new Date(charge.guest_checkout_date), 'dd/MM', { locale: ptBR })}
                   </p>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 flex-shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  disabled={dismissingId === charge.id}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setConfirmDismiss(charge);
+                  }}
+                  title="Descartar (cobrança feita pelo Airbnb)"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </div>
             ))}
@@ -167,6 +212,19 @@ export function GuestChargeReminders() {
                     {charge.days_until_charge} {charge.days_until_charge === 1 ? 'dia' : 'dias'}
                   </Badge>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 flex-shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  disabled={dismissingId === charge.id}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setConfirmDismiss(charge);
+                  }}
+                  title="Descartar (cobrança feita pelo Airbnb)"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
               </div>
             ))}
             {upcoming.length > 3 && (
@@ -177,6 +235,31 @@ export function GuestChargeReminders() {
           </div>
         )}
       </CardContent>
+
+      <AlertDialog open={!!confirmDismiss} onOpenChange={(open) => !open && setConfirmDismiss(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Descartar cobrança de hóspede?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Use esta opção quando a cobrança já foi feita diretamente pelo Airbnb e não precisa ser processada pelo portal. O aviso será removido do painel.
+              {confirmDismiss && (
+                <span className="block mt-2 font-medium text-foreground">
+                  {confirmDismiss.subject} — {confirmDismiss.property_name}
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => confirmDismiss && handleDismiss(confirmDismiss)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Descartar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
