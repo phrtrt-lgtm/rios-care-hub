@@ -62,7 +62,7 @@ const CopyButton = ({ text, label }: { text: string; label?: string }) => {
       className="inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground opacity-0 transition-all hover:bg-accent hover:text-foreground group-hover:opacity-100"
       aria-label="Copiar"
     >
-      {copied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
+      {copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
     </button>
   );
 };
@@ -134,7 +134,7 @@ export const FichaViewerPanel = ({ propertyId, open, onOpenChange, onEdit }: Pro
                       )}
                     </>
                   ) : (
-                    <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                    <Badge variant="outline">
                       Sem ficha cadastrada
                     </Badge>
                   )}
