@@ -1556,6 +1556,7 @@ export type Database = {
       properties: {
         Row: {
           address: string | null
+          archived_at: string | null
           assigned_cleaner_id: string | null
           assigned_cleaner_phone: string | null
           cover_photo_url: string | null
@@ -1568,6 +1569,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          archived_at?: string | null
           assigned_cleaner_id?: string | null
           assigned_cleaner_phone?: string | null
           cover_photo_url?: string | null
@@ -1580,6 +1582,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          archived_at?: string | null
           assigned_cleaner_id?: string | null
           assigned_cleaner_phone?: string | null
           cover_photo_url?: string | null

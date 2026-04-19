@@ -33,6 +33,7 @@ export const OwnerPropertiesSection = () => {
           .from('properties')
           .select('id, name, address, cover_photo_url')
           .eq('owner_id', user.id)
+          .is('archived_at', null)
           .order('name');
 
         if (propError) throw propError;

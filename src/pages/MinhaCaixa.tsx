@@ -39,7 +39,8 @@ export default function MinhaCaixa() {
         const { data: properties, error: propError } = await supabase
           .from('properties')
           .select('id')
-          .eq('owner_id', user.id);
+          .eq('owner_id', user.id)
+          .is('archived_at', null);
 
         if (propError) throw propError;
         

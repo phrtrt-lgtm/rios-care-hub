@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { ArrowLeft, Building2, Plus, Pencil, Trash2, X } from "lucide-react";
+import { ArrowLeft, Building2, Plus, Pencil, Archive, ArchiveRestore, X, Eye, EyeOff } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { PropertyPhotoUpload } from "@/components/PropertyPhotoUpload";
 
@@ -21,6 +22,7 @@ interface Property {
   assigned_cleaner_id: string | null;
   assigned_cleaner_phone: string | null;
   owner_phone: string | null;
+  archived_at: string | null;
   owner: {
     name: string;
     email: string;
@@ -54,12 +56,17 @@ const Propriedades = () => {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     address: "",
     owner_id: "",
     assigned_cleaner_id: ""
   });
+
+  const visibleProperties = properties.filter((p) =>
+    showArchived ? !!p.archived_at : !p.archived_at
+  );
 
   useEffect(() => {
     if (!user || !['admin', 'agent'].includes(profile?.role || '')) {
@@ -240,36 +247,41 @@ const Propriedades = () => {
     setDialogOpen(true);
   };
 
-  const handleDelete = async (propertyId: string) => {
-    // Only admins can delete
+  const handleArchiveToggle = async (property: Property) => {
     if (profile?.role !== 'admin') {
       toast({
         title: "Permissão negada",
-        description: "Apenas administradores podem excluir unidades",
+        description: "Apenas administradores podem arquivar unidades",
         variant: "destructive",
       });
       return;
     }
 
-    if (!confirm("Tem certeza que deseja excluir esta unidade?")) return;
+    const isArchiving = !property.archived_at;
+    const confirmMsg = isArchiving
+      ? `Arquivar a unidade "${property.name}"? Ela ficará oculta da listagem mas todo o histórico (cobranças, vistorias, chamados) será preservado.`
+      : `Restaurar a unidade "${property.name}" para a listagem ativa?`;
+    if (!confirm(confirmMsg)) return;
 
     try {
       const { error } = await supabase
         .from('properties')
-        .delete()
-        .eq('id', propertyId);
+        .update({ archived_at: isArchiving ? new Date().toISOString() : null })
+        .eq('id', property.id);
 
       if (error) throw error;
 
       toast({
-        title: "Unidade excluída!",
-        description: "A unidade foi excluída com sucesso."
+        title: isArchiving ? "Unidade arquivada!" : "Unidade restaurada!",
+        description: isArchiving
+          ? "A unidade foi ocultada da listagem ativa."
+          : "A unidade voltou para a listagem ativa."
       });
 
       fetchData();
     } catch (error: any) {
       toast({
-        title: "Erro ao excluir unidade",
+        title: "Erro ao atualizar unidade",
         description: error.message,
         variant: "destructive"
       });
@@ -403,9 +415,19 @@ const Propriedades = () => {
           </Dialog>
         </div>
 
+        <div className="mb-4 flex items-center justify-between rounded-md border bg-card p-3">
+          <div className="flex items-center gap-2">
+            {showArchived ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+            <Label htmlFor="show-archived" className="cursor-pointer text-sm">
+              {showArchived ? "Mostrando arquivadas" : "Mostrar arquivadas"}
+            </Label>
+          </div>
+          <Switch id="show-archived" checked={showArchived} onCheckedChange={setShowArchived} />
+        </div>
+
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {properties.map((property) => (
-            <Card key={property.id}>
+          {visibleProperties.map((property) => (
+            <Card key={property.id} className={property.archived_at ? "opacity-70" : ""}>
               <CardHeader className="pb-3">
                 <PropertyPhotoUpload
                   propertyId={property.id}
@@ -431,6 +453,11 @@ const Propriedades = () => {
                     <CardTitle className="flex items-center gap-2">
                       <Building2 className="h-5 w-5" />
                       {property.name}
+                      {property.archived_at && (
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase text-muted-foreground">
+                          Arquivada
+                        </span>
+                      )}
                     </CardTitle>
                     {property.address && (
                       <CardDescription className="mt-2">{property.address}</CardDescription>
@@ -470,12 +497,21 @@ const Propriedades = () => {
                     {profile?.role === 'admin' && (
                       <Button
                         size="sm"
-                        variant="destructive"
-                        onClick={() => handleDelete(property.id)}
+                        variant={property.archived_at ? "default" : "destructive"}
+                        onClick={() => handleArchiveToggle(property)}
                         className="flex-1"
                       >
-                        <Trash2 className="mr-2 h-3 w-3" />
-                        Excluir
+                        {property.archived_at ? (
+                          <>
+                            <ArchiveRestore className="mr-2 h-3 w-3" />
+                            Restaurar
+                          </>
+                        ) : (
+                          <>
+                            <Archive className="mr-2 h-3 w-3" />
+                            Arquivar
+                          </>
+                        )}
                       </Button>
                     )}
                   </div>
@@ -485,13 +521,17 @@ const Propriedades = () => {
           ))}
         </div>
 
-        {properties.length === 0 && (
+        {visibleProperties.length === 0 && (
           <Card>
             <CardContent className="py-12 text-center">
               <Building2 className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-semibold text-foreground">Nenhuma unidade cadastrada</h3>
+              <h3 className="mt-4 text-lg font-semibold text-foreground">
+                {showArchived ? "Nenhuma unidade arquivada" : "Nenhuma unidade ativa"}
+              </h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                Crie a primeira unidade clicando no botão "Nova Unidade".
+                {showArchived
+                  ? "Quando você arquivar uma unidade, ela aparecerá aqui."
+                  : 'Crie a primeira unidade clicando no botão "Nova Unidade".'}
               </p>
             </CardContent>
           </Card>
