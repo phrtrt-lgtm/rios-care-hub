@@ -4,9 +4,20 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, DollarSign, Building2, AlertCircle, ChevronRight } from 'lucide-react';
+import { Calendar, DollarSign, Building2, AlertCircle, ChevronRight, X } from 'lucide-react';
 import { format, differenceInDays, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { toast } from 'sonner';
 
 interface GuestChargePending {
   id: string;
