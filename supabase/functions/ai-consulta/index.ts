@@ -98,7 +98,7 @@ serve(async (req) => {
         .gte("check_out", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0])
         .lte("check_in", in90days)
         .order("check_in", { ascending: true })
-        .limit(300),
+        .limit(2000),
 
       // Fichas (property_files) — documentação interna em markdown por imóvel
       supabase
