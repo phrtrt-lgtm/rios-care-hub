@@ -265,6 +265,29 @@ serve(async (req) => {
       }
     }
 
+    // ── Fichas dos imóveis (markdown) ─────────────────────────────────────
+    // Documentação técnica/operacional de cada unidade: wifi, chaves, comodidades,
+    // instruções, particularidades. Truncamos em ~3500 chars por ficha.
+    const fichasComConteudo = propertyFiles.filter(
+      (f: any) => f.content_md && f.content_md.trim().length > 0
+    );
+    if (fichasComConteudo.length > 0) {
+      ctx.push(
+        `\n=== FICHAS DOS IMÓVEIS – DOCUMENTAÇÃO INTERNA (${fichasComConteudo.length}) ===`
+      );
+      ctx.push(
+        `Use estas fichas SEMPRE que perguntarem sobre detalhes operacionais de um imóvel: wifi, senhas, chaves, código do portão, comodidades, instruções para hóspedes, peculiaridades, fornecedores, etc. Se a informação solicitada existir aqui, responda diretamente citando a fonte (ex.: "Conforme a ficha do imóvel X..."). Se não existir, diga que a ficha não tem aquela informação e sugira atualizar.\n`
+      );
+      for (const f of fichasComConteudo) {
+        const prop = properties.find((p: any) => p.id === (f as any).property_id);
+        const propName = (prop as any)?.name || "Imóvel desconhecido";
+        const content = (f as any).content_md as string;
+        const truncated =
+          content.length > 3500 ? content.slice(0, 3500) + "\n...[ficha truncada — consulte o portal para ver completa]" : content;
+        ctx.push(`\n--- FICHA: ${propName} (v${(f as any).version}) ---\n${truncated}\n--- FIM DA FICHA: ${propName} ---`);
+      }
+    }
+
     // ── System Prompt ─────────────────────────────────────────────────────
     const systemPrompt = `Você é o assistente interno da RIOS – Operação e Gestão de Hospedagens.
 
