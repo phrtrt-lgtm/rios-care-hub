@@ -62,6 +62,7 @@ const TodosTickets = () => {
   const [chatOpen, setChatOpen] = useState(false);
   const [selectedTicketForChat, setSelectedTicketForChat] = useState<Ticket | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [sortBy, setSortBy] = useState<string>("recent"); // recent | oldest | sla
 
   useEffect(() => {
     if (!user || !['admin', 'agent'].includes(profile?.role || '')) {
