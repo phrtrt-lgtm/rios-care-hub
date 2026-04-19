@@ -183,6 +183,18 @@ export default function Insights() {
             <BrainCircuit className="h-5 w-5 text-primary" />
             <h1 className="text-lg font-bold">Insights</h1>
           </div>
+          <div className="ml-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/admin/fichas-imoveis")}
+              className="gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              <span className="hidden sm:inline">Fichas dos Imóveis</span>
+              <span className="sm:hidden">Fichas</span>
+            </Button>
+          </div>
         </div>
       </header>
 
