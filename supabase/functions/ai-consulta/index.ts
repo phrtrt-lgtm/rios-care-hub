@@ -34,6 +34,7 @@ serve(async (req) => {
       profilesRes,
       reservationsRes,
       propertyFilesRes,
+      icalLinksRes,
     ] = await Promise.all([
       // All non-closed tickets with property and owner info
       supabase
