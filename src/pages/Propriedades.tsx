@@ -525,9 +525,13 @@ const Propriedades = () => {
           <Card>
             <CardContent className="py-12 text-center">
               <Building2 className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-semibold text-foreground">Nenhuma unidade cadastrada</h3>
+              <h3 className="mt-4 text-lg font-semibold text-foreground">
+                {showArchived ? "Nenhuma unidade arquivada" : "Nenhuma unidade ativa"}
+              </h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                Crie a primeira unidade clicando no botão "Nova Unidade".
+                {showArchived
+                  ? "Quando você arquivar uma unidade, ela aparecerá aqui."
+                  : 'Crie a primeira unidade clicando no botão "Nova Unidade".'}
               </p>
             </CardContent>
           </Card>
