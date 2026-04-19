@@ -6,11 +6,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, FileText, Search, Upload, CheckCircle2, AlertCircle, Building2 } from "lucide-react";
+import { ArrowLeft, FileText, Search, Upload, CheckCircle2, AlertCircle, Building2, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { FichaEditorDialog } from "@/components/fichas/FichaEditorDialog";
 import { FichaViewerPanel } from "@/components/fichas/FichaViewerPanel";
 import { BulkUploadFichasDialog } from "@/components/fichas/BulkUploadFichasDialog";
+import { BulkAIEditDialog } from "@/components/fichas/BulkAIEditDialog";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -39,6 +40,7 @@ const AdminFichasImoveis = () => {
   const [editingPropertyId, setEditingPropertyId] = useState<string | null>(null);
   const [viewingPropertyId, setViewingPropertyId] = useState<string | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkAIOpen, setBulkAIOpen] = useState(false);
 
   useEffect(() => {
     if (!user || !["admin", "agent", "maintenance"].includes(profile?.role || "")) {
@@ -139,6 +141,15 @@ const AdminFichasImoveis = () => {
               Documentação completa de cada unidade em Markdown — usada como contexto pela IA.
             </p>
           </div>
+          <Button
+            onClick={() => setBulkAIOpen(true)}
+            variant="outline"
+            disabled={stats.filled === 0}
+            title={stats.filled === 0 ? "Nenhuma ficha preenchida ainda" : ""}
+          >
+            <Sparkles className="mr-2 h-4 w-4" />
+            Editar com IA em massa
+          </Button>
           <Button onClick={() => setBulkOpen(true)} variant="outline">
             <Upload className="mr-2 h-4 w-4" />
             Upload em massa
@@ -280,6 +291,13 @@ const AdminFichasImoveis = () => {
         onOpenChange={setBulkOpen}
         properties={properties.map((p) => ({ id: p.id, name: p.name }))}
         onCompleted={fetchData}
+      />
+
+      <BulkAIEditDialog
+        open={bulkAIOpen}
+        onOpenChange={setBulkAIOpen}
+        propertyIds={properties.filter((p) => p.file?.has_content).map((p) => p.id)}
+        onApplied={fetchData}
       />
     </div>
   );
