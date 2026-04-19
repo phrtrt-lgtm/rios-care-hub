@@ -56,12 +56,17 @@ const Propriedades = () => {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     address: "",
     owner_id: "",
     assigned_cleaner_id: ""
   });
+
+  const visibleProperties = properties.filter((p) =>
+    showArchived ? !!p.archived_at : !p.archived_at
+  );
 
   useEffect(() => {
     if (!user || !['admin', 'agent'].includes(profile?.role || '')) {
