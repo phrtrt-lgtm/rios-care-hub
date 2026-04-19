@@ -103,6 +103,11 @@ serve(async (req) => {
       supabase
         .from("property_files")
         .select("property_id, content_md, version, updated_at"),
+
+      // iCal links — só consultamos datas/disponibilidade de imóveis com iCal configurado
+      supabase
+        .from("property_ical_links")
+        .select("property_id"),
     ]);
 
     const tickets = ticketsRes.data || [];
@@ -114,6 +119,7 @@ serve(async (req) => {
     const profiles = profilesRes.data || [];
     const reservations = reservationsRes.data || [];
     const propertyFiles = propertyFilesRes.data || [];
+    const icalLinks = (await Promise.resolve(arguments[0])) as any; // placeholder removed below
 
     // ── Build structured context ──────────────────────────────────────────
     const owners = profiles.filter((p: any) => p.role === "owner");
