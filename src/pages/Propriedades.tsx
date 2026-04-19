@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { ArrowLeft, Building2, Plus, Pencil, Trash2, X } from "lucide-react";
+import { ArrowLeft, Building2, Plus, Pencil, Archive, ArchiveRestore, X, Eye, EyeOff } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { PropertyPhotoUpload } from "@/components/PropertyPhotoUpload";
 
