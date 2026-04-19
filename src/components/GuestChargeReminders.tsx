@@ -47,8 +47,21 @@ export function GuestChargeReminders() {
 
       if (error) throw error;
 
+      // Exclude tickets that already have a charge created (any status)
+      const ticketIds = (tickets || []).map(t => t.id);
+      let chargedTicketIds = new Set<string>();
+      if (ticketIds.length > 0) {
+        const { data: existingCharges } = await supabase
+          .from('charges')
+          .select('ticket_id')
+          .in('ticket_id', ticketIds)
+          .not('ticket_id', 'is', null);
+        chargedTicketIds = new Set((existingCharges || []).map(c => c.ticket_id as string));
+      }
+
       const today = new Date();
       const chargesWithDays: GuestChargePending[] = (tickets || [])
+        .filter(t => !chargedTicketIds.has(t.id))
         .map(ticket => {
           const checkoutDate = new Date(ticket.guest_checkout_date!);
           const daysSince = differenceInDays(today, checkoutDate);
