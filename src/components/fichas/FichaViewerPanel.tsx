@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, Pencil, Copy, Check, FileText, Clock } from "lucide-react";
+import { Loader2, Pencil, Copy, Check, FileText, Clock, History } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { FichaHistoryDialog } from "./FichaHistoryDialog";
 
 interface Props {
   propertyId: string | null;
