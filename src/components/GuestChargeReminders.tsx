@@ -34,10 +34,31 @@ export function GuestChargeReminders() {
   const navigate = useNavigate();
   const [pendingCharges, setPendingCharges] = useState<GuestChargePending[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dismissingId, setDismissingId] = useState<string | null>(null);
+  const [confirmDismiss, setConfirmDismiss] = useState<GuestChargePending | null>(null);
 
   useEffect(() => {
     fetchGuestCharges();
   }, []);
+
+  const handleDismiss = async (charge: GuestChargePending) => {
+    setDismissingId(charge.id);
+    try {
+      const { error } = await supabase
+        .from('tickets')
+        .update({ guest_checkout_date: null })
+        .eq('id', charge.id);
+      if (error) throw error;
+      setPendingCharges(prev => prev.filter(c => c.id !== charge.id));
+      toast.success('Cobrança removida (será feita pelo Airbnb)');
+    } catch (err) {
+      console.error('Error dismissing guest charge:', err);
+      toast.error('Erro ao remover cobrança');
+    } finally {
+      setDismissingId(null);
+      setConfirmDismiss(null);
+    }
+  };
 
   const fetchGuestCharges = async () => {
     try {
