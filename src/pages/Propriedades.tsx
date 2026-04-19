@@ -22,6 +22,7 @@ interface Property {
   assigned_cleaner_id: string | null;
   assigned_cleaner_phone: string | null;
   owner_phone: string | null;
+  archived_at: string | null;
   owner: {
     name: string;
     email: string;
