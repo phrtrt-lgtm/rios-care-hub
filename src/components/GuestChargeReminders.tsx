@@ -170,6 +170,19 @@ export function GuestChargeReminders() {
                     Check-out: {format(new Date(charge.guest_checkout_date), 'dd/MM', { locale: ptBR })}
                   </p>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 flex-shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  disabled={dismissingId === charge.id}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setConfirmDismiss(charge);
+                  }}
+                  title="Descartar (cobrança feita pelo Airbnb)"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </div>
             ))}
