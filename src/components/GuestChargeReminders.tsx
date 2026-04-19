@@ -212,6 +212,19 @@ export function GuestChargeReminders() {
                     {charge.days_until_charge} {charge.days_until_charge === 1 ? 'dia' : 'dias'}
                   </Badge>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 flex-shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  disabled={dismissingId === charge.id}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setConfirmDismiss(charge);
+                  }}
+                  title="Descartar (cobrança feita pelo Airbnb)"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
               </div>
             ))}
             {upcoming.length > 3 && (
@@ -222,6 +235,31 @@ export function GuestChargeReminders() {
           </div>
         )}
       </CardContent>
+
+      <AlertDialog open={!!confirmDismiss} onOpenChange={(open) => !open && setConfirmDismiss(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Descartar cobrança de hóspede?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Use esta opção quando a cobrança já foi feita diretamente pelo Airbnb e não precisa ser processada pelo portal. O aviso será removido do painel.
+              {confirmDismiss && (
+                <span className="block mt-2 font-medium text-foreground">
+                  {confirmDismiss.subject} — {confirmDismiss.property_name}
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => confirmDismiss && handleDismiss(confirmDismiss)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Descartar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
