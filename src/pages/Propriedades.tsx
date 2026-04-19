@@ -415,9 +415,19 @@ const Propriedades = () => {
           </Dialog>
         </div>
 
+        <div className="mb-4 flex items-center justify-between rounded-md border bg-card p-3">
+          <div className="flex items-center gap-2">
+            {showArchived ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+            <Label htmlFor="show-archived" className="cursor-pointer text-sm">
+              {showArchived ? "Mostrando arquivadas" : "Mostrar arquivadas"}
+            </Label>
+          </div>
+          <Switch id="show-archived" checked={showArchived} onCheckedChange={setShowArchived} />
+        </div>
+
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {properties.map((property) => (
-            <Card key={property.id}>
+          {visibleProperties.map((property) => (
+            <Card key={property.id} className={property.archived_at ? "opacity-70" : ""}>
               <CardHeader className="pb-3">
                 <PropertyPhotoUpload
                   propertyId={property.id}
@@ -443,6 +453,11 @@ const Propriedades = () => {
                     <CardTitle className="flex items-center gap-2">
                       <Building2 className="h-5 w-5" />
                       {property.name}
+                      {property.archived_at && (
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase text-muted-foreground">
+                          Arquivada
+                        </span>
+                      )}
                     </CardTitle>
                     {property.address && (
                       <CardDescription className="mt-2">{property.address}</CardDescription>
@@ -482,12 +497,21 @@ const Propriedades = () => {
                     {profile?.role === 'admin' && (
                       <Button
                         size="sm"
-                        variant="destructive"
-                        onClick={() => handleDelete(property.id)}
+                        variant={property.archived_at ? "default" : "destructive"}
+                        onClick={() => handleArchiveToggle(property)}
                         className="flex-1"
                       >
-                        <Trash2 className="mr-2 h-3 w-3" />
-                        Excluir
+                        {property.archived_at ? (
+                          <>
+                            <ArchiveRestore className="mr-2 h-3 w-3" />
+                            Restaurar
+                          </>
+                        ) : (
+                          <>
+                            <Archive className="mr-2 h-3 w-3" />
+                            Arquivar
+                          </>
+                        )}
                       </Button>
                     )}
                   </div>
@@ -497,7 +521,7 @@ const Propriedades = () => {
           ))}
         </div>
 
-        {properties.length === 0 && (
+        {visibleProperties.length === 0 && (
           <Card>
             <CardContent className="py-12 text-center">
               <Building2 className="mx-auto h-12 w-12 text-muted-foreground" />
