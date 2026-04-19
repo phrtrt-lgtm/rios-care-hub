@@ -197,7 +197,7 @@ export const BulkUploadFichasDialog = ({ open, onOpenChange, properties, onCompl
             />
           </label>
         ) : (
-          <ScrollArea className="flex-1 pr-2">
+          <ScrollArea className="flex-1 min-h-0 max-h-[60vh] pr-2">
             <div className="space-y-2">
               {matches.map((m, i) => (
                 <div
