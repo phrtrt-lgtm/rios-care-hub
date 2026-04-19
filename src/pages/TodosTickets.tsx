@@ -434,8 +434,8 @@ const TodosTickets = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-4">
-              <div className="relative">
+            <div className="grid gap-4 md:grid-cols-5">
+              <div className="relative md:col-span-2">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Buscar por assunto, proprietário ou unidade..."
@@ -451,8 +451,9 @@ const TodosTickets = () => {
                 <SelectContent>
                   <SelectItem value="all">Todos os Status</SelectItem>
                   <SelectItem value="novo">Novo</SelectItem>
-                  <SelectItem value="em_andamento">Em Andamento</SelectItem>
-                  <SelectItem value="aguardando_resposta">Aguardando Resposta</SelectItem>
+                  <SelectItem value="em_analise">Em Análise</SelectItem>
+                  <SelectItem value="em_execucao">Em Execução</SelectItem>
+                  <SelectItem value="aguardando_info">Aguardando Info</SelectItem>
                   <SelectItem value="concluido">Concluído</SelectItem>
                   <SelectItem value="cancelado">Cancelado</SelectItem>
                 </SelectContent>
@@ -480,6 +481,16 @@ const TodosTickets = () => {
                   <SelectItem value="duvida">Dúvida</SelectItem>
                   <SelectItem value="reclamacao">Reclamação</SelectItem>
                   <SelectItem value="outro">Outro</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Ordenar por" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="recent">Mais recentes primeiro</SelectItem>
+                  <SelectItem value="oldest">Mais antigos primeiro</SelectItem>
+                  <SelectItem value="sla">SLA (vencendo antes)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
