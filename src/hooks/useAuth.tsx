@@ -36,6 +36,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     console.log('[useAuth] Initializing');
     let isMounted = true;
     let loadingTimeout: NodeJS.Timeout;
+    let currentUserId: string | null = null;
 
     // Garantir que o loading nunca fique travado
     const ensureLoadingEnds = () => {
@@ -56,7 +57,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         
         console.log('[useAuth] Auth state changed:', event, !!session);
         clearTimeout(loadingTimeout);
-        
+
+        const newUserId = session?.user?.id ?? null;
+
+        // Eventos que NÃO devem disparar refetch/re-render: apenas atualiza a sessão silenciosamente
+        // TOKEN_REFRESHED e USER_UPDATED acontecem em background (e quando a aba volta ao foco)
+        // e não devem causar reload das páginas.
+        if (event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+          setSession(session);
+          // Não mexer em user/profile/loading se o usuário não mudou
+          if (newUserId !== currentUserId) {
+            currentUserId = newUserId;
+            setUser(session?.user ?? null);
+          }
+          return;
+        }
+
+        // Se INITIAL_SESSION ou SIGNED_IN dispara para o mesmo usuário já carregado, ignorar refetch
+        if (newUserId && newUserId === currentUserId && event !== 'SIGNED_OUT') {
+          setSession(session);
+          setLoading(false);
+          return;
+        }
+
+        currentUserId = newUserId;
         setSession(session);
         setUser(session?.user ?? null);
         
