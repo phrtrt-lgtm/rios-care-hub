@@ -138,6 +138,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (!isMounted) return;
         
         console.log('[useAuth] Initial session:', !!session);
+        currentUserId = session?.user?.id ?? null;
         setSession(session);
         setUser(session?.user ?? null);
         
