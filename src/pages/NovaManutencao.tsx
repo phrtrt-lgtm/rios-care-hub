@@ -34,7 +34,14 @@ interface Property {
   profiles?: { name: string };
 }
 
-export default function NovaManutencao() {
+interface NovaManutencaoProps {
+  embedded?: boolean;
+  editId?: string;
+  onSaved?: () => void;
+  onCancel?: () => void;
+}
+
+export default function NovaManutencao({ embedded = false, editId, onSaved, onCancel }: NovaManutencaoProps = {}) {
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<"normal" | "urgente">("normal");
@@ -54,7 +61,7 @@ export default function NovaManutencao() {
   const [searchParams] = useSearchParams();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const editTicketId = searchParams.get('edit');
+  const editTicketId = editId ?? searchParams.get('edit');
   const isEditMode = !!editTicketId;
   const [loadingTicket, setLoadingTicket] = useState(isEditMode);
 
