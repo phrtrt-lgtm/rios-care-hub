@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { goBack } from "@/lib/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -78,7 +79,7 @@ export default function RelatoriosPropriedade() {
   return (
     <div className="min-h-screen bg-background pb-24">
       <MobileHeader title="Relatórios Financeiros" leftAction={
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+        <Button variant="ghost" size="icon" onClick={() => goBack(navigate, "/minha-caixa")}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
       } />

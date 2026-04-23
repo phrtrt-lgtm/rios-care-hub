@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { goBack } from "@/lib/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -132,7 +133,7 @@ const AdminFichasImoveis = () => {
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="mx-auto max-w-6xl">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/painel")}>
+          <Button variant="ghost" size="icon" onClick={() => goBack(navigate, "/painel")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1">

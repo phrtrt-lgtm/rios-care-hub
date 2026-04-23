@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { goBack } from "@/lib/navigation";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { LoadingScreen } from '@/components/LoadingScreen';
@@ -312,7 +313,7 @@ export default function AdminVistoriasImovel() {
     return (
       <div className="container mx-auto p-4 flex flex-col items-center justify-center min-h-[50vh] gap-4">
         <p className="text-muted-foreground">Imóvel não encontrado.</p>
-        <Button variant="outline" onClick={() => navigate(-1)}>
+        <Button variant="outline" onClick={() => goBack(navigate, "/admin/vistorias")}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Voltar
         </Button>
@@ -330,7 +331,7 @@ export default function AdminVistoriasImovel() {
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4">
           <div className="flex h-16 items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/admin/vistorias')}>
+            <Button variant="ghost" size="icon" onClick={() => goBack(navigate, "/admin/vistorias")}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1">

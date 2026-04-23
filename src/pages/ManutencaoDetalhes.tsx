@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { goBack } from "@/lib/navigation";
 import { useMaintenance } from "@/hooks/useMaintenances";
 import { MaintenancePaymentForm } from "@/components/MaintenancePaymentForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -88,7 +89,7 @@ export default function ManutencaoDetalhes() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/manutencoes')}>
+        <Button variant="ghost" size="icon" onClick={() => goBack(navigate, "/admin/manutencoes-lista")}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">

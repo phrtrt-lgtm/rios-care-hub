@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Edit, Info, Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { goBack } from "@/lib/navigation";
 import { Badge } from "@/components/ui/badge";
 
 interface EmailTemplate {
@@ -326,7 +327,7 @@ export default function ConfiguracaoEmail() {
       <header className="border-b bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto px-4">
           <div className="flex h-16 items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/painel")}>
+            <Button variant="ghost" size="icon" onClick={() => goBack(navigate, "/painel")}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <h1 className="text-xl font-semibold">Configuração de Templates de Email</h1>

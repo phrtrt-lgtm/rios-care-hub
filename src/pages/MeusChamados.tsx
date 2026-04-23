@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { goBack } from "@/lib/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Plus, Building2, Clock, MessageSquare, ChevronRight, Ticket } from "lucide-react";
@@ -172,7 +173,7 @@ export default function MeusChamados() {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => navigate("/minha-caixa")}
+                onClick={() => goBack(navigate, "/minha-caixa")}
                 className="shrink-0"
               >
                 <ArrowLeft className="h-5 w-5" />

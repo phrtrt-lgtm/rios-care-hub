@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { goBack } from "@/lib/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -300,7 +301,7 @@ export default function VotacaoDetalhes() {
       <div className="min-h-screen bg-background p-4 md:p-8">
         <div className="max-w-3xl mx-auto text-center">
           <p className="text-muted-foreground">Proposta não encontrada</p>
-          <Button variant="outline" onClick={() => navigate('/votacoes')} className="mt-4">
+          <Button variant="outline" onClick={() => goBack(navigate, "/votacoes")} className="mt-4">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Voltar
           </Button>
@@ -326,7 +327,7 @@ export default function VotacaoDetalhes() {
           <Button 
             variant="ghost" 
             size="sm"
-            onClick={() => navigate('/votacoes')} 
+            onClick={() => goBack(navigate, "/votacoes")} 
             className="mb-4 -ml-2"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />

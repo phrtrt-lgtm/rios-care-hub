@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { goBack } from "@/lib/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -282,7 +283,7 @@ ${guardrails ? `REGRAS DE SEGURANÇA:\n${guardrails}\n` : ""}`;
           <div>
             <Button
               variant="ghost"
-              onClick={() => navigate("/painel")}
+              onClick={() => goBack(navigate, "/painel")}
               className="mb-4"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />

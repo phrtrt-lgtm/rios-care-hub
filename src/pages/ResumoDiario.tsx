@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { goBack } from "@/lib/navigation";
 import { ArrowLeft, RefreshCw, AlertTriangle, Clock, CheckCircle, Calendar, Wrench, Bell, FileText, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -112,7 +113,7 @@ export default function ResumoDiario() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate("/painel")}
+              onClick={() => goBack(navigate, "/painel")}
               className="text-white hover:bg-white/20"
             >
               <ArrowLeft className="h-5 w-5" />

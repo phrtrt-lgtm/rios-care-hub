@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { goBack } from "@/lib/navigation";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useReadReceipts } from "@/hooks/useReadReceipts";
@@ -710,7 +711,7 @@ export default function TicketDetalhes() {
     return (
       <div className="container mx-auto p-4 flex flex-col items-center justify-center min-h-[50vh] gap-4">
         <p className="text-muted-foreground">Ticket não encontrado.</p>
-        <Button variant="outline" onClick={() => navigate(-1)}>
+        <Button variant="outline" onClick={() => goBack(navigate, "/todos-tickets")}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Voltar
         </Button>
@@ -795,7 +796,7 @@ export default function TicketDetalhes() {
           <Button 
             variant="ghost" 
             size="sm" 
-            onClick={() => navigate("/")}
+            onClick={() => goBack(navigate, "/todos-tickets")}
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Voltar
