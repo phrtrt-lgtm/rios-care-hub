@@ -97,13 +97,20 @@ interface SortableHeaderProps {
 
 function SortableHeader({ label, field, currentSort, direction, onSort, className }: SortableHeaderProps) {
   const isActive = currentSort === field;
-  
+
+  // Detect text alignment from className to align the inner flex accordingly.
+  const justify = className?.includes("text-right")
+    ? "justify-end"
+    : className?.includes("text-left")
+    ? "justify-start"
+    : "justify-center";
+
   return (
-    <th 
-      className={cn("px-2 py-2 font-medium cursor-pointer hover:bg-muted/50 transition-colors select-none", className)}
+    <th
+      className={cn("px-1 py-2 font-medium cursor-pointer hover:bg-muted/50 transition-colors select-none", className)}
       onClick={() => onSort(field)}
     >
-      <div className="flex items-center gap-1">
+      <div className={cn("flex items-center gap-1", justify)}>
         <span>{label}</span>
         {isActive ? (
           direction === "asc" ? (
@@ -356,8 +363,8 @@ function GroupRow({
               : {})}
           >
             {/* Checkbox */}
-            <td className="p-0 w-[40px]" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-center px-2 py-2">
+            <td className="p-0 w-[36px]" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-center px-1 py-2">
                 <Checkbox
                   checked={selectedIds.has(item.id)}
                   onCheckedChange={() => onToggleSelection(item.id)}
@@ -366,12 +373,12 @@ function GroupRow({
             </td>
 
             {/* Nome da Manutenção - Abre Chat */}
-            <td className="p-0 max-w-[200px]">
+            <td className="p-0 w-[220px] max-w-[220px]">
               <TooltipProvider delayDuration={300}>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div 
-                      className="px-2 py-2 font-medium text-sm cursor-pointer hover:text-primary transition-colors truncate flex items-center gap-2"
+                    <div
+                      className="px-1 py-2 font-medium text-sm cursor-pointer hover:text-primary transition-colors truncate text-center"
                       onClick={() => onOpenChat(item)}
                     >
                       <span className="truncate">{item.subject}</span>
@@ -385,9 +392,9 @@ function GroupRow({
             </td>
 
             {/* Chat / Mensagens não lidas */}
-            <td className="p-0 w-[60px]">
-              <div 
-                className="flex items-center justify-center px-2 py-2 cursor-pointer hover:bg-muted/50 rounded transition-colors"
+            <td className="p-0 w-[44px]">
+              <div
+                className="flex items-center justify-center px-1 py-2 cursor-pointer hover:bg-muted/50 rounded transition-colors"
                 onClick={() => onOpenChat(item)}
               >
                 <div className="relative">
@@ -402,11 +409,11 @@ function GroupRow({
             </td>
 
             {/* Imóvel */}
-            <td className="p-0 max-w-[130px]">
+            <td className="p-0 w-[140px] max-w-[140px]">
               <TooltipProvider delayDuration={300}>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="px-2 py-2 text-sm text-muted-foreground truncate">
+                    <div className="px-1 py-2 text-sm text-muted-foreground truncate text-center">
                       {item.property?.name || "—"}
                     </div>
                   </TooltipTrigger>
@@ -418,40 +425,40 @@ function GroupRow({
             </td>
 
             {/* Valor */}
-            <td className="p-0 w-[120px]">
+            <td className="p-0 w-[90px]">
               <EditableCell
                 value={item.amount_cents || null}
                 type="currency"
                 placeholder="R$ 0,00"
                 onSave={(val) => onUpdateItem(item.id, "amount_cents", val)}
-                className="justify-end font-medium"
+                className="justify-center font-medium"
               />
             </td>
 
             {/* Aporte Gestão */}
-            <td className="p-0 w-[120px]">
+            <td className="p-0 w-[90px]">
               <EditableCell
                 value={item.management_contribution_cents || null}
                 type="currency"
                 placeholder="R$ 0,00"
                 onSave={(val) => onUpdateItem(item.id, "management_contribution_cents", val)}
-                className="justify-end text-success"
+                className="justify-center text-success"
               />
             </td>
 
             {/* Data (criação) */}
-            <td className="p-0 w-[100px]">
-              <div className="px-2 py-2 text-sm text-center text-muted-foreground">
+            <td className="p-0 w-[80px]">
+              <div className="px-1 py-2 text-sm text-center text-muted-foreground">
                 {item.created_at ? format(new Date(item.created_at), "dd MMM", { locale: ptBR }) : "—"}
               </div>
             </td>
 
             {/* Anexos */}
-            <td className="p-0 w-[80px]">
-              <div className="flex items-center justify-center gap-1 px-1 py-2">
+            <td className="p-0 w-[70px]">
+              <div className="flex items-center justify-center gap-0.5 px-1 py-2">
                 <button
                   className={cn(
-                    "flex items-center gap-1 px-2 py-1 rounded text-sm transition-colors",
+                    "flex items-center gap-1 px-1.5 py-1 rounded text-sm transition-colors",
                     item.attachments_count && item.attachments_count > 0
                       ? "hover:bg-primary/10 cursor-pointer text-primary"
                       : "text-muted-foreground"
@@ -485,23 +492,25 @@ function GroupRow({
             </td>
 
             {/* Label (Categoria) */}
-            <td className="p-0 w-[130px]">
+            <td className="p-0 w-[120px]">
               <EditableCell
                 value={item.service_type || null}
                 type="select"
                 options={SERVICE_LABELS}
                 placeholder="Selecionar"
                 onSave={(val) => onUpdateItem(item.id, "service_type", val)}
+                className="justify-center"
               />
             </td>
 
             {/* Status */}
-            <td className="p-0 w-[150px]">
+            <td className="p-0 w-[140px]">
               <EditableCell
                 value={item.list_status || "em_progresso"}
                 type="select"
                 options={LIST_STATUSES}
                 onSave={(val) => onUpdateItem(item.id, "list_status", val)}
+                className="justify-center"
               />
             </td>
           </tr>
@@ -2111,16 +2120,16 @@ export default function AdminManutencoesLista() {
             <table className="w-full text-sm table-fixed">
               <thead className="bg-secondary text-secondary-foreground">
                 <tr className="h-10">
-                  <th className="w-[40px] px-2 py-2"></th>
-                  <SortableHeader label="Manutenção" field="subject" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-left w-[200px] max-w-[200px]" />
-                  <th className="text-center px-2 py-2 font-medium w-[60px]">Chat</th>
-                  <SortableHeader label="Imóvel" field="property" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-left w-[130px] max-w-[130px]" />
-                  <SortableHeader label="Valor" field="amount_cents" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-right w-[120px]" />
-                  <SortableHeader label="Aporte Gestão" field="management_contribution_cents" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-right w-[120px]" />
-                  <SortableHeader label="Data" field="created_at" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[100px]" />
-                  <th className="text-center px-2 py-2 font-medium w-[60px]">Anexos</th>
-                  <SortableHeader label="Label" field="service_type" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[130px]" />
-                  <SortableHeader label="Status" field="list_status" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[150px]" />
+                  <th className="w-[36px] px-1 py-2"></th>
+                  <SortableHeader label="Manutenção" field="subject" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[220px] max-w-[220px]" />
+                  <th className="text-center px-1 py-2 font-medium w-[44px]">Chat</th>
+                  <SortableHeader label="Imóvel" field="property" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[140px] max-w-[140px]" />
+                  <SortableHeader label="Valor" field="amount_cents" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[90px]" />
+                  <SortableHeader label="Aporte" field="management_contribution_cents" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[90px]" />
+                  <SortableHeader label="Data" field="created_at" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[80px]" />
+                  <th className="text-center px-1 py-2 font-medium w-[70px]">Anexos</th>
+                  <SortableHeader label="Label" field="service_type" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[120px]" />
+                  <SortableHeader label="Status" field="list_status" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[140px]" />
                 </tr>
               </thead>
               <tbody>
