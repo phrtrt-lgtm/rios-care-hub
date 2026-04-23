@@ -308,7 +308,7 @@ function EditableCell({ value, type, options, onSave, className, placeholder }: 
       onClick={(e) => {
         e.stopPropagation();
         setEditValue(type === "currency" && typeof value === "number" 
-          ? (value / 100).toFixed(2).replace(",", ",")
+          ? (value / 100).toFixed(2).replace(".", ",")
           : String(value ?? "")
         );
         setIsEditing(true);
