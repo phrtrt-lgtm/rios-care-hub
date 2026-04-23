@@ -54,6 +54,7 @@ interface MaintenanceItem {
   list_status?: ListStatus;
   attachments_count?: number;
   itemType?: "ticket" | "charge";
+  cost_responsible?: string | null;
 }
 
 // ===== CONSTANTS =====
