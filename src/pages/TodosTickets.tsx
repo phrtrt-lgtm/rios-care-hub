@@ -483,8 +483,10 @@ const TodosTickets = () => {
 
         {/* Tickets Abertos */}
         {(() => {
-          const openTickets = filteredTickets.filter(t => isTicketOpen(t.status));
-          const closedTickets = filteredTickets.filter(t => !isTicketOpen(t.status));
+          const visibleTickets = filteredTickets.slice(0, visibleCount);
+          const openTickets = visibleTickets.filter(t => isTicketOpen(t.status));
+          const closedTickets = visibleTickets.filter(t => !isTicketOpen(t.status));
+          const hasMore = filteredTickets.length > visibleCount;
           
           const renderTicketRow = (ticket: Ticket) => {
             const ticketIsOpen = isTicketOpen(ticket.status);
