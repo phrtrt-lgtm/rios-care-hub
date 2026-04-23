@@ -50,6 +50,7 @@ interface Attachment {
   file_name?: string;
   file_type?: string;
   size_bytes?: number;
+  maintenance_ticket_id?: string | null;
 }
 
 // Component to show audio with duration
