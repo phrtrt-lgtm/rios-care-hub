@@ -13,6 +13,8 @@ import { ptBR } from "date-fns/locale";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
+import { ListFilters } from "@/components/list/ListFilters";
+import { useListFilters } from "@/hooks/useListFilters";
 
 const statusLabels: Record<string, string> = {
   novo: "Novo",
