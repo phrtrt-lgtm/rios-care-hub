@@ -130,7 +130,9 @@ export function CreateMaintenanceFromInspectionDialog({
   };
 
   const selectAllAttachments = () => {
-    setSelectedAttachments(mediaAttachments.map(a => a.id));
+    setSelectedAttachments(
+      mediaAttachments.filter((a) => !a.maintenance_ticket_id).map((a) => a.id)
+    );
   };
 
   const deselectAllAttachments = () => {
