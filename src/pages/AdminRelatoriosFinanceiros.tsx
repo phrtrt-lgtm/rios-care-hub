@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { goBack } from "@/lib/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -187,7 +188,7 @@ export default function AdminRelatoriosFinanceiros() {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => navigate("/painel")}
+                onClick={() => goBack(navigate, "/painel")}
                 aria-label="Voltar ao painel"
               >
                 <ArrowLeft className="h-5 w-5" />
