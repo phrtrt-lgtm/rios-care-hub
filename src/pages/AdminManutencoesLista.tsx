@@ -510,7 +510,7 @@ function GroupRow({
             </td>
 
             {/* Valor */}
-            <td className="p-0 w-[90px]">
+            <td className="p-0 w-[90px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
               <EditableCell
                 value={item.amount_cents || null}
                 type="currency"
@@ -521,7 +521,7 @@ function GroupRow({
             </td>
 
             {/* Aporte Gestão */}
-            <td className="p-0 w-[90px]">
+            <td className="p-0 w-[90px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
               <EditableCell
                 value={item.management_contribution_cents || null}
                 type="currency"
