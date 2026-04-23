@@ -16,7 +16,7 @@ interface DetailSheetProps {
 }
 
 function getEntityRoute(entityType: DetailEntityType, id: string): string {
-  if (entityType === 'maintenance') return `/manutencao/${id}`;
+  if (entityType === 'maintenance') return `/ticket-detalhes/${id}`;
   if (entityType === 'vistoria') return `/admin/vistoria/${id}`;
   if (entityType === 'cobranca') return `/cobranca/${id}`;
   return '/';
