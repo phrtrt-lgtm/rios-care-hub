@@ -12,6 +12,7 @@ import { ArrowLeft, Calendar, User, Building2, CheckCircle2, AlertTriangle, Head
 import { format, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 
 interface Inspection {
   id: string;
@@ -35,6 +36,7 @@ interface InspectionDate {
 }
 
 export default function Vistorias() {
+  useScrollRestoration();
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();

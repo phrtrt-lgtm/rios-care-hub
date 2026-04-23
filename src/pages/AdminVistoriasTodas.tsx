@@ -25,6 +25,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ListFilters } from "@/components/list/ListFilters";
 import { useListFilters } from "@/hooks/useListFilters";
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 
 const PAGE_SIZE = 50;
 
@@ -58,6 +59,7 @@ interface ExpandedData {
 }
 
 export default function AdminVistoriasTodas() {
+  useScrollRestoration();
   const { profile } = useAuth();
   const navigate = useNavigate();
   const [inspections, setInspections] = useState<Inspection[]>([]);

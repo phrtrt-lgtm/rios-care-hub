@@ -29,6 +29,7 @@ import { Pencil } from "lucide-react";
 import { useDetailSheet } from "@/hooks/useDetailSheet";
 import { DetailSheet } from "@/components/detail-sheet/DetailSheet";
 import { getRowHandlers } from "@/lib/row-interaction";
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 // ===== TYPES =====
 type TicketStatus = "novo" | "em_analise" | "aguardando_info" | "em_execucao" | "concluido" | "cancelado";
 
@@ -992,6 +993,7 @@ function VistoriasTable({
 
 // ===== MAIN COMPONENT =====
 export default function AdminManutencoesLista() {
+  useScrollRestoration();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();

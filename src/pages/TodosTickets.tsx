@@ -16,6 +16,7 @@ import { ptBR } from "date-fns/locale";
 import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
 import { ListFilters } from "@/components/list/ListFilters";
 import { useListFilters } from "@/hooks/useListFilters";
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 
 interface Ticket {
   id: string;
@@ -48,6 +49,7 @@ interface Ticket {
 }
 
 const TodosTickets = () => {
+  useScrollRestoration();
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [tickets, setTickets] = useState<Ticket[]>([]);

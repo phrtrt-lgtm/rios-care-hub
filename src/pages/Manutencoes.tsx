@@ -13,8 +13,10 @@ import { Plus, Filter, Building2, ArrowLeft } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { goBack } from "@/lib/navigation";
 import { supabase } from "@/integrations/supabase/client";
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 
 export default function Manutencoes() {
+  useScrollRestoration();
   const { profile, user } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();

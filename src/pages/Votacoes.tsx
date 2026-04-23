@@ -11,8 +11,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useState } from "react";
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 
 export default function Votacoes() {
+  useScrollRestoration();
   const navigate = useNavigate();
   const { profile } = useAuth();
   const queryClient = useQueryClient();

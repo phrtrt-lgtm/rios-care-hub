@@ -17,6 +17,7 @@ import { Headphones, Paperclip, ArrowLeft, User, Calendar, AlertTriangle, CheckC
 import { format, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -56,6 +57,7 @@ interface InspectionDate {
 }
 
 export default function AdminVistoriasImovel() {
+  useScrollRestoration();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();

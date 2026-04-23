@@ -19,6 +19,7 @@ import { EditChargeDialog } from "@/components/EditChargeDialog";
 import { DebitoReservaCalculator } from "@/components/DebitoReservaCalculator";
 import { ReserveDebitsTable } from "@/components/ReserveDebitsTable";
 import { OpenChargesTable } from "@/components/OpenChargesTable";
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -67,6 +68,7 @@ interface PropertyGroup {
 }
 
 const GerenciarCobrancas = () => {
+  useScrollRestoration();
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();

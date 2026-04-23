@@ -14,6 +14,7 @@ import { formatBRL } from "@/lib/format";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 
 interface BookingCommission {
   id: string;
@@ -47,6 +48,7 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
 const OPEN_STATUSES = ["sent", "pendente", "overdue"];
 
 export default function MinhasComissoesBooking() {
+  useScrollRestoration();
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());

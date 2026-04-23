@@ -17,6 +17,7 @@ import { differenceInDays, isPast, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { BookingCommissionChatDialog } from "@/components/BookingCommissionChatDialog";
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 
 export interface BookingCommission {
   id: string;
@@ -56,6 +57,7 @@ const OPEN_STATUSES = ["sent", "pendente", "overdue", "draft"];
 const PAID_STATUSES = ["paid", "pago_no_vencimento", "pago_antecipado", "pago_com_atraso"];
 
 const BookingComissoes = () => {
+  useScrollRestoration();
   const navigate = useNavigate();
   const { profile } = useAuth();
   const { toast } = useToast();
