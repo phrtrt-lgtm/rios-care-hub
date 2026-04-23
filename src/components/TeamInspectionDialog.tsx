@@ -718,7 +718,7 @@ export default function TeamInspectionDialog({
             </Button>
             <Button 
               onClick={handleSubmit} 
-              disabled={sending || isUploading || isTranscribing || hasErrors || (inspectionType === 'standard' && !inspectionStatus)}
+              disabled={sending || isUploading || isTranscribing || hasErrors}
             >
               {sending ? (
                 <>
