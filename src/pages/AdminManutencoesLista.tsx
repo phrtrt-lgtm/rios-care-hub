@@ -54,6 +54,7 @@ interface MaintenanceItem {
   list_status?: ListStatus;
   attachments_count?: number;
   itemType?: "ticket" | "charge";
+  cost_responsible?: string | null;
 }
 
 // ===== CONSTANTS =====
@@ -77,6 +78,16 @@ const LIST_STATUSES = [
   { value: "em_progresso", label: "Em Progresso", color: "bg-warning" },
   { value: "feito", label: "Feito", color: "bg-success" },
   { value: "enviar_proprietario", label: "Enviar ao Proprietário", color: "bg-primary" },
+];
+
+// Cost responsible options shown in the list. 'pending' means the team hasn't
+// decided yet — owner does not see the maintenance and no notification is sent.
+// Selecting any other value triggers the "ticket created" notification flow.
+const COST_RESPONSIBLE_OPTIONS = [
+  { value: "pending", label: "Em espera", color: "bg-muted-foreground" },
+  { value: "owner", label: "Proprietário", color: "bg-primary" },
+  { value: "pm", label: "Gestão", color: "bg-info" },
+  { value: "guest", label: "Hóspede", color: "bg-warning" },
 ];
 
 const GROUPS = [
@@ -576,7 +587,23 @@ function GroupRow({
               </div>
             </td>
 
-            {/* Label (Categoria) */}
+            {/* Responsável pelo custo */}
+            <td className="p-0 w-[120px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
+              {isCharge ? (
+                <div className="px-1 py-2 text-sm text-center text-muted-foreground">
+                  {COST_RESPONSIBLE_OPTIONS.find(o => o.value === item.cost_responsible)?.label || "—"}
+                </div>
+              ) : (
+                <EditableCell
+                  value={item.cost_responsible || "pending"}
+                  type="select"
+                  options={COST_RESPONSIBLE_OPTIONS}
+                  onSave={(val) => onUpdateItem(item.id, "cost_responsible", val, false)}
+                  className="justify-center"
+                />
+              )}
+            </td>
+
             <td className="p-0 w-[120px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
               <EditableCell
                 value={item.service_type || null}
@@ -1215,6 +1242,9 @@ export default function AdminManutencoesLista() {
           ticket_type: "manutencao",
           kind: "maintenance",
           status: inlineAdd.groupId === "concluidas" ? "concluido" : "novo",
+          // Created in "Em espera" — hidden from owner, no notifications until
+          // the team picks a real cost_responsible from the list.
+          cost_responsible: "pending",
         });
         if (error) throw error;
       } else {
@@ -1356,6 +1386,7 @@ export default function AdminManutencoesLista() {
           status,
           scheduled_at,
           created_at,
+          cost_responsible,
           property:properties(id, name),
           owner:profiles!tickets_owner_id_fkey(id, name)
         `)
@@ -1408,6 +1439,7 @@ export default function AdminManutencoesLista() {
           management_contribution_cents: chargeMap[t.id]?.management_contribution_cents || null,
           service_type: chargeMap[t.id]?.service_type || null,
           list_status: t.status === "concluido" ? "feito" : "em_progresso",
+          cost_responsible: (t as any).cost_responsible ?? null,
         })) as MaintenanceItem[];
     },
   });
@@ -1428,6 +1460,7 @@ export default function AdminManutencoesLista() {
           created_at,
           due_date,
           status,
+          cost_responsible,
           property:properties(id, name),
           owner:profiles!charges_owner_id_fkey(id, name),
           ticket_id
@@ -2219,6 +2252,7 @@ export default function AdminManutencoesLista() {
                   <SortableHeader label="Aporte" field="management_contribution_cents" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[90px]" />
                   <SortableHeader label="Data" field="created_at" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[80px]" />
                   <th className="text-center px-1 py-2 font-medium w-[70px]">Anexos</th>
+                  <th className="text-center px-1 py-2 font-medium w-[120px]">Responsável</th>
                   <SortableHeader label="Label" field="service_type" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[120px]" />
                   <SortableHeader label="Status" field="list_status" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[140px]" />
                 </tr>
