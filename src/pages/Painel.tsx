@@ -98,52 +98,63 @@ export default function Painel() {
       <header className="border-b bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1 sm:gap-3 min-w-0 flex-shrink overflow-x-auto">
-              <img src="/logo.png" alt="RIOS" className="h-6 object-contain" />
-              
-              {profile?.role === "admin" && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => navigate("/admin/vistorias")}
-                  title="Vistorias de Faxina"
-                >
-                  <Sparkles className="h-5 w-5" />
-                </Button>
-              )}
-              
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <button
+                onClick={() => navigate("/painel")}
+                className="flex-shrink-0"
+                aria-label="Início"
+              >
+                <img src="/logo.png" alt="RIOS" className="h-6 object-contain" />
+              </button>
+
+              {/* Ação primária — desktop apenas. No mobile fica no MobileBottomNav. */}
               {(profile?.role === "admin" || profile?.role === "agent" || profile?.role === "maintenance") && (
                 <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => navigate("/resumo-propriedades")}
-                  title="Resumo por Propriedade"
+                  variant="default"
+                  size="sm"
+                  className="hidden sm:inline-flex"
+                  onClick={() => navigate("/novo-ticket-massa")}
                 >
-                  <Building2 className="h-5 w-5" />
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo ticket
                 </Button>
               )}
-              
-              {(profile?.role === "admin" || profile?.role === "maintenance") && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => navigate("/admin/manutencoes-lista")}
-                  title="Lista de Manutenções e Vistorias"
-                >
-                  <List className="h-5 w-5" />
-                </Button>
-              )}
-              
-              {profile?.role === "maintenance" && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => navigate("/admin/vistorias")}
-                  title="Vistorias de Faxina"
-                >
-                  <Sparkles className="h-5 w-5" />
-                </Button>
-              )}
+
+              {/* Mais ações — desktop apenas */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="hidden sm:inline-flex">
+                    <MoreHorizontal className="h-4 w-4 mr-2" />
+                    Mais
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-60 bg-popover">
+                  {profile?.role === "admin" && (
+                    <DropdownMenuItem onClick={() => navigate("/admin/vistorias")}>
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Vistorias de faxina
+                    </DropdownMenuItem>
+                  )}
+                  {profile?.role === "maintenance" && (
+                    <DropdownMenuItem onClick={() => navigate("/admin/vistorias")}>
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Vistorias de faxina
+                    </DropdownMenuItem>
+                  )}
+                  {(profile?.role === "admin" || profile?.role === "agent" || profile?.role === "maintenance") && (
+                    <DropdownMenuItem onClick={() => navigate("/resumo-propriedades")}>
+                      <Building2 className="h-4 w-4 mr-2" />
+                      Resumo por propriedade
+                    </DropdownMenuItem>
+                  )}
+                  {(profile?.role === "admin" || profile?.role === "maintenance") && (
+                    <DropdownMenuItem onClick={() => navigate("/admin/manutencoes-lista")}>
+                      <List className="h-4 w-4 mr-2" />
+                      Lista de manutenções
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
             
             <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
