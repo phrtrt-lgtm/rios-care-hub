@@ -1198,6 +1198,12 @@ export default function AdminManutencoesLista() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pendingUploadItem, setPendingUploadItem] = useState<MaintenanceItem | null>(null);
 
+  // Edit dialogs state
+  const [editMaintenanceId, setEditMaintenanceId] = useState<string | null>(null);
+  const [editMaintenanceOpen, setEditMaintenanceOpen] = useState(false);
+  const [editChargeId, setEditChargeId] = useState<string | null>(null);
+  const [editChargeOpen, setEditChargeOpen] = useState(false);
+
   // Debounced search
   const [debouncedSearch, setDebouncedSearch] = useState("");
   useEffect(() => {
