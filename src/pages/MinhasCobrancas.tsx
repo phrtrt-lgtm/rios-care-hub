@@ -14,6 +14,8 @@ import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { formatBRL } from "@/lib/format";
 import { CHARGE_CATEGORIES } from "@/constants/chargeCategories";
+import { ListFilters } from "@/components/list/ListFilters";
+import { useListFilters } from "@/hooks/useListFilters";
 
 interface Charge {
   id: string;
@@ -61,7 +63,9 @@ const MinhasCobrancas = () => {
     pix_qr_code_base64: string;
     total_amount: number;
   } | null>(null);
-
+  const [visibleCount, setVisibleCount] = useState(100);
+  const filtersHook = useListFilters("filters:minhas-cobrancas");
+  const { applyTo } = filtersHook;
   useEffect(() => {
     if (!user || profile?.role !== 'owner') {
       navigate("/");
@@ -424,21 +428,56 @@ const MinhasCobrancas = () => {
           </Card>
         )}
 
-        {charges.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-semibold text-foreground">
-                Nenhuma cobrança encontrada
-              </h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Você não possui cobranças no momento.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {charges.map((charge) => {
+        {(() => {
+          const propertyOptions = Array.from(
+            new Map(charges.filter(c => c.property?.name && c.property_id).map(c => [c.property_id!, c.property!.name])).entries()
+          ).map(([value, label]) => ({ value, label }));
+          const filteredCharges = applyTo(charges, {
+            searchFields: (c) => [c.title, c.description, c.property?.name],
+            status: (c) => c.status,
+            propertyId: (c) => c.property_id,
+            date: (c) => c.created_at,
+          });
+          const visibleCharges = filteredCharges.slice(0, visibleCount);
+          const hasMore = filteredCharges.length > visibleCount;
+          return (
+            <>
+              <Card className="mb-4">
+                <CardContent className="pt-6">
+                  <ListFilters
+                    {...filtersHook}
+                    searchPlaceholder="Buscar por título ou imóvel..."
+                    statusOptions={[
+                      { value: "draft", label: "Rascunho" },
+                      { value: "sent", label: "Enviada" },
+                      { value: "paid", label: "Paga" },
+                      { value: "overdue", label: "Vencida" },
+                      { value: "cancelled", label: "Cancelada" },
+                      { value: "debited", label: "Debitada em Reserva" },
+                    ]}
+                    propertyOptions={propertyOptions}
+                    showDateRange
+                    totalCount={charges.length}
+                    filteredCount={filteredCharges.length}
+                  />
+                </CardContent>
+              </Card>
+
+              {charges.length === 0 ? (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
+                    <h3 className="mt-4 text-lg font-semibold text-foreground">
+                      Nenhuma cobrança encontrada
+                    </h3>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Você não possui cobranças no momento.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-3">
+                  {visibleCharges.map((charge) => {
               const isOpen = charge.status === 'sent' || charge.status === 'overdue';
               const isSelected = selectedCharges.includes(charge.id);
               const ownerDue = charge.amount_cents - charge.management_contribution_cents;
@@ -555,9 +594,20 @@ const MinhasCobrancas = () => {
                   </div>
                 </Card>
               );
-            })}
-          </div>
-        )}
+                  })}
+                </div>
+              )}
+
+              {hasMore && (
+                <div className="flex justify-center pt-2">
+                  <Button variant="outline" onClick={() => setVisibleCount((v) => v + 100)}>
+                    Carregar mais ({filteredCharges.length - visibleCount} restantes)
+                  </Button>
+                </div>
+              )}
+            </>
+          );
+        })()}
       </main>
     </div>
   );

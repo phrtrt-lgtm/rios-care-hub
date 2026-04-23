@@ -5,15 +5,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Search, Filter, Building2, Trash2, MessageSquare, ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, Building2, Trash2, MessageSquare, ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
+import { ListFilters } from "@/components/list/ListFilters";
+import { useListFilters } from "@/hooks/useListFilters";
 
 interface Ticket {
   id: string;
@@ -51,9 +52,8 @@ const TodosTickets = () => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [filteredTickets, setFilteredTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const filtersHook = useListFilters("filters:todos-tickets");
+  const { filters, debouncedSearch, applyTo } = filtersHook;
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [selectedTickets, setSelectedTickets] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
@@ -62,7 +62,8 @@ const TodosTickets = () => {
   const [chatOpen, setChatOpen] = useState(false);
   const [selectedTicketForChat, setSelectedTicketForChat] = useState<Ticket | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [sortBy, setSortBy] = useState<string>("recent"); // recent | oldest | sla
+  const [sortBy, setSortBy] = useState<string>("recent");
+  const [visibleCount, setVisibleCount] = useState(100);
 
   useEffect(() => {
     if (!user || !['admin', 'agent'].includes(profile?.role || '')) {
@@ -74,7 +75,7 @@ const TodosTickets = () => {
 
   useEffect(() => {
     filterTickets();
-  }, [searchTerm, statusFilter, priorityFilter, typeFilter, sortBy, tickets]);
+  }, [debouncedSearch, filters.status, filters.priority, filters.property, filters.dateFrom, filters.dateTo, typeFilter, sortBy, tickets]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -168,23 +169,13 @@ const TodosTickets = () => {
   };
 
   const filterTickets = () => {
-    let filtered = [...tickets];
-
-    if (searchTerm) {
-      filtered = filtered.filter(ticket => 
-        ticket.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        ticket.owner.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (ticket.property?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(ticket => ticket.status === statusFilter);
-    }
-
-    if (priorityFilter !== 'all') {
-      filtered = filtered.filter(ticket => ticket.priority === priorityFilter);
-    }
+    let filtered = applyTo(tickets, {
+      searchFields: (t) => [t.subject, t.description, t.owner.name, t.property?.name],
+      status: (t) => t.status,
+      priority: (t) => t.priority,
+      propertyId: (t) => t.property?.id ?? null,
+      date: (t) => t.created_at,
+    });
 
     if (typeFilter !== 'all') {
       filtered = filtered.filter(ticket => ticket.ticket_type === typeFilter);
@@ -214,7 +205,17 @@ const TodosTickets = () => {
     });
 
     setFilteredTickets(filtered);
+    setVisibleCount(100);
   };
+
+  // Build property options from loaded tickets
+  const propertyOptions = (() => {
+    const map = new Map<string, string>();
+    tickets.forEach((t) => {
+      if (t.property?.id) map.set(t.property.id, t.property.name);
+    });
+    return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
+  })();
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
@@ -427,80 +428,65 @@ const TodosTickets = () => {
 
         {/* Filtros */}
         <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="h-5 w-5" />
-              Filtros
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-5">
-              <div className="relative md:col-span-2">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar por assunto, proprietário ou unidade..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os Status</SelectItem>
-                  <SelectItem value="novo">Novo</SelectItem>
-                  <SelectItem value="em_analise">Em Análise</SelectItem>
-                  <SelectItem value="em_execucao">Em Execução</SelectItem>
-                  <SelectItem value="aguardando_info">Aguardando Info</SelectItem>
-                  <SelectItem value="concluido">Concluído</SelectItem>
-                  <SelectItem value="cancelado">Cancelado</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Prioridade" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas as Prioridades</SelectItem>
-                  <SelectItem value="baixa">Baixa</SelectItem>
-                  <SelectItem value="normal">Normal</SelectItem>
-                  <SelectItem value="alta">Alta</SelectItem>
-                  <SelectItem value="urgente">Urgente</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os Tipos</SelectItem>
-                  <SelectItem value="manutencao">Manutenção</SelectItem>
-                  <SelectItem value="financeiro">Financeiro</SelectItem>
-                  <SelectItem value="duvida">Dúvida</SelectItem>
-                  <SelectItem value="reclamacao">Reclamação</SelectItem>
-                  <SelectItem value="outro">Outro</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Ordenar por" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="recent">Mais recentes primeiro</SelectItem>
-                  <SelectItem value="oldest">Mais antigos primeiro</SelectItem>
-                  <SelectItem value="sla">SLA (vencendo antes)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <CardContent className="pt-6">
+            <ListFilters
+              {...filtersHook}
+              searchPlaceholder="Buscar por assunto, proprietário ou unidade..."
+              statusOptions={[
+                { value: "novo", label: "Novo" },
+                { value: "em_analise", label: "Em Análise" },
+                { value: "em_execucao", label: "Em Execução" },
+                { value: "aguardando_info", label: "Aguardando Info" },
+                { value: "concluido", label: "Concluído" },
+                { value: "cancelado", label: "Cancelado" },
+              ]}
+              priorityOptions={[
+                { value: "baixa", label: "Baixa" },
+                { value: "normal", label: "Normal" },
+                { value: "alta", label: "Alta" },
+                { value: "urgente", label: "Urgente" },
+              ]}
+              propertyOptions={propertyOptions}
+              showDateRange
+              totalCount={tickets.length}
+              filteredCount={filteredTickets.length}
+              extra={
+                <>
+                  <Select value={typeFilter} onValueChange={setTypeFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Tipo" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover z-50">
+                      <SelectItem value="all">Todos os tipos</SelectItem>
+                      <SelectItem value="manutencao">Manutenção</SelectItem>
+                      <SelectItem value="financeiro">Financeiro</SelectItem>
+                      <SelectItem value="duvida">Dúvida</SelectItem>
+                      <SelectItem value="reclamacao">Reclamação</SelectItem>
+                      <SelectItem value="outro">Outro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Ordenar por" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover z-50">
+                      <SelectItem value="recent">Mais recentes</SelectItem>
+                      <SelectItem value="oldest">Mais antigos</SelectItem>
+                      <SelectItem value="sla">SLA (vencendo antes)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </>
+              }
+            />
           </CardContent>
         </Card>
 
         {/* Tickets Abertos */}
         {(() => {
-          const openTickets = filteredTickets.filter(t => isTicketOpen(t.status));
-          const closedTickets = filteredTickets.filter(t => !isTicketOpen(t.status));
+          const visibleTickets = filteredTickets.slice(0, visibleCount);
+          const openTickets = visibleTickets.filter(t => isTicketOpen(t.status));
+          const closedTickets = visibleTickets.filter(t => !isTicketOpen(t.status));
+          const hasMore = filteredTickets.length > visibleCount;
           
           const renderTicketRow = (ticket: Ticket) => {
             const ticketIsOpen = isTicketOpen(ticket.status);
@@ -748,6 +734,14 @@ const TodosTickets = () => {
                   )}
                 </CardContent>
               </Card>
+
+              {hasMore && (
+                <div className="flex justify-center pt-2">
+                  <Button variant="outline" onClick={() => setVisibleCount((v) => v + 100)}>
+                    Carregar mais ({filteredTickets.length - visibleCount} restantes)
+                  </Button>
+                </div>
+              )}
             </div>
           );
         })()}

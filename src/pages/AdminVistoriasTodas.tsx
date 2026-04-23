@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { ListFilters } from "@/components/list/ListFilters";
+import { useListFilters } from "@/hooks/useListFilters";
 
 const PAGE_SIZE = 50;
 
@@ -67,6 +69,8 @@ export default function AdminVistoriasTodas() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [expandedData, setExpandedData] = useState<Record<string, ExpandedData>>({});
   const [loadingExpand, setLoadingExpand] = useState<string | null>(null);
+  const filtersHook = useListFilters("filters:admin-vistorias-todas");
+  const { filters, debouncedSearch } = filtersHook;
 
   useEffect(() => {
     if (profile?.role !== "admin" && profile?.role !== "agent" && profile?.role !== "maintenance") {
@@ -79,14 +83,12 @@ export default function AdminVistoriasTodas() {
     setExpandedId(null);
   }, [currentPage, searchTerm, statusFilter]);
 
-  // Debounce search
+  // Sync ListFilters debounced search → server search
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setSearchTerm(searchInput);
-      setCurrentPage(1);
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [searchInput]);
+    setSearchTerm(debouncedSearch);
+    setSearchInput(debouncedSearch);
+    setCurrentPage(1);
+  }, [debouncedSearch]);
 
   const fetchInspections = async () => {
     try {
@@ -182,32 +184,32 @@ export default function AdminVistoriasTodas() {
 
       <main className="container mx-auto px-4 py-4 max-w-3xl">
         {/* Filtros */}
-        <div className="mb-4 space-y-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Pesquisar por imóvel..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <div className="flex gap-2">
-            {(["todos", "ok", "nao"] as const).map((f) => (
-              <Button
-                key={f}
-                variant={statusFilter === f ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleFilterChange(f)}
-                className={
-                  statusFilter === f && f === "ok" ? "bg-success hover:bg-success" :
-                  statusFilter === f && f === "nao" ? "bg-destructive hover:bg-destructive" : ""
-                }
-              >
-                {f === "todos" ? "Todos" : f === "ok" ? "✓ OK" : "✗ Problemas"}
-              </Button>
-            ))}
-          </div>
+        <div className="mb-4">
+          <ListFilters
+            {...filtersHook}
+            searchPlaceholder="Pesquisar por imóvel..."
+            showDateRange={false}
+            totalCount={totalCount}
+            filteredCount={inspections.length}
+            extra={
+              <div className="flex gap-2 flex-wrap col-span-full">
+                {(["todos", "ok", "nao"] as const).map((f) => (
+                  <Button
+                    key={f}
+                    variant={statusFilter === f ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handleFilterChange(f)}
+                    className={
+                      statusFilter === f && f === "ok" ? "bg-success hover:bg-success" :
+                      statusFilter === f && f === "nao" ? "bg-destructive hover:bg-destructive" : ""
+                    }
+                  >
+                    {f === "todos" ? "Todos" : f === "ok" ? "✓ OK" : "✗ Problemas"}
+                  </Button>
+                ))}
+              </div>
+            }
+          />
         </div>
 
         {/* Lista */}
