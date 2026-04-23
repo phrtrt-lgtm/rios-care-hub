@@ -212,23 +212,61 @@ export default function MeusChamados() {
             </TabsList>
           </Tabs>
 
-          {tickets.length === 0 ? (
-            <EmptyState
-              icon={<Ticket className="h-6 w-6" />}
-              title={`Nenhum chamado ${activeTab === "abertos" ? "aberto" : "fechado"}${ticketTypeFilter !== "todos" ? ` em ${typeLabels[ticketTypeFilter]}` : ""}`}
-              description="Crie um novo chamado para registrar uma solicitação ou dúvida."
-              action={
-                <Button onClick={() => navigate("/novo-ticket")} size="sm">
-                  <Plus className="h-4 w-4 mr-1" />
-                  Criar chamado
-                </Button>
-              }
-            />
-          ) : (
-            <div className="space-y-2">
-              {tickets.map((ticket) => {
-                const unreadCount = unreadCounts[ticket.id] || 0;
-                
+          {(() => {
+            const propertyOptions = Array.from(
+              new Map(tickets.filter(t => t.properties?.name && t.property_id).map(t => [t.property_id, t.properties.name as string])).entries()
+            ).map(([value, label]) => ({ value, label }));
+            const filteredTickets = applyTo(tickets, {
+              searchFields: (t: any) => [t.subject, t.description, t.properties?.name],
+              status: (t: any) => t.status,
+              priority: (t: any) => t.priority,
+              propertyId: (t: any) => t.property_id,
+              date: (t: any) => t.created_at,
+            });
+            const visibleTickets = filteredTickets.slice(0, visibleCount);
+            const hasMore = filteredTickets.length > visibleCount;
+            return (
+              <>
+                <ListFilters
+                  {...filtersHook}
+                  searchPlaceholder="Buscar por assunto ou imóvel..."
+                  statusOptions={[
+                    { value: "novo", label: "Novo" },
+                    { value: "em_analise", label: "Em Análise" },
+                    { value: "aguardando_info", label: "Aguardando Info" },
+                    { value: "em_execucao", label: "Em Execução" },
+                    { value: "concluido", label: "Concluído" },
+                    { value: "cancelado", label: "Cancelado" },
+                  ]}
+                  priorityOptions={[
+                    { value: "baixa", label: "Baixa" },
+                    { value: "normal", label: "Normal" },
+                    { value: "alta", label: "Alta" },
+                    { value: "urgente", label: "Urgente" },
+                  ]}
+                  propertyOptions={propertyOptions}
+                  showDateRange
+                  totalCount={tickets.length}
+                  filteredCount={filteredTickets.length}
+                />
+
+                {tickets.length === 0 ? (
+                  <EmptyState
+                    icon={<Ticket className="h-6 w-6" />}
+                    title={`Nenhum chamado ${activeTab === "abertos" ? "aberto" : "fechado"}${ticketTypeFilter !== "todos" ? ` em ${typeLabels[ticketTypeFilter]}` : ""}`}
+                    description="Crie um novo chamado para registrar uma solicitação ou dúvida."
+                    action={
+                      <Button onClick={() => navigate("/novo-ticket")} size="sm">
+                        <Plus className="h-4 w-4 mr-1" />
+                        Criar chamado
+                      </Button>
+                    }
+                  />
+                ) : (
+                  <div className="space-y-2">
+                    {visibleTickets.map((ticket) => {
+                      const unreadCount = unreadCounts[ticket.id] || 0;
+                      
                 return (
                   <div
                     key={ticket.id}
