@@ -118,15 +118,15 @@ export const TicketList = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "novo":
-        return "bg-blue-500";
+        return "bg-info";
       case "em_analise":
-        return "bg-yellow-500";
+        return "bg-warning";
       case "aguardando_info":
-        return "bg-orange-500";
+        return "bg-warning";
       case "em_execucao":
-        return "bg-purple-500";
+        return "bg-primary";
       case "concluido":
-        return "bg-green-500";
+        return "bg-success";
       case "cancelado":
         return "bg-gray-500";
       default:

@@ -352,13 +352,13 @@ export default function Painel() {
             </h3>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <Card 
-                className="cursor-pointer hover-lift group border-blue-200 dark:border-blue-800 hover:border-blue-400 dark:hover:border-blue-600 transition-colors"
+                className="cursor-pointer hover-lift group border-info/30 hover:border-info/30 dark:hover:border-info/30 transition-colors"
                 onClick={() => navigate("/calendario-reservas")}
               >
                 <CardHeader className="py-3 px-4">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center group-hover:bg-blue-500/20 transition-colors">
-                      <Calendar className="h-5 w-5 text-blue-600" />
+                    <div className="h-10 w-10 rounded-lg bg-info/10 flex items-center justify-center group-hover:bg-info/20 transition-colors">
+                      <Calendar className="h-5 w-5 text-info" />
                     </div>
                     <div>
                       <CardTitle className="text-sm">Calendário & Ocupação</CardTitle>
@@ -464,8 +464,8 @@ export default function Painel() {
             title="Novos"
             value={stats.novos}
             description="Tickets recém-criados"
-            icon={<Ticket className="h-4 w-4 text-blue-500" />}
-            iconBgColor="bg-blue-500/10"
+            icon={<Ticket className="h-4 w-4 text-info" />}
+            iconBgColor="bg-info/10"
             borderColor="border-l-blue-500"
             delay={0}
             onClick={() => navigate("/todos-tickets?status=novo")}
@@ -474,8 +474,8 @@ export default function Painel() {
             title="Urgentes"
             value={stats.urgentes}
             description="Prioridade alta"
-            icon={<AlertTriangle className="h-4 w-4 text-red-500" />}
-            iconBgColor="bg-red-500/10"
+            icon={<AlertTriangle className="h-4 w-4 text-destructive" />}
+            iconBgColor="bg-destructive/10"
             borderColor="border-l-red-500"
             delay={0.1}
             onClick={() => navigate("/todos-tickets?priority=urgente")}
@@ -484,8 +484,8 @@ export default function Painel() {
             title="Em Andamento"
             value={stats.pendentes}
             description="Aguardando conclusão"
-            icon={<Users className="h-4 w-4 text-yellow-500" />}
-            iconBgColor="bg-yellow-500/10"
+            icon={<Users className="h-4 w-4 text-warning" />}
+            iconBgColor="bg-warning/10"
             borderColor="border-l-yellow-500"
             delay={0.2}
           />
@@ -493,8 +493,8 @@ export default function Painel() {
             title="Concluídos"
             value={stats.concluidos}
             description="Total finalizado"
-            icon={<CheckCircle2 className="h-4 w-4 text-green-500" />}
-            iconBgColor="bg-green-500/10"
+            icon={<CheckCircle2 className="h-4 w-4 text-success" />}
+            iconBgColor="bg-success/10"
             borderColor="border-l-green-500"
             delay={0.3}
           />
@@ -509,8 +509,8 @@ export default function Painel() {
               <Card className="cursor-pointer hover-lift group border-transparent hover:border-primary/20" onClick={() => navigate("/tutoriais")}>
                 <CardHeader>
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors">
-                      <BookOpen className="h-5 w-5 text-emerald-600" />
+                    <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center group-hover:bg-success/20 transition-colors">
+                      <BookOpen className="h-5 w-5 text-success" />
                     </div>
                     <div>
                       <CardTitle className="text-base">Tutoriais</CardTitle>
@@ -628,8 +628,8 @@ export default function Painel() {
               <Card className="cursor-pointer hover-lift group border-transparent hover:border-primary/20" onClick={() => navigate("/aprovacoes")}>
                 <CardHeader>
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-yellow-500/10 flex items-center justify-center group-hover:bg-yellow-500/20 transition-colors">
-                      <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                    <div className="h-10 w-10 rounded-lg bg-warning/10 flex items-center justify-center group-hover:bg-warning/20 transition-colors">
+                      <AlertTriangle className="h-5 w-5 text-warning" />
                     </div>
                     <div>
                       <CardTitle className="text-base">Aprovações Pendentes</CardTitle>
@@ -720,8 +720,8 @@ export default function Painel() {
               }}>
                 <CardHeader>
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center group-hover:bg-green-500/20 transition-colors">
-                      <Download className="h-5 w-5 text-green-600" />
+                    <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center group-hover:bg-success/20 transition-colors">
+                      <Download className="h-5 w-5 text-success" />
                     </div>
                     <div>
                       <CardTitle className="text-base">Exportar Contatos</CardTitle>

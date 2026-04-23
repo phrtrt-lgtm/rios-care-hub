@@ -200,8 +200,8 @@ export default function AdminVistoriasTodas() {
                 size="sm"
                 onClick={() => handleFilterChange(f)}
                 className={
-                  statusFilter === f && f === "ok" ? "bg-green-600 hover:bg-green-700" :
-                  statusFilter === f && f === "nao" ? "bg-red-600 hover:bg-red-700" : ""
+                  statusFilter === f && f === "ok" ? "bg-success hover:bg-success" :
+                  statusFilter === f && f === "nao" ? "bg-destructive hover:bg-destructive" : ""
                 }
               >
                 {f === "todos" ? "Todos" : f === "ok" ? "✓ OK" : "✗ Problemas"}
@@ -275,8 +275,8 @@ export default function AdminVistoriasTodas() {
                             {inspection.notes ? (
                               <span className={`flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
                                 isOk
-                                  ? "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400"
-                                  : "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400"
+                                  ? "bg-success/10 text-success dark:bg-green-900/50"
+                                  : "bg-destructive/10 text-destructive dark:bg-red-900/50"
                               }`}>
                                 {isOk
                                   ? <CheckCircle2 className="h-3 w-3" />
@@ -305,7 +305,7 @@ export default function AdminVistoriasTodas() {
                               </div>
                               <p className={`text-sm whitespace-pre-wrap rounded-lg p-3 ${
                                 isOk
-                                  ? "bg-green-500/10 border border-green-500/20"
+                                  ? "bg-success/10 border border-success/30/20"
                                   : "bg-destructive/10 border border-destructive/20"
                               }`}>
                                 {inspection.transcript}
@@ -334,17 +334,17 @@ export default function AdminVistoriasTodas() {
                               ) : (
                                 <div className="flex gap-2 flex-wrap">
                                   {imageCount > 0 && (
-                                    <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 px-2 py-1 rounded-full">
+                                    <span className="text-xs bg-info/10 text-info dark:bg-blue-900/40 dark:text-blue-300 px-2 py-1 rounded-full">
                                       🖼 {imageCount} foto{imageCount > 1 ? "s" : ""}
                                     </span>
                                   )}
                                   {videoCount > 0 && (
-                                    <span className="text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 px-2 py-1 rounded-full">
+                                    <span className="text-xs bg-primary/10 text-primary dark:bg-purple-900/40 dark:text-purple-300 px-2 py-1 rounded-full">
                                       🎬 {videoCount} vídeo{videoCount > 1 ? "s" : ""}
                                     </span>
                                   )}
                                   {audioCount > 0 && (
-                                    <span className="text-xs bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 px-2 py-1 rounded-full">
+                                    <span className="text-xs bg-warning/10 text-warning dark:bg-orange-900/40 dark:text-orange-300 px-2 py-1 rounded-full">
                                       🎵 {audioCount} áudio{audioCount > 1 ? "s" : ""}
                                     </span>
                                   )}

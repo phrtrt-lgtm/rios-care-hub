@@ -448,7 +448,7 @@ export function ChargeChatDialog({
                 isOwnMessage
                   ? "bg-primary text-primary-foreground"
                   : authorIsTeam
-                  ? "bg-blue-500/10 border border-blue-500/20"
+                  ? "bg-info/10 border border-info/30/20"
                   : "bg-muted"
               }`}
             >

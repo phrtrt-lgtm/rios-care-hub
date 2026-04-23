@@ -165,7 +165,7 @@ export default function ManutencaoDetalhes() {
             {managementContribution > 0 && (
               <div>
                 <div className="text-sm text-muted-foreground">Contribuição da Gestão</div>
-                <div className="text-xl font-semibold text-green-600">- {formatBRL(managementContribution)}</div>
+                <div className="text-xl font-semibold text-success">- {formatBRL(managementContribution)}</div>
               </div>
             )}
 
@@ -187,12 +187,12 @@ export default function ManutencaoDetalhes() {
 
             <div>
               <div className="text-sm text-muted-foreground">Total Pago</div>
-              <div className="text-xl font-semibold text-green-600">{formatBRL(totalPaid)}</div>
+              <div className="text-xl font-semibold text-success">{formatBRL(totalPaid)}</div>
             </div>
 
             <div>
               <div className="text-sm text-muted-foreground">Restante</div>
-              <div className="text-xl font-semibold text-orange-600">{formatBRL(remaining)}</div>
+              <div className="text-xl font-semibold text-warning">{formatBRL(remaining)}</div>
             </div>
           </CardContent>
         </Card>

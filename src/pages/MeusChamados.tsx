@@ -137,7 +137,7 @@ export default function MeusChamados() {
       case "em_execucao":
         return "bg-secondary/80 text-secondary-foreground";
       case "concluido":
-        return "bg-green-600 text-white";
+        return "bg-success text-white";
       case "cancelado":
         return "bg-muted text-muted-foreground";
       default:

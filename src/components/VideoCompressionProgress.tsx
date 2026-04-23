@@ -29,7 +29,7 @@ export function VideoCompressionProgress({
       case 'compressing':
         return <Video className="h-4 w-4 text-primary animate-pulse" />;
       case 'done':
-        return <CheckCircle2 className="h-4 w-4 text-green-500" />;
+        return <CheckCircle2 className="h-4 w-4 text-success" />;
       case 'error':
         return <AlertCircle className="h-4 w-4 text-destructive" />;
       default:
@@ -42,7 +42,7 @@ export function VideoCompressionProgress({
       case 'error':
         return 'bg-destructive';
       case 'done':
-        return 'bg-green-500';
+        return 'bg-success';
       default:
         return 'bg-primary';
     }

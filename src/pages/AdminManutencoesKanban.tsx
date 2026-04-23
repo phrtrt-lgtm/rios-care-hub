@@ -63,19 +63,19 @@ const KANBAN_COLUMNS = [
     id: "pendente", 
     label: "Pendente", 
     statuses: ["novo", "em_analise", "aguardando_info"] as TicketStatus[],
-    color: "bg-amber-500/10 border-amber-500/30"
+    color: "bg-warning/10 border-warning/30/30"
   },
   { 
     id: "agendado", 
     label: "Agendado", 
     statuses: [] as TicketStatus[], // Custom filter: has scheduled_at
-    color: "bg-blue-500/10 border-blue-500/30"
+    color: "bg-info/10 border-info/30/30"
   },
   { 
     id: "em_execucao", 
     label: "Em Execução", 
     statuses: ["em_execucao"] as TicketStatus[],
-    color: "bg-purple-500/10 border-purple-500/30"
+    color: "bg-primary/10 border-primary/30/30"
   },
 ];
 
@@ -461,12 +461,12 @@ const AdminManutencoesKanban = () => {
                           {/* Cost responsible badge */}
                           <div className="flex flex-wrap gap-1">
                             {ticket.cost_responsible === "guest" && (
-                              <Badge variant="outline" className="text-xs bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30">
+                              <Badge variant="outline" className="text-xs bg-warning/10 text-warning border-warning/30/30">
                                 Hóspede
                               </Badge>
                             )}
                             {ticket.cost_responsible === "pm" && (
-                              <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30">
+                              <Badge variant="outline" className="text-xs bg-info/10 text-info border-info/30/30">
                                 Gestão
                               </Badge>
                             )}
@@ -479,7 +479,7 @@ const AdminManutencoesKanban = () => {
 
                           {/* Scheduled info */}
                           {ticket.scheduled_at && (
-                            <div className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400">
+                            <div className="flex items-center gap-1 text-xs text-info">
                               <Calendar className="h-3 w-3" />
                               {format(new Date(ticket.scheduled_at), "dd/MM HH:mm", { locale: ptBR })}
                             </div>
@@ -523,7 +523,7 @@ const AdminManutencoesKanban = () => {
                             >
                               <MessageSquare className="h-3 w-3" />
                               {unreadCounts[ticket.id] > 0 && (
-                                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] rounded-full h-4 min-w-[16px] flex items-center justify-center px-1 font-bold">
+                                <span className="absolute -top-1 -right-1 bg-destructive text-white text-[8px] rounded-full h-4 min-w-[16px] flex items-center justify-center px-1 font-bold">
                                   {unreadCounts[ticket.id] > 9 ? "9+" : unreadCounts[ticket.id]}
                                 </span>
                               )}
@@ -583,7 +583,7 @@ const AdminManutencoesKanban = () => {
                                 </Button>
                                 <Button
                                   size="sm"
-                                  className="flex-1 text-xs h-7 bg-green-600 hover:bg-green-700"
+                                  className="flex-1 text-xs h-7 bg-success hover:bg-success"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     openCompleteDialog(ticket);
@@ -674,7 +674,7 @@ const AdminManutencoesKanban = () => {
                     </SelectContent>
                   </Select>
                   {scheduleData.cost_responsible === "guest" && (
-                    <p className="text-xs text-orange-600 dark:text-orange-400">
+                    <p className="text-xs text-warning">
                       ⚠️ Manutenções de hóspede não aparecem para o proprietário
                     </p>
                   )}

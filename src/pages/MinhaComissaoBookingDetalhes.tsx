@@ -37,13 +37,13 @@ interface BookingCommission {
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   draft:              { label: "Rascunho",        className: "bg-muted text-muted-foreground" },
-  sent:               { label: "Aguardando",      className: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300" },
-  pendente:           { label: "Pendente",        className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300" },
-  overdue:            { label: "Vencida",         className: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300" },
-  paid:               { label: "Pago",            className: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300" },
-  pago_no_vencimento: { label: "Pago no Venc.",   className: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300" },
-  pago_antecipado:    { label: "Pago Antecipado", className: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300" },
-  pago_com_atraso:    { label: "Pago c/ Atraso",  className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300" },
+  sent:               { label: "Aguardando",      className: "bg-info/10 text-info dark:bg-blue-900/40 dark:text-blue-300" },
+  pendente:           { label: "Pendente",        className: "bg-warning/10 text-warning dark:bg-yellow-900/40 dark:text-yellow-300" },
+  overdue:            { label: "Vencida",         className: "bg-destructive/10 text-destructive dark:bg-red-900/40 dark:text-red-300" },
+  paid:               { label: "Pago",            className: "bg-success/10 text-success dark:bg-green-900/40 dark:text-green-300" },
+  pago_no_vencimento: { label: "Pago no Venc.",   className: "bg-success/10 text-success dark:bg-green-900/40 dark:text-green-300" },
+  pago_antecipado:    { label: "Pago Antecipado", className: "bg-success/10 text-success dark:bg-emerald-900/40 dark:text-emerald-300" },
+  pago_com_atraso:    { label: "Pago c/ Atraso",  className: "bg-warning/10 text-warning dark:bg-yellow-900/40 dark:text-yellow-300" },
   cancelled:          { label: "Cancelado",       className: "bg-muted text-muted-foreground" },
 };
 
@@ -196,12 +196,12 @@ export default function MinhaComissaoBookingDetalhes() {
             </div>
             <div className="flex justify-between font-bold text-base border-t pt-2">
               <span>Total a pagar</span>
-              <span className={isPaid ? "text-green-600" : "text-destructive"}>
+              <span className={isPaid ? "text-success" : "text-destructive"}>
                 {formatBRL(commission.total_due_cents)}
               </span>
             </div>
             {isPaid && commission.paid_at && (
-              <p className="text-xs text-emerald-600 text-right">
+              <p className="text-xs text-success text-right">
                 Pago em {format(new Date(commission.paid_at), "dd/MM/yyyy", { locale: ptBR })}
               </p>
             )}

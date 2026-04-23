@@ -40,7 +40,7 @@ function StatusBadge({ value }: { value: string | null }) {
   if (!value) return <Badge variant="outline">N/A</Badge>;
   switch (value) {
     case 'ok':
-      return <Badge className="bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30">OK</Badge>;
+      return <Badge className="bg-success/20 text-success border-success/30/30">OK</Badge>;
     case 'problem':
       return <Badge variant="destructive">Problema</Badge>;
     case 'na':
@@ -93,7 +93,7 @@ export function RoutineChecklistDisplay({ checklist }: RoutineChecklistDisplayPr
         {problemCount > 0 ? (
           <Badge variant="destructive">{problemCount} problema{problemCount > 1 ? 's' : ''}</Badge>
         ) : (
-          <Badge className="bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30">Tudo OK</Badge>
+          <Badge className="bg-success/20 text-success border-success/30/30">Tudo OK</Badge>
         )}
       </div>
 

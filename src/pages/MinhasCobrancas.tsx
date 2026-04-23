@@ -290,8 +290,8 @@ const MinhasCobrancas = () => {
                   {groupPayment && !generatingPayment && (
                     <div className="space-y-4 animate-scale-in">
                       {/* Indicador de sucesso */}
-                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-full border border-green-200 mx-auto">
-                        <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
+                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-success/10 text-success rounded-full border border-success/30 mx-auto">
+                        <div className="h-2 w-2 bg-success rounded-full animate-pulse" />
                         <span className="text-sm font-medium">Opções de pagamento geradas!</span>
                       </div>
 
@@ -302,8 +302,8 @@ const MinhasCobrancas = () => {
                           <Card className="border-2 border-primary/20 hover:border-primary/40 transition-colors">
                             <CardHeader className="pb-3">
                               <div className="flex items-center gap-2 mb-2">
-                                <div className="p-2 rounded-lg bg-green-50">
-                                  <Zap className="h-5 w-5 text-green-600" />
+                                <div className="p-2 rounded-lg bg-success/10">
+                                  <Zap className="h-5 w-5 text-success" />
                                 </div>
                                 <div>
                                   <CardTitle className="text-lg">PIX Instantâneo</CardTitle>
@@ -335,11 +335,11 @@ const MinhasCobrancas = () => {
                         )}
 
                         {/* Opção 2: Cartão com Parcelamento */}
-                        <Card className="border-2 border-blue-200 hover:border-blue-300 transition-colors bg-gradient-to-br from-blue-50/50 to-background">
+                        <Card className="border-2 border-info/30 hover:border-info/30 transition-colors bg-gradient-to-br from-info/10/50 to-background">
                           <CardHeader className="pb-3">
                             <div className="flex items-center gap-2 mb-2">
-                              <div className="p-2 rounded-lg bg-blue-50">
-                                <CreditCard className="h-5 w-5 text-blue-600" />
+                              <div className="p-2 rounded-lg bg-info/10">
+                                <CreditCard className="h-5 w-5 text-info" />
                               </div>
                               <div>
                                 <CardTitle className="text-lg">Cartão de Crédito</CardTitle>
@@ -347,16 +347,16 @@ const MinhasCobrancas = () => {
                               </div>
                             </div>
                             <div className="flex items-center gap-2 mt-2">
-                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                              <Badge variant="outline" className="bg-info/10 text-info border-info/30">
                                 Todos os cartões
                               </Badge>
-                              <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                              <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
                                 Débito e Crédito
                               </Badge>
                             </div>
                           </CardHeader>
                           <CardContent className="space-y-3">
-                            <div className="p-4 bg-white rounded-lg border-2 border-dashed border-blue-200 space-y-2">
+                            <div className="p-4 bg-white rounded-lg border-2 border-dashed border-info/30 space-y-2">
                               <div className="flex items-center justify-between text-sm">
                                 <span className="text-muted-foreground">Valor total:</span>
                                 <span className="font-bold text-lg">{formatBRL(totalDue)}</span>
@@ -393,10 +393,10 @@ const MinhasCobrancas = () => {
                   {/* Preview das opções de pagamento */}
                   <div className="grid sm:grid-cols-2 gap-3">
                     {/* Mini Card PIX */}
-                    <div className="p-4 bg-gradient-to-br from-green-50/80 to-background rounded-lg border-2 border-green-200/50 hover:border-green-300/70 transition-all">
+                    <div className="p-4 bg-gradient-to-br from-success/10/80 to-background rounded-lg border-2 border-success/30/50 hover:border-success/30/70 transition-all">
                       <div className="flex items-center gap-2 mb-2">
-                        <div className="p-1.5 rounded bg-green-100">
-                          <Zap className="h-4 w-4 text-green-600" />
+                        <div className="p-1.5 rounded bg-success/10">
+                          <Zap className="h-4 w-4 text-success" />
                         </div>
                         <div>
                           <p className="font-semibold text-sm">PIX Instantâneo</p>
@@ -406,10 +406,10 @@ const MinhasCobrancas = () => {
                     </div>
 
                     {/* Mini Card Cartão */}
-                    <div className="p-4 bg-gradient-to-br from-blue-50/80 to-background rounded-lg border-2 border-blue-200/50 hover:border-blue-300/70 transition-all">
+                    <div className="p-4 bg-gradient-to-br from-info/10/80 to-background rounded-lg border-2 border-info/30/50 hover:border-info/30/70 transition-all">
                       <div className="flex items-center gap-2 mb-2">
-                        <div className="p-1.5 rounded bg-blue-100">
-                          <CreditCard className="h-4 w-4 text-blue-600" />
+                        <div className="p-1.5 rounded bg-info/10">
+                          <CreditCard className="h-4 w-4 text-info" />
                         </div>
                         <div>
                           <p className="font-semibold text-sm">Cartão de Crédito</p>
@@ -484,12 +484,12 @@ const MinhasCobrancas = () => {
                               </Badge>
                             )}
                             {charge.category && (
-                              <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                              <Badge variant="outline" className="text-xs bg-info/10 text-info border-info/30">
                                 {CHARGE_CATEGORIES[charge.category as keyof typeof CHARGE_CATEGORIES]}
                               </Badge>
                             )}
                             {charge.service_type && (
-                              <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                              <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30">
                                 <Tag className="h-3 w-3 mr-1" />
                                 {charge.service_type}
                               </Badge>
@@ -515,7 +515,7 @@ const MinhasCobrancas = () => {
                               {charge.management_contribution_cents > 0 && (
                                 <div className="flex items-baseline gap-2">
                                   <span className="text-xs text-muted-foreground">Aporte Gestão:</span>
-                                  <span className="text-sm font-semibold text-green-600">
+                                  <span className="text-sm font-semibold text-success">
                                     - {formatCurrency(charge.management_contribution_cents, charge.currency)}
                                   </span>
                                 </div>
@@ -542,7 +542,7 @@ const MinhasCobrancas = () => {
                                 </div>
                               )}
                               {charge.attachments && charge.attachments.length > 0 && (
-                                <div className="flex items-center gap-1 text-blue-600">
+                                <div className="flex items-center gap-1 text-info">
                                   <Paperclip className="h-3 w-3" />
                                   +{charge.attachments.length} anexo{charge.attachments.length > 1 ? 's' : ''}
                                 </div>

@@ -396,8 +396,8 @@ export default function ConfiguracaoEmail() {
                               </div>
                             </div>
 
-                            <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                              <p className="text-sm text-amber-800">
+                            <div className="p-4 bg-warning/10 border border-warning/30 rounded-lg">
+                              <p className="text-sm text-warning">
                                 <strong>Nota:</strong> Este é um exemplo com dados fictícios. O email real será preenchido com dados reais do sistema.
                               </p>
                             </div>

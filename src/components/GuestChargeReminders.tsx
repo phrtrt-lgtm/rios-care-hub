@@ -133,12 +133,12 @@ export function GuestChargeReminders() {
   const upcoming = pendingCharges.filter(c => !c.can_charge);
 
   return (
-    <Card className="border-orange-200 bg-orange-50/50 dark:bg-orange-950/20">
+    <Card className="border-warning/30 bg-warning/10/50 dark:bg-orange-950/20">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-lg">
-          <DollarSign className="h-5 w-5 text-orange-600" />
+          <DollarSign className="h-5 w-5 text-warning" />
           Cobranças de Hóspede Pendentes
-          <Badge variant="secondary" className="ml-auto bg-orange-100 text-orange-700">
+          <Badge variant="secondary" className="ml-auto bg-warning/10 text-warning">
             {pendingCharges.length}
           </Badge>
         </CardTitle>
@@ -147,14 +147,14 @@ export function GuestChargeReminders() {
         {/* Can charge now */}
         {canChargeNow.length > 0 && (
           <div className="space-y-2">
-            <p className="text-sm font-medium text-green-700 dark:text-green-400 flex items-center gap-1">
+            <p className="text-sm font-medium text-success flex items-center gap-1">
               <AlertCircle className="h-4 w-4" />
               Pronto para cobrar ({canChargeNow.length})
             </p>
             {canChargeNow.map(charge => (
               <div
                 key={charge.id}
-                className="flex items-center gap-3 p-3 bg-green-100/50 dark:bg-green-900/20 rounded-lg cursor-pointer hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
+                className="flex items-center gap-3 p-3 bg-success/10/50 dark:bg-green-900/20 rounded-lg cursor-pointer hover:bg-success/10 dark:hover:bg-green-900/30 transition-colors"
                 onClick={() => navigate(`/ticket-detalhes/${charge.id}`)}
               >
                 <Building2 className="h-5 w-5 text-muted-foreground flex-shrink-0" />
@@ -163,7 +163,7 @@ export function GuestChargeReminders() {
                   <p className="text-xs text-muted-foreground">{charge.property_name}</p>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <Badge variant="default" className="bg-green-600">
+                  <Badge variant="default" className="bg-success">
                     Cobrar agora
                   </Badge>
                   <p className="text-xs text-muted-foreground mt-1">

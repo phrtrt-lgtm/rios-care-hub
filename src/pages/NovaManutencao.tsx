@@ -499,9 +499,9 @@ export default function NovaManutencao() {
                 </RadioGroup>
 
                 {costResponsible === 'management' && (
-                  <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950/30">
-                    <AlertTriangle className="h-4 w-4 text-blue-500" />
-                    <AlertDescription className="text-blue-700 dark:text-blue-300">
+                  <Alert className="border-info/30 bg-info/10 dark:bg-blue-950/30">
+                    <AlertTriangle className="h-4 w-4 text-info" />
+                    <AlertDescription className="text-info dark:text-blue-300">
                       Esta manutenção <strong>não será visível</strong> para o proprietário. Use para manutenções internas ou de responsabilidade da gestão.
                     </AlertDescription>
                   </Alert>
@@ -509,13 +509,13 @@ export default function NovaManutencao() {
 
                 {costResponsible === 'guest' && (
                   <div className="space-y-3">
-                    <Alert className="border-orange-200 bg-orange-50 dark:bg-orange-950/30">
-                      <AlertTriangle className="h-4 w-4 text-orange-500" />
-                      <AlertDescription className="text-orange-700 dark:text-orange-300">
+                    <Alert className="border-warning/30 bg-warning/10 dark:bg-orange-950/30">
+                      <AlertTriangle className="h-4 w-4 text-warning" />
+                      <AlertDescription className="text-warning dark:text-orange-300">
                         Esta manutenção <strong>não será visível</strong> para o proprietário. Use para problemas causados por hóspedes ou substituições internas.
                       </AlertDescription>
                     </Alert>
-                    <div className="space-y-2 pl-4 border-l-2 border-orange-300">
+                    <div className="space-y-2 pl-4 border-l-2 border-warning/30">
                       <Label htmlFor="guestCheckoutDate">Data de checkout do hóspede *</Label>
                       <Input
                         id="guestCheckoutDate"
@@ -569,10 +569,10 @@ export default function NovaManutencao() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-start space-x-2 border rounded-lg p-3 border-orange-200 bg-orange-50/50">
+                    <div className="flex items-start space-x-2 border rounded-lg p-3 border-warning/30 bg-warning/10/50">
                       <RadioGroupItem value="essential" id="mode-essential" className="mt-1" />
                       <div className="flex-1">
-                        <Label htmlFor="mode-essential" className="font-medium cursor-pointer text-orange-700">
+                        <Label htmlFor="mode-essential" className="font-medium cursor-pointer text-warning">
                           🚨 Essencial / Urgente
                         </Label>
                         <p className="text-xs text-muted-foreground mt-1">
@@ -581,10 +581,10 @@ export default function NovaManutencao() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-start space-x-2 border rounded-lg p-3 border-blue-200 bg-blue-50/50">
+                    <div className="flex items-start space-x-2 border rounded-lg p-3 border-info/30 bg-info/10/50">
                       <RadioGroupItem value="pm_immediate" id="mode-pm" className="mt-1" />
                       <div className="flex-1">
-                        <Label htmlFor="mode-pm" className="font-medium cursor-pointer text-blue-700">
+                        <Label htmlFor="mode-pm" className="font-medium cursor-pointer text-info">
                           👥 Gestão assume imediatamente
                         </Label>
                         <p className="text-xs text-muted-foreground mt-1">

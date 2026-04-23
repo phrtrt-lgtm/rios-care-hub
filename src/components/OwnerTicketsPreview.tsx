@@ -106,8 +106,8 @@ export function OwnerTicketsPreview() {
 
   if (isLoading) {
     return (
-      <Card className="overflow-hidden border-blue-500/20">
-        <CardHeader className="pb-2 bg-gradient-to-r from-blue-500/5 to-transparent">
+      <Card className="overflow-hidden border-info/30/20">
+        <CardHeader className="pb-2 bg-gradient-to-r from-info/5 to-transparent">
           <Skeleton className="h-5 w-48" />
         </CardHeader>
         <CardContent className="pt-3 px-3">
@@ -122,11 +122,11 @@ export function OwnerTicketsPreview() {
 
   return (
     <>
-      <Card className="overflow-hidden border-blue-500/20">
-        <CardHeader className="pb-2 bg-gradient-to-r from-blue-500/5 to-transparent">
+      <Card className="overflow-hidden border-info/30/20">
+        <CardHeader className="pb-2 bg-gradient-to-r from-info/5 to-transparent">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="text-base flex items-center gap-2">
-              <Ticket className="h-5 w-5 text-blue-500" />
+              <Ticket className="h-5 w-5 text-info" />
               Chamados em Aberto
             </CardTitle>
             <div className="flex items-center gap-2">

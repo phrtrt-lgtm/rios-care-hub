@@ -156,7 +156,7 @@ export default function VistoriaDetalhes() {
             </div>
             <Badge 
               variant={isOk ? "secondary" : "destructive"}
-              className={isOk ? "bg-green-500/20 text-green-700 dark:text-green-400" : ""}
+              className={isOk ? "bg-success/20 text-success" : ""}
             >
               {isOk ? <CheckCircle2 className="h-4 w-4 mr-1" /> : <AlertTriangle className="h-4 w-4 mr-1" />}
               {inspection.notes || '—'}
@@ -247,7 +247,7 @@ export default function VistoriaDetalhes() {
                 <div className={`whitespace-pre-wrap text-sm rounded-lg p-4 ${
                   hasSummary 
                     ? isOk 
-                      ? 'bg-green-500/10 border border-green-500/30' 
+                      ? 'bg-success/10 border border-success/30/30' 
                       : 'bg-destructive/10 border border-destructive/30'
                     : 'bg-muted'
                 }`}>

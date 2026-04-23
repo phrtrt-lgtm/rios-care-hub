@@ -57,11 +57,11 @@ const phases: Phase[] = [
     icon: PackagePlus,
     title: "Criar a manutenção",
     subtitle: "Quando e como registrar",
-    color: "text-blue-600 dark:text-blue-400",
-    bg: "bg-blue-50 dark:bg-blue-950/30",
-    border: "border-blue-200 dark:border-blue-800",
-    iconBg: "bg-blue-100 dark:bg-blue-900/50",
-    dot: "bg-blue-500",
+    color: "text-info",
+    bg: "bg-info/10 dark:bg-blue-950/30",
+    border: "border-info/30",
+    iconBg: "bg-info/10 dark:bg-blue-900/50",
+    dot: "bg-info",
     items: [
       { icon: Smartphone, text: "Pode vir de uma vistoria, de um pedido via WhatsApp, do proprietário ou de algo que você mesmo notou" },
       { icon: FileText, text: "Registre o que for pertinente — não precisa colocar tudo que chega no WhatsApp" },
@@ -76,11 +76,11 @@ const phases: Phase[] = [
     icon: LayoutGrid,
     title: "Triagem pós-vistoria",
     subtitle: "Use o Kanban do imóvel",
-    color: "text-violet-600 dark:text-violet-400",
-    bg: "bg-violet-50 dark:bg-violet-950/30",
-    border: "border-violet-200 dark:border-violet-800",
-    iconBg: "bg-violet-100 dark:bg-violet-900/50",
-    dot: "bg-violet-500",
+    color: "text-primary",
+    bg: "bg-primary/10 dark:bg-violet-950/30",
+    border: "border-primary/30",
+    iconBg: "bg-primary/10 dark:bg-violet-900/50",
+    dot: "bg-primary",
     items: [
       { icon: LayoutGrid, text: "Após vistoria, use o botão 'Importar para Kanban do imóvel' para ver todos os problemas encontrados de uma só vez" },
       { icon: CheckCircle2, text: "Escolha quais manutenções vai resolver agora e agende os serviços para cada responsável" },
@@ -94,11 +94,11 @@ const phases: Phase[] = [
     icon: Wrench,
     title: "Durante a manutenção",
     subtitle: "Acompanhe do seu jeito",
-    color: "text-green-600 dark:text-green-400",
-    bg: "bg-green-50 dark:bg-green-950/30",
-    border: "border-green-200 dark:border-green-800",
-    iconBg: "bg-green-100 dark:bg-green-900/50",
-    dot: "bg-green-500",
+    color: "text-success",
+    bg: "bg-success/10 dark:bg-green-950/30",
+    border: "border-success/30",
+    iconBg: "bg-success/10 dark:bg-green-900/50",
+    dot: "bg-success",
     items: [
       { icon: Paperclip, text: "Anexe fotos, vídeos e comprovantes quando tiver — sem precisar adicionar nota toda vez" },
       { icon: FileText, text: "Quer deixar uma observação importante? Anote para a sua organização — não é obrigatório" },
@@ -112,11 +112,11 @@ const phases: Phase[] = [
     icon: MessageSquare,
     title: "Comunicação",
     subtitle: "Com proprietário, equipe e hóspede",
-    color: "text-amber-600 dark:text-amber-400",
-    bg: "bg-amber-50 dark:bg-amber-950/30",
-    border: "border-amber-200 dark:border-amber-800",
-    iconBg: "bg-amber-100 dark:bg-amber-900/50",
-    dot: "bg-amber-500",
+    color: "text-warning",
+    bg: "bg-warning/10 dark:bg-amber-950/30",
+    border: "border-warning/30",
+    iconBg: "bg-warning/10 dark:bg-amber-900/50",
+    dot: "bg-warning",
     items: [
       { icon: MessageSquare, text: "Precisar envolver o proprietário numa decisão? Habilite o chat para ele conversar diretamente pelo sistema" },
       { icon: DollarSign, text: "Proprietário contestou um valor? Responde no chat da cobrança e ajusta o aporte se fizer sentido" },
@@ -131,11 +131,11 @@ const phases: Phase[] = [
     icon: CreditCard,
     title: "Cobrança",
     subtitle: "Depois que concluir",
-    color: "text-rose-600 dark:text-rose-400",
-    bg: "bg-rose-50 dark:bg-rose-950/30",
-    border: "border-rose-200 dark:border-rose-800",
-    iconBg: "bg-rose-100 dark:bg-rose-900/50",
-    dot: "bg-rose-500",
+    color: "text-destructive",
+    bg: "bg-destructive/10 dark:bg-rose-950/30",
+    border: "border-destructive/30",
+    iconBg: "bg-destructive/10 dark:bg-rose-900/50",
+    dot: "bg-destructive",
     items: [
       { icon: CheckCircle2, text: "Manutenção concluída? Cria a cobrança no RIOS com o valor do serviço e o aporte de gestão — autonomia orientada por Paulo Henrique inicialmente" },
       { icon: Calendar, text: "Hóspede causou dano? Cobre pela plataforma (Airbnb, Booking etc.) após 14 dias do check-out — registre o dia do check-out ao criar a manutenção", badge: "14 DIAS" },
@@ -256,7 +256,7 @@ function PhaseCard({ phase, index }: { phase: Phase; index: number }) {
                                 ? "bg-destructive text-destructive-foreground"
                                 : item.badge === "EXCEÇÃO"
                                 ? "bg-muted text-muted-foreground"
-                                : "bg-amber-500 text-white"
+                                : "bg-warning text-white"
                             }`}
                           >
                             {item.badge}

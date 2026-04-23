@@ -166,17 +166,17 @@ const AdminFichasImoveis = () => {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <CheckCircle2 className="h-3 w-3 text-green-600" /> Com ficha
+                <CheckCircle2 className="h-3 w-3 text-success" /> Com ficha
               </div>
-              <div className="text-2xl font-bold text-green-600">{stats.filled}</div>
+              <div className="text-2xl font-bold text-success">{stats.filled}</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <AlertCircle className="h-3 w-3 text-amber-600" /> Sem ficha
+                <AlertCircle className="h-3 w-3 text-warning" /> Sem ficha
               </div>
-              <div className="text-2xl font-bold text-amber-600">{stats.empty}</div>
+              <div className="text-2xl font-bold text-warning">{stats.empty}</div>
             </CardContent>
           </Card>
         </div>
@@ -206,11 +206,11 @@ const AdminFichasImoveis = () => {
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="font-semibold text-foreground">{p.name}</h3>
                     {p.file?.has_content ? (
-                      <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100">
+                      <Badge variant="secondary" className="bg-success/10 text-success hover:bg-success/10">
                         <CheckCircle2 className="mr-1 h-3 w-3" /> v{p.file.version}
                       </Badge>
                     ) : (
-                      <Badge variant="secondary" className="bg-amber-100 text-amber-700 hover:bg-amber-100">
+                      <Badge variant="secondary" className="bg-warning/10 text-warning hover:bg-warning/10">
                         <AlertCircle className="mr-1 h-3 w-3" /> Sem ficha
                       </Badge>
                     )}

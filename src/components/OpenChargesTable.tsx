@@ -168,11 +168,11 @@ export function OpenChargesTable({
     const statusConfig: Record<string, { label: string; variant: "secondary" | "default" | "destructive" | "outline"; className?: string }> = {
       draft: { label: 'Rascunho', variant: 'secondary' },
       sent: { label: 'Enviada', variant: 'default' },
-      paid: { label: 'Paga', variant: 'default', className: 'bg-green-500' },
+      paid: { label: 'Paga', variant: 'default', className: 'bg-success' },
       overdue: { label: 'Vencida', variant: 'destructive' },
       cancelled: { label: 'Cancelada', variant: 'outline' },
-      debited: { label: 'Débito em Reserva', variant: 'destructive', className: 'bg-red-700' },
-      aguardando_reserva: { label: 'Aguardando Reserva', variant: 'secondary', className: 'bg-amber-500 text-white' }
+      debited: { label: 'Débito em Reserva', variant: 'destructive', className: 'bg-destructive' },
+      aguardando_reserva: { label: 'Aguardando Reserva', variant: 'secondary', className: 'bg-warning text-white' }
     };
 
     const config = statusConfig[status] || { label: status, variant: 'outline' as const };
@@ -250,7 +250,7 @@ export function OpenChargesTable({
                     <Badge variant="destructive" className="text-xs">{totalOverdue}</Badge>
                   )}
                   {totalOpen > 0 && (
-                    <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">{totalOpen}</Badge>
+                    <Badge variant="outline" className="text-xs bg-info/10 text-info border-info/30">{totalOpen}</Badge>
                   )}
                 </div>
               </td>
@@ -273,7 +273,7 @@ export function OpenChargesTable({
                     key={group.id}
                     className={cn(
                       "border-b hover:bg-muted/30 cursor-pointer transition-colors h-12",
-                      group.overdueCount > 0 && "bg-red-50/50 dark:bg-red-950/10",
+                      group.overdueCount > 0 && "bg-destructive/10/50 dark:bg-red-950/10",
                       isExpanded && "bg-muted/20"
                     )}
                     onClick={() => toggleProperty(group.id)}
@@ -342,7 +342,7 @@ export function OpenChargesTable({
                           <Badge variant="destructive" className="text-xs">{group.overdueCount} venc.</Badge>
                         )}
                         {group.openCount > 0 && (
-                          <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">{group.openCount}</Badge>
+                          <Badge variant="outline" className="text-xs bg-info/10 text-info border-info/30">{group.openCount}</Badge>
                         )}
                       </div>
                     </td>
@@ -428,7 +428,7 @@ export function OpenChargesTable({
                                   <Button
                                     size="sm"
                                     variant="ghost"
-                                    className="h-7 w-7 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                    className="h-7 w-7 p-0 text-warning hover:text-warning hover:bg-warning/10"
                                     onClick={() => handleOpenCalculator(charge)}
                                   >
                                     <Calculator className="h-3.5 w-3.5" />

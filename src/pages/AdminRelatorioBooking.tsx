@@ -37,10 +37,10 @@ interface BookingCommission {
 const PAID_STATUSES = ["paid", "pago_no_vencimento", "pago_antecipado", "pago_com_atraso"];
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  paid: { label: "Pago", className: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300" },
-  pago_no_vencimento: { label: "Pago no Venc.", className: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300" },
-  pago_antecipado: { label: "Pago Antecipado", className: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300" },
-  pago_com_atraso: { label: "Pago c/ Atraso", className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300" },
+  paid: { label: "Pago", className: "bg-success/10 text-success dark:bg-green-900/40 dark:text-green-300" },
+  pago_no_vencimento: { label: "Pago no Venc.", className: "bg-success/10 text-success dark:bg-green-900/40 dark:text-green-300" },
+  pago_antecipado: { label: "Pago Antecipado", className: "bg-success/10 text-success dark:bg-emerald-900/40 dark:text-emerald-300" },
+  pago_com_atraso: { label: "Pago c/ Atraso", className: "bg-warning/10 text-warning dark:bg-yellow-900/40 dark:text-yellow-300" },
 };
 
 const AdminRelatorioBooking = () => {
@@ -206,17 +206,17 @@ const AdminRelatorioBooking = () => {
               <p className="text-xs text-muted-foreground">{filtered.length} cobranças</p>
             </CardContent>
           </Card>
-          <Card className="border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-900/10">
+          <Card className="border-success/30 bg-success/10/50 dark:bg-green-900/10">
             <CardContent className="pt-3 pb-3">
               <p className="text-xs text-muted-foreground">Comissões</p>
-              <p className="text-lg font-bold text-green-700 dark:text-green-400">{formatBRL(totalComissoes)}</p>
+              <p className="text-lg font-bold text-success">{formatBRL(totalComissoes)}</p>
               <p className="text-xs text-muted-foreground">% sobre reservas</p>
             </CardContent>
           </Card>
-          <Card className="border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-900/10">
+          <Card className="border-info/30 bg-info/10/50 dark:bg-blue-900/10">
             <CardContent className="pt-3 pb-3">
               <p className="text-xs text-muted-foreground">Taxas de Limpeza</p>
-              <p className="text-lg font-bold text-blue-700 dark:text-blue-400">{formatBRL(totalLimpeza)}</p>
+              <p className="text-lg font-bold text-info">{formatBRL(totalLimpeza)}</p>
               <p className="text-xs text-muted-foreground">fixo por reserva</p>
             </CardContent>
           </Card>

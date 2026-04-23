@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Plus, LogOut, DollarSign, ClipboardCheck, Ticket, BookOpen, Wrench, BarChart3 } from "lucide-react";
+import { Plus, LogOut, DollarSign, ClipboardCheck, Ticket, BookOpen, Wrench, BarChart3, GraduationCap } from "lucide-react";
 import { TicketList } from "@/components/TicketList";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -218,16 +218,16 @@ export default function MinhaCaixa() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2, delay: 0.1 }}
             onClick={() => navigate("/tutoriais")}
-            className="flex items-center gap-3 p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20 cursor-pointer hover:bg-emerald-500/10 transition-colors"
+            className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20 cursor-pointer hover:bg-primary/10 transition-colors"
           >
-            <div className="h-9 w-9 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
-              <BookOpen className="h-4 w-4 text-emerald-600" />
+            <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <GraduationCap className="h-4 w-4 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium">Tutoriais</p>
               <p className="text-xs text-muted-foreground">Guias detalhados de cada funcionalidade</p>
             </div>
-            <span className="text-xs text-emerald-600 font-medium hidden sm:block">Ver →</span>
+            <span className="text-xs text-success font-medium hidden sm:block">Ver →</span>
           </motion.div>
         </div>
 

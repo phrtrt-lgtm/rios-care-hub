@@ -126,7 +126,7 @@ export default function RelatoriosPropriedade() {
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
                           {ownerNet !== 0 && (
-                            <span className={`font-semibold text-sm ${ownerNet > 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                            <span className={`font-semibold text-sm ${ownerNet > 0 ? 'text-success' : 'text-destructive'}`}>
                               {formatCurrency(ownerNet)}
                             </span>
                           )}

@@ -31,14 +31,14 @@ interface BlockRequest {
 }
 
 const statusConfig = {
-  pending: { label: "Pendente", color: "bg-amber-100 text-amber-800 border-amber-200" },
-  processed: { label: "Processado", color: "bg-green-100 text-green-800 border-green-200" },
-  rejected: { label: "Rejeitado", color: "bg-red-100 text-red-800 border-red-200" },
+  pending: { label: "Pendente", color: "bg-warning/10 text-warning border-warning/30" },
+  processed: { label: "Processado", color: "bg-success/10 text-success border-success/30" },
+  rejected: { label: "Rejeitado", color: "bg-destructive/10 text-destructive border-destructive/30" },
 };
 
 const reasonConfig = {
-  maintenance: { label: "Manutenção", icon: Wrench, color: "text-orange-500" },
-  family_visit: { label: "Visita familiar", icon: Users, color: "text-blue-500" },
+  maintenance: { label: "Manutenção", icon: Wrench, color: "text-warning" },
+  family_visit: { label: "Visita familiar", icon: Users, color: "text-info" },
 };
 
 export default function AdminBloqueiosDatas() {
@@ -175,7 +175,7 @@ export default function AdminBloqueiosDatas() {
               </SelectContent>
             </Select>
             {pendingCount > 0 && statusFilter === "pending" && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 border border-amber-200">
+              <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning border border-warning/30">
                 <Clock className="h-3 w-3" />
                 {pendingCount} {pendingCount === 1 ? "pendente" : "pendentes"}
               </span>
@@ -205,7 +205,7 @@ export default function AdminBloqueiosDatas() {
                   <CardContent className="p-0">
                     <div className="flex gap-0">
                       {/* Color bar */}
-                      <div className={`w-1.5 shrink-0 ${req.status === "pending" ? "bg-amber-400" : req.status === "processed" ? "bg-green-500" : "bg-red-400"}`} />
+                      <div className={`w-1.5 shrink-0 ${req.status === "pending" ? "bg-warning" : req.status === "processed" ? "bg-success" : "bg-destructive"}`} />
 
                       <div className="flex-1 p-4 space-y-3">
                         {/* Header: Property name + Status */}
@@ -274,9 +274,9 @@ export default function AdminBloqueiosDatas() {
 
                         {/* Rejection reason */}
                         {req.rejection_reason && req.status === "rejected" && (
-                          <div className="bg-red-50 dark:bg-red-950/30 rounded-md px-3 py-2 border border-red-200 dark:border-red-800">
-                            <p className="text-[10px] uppercase tracking-wider text-red-600 dark:text-red-400 font-semibold mb-0.5">Motivo da Rejeição</p>
-                            <p className="text-sm text-red-800 dark:text-red-200">{req.rejection_reason}</p>
+                          <div className="bg-destructive/10 dark:bg-red-950/30 rounded-md px-3 py-2 border border-destructive/30">
+                            <p className="text-[10px] uppercase tracking-wider text-destructive font-semibold mb-0.5">Motivo da Rejeição</p>
+                            <p className="text-sm text-destructive dark:text-red-200">{req.rejection_reason}</p>
                           </div>
                         )}
 
@@ -305,7 +305,7 @@ export default function AdminBloqueiosDatas() {
                             <div className="flex items-center gap-2 shrink-0">
                               <Button
                                 size="sm"
-                                className="h-8 px-3 text-xs bg-green-600 hover:bg-green-700 text-white"
+                                className="h-8 px-3 text-xs bg-success hover:bg-success text-white"
                                 onClick={() => handleMarkProcessed(req.id)}
                                 disabled={updatingId === req.id}
                               >

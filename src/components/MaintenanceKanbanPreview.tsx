@@ -239,10 +239,10 @@ export function MaintenanceKanbanPreview() {
 
   if (loading) {
     return (
-      <Card className="border-purple-200 dark:border-purple-800">
+      <Card className="border-primary/30">
         <CardHeader className="py-3 px-4">
           <div className="flex items-center gap-2">
-            <Wrench className="h-4 w-4 text-purple-600 animate-pulse" />
+            <Wrench className="h-4 w-4 text-primary animate-pulse" />
             <div className="h-4 w-36 rounded bg-muted animate-pulse" />
           </div>
         </CardHeader>
@@ -252,14 +252,14 @@ export function MaintenanceKanbanPreview() {
 
   return (
     <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-      <Card className="border-purple-200 dark:border-purple-800 overflow-hidden w-full min-w-0">
+      <Card className="border-primary/30 overflow-hidden w-full min-w-0">
         <CardHeader className="py-3 px-4">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-2 min-w-0">
-              <Wrench className="h-4 w-4 text-purple-600" />
+              <Wrench className="h-4 w-4 text-primary" />
               <CardTitle className="text-sm">Manutenções</CardTitle>
               {tickets.length > 0 && (
-                <Badge variant="secondary" className="h-5 px-1.5 text-xs bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">
+                <Badge variant="secondary" className="h-5 px-1.5 text-xs bg-primary/10 text-primary dark:bg-purple-900 dark:text-purple-300">
                   {tickets.length}
                 </Badge>
               )}
@@ -286,7 +286,7 @@ export function MaintenanceKanbanPreview() {
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate("/admin/manutencoes-concluidas")}
-                className="h-7 text-xs text-green-600"
+                className="h-7 text-xs text-success"
               >
                 <span className="hidden sm:inline">Concluídas</span>
                 <span className="sm:hidden">OK</span>
@@ -295,7 +295,7 @@ export function MaintenanceKanbanPreview() {
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate("/admin/manutencoes")}
-                className="h-7 text-xs text-purple-600"
+                className="h-7 text-xs text-primary"
               >
                 <span className="hidden sm:inline">Completo</span>
                 <span className="sm:hidden">Ver</span>
@@ -312,7 +312,7 @@ export function MaintenanceKanbanPreview() {
             {/* Pendentes */}
             {pendentes.length > 0 && (
               <div>
-                <p className="text-xs font-semibold text-yellow-600 mb-1.5">Pendentes ({pendentes.length})</p>
+                <p className="text-xs font-semibold text-warning mb-1.5">Pendentes ({pendentes.length})</p>
                 <div className="space-y-1">
                   {pendentes.slice(0, COLLAPSED_LIMIT).map((ticket) => (
                     <div
@@ -355,7 +355,7 @@ export function MaintenanceKanbanPreview() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-6 px-2 text-[10px] shrink-0 whitespace-nowrap text-green-700 border-green-300 hover:bg-green-50"
+                          className="h-6 px-2 text-[10px] shrink-0 whitespace-nowrap text-success border-success/30 hover:bg-success/10"
                           onClick={(e) => openCompleteDialog(ticket, e)}
                         >
                           <CheckCircle className="h-3 w-3" />
@@ -409,7 +409,7 @@ export function MaintenanceKanbanPreview() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="h-6 px-2 text-[10px] shrink-0 whitespace-nowrap text-green-700 border-green-300 hover:bg-green-50"
+                            className="h-6 px-2 text-[10px] shrink-0 whitespace-nowrap text-success border-success/30 hover:bg-success/10"
                             onClick={(e) => openCompleteDialog(ticket, e)}
                           >
                             <CheckCircle className="h-3 w-3" />
@@ -427,12 +427,12 @@ export function MaintenanceKanbanPreview() {
             {/* Agendados */}
             {agendados.length > 0 && (
               <div>
-                <p className="text-xs font-semibold text-blue-600 mb-1.5">Agendados ({agendados.length})</p>
+                <p className="text-xs font-semibold text-info mb-1.5">Agendados ({agendados.length})</p>
                 <div className="space-y-1">
                   {agendados.slice(0, COLLAPSED_LIMIT).map((ticket) => (
                     <div
                       key={ticket.id}
-                      className="flex items-center gap-2 p-2 rounded-lg bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50 cursor-pointer transition-colors overflow-hidden"
+                      className="flex items-center gap-2 p-2 rounded-lg bg-info/10 dark:bg-blue-950/30 hover:bg-info/10 dark:hover:bg-blue-950/50 cursor-pointer transition-colors overflow-hidden"
                       onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
                     >
                       <div className="flex-1 min-w-0">
@@ -442,7 +442,7 @@ export function MaintenanceKanbanPreview() {
 
                       <div className="flex items-center gap-1 shrink-0">
                         {ticket.scheduled_at && (
-                          <span className="hidden sm:flex text-[10px] font-medium text-blue-600 items-center gap-1 whitespace-nowrap shrink-0">
+                          <span className="hidden sm:flex text-[10px] font-medium text-info items-center gap-1 whitespace-nowrap shrink-0">
                             <Calendar className="h-3 w-3" />
                             {format(new Date(ticket.scheduled_at), "dd/MM HH:mm", { locale: ptBR })}
                           </span>
@@ -467,7 +467,7 @@ export function MaintenanceKanbanPreview() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-6 px-2 text-[10px] shrink-0 whitespace-nowrap text-green-700 border-green-300 hover:bg-green-50"
+                          className="h-6 px-2 text-[10px] shrink-0 whitespace-nowrap text-success border-success/30 hover:bg-success/10"
                           onClick={(e) => openCompleteDialog(ticket, e)}
                         >
                           <CheckCircle className="h-3 w-3" />
@@ -483,7 +483,7 @@ export function MaintenanceKanbanPreview() {
                     {agendados.slice(COLLAPSED_LIMIT, EXPANDED_LIMIT).map((ticket) => (
                       <div
                         key={ticket.id}
-                        className="flex items-center gap-2 p-2 rounded-lg bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50 cursor-pointer transition-colors overflow-hidden"
+                        className="flex items-center gap-2 p-2 rounded-lg bg-info/10 dark:bg-blue-950/30 hover:bg-info/10 dark:hover:bg-blue-950/50 cursor-pointer transition-colors overflow-hidden"
                         onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
                       >
                         <div className="flex-1 min-w-0">
@@ -493,7 +493,7 @@ export function MaintenanceKanbanPreview() {
 
                         <div className="flex items-center gap-1 shrink-0">
                           {ticket.scheduled_at && (
-                            <span className="hidden sm:flex text-[10px] font-medium text-blue-600 items-center gap-1 whitespace-nowrap shrink-0">
+                            <span className="hidden sm:flex text-[10px] font-medium text-info items-center gap-1 whitespace-nowrap shrink-0">
                               <Calendar className="h-3 w-3" />
                               {format(new Date(ticket.scheduled_at), "dd/MM HH:mm", { locale: ptBR })}
                             </span>
@@ -518,7 +518,7 @@ export function MaintenanceKanbanPreview() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="h-6 px-2 text-[10px] shrink-0 whitespace-nowrap text-green-700 border-green-300 hover:bg-green-50"
+                            className="h-6 px-2 text-[10px] shrink-0 whitespace-nowrap text-success border-success/30 hover:bg-success/10"
                             onClick={(e) => openCompleteDialog(ticket, e)}
                           >
                             <CheckCircle className="h-3 w-3" />

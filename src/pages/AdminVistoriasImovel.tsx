@@ -451,7 +451,7 @@ export default function AdminVistoriasImovel() {
                 <h3 className="font-medium">{property.name}</h3>
                 <p className="text-sm text-muted-foreground">{property.address || 'Sem endereço'}</p>
                 <div className="flex gap-2 mt-2">
-                  <Badge variant="secondary" className="bg-green-500/20 text-green-700 dark:text-green-400">
+                  <Badge variant="secondary" className="bg-success/20 text-success">
                     <CheckCircle2 className="h-3 w-3 mr-1" />
                     {okCount} OK
                   </Badge>
@@ -501,7 +501,7 @@ export default function AdminVistoriasImovel() {
                 variant={statusFilter === "ok" ? "default" : "outline"}
                 size="sm"
                 onClick={() => { setStatusFilter("ok"); setSelectedIds(new Set()); }}
-                className={statusFilter === "ok" ? "bg-green-600 hover:bg-green-700" : ""}
+                className={statusFilter === "ok" ? "bg-success hover:bg-success" : ""}
               >
                 <CheckCircle2 className="h-4 w-4 mr-1" />
                 OK ({okCount})
@@ -510,7 +510,7 @@ export default function AdminVistoriasImovel() {
                 variant={statusFilter === "nao" ? "default" : "outline"}
                 size="sm"
                 onClick={() => { setStatusFilter("nao"); setSelectedIds(new Set()); }}
-                className={statusFilter === "nao" ? "bg-red-600 hover:bg-red-700" : ""}
+                className={statusFilter === "nao" ? "bg-destructive hover:bg-destructive" : ""}
               >
                 <AlertTriangle className="h-4 w-4 mr-1" />
                 Problemas ({problemCount})
@@ -575,7 +575,7 @@ export default function AdminVistoriasImovel() {
                       <div 
                         className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center cursor-pointer ${
                           inspection.notes === 'OK' 
-                            ? 'bg-green-500/20 text-green-600' 
+                            ? 'bg-success/20 text-success' 
                             : 'bg-destructive/20 text-destructive'
                         }`}
                         onClick={() => navigate(`/admin/vistoria/${inspection.id}`)}

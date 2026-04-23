@@ -347,7 +347,7 @@ export default function VotacaoDetalhes() {
             </div>
             <Badge
               variant={proposal.status === 'active' ? 'secondary' : 'outline'}
-              className={proposal.status === 'active' ? 'bg-green-100 text-green-700' : ''}
+              className={proposal.status === 'active' ? 'bg-success/10 text-success' : ''}
             >
               {proposal.status === 'active' ? 'Ativa' : proposal.status}
             </Badge>
@@ -441,10 +441,10 @@ export default function VotacaoDetalhes() {
 
         {/* Team: Payment Tracking */}
         {isTeam && proposal.amount_cents && proposal.amount_cents > 0 && (
-          <Card className="border-0 shadow-md border-green-200 dark:border-green-800">
+          <Card className="border-0 shadow-md border-success/30">
             <CardContent className="p-6">
               <h3 className="font-semibold mb-4 flex items-center gap-2">
-                <CreditCard className="h-4 w-4 text-green-600" />
+                <CreditCard className="h-4 w-4 text-success" />
                 Pagamentos Recebidos
               </h3>
               
@@ -454,9 +454,9 @@ export default function VotacaoDetalhes() {
                 
                 return (
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between p-3 rounded-lg bg-green-50 dark:bg-green-950/30">
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-success/10 dark:bg-green-950/30">
                       <span className="text-sm text-muted-foreground">Total arrecadado</span>
-                      <span className="text-xl font-bold text-green-600">
+                      <span className="text-xl font-bold text-success">
                         R$ {(totalPaid / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </span>
                     </div>
@@ -471,7 +471,7 @@ export default function VotacaoDetalhes() {
                           <div key={r.id} className="flex items-center justify-between p-2 rounded border bg-background">
                             <span className="font-medium">{r.profiles?.name || 'Proprietário'}</span>
                             <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                              <Badge variant="outline" className="bg-success/10 text-success border-success/30">
                                 <Check className="h-3 w-3 mr-1" />
                                 Pago
                               </Badge>
@@ -570,14 +570,14 @@ export default function VotacaoDetalhes() {
 
         {/* Owner: Already Responded */}
         {!isTeam && hasResponded && (
-          <Card className="border-0 shadow-md bg-green-50 dark:bg-green-950/20">
+          <Card className="border-0 shadow-md bg-success/10 dark:bg-green-950/20">
             <CardContent className="p-6">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                  <Check className="h-5 w-5 text-green-600" />
+                <div className="h-10 w-10 rounded-full bg-success/10 dark:bg-green-900 flex items-center justify-center">
+                  <Check className="h-5 w-5 text-success" />
                 </div>
                 <div>
-                  <p className="font-semibold text-green-700 dark:text-green-400">Sua resposta foi registrada</p>
+                  <p className="font-semibold text-success">Sua resposta foi registrada</p>
                   <p className="text-sm text-muted-foreground">
                     Você respondeu: <strong>{mySelectedOption?.option_text}</strong>
                   </p>
@@ -630,14 +630,14 @@ export default function VotacaoDetalhes() {
 
                 {/* Payment warning */}
                 {selectedOption && requiresPayment() && (
-                  <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+                  <div className="p-4 rounded-lg bg-warning/10 dark:bg-amber-950/20 border border-warning/30">
                     <div className="flex items-start gap-3">
-                      <CreditCard className="h-5 w-5 text-amber-600 mt-0.5" />
+                      <CreditCard className="h-5 w-5 text-warning mt-0.5" />
                       <div>
-                        <p className="font-medium text-amber-800 dark:text-amber-400">
+                        <p className="font-medium text-warning">
                           Pagamento necessário
                         </p>
-                        <p className="text-sm text-amber-700 dark:text-amber-500 mt-1">
+                        <p className="text-sm text-warning mt-1">
                           Ao confirmar esta opção, você será direcionado para pagamento de{' '}
                           <strong>R$ {(proposal.amount_cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
                         </p>

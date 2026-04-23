@@ -74,10 +74,10 @@ export default function ResumoDiario() {
     onClick?: () => void;
   }) => {
     const variants = {
-      default: "bg-blue-50 text-blue-700 border-blue-200",
-      warning: "bg-yellow-50 text-yellow-700 border-yellow-200",
-      danger: "bg-red-50 text-red-700 border-red-200",
-      success: "bg-green-50 text-green-700 border-green-200",
+      default: "bg-info/10 text-info border-info/30",
+      warning: "bg-warning/10 text-warning border-warning/30",
+      danger: "bg-destructive/10 text-destructive border-destructive/30",
+      success: "bg-success/10 text-success border-success/30",
     };
 
     return (
@@ -87,10 +87,10 @@ export default function ResumoDiario() {
       >
         <CardContent className="p-4 flex items-center gap-4">
           <div className={`p-3 rounded-full ${
-            variant === "danger" ? "bg-red-100" :
-            variant === "warning" ? "bg-yellow-100" :
-            variant === "success" ? "bg-green-100" :
-            "bg-blue-100"
+            variant === "danger" ? "bg-destructive/10" :
+            variant === "warning" ? "bg-warning/10" :
+            variant === "success" ? "bg-success/10" :
+            "bg-info/10"
           }`}>
             <Icon className="h-5 w-5" />
           </div>
@@ -137,18 +137,18 @@ export default function ResumoDiario() {
       <div className="max-w-4xl mx-auto p-4 space-y-6">
         {/* AI Summary */}
         {loading ? (
-          <Card className="bg-blue-50 border-blue-200">
+          <Card className="bg-info/10 border-info/30">
             <CardContent className="p-6">
               <Skeleton className="h-4 w-full mb-2" />
               <Skeleton className="h-4 w-3/4" />
             </CardContent>
           </Card>
         ) : summary?.resumoIA ? (
-          <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+          <Card className="bg-gradient-to-r from-info/10 to-indigo-50 border-info/30">
             <CardContent className="p-6">
               <div className="flex items-start gap-3">
                 <span className="text-2xl">💡</span>
-                <p className="text-blue-800 leading-relaxed">{summary.resumoIA}</p>
+                <p className="text-info leading-relaxed">{summary.resumoIA}</p>
               </div>
             </CardContent>
           </Card>

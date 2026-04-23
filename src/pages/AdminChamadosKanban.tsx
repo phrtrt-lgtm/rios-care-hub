@@ -67,25 +67,25 @@ const KANBAN_COLUMNS = [
     id: "novo", 
     label: "Novos", 
     statuses: ["novo"] as TicketStatus[],
-    color: "bg-blue-500/10 border-blue-500/30"
+    color: "bg-info/10 border-info/30/30"
   },
   { 
     id: "em_analise", 
     label: "Em Análise", 
     statuses: ["em_analise"] as TicketStatus[],
-    color: "bg-amber-500/10 border-amber-500/30"
+    color: "bg-warning/10 border-warning/30/30"
   },
   { 
     id: "aguardando_info", 
     label: "Aguardando Info", 
     statuses: ["aguardando_info"] as TicketStatus[],
-    color: "bg-orange-500/10 border-orange-500/30"
+    color: "bg-warning/10 border-warning/30/30"
   },
   { 
     id: "em_execucao", 
     label: "Em Execução", 
     statuses: ["em_execucao"] as TicketStatus[],
-    color: "bg-purple-500/10 border-purple-500/30"
+    color: "bg-primary/10 border-primary/30/30"
   },
 ];
 
@@ -338,7 +338,7 @@ const AdminChamadosKanban = () => {
                                 <MessageSquare className="h-3 w-3 mr-1" />
                                 Responder
                                 {unreadCounts[ticket.id] > 0 && (
-                                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] rounded-full h-4 min-w-[16px] flex items-center justify-center px-1 font-bold">
+                                  <span className="absolute -top-1 -right-1 bg-destructive text-white text-[8px] rounded-full h-4 min-w-[16px] flex items-center justify-center px-1 font-bold">
                                     {unreadCounts[ticket.id] > 9 ? "9+" : unreadCounts[ticket.id]}
                                   </span>
                                 )}

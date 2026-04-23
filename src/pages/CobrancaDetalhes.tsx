@@ -1001,14 +1001,14 @@ export default function CobrancaDetalhes() {
       </header>
 
       {isTeamMemberRaw && previewAsOwner && (
-        <div className="bg-amber-500 text-white px-4 py-2 text-center text-sm font-medium flex items-center justify-center gap-3 flex-wrap">
+        <div className="bg-warning text-white px-4 py-2 text-center text-sm font-medium flex items-center justify-center gap-3 flex-wrap">
           <Eye className="h-4 w-4" />
           <span>Você está vendo esta cobrança como o proprietário a enxerga</span>
           <Button
             variant="secondary"
             size="sm"
             onClick={() => setPreviewAsOwner(false)}
-            className="h-7 bg-white/95 text-amber-700 hover:bg-white"
+            className="h-7 bg-white/95 text-warning hover:bg-white"
           >
             Voltar à visão da equipe
           </Button>
@@ -1090,7 +1090,7 @@ export default function CobrancaDetalhes() {
                     variant="default"
                     size="sm"
                     onClick={() => setPreviewAsOwner(false)}
-                    className="bg-amber-500 hover:bg-amber-600 text-white"
+                    className="bg-warning hover:bg-warning text-white"
                   >
                     <X className="h-4 w-4 mr-2" />
                     Sair da visão do proprietário
@@ -1102,17 +1102,17 @@ export default function CobrancaDetalhes() {
             {/* Categorização */}
             <div className="flex flex-wrap gap-2">
               {charge.property && (
-                <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100">
+                <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30 hover:bg-warning/10">
                   📍 {charge.property.name}
                 </Badge>
               )}
               {charge.category && (
-                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100">
+                <Badge variant="outline" className="bg-info/10 text-info border-info/30 hover:bg-info/10">
                   {CHARGE_CATEGORIES[charge.category as keyof typeof CHARGE_CATEGORIES]}
                 </Badge>
               )}
               {charge.service_type && (
-                <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100">
+                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 hover:bg-primary/10">
                   🏷️ {charge.service_type}
                 </Badge>
               )}
@@ -1129,7 +1129,7 @@ export default function CobrancaDetalhes() {
               {charge.management_contribution_cents > 0 && (
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground font-medium">Aporte Gestão</p>
-                  <p className="text-lg font-semibold text-green-600">
+                  <p className="text-lg font-semibold text-success">
                     - {formatCurrency(charge.management_contribution_cents, charge.currency)}
                   </p>
                 </div>
@@ -1146,22 +1146,22 @@ export default function CobrancaDetalhes() {
             {(charge.maintenance_date || charge.due_date) && (
               <div className="flex flex-wrap gap-3">
                 {charge.maintenance_date && (
-                  <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-md border border-blue-200">
-                    <Calendar className="h-4 w-4 text-blue-600" />
+                  <div className="flex items-center gap-2 px-3 py-2 bg-info/10 rounded-md border border-info/30">
+                    <Calendar className="h-4 w-4 text-info" />
                     <div className="flex flex-col">
-                      <span className="text-xs text-blue-600 font-medium">Data do Serviço</span>
-                      <span className="text-sm font-semibold text-blue-700">
+                      <span className="text-xs text-info font-medium">Data do Serviço</span>
+                      <span className="text-sm font-semibold text-info">
                         {format(new Date(charge.maintenance_date), "dd/MM/yyyy", { locale: ptBR })}
                       </span>
                     </div>
                   </div>
                 )}
                 {charge.due_date && (
-                  <div className="flex items-center gap-2 px-3 py-2 bg-red-50 rounded-md border border-red-200">
-                    <Calendar className="h-4 w-4 text-red-600" />
+                  <div className="flex items-center gap-2 px-3 py-2 bg-destructive/10 rounded-md border border-destructive/30">
+                    <Calendar className="h-4 w-4 text-destructive" />
                     <div className="flex flex-col">
-                      <span className="text-xs text-red-600 font-medium">Vencimento</span>
-                      <span className="text-sm font-semibold text-red-700">
+                      <span className="text-xs text-destructive font-medium">Vencimento</span>
+                      <span className="text-sm font-semibold text-destructive">
                         {format(new Date(charge.due_date), "dd/MM/yyyy", { locale: ptBR })}
                       </span>
                     </div>
@@ -1174,13 +1174,13 @@ export default function CobrancaDetalhes() {
 
             {/* Link de Pagamento - Para Admin/Agent */}
             {isTeamMember && charge.status !== 'paid' && charge.status !== 'cancelled' && (
-              <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
+              <div className="bg-gradient-to-r from-success/10 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border border-success/30 rounded-lg p-4 mb-6">
                 <div className="flex items-start gap-3">
                   <div className="flex-1">
-                    <h4 className="font-semibold text-green-900 dark:text-green-100 mb-1">
+                    <h4 className="font-semibold text-success dark:text-green-100 mb-1">
                       💳 Link de Pagamento Mercado Pago
                     </h4>
-                    <p className="text-sm text-green-700 dark:text-green-300 mb-3">
+                    <p className="text-sm text-success dark:text-green-300 mb-3">
                       {charge.payment_link 
                         ? "Link gerado! O proprietário pode pagar com cartão de crédito, débito ou PIX através do Mercado Pago."
                         : "Gere um link de pagamento para que o proprietário possa pagar online com cartão de crédito ou PIX."}
@@ -1193,7 +1193,7 @@ export default function CobrancaDetalhes() {
                           onClick={() => {
                             window.open(charge.payment_link!, '_blank');
                           }}
-                          className="bg-green-600 hover:bg-green-700"
+                          className="bg-success hover:bg-success"
                         >
                           🔗 Abrir Link de Pagamento
                         </Button>
@@ -1215,7 +1215,7 @@ export default function CobrancaDetalhes() {
                       <Button
                         onClick={handleGeneratePaymentLink}
                         disabled={generatingPaymentLink}
-                        className="bg-green-600 hover:bg-green-700"
+                        className="bg-success hover:bg-success"
                         size="sm"
                       >
                         {generatingPaymentLink ? (
@@ -1257,8 +1257,8 @@ export default function CobrancaDetalhes() {
                       <Card className="border-2 border-primary/20 hover:border-primary/40 transition-colors">
                         <CardHeader className="pb-3">
                           <div className="flex items-center gap-2 mb-2">
-                            <div className="p-2 rounded-lg bg-green-50">
-                              <svg className="h-5 w-5 text-green-600" viewBox="0 0 24 24" fill="currentColor">
+                            <div className="p-2 rounded-lg bg-success/10">
+                              <svg className="h-5 w-5 text-success" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M13 3L4 14h7l-1 7 9-11h-7l1-7z"/>
                               </svg>
                             </div>
@@ -1294,11 +1294,11 @@ export default function CobrancaDetalhes() {
                     )}
 
                     {/* Opção 2: Cartão com Parcelamento */}
-                    <Card className="border-2 border-blue-200 hover:border-blue-300 transition-colors bg-gradient-to-br from-blue-50/50 to-background">
+                    <Card className="border-2 border-info/30 hover:border-info/30 transition-colors bg-gradient-to-br from-info/10/50 to-background">
                       <CardHeader className="pb-3">
                         <div className="flex items-center gap-2 mb-2">
-                          <div className="p-2 rounded-lg bg-blue-50">
-                            <CreditCard className="h-5 w-5 text-blue-600" />
+                          <div className="p-2 rounded-lg bg-info/10">
+                            <CreditCard className="h-5 w-5 text-info" />
                           </div>
                           <div>
                             <CardTitle className="text-lg">Cartão de Crédito</CardTitle>
@@ -1306,16 +1306,16 @@ export default function CobrancaDetalhes() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2 mt-2">
-                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                          <Badge variant="outline" className="bg-info/10 text-info border-info/30">
                             Todos os cartões
                           </Badge>
-                          <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
                             Débito e Crédito
                           </Badge>
                         </div>
                       </CardHeader>
                       <CardContent className="space-y-3">
-                        <div className="p-4 bg-white rounded-lg border-2 border-dashed border-blue-200 space-y-2">
+                        <div className="p-4 bg-white rounded-lg border-2 border-dashed border-info/30 space-y-2">
                           <div className="flex items-center justify-between text-sm">
                             <span className="text-muted-foreground">Valor devido:</span>
                             <span className="font-bold text-lg">{formatCurrency(charge.amount_cents - (charge.management_contribution_cents || 0), charge.currency)}</span>

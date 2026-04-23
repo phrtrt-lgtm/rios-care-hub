@@ -337,7 +337,7 @@ export default function Manutencoes() {
                       <td className="p-3 text-right font-medium">
                         {formatBRL(m.amount_cents)}
                       </td>
-                      <td className="p-3 text-right font-medium text-emerald-600">
+                      <td className="p-3 text-right font-medium text-success">
                         {m.management_contribution_cents > 0 ? formatBRL(m.management_contribution_cents) : '-'}
                       </td>
                       <td className="p-3 text-right font-bold">
@@ -403,11 +403,11 @@ export default function Manutencoes() {
                   </div>
                   <div className="bg-muted/50 rounded-lg p-3">
                     <div className="text-xs text-muted-foreground">Abertas</div>
-                    <div className="text-lg font-bold text-orange-600">{prop.openCount}</div>
+                    <div className="text-lg font-bold text-warning">{prop.openCount}</div>
                   </div>
                   <div className="bg-muted/50 rounded-lg p-3">
                     <div className="text-xs text-muted-foreground">Pagas</div>
-                    <div className="text-lg font-bold text-emerald-600">{prop.paidCount}</div>
+                    <div className="text-lg font-bold text-success">{prop.paidCount}</div>
                   </div>
                 </div>
               </CardContent>

@@ -243,8 +243,8 @@ export function CompleteMaintenanceDialog({
                 const Icon = icons[r];
                 const colors = {
                   owner: "border-primary bg-primary/10 text-primary",
-                  pm: "border-blue-500 bg-blue-500/10 text-blue-700 dark:text-blue-400",
-                  guest: "border-orange-500 bg-orange-500/10 text-orange-700 dark:text-orange-400",
+                  pm: "border-info/30 bg-info/10 text-info",
+                  guest: "border-warning/30 bg-warning/10 text-warning",
                 };
                 const selected = costResponsible === r;
                 return (
@@ -265,18 +265,18 @@ export function CompleteMaintenanceDialog({
 
             {/* Contextual description */}
             {costResponsible === "guest" && (
-              <Alert className="border-orange-500/30 bg-orange-500/5">
-                <AlertCircle className="h-4 w-4 text-orange-600" />
-                <AlertDescription className="text-orange-700 dark:text-orange-400 text-xs">
+              <Alert className="border-warning/30/30 bg-warning/5">
+                <AlertCircle className="h-4 w-4 text-warning" />
+                <AlertDescription className="text-warning text-xs">
                   Dano de hóspede — informe o check-out para receber um aviso automático de cobrança.
                   Esta manutenção <strong>não aparece</strong> para o proprietário.
                 </AlertDescription>
               </Alert>
             )}
             {costResponsible === "pm" && (
-              <Alert className="border-blue-500/30 bg-blue-500/5">
-                <AlertCircle className="h-4 w-4 text-blue-600" />
-                <AlertDescription className="text-blue-700 dark:text-blue-400 text-xs">
+              <Alert className="border-info/30/30 bg-info/5">
+                <AlertCircle className="h-4 w-4 text-info" />
+                <AlertDescription className="text-info text-xs">
                   Gestão assume 100% — o aporte será igual ao valor total, zerada para o proprietário.
                 </AlertDescription>
               </Alert>
@@ -372,13 +372,13 @@ export function CompleteMaintenanceDialog({
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Aporte gestão:</span>
-                    <span className="text-blue-600 dark:text-blue-400">
+                    <span className="text-info">
                       − R$ {(costResponsible === "pm" ? amountNum : contributionNum).toFixed(2).replace(".", ",")}
                     </span>
                   </div>
                   <div className="flex justify-between font-semibold border-t pt-1">
                     <span>Proprietário paga:</span>
-                    <span className={ownerPays === 0 ? "text-green-600" : "text-foreground"}>
+                    <span className={ownerPays === 0 ? "text-success" : "text-foreground"}>
                       R$ {(costResponsible === "pm" ? 0 : ownerPays).toFixed(2).replace(".", ",")}
                     </span>
                   </div>

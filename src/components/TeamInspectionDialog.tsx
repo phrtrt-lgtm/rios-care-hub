@@ -513,13 +513,13 @@ export default function TeamInspectionDialog({
                     htmlFor="team-status-ok"
                     className={`cursor-pointer border-2 rounded-xl p-4 flex flex-col items-center gap-2 transition-all ${
                       inspectionStatus === 'OK' 
-                        ? 'border-green-500 bg-green-50 dark:bg-green-950' 
-                        : 'border-border hover:border-green-300'
+                        ? 'border-success/30 bg-success/10 dark:bg-green-950' 
+                        : 'border-border hover:border-success/30'
                     }`}
                   >
                     <RadioGroupItem value="OK" id="team-status-ok" className="sr-only" />
-                    <CheckCircle2 className={`h-12 w-12 ${inspectionStatus === 'OK' ? 'text-green-600' : 'text-muted-foreground'}`} />
-                    <span className={`text-xl font-bold ${inspectionStatus === 'OK' ? 'text-green-600' : 'text-muted-foreground'}`}>
+                    <CheckCircle2 className={`h-12 w-12 ${inspectionStatus === 'OK' ? 'text-success' : 'text-muted-foreground'}`} />
+                    <span className={`text-xl font-bold ${inspectionStatus === 'OK' ? 'text-success' : 'text-muted-foreground'}`}>
                       OK
                     </span>
                   </label>
@@ -528,13 +528,13 @@ export default function TeamInspectionDialog({
                     htmlFor="team-status-nao"
                     className={`cursor-pointer border-2 rounded-xl p-4 flex flex-col items-center gap-2 transition-all ${
                       inspectionStatus === 'NÃO' 
-                        ? 'border-red-500 bg-red-50 dark:bg-red-950' 
-                        : 'border-border hover:border-red-300'
+                        ? 'border-destructive/30 bg-destructive/10 dark:bg-red-950' 
+                        : 'border-border hover:border-destructive/30'
                     }`}
                   >
                     <RadioGroupItem value="NÃO" id="team-status-nao" className="sr-only" />
-                    <XCircle className={`h-12 w-12 ${inspectionStatus === 'NÃO' ? 'text-red-600' : 'text-muted-foreground'}`} />
-                    <span className={`text-xl font-bold ${inspectionStatus === 'NÃO' ? 'text-red-600' : 'text-muted-foreground'}`}>
+                    <XCircle className={`h-12 w-12 ${inspectionStatus === 'NÃO' ? 'text-destructive' : 'text-muted-foreground'}`} />
+                    <span className={`text-xl font-bold ${inspectionStatus === 'NÃO' ? 'text-destructive' : 'text-muted-foreground'}`}>
                       NÃO
                     </span>
                   </label>
@@ -577,7 +577,7 @@ export default function TeamInspectionDialog({
                           </span>
                         )}
                         {!audio.uploading && !audio.transcribing && audio.url && (
-                          <CheckCircle2 className="h-4 w-4 text-green-600 ml-auto" />
+                          <CheckCircle2 className="h-4 w-4 text-success ml-auto" />
                         )}
                       </div>
                       <AudioPlayer file={audio.file} />
@@ -598,10 +598,10 @@ export default function TeamInspectionDialog({
             )}
             
             {combinedSummary && (
-              <div className="mt-4 p-4 bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/20 rounded-xl">
+              <div className="mt-4 p-4 bg-gradient-to-br from-primary/10 to-info/10 border border-primary/30/20 rounded-xl">
                 <div className="flex items-center gap-2 mb-2">
-                  <Sparkles className="h-5 w-5 text-purple-600" />
-                  <span className="font-semibold text-purple-700 dark:text-purple-300">Análise da IA</span>
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  <span className="font-semibold text-primary dark:text-purple-300">Análise da IA</span>
                 </div>
                 <div className="text-sm whitespace-pre-wrap">
                   {combinedSummary}
@@ -647,7 +647,7 @@ export default function TeamInspectionDialog({
                 <p className="text-sm font-semibold flex items-center gap-2">
                   {isCompressing ? (
                     <>
-                      <Video className="h-4 w-4 animate-pulse text-amber-600" />
+                      <Video className="h-4 w-4 animate-pulse text-warning" />
                       Comprimindo vídeo(s)...
                     </>
                   ) : isUploading ? (
@@ -657,12 +657,12 @@ export default function TeamInspectionDialog({
                     </>
                   ) : hasErrors ? (
                     <>
-                      <XCircle className="h-4 w-4 text-red-600" />
+                      <XCircle className="h-4 w-4 text-destructive" />
                       {uploadedCount} de {totalFilesCount} enviado(s)
                     </>
                   ) : (
                     <>
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      <CheckCircle2 className="h-4 w-4 text-success" />
                       {uploadedFiles.length} arquivo(s) prontos
                     </>
                   )}
@@ -673,12 +673,12 @@ export default function TeamInspectionDialog({
                       key={index} 
                       className={`relative aspect-square rounded-lg overflow-hidden border-2 ${
                         uploadedFile.error 
-                          ? 'border-red-500' 
+                          ? 'border-destructive/30' 
                           : uploadedFile.compressing
-                            ? 'border-amber-500'
+                            ? 'border-warning/30'
                             : uploadedFile.uploading 
                               ? 'border-primary/50' 
-                              : 'border-green-500'
+                              : 'border-success/30'
                       }`}
                     >
                       {uploadedFile.file.type.startsWith('image/') ? (

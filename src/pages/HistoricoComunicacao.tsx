@@ -223,11 +223,11 @@ export default function HistoricoComunicacao() {
   const getEventColor = (type: CommunicationEvent["type"]) => {
     switch (type) {
       case "ticket_message":
-        return "bg-blue-500";
+        return "bg-info";
       case "charge_message":
-        return "bg-amber-500";
+        return "bg-warning";
       case "notification":
-        return "bg-purple-500";
+        return "bg-primary";
       default:
         return "bg-gray-500";
     }

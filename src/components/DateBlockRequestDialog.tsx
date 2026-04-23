@@ -223,7 +223,7 @@ export const DateBlockRequestDialog = ({
                 <RadioGroupItem value="maintenance" className="mt-0.5" />
                 <div>
                   <div className="flex items-center gap-1.5 font-medium text-sm">
-                    <Wrench className="h-3.5 w-3.5 text-orange-500" />
+                    <Wrench className="h-3.5 w-3.5 text-warning" />
                     Manutenção
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">Reparos, obras ou serviços na unidade</p>
@@ -237,7 +237,7 @@ export const DateBlockRequestDialog = ({
                 <RadioGroupItem value="family_visit" className="mt-0.5" />
                 <div>
                   <div className="flex items-center gap-1.5 font-medium text-sm">
-                    <Users className="h-3.5 w-3.5 text-blue-500" />
+                    <Users className="h-3.5 w-3.5 text-info" />
                     Visita de familiar
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">Uso pessoal — requer comprovante da taxa de limpeza</p>
@@ -329,12 +329,12 @@ export const DateBlockRequestDialog = ({
               {proofFile && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Comprovante</span>
-                  <span className="font-medium text-green-600">Anexado ✓</span>
+                  <span className="font-medium text-success">Anexado ✓</span>
                 </div>
               )}
             </div>
 
-            <div className="flex items-center gap-2 rounded-lg bg-blue-50 border border-blue-200 p-3 text-xs text-blue-800">
+            <div className="flex items-center gap-2 rounded-lg bg-info/10 border border-info/30 p-3 text-xs text-info">
               <Clock className="h-4 w-4 shrink-0" />
               <span>As datas serão bloqueadas em até <strong>1h 30min</strong> após a confirmação.</span>
             </div>
@@ -353,8 +353,8 @@ export const DateBlockRequestDialog = ({
         {/* Step: Success */}
         {step === "success" && (
           <div className="flex flex-col items-center gap-4 py-4 text-center">
-            <div className="rounded-full bg-green-100 p-4">
-              <CheckCircle2 className="h-10 w-10 text-green-600" />
+            <div className="rounded-full bg-success/10 p-4">
+              <CheckCircle2 className="h-10 w-10 text-success" />
             </div>
             <div>
               <p className="font-semibold text-foreground">Solicitação enviada!</p>

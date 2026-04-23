@@ -26,32 +26,32 @@ interface CalendarEvent {
 
 const eventColors: Record<EventType, { bg: string; dot: string; label: string; icon: React.ReactNode }> = {
   inspection: { 
-    bg: 'bg-purple-500/20', 
-    dot: 'bg-purple-500', 
+    bg: 'bg-primary/20', 
+    dot: 'bg-primary', 
     label: 'Vistoria',
     icon: <Sparkles className="h-3 w-3" />
   },
   maintenance: { 
-    bg: 'bg-blue-500/20', 
-    dot: 'bg-blue-500', 
+    bg: 'bg-info/20', 
+    dot: 'bg-info', 
     label: 'Manutenção',
     icon: <Wrench className="h-3 w-3" />
   },
   charge: { 
-    bg: 'bg-amber-500/20', 
-    dot: 'bg-amber-500', 
+    bg: 'bg-warning/20', 
+    dot: 'bg-warning', 
     label: 'Cobrança',
     icon: <DollarSign className="h-3 w-3" />
   },
   blocked: { 
-    bg: 'bg-red-500/20', 
-    dot: 'bg-red-500', 
+    bg: 'bg-destructive/20', 
+    dot: 'bg-destructive', 
     label: 'Bloqueio',
     icon: <CalendarOff className="h-3 w-3" />
   },
   checkout: { 
-    bg: 'bg-green-500/20', 
-    dot: 'bg-green-500', 
+    bg: 'bg-success/20', 
+    dot: 'bg-success', 
     label: 'Checkout',
     icon: <Users className="h-3 w-3" />
   },

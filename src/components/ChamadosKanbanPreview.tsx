@@ -118,10 +118,10 @@ export function ChamadosKanbanPreview() {
 
   if (loading) {
     return (
-      <Card className="border-blue-200 dark:border-blue-800">
+      <Card className="border-info/30">
         <CardHeader className="py-3 px-4">
           <div className="flex items-center gap-2">
-            <Ticket className="h-4 w-4 text-blue-600 animate-pulse" />
+            <Ticket className="h-4 w-4 text-info animate-pulse" />
             <div className="h-4 w-32 rounded bg-muted animate-pulse" />
           </div>
         </CardHeader>
@@ -130,11 +130,11 @@ export function ChamadosKanbanPreview() {
   }
 
   return (
-    <Card className="border-blue-200 dark:border-blue-800 overflow-hidden w-full min-w-0">
+    <Card className="border-info/30 overflow-hidden w-full min-w-0">
       <CardHeader className="py-3 px-4">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2 min-w-0">
-            <Ticket className="h-4 w-4 text-blue-600" />
+            <Ticket className="h-4 w-4 text-info" />
             <CardTitle className="text-sm">Chamados</CardTitle>
             {tickets.length > 0 && (
               <Badge variant="secondary" className="h-5 px-1.5 text-xs">
@@ -146,7 +146,7 @@ export function ChamadosKanbanPreview() {
             variant="ghost"
             size="sm"
             onClick={() => navigate("/admin/chamados")}
-            className="h-7 text-xs text-blue-600"
+            className="h-7 text-xs text-info"
           >
             <span className="hidden sm:inline">Ver todos</span>
             <span className="sm:hidden">Ver</span>
@@ -163,7 +163,7 @@ export function ChamadosKanbanPreview() {
             {novos.length > 0 && (
               <Collapsible open={novosExpanded} onOpenChange={setNovosExpanded}>
                 <div className="flex items-center justify-between mb-1.5">
-                  <p className="text-xs font-semibold text-blue-600">Novos ({novos.length})</p>
+                  <p className="text-xs font-semibold text-info">Novos ({novos.length})</p>
                   {novos.length > COLLAPSED_LIMIT && (
                     <CollapsibleTrigger asChild>
                       <Button variant="ghost" size="sm" className="h-5 px-1.5 text-xs text-muted-foreground">
@@ -186,7 +186,7 @@ export function ChamadosKanbanPreview() {
             {emAndamento.length > 0 && (
               <Collapsible open={emAndamentoExpanded} onOpenChange={setEmAndamentoExpanded}>
                 <div className="flex items-center justify-between mb-1.5">
-                  <p className="text-xs font-semibold text-amber-600">Em andamento ({emAndamento.length})</p>
+                  <p className="text-xs font-semibold text-warning">Em andamento ({emAndamento.length})</p>
                   {emAndamento.length > COLLAPSED_LIMIT && (
                     <CollapsibleTrigger asChild>
                       <Button variant="ghost" size="sm" className="h-5 px-1.5 text-xs text-muted-foreground">
