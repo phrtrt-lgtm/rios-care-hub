@@ -1215,6 +1215,9 @@ export default function AdminManutencoesLista() {
           ticket_type: "manutencao",
           kind: "maintenance",
           status: inlineAdd.groupId === "concluidas" ? "concluido" : "novo",
+          // Created in "Em espera" — hidden from owner, no notifications until
+          // the team picks a real cost_responsible from the list.
+          cost_responsible: "pending",
         });
         if (error) throw error;
       } else {
