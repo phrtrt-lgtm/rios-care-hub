@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { sanitizeFilename } from "@/lib/storage";
 import { VoiceToTextInput } from "@/components/VoiceToTextInput";
-import { MaintenanceCostSplit } from "@/components/MaintenanceCostSplit";
+
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { processFileForUpload } from "@/lib/processVideoForUpload";
 
