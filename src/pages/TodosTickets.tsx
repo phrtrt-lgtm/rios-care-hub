@@ -218,12 +218,12 @@ const TodosTickets = () => {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      novo: { label: 'Novo', className: 'bg-blue-500 text-white hover:bg-blue-600' },
-      em_analise: { label: 'Em Análise', className: 'bg-yellow-500 text-white hover:bg-yellow-600' },
-      em_execucao: { label: 'Em Execução', className: 'bg-orange-500 text-white hover:bg-orange-600' },
-      aguardando_info: { label: 'Aguardando Info', className: 'bg-purple-500 text-white hover:bg-purple-600' },
-      concluido: { label: 'Concluído', className: 'bg-green-500 text-white hover:bg-green-600' },
-      cancelado: { label: 'Cancelado', className: 'bg-red-500 text-white hover:bg-red-600' }
+      novo: { label: 'Novo', className: 'bg-info text-white hover:bg-info' },
+      em_analise: { label: 'Em Análise', className: 'bg-warning text-white hover:bg-warning' },
+      em_execucao: { label: 'Em Execução', className: 'bg-warning text-white hover:bg-warning' },
+      aguardando_info: { label: 'Aguardando Info', className: 'bg-primary text-white hover:bg-primary' },
+      concluido: { label: 'Concluído', className: 'bg-success text-white hover:bg-success' },
+      cancelado: { label: 'Cancelado', className: 'bg-destructive text-white hover:bg-destructive' }
     };
 
     const config = statusConfig[status as keyof typeof statusConfig] || { label: status, className: 'bg-gray-500 text-white' };
@@ -562,7 +562,7 @@ const TodosTickets = () => {
                   </TableCell>
                   <TableCell onClick={() => toggleRowExpand(ticket.id)}>
                     {slaInfo ? (
-                      <span className={`text-sm font-semibold ${slaInfo.isUrgent ? 'text-red-600' : 'text-foreground'}`}>
+                      <span className={`text-sm font-semibold ${slaInfo.isUrgent ? 'text-destructive' : 'text-foreground'}`}>
                         {slaInfo.text}
                       </span>
                     ) : (
@@ -639,9 +639,9 @@ const TodosTickets = () => {
             <div className="space-y-6">
               {/* Seção Tickets Abertos */}
               <Card>
-                <CardHeader className="py-3 px-4 bg-blue-500/10 border-b">
+                <CardHeader className="py-3 px-4 bg-info/10 border-b">
                   <CardTitle className="text-base flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-blue-500" />
+                    <div className="h-2 w-2 rounded-full bg-info" />
                     Tickets Abertos
                     <Badge variant="secondary" className="ml-2">{openTickets.length}</Badge>
                   </CardTitle>
@@ -695,9 +695,9 @@ const TodosTickets = () => {
 
               {/* Seção Tickets Concluídos */}
               <Card>
-                <CardHeader className="py-3 px-4 bg-green-500/10 border-b">
+                <CardHeader className="py-3 px-4 bg-success/10 border-b">
                   <CardTitle className="text-base flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-green-500" />
+                    <div className="h-2 w-2 rounded-full bg-success" />
                     Tickets Concluídos / Cancelados
                     <Badge variant="secondary" className="ml-2">{closedTickets.length}</Badge>
                   </CardTitle>

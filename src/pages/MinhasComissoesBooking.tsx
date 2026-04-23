@@ -33,13 +33,13 @@ interface BookingCommission {
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   draft:              { label: "Rascunho",        className: "bg-muted text-muted-foreground" },
-  sent:               { label: "Aguardando",      className: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300" },
-  pendente:           { label: "Pendente",        className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300" },
-  overdue:            { label: "Vencida",         className: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300" },
-  paid:               { label: "Pago",            className: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300" },
-  pago_no_vencimento: { label: "Pago no Venc.",   className: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300" },
-  pago_antecipado:    { label: "Pago Antecipado", className: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300" },
-  pago_com_atraso:    { label: "Pago c/ Atraso",  className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300" },
+  sent:               { label: "Aguardando",      className: "bg-info/10 text-info dark:bg-blue-900/40 dark:text-blue-300" },
+  pendente:           { label: "Pendente",        className: "bg-warning/10 text-warning dark:bg-yellow-900/40 dark:text-yellow-300" },
+  overdue:            { label: "Vencida",         className: "bg-destructive/10 text-destructive dark:bg-red-900/40 dark:text-red-300" },
+  paid:               { label: "Pago",            className: "bg-success/10 text-success dark:bg-green-900/40 dark:text-green-300" },
+  pago_no_vencimento: { label: "Pago no Venc.",   className: "bg-success/10 text-success dark:bg-green-900/40 dark:text-green-300" },
+  pago_antecipado:    { label: "Pago Antecipado", className: "bg-success/10 text-success dark:bg-emerald-900/40 dark:text-emerald-300" },
+  pago_com_atraso:    { label: "Pago c/ Atraso",  className: "bg-warning/10 text-warning dark:bg-yellow-900/40 dark:text-yellow-300" },
   cancelled:          { label: "Cancelado",       className: "bg-muted text-muted-foreground" },
 };
 
@@ -233,8 +233,8 @@ export default function MinhasComissoesBooking() {
                   {/* QR Code gerado */}
                   {groupPayment && !generatingPayment && (
                     <div className="space-y-3 animate-fade-in">
-                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-700 rounded-full border border-green-200 text-xs font-medium">
-                        <div className="h-1.5 w-1.5 bg-green-500 rounded-full animate-pulse" />
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-success/10 text-success rounded-full border border-success/30 text-xs font-medium">
+                        <div className="h-1.5 w-1.5 bg-success rounded-full animate-pulse" />
                         PIX gerado com sucesso!
                       </div>
                       {groupPayment.pix_qr_code_base64 && (

@@ -325,7 +325,7 @@ export function ReserveDebitsTable() {
         <td className="p-0 w-[120px]">
           <div className="px-2 py-2 text-sm text-center font-medium">
             {group.new_commission_percent != null ? (
-              <span className="text-green-600">{group.new_commission_percent.toFixed(1)}%</span>
+              <span className="text-success">{group.new_commission_percent.toFixed(1)}%</span>
             ) : (
               <span className="text-muted-foreground">—</span>
             )}
@@ -405,7 +405,7 @@ export function ReserveDebitsTable() {
                           </Badge>
                         )}
                         {todayDebits.length > 0 && (
-                          <Badge className="ml-1 bg-amber-500">
+                          <Badge className="ml-1 bg-warning">
                             {todayDebits.length} hoje
                           </Badge>
                         )}
@@ -416,8 +416,8 @@ export function ReserveDebitsTable() {
                   {/* Render rows */}
                   {expanded && (
                     <>
-                      {overdueDebits.map((group) => renderDebitRow(group, "bg-red-50 dark:bg-red-950/20"))}
-                      {todayDebits.map((group) => renderDebitRow(group, "bg-amber-50 dark:bg-amber-950/20"))}
+                      {overdueDebits.map((group) => renderDebitRow(group, "bg-destructive/10 dark:bg-red-950/20"))}
+                      {todayDebits.map((group) => renderDebitRow(group, "bg-warning/10 dark:bg-amber-950/20"))}
                       {upcomingDebits.map((group) => renderDebitRow(group))}
                     </>
                   )}

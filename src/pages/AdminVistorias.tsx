@@ -245,7 +245,7 @@ export default function AdminVistorias() {
                         {counts && (counts.ok_count > 0 || counts.problem_count > 0) && (
                           <div className="absolute bottom-2 right-2 flex gap-1">
                             {counts.ok_count > 0 && (
-                              <Badge variant="secondary" className="bg-green-500/90 text-white text-xs">
+                              <Badge variant="secondary" className="bg-success/90 text-white text-xs">
                                 <CheckCircle2 className="h-3 w-3 mr-1" />
                                 {counts.ok_count}
                               </Badge>
@@ -322,7 +322,7 @@ export default function AdminVistorias() {
                         </div>
                         <Badge 
                           variant={insp.notes === 'OK' ? 'secondary' : 'destructive'}
-                          className={insp.notes === 'OK' ? 'bg-green-500/20 text-green-700' : ''}
+                          className={insp.notes === 'OK' ? 'bg-success/20 text-success' : ''}
                         >
                           {insp.notes === 'OK' ? 'OK' : 'Problema'}
                         </Badge>

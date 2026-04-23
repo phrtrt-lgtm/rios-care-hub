@@ -41,13 +41,13 @@ export interface BookingCommission {
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   draft: { label: "Rascunho", className: "bg-muted text-muted-foreground" },
-  sent: { label: "Enviada", className: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300" },
-  pendente: { label: "Pendente", className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300" },
-  overdue: { label: "Vencida", className: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300" },
-  paid: { label: "Pago", className: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300" },
-  pago_no_vencimento: { label: "Pago no Venc.", className: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300" },
-  pago_antecipado: { label: "Pago Antecipado", className: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300" },
-  pago_com_atraso: { label: "Pago c/ Atraso", className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300" },
+  sent: { label: "Enviada", className: "bg-info/10 text-info dark:bg-blue-900/40 dark:text-blue-300" },
+  pendente: { label: "Pendente", className: "bg-warning/10 text-warning dark:bg-yellow-900/40 dark:text-yellow-300" },
+  overdue: { label: "Vencida", className: "bg-destructive/10 text-destructive dark:bg-red-900/40 dark:text-red-300" },
+  paid: { label: "Pago", className: "bg-success/10 text-success dark:bg-green-900/40 dark:text-green-300" },
+  pago_no_vencimento: { label: "Pago no Venc.", className: "bg-success/10 text-success dark:bg-green-900/40 dark:text-green-300" },
+  pago_antecipado: { label: "Pago Antecipado", className: "bg-success/10 text-success dark:bg-emerald-900/40 dark:text-emerald-300" },
+  pago_com_atraso: { label: "Pago c/ Atraso", className: "bg-warning/10 text-warning dark:bg-yellow-900/40 dark:text-yellow-300" },
   cancelled: { label: "Cancelado", className: "bg-muted text-muted-foreground" },
 };
 
@@ -138,8 +138,8 @@ const BookingComissoes = () => {
     const daysLeft = differenceInDays(dueDate, new Date());
     const isOverdue = isPast(dueDate) || status === "overdue";
     if (isOverdue) return { text: `${Math.abs(daysLeft)}d atraso`, color: "text-destructive" };
-    if (daysLeft <= 2) return { text: `${daysLeft}d`, color: "text-orange-600" };
-    if (daysLeft <= 7) return { text: `${daysLeft}d`, color: "text-yellow-600" };
+    if (daysLeft <= 2) return { text: `${daysLeft}d`, color: "text-warning" };
+    if (daysLeft <= 7) return { text: `${daysLeft}d`, color: "text-warning" };
     return { text: `${daysLeft}d`, color: "text-muted-foreground" };
   };
 
@@ -198,10 +198,10 @@ const BookingComissoes = () => {
 
         {/* Summary Cards */}
         <div className="grid grid-cols-2 gap-3">
-          <Card className="border-yellow-200 bg-yellow-50/50 dark:border-yellow-800 dark:bg-yellow-900/10">
+          <Card className="border-warning/30 bg-warning/10/50 dark:bg-yellow-900/10">
             <CardContent className="pt-4 pb-4">
               <p className="text-xs text-muted-foreground">A Receber</p>
-              <p className="text-xl font-bold text-yellow-700 dark:text-yellow-400">{formatBRL(totalPendente)}</p>
+              <p className="text-xl font-bold text-warning">{formatBRL(totalPendente)}</p>
               <p className="text-xs text-muted-foreground">
                 {filtered.filter((c) => OPEN_STATUSES.includes(c.status)).length} cobranças
               </p>

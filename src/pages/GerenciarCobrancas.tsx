@@ -349,10 +349,10 @@ const GerenciarCobrancas = () => {
     const statusConfig: Record<string, { label: string; variant: "secondary" | "default" | "destructive" | "outline"; className?: string }> = {
       draft: { label: 'Rascunho', variant: 'secondary' },
       sent: { label: 'Enviada', variant: 'default' },
-      paid: { label: 'Paga', variant: 'default', className: 'bg-green-500' },
+      paid: { label: 'Paga', variant: 'default', className: 'bg-success' },
       overdue: { label: 'Vencida', variant: 'destructive' },
       cancelled: { label: 'Cancelada', variant: 'outline' },
-      debited: { label: 'Débito em Reserva', variant: 'destructive', className: 'bg-red-700' }
+      debited: { label: 'Débito em Reserva', variant: 'destructive', className: 'bg-destructive' }
     };
 
     const config = statusConfig[status] || { label: status, variant: 'outline' as const };
@@ -474,12 +474,12 @@ const GerenciarCobrancas = () => {
           <TabsContent value="debito" className="space-y-4">
             {/* Summary */}
             {debitoPropertyGroups.length > 0 && (
-              <Card className="bg-gradient-to-r from-red-100 to-red-50 border-red-200">
+              <Card className="bg-gradient-to-r from-red-100 to-red-50 border-destructive/30">
                 <CardContent className="py-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground font-medium">Total a Debitar em Reservas</p>
-                      <p className="text-3xl font-bold text-red-700">
+                      <p className="text-3xl font-bold text-destructive">
                         {formatCurrency(debitoPropertyGroups.reduce((acc, g) => acc + g.totalDueCents, 0), 'BRL')}
                       </p>
                     </div>
@@ -505,7 +505,7 @@ const GerenciarCobrancas = () => {
                 {debitoPropertyGroups.map((group) => (
                   <Card 
                     key={group.id} 
-                    className="border-red-200 bg-red-50/30 hover:bg-red-50 transition-colors cursor-pointer"
+                    className="border-destructive/30 bg-destructive/10/30 hover:bg-destructive/10 transition-colors cursor-pointer"
                     onClick={() => openCalculator(group)}
                   >
                     <CardContent className="py-4">
@@ -539,19 +539,19 @@ const GerenciarCobrancas = () => {
                         {/* Amount and Calculator Button */}
                         <div className="text-right flex items-center gap-3">
                           <div>
-                            <p className="text-lg font-bold text-red-700">
+                            <p className="text-lg font-bold text-destructive">
                               {formatCurrency(group.totalDueCents, 'BRL')}
                             </p>
                             <p className="text-xs text-muted-foreground">a debitar</p>
                           </div>
-                          <Button variant="outline" size="sm" className="border-red-300 hover:bg-red-100">
+                          <Button variant="outline" size="sm" className="border-destructive/30 hover:bg-destructive/10">
                             <Calculator className="h-4 w-4" />
                           </Button>
                         </div>
                       </div>
 
                       {/* Charges List Preview */}
-                      <div className="mt-3 pt-3 border-t border-red-200 space-y-1">
+                      <div className="mt-3 pt-3 border-t border-destructive/30 space-y-1">
                         {group.charges.slice(0, 3).map((charge) => (
                           <div key={charge.id} className="flex justify-between text-sm">
                             <span className="text-muted-foreground truncate flex-1">{charge.title}</span>

@@ -179,8 +179,8 @@ export default function CalendarioReservas() {
     else { setSortField(field); setSortDir(field === "name" ? "asc" : "desc"); }
   };
 
-  const getOccColor = (rate: number) => rate >= 70 ? "text-green-600" : rate >= 40 ? "text-yellow-600" : "text-red-600";
-  const getProgressBg = (rate: number) => rate >= 70 ? "bg-green-500" : rate >= 40 ? "bg-yellow-500" : "bg-red-500";
+  const getOccColor = (rate: number) => rate >= 70 ? "text-success" : rate >= 40 ? "text-warning" : "text-destructive";
+  const getProgressBg = (rate: number) => rate >= 70 ? "bg-success" : rate >= 40 ? "bg-warning" : "bg-destructive";
 
   // Portfolio health & price alerts data
   const [openTicketsCount, setOpenTicketsCount] = useState<Record<string, number>>({});
@@ -301,8 +301,8 @@ export default function CalendarioReservas() {
     return Math.round(healthScores.reduce((s, h) => s + h.total, 0) / healthScores.length);
   }, [healthScores]);
 
-  const getHealthColor = (score: number) => score >= 70 ? "text-green-600" : score >= 40 ? "text-yellow-600" : "text-red-600";
-  const getHealthBg = (score: number) => score >= 70 ? "bg-green-500" : score >= 40 ? "bg-yellow-500" : "bg-red-500";
+  const getHealthColor = (score: number) => score >= 70 ? "text-success" : score >= 40 ? "text-warning" : "text-destructive";
+  const getHealthBg = (score: number) => score >= 70 ? "bg-success" : score >= 40 ? "bg-warning" : "bg-destructive";
   const getHealthLabel = (score: number) => score >= 70 ? "Saudável" : score >= 40 ? "Atenção" : "Crítico";
 
   const [calendarMonth, setCalendarMonth] = useState(new Date());
@@ -964,7 +964,7 @@ export default function CalendarioReservas() {
                         </span>
                       )}
                       {link.last_synced_at && !link.sync_error && (
-                        <span className="text-green-600 flex items-center gap-1">
+                        <span className="text-success flex items-center gap-1">
                           <CheckCircle2 className="h-3 w-3" />
                           OK
                         </span>
@@ -1198,7 +1198,7 @@ export default function CalendarioReservas() {
                             </div>
                           )}
                           {prop.next_guest_checkin && (
-                            <p className="text-xs text-yellow-600 mt-1 flex items-center gap-1">
+                            <p className="text-xs text-warning mt-1 flex items-center gap-1">
                               <Clock className="h-3 w-3" />
                               Próximo check-in: {format(parseISO(prop.next_guest_checkin), "dd/MM/yyyy")}
                             </p>
@@ -1229,7 +1229,7 @@ export default function CalendarioReservas() {
                     </CardHeader>
                     <CardContent>
                       {list.next_checkin && (
-                        <p className="text-xs text-yellow-600 mb-2 flex items-center gap-1">
+                        <p className="text-xs text-warning mb-2 flex items-center gap-1">
                           <Clock className="h-3 w-3" />
                           Próximo check-in: {format(parseISO(list.next_checkin), "dd/MM/yyyy")}
                         </p>
@@ -1296,14 +1296,14 @@ export default function CalendarioReservas() {
                 <CardContent className="py-3 px-4">
                   <p className="text-xs text-muted-foreground">Melhor Imóvel</p>
                   <p className="text-sm font-bold truncate">{occSummary.best?.property.name || "-"}</p>
-                  <p className="text-xs text-green-600">{occSummary.best?.occupancyRate.toFixed(0)}% ocupado</p>
+                  <p className="text-xs text-success">{occSummary.best?.occupancyRate.toFixed(0)}% ocupado</p>
                 </CardContent>
               </Card>
               <Card className="border-l-4 border-l-red-500">
                 <CardContent className="py-3 px-4">
                   <p className="text-xs text-muted-foreground">Mais Vago</p>
                   <p className="text-sm font-bold truncate">{occSummary.worst?.property.name || "-"}</p>
-                  <p className="text-xs text-red-600">{occSummary.worst?.vacantDays || 0} dias vagos</p>
+                  <p className="text-xs text-destructive">{occSummary.worst?.vacantDays || 0} dias vagos</p>
                 </CardContent>
               </Card>
             </div>
@@ -1362,7 +1362,7 @@ export default function CalendarioReservas() {
                             </div>
                           </td>
                           <td className="p-3 text-center">
-                            <span className={`font-bold ${item.vacantDays > item.totalDays * 0.5 ? "text-red-600" : "text-foreground"}`}>{item.vacantDays}</span>
+                            <span className={`font-bold ${item.vacantDays > item.totalDays * 0.5 ? "text-destructive" : "text-foreground"}`}>{item.vacantDays}</span>
                             <span className="text-muted-foreground text-xs">/{item.totalDays}</span>
                           </td>
                           <td className="p-3 text-center hidden sm:table-cell text-muted-foreground">{item.reservationCount}</td>
@@ -1376,10 +1376,10 @@ export default function CalendarioReservas() {
 
             {/* Smart Price Alerts */}
             {priceAlerts.length > 0 && (
-              <Card className="border-orange-200 dark:border-orange-800">
+              <Card className="border-warning/30">
                 <CardHeader className="py-3 px-4">
                   <div className="flex items-center gap-2">
-                    <Zap className="h-5 w-5 text-orange-500" />
+                    <Zap className="h-5 w-5 text-warning" />
                     <CardTitle className="text-sm">Alertas de Preço</CardTitle>
                     <Badge variant="destructive" className="text-xs ml-auto">{priceAlerts.length}</Badge>
                   </div>
@@ -1390,10 +1390,10 @@ export default function CalendarioReservas() {
                     <div
                       key={alert.property.id}
                       className={`flex items-start gap-3 p-3 rounded-lg border ${
-                        alert.severity === "critical" ? "border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950/30" : "border-yellow-300 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950/30"
+                        alert.severity === "critical" ? "border-destructive/30 bg-destructive/10 dark:bg-red-950/30" : "border-warning/30 bg-warning/10 dark:bg-yellow-950/30"
                       }`}
                     >
-                      <TrendingDown className={`h-4 w-4 mt-0.5 shrink-0 ${alert.severity === "critical" ? "text-red-500" : "text-yellow-500"}`} />
+                      <TrendingDown className={`h-4 w-4 mt-0.5 shrink-0 ${alert.severity === "critical" ? "text-destructive" : "text-warning"}`} />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{alert.property.name}</p>
                         {alert.alerts.map((msg, i) => (
@@ -1452,17 +1452,17 @@ export default function CalendarioReservas() {
                         <div>
                           <p className="text-[10px] text-muted-foreground">Manutenção</p>
                           <p className="text-xs font-medium">{item.maintenance}/25</p>
-                          {item.openTickets > 0 && <p className="text-[10px] text-red-500">{item.openTickets} abertas</p>}
+                          {item.openTickets > 0 && <p className="text-[10px] text-destructive">{item.openTickets} abertas</p>}
                         </div>
                         <div>
                           <p className="text-[10px] text-muted-foreground">Vistoria</p>
                           <p className="text-xs font-medium">{item.inspection}/20</p>
-                          {item.pendingItems > 0 && <p className="text-[10px] text-red-500">{item.pendingItems} pendentes</p>}
+                          {item.pendingItems > 0 && <p className="text-[10px] text-destructive">{item.pendingItems} pendentes</p>}
                         </div>
                         <div>
                           <p className="text-[10px] text-muted-foreground">Financeiro</p>
                           <p className="text-xs font-medium">{item.financial}/15</p>
-                          {item.openCharges > 0 && <p className="text-[10px] text-red-500">{item.openCharges} cobranças</p>}
+                          {item.openCharges > 0 && <p className="text-[10px] text-destructive">{item.openCharges} cobranças</p>}
                         </div>
                       </div>
                     </div>

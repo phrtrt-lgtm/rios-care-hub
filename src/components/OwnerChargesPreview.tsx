@@ -287,10 +287,10 @@ export function OwnerChargesPreview() {
       return { text: `Vencida há ${Math.abs(days)} dias`, color: "text-destructive", urgent: true };
     }
     if (isToday(date)) {
-      return { text: "Vence hoje!", color: "text-orange-500", urgent: true };
+      return { text: "Vence hoje!", color: "text-warning", urgent: true };
     }
     if (days <= 3) {
-      return { text: `Vence em ${days} dias`, color: "text-orange-500", urgent: true };
+      return { text: `Vence em ${days} dias`, color: "text-warning", urgent: true };
     }
     return { text: `Vence em ${days} dias`, color: "text-muted-foreground", urgent: false };
   };
@@ -322,11 +322,11 @@ export function OwnerChargesPreview() {
 
   return (
     <>
-      <Card className="overflow-hidden border-green-500/20">
-        <CardHeader className="pb-2 bg-gradient-to-r from-green-500/5 to-transparent">
+      <Card className="overflow-hidden border-success/30/20">
+        <CardHeader className="pb-2 bg-gradient-to-r from-success/5 to-transparent">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="text-base flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-green-500" />
+              <DollarSign className="h-5 w-5 text-success" />
               Cobranças em Aberto
             </CardTitle>
             <div className="flex items-center gap-2">
@@ -550,10 +550,10 @@ export function OwnerChargesPreview() {
       {freeMaintenances && freeMaintenances.length > 0 && (() => {
         const totalFreeCents = freeMaintenances.reduce((sum, c) => sum + (c.amount_cents || 0), 0);
         return (
-        <Card className="overflow-hidden border-emerald-500/20 mt-4">
-          <CardHeader className="pb-2 bg-gradient-to-r from-emerald-500/5 to-transparent">
+        <Card className="overflow-hidden border-success/30/20 mt-4">
+          <CardHeader className="pb-2 bg-gradient-to-r from-success/5 to-transparent">
             <CardTitle className="text-base flex items-center gap-2">
-              <Gift className="h-5 w-5 text-emerald-500" />
+              <Gift className="h-5 w-5 text-success" />
               Manutenções Gratuitas
               <Badge variant="secondary" className="font-medium text-xs ml-auto">
                 {freeMaintenances.length}
@@ -562,11 +562,11 @@ export function OwnerChargesPreview() {
 
             {/* All-time total */}
             {(allTimeInvestmentCents ?? 0) > 0 && (
-              <div className="mt-2 rounded-xl bg-gradient-to-r from-emerald-500/15 to-emerald-600/5 border border-emerald-500/25 px-4 py-3 text-center">
-                <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium tracking-wide uppercase">
+              <div className="mt-2 rounded-xl bg-gradient-to-r from-success/15 to-success/5 border border-success/30/25 px-4 py-3 text-center">
+                <p className="text-[11px] text-success font-medium tracking-wide uppercase">
                   A RIOS já aportou no seu imóvel
                 </p>
-                <p className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                <p className="text-2xl font-extrabold text-success mt-0.5">
                   {formatBRL(allTimeInvestmentCents ?? 0)}
                 </p>
               </div>
@@ -599,7 +599,7 @@ export function OwnerChargesPreview() {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-xs line-clamp-1">{charge.title}</p>
                         <div className="flex items-center gap-1.5">
-                          <Badge variant="outline" className="text-[10px] h-4 border-emerald-500/30 text-emerald-600">
+                          <Badge variant="outline" className="text-[10px] h-4 border-success/30/30 text-success">
                             Aporte integral
                           </Badge>
                           <span className="text-[10px] text-muted-foreground">
@@ -619,9 +619,9 @@ export function OwnerChargesPreview() {
               ))}
             </div>
             {/* 7-day integral total below list */}
-            <div className="mt-3 flex items-center justify-between rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-3 py-2">
-              <span className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">Aportes integrais dos últimos 7 dias:</span>
-              <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{formatBRL(totalFreeCents)}</span>
+            <div className="mt-3 flex items-center justify-between rounded-lg bg-success/10 border border-success/30/20 px-3 py-2">
+              <span className="text-xs text-success font-medium">Aportes integrais dos últimos 7 dias:</span>
+              <span className="text-sm font-bold text-success">{formatBRL(totalFreeCents)}</span>
             </div>
           </CardContent>
         </Card>
@@ -633,7 +633,7 @@ export function OwnerChargesPreview() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Zap className="h-5 w-5 text-green-600" />
+              <Zap className="h-5 w-5 text-success" />
               Pagar com PIX
             </DialogTitle>
           </DialogHeader>

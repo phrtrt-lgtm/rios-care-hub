@@ -8,18 +8,18 @@ export default function OwnerMaintenancePolicyBanner() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <Card className="mb-6 border-yellow-400 bg-yellow-50">
+    <Card className="mb-6 border-warning/30 bg-warning/10">
       <CardHeader>
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
-            <AlertCircle className="h-6 w-6 text-yellow-600 flex-shrink-0 mt-1" />
+            <AlertCircle className="h-6 w-6 text-warning flex-shrink-0 mt-1" />
             <CardTitle className="text-lg">Política de Manutenção</CardTitle>
           </div>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setIsOpen(!isOpen)}
-            className="text-yellow-700 hover:text-yellow-800 hover:bg-yellow-100"
+            className="text-warning hover:text-warning hover:bg-warning/10"
           >
             {isOpen ? (
               <>

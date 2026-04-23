@@ -22,12 +22,12 @@ export default function OwnerMaintenanceDecision({ ticket, onUpdate }: { ticket:
     return (
       <div className={`p-4 border rounded-xl ${
         ticket.owner_decision === 'owner_will_fix' 
-          ? 'bg-blue-50 border-blue-200' 
-          : 'bg-green-50 border-green-200'
+          ? 'bg-info/10 border-info/30' 
+          : 'bg-success/10 border-success/30'
       }`}>
         <div className="flex items-start gap-3">
           <CheckCircle2 className={`h-5 w-5 mt-0.5 ${
-            ticket.owner_decision === 'owner_will_fix' ? 'text-blue-600' : 'text-green-600'
+            ticket.owner_decision === 'owner_will_fix' ? 'text-info' : 'text-success'
           }`} />
           <div>
             <p className="font-medium flex items-center gap-2">
@@ -97,12 +97,12 @@ export default function OwnerMaintenanceDecision({ ticket, onUpdate }: { ticket:
   };
 
   return (
-    <div className={`p-4 border rounded-xl ${overdue ? 'bg-red-50 border-red-300' : 'bg-amber-50 border-amber-300'}`}>
+    <div className={`p-4 border rounded-xl ${overdue ? 'bg-destructive/10 border-destructive/30' : 'bg-warning/10 border-warning/30'}`}>
       <div className="flex items-start gap-3 mb-4">
         {overdue ? (
-          <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
         ) : (
-          <Clock className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <Clock className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
         )}
         <div className="flex-1">
           <p className="font-medium">
@@ -156,7 +156,7 @@ export default function OwnerMaintenanceDecision({ ticket, onUpdate }: { ticket:
       </div>
       
       {overdue && (
-        <p className="text-xs text-red-600 mt-3">
+        <p className="text-xs text-destructive mt-3">
           ⚠️ Prazo expirado. A gestão poderá executar para evitar prejuízos operacionais.
         </p>
       )}

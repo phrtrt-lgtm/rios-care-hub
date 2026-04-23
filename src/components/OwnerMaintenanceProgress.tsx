@@ -33,11 +33,11 @@ interface MaintenanceTicket {
 }
 
 const STATUS_CONFIG = {
-  novo: { label: "Pendente", color: "bg-amber-500", step: 1 },
-  em_analise: { label: "Em Análise", color: "bg-amber-500", step: 1 },
-  aguardando_info: { label: "Aguardando Info", color: "bg-amber-500", step: 1 },
-  em_execucao: { label: "Em Execução", color: "bg-purple-500", step: 3 },
-  concluido: { label: "Concluído", color: "bg-green-500", step: 4 },
+  novo: { label: "Pendente", color: "bg-warning", step: 1 },
+  em_analise: { label: "Em Análise", color: "bg-warning", step: 1 },
+  aguardando_info: { label: "Aguardando Info", color: "bg-warning", step: 1 },
+  em_execucao: { label: "Em Execução", color: "bg-primary", step: 3 },
+  concluido: { label: "Concluído", color: "bg-success", step: 4 },
   cancelado: { label: "Cancelado", color: "bg-gray-500", step: 0 },
 };
 
@@ -242,8 +242,8 @@ export function OwnerMaintenanceProgress() {
                           variant="outline" 
                           className={`mt-1 text-[10px] ${
                             ticket.owner_decision === 'owner_will_fix'
-                              ? 'border-blue-200 text-blue-600 bg-blue-50'
-                              : 'border-green-200 text-green-600 bg-green-50'
+                              ? 'border-info/30 text-info bg-info/10'
+                              : 'border-success/30 text-success bg-success/10'
                           }`}
                         >
                           {ticket.owner_decision === 'owner_will_fix' ? '✓ Você assumiu' : '✓ Delegado à gestão'}
@@ -251,7 +251,7 @@ export function OwnerMaintenanceProgress() {
                       )}
                       
                       {ticket.scheduled_at && (
-                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 flex items-center gap-1">
+                        <p className="text-xs text-info mt-1 flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
                           Agendado: {format(new Date(ticket.scheduled_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
                         </p>
@@ -269,7 +269,7 @@ export function OwnerMaintenanceProgress() {
                         <MessageSquare className="h-3 w-3" />
                         <span>Msgs</span>
                         {unreadCount > 0 && (
-                          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+                          <span className="absolute -top-1 -right-1 bg-destructive text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
                             {unreadCount > 9 ? "9+" : unreadCount}
                           </span>
                         )}

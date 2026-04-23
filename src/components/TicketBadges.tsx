@@ -16,14 +16,14 @@ export function TicketBadges({ ticket }: { ticket: Ticket }) {
   return (
     <div className="flex gap-2 flex-wrap">
       {ticket.kind === 'maintenance' && (
-        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+        <Badge variant="outline" className="bg-info/10 text-info border-info/30">
           <Wrench className="h-3 w-3 mr-1" />
           Manutenção
         </Badge>
       )}
       
       {ticket.essential && (
-        <Badge variant="destructive" className="bg-red-100 text-red-700 border-red-200">
+        <Badge variant="destructive" className="bg-destructive/10 text-destructive border-destructive/30">
           <AlertCircle className="h-3 w-3 mr-1" />
           Essencial
         </Badge>
@@ -36,8 +36,8 @@ export function TicketBadges({ ticket }: { ticket: Ticket }) {
         <Badge 
           variant={overdue ? "destructive" : "outline"} 
           className={overdue 
-            ? "bg-red-100 text-red-700 border-red-200" 
-            : "bg-amber-50 text-amber-700 border-amber-200"
+            ? "bg-destructive/10 text-destructive border-destructive/30" 
+            : "bg-warning/10 text-warning border-warning/30"
           }
         >
           <Clock className="h-3 w-3 mr-1" />

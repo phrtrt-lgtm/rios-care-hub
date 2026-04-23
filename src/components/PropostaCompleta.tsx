@@ -443,16 +443,16 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
             {((proposal as any).payment_type === 'fixed' || 
               (proposal as any).payment_type === 'quantity' || 
               (proposal as any).payment_type === 'items') && (
-              <div className="p-4 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 border border-blue-200 dark:border-blue-800 space-y-3">
+              <div className="p-4 rounded-lg bg-gradient-to-br from-info/10 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 border border-info/30 space-y-3">
                 <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-full bg-blue-500/20 flex items-center justify-center">
-                    <CreditCard className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <div className="h-8 w-8 rounded-full bg-info/20 flex items-center justify-center">
+                    <CreditCard className="h-4 w-4 text-info" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                    <p className="text-sm font-medium text-info dark:text-blue-300">
                       💳 Pagamento automático incluso
                     </p>
-                    <p className="text-xs text-blue-600 dark:text-blue-400">
+                    <p className="text-xs text-info">
                       Ao aprovar, você será direcionado para pagamento via PIX ou cartão
                     </p>
                   </div>
@@ -460,7 +460,7 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
 
                 {/* Fixed amount */}
                 {(proposal as any).payment_type === 'fixed' && proposal.amount_cents && proposal.amount_cents > 0 && (
-                  <div className="p-3 rounded-lg bg-white/60 dark:bg-black/20 border border-blue-200/50 dark:border-blue-700/50">
+                  <div className="p-3 rounded-lg bg-white/60 dark:bg-black/20 border border-info/30/50/50">
                     <p className="text-xs text-muted-foreground">Valor fixo</p>
                     <p className="text-xl font-bold text-primary">
                       R$ {(proposal.amount_cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -470,7 +470,7 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
 
                 {/* Quantity based */}
                 {(proposal as any).payment_type === 'quantity' && (proposal as any).unit_price_cents > 0 && (
-                  <div className="p-3 rounded-lg bg-white/60 dark:bg-black/20 border border-blue-200/50 dark:border-blue-700/50">
+                  <div className="p-3 rounded-lg bg-white/60 dark:bg-black/20 border border-info/30/50/50">
                     <p className="text-xs text-muted-foreground">Preço por unidade</p>
                     <p className="text-lg font-bold text-primary">
                       R$ {((proposal as any).unit_price_cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / unidade
@@ -487,7 +487,7 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
                     <p className="text-xs text-muted-foreground font-medium">Itens disponíveis:</p>
                     <div className="space-y-1.5">
                       {((proposal as any).proposal_items || []).map((item: any) => (
-                        <div key={item.id} className="flex items-center justify-between p-2 rounded bg-white/60 dark:bg-black/20 border border-blue-200/50 dark:border-blue-700/50">
+                        <div key={item.id} className="flex items-center justify-between p-2 rounded bg-white/60 dark:bg-black/20 border border-info/30/50/50">
                           <span className="text-sm font-medium">{item.name}</span>
                           <span className="text-sm text-primary font-semibold">
                             R$ {(item.unit_price_cents / 100).toFixed(2)}
@@ -503,8 +503,8 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
 
                 {/* Which options require payment */}
                 {options.filter((o: any) => o.requires_payment).length > 0 && (
-                  <div className="pt-2 border-t border-blue-200/50 dark:border-blue-700/50">
-                    <p className="text-xs text-blue-700 dark:text-blue-400">
+                  <div className="pt-2 border-t border-info/30/50/50">
+                    <p className="text-xs text-info">
                       <strong>Opções que geram pagamento:</strong>{' '}
                       {options.filter((o: any) => o.requires_payment).map((o: any) => `"${o.option_text}"`).join(', ')}
                     </p>
@@ -551,14 +551,14 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
 
             {/* Already Responded - Waiting Payment (Editable) */}
             {hasResponded && !hasPaid && needsPayment && (
-              <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 space-y-4">
+              <div className="p-4 rounded-lg bg-warning/10 dark:bg-amber-950/30 border border-warning/30 space-y-4">
                 <div className="flex items-start gap-3">
-                  <CreditCard className="h-5 w-5 text-amber-600 mt-0.5" />
+                  <CreditCard className="h-5 w-5 text-warning mt-0.5" />
                   <div className="flex-1">
-                    <p className="font-medium text-amber-800 dark:text-amber-400">
+                    <p className="font-medium text-warning">
                       Aguardando pagamento
                     </p>
-                    <p className="text-xs text-amber-700 dark:text-amber-500 mt-1">
+                    <p className="text-xs text-warning mt-1">
                       Você pode alterar sua resposta antes de pagar
                     </p>
                   </div>
@@ -929,14 +929,14 @@ export function PropostaCompleta({ proposalId, onResponded }: PropostaCompletaPr
 
                 {/* Payment warning - fixed amount */}
                 {selectedOption && requiresPayment() && (proposal as any).payment_type === 'fixed' && (
-                  <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+                  <div className="p-3 rounded-lg bg-warning/10 dark:bg-amber-950/30 border border-warning/30">
                     <div className="flex items-start gap-2">
-                      <CreditCard className="h-4 w-4 text-amber-600 mt-0.5" />
+                      <CreditCard className="h-4 w-4 text-warning mt-0.5" />
                       <div>
-                        <p className="text-sm font-medium text-amber-800 dark:text-amber-400">
+                        <p className="text-sm font-medium text-warning">
                           Pagamento necessário
                         </p>
-                        <p className="text-xs text-amber-700 dark:text-amber-500 mt-0.5">
+                        <p className="text-xs text-warning mt-0.5">
                           Valor: R$ {(proposal.amount_cents! / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </p>
                       </div>

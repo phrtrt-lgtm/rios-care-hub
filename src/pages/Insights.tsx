@@ -161,15 +161,15 @@ export default function Insights() {
   };
 
   const getOccupancyColor = (rate: number) => {
-    if (rate >= 70) return "text-green-600";
-    if (rate >= 40) return "text-yellow-600";
-    return "text-red-600";
+    if (rate >= 70) return "text-success";
+    if (rate >= 40) return "text-warning";
+    return "text-destructive";
   };
 
   const getProgressColor = (rate: number) => {
-    if (rate >= 70) return "bg-green-500";
-    if (rate >= 40) return "bg-yellow-500";
-    return "bg-red-500";
+    if (rate >= 70) return "bg-success";
+    if (rate >= 40) return "bg-warning";
+    return "bg-destructive";
   };
 
   return (
@@ -268,14 +268,14 @@ export default function Insights() {
                 <CardContent className="py-3 px-4">
                   <p className="text-xs text-muted-foreground">Melhor Imóvel</p>
                   <p className="text-sm font-bold truncate">{summary.bestProperty?.property.name || "-"}</p>
-                  <p className="text-xs text-green-600">{summary.bestProperty?.occupancyRate.toFixed(0)}% ocupado</p>
+                  <p className="text-xs text-success">{summary.bestProperty?.occupancyRate.toFixed(0)}% ocupado</p>
                 </CardContent>
               </Card>
               <Card className="border-l-4 border-l-red-500">
                 <CardContent className="py-3 px-4">
                   <p className="text-xs text-muted-foreground">Mais Vago</p>
                   <p className="text-sm font-bold truncate">{summary.worstProperty?.property.name || "-"}</p>
-                  <p className="text-xs text-red-600">{summary.worstProperty?.vacantDays || 0} dias vagos</p>
+                  <p className="text-xs text-destructive">{summary.worstProperty?.vacantDays || 0} dias vagos</p>
                 </CardContent>
               </Card>
             </div>
@@ -345,7 +345,7 @@ export default function Insights() {
                               </div>
                             </td>
                             <td className="p-3 text-center">
-                              <span className={`font-bold ${item.vacantDays > item.totalDays * 0.5 ? "text-red-600" : "text-foreground"}`}>
+                              <span className={`font-bold ${item.vacantDays > item.totalDays * 0.5 ? "text-destructive" : "text-foreground"}`}>
                                 {item.vacantDays}
                               </span>
                               <span className="text-muted-foreground text-xs">/{item.totalDays}</span>

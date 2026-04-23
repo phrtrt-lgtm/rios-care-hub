@@ -15,7 +15,7 @@ const steps = [
     tip: "Use o botão '+' no cabeçalho para abrir um novo chamado a qualquer momento.",
   },
   {
-    icon: <ClipboardCheck className="h-10 w-10 text-emerald-600" />,
+    icon: <ClipboardCheck className="h-10 w-10 text-success" />,
     title: "Vistorias",
     emoji: "🔍",
     description:
@@ -23,7 +23,7 @@ const steps = [
     tip: "Vistorias de rotina são feitas periodicamente para garantir a qualidade do seu imóvel.",
   },
   {
-    icon: <DollarSign className="h-10 w-10 text-amber-600" />,
+    icon: <DollarSign className="h-10 w-10 text-warning" />,
     title: "Cobranças & Manutenções",
     emoji: "💰",
     description:
@@ -31,7 +31,7 @@ const steps = [
     tip: "Você tem 7 dias para contestar qualquer cobrança diretamente pelo chat.",
   },
   {
-    icon: <Vote className="h-10 w-10 text-purple-600" />,
+    icon: <Vote className="h-10 w-10 text-primary" />,
     title: "Votações & Alertas",
     emoji: "🗳️",
     description:
@@ -39,7 +39,7 @@ const steps = [
     tip: "Fique atento ao sino de notificações para não perder votações com prazo.",
   },
   {
-    icon: <BarChart3 className="h-10 w-10 text-yellow-500" />,
+    icon: <BarChart3 className="h-10 w-10 text-warning" />,
     title: "Relatório de Manutenções",
     emoji: "📊",
     description:

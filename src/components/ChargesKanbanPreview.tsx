@@ -76,9 +76,9 @@ export function ChargesKanbanPreview() {
     const daysLeft = differenceInDays(dueDate, new Date());
     const isOverdue = isPast(dueDate) || status === "overdue";
     
-    if (isOverdue) return { text: `${Math.abs(daysLeft)}d atrás`, color: "text-red-600" };
-    if (daysLeft <= 2) return { text: `${daysLeft}d`, color: "text-orange-600" };
-    if (daysLeft <= 7) return { text: `${daysLeft}d`, color: "text-yellow-600" };
+    if (isOverdue) return { text: `${Math.abs(daysLeft)}d atrás`, color: "text-destructive" };
+    if (daysLeft <= 2) return { text: `${daysLeft}d`, color: "text-warning" };
+    if (daysLeft <= 7) return { text: `${daysLeft}d`, color: "text-warning" };
     return { text: `${daysLeft}d`, color: "text-muted-foreground" };
   };
 
@@ -106,7 +106,7 @@ export function ChargesKanbanPreview() {
         key={charge.id}
         className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors overflow-hidden min-w-0 ${
           isOverdue 
-            ? "bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50" 
+            ? "bg-destructive/10 dark:bg-red-950/30 hover:bg-destructive/10 dark:hover:bg-red-950/50" 
             : "bg-muted/50 hover:bg-muted"
         }`}
         onClick={() => navigate(`/cobranca/${charge.id}`)}
@@ -118,7 +118,7 @@ export function ChargesKanbanPreview() {
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
-          <span className="text-xs font-bold text-green-600 whitespace-nowrap">
+          <span className="text-xs font-bold text-success whitespace-nowrap">
             {formatBRL(getDueAmount(charge))}
           </span>
           <span className={`hidden sm:inline text-[10px] font-medium whitespace-nowrap ${dueInfo.color}`}>{dueInfo.text}</span>
@@ -138,10 +138,10 @@ export function ChargesKanbanPreview() {
 
   if (loading) {
     return (
-      <Card className="border-green-200 dark:border-green-800">
+      <Card className="border-success/30">
         <CardHeader className="py-3 px-4">
           <div className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4 text-green-600 animate-pulse" />
+            <DollarSign className="h-4 w-4 text-success animate-pulse" />
             <div className="h-4 w-32 rounded bg-muted animate-pulse" />
           </div>
         </CardHeader>
@@ -150,11 +150,11 @@ export function ChargesKanbanPreview() {
   }
 
   return (
-    <Card className="border-green-200 dark:border-green-800 w-full min-w-0 overflow-hidden">
+    <Card className="border-success/30 w-full min-w-0 overflow-hidden">
       <CardHeader className="py-3 px-4">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2 min-w-0 flex-wrap">
-            <DollarSign className="h-4 w-4 text-green-600" />
+            <DollarSign className="h-4 w-4 text-success" />
             <CardTitle className="text-sm">Cobranças</CardTitle>
             {charges.length > 0 && (
               <Badge variant="secondary" className="h-5 px-1.5 text-xs">
@@ -181,7 +181,7 @@ export function ChargesKanbanPreview() {
               variant="ghost"
               size="sm"
               onClick={() => navigate(isOwner ? "/minhas-cobrancas" : "/gerenciar-cobrancas")}
-              className="h-7 text-xs text-green-600"
+              className="h-7 text-xs text-success"
             >
               <span className="hidden sm:inline">Ver</span>
               <ArrowRight className="ml-1 h-3 w-3" />
@@ -198,7 +198,7 @@ export function ChargesKanbanPreview() {
             {vencidas.length > 0 && (
               <Collapsible open={vencidasExpanded} onOpenChange={setVencidasExpanded}>
                 <div className="flex items-center justify-between mb-1.5">
-                  <p className="text-xs font-semibold text-red-600">Vencidas ({vencidas.length})</p>
+                  <p className="text-xs font-semibold text-destructive">Vencidas ({vencidas.length})</p>
                   {vencidas.length > COLLAPSED_LIMIT && (
                     <CollapsibleTrigger asChild>
                       <Button variant="ghost" size="sm" className="h-5 px-1.5 text-xs text-muted-foreground">
@@ -221,7 +221,7 @@ export function ChargesKanbanPreview() {
             {pendentes.length > 0 && (
               <Collapsible open={pendentesExpanded} onOpenChange={setPendentesExpanded}>
                 <div className="flex items-center justify-between mb-1.5">
-                  <p className="text-xs font-semibold text-yellow-600">Pendentes ({pendentes.length})</p>
+                  <p className="text-xs font-semibold text-warning">Pendentes ({pendentes.length})</p>
                   {pendentes.length > COLLAPSED_LIMIT && (
                     <CollapsibleTrigger asChild>
                       <Button variant="ghost" size="sm" className="h-5 px-1.5 text-xs text-muted-foreground">

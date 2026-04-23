@@ -175,14 +175,14 @@ export function VistoriasKanbanPreview() {
               {problemInspections.length > 0 && (
                 <div>
                   <div className="flex items-center gap-1.5 mb-1.5">
-                    <AlertTriangle className="h-3.5 w-3.5 text-red-600" />
-                    <p className="text-xs font-semibold text-red-600">Problemas ({problemInspections.length})</p>
+                    <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
+                    <p className="text-xs font-semibold text-destructive">Problemas ({problemInspections.length})</p>
                   </div>
                   <div className="space-y-1">
                     {problemInspections.slice(0, COLLAPSED_PROBLEM_LIMIT).map((inspection) => (
                       <div
                         key={inspection.id}
-                        className="flex items-center gap-2 p-2 rounded-lg bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 cursor-pointer transition-colors overflow-hidden"
+                        className="flex items-center gap-2 p-2 rounded-lg bg-destructive/10 dark:bg-red-950/30 hover:bg-destructive/10 dark:hover:bg-red-950/50 cursor-pointer transition-colors overflow-hidden"
                         onClick={() => navigate(`/admin/vistoria/${inspection.id}`)}
                       >
                         <div className="flex-1 min-w-0">
@@ -200,7 +200,7 @@ export function VistoriasKanbanPreview() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-6 px-2 text-[10px] text-orange-600 shrink-0 whitespace-nowrap"
+                            className="h-6 px-2 text-[10px] text-warning shrink-0 whitespace-nowrap"
                             onClick={(e) => handleNewMaintenance(inspection, e)}
                           >
                             <Wrench className="h-3 w-3" />
@@ -216,7 +216,7 @@ export function VistoriasKanbanPreview() {
                       {problemInspections.slice(COLLAPSED_PROBLEM_LIMIT, EXPANDED_LIMIT).map((inspection) => (
                         <div
                           key={inspection.id}
-                          className="flex items-center gap-2 p-2 rounded-lg bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 cursor-pointer transition-colors overflow-hidden"
+                          className="flex items-center gap-2 p-2 rounded-lg bg-destructive/10 dark:bg-red-950/30 hover:bg-destructive/10 dark:hover:bg-red-950/50 cursor-pointer transition-colors overflow-hidden"
                           onClick={() => navigate(`/admin/vistoria/${inspection.id}`)}
                         >
                           <div className="flex-1 min-w-0">
@@ -234,7 +234,7 @@ export function VistoriasKanbanPreview() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-6 px-2 text-[10px] text-orange-600 shrink-0 whitespace-nowrap"
+                              className="h-6 px-2 text-[10px] text-warning shrink-0 whitespace-nowrap"
                               onClick={(e) => handleNewMaintenance(inspection, e)}
                             >
                               <Wrench className="h-3 w-3" />
@@ -253,8 +253,8 @@ export function VistoriasKanbanPreview() {
               {okInspections.length > 0 && (
                 <div>
                   <div className="flex items-center gap-1.5 mb-1.5">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
-                    <p className="text-xs font-semibold text-green-600">OK ({okInspections.length})</p>
+                    <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+                    <p className="text-xs font-semibold text-success">OK ({okInspections.length})</p>
                   </div>
                   <div className="space-y-1">
                     {okInspections.slice(0, COLLAPSED_OK_LIMIT).map((inspection) => (
@@ -277,7 +277,7 @@ export function VistoriasKanbanPreview() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-6 px-2 text-[10px] text-orange-600 shrink-0 whitespace-nowrap"
+                            className="h-6 px-2 text-[10px] text-warning shrink-0 whitespace-nowrap"
                             onClick={(e) => handleNewMaintenance(inspection, e)}
                           >
                             <Wrench className="h-3 w-3" />
@@ -310,7 +310,7 @@ export function VistoriasKanbanPreview() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-6 px-2 text-[10px] text-orange-600 shrink-0 whitespace-nowrap"
+                              className="h-6 px-2 text-[10px] text-warning shrink-0 whitespace-nowrap"
                               onClick={(e) => handleNewMaintenance(inspection, e)}
                             >
                               <Wrench className="h-3 w-3" />

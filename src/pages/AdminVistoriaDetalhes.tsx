@@ -370,7 +370,7 @@ export default function AdminVistoriaDetalhes() {
             </Button>
             <Badge 
               variant={isOk ? "secondary" : "destructive"}
-              className={isOk ? "bg-green-500/20 text-green-700 dark:text-green-400" : ""}
+              className={isOk ? "bg-success/20 text-success" : ""}
             >
               {isOk ? <CheckCircle2 className="h-4 w-4 mr-1" /> : <AlertTriangle className="h-4 w-4 mr-1" />}
               {inspection.notes || '—'}
@@ -460,11 +460,11 @@ export default function AdminVistoriaDetalhes() {
 
           {/* AI Summary Section - Show first if available */}
           {inspection.transcript_summary && (
-            <Card className="p-4 border-purple-500/30 bg-gradient-to-br from-purple-500/10 to-blue-500/10">
+            <Card className="p-4 border-primary/30/30 bg-gradient-to-br from-primary/10 to-info/10">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-purple-600" />
-                  <h3 className="font-semibold text-purple-700 dark:text-purple-300">Análise da IA</h3>
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  <h3 className="font-semibold text-primary dark:text-purple-300">Análise da IA</h3>
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
@@ -472,7 +472,7 @@ export default function AdminVistoriaDetalhes() {
                     size="sm"
                     onClick={() => handleImportToKanban()}
                     disabled={importingToKanban}
-                    className="gap-1.5 border-purple-500/50 text-purple-700 hover:bg-purple-500/10"
+                    className="gap-1.5 border-primary/30/50 text-primary hover:bg-primary/10"
                   >
                     {importingToKanban ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -485,7 +485,7 @@ export default function AdminVistoriaDetalhes() {
                     variant="ghost"
                     size="sm"
                     onClick={() => setRegenerateDialogOpen(true)}
-                    className="gap-1.5 text-purple-600 hover:text-purple-700 hover:bg-purple-500/10"
+                    className="gap-1.5 text-primary hover:text-primary hover:bg-primary/10"
                   >
                     <RefreshCw className="h-4 w-4" />
                     Regenerar
@@ -500,12 +500,12 @@ export default function AdminVistoriaDetalhes() {
 
           {/* Generate AI Summary Button - Show if transcript exists but no summary */}
           {canGenerateSummary && (
-            <Card className="p-4 border-purple-500/30 bg-gradient-to-br from-purple-500/5 to-blue-500/5">
+            <Card className="p-4 border-primary/30/30 bg-gradient-to-br from-primary/5 to-info/5">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-purple-600" />
+                  <Sparkles className="h-5 w-5 text-primary" />
                   <div>
-                    <h3 className="font-semibold text-purple-700 dark:text-purple-300">Análise da IA</h3>
+                    <h3 className="font-semibold text-primary dark:text-purple-300">Análise da IA</h3>
                     <p className="text-sm text-muted-foreground">Gere um resumo automático da transcrição</p>
                   </div>
                 </div>
@@ -513,7 +513,7 @@ export default function AdminVistoriaDetalhes() {
                   onClick={() => generateAISummary()}
                   disabled={generatingSummary}
                   variant="outline"
-                  className="gap-2 border-purple-500/50 text-purple-700 hover:bg-purple-500/10"
+                  className="gap-2 border-primary/30/50 text-primary hover:bg-primary/10"
                 >
                   {generatingSummary ? (
                     <>
@@ -593,10 +593,10 @@ export default function AdminVistoriaDetalhes() {
           )}
 
           {/* Create Maintenance Section - Always show for all inspections */}
-          <Card className={`p-4 ${inspection.notes === 'NÃO' ? 'border-destructive/50 bg-destructive/5' : 'border-orange-500/30 bg-orange-500/5'}`}>
+          <Card className={`p-4 ${inspection.notes === 'NÃO' ? 'border-destructive/50 bg-destructive/5' : 'border-warning/30/30 bg-warning/5'}`}>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
-                <h3 className={`font-semibold ${inspection.notes === 'NÃO' ? 'text-destructive' : 'text-orange-600'}`}>Criar Manutenção</h3>
+                <h3 className={`font-semibold ${inspection.notes === 'NÃO' ? 'text-destructive' : 'text-warning'}`}>Criar Manutenção</h3>
                 <p className="text-sm text-muted-foreground">
                   {inspection.notes === 'NÃO'
                     ? 'Crie uma manutenção com anexos da vistoria. Para triagem automática, use o Kanban acima.'
@@ -653,7 +653,7 @@ export default function AdminVistoriaDetalhes() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-purple-600" />
+              <Sparkles className="h-5 w-5 text-primary" />
               Regenerar Análise IA
             </DialogTitle>
             <DialogDescription>
@@ -687,7 +687,7 @@ export default function AdminVistoriaDetalhes() {
             <Button
               onClick={() => generateAISummary(extraPrompt)}
               disabled={generatingSummary}
-              className="gap-2 bg-purple-600 hover:bg-purple-700"
+              className="gap-2 bg-primary hover:bg-primary"
             >
               {generatingSummary ? (
                 <>

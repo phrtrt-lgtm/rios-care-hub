@@ -227,7 +227,7 @@ export default function MinhaCaixa() {
               <p className="text-sm font-medium">Tutoriais</p>
               <p className="text-xs text-muted-foreground">Guias detalhados de cada funcionalidade</p>
             </div>
-            <span className="text-xs text-emerald-600 font-medium hidden sm:block">Ver →</span>
+            <span className="text-xs text-success font-medium hidden sm:block">Ver →</span>
           </motion.div>
         </div>
 

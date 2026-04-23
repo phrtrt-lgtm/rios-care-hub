@@ -168,7 +168,7 @@ export default function Vistorias() {
               </p>
             </div>
             <div className="flex gap-2">
-              <Badge variant="secondary" className="bg-green-500/20 text-green-700 dark:text-green-400">
+              <Badge variant="secondary" className="bg-success/20 text-success">
                 <CheckCircle2 className="h-3 w-3 mr-1" />
                 {okCount}
               </Badge>
@@ -243,7 +243,7 @@ export default function Vistorias() {
                               <h3 className="font-semibold line-clamp-1">{inspection.property.name}</h3>
                               <Badge 
                                 variant={isOk ? "secondary" : "destructive"}
-                                className={isOk ? "bg-green-500/20 text-green-700 dark:text-green-400 flex-shrink-0" : "flex-shrink-0"}
+                                className={isOk ? "bg-success/20 text-success flex-shrink-0" : "flex-shrink-0"}
                               >
                                 {isOk ? <CheckCircle2 className="h-3 w-3 mr-1" /> : <AlertTriangle className="h-3 w-3 mr-1" />}
                                 {inspection.notes || '—'}

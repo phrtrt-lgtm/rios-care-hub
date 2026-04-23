@@ -148,27 +148,27 @@ const PendingReserveDebitsBoard = () => {
     if (isPast(date) && !isToday(date)) {
       return { 
         label: "Atrasado", 
-        color: "bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-400",
+        color: "bg-destructive/10 border-destructive/30/30 text-destructive",
         badgeVariant: "destructive" as const
       };
     }
     if (isToday(date)) {
       return { 
         label: "Hoje", 
-        color: "bg-orange-500/10 border-orange-500/30 text-orange-700 dark:text-orange-400",
+        color: "bg-warning/10 border-warning/30/30 text-warning",
         badgeVariant: "default" as const
       };
     }
     if (days <= 3) {
       return { 
         label: `Em ${days} dia${days > 1 ? "s" : ""}`, 
-        color: "bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400",
+        color: "bg-warning/10 border-warning/30/30 text-warning",
         badgeVariant: "secondary" as const
       };
     }
     return { 
       label: `Em ${days} dias`, 
-      color: "bg-blue-500/10 border-blue-500/30 text-blue-700 dark:text-blue-400",
+      color: "bg-info/10 border-info/30/30 text-info",
       badgeVariant: "outline" as const
     };
   };
@@ -259,7 +259,7 @@ const PendingReserveDebitsBoard = () => {
               </div>
             )}
             {debit.reserve_extra_commission_percent !== null && debit.reserve_extra_commission_percent !== undefined && (
-              <div className="flex items-center gap-1 bg-amber-500/10 text-amber-700 dark:text-amber-400 rounded px-2 py-1">
+              <div className="flex items-center gap-1 bg-warning/10 text-warning rounded px-2 py-1">
                 <Percent className="h-3 w-3" />
                 <span>Extra: +{debit.reserve_extra_commission_percent}%</span>
               </div>
@@ -326,7 +326,7 @@ const PendingReserveDebitsBoard = () => {
           {overdueDebits.length > 0 && (
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <AlertTriangle className="h-5 w-5 text-red-500" />
+                <AlertTriangle className="h-5 w-5 text-destructive" />
                 <h3 className="font-semibold text-lg">
                   Atrasados ({overdueDebits.length})
                 </h3>
@@ -341,7 +341,7 @@ const PendingReserveDebitsBoard = () => {
           {todayDebits.length > 0 && (
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <Calendar className="h-5 w-5 text-orange-500" />
+                <Calendar className="h-5 w-5 text-warning" />
                 <h3 className="font-semibold text-lg">
                   Hoje ({todayDebits.length})
                 </h3>
@@ -356,7 +356,7 @@ const PendingReserveDebitsBoard = () => {
           {upcomingDebits.length > 0 && (
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <Clock className="h-5 w-5 text-blue-500" />
+                <Clock className="h-5 w-5 text-info" />
                 <h3 className="font-semibold text-lg">
                   Próximos ({upcomingDebits.length})
                 </h3>
@@ -390,15 +390,15 @@ const PendingReserveDebitsBoard = () => {
                 </p>
               </div>
 
-              <div className="space-y-3 bg-amber-500/10 rounded-lg p-3">
+              <div className="space-y-3 bg-warning/10 rounded-lg p-3">
                 <div className="flex items-center gap-2">
-                  <Percent className="h-4 w-4 text-amber-600" />
-                  <span className="font-medium text-amber-700 dark:text-amber-400">
+                  <Percent className="h-4 w-4 text-warning" />
+                  <span className="font-medium text-warning">
                     Comissão Original: {confirmDialog.reserve_base_commission_percent || "-"}%
                   </span>
                 </div>
                 {confirmDialog.reserve_extra_commission_percent !== null && (
-                  <div className="text-sm text-amber-600">
+                  <div className="text-sm text-warning">
                     + {confirmDialog.reserve_extra_commission_percent}% extra = {((confirmDialog.reserve_base_commission_percent || 0) + (confirmDialog.reserve_extra_commission_percent || 0))}% total esperado
                   </div>
                 )}
