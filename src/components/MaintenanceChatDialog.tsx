@@ -26,6 +26,8 @@ import { processFileForUpload } from "@/lib/processVideoForUpload";
 import { sanitizeFilename } from "@/lib/storage";
 import { NativeMediaPicker } from "@/components/NativeMediaPicker";
 import { toast as sonnerToast } from "sonner";
+import { MentionInput, MentionableUser, extractMentionedIds } from "@/components/comments/MentionInput";
+import { MentionText } from "@/components/comments/MentionText";
 
 interface MaintenanceChatDialogProps {
   open: boolean;
@@ -61,6 +63,8 @@ export function MaintenanceChatDialog({
     open ? ticketId : null
   );
   const [newMessage, setNewMessage] = useState("");
+  const [mentionedIds, setMentionedIds] = useState<string[]>([]);
+  const [mentionableUsers, setMentionableUsers] = useState<MentionableUser[]>([]);
   const [aiCommand, setAiCommand] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
@@ -389,7 +393,7 @@ export function MaintenanceChatDialog({
                   : "bg-muted"
               }`}
             >
-              <p className="whitespace-pre-wrap break-words">{message.body}</p>
+              <MentionText body={message.body} className={isOwnMessage ? "text-primary-foreground" : ""} />
             </div>
           )}
           
