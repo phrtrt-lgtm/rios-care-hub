@@ -52,9 +52,8 @@ const TodosTickets = () => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [filteredTickets, setFilteredTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const filtersHook = useListFilters("filters:todos-tickets");
+  const { filters, debouncedSearch, applyTo } = filtersHook;
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [selectedTickets, setSelectedTickets] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
@@ -63,7 +62,8 @@ const TodosTickets = () => {
   const [chatOpen, setChatOpen] = useState(false);
   const [selectedTicketForChat, setSelectedTicketForChat] = useState<Ticket | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [sortBy, setSortBy] = useState<string>("recent"); // recent | oldest | sla
+  const [sortBy, setSortBy] = useState<string>("recent");
+  const [visibleCount, setVisibleCount] = useState(100);
 
   useEffect(() => {
     if (!user || !['admin', 'agent'].includes(profile?.role || '')) {
