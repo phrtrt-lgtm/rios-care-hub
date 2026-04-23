@@ -525,21 +525,6 @@ export default function NovaManutencao() {
                   </div>
                 )}
 
-                {costResponsible === 'split' && (
-                  <div className="space-y-2 pl-4 border-l-2 border-muted">
-                    <Label>Percentual do proprietário (%)</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={splitOwnerPercent ?? 50}
-                      onChange={(e) => setSplitOwnerPercent(Number(e.target.value))}
-                    />
-                    <p className="text-sm text-muted-foreground">
-                      Gestão pagará: {100 - (splitOwnerPercent ?? 50)}%
-                    </p>
-                  </div>
-                )}
               </div>
 
               {/* Owner Decision Mode - only show for owner-responsible costs */}
