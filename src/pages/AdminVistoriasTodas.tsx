@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { ListFilters } from "@/components/list/ListFilters";
+import { useListFilters } from "@/hooks/useListFilters";
 
 const PAGE_SIZE = 50;
 
