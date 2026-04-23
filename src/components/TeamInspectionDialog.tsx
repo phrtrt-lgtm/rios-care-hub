@@ -503,47 +503,30 @@ export default function TeamInspectionDialog({
             </div>
           )}
 
-          {/* Status Selection - Only for standard inspections */}
-          {inspectionType === 'standard' && (
-            <div className="space-y-4">
-              <div className="text-center">
-                <h2 className="text-xl font-bold mb-1">Como está o imóvel?</h2>
+          {/* Status Indicator - automatic for standard inspections */}
+          {inspectionType === 'standard' && (() => {
+            const hasFiles =
+              uploadedFiles.filter((f) => f.url && !f.error).length > 0 ||
+              audioFiles.filter((a) => a.url).length > 0;
+            return (
+              <div
+                className={`rounded-lg border p-3 text-sm text-center transition-colors ${
+                  hasFiles
+                    ? 'border-destructive/30 bg-destructive/10'
+                    : 'border-success/30 bg-success/10'
+                }`}
+              >
+                <p className="font-medium text-foreground mb-1">
+                  Status determinado automaticamente
+                </p>
+                <p className={hasFiles ? 'text-destructive' : 'text-success'}>
+                  {hasFiles
+                    ? '⚠️ Arquivos detectados — vistoria será marcada como NÃO'
+                    : '✓ Sem arquivos — vistoria será marcada como OK'}
+                </p>
               </div>
-              <RadioGroup value={inspectionStatus} onValueChange={(value) => setInspectionStatus(value as 'OK' | 'NÃO')}>
-                <div className="grid grid-cols-2 gap-4">
-                  <label 
-                    htmlFor="team-status-ok"
-                    className={`cursor-pointer border-2 rounded-xl p-4 flex flex-col items-center gap-2 transition-all ${
-                      inspectionStatus === 'OK' 
-                        ? 'border-success/30 bg-success/10 dark:bg-green-950' 
-                        : 'border-border hover:border-success/30'
-                    }`}
-                  >
-                    <RadioGroupItem value="OK" id="team-status-ok" className="sr-only" />
-                    <CheckCircle2 className={`h-12 w-12 ${inspectionStatus === 'OK' ? 'text-success' : 'text-muted-foreground'}`} />
-                    <span className={`text-xl font-bold ${inspectionStatus === 'OK' ? 'text-success' : 'text-muted-foreground'}`}>
-                      OK
-                    </span>
-                  </label>
-
-                  <label 
-                    htmlFor="team-status-nao"
-                    className={`cursor-pointer border-2 rounded-xl p-4 flex flex-col items-center gap-2 transition-all ${
-                      inspectionStatus === 'NÃO' 
-                        ? 'border-destructive/30 bg-destructive/10 dark:bg-red-950' 
-                        : 'border-border hover:border-destructive/30'
-                    }`}
-                  >
-                    <RadioGroupItem value="NÃO" id="team-status-nao" className="sr-only" />
-                    <XCircle className={`h-12 w-12 ${inspectionStatus === 'NÃO' ? 'text-destructive' : 'text-muted-foreground'}`} />
-                    <span className={`text-xl font-bold ${inspectionStatus === 'NÃO' ? 'text-destructive' : 'text-muted-foreground'}`}>
-                      NÃO
-                    </span>
-                  </label>
-                </div>
-              </RadioGroup>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Audio Recording */}
           <div className="space-y-3 bg-card border rounded-xl p-4">
