@@ -63,7 +63,9 @@ const MinhasCobrancas = () => {
     pix_qr_code_base64: string;
     total_amount: number;
   } | null>(null);
-
+  const [visibleCount, setVisibleCount] = useState(100);
+  const filtersHook = useListFilters("filters:minhas-cobrancas");
+  const { applyTo } = filtersHook;
   useEffect(() => {
     if (!user || profile?.role !== 'owner') {
       navigate("/");
