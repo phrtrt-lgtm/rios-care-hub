@@ -2276,15 +2276,15 @@ export default function AdminManutencoesLista() {
                 <tr className="h-10">
                   <th className="w-[36px] px-1 py-2"></th>
                   <SortableHeader label="Manutenção" field="subject" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[220px] max-w-[220px]" />
-                  <th className="text-center px-1 py-2 font-medium w-[44px]">Chat</th>
                   <SortableHeader label="Imóvel" field="property" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[140px] max-w-[140px]" />
-                  <SortableHeader label="Valor" field="amount_cents" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[90px]" />
-                  <SortableHeader label="Aporte" field="management_contribution_cents" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[90px]" />
                   <SortableHeader label="Data" field="created_at" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[80px]" />
                   <th className="text-center px-1 py-2 font-medium w-[70px]">Anexos</th>
-                  <th className="text-center px-1 py-2 font-medium w-[120px]">Responsável</th>
                   <SortableHeader label="Label" field="service_type" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[120px]" />
                   <SortableHeader label="Status" field="list_status" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[140px]" />
+                  <th className="text-center px-1 py-2 font-medium w-[120px]">Responsável</th>
+                  <SortableHeader label="Valor" field="amount_cents" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[90px]" />
+                  <SortableHeader label="Aporte" field="management_contribution_cents" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[90px]" />
+                  <th className="text-center px-1 py-2 font-medium w-[44px]">Chat</th>
                   <th className="text-center px-1 py-2 font-medium w-[44px]">Editar</th>
                 </tr>
               </thead>
