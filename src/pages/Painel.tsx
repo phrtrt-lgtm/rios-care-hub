@@ -386,6 +386,44 @@ export default function Painel() {
                   </div>
                 </CardHeader>
               </Card>
+
+              <Card
+                className="cursor-pointer hover-lift group border-primary/20 hover:border-primary/40 transition-colors"
+                onClick={() => navigate("/admin/relatorios-financeiros")}
+              >
+                <CardHeader className="py-3 px-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                      <FileText className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-sm">Relatórios Financeiros</CardTitle>
+                      <CardDescription className="text-xs">
+                        Consulte relatórios por proprietário
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+
+              <Card
+                className="cursor-pointer hover-lift group border-primary/20 hover:border-primary/40 transition-colors"
+                onClick={() => navigate("/admin/fichas-imoveis")}
+              >
+                <CardHeader className="py-3 px-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                      <FileText className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-sm">Fichas dos Imóveis</CardTitle>
+                      <CardDescription className="text-xs">
+                        Documentação completa em Markdown (contexto da IA)
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
             </div>
           </div>
         )}

@@ -75,6 +75,8 @@ import RelatorioFinanceiro from "./pages/RelatorioFinanceiro";
 import OwnerRelatorioFinanceiro from "./pages/OwnerRelatorioFinanceiro";
 import RelatoriosPropriedade from "./pages/RelatoriosPropriedade";
 import AdminFichasImoveis from "./pages/AdminFichasImoveis";
+import AdminRelatoriosFinanceiros from "./pages/AdminRelatoriosFinanceiros";
+import AdminRelatoriosProprietario from "./pages/AdminRelatoriosProprietario";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -567,6 +569,22 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['admin', 'agent', 'maintenance']}>
                   <AdminFichasImoveis />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/relatorios-financeiros"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'agent', 'maintenance']}>
+                  <AdminRelatoriosFinanceiros />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/relatorios-financeiros/:ownerId"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'agent', 'maintenance']}>
+                  <AdminRelatoriosProprietario />
                 </ProtectedRoute>
               }
             />
