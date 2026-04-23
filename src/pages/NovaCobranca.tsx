@@ -534,7 +534,45 @@ export default function NovaCobranca({ embedded = false, editId, onSaved, onCanc
                   {isEditMode ? "Salvar Alterações" : "Criar e Enviar"}
                 </Button>
               </div>
-            </form>
+    </form>
+  );
+
+  if (embedded) {
+    return (
+      <div className="space-y-2">
+        {isReposicao && (
+          <p className="text-sm text-muted-foreground">
+            Registre a compra de itens para o imóvel. O aporte da gestão cobre 100% automaticamente.
+          </p>
+        )}
+        {formElement}
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+      <header className="border-b bg-card/50 backdrop-blur-sm">
+        <div className="container mx-auto flex h-16 items-center px-4">
+          <Button variant="ghost" size="sm" onClick={() => goBack(navigate, "/gerenciar-cobrancas")}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Voltar
+          </Button>
+        </div>
+      </header>
+
+      <main className="container mx-auto px-4 py-8 max-w-2xl">
+        <Card>
+          <CardHeader>
+            <CardTitle>{isEditMode ? "Editar Cobrança" : (isReposicao ? "Reposição de Item" : "Nova Cobrança")}</CardTitle>
+            {isReposicao && (
+              <p className="text-sm text-muted-foreground">
+                Registre a compra de itens para o imóvel. O aporte da gestão cobre 100% automaticamente.
+              </p>
+            )}
+          </CardHeader>
+          <CardContent>
+            {formElement}
           </CardContent>
         </Card>
       </main>
