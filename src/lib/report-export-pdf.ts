@@ -32,7 +32,7 @@ export async function exportElementAsPdf(
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pageW = pdf.internal.pageSize.getWidth();   // 210
     const pageH = pdf.internal.pageSize.getHeight();  // 297
-    const margin = 10;
+    const margin = 12;       // 12mm em todas as bordas, igual ao @page de impressão
     const usableW = pageW - margin * 2;
     const usableH = pageH - margin * 2;
     const gap = 3;
