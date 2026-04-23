@@ -65,7 +65,7 @@ export function VistoriaDetailSheetContent({ id, onOpenFull }: Props) {
 
         const { data: attachments } = await supabase
           .from('cleaning_inspection_attachments')
-          .select('id, file_url, file_name, file_type')
+          .select('id, file_url, file_name, file_type, maintenance_ticket_id')
           .eq('inspection_id', id);
 
         if (!cancelled) {
