@@ -247,6 +247,7 @@ interface GroupRowProps {
   onOpenAttachments: (item: MaintenanceItem) => void;
   onUploadAttachment: (item: MaintenanceItem) => void;
   uploadingItemId: string | null;
+  onOpenSheet?: (id: string) => void;
 }
 
 function GroupRow({ 
@@ -264,7 +265,8 @@ function GroupRow({
   onSort,
   onOpenAttachments,
   onUploadAttachment,
-  uploadingItemId
+  uploadingItemId,
+  onOpenSheet
 }: GroupRowProps) {
   // Sort items within the group
   const sortedItems = useMemo(() => {
