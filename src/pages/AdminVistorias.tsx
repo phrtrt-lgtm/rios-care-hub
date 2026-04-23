@@ -199,12 +199,6 @@ export default function AdminVistorias() {
         ? 'bg-destructive/10 dark:bg-red-950/30 hover:bg-destructive/15 dark:hover:bg-red-950/50'
         : 'bg-muted/50 hover:bg-muted';
 
-  const renderInspectionRow = (inspection: Inspection, variant: 'problem' | 'ok') => {
-    const baseClass =
-      variant === 'problem'
-        ? 'bg-destructive/10 dark:bg-red-950/30 hover:bg-destructive/15 dark:hover:bg-red-950/50'
-        : 'bg-muted/50 hover:bg-muted';
-
     const handlers = getRowHandlers(`/admin/vistoria/${inspection.id}`, () =>
       detailSheet.openSheet(inspection.id, 'vistoria'),
     );
