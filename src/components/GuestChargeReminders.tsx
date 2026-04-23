@@ -111,6 +111,9 @@ export function GuestChargeReminders() {
             days_until_charge: Math.max(0, daysUntil),
           };
         })
+        // Auto-hide: cobranças prontas há mais de 10 dias somem do painel
+        // (assume-se que já foram cobradas pelo Airbnb ou processadas externamente)
+        .filter(c => c.days_since_checkout < 24)
         // Sort: can charge first, then by days until charge
         .sort((a, b) => {
           if (a.can_charge && !b.can_charge) return -1;
