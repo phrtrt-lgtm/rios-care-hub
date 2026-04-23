@@ -341,7 +341,7 @@ export function FinancialReportView({ data, onBack, hideBackButton = false, forc
   const renderChart = () => {
     if (chartData.length <= 1) return null;
     return (
-      <div className="mb-8">
+      <div className="mb-8 print:mb-12 chart-section">
         <SectionSeparator title={config.reportType === 'owner' ? 'Receita por Mês' : 'Desempenho Mensal'} />
         <div className="rounded-xl" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)', borderRadius: '12px', overflow: 'hidden' }}>
           <div className={useStaticExportLayout ? '' : 'h-64 w-full'}>

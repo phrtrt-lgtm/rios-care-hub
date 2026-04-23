@@ -424,5 +424,12 @@ All colors MUST be HSL.
     padding-left: 2mm !important;
     padding-right: 2mm !important;
   }
+
+  /* Respiro extra após a seção de gráficos para separar visualmente
+     o desempenho mensal do bloco de totais/detalhamento */
+  .chart-section {
+    margin-bottom: 12mm !important;
+    padding-bottom: 4mm !important;
+  }
 }
 
