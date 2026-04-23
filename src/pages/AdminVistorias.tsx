@@ -104,7 +104,7 @@ export default function AdminVistorias() {
       if (inspectionIds.length > 0) {
         const { data: attachmentsData } = await supabase
           .from('cleaning_inspection_attachments')
-          .select('id, file_url, file_name, file_type, inspection_id')
+          .select('id, file_url, file_name, file_type, inspection_id, maintenance_ticket_id')
           .in('inspection_id', inspectionIds);
 
         (attachmentsData || []).forEach((att) => {
