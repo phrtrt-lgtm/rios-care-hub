@@ -25,6 +25,9 @@ import { CreateMaintenanceFromInspectionDialog } from "@/components/CreateMainte
 import EditInspectionDialog from "@/components/EditInspectionDialog";
 import { ReserveDebitsTable } from "@/components/ReserveDebitsTable";
 import { Pencil } from "lucide-react";
+import { useDetailSheet } from "@/hooks/useDetailSheet";
+import { DetailSheet } from "@/components/detail-sheet/DetailSheet";
+import { getRowHandlers } from "@/lib/row-interaction";
 // ===== TYPES =====
 type TicketStatus = "novo" | "em_analise" | "aguardando_info" | "em_execucao" | "concluido" | "cancelado";
 
