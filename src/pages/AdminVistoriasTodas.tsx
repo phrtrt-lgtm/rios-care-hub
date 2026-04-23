@@ -69,6 +69,8 @@ export default function AdminVistoriasTodas() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [expandedData, setExpandedData] = useState<Record<string, ExpandedData>>({});
   const [loadingExpand, setLoadingExpand] = useState<string | null>(null);
+  const filtersHook = useListFilters("filters:admin-vistorias-todas");
+  const { filters, debouncedSearch } = filtersHook;
 
   useEffect(() => {
     if (profile?.role !== "admin" && profile?.role !== "agent" && profile?.role !== "maintenance") {
