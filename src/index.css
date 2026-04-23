@@ -335,12 +335,28 @@ All colors MUST be HSL.
     border-radius: 0 !important;
   }
 
-  /* Evitar quebras dentro de blocos visuais críticos */
+  /* Evitar quebras dentro de blocos visuais críticos.
+     OBS: NÃO aplicamos em [data-pdf-section] de forma global porque
+     o "summary" é grande demais e empurraria tudo para a página 2,
+     deixando a primeira página só com o header. */
   .print-avoid-break,
-  [data-pdf-section],
+  [data-pdf-section]:not([data-pdf-section="summary"]):not([data-pdf-allow-break]),
   table,
   thead,
   tfoot {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Forçar quebra de página DEPOIS do bloco final da primeira página
+     (header + KPIs + canais + gráfico). Tudo que vier depois começa na pág 2. */
+  [data-pdf-page-break-after] {
+    break-after: page !important;
+    page-break-after: always !important;
+  }
+
+  /* O wrapper do gráfico não pode quebrar no meio */
+  [data-pdf-chart] {
     break-inside: avoid !important;
     page-break-inside: avoid !important;
   }
