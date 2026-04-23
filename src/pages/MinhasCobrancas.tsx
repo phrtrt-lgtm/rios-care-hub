@@ -428,21 +428,56 @@ const MinhasCobrancas = () => {
           </Card>
         )}
 
-        {charges.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-semibold text-foreground">
-                Nenhuma cobrança encontrada
-              </h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Você não possui cobranças no momento.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {charges.map((charge) => {
+        {(() => {
+          const propertyOptions = Array.from(
+            new Map(charges.filter(c => c.property?.name && c.property_id).map(c => [c.property_id!, c.property!.name])).entries()
+          ).map(([value, label]) => ({ value, label }));
+          const filteredCharges = applyTo(charges, {
+            searchFields: (c) => [c.title, c.description, c.property?.name],
+            status: (c) => c.status,
+            propertyId: (c) => c.property_id,
+            date: (c) => c.created_at,
+          });
+          const visibleCharges = filteredCharges.slice(0, visibleCount);
+          const hasMore = filteredCharges.length > visibleCount;
+          return (
+            <>
+              <Card className="mb-4">
+                <CardContent className="pt-6">
+                  <ListFilters
+                    {...filtersHook}
+                    searchPlaceholder="Buscar por título ou imóvel..."
+                    statusOptions={[
+                      { value: "draft", label: "Rascunho" },
+                      { value: "sent", label: "Enviada" },
+                      { value: "paid", label: "Paga" },
+                      { value: "overdue", label: "Vencida" },
+                      { value: "cancelled", label: "Cancelada" },
+                      { value: "debited", label: "Debitada em Reserva" },
+                    ]}
+                    propertyOptions={propertyOptions}
+                    showDateRange
+                    totalCount={charges.length}
+                    filteredCount={filteredCharges.length}
+                  />
+                </CardContent>
+              </Card>
+
+              {charges.length === 0 ? (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
+                    <h3 className="mt-4 text-lg font-semibold text-foreground">
+                      Nenhuma cobrança encontrada
+                    </h3>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Você não possui cobranças no momento.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-3">
+                  {visibleCharges.map((charge) => {
               const isOpen = charge.status === 'sent' || charge.status === 'overdue';
               const isSelected = selectedCharges.includes(charge.id);
               const ownerDue = charge.amount_cents - charge.management_contribution_cents;
