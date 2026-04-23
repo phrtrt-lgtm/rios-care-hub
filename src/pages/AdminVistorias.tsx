@@ -8,11 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { InspectionCalendar } from '@/components/InspectionCalendar';
-import { QuickInspectionAttachmentButton } from '@/components/QuickInspectionAttachmentButton';
-import { CreateMaintenanceFromInspectionDialog } from '@/components/CreateMaintenanceFromInspectionDialog';
-import { useDetailSheet } from '@/hooks/useDetailSheet';
-import { DetailSheet } from '@/components/detail-sheet/DetailSheet';
-import { getRowHandlers } from '@/lib/row-interaction';
 import {
   Settings,
   List,
@@ -20,30 +15,20 @@ import {
   ArrowLeft,
   Building2,
   AlertTriangle,
-  CheckCircle2,
-  Clock,
   ClipboardCheck,
-  Wrench,
   ChevronRight,
+  Clock,
 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
 import { format, isSameDay, parseISO, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useScrollRestoration } from "@/hooks/useScrollRestoration";
+import { useScrollRestoration } from '@/hooks/useScrollRestoration';
+import { saveScrollPosition } from '@/lib/navigation';
+import { goBack } from '@/lib/navigation';
 
 interface Property {
   id: string;
   name: string;
-  address?: string;
-  cover_photo_url?: string;
-  owner_id?: string;
-}
-
-interface Attachment {
-  id: string;
-  file_url: string;
-  file_name?: string;
-  file_type?: string;
 }
 
 interface Inspection {
@@ -51,9 +36,14 @@ interface Inspection {
   property_id: string;
   notes: string;
   created_at: string;
-  transcript_summary?: string;
-  property?: Property;
-  attachments?: Attachment[];
+}
+
+interface PropertyRow {
+  id: string;
+  name: string;
+  inspectionCount: number;
+  problemCount: number;
+  lastInspectionAt: string | null;
 }
 
 interface InspectionDate {
@@ -67,13 +57,11 @@ export default function AdminVistorias() {
   const navigate = useNavigate();
   const { profile, loading: authLoading } = useAuth();
   const [allInspections, setAllInspections] = useState<Inspection[]>([]);
+  const [allProperties, setAllProperties] = useState<Property[]>([]);
   const [inspectionDates, setInspectionDates] = useState<InspectionDate[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
-  const [maintenanceDialogOpen, setMaintenanceDialogOpen] = useState(false);
-  const [selectedInspection, setSelectedInspection] = useState<Inspection | null>(null);
-  const detailSheet = useDetailSheet();
 
   useEffect(() => {
     if (!authLoading) {
@@ -87,54 +75,28 @@ export default function AdminVistorias() {
 
   const fetchData = async () => {
     try {
-      // Fetch inspections with property info
-      const { data: inspections, error: inspError } = await supabase
-        .from('cleaning_inspections')
-        .select(`
-          id, property_id, notes, created_at, transcript_summary,
-          property:properties(id, name, address, cover_photo_url, owner_id)
-        `)
-        .order('created_at', { ascending: false });
+      const [{ data: properties, error: propError }, { data: inspections, error: inspError }] =
+        await Promise.all([
+          supabase.from('properties').select('id, name').order('name', { ascending: true }),
+          supabase
+            .from('cleaning_inspections')
+            .select('id, property_id, notes, created_at')
+            .order('created_at', { ascending: false }),
+        ]);
 
+      if (propError) throw propError;
       if (inspError) throw inspError;
 
-      const inspectionIds = (inspections || []).map((i) => i.id);
-      const attachmentsMap = new Map<string, Attachment[]>();
+      setAllProperties(properties || []);
+      setAllInspections(inspections || []);
 
-      if (inspectionIds.length > 0) {
-        const { data: attachmentsData } = await supabase
-          .from('cleaning_inspection_attachments')
-          .select('id, file_url, file_name, file_type, inspection_id, maintenance_ticket_id')
-          .in('inspection_id', inspectionIds);
-
-        (attachmentsData || []).forEach((att) => {
-          const existing = attachmentsMap.get(att.inspection_id) || [];
-          existing.push({
-            id: att.id,
-            file_url: att.file_url,
-            file_name: att.file_name || undefined,
-            file_type: att.file_type || undefined,
-          });
-          attachmentsMap.set(att.inspection_id, existing);
-        });
-      }
-
-      const inspectionsWithExtras = (inspections || []).map((insp) => ({
-        ...insp,
-        property: insp.property as unknown as Property,
-        attachments: attachmentsMap.get(insp.id) || [],
-      }));
-
-      setAllInspections(inspectionsWithExtras);
-
-      // Date aggregates for calendar
       const dateAggregates = new Map<string, { count: number; hasProblems: boolean }>();
       inspections?.forEach((insp) => {
         const dateKey = format(new Date(insp.created_at), 'yyyy-MM-dd');
-        const dateExisting = dateAggregates.get(dateKey) || { count: 0, hasProblems: false };
-        dateExisting.count++;
-        if (insp.notes === 'NÃO') dateExisting.hasProblems = true;
-        dateAggregates.set(dateKey, dateExisting);
+        const existing = dateAggregates.get(dateKey) || { count: 0, hasProblems: false };
+        existing.count++;
+        if (insp.notes === 'NÃO') existing.hasProblems = true;
+        dateAggregates.set(dateKey, existing);
       });
 
       const datesArray: InspectionDate[] = [];
@@ -153,106 +115,55 @@ export default function AdminVistorias() {
     setSelectedDate((prev) => (prev && isSameDay(prev, date) ? undefined : date));
   };
 
-  const handleNewMaintenance = (inspection: Inspection, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSelectedInspection(inspection);
-    setMaintenanceDialogOpen(true);
-  };
+  // Build a property list aggregated by inspection counts (filtered by date if active).
+  const propertyRows = useMemo<PropertyRow[]>(() => {
+    const filteredInspections = selectedDate
+      ? allInspections.filter((insp) =>
+          isSameDay(startOfDay(parseISO(insp.created_at)), startOfDay(selectedDate)),
+        )
+      : allInspections;
 
-  // Filter inspections by search term and selected date
-  const filteredInspections = useMemo(() => {
-    let list = allInspections;
+    const byProperty = new Map<string, { count: number; problem: number; last: string | null }>();
+    for (const insp of filteredInspections) {
+      const acc = byProperty.get(insp.property_id) || { count: 0, problem: 0, last: null };
+      acc.count++;
+      if (insp.notes === 'NÃO') acc.problem++;
+      if (!acc.last || insp.created_at > acc.last) acc.last = insp.created_at;
+      byProperty.set(insp.property_id, acc);
+    }
 
+    let rows: PropertyRow[] = allProperties.map((p) => {
+      const agg = byProperty.get(p.id);
+      return {
+        id: p.id,
+        name: p.name,
+        inspectionCount: agg?.count || 0,
+        problemCount: agg?.problem || 0,
+        lastInspectionAt: agg?.last || null,
+      };
+    });
+
+    // When filtering by date, hide properties without inspections that day.
     if (selectedDate) {
-      const selectedDayStart = startOfDay(selectedDate);
-      list = list.filter((insp) =>
-        isSameDay(startOfDay(parseISO(insp.created_at)), selectedDayStart),
-      );
+      rows = rows.filter((r) => r.inspectionCount > 0);
     }
 
     if (searchTerm.trim() !== '') {
       const term = searchTerm.toLowerCase();
-      list = list.filter(
-        (insp) =>
-          insp.property?.name?.toLowerCase().includes(term) ||
-          insp.property?.address?.toLowerCase().includes(term),
-      );
+      rows = rows.filter((r) => r.name.toLowerCase().includes(term));
     }
 
-    return list;
-  }, [allInspections, searchTerm, selectedDate]);
-
-  const problemInspections = useMemo(
-    () => filteredInspections.filter((i) => i.notes === 'NÃO'),
-    [filteredInspections],
-  );
-  const okInspections = useMemo(
-    () => filteredInspections.filter((i) => i.notes === 'OK'),
-    [filteredInspections],
-  );
+    rows.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+    return rows;
+  }, [allProperties, allInspections, searchTerm, selectedDate]);
 
   if (authLoading || loading) {
     return <LoadingScreen />;
   }
 
-  const renderInspectionRow = (inspection: Inspection, variant: 'problem' | 'ok') => {
-    const baseClass =
-      variant === 'problem'
-        ? 'bg-destructive/10 dark:bg-red-950/30 hover:bg-destructive/15 dark:hover:bg-red-950/50'
-        : 'bg-muted/50 hover:bg-muted';
-
-    const handlers = getRowHandlers(`/admin/vistoria/${inspection.id}`, () =>
-      detailSheet.openSheet(inspection.id, 'vistoria'),
-    );
-
-    return (
-      <div
-        key={inspection.id}
-        {...handlers}
-        className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors overflow-hidden ${baseClass}`}
-      >
-        {/* Thumbnail */}
-        <div className="h-9 w-9 rounded-md overflow-hidden flex-shrink-0 bg-muted">
-          {inspection.property?.cover_photo_url ? (
-            <img
-              src={inspection.property.cover_photo_url}
-              alt={inspection.property.name}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="h-full w-full flex items-center justify-center">
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-            </div>
-          )}
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium truncate">
-            {inspection.property?.name || 'Imóvel'}
-          </p>
-          <p className="text-[10px] text-muted-foreground">
-            {format(new Date(inspection.created_at), 'dd/MM HH:mm', { locale: ptBR })}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-1 shrink-0" data-no-sheet>
-          <QuickInspectionAttachmentButton
-            inspectionId={inspection.id}
-            onSuccess={fetchData}
-          />
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 px-2 text-[10px] text-warning shrink-0 whitespace-nowrap"
-            onClick={(e) => handleNewMaintenance(inspection, e)}
-          >
-            <Wrench className="h-3 w-3" />
-            <span className="hidden sm:inline ml-1">Manutenção</span>
-          </Button>
-          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-        </div>
-      </div>
-    );
+  const handleOpenProperty = (propertyId: string) => {
+    saveScrollPosition('/admin/vistorias');
+    navigate(`/admin/vistorias/${propertyId}`);
   };
 
   return (
@@ -260,13 +171,13 @@ export default function AdminVistorias() {
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4">
           <div className="flex h-16 items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/painel')}>
+            <Button variant="ghost" size="icon" onClick={() => goBack(navigate, '/painel')}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1">
               <h1 className="text-xl font-semibold">Vistorias de Faxina</h1>
               <p className="text-sm text-muted-foreground">
-                {allInspections.length} vistorias registradas
+                {allProperties.length} imóveis · {allInspections.length} vistorias registradas
               </p>
             </div>
             <Button
@@ -293,14 +204,13 @@ export default function AdminVistorias() {
 
       <main className="container mx-auto px-4 py-6">
         <div className="grid lg:grid-cols-[1fr_320px] gap-6">
-          {/* Inspection list */}
           <div className="space-y-4">
             {/* Search bar */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Pesquisar imóvel por nome ou endereço..."
+                placeholder="Pesquisar imóvel por nome..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -324,51 +234,58 @@ export default function AdminVistorias() {
               </div>
             )}
 
-            {filteredInspections.length === 0 ? (
+            {propertyRows.length === 0 ? (
               <EmptyState
                 icon={<ClipboardCheck className="h-6 w-6" />}
                 title={
                   searchTerm || selectedDate
-                    ? 'Nenhuma vistoria encontrada'
-                    : 'Nenhuma vistoria registrada'
+                    ? 'Nenhum imóvel encontrado'
+                    : 'Nenhum imóvel cadastrado'
                 }
                 description={
                   searchTerm || selectedDate
                     ? 'Tente ajustar os filtros aplicados.'
-                    : 'As vistorias realizadas aparecerão aqui.'
+                    : 'Cadastre imóveis para começar a registrar vistorias.'
                 }
               />
             ) : (
-              <Card className="p-4 space-y-4">
-                {/* Problemas */}
-                {problemInspections.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
-                      <p className="text-xs font-semibold text-destructive">
-                        Problemas ({problemInspections.length})
-                      </p>
+              <Card className="divide-y">
+                {propertyRows.map((row) => (
+                  <button
+                    key={row.id}
+                    type="button"
+                    onClick={() => handleOpenProperty(row.id)}
+                    onAuxClick={(e) => {
+                      if (e.button === 1) {
+                        e.preventDefault();
+                        window.open(`/admin/vistorias/${row.id}`, '_blank', 'noopener,noreferrer');
+                      }
+                    }}
+                    className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-muted/50 transition-colors"
+                  >
+                    <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{row.name}</p>
+                      {row.lastInspectionAt && (
+                        <p className="text-[11px] text-muted-foreground">
+                          Última: {format(new Date(row.lastInspectionAt), 'dd/MM/yyyy', { locale: ptBR })}
+                        </p>
+                      )}
                     </div>
-                    <div className="space-y-1">
-                      {problemInspections.map((insp) => renderInspectionRow(insp, 'problem'))}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {row.problemCount > 0 && (
+                        <Badge variant="destructive" className="h-5 px-1.5 gap-1 text-[10px]">
+                          <AlertTriangle className="h-3 w-3" />
+                          {row.problemCount}
+                        </Badge>
+                      )}
+                      <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
+                        {row.inspectionCount}
+                      </Badge>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </div>
-                  </div>
-                )}
-
-                {/* OK */}
-                {okInspections.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-success" />
-                      <p className="text-xs font-semibold text-success">
-                        OK ({okInspections.length})
-                      </p>
-                    </div>
-                    <div className="space-y-1">
-                      {okInspections.map((insp) => renderInspectionRow(insp, 'ok'))}
-                    </div>
-                  </div>
-                )}
+                  </button>
+                ))}
               </Card>
             )}
           </div>
@@ -383,26 +300,6 @@ export default function AdminVistorias() {
           </div>
         </div>
       </main>
-
-      {selectedInspection && selectedInspection.property && (
-        <CreateMaintenanceFromInspectionDialog
-          open={maintenanceDialogOpen}
-          onOpenChange={setMaintenanceDialogOpen}
-          propertyId={selectedInspection.property.id}
-          propertyName={selectedInspection.property.name}
-          ownerId={selectedInspection.property.owner_id || ''}
-          inspectionId={selectedInspection.id}
-          attachments={selectedInspection.attachments || []}
-          transcriptSummary={selectedInspection.transcript_summary}
-        />
-      )}
-
-      <DetailSheet
-        open={detailSheet.open}
-        onClose={detailSheet.closeSheet}
-        entityId={detailSheet.entityId}
-        entityType={detailSheet.entityType}
-      />
     </div>
   );
 }
