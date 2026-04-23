@@ -1370,6 +1370,7 @@ export default function AdminManutencoesLista() {
           status,
           scheduled_at,
           created_at,
+          cost_responsible,
           property:properties(id, name),
           owner:profiles!tickets_owner_id_fkey(id, name)
         `)
@@ -1422,6 +1423,7 @@ export default function AdminManutencoesLista() {
           management_contribution_cents: chargeMap[t.id]?.management_contribution_cents || null,
           service_type: chargeMap[t.id]?.service_type || null,
           list_status: t.status === "concluido" ? "feito" : "em_progresso",
+          cost_responsible: (t as any).cost_responsible ?? null,
         })) as MaintenanceItem[];
     },
   });
@@ -1442,6 +1444,7 @@ export default function AdminManutencoesLista() {
           created_at,
           due_date,
           status,
+          cost_responsible,
           property:properties(id, name),
           owner:profiles!charges_owner_id_fkey(id, name),
           ticket_id
