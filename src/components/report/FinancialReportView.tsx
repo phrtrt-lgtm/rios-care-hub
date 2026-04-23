@@ -403,7 +403,7 @@ export function FinancialReportView({ data, onBack, hideBackButton = false, forc
               <div className="px-4 sm:px-8 py-5 sm:py-7 bg-foreground text-background">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="bg-background/10 rounded-xl p-2"><img src={logo} alt="Rios Hospedagens" className="h-7 sm:h-9 w-auto" /></div>
+                    <div className="bg-white rounded-xl p-2 shadow-sm"><img src={logo} alt="Rios Hospedagens" className="h-7 sm:h-9 w-auto" /></div>
                     <div><h1 className="text-lg sm:text-xl font-bold text-background">Rios Hospedagens</h1><p className="text-xs sm:text-sm text-background/60">Extrato do Proprietário</p></div>
                   </div>
                   <div className="flex items-center justify-between sm:justify-end gap-3">
