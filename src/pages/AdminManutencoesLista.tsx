@@ -1584,6 +1584,15 @@ export default function AdminManutencoesLista() {
             if (ticketError) throw ticketError;
           }
 
+          // Notificar o proprietário (email + push + notificação interna)
+          try {
+            await supabase.functions.invoke("send-charge-email", {
+              body: { type: "charge_created", chargeId },
+            });
+          } catch (notifyErr) {
+            console.warn("Falha ao notificar proprietário (não crítico):", notifyErr);
+          }
+
           toast.success("Cobrança criada e enviada ao proprietário!");
           return;
         }
