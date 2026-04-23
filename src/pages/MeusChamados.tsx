@@ -57,6 +57,9 @@ export default function MeusChamados() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [chatOpen, setChatOpen] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<any>(null);
+  const [visibleCount, setVisibleCount] = useState(100);
+  const filtersHook = useListFilters("filters:meus-chamados");
+  const { applyTo } = filtersHook;
 
   const ticketIds = tickets.map(t => t.id);
   const { unreadCounts, markAsRead } = useUnreadMessages(ticketIds);
