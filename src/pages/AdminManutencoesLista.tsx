@@ -2315,6 +2315,14 @@ export default function AdminManutencoesLista() {
             }}
           />
         )}
+
+        {/* Detail Sheet (preview lateral) */}
+        <DetailSheet
+          open={detailSheetOpen}
+          onClose={closeSheet}
+          entityId={detailEntityId}
+          entityType={detailEntityType}
+        />
       </div>
     </div>
   );
