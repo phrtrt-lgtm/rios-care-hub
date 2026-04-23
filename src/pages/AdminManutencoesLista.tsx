@@ -577,10 +577,10 @@ function GroupRow({
             </td>
 
             {/* Label (Categoria) */}
-            <td className="p-0 w-[120px]">
+            <td className="p-0 w-[120px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
               <EditableCell
                 value={item.service_type || null}
-                type="select"
+                type="multi-select"
                 options={SERVICE_LABELS}
                 placeholder="Selecionar"
                 onSave={(val) => onUpdateItem(item.id, "service_type", val)}
