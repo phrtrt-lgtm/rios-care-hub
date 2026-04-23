@@ -31,6 +31,8 @@ import { useDetailSheet } from "@/hooks/useDetailSheet";
 import { DetailSheet } from "@/components/detail-sheet/DetailSheet";
 import { getRowHandlers } from "@/lib/row-interaction";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
+import { EditMaintenanceDialog } from "@/components/EditMaintenanceDialog";
+import { EditChargeFullDialog } from "@/components/EditChargeFullDialog";
 // ===== TYPES =====
 type TicketStatus = "novo" | "em_analise" | "aguardando_info" | "em_execucao" | "concluido" | "cancelado";
 
