@@ -287,16 +287,12 @@ export default function TeamInspectionDialog({
   };
 
   const handleSubmit = async () => {
-    // For standard inspections, require status
-    if (inspectionType === 'standard' && !inspectionStatus) {
-      toast.error('Selecione o status da vistoria (OK ou NÃO)');
-      return;
-    }
+    // Determinar status automaticamente baseado no tipo de vistoria
+    let finalStatus: string;
 
-    // For routine inspections, derive status from checklist
-    let finalStatus = inspectionStatus;
     if (inspectionType === 'routine') {
-      const hasProblems = 
+      // Routine: deriva do checklist
+      const hasProblems =
         checklistData.ac_working === 'problema' ||
         checklistData.tv_internet_working === 'problema' ||
         checklistData.outlets_switches_working === 'problema' ||
@@ -305,8 +301,14 @@ export default function TeamInspectionDialog({
         checklistData.bathroom_working === 'problema' ||
         checklistData.furniture_working === 'problema' ||
         checklistData.kitchen_working === 'problema';
-      
+
       finalStatus = hasProblems ? 'NÃO' : 'OK';
+    } else {
+      // Standard: se tem qualquer arquivo (foto/vídeo/áudio) → NÃO. Sem nada → OK.
+      const hasFiles =
+        uploadedFiles.filter((f) => f.url && !f.error).length > 0 ||
+        audioFiles.filter((a) => a.url).length > 0;
+      finalStatus = hasFiles ? 'NÃO' : 'OK';
     }
 
     const hasPendingUploads = uploadedFiles.some(f => f.uploading) || audioFiles.some(a => a.uploading);
