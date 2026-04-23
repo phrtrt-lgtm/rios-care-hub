@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Plus, Building2, Clock, MessageSquare, ChevronRight } from "lucide-react";
+import { ArrowLeft, Plus, Building2, Clock, MessageSquare, ChevronRight, Ticket } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { TicketBadges } from "@/components/TicketBadges";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -207,19 +208,17 @@ export default function MeusChamados() {
           </Tabs>
 
           {tickets.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                <MessageSquare className="h-8 w-8 text-muted-foreground" />
-              </div>
-              <p className="text-muted-foreground mb-4">
-                Nenhum ticket {activeTab === "abertos" ? "aberto" : "fechado"}
-                {ticketTypeFilter !== "todos" && ` em ${typeLabels[ticketTypeFilter]}`}
-              </p>
-              <Button onClick={() => navigate("/novo-ticket")} size="sm">
-                <Plus className="h-4 w-4 mr-1" />
-                Criar Chamado
-              </Button>
-            </div>
+            <EmptyState
+              icon={<Ticket className="h-6 w-6" />}
+              title={`Nenhum chamado ${activeTab === "abertos" ? "aberto" : "fechado"}${ticketTypeFilter !== "todos" ? ` em ${typeLabels[ticketTypeFilter]}` : ""}`}
+              description="Crie um novo chamado para registrar uma solicitação ou dúvida."
+              action={
+                <Button onClick={() => navigate("/novo-ticket")} size="sm">
+                  <Plus className="h-4 w-4 mr-1" />
+                  Criar chamado
+                </Button>
+              }
+            />
           ) : (
             <div className="space-y-2">
               {tickets.map((ticket) => {

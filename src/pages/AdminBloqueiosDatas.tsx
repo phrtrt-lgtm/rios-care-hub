@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface BlockRequest {
   id: string;
@@ -191,10 +192,11 @@ export default function AdminBloqueiosDatas() {
             ))}
           </div>
         ) : requests.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 py-16 text-muted-foreground">
-            <CalendarDays className="h-10 w-10 opacity-30" />
-            <p className="text-sm">Nenhuma solicitação encontrada</p>
-          </div>
+          <EmptyState
+            icon={<CalendarDays className="h-6 w-6" />}
+            title="Nenhuma solicitação encontrada"
+            description="Quando proprietários solicitarem bloqueios de datas, eles aparecerão aqui."
+          />
         ) : (
           <div className="space-y-4">
             {requests.map((req) => {

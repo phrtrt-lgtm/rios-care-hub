@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { InspectionCalendar } from '@/components/InspectionCalendar';
-import { Settings, List, Search, ArrowLeft, Building2, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
+import { Settings, List, Search, ArrowLeft, Building2, AlertTriangle, CheckCircle2, Clock, ClipboardCheck } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 import { format, isSameDay, parseISO, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -212,12 +213,11 @@ export default function AdminVistorias() {
             </div>
 
             {filteredProperties.length === 0 ? (
-              <Card className="p-12 text-center">
-                <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">
-                  {searchTerm ? 'Nenhum imóvel encontrado com esse termo.' : 'Nenhum imóvel cadastrado.'}
-                </p>
-              </Card>
+              <EmptyState
+                icon={<Building2 className="h-6 w-6" />}
+                title={searchTerm ? 'Nenhum imóvel encontrado' : 'Nenhum imóvel cadastrado'}
+                description={searchTerm ? 'Tente buscar por outro nome.' : 'Cadastre propriedades para começar a registrar vistorias.'}
+              />
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                 {filteredProperties.map((property) => {
