@@ -432,6 +432,59 @@ export default function NovaManutencao({ embedded = false, editId, onSaved, onCa
     goBack(navigate, "/admin/manutencoes-lista");
   };
 
+  if (embedded) {
+    return (
+      <form onSubmit={handleSubmit}>
+        <div className="space-y-6">
+          {/* Embedded form content */}
+          <EmbeddedFormBody
+            propertyId={propertyId}
+            setPropertyId={setPropertyId}
+            properties={properties}
+            subject={subject}
+            setSubject={setSubject}
+            description={description}
+            setDescription={setDescription}
+            isGeneratingTitle={isGeneratingTitle}
+            generateTitle={generateTitle}
+            aiPrompt={aiPrompt}
+            setAiPrompt={setAiPrompt}
+            generateDescription={generateDescription}
+            isGenerating={isGenerating}
+            costResponsible={costResponsible}
+            setCostResponsible={setCostResponsible}
+            guestCheckoutDate={guestCheckoutDate}
+            setGuestCheckoutDate={setGuestCheckoutDate}
+            ownerActionMode={ownerActionMode}
+            setOwnerActionMode={setOwnerActionMode}
+            priority={priority}
+            setPriority={setPriority}
+            inputRef={inputRef}
+            uploading={uploading}
+            handleFileChange={handleFileChange}
+            uploadedFiles={uploadedFiles}
+            removeFile={removeFile}
+          />
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={loading || uploading || loadingTicket}>
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {isEditMode ? 'Salvando...' : 'Criando...'}
+                </>
+              ) : (
+                isEditMode ? 'Salvar Alterações' : 'Criar Manutenção'
+              )}
+            </Button>
+          </div>
+        </div>
+      </form>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       <header className="border-b bg-card/50 backdrop-blur-sm">
