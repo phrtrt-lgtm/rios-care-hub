@@ -54,6 +54,10 @@ export default function NovaManutencao() {
   const [searchParams] = useSearchParams();
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const editTicketId = searchParams.get('edit');
+  const isEditMode = !!editTicketId;
+  const [loadingTicket, setLoadingTicket] = useState(isEditMode);
+
   useEffect(() => {
     // Only admins, agents, and maintenance can access this page
     if (profile && !['admin', 'agent', 'maintenance'].includes(profile.role)) {
@@ -62,6 +66,42 @@ export default function NovaManutencao() {
     }
     fetchProperties();
   }, [profile, navigate]);
+
+  // Load existing ticket for edit mode
+  useEffect(() => {
+    if (!isEditMode || !editTicketId) return;
+    (async () => {
+      try {
+        const { data: ticket, error } = await supabase
+          .from('tickets')
+          .select('*')
+          .eq('id', editTicketId)
+          .maybeSingle();
+        if (error) throw error;
+        if (!ticket) {
+          toast.error('Manutenção não encontrada');
+          navigate('/admin/manutencoes-lista');
+          return;
+        }
+        setSubject(ticket.subject || '');
+        setDescription(ticket.description || '');
+        setPriority((ticket.priority as any) || 'normal');
+        setPropertyId(ticket.property_id || '');
+        const cr = ticket.cost_responsible;
+        setCostResponsible(
+          cr === 'pm' ? 'management' : (cr as any) || 'pending'
+        );
+        setGuestCheckoutDate(ticket.guest_checkout_date || '');
+        if (ticket.essential) setOwnerActionMode('essential');
+        else if (ticket.owner_decision === 'pm_will_fix') setOwnerActionMode('pm_immediate');
+        else setOwnerActionMode('pending_decision');
+      } catch (err: any) {
+        toast.error('Erro ao carregar manutenção: ' + err.message);
+      } finally {
+        setLoadingTicket(false);
+      }
+    })();
+  }, [isEditMode, editTicketId, navigate]);
 
   // Pre-select property from URL parameter
   useEffect(() => {
