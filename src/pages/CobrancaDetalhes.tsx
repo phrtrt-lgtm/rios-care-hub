@@ -967,6 +967,21 @@ export default function CobrancaDetalhes() {
         </div>
       </header>
 
+      {isTeamMemberRaw && previewAsOwner && (
+        <div className="bg-amber-500 text-white px-4 py-2 text-center text-sm font-medium flex items-center justify-center gap-3 flex-wrap">
+          <Eye className="h-4 w-4" />
+          <span>Você está vendo esta cobrança como o proprietário a enxerga</span>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setPreviewAsOwner(false)}
+            className="h-7 bg-white/95 text-amber-700 hover:bg-white"
+          >
+            Voltar à visão da equipe
+          </Button>
+        </div>
+      )}
+
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         <Card className="mb-6 overflow-hidden">
           <CardHeader className="space-y-6">
