@@ -347,7 +347,7 @@ export default function NovaManutencao() {
   };
 
   const handleGoBack = () => {
-    navigate("/admin/manutencoes");
+    goBack(navigate, "/admin/manutencoes-lista");
   };
 
   return (

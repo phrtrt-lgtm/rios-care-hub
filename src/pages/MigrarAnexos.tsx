@@ -51,7 +51,7 @@ export default function MigrarAnexos() {
       <div className="container mx-auto max-w-2xl">
         <Button 
           variant="ghost" 
-          onClick={() => navigate("/painel")}
+          onClick={() => goBack(navigate, "/painel")}
           className="mb-6"
         >
           ← Voltar ao Painel
