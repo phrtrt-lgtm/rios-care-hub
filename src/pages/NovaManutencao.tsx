@@ -43,7 +43,7 @@ export default function NovaManutencao() {
   const [uploadedFiles, setUploadedFiles] = useState<ReadyAttachment[]>([]);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [costResponsible, setCostResponsible] = useState<'owner' | 'management' | 'guest'>('owner');
+  const [costResponsible, setCostResponsible] = useState<'owner' | 'management' | 'guest' | 'pending'>('pending');
   const [guestCheckoutDate, setGuestCheckoutDate] = useState<string>("");
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -249,8 +249,9 @@ export default function NovaManutencao() {
         throw new Error("Unidade não encontrada");
       }
 
-      // Map 'management' to 'pm' for database
-      const dbCostResponsible = costResponsible === 'management' ? 'pm' : costResponsible;
+      // Map 'management' to 'pm' for database; keep 'pending' and 'guest' as-is
+      const dbCostResponsible =
+        costResponsible === 'management' ? 'pm' : costResponsible;
 
       // Determine if this is essential (immediate action) or needs owner decision
       const isEssential = ownerActionMode === 'essential';
@@ -310,8 +311,10 @@ export default function NovaManutencao() {
         });
       }
 
-      // Send notification for owner decision if applicable
-      if (ownerActionMode === 'pending_decision') {
+      // Send notification for owner decision if applicable.
+      // 'pending' (Em espera) MUST NOT notify the owner — the maintenance stays
+      // hidden until the team defines a real responsible.
+      if (ownerActionMode === 'pending_decision' && costResponsible === 'owner') {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
         
@@ -471,6 +474,12 @@ export default function NovaManutencao() {
                   onValueChange={(v) => setCostResponsible(v as any)}
                   className="grid grid-cols-2 gap-3"
                 >
+                  <div className="flex items-center space-x-2 border rounded-lg p-3 border-muted-foreground/30 bg-muted/40">
+                    <RadioGroupItem value="pending" id="cost-pending" />
+                    <Label htmlFor="cost-pending" className="font-normal cursor-pointer flex-1">
+                      ⏳ Em espera
+                    </Label>
+                  </div>
                   <div className="flex items-center space-x-2 border rounded-lg p-3">
                     <RadioGroupItem value="owner" id="cost-owner" />
                     <Label htmlFor="cost-owner" className="font-normal cursor-pointer flex-1">
@@ -490,6 +499,15 @@ export default function NovaManutencao() {
                     </Label>
                   </div>
                 </RadioGroup>
+
+                {costResponsible === 'pending' && (
+                  <Alert className="border-muted-foreground/30 bg-muted/30">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>
+                      O responsável pelo custo ainda <strong>não foi definido</strong>. A manutenção <strong>não será visível</strong> para o proprietário e <strong>nenhuma notificação</strong> será enviada até que a equipe selecione um responsável na lista.
+                    </AlertDescription>
+                  </Alert>
+                )}
 
                 {costResponsible === 'management' && (
                   <Alert className="border-info/30 bg-info/10 dark:bg-blue-950/30">
