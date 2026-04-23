@@ -480,7 +480,7 @@ export function PropertyInspectionItemsKanban({
     try {
       const { data: attachments, error } = await supabase
         .from('cleaning_inspection_attachments')
-        .select('id, file_url, file_name, file_type, inspection_id')
+        .select('id, file_url, file_name, file_type, inspection_id, maintenance_ticket_id')
         .in('inspection_id', uniqueInspectionIds);
       
       if (error) throw error;
