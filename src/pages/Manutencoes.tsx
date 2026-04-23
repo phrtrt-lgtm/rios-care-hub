@@ -334,7 +334,9 @@ export default function Manutencoes() {
                           <div className="text-xs text-muted-foreground">{m.category}</div>
                         )}
                         {m.service_type && (
-                          <div className="text-xs text-muted-foreground">🏷️ {m.service_type}</div>
+                          <div className="text-xs text-muted-foreground">
+                            🏷️ {String(m.service_type).split(",").map((s: string) => s.trim()).filter(Boolean).join(", ")}
+                          </div>
                         )}
                       </td>
                       <td className="p-3 text-right font-medium">
