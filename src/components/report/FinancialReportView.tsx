@@ -395,8 +395,8 @@ export function FinancialReportView({ data, onBack, hideBackButton = false, forc
         </div>
       )}
 
-      <div className="container max-w-5xl px-2 sm:px-6 py-4 sm:py-8">
-        <div ref={reportContentRef} className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
+      <div className="container max-w-5xl px-2 sm:px-6 py-4 sm:py-8 print:p-0 print:max-w-none">
+        <div ref={reportContentRef} data-report-root className="bg-card rounded-xl shadow-sm border border-border overflow-hidden print:shadow-none print:border-0 print:rounded-none">
           {isOwnerType ? (
             <>
               {/* Owner header - mobile stacked */}
