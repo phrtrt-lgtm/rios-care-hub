@@ -58,8 +58,15 @@ const handler = async (req: Request): Promise<Response> => {
     // Verificar se já existe um payment_link (não recria para proprietários comuns)
     // Para Rodrigo Azevedo, sempre recria para garantir parcelamento correto em 4x sem juros
     const isRodrigoAzevedoEarly = charge.owner_id === 'dfe67361-061f-4e95-8a44-e19606a59321';
-    if (charge.payment_link && !isRodrigoAzevedoEarly) {
-      console.log('Payment link already exists:', charge.payment_link);
+    
+    // Detectar se o link/PIX existente já expirou (cobrança vencida há mais que a janela de expiração)
+    // O link era gerado expirando na due_date — então se hoje > due_date, o link está vencido e precisa ser regerado
+    const now = new Date();
+    const dueDateObj = charge.due_date ? new Date(charge.due_date) : null;
+    const isLinkExpired = dueDateObj ? now > dueDateObj : false;
+    
+    if (charge.payment_link && !isRodrigoAzevedoEarly && !isLinkExpired) {
+      console.log('Payment link already exists and is still valid:', charge.payment_link);
       return new Response(
         JSON.stringify({ payment_link: charge.payment_link }),
         {
@@ -67,6 +74,10 @@ const handler = async (req: Request): Promise<Response> => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         }
       );
+    }
+    
+    if (isLinkExpired) {
+      console.log('Payment link expired, regenerating new one for charge:', chargeId);
     }
 
     const property = charge.properties;
@@ -155,7 +166,8 @@ const handler = async (req: Request): Promise<Response> => {
       statement_descriptor: 'RIOS Gestao',
       expires: true,
       expiration_date_from: new Date().toISOString(),
-      expiration_date_to: new Date(charge.due_date).toISOString(),
+      // Link válido por 60 dias a partir de agora — permite pagamento mesmo após o vencimento
+      expiration_date_to: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
     };
 
     console.log('Creating MercadoPago preference:', preferencePayload);
@@ -185,6 +197,8 @@ const handler = async (req: Request): Promise<Response> => {
     let pixQrCodeBase64 = null;
 
     // Criar pagamento PIX para gerar QR code
+    // PIX padrão expira em 24h — estendemos para 60 dias para permitir pagamento de cobranças vencidas
+    const pixExpiration = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000);
     const pixPaymentPayload = {
       transaction_amount: dueAmount,
       description: manutencaoLabel,
@@ -194,14 +208,18 @@ const handler = async (req: Request): Promise<Response> => {
       },
       external_reference: chargeId,
       notification_url: `${supabaseUrl}/functions/v1/mercadopago-webhook`,
+      date_of_expiration: pixExpiration.toISOString(),
     };
+
+    // Idempotency-Key único por geração — evita o Mercado Pago devolver o PIX antigo já vencido
+    const pixIdempotencyKey = `${chargeId}-${Date.now()}`;
 
     const pixResponse = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${mercadoPagoToken}`,
         'Content-Type': 'application/json',
-        'X-Idempotency-Key': chargeId, // Usar o ID da cobrança como chave de idempotência
+        'X-Idempotency-Key': pixIdempotencyKey,
       },
       body: JSON.stringify(pixPaymentPayload),
     });
