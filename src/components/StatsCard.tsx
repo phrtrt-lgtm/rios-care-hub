@@ -1,5 +1,4 @@
 import { ReactNode } from "react";
-import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -9,7 +8,9 @@ interface StatsCardProps {
   description: string;
   icon: ReactNode;
   iconBgColor: string;
-  borderColor: string;
+  /** @deprecated mantido por compatibilidade — não é mais usado visualmente */
+  borderColor?: string;
+  /** @deprecated mantido por compatibilidade — entrada não tem mais stagger */
   delay?: number;
   onClick?: () => void;
 }
@@ -20,89 +21,45 @@ export function StatsCard({
   description,
   icon,
   iconBgColor,
-  borderColor,
-  delay = 0,
   onClick,
 }: StatsCardProps) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{
-        duration: 0.4,
-        delay,
-        ease: [0.25, 0.46, 0.45, 0.94],
-      }}
-      whileHover={{ y: -2, transition: { duration: 0.2 } }}
-      whileTap={{ scale: 0.98 }}
-    >
+    <div className="animate-fade-in" style={{ animationDuration: "0.25s" }}>
       <Card
         onClick={onClick}
         className={cn(
-          "border-l-4 cursor-pointer transition-all duration-200 hover:shadow-lg group",
-          borderColor,
-          onClick && "hover:bg-accent/50"
+          "transition-all duration-200 hover:shadow-md hover:-translate-y-0.5",
+          onClick && "cursor-pointer hover:bg-accent/50"
         )}
       >
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium">{title}</CardTitle>
-          <motion.div
-            whileHover={{ scale: 1.1, rotate: 5 }}
-            transition={{ type: "spring", stiffness: 400, damping: 17 }}
+        <CardHeader className="flex flex-row items-center gap-3 pb-2 space-y-0">
+          <div
             className={cn(
-              "h-8 w-8 rounded-full flex items-center justify-center",
+              "h-12 w-12 shrink-0 rounded-xl flex items-center justify-center",
               iconBgColor
             )}
           >
             {icon}
-          </motion.div>
+          </div>
+          <CardTitle className="text-sm font-medium">{title}</CardTitle>
         </CardHeader>
         <CardContent>
-          <motion.div
-            initial={{ scale: 0.5, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{
-              duration: 0.3,
-              delay: delay + 0.2,
-              type: "spring",
-              stiffness: 300,
-            }}
-            className="text-2xl font-bold"
-          >
-            {value}
-          </motion.div>
+          <div className="text-2xl font-bold">{value}</div>
           <p className="text-xs text-muted-foreground mt-1">{description}</p>
         </CardContent>
       </Card>
-    </motion.div>
+    </div>
   );
 }
 
 // Animated counter for stats
 export function AnimatedCounter({
   value,
-  duration = 1,
   className,
 }: {
   value: number;
   duration?: number;
   className?: string;
 }) {
-  return (
-    <motion.span
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className={className}
-    >
-      <motion.span
-        initial={{ opacity: 0 }}
-        animate={{
-          opacity: 1,
-        }}
-        transition={{ duration: 0.5 }}
-      >
-        {value}
-      </motion.span>
-    </motion.span>
-  );
+  return <span className={className}>{value}</span>;
 }
