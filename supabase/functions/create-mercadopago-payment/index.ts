@@ -197,6 +197,8 @@ const handler = async (req: Request): Promise<Response> => {
     let pixQrCodeBase64 = null;
 
     // Criar pagamento PIX para gerar QR code
+    // PIX padrão expira em 24h — estendemos para 60 dias para permitir pagamento de cobranças vencidas
+    const pixExpiration = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000);
     const pixPaymentPayload = {
       transaction_amount: dueAmount,
       description: manutencaoLabel,
@@ -206,14 +208,18 @@ const handler = async (req: Request): Promise<Response> => {
       },
       external_reference: chargeId,
       notification_url: `${supabaseUrl}/functions/v1/mercadopago-webhook`,
+      date_of_expiration: pixExpiration.toISOString(),
     };
+
+    // Idempotency-Key único por geração — evita o Mercado Pago devolver o PIX antigo já vencido
+    const pixIdempotencyKey = `${chargeId}-${Date.now()}`;
 
     const pixResponse = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${mercadoPagoToken}`,
         'Content-Type': 'application/json',
-        'X-Idempotency-Key': chargeId, // Usar o ID da cobrança como chave de idempotência
+        'X-Idempotency-Key': pixIdempotencyKey,
       },
       body: JSON.stringify(pixPaymentPayload),
     });
