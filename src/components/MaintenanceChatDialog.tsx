@@ -662,15 +662,22 @@ export function MaintenanceChatDialog({
                 className="h-9 w-9 flex-shrink-0"
               />
               
-              <Textarea
-                ref={textareaRef}
-                value={newMessage}
-                onChange={handleInputChange}
-                onKeyDown={handleKeyDown}
-                placeholder="Mensagem para enviar..."
-                className="min-h-[40px] max-h-[120px] resize-none flex-1"
-                rows={1}
-              />
+              <div className="flex-1">
+                <MentionInput
+                  value={newMessage}
+                  onChange={(v, ids) => {
+                    setNewMessage(v);
+                    setMentionedIds(ids);
+                    setTyping(v.length > 0);
+                  }}
+                  users={mentionableUsers}
+                  placeholder="Mensagem para enviar... use @ para mencionar"
+                  rows={1}
+                  disabled={sending}
+                  onSubmit={handleSend}
+                  className="min-h-[40px]"
+                />
+              </div>
               
               <Button
                 onClick={handleSend}
