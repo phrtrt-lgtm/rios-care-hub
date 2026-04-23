@@ -31,6 +31,8 @@ import { useDetailSheet } from "@/hooks/useDetailSheet";
 import { DetailSheet } from "@/components/detail-sheet/DetailSheet";
 import { getRowHandlers } from "@/lib/row-interaction";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
+import { EditMaintenanceDialog } from "@/components/EditMaintenanceDialog";
+import { EditChargeFullDialog } from "@/components/EditChargeFullDialog";
 // ===== TYPES =====
 type TicketStatus = "novo" | "em_analise" | "aguardando_info" | "em_execucao" | "concluido" | "cancelado";
 
@@ -1196,6 +1198,12 @@ export default function AdminManutencoesLista() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pendingUploadItem, setPendingUploadItem] = useState<MaintenanceItem | null>(null);
 
+  // Edit dialogs state
+  const [editMaintenanceId, setEditMaintenanceId] = useState<string | null>(null);
+  const [editMaintenanceOpen, setEditMaintenanceOpen] = useState(false);
+  const [editChargeId, setEditChargeId] = useState<string | null>(null);
+  const [editChargeOpen, setEditChargeOpen] = useState(false);
+
   // Debounced search
   const [debouncedSearch, setDebouncedSearch] = useState("");
   useEffect(() => {
@@ -2324,10 +2332,13 @@ export default function AdminManutencoesLista() {
                             openSheet(id, isCharge ? "cobranca" : "maintenance");
                           }}
                           onEdit={(item, isCharge) => {
-                            const path = isCharge
-                              ? `/nova-cobranca?edit=${item.id}`
-                              : `/admin/nova-manutencao?edit=${item.id}`;
-                            navigate(path);
+                            if (isCharge) {
+                              setEditChargeId(item.id);
+                              setEditChargeOpen(true);
+                            } else {
+                              setEditMaintenanceId(item.id);
+                              setEditMaintenanceOpen(true);
+                            }
                           }}
                         />
 
@@ -2494,6 +2505,32 @@ export default function AdminManutencoesLista() {
           onClose={closeSheet}
           entityId={detailEntityId}
           entityType={detailEntityType}
+        />
+
+        {/* Edit dialogs (pop-ups) */}
+        <EditMaintenanceDialog
+          ticketId={editMaintenanceId}
+          open={editMaintenanceOpen}
+          onOpenChange={(o) => {
+            setEditMaintenanceOpen(o);
+            if (!o) setEditMaintenanceId(null);
+          }}
+          onSaved={() => {
+            queryClient.invalidateQueries({ queryKey: ["admin-maintenance-tickets"] });
+            queryClient.invalidateQueries({ queryKey: ["admin-charges-list"] });
+          }}
+        />
+        <EditChargeFullDialog
+          chargeId={editChargeId}
+          open={editChargeOpen}
+          onOpenChange={(o) => {
+            setEditChargeOpen(o);
+            if (!o) setEditChargeId(null);
+          }}
+          onSaved={() => {
+            queryClient.invalidateQueries({ queryKey: ["admin-charges-list"] });
+            queryClient.invalidateQueries({ queryKey: ["admin-maintenance-tickets"] });
+          }}
         />
       </div>
     </div>

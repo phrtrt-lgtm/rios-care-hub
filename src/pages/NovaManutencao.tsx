@@ -34,7 +34,14 @@ interface Property {
   profiles?: { name: string };
 }
 
-export default function NovaManutencao() {
+interface NovaManutencaoProps {
+  embedded?: boolean;
+  editId?: string;
+  onSaved?: () => void;
+  onCancel?: () => void;
+}
+
+export default function NovaManutencao({ embedded = false, editId, onSaved, onCancel }: NovaManutencaoProps = {}) {
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<"normal" | "urgente">("normal");
@@ -54,7 +61,7 @@ export default function NovaManutencao() {
   const [searchParams] = useSearchParams();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const editTicketId = searchParams.get('edit');
+  const editTicketId = editId ?? searchParams.get('edit');
   const isEditMode = !!editTicketId;
   const [loadingTicket, setLoadingTicket] = useState(isEditMode);
 
@@ -398,7 +405,11 @@ export default function NovaManutencao() {
       }
 
       toast.success(isEditMode ? "Manutenção atualizada!" : "Manutenção criada com sucesso!");
-      navigate(`/admin/manutencoes-lista`);
+      if (embedded) {
+        onSaved?.();
+      } else {
+        navigate(`/admin/manutencoes-lista`);
+      }
     } catch (error: any) {
       console.error("Error saving maintenance:", error);
       toast.error(error.message || "Erro ao salvar manutenção");
@@ -421,6 +432,325 @@ export default function NovaManutencao() {
     goBack(navigate, "/admin/manutencoes-lista");
   };
 
+  const formBody = (
+    <>
+      <div className="space-y-2">
+        <Label htmlFor="property">Unidade *</Label>
+        <Select value={propertyId} onValueChange={setPropertyId} required>
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione a unidade" />
+          </SelectTrigger>
+          <SelectContent className="bg-background border-border z-50">
+            {properties.map((property) => (
+              <SelectItem key={property.id} value={property.id}>
+                {property.name}
+                {property.profiles?.name && ` - ${property.profiles.name}`}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="subject">Assunto *</Label>
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Input
+              id="subject"
+              placeholder={isGeneratingTitle ? "Gerando título..." : "Ex: Torneira do banheiro vazando"}
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              disabled={isGeneratingTitle}
+              required
+            />
+            {isGeneratingTitle && (
+              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+            )}
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            size="icon"
+            onClick={() => generateTitle()}
+            disabled={isGeneratingTitle || !description.trim()}
+            title="Gerar título com IA"
+          >
+            {isGeneratingTitle ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+          </Button>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="description">Descrição *</Label>
+        <Textarea
+          id="description"
+          placeholder="Descreva o problema encontrado..."
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={4}
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="aiPrompt">Gerar com IA (opcional)</Label>
+        <div className="flex gap-2">
+          <Input
+            id="aiPrompt"
+            value={aiPrompt}
+            onChange={(e) => setAiPrompt(e.target.value)}
+            placeholder="Ex: torneira vazando no banheiro da suíte"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                generateDescription();
+              }
+            }}
+          />
+          <VoiceToTextInput onTranscript={(text) => setAiPrompt(prev => prev ? `${prev} ${text}` : text)} />
+          <Button
+            type="button"
+            onClick={generateDescription}
+            disabled={isGenerating || !aiPrompt.trim()}
+            variant="secondary"
+          >
+            {isGenerating ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Descreva brevemente o problema e a IA gerará uma descrição detalhada
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        <Label>Responsável pelo custo *</Label>
+        <RadioGroup
+          value={costResponsible}
+          onValueChange={(v) => setCostResponsible(v as any)}
+          className="grid grid-cols-2 gap-3"
+        >
+          <div className="flex items-center space-x-2 border rounded-lg p-3 border-muted-foreground/30 bg-muted/40">
+            <RadioGroupItem value="pending" id="cost-pending" />
+            <Label htmlFor="cost-pending" className="font-normal cursor-pointer flex-1">
+              ⏳ Em espera
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2 border rounded-lg p-3">
+            <RadioGroupItem value="owner" id="cost-owner" />
+            <Label htmlFor="cost-owner" className="font-normal cursor-pointer flex-1">
+              Proprietário
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2 border rounded-lg p-3">
+            <RadioGroupItem value="management" id="cost-management" />
+            <Label htmlFor="cost-management" className="font-normal cursor-pointer flex-1">
+              Gestão
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2 border rounded-lg p-3">
+            <RadioGroupItem value="guest" id="cost-guest" />
+            <Label htmlFor="cost-guest" className="font-normal cursor-pointer flex-1">
+              Hóspede
+            </Label>
+          </div>
+        </RadioGroup>
+
+        {costResponsible === 'pending' && (
+          <Alert className="border-muted-foreground/30 bg-muted/30">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              O responsável pelo custo ainda <strong>não foi definido</strong>. A manutenção <strong>não será visível</strong> para o proprietário e <strong>nenhuma notificação</strong> será enviada até que a equipe selecione um responsável na lista.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {costResponsible === 'management' && (
+          <Alert className="border-info/30 bg-info/10 dark:bg-blue-950/30">
+            <AlertTriangle className="h-4 w-4 text-info" />
+            <AlertDescription className="text-info dark:text-blue-300">
+              Esta manutenção <strong>não será visível</strong> para o proprietário. Use para manutenções internas ou de responsabilidade da gestão.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {costResponsible === 'guest' && (
+          <div className="space-y-3">
+            <Alert className="border-warning/30 bg-warning/10 dark:bg-orange-950/30">
+              <AlertTriangle className="h-4 w-4 text-warning" />
+              <AlertDescription className="text-warning dark:text-orange-300">
+                Esta manutenção <strong>não será visível</strong> para o proprietário. Use para problemas causados por hóspedes ou substituições internas.
+              </AlertDescription>
+            </Alert>
+            <div className="space-y-2 pl-4 border-l-2 border-warning/30">
+              <Label htmlFor="guestCheckoutDate">Data de checkout do hóspede *</Label>
+              <Input
+                id="guestCheckoutDate"
+                type="date"
+                value={guestCheckoutDate}
+                onChange={(e) => setGuestCheckoutDate(e.target.value)}
+                required={costResponsible === 'guest'}
+              />
+              <p className="text-xs text-muted-foreground">
+                O lembrete de cobrança aparecerá 14 dias após esta data (regra Airbnb)
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {costResponsible === 'owner' && (
+        <div className="space-y-3">
+          <Label>Modo de decisão do proprietário</Label>
+          <RadioGroup
+            value={ownerActionMode}
+            onValueChange={(v) => setOwnerActionMode(v as any)}
+            className="space-y-2"
+          >
+            <div className="flex items-start space-x-2 border rounded-lg p-3">
+              <RadioGroupItem value="pending_decision" id="mode-pending" className="mt-1" />
+              <div className="flex-1">
+                <Label htmlFor="mode-pending" className="font-medium cursor-pointer">
+                  ⏰ Aguardar decisão (72h)
+                </Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  O proprietário terá 72h para decidir se assume a execução ou delega à gestão.
+                  Ele será notificado por email e push, com lembrete 24h antes do prazo.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start space-x-2 border rounded-lg p-3 border-warning/30 bg-warning/10/50">
+              <RadioGroupItem value="essential" id="mode-essential" className="mt-1" />
+              <div className="flex-1">
+                <Label htmlFor="mode-essential" className="font-medium cursor-pointer text-warning">
+                  🚨 Essencial / Urgente
+                </Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Manutenção crítica que precisa ser executada imediatamente (vazamentos,
+                  problemas elétricos graves, etc). Não aguarda decisão do proprietário.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start space-x-2 border rounded-lg p-3 border-info/30 bg-info/10/50">
+              <RadioGroupItem value="pm_immediate" id="mode-pm" className="mt-1" />
+              <div className="flex-1">
+                <Label htmlFor="mode-pm" className="font-medium cursor-pointer text-info">
+                  👥 Gestão assume imediatamente
+                </Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  A gestão assumirá a execução sem consultar o proprietário.
+                  Útil para manutenções pequenas ou já acordadas.
+                </p>
+              </div>
+            </div>
+          </RadioGroup>
+        </div>
+      )}
+      <div className="space-y-2">
+        <Label>Prioridade</Label>
+        <RadioGroup value={priority} onValueChange={(v) => setPriority(v as any)}>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="normal" id="normal" />
+            <Label htmlFor="normal" className="font-normal cursor-pointer">
+              Normal
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="urgente" id="urgente" />
+            <Label htmlFor="urgente" className="font-normal cursor-pointer">
+              Urgente
+            </Label>
+          </div>
+        </RadioGroup>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="files">Anexos (opcional)</Label>
+        <div className="flex items-center gap-2">
+          <Input
+            ref={inputRef}
+            id="files"
+            type="file"
+            multiple
+            accept="image/*,video/*,application/pdf,.pdf"
+            onChange={handleFileChange}
+            className="cursor-pointer"
+            disabled={uploading}
+          />
+          {uploading ? (
+            <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
+          ) : (
+            <Upload className="h-5 w-5 text-muted-foreground" />
+          )}
+        </div>
+        {uploadedFiles.length > 0 && (
+          <div className="space-y-2 mt-2">
+            <p className="text-sm text-muted-foreground">
+              {uploadedFiles.length} arquivo(s) pronto(s):
+            </p>
+            <div className="space-y-1">
+              {uploadedFiles.map((file, idx) => (
+                <div key={idx} className="flex items-center justify-between text-xs border rounded px-2 py-1">
+                  <span className="truncate flex-1">{file.name}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 ml-2"
+                    onClick={() => removeFile(file.file_url)}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+
+  const submitButton = (
+    <Button type="submit" className="w-full" disabled={loading || uploading || loadingTicket}>
+      {loading ? (
+        <>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          {isEditMode ? 'Salvando...' : 'Criando...'}
+        </>
+      ) : (
+        isEditMode ? 'Salvar Alterações' : 'Criar Manutenção'
+      )}
+    </Button>
+  );
+
+  if (embedded) {
+    return (
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {formBody}
+        <div className="flex justify-end gap-2 pt-2">
+          {onCancel && (
+            <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
+              Cancelar
+            </Button>
+          )}
+          <Button type="submit" disabled={loading || uploading || loadingTicket}>
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {isEditMode ? 'Salvando...' : 'Criando...'}
+              </>
+            ) : (
+              isEditMode ? 'Salvar Alterações' : 'Criar Manutenção'
+            )}
+          </Button>
+        </div>
+      </form>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       <header className="border-b bg-card/50 backdrop-blur-sm">
@@ -442,295 +772,8 @@ export default function NovaManutencao() {
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="property">Unidade *</Label>
-                <Select value={propertyId} onValueChange={setPropertyId} required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a unidade" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background border-border z-50">
-                    {properties.map((property) => (
-                      <SelectItem key={property.id} value={property.id}>
-                        {property.name}
-                        {property.profiles?.name && ` - ${property.profiles.name}`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="subject">Assunto *</Label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Input
-                      id="subject"
-                      placeholder={isGeneratingTitle ? "Gerando título..." : "Ex: Torneira do banheiro vazando"}
-                      value={subject}
-                      onChange={(e) => setSubject(e.target.value)}
-                      disabled={isGeneratingTitle}
-                      required
-                    />
-                    {isGeneratingTitle && (
-                      <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
-                    )}
-                  </div>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="icon"
-                    onClick={() => generateTitle()}
-                    disabled={isGeneratingTitle || !description.trim()}
-                    title="Gerar título com IA"
-                  >
-                    {isGeneratingTitle ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Descrição *</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Descreva o problema encontrado..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={4}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="aiPrompt">Gerar com IA (opcional)</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="aiPrompt"
-                    value={aiPrompt}
-                    onChange={(e) => setAiPrompt(e.target.value)}
-                    placeholder="Ex: torneira vazando no banheiro da suíte"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        generateDescription();
-                      }
-                    }}
-                  />
-                  <VoiceToTextInput onTranscript={(text) => setAiPrompt(prev => prev ? `${prev} ${text}` : text)} />
-                  <Button
-                    type="button"
-                    onClick={generateDescription}
-                    disabled={isGenerating || !aiPrompt.trim()}
-                    variant="secondary"
-                  >
-                    {isGenerating ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Sparkles className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Descreva brevemente o problema e a IA gerará uma descrição detalhada
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                <Label>Responsável pelo custo *</Label>
-                <RadioGroup 
-                  value={costResponsible} 
-                  onValueChange={(v) => setCostResponsible(v as any)}
-                  className="grid grid-cols-2 gap-3"
-                >
-                  <div className="flex items-center space-x-2 border rounded-lg p-3 border-muted-foreground/30 bg-muted/40">
-                    <RadioGroupItem value="pending" id="cost-pending" />
-                    <Label htmlFor="cost-pending" className="font-normal cursor-pointer flex-1">
-                      ⏳ Em espera
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2 border rounded-lg p-3">
-                    <RadioGroupItem value="owner" id="cost-owner" />
-                    <Label htmlFor="cost-owner" className="font-normal cursor-pointer flex-1">
-                      Proprietário
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2 border rounded-lg p-3">
-                    <RadioGroupItem value="management" id="cost-management" />
-                    <Label htmlFor="cost-management" className="font-normal cursor-pointer flex-1">
-                      Gestão
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2 border rounded-lg p-3">
-                    <RadioGroupItem value="guest" id="cost-guest" />
-                    <Label htmlFor="cost-guest" className="font-normal cursor-pointer flex-1">
-                      Hóspede
-                    </Label>
-                  </div>
-                </RadioGroup>
-
-                {costResponsible === 'pending' && (
-                  <Alert className="border-muted-foreground/30 bg-muted/30">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertDescription>
-                      O responsável pelo custo ainda <strong>não foi definido</strong>. A manutenção <strong>não será visível</strong> para o proprietário e <strong>nenhuma notificação</strong> será enviada até que a equipe selecione um responsável na lista.
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {costResponsible === 'management' && (
-                  <Alert className="border-info/30 bg-info/10 dark:bg-blue-950/30">
-                    <AlertTriangle className="h-4 w-4 text-info" />
-                    <AlertDescription className="text-info dark:text-blue-300">
-                      Esta manutenção <strong>não será visível</strong> para o proprietário. Use para manutenções internas ou de responsabilidade da gestão.
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {costResponsible === 'guest' && (
-                  <div className="space-y-3">
-                    <Alert className="border-warning/30 bg-warning/10 dark:bg-orange-950/30">
-                      <AlertTriangle className="h-4 w-4 text-warning" />
-                      <AlertDescription className="text-warning dark:text-orange-300">
-                        Esta manutenção <strong>não será visível</strong> para o proprietário. Use para problemas causados por hóspedes ou substituições internas.
-                      </AlertDescription>
-                    </Alert>
-                    <div className="space-y-2 pl-4 border-l-2 border-warning/30">
-                      <Label htmlFor="guestCheckoutDate">Data de checkout do hóspede *</Label>
-                      <Input
-                        id="guestCheckoutDate"
-                        type="date"
-                        value={guestCheckoutDate}
-                        onChange={(e) => setGuestCheckoutDate(e.target.value)}
-                        required={costResponsible === 'guest'}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        O lembrete de cobrança aparecerá 14 dias após esta data (regra Airbnb)
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-              </div>
-
-              {/* Owner Decision Mode - only show for owner-responsible costs */}
-              {costResponsible === 'owner' && (
-                <div className="space-y-3">
-                  <Label>Modo de decisão do proprietário</Label>
-                  <RadioGroup 
-                    value={ownerActionMode} 
-                    onValueChange={(v) => setOwnerActionMode(v as any)}
-                    className="space-y-2"
-                  >
-                    <div className="flex items-start space-x-2 border rounded-lg p-3">
-                      <RadioGroupItem value="pending_decision" id="mode-pending" className="mt-1" />
-                      <div className="flex-1">
-                        <Label htmlFor="mode-pending" className="font-medium cursor-pointer">
-                          ⏰ Aguardar decisão (72h)
-                        </Label>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          O proprietário terá 72h para decidir se assume a execução ou delega à gestão. 
-                          Ele será notificado por email e push, com lembrete 24h antes do prazo.
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-start space-x-2 border rounded-lg p-3 border-warning/30 bg-warning/10/50">
-                      <RadioGroupItem value="essential" id="mode-essential" className="mt-1" />
-                      <div className="flex-1">
-                        <Label htmlFor="mode-essential" className="font-medium cursor-pointer text-warning">
-                          🚨 Essencial / Urgente
-                        </Label>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Manutenção crítica que precisa ser executada imediatamente (vazamentos, 
-                          problemas elétricos graves, etc). Não aguarda decisão do proprietário.
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-start space-x-2 border rounded-lg p-3 border-info/30 bg-info/10/50">
-                      <RadioGroupItem value="pm_immediate" id="mode-pm" className="mt-1" />
-                      <div className="flex-1">
-                        <Label htmlFor="mode-pm" className="font-medium cursor-pointer text-info">
-                          👥 Gestão assume imediatamente
-                        </Label>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          A gestão assumirá a execução sem consultar o proprietário. 
-                          Útil para manutenções pequenas ou já acordadas.
-                        </p>
-                      </div>
-                    </div>
-                  </RadioGroup>
-                </div>
-              )}
-              <div className="space-y-2">
-                <Label>Prioridade</Label>
-                <RadioGroup value={priority} onValueChange={(v) => setPriority(v as any)}>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="normal" id="normal" />
-                    <Label htmlFor="normal" className="font-normal cursor-pointer">
-                      Normal
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="urgente" id="urgente" />
-                    <Label htmlFor="urgente" className="font-normal cursor-pointer">
-                      Urgente
-                    </Label>
-                  </div>
-                </RadioGroup>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="files">Anexos (opcional)</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    ref={inputRef}
-                    id="files"
-                    type="file"
-                    multiple
-                    accept="image/*,video/*,application/pdf,.pdf"
-                    onChange={handleFileChange}
-                    className="cursor-pointer"
-                    disabled={uploading}
-                  />
-                  {uploading ? (
-                    <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
-                  ) : (
-                    <Upload className="h-5 w-5 text-muted-foreground" />
-                  )}
-                </div>
-                {uploadedFiles.length > 0 && (
-                  <div className="space-y-2 mt-2">
-                    <p className="text-sm text-muted-foreground">
-                      {uploadedFiles.length} arquivo(s) pronto(s):
-                    </p>
-                    <div className="space-y-1">
-                      {uploadedFiles.map((file, idx) => (
-                        <div key={idx} className="flex items-center justify-between text-xs border rounded px-2 py-1">
-                          <span className="truncate flex-1">{file.name}</span>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 ml-2"
-                            onClick={() => removeFile(file.file_url)}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <Button type="submit" className="w-full" disabled={loading || uploading || loadingTicket}>
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {isEditMode ? 'Salvando...' : 'Criando...'}
-                  </>
-                ) : (
-                  isEditMode ? 'Salvar Alterações' : 'Criar Manutenção'
-                )}
-              </Button>
+              {formBody}
+              {submitButton}
             </CardContent>
           </form>
         </Card>
