@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { goBack } from "@/lib/navigation";
+import { useNavigate, useLocation } from "react-router-dom";
+import { goBack, saveScrollPosition } from "@/lib/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,6 +52,7 @@ const TodosTickets = () => {
   useScrollRestoration();
   const { user, profile } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [filteredTickets, setFilteredTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -583,7 +584,7 @@ const TodosTickets = () => {
                         className="h-8 w-8"
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/ticket-detalhes/${ticket.id}`);
+                          (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${ticket.id}`));
                         }}
                         title="Ver detalhes"
                       >

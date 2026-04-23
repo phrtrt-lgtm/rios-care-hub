@@ -1,4 +1,5 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { saveScrollPosition } from "@/lib/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 export default function Votacoes() {
   useScrollRestoration();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { profile } = useAuth();
   const queryClient = useQueryClient();
   const isTeam = profile?.role && ['admin', 'maintenance'].includes(profile.role);
@@ -190,7 +192,7 @@ export default function Votacoes() {
                     e.stopPropagation();
                     return;
                   }
-                  navigate(`/votacao-detalhes/${proposal.id}`);
+                  (saveScrollPosition(pathname), navigate(`/votacao-detalhes/${proposal.id}`));
                 }}
               >
                 <CardHeader>
