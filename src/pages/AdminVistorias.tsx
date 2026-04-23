@@ -10,6 +10,9 @@ import { Badge } from '@/components/ui/badge';
 import { InspectionCalendar } from '@/components/InspectionCalendar';
 import { QuickInspectionAttachmentButton } from '@/components/QuickInspectionAttachmentButton';
 import { CreateMaintenanceFromInspectionDialog } from '@/components/CreateMaintenanceFromInspectionDialog';
+import { useDetailSheet } from '@/hooks/useDetailSheet';
+import { DetailSheet } from '@/components/detail-sheet/DetailSheet';
+import { getRowHandlers } from '@/lib/row-interaction';
 import {
   Settings,
   List,
