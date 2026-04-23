@@ -342,7 +342,6 @@ export default function NovaManutencao() {
       case 'owner': return 'Proprietário';
       case 'management': return 'Gestão';
       case 'guest': return 'Hóspede';
-      case 'split': return 'Dividido';
       default: return '';
     }
   };
