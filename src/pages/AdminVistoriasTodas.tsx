@@ -83,14 +83,12 @@ export default function AdminVistoriasTodas() {
     setExpandedId(null);
   }, [currentPage, searchTerm, statusFilter]);
 
-  // Debounce search
+  // Sync ListFilters debounced search → server search
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setSearchTerm(searchInput);
-      setCurrentPage(1);
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [searchInput]);
+    setSearchTerm(debouncedSearch);
+    setSearchInput(debouncedSearch);
+    setCurrentPage(1);
+  }, [debouncedSearch]);
 
   const fetchInspections = async () => {
     try {
