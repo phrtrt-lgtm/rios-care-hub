@@ -9,7 +9,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { saveScrollPosition } from "@/lib/navigation";
 import {
   ChevronDown, ChevronRight, Hotel, CalendarDays, QrCode, User, Copy, Loader2, CheckCircle2,
 } from "lucide-react";
@@ -54,6 +55,7 @@ interface PixResult {
 export function OwnerBookingCommissionsPreview() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const queryClient = useQueryClient();
 
   const [openPending, setOpenPending] = useState(true);
@@ -191,7 +193,7 @@ export function OwnerBookingCommissionsPreview() {
                         />
                         <div
                           className="flex-1 min-w-0 space-y-0.5"
-                          onClick={e => { e.stopPropagation(); navigate(`/minha-comissao-booking/${c.id}`); }}
+                          onClick={e => { e.stopPropagation(); (saveScrollPosition(pathname), navigate(`/minha-comissao-booking/${c.id}`)); }}
                         >
                           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                             <User className="h-3 w-3 shrink-0" />
@@ -233,7 +235,7 @@ export function OwnerBookingCommissionsPreview() {
                 {paid.slice(0, 3).map(c => (
                   <button
                     key={c.id}
-                    onClick={() => navigate(`/minha-comissao-booking/${c.id}`)}
+                    onClick={() => (saveScrollPosition(pathname), navigate(`/minha-comissao-booking/${c.id}`))}
                     className="w-full text-left flex items-center justify-between gap-3 p-3 rounded-lg border bg-muted/30 hover:bg-accent/50 transition-colors"
                   >
                     <div className="flex-1 min-w-0">

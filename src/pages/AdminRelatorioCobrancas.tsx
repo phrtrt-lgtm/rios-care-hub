@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { goBack } from "@/lib/navigation";
+import { useNavigate, useLocation } from "react-router-dom";
+import { goBack, saveScrollPosition } from "@/lib/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,6 +44,7 @@ const statusLabel: Record<string, { label: string; color: string }> = {
 
 const AdminRelatorioCobrancas = () => {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { profile } = useAuth();
   const [charges, setCharges] = useState<PaidCharge[]>([]);
   const [loading, setLoading] = useState(true);
@@ -175,7 +176,7 @@ const AdminRelatorioCobrancas = () => {
     return (
       <div
         className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/30 cursor-pointer transition-colors"
-        onClick={() => navigate(`/cobranca/${charge.id}`)}
+        onClick={() => (saveScrollPosition(pathname), navigate(`/cobranca/${charge.id}`))}
       >
         {charge.property?.cover_photo_url ? (
           <img

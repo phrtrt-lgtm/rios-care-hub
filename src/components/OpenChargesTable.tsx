@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { saveScrollPosition } from "@/lib/navigation";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Card } from "@/components/ui/card";
@@ -75,6 +76,7 @@ export function OpenChargesTable({
   onEditCharge 
 }: OpenChargesTableProps) {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [expandedProperties, setExpandedProperties] = useState<Set<string>>(new Set());
   const [sortField, setSortField] = useState<SortField | null>("due_date");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
@@ -369,7 +371,7 @@ export function OpenChargesTable({
                       </td>
                       <td 
                         className="px-2 py-2 pl-12 cursor-pointer"
-                        onClick={() => navigate(`/cobranca/${charge.id}`)}
+                        onClick={() => (saveScrollPosition(pathname), navigate(`/cobranca/${charge.id}`))}
                       >
                         <TooltipProvider delayDuration={300}>
                           <Tooltip>

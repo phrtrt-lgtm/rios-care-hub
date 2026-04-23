@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { saveScrollPosition } from "@/lib/navigation";
 import { Wrench, Calendar, Clock, CheckCircle2, Building2, MessageSquare, ChevronRight, Users } from "lucide-react";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useChatPreloader } from "@/hooks/useChatPreloader";
@@ -44,6 +45,7 @@ const STATUS_CONFIG = {
 export function OwnerMaintenanceProgress() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const queryClient = useQueryClient();
   const [selectedTicket, setSelectedTicket] = useState<MaintenanceTicket | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
@@ -209,7 +211,7 @@ export function OwnerMaintenanceProgress() {
                 <div
                   key={ticket.id}
                   className="p-4 rounded-lg border bg-card hover:bg-muted/50 cursor-pointer transition-colors group"
-                  onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
+                  onClick={() => (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${ticket.id}`))}
                 >
                   <div className="flex items-start gap-3 mb-4">
                     {/* Property photo */}

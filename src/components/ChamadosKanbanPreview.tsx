@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { saveScrollPosition } from "@/lib/navigation";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ type OwnerTicket = {
 
 export function ChamadosKanbanPreview() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { user } = useAuth();
   const [tickets, setTickets] = useState<OwnerTicket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,7 +88,7 @@ export function ChamadosKanbanPreview() {
     <div
       key={ticket.id}
       className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors overflow-hidden"
-      onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
+      onClick={() => (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${ticket.id}`))}
     >
       <div className="flex-1 min-w-0">
         <p className="text-xs font-medium truncate">{ticket.property?.name || "Sem unidade"}</p>

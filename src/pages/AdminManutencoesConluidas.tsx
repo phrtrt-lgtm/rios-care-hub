@@ -1,8 +1,8 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
-import { goBack } from "@/lib/navigation";
+import { useNavigate, useLocation } from "react-router-dom";
+import { goBack, saveScrollPosition } from "@/lib/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -47,6 +47,7 @@ interface PropertyGroup {
 
 const AdminManutencoesConluidas = () => {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [search, setSearch] = useState("");
   const [expandedProperties, setExpandedProperties] = useState<Set<string>>(new Set());
 
@@ -290,7 +291,7 @@ const AdminManutencoesConluidas = () => {
                             } else if (anyCharge) {
                               navigate(`/manutencao-detalhes/${anyCharge.id}`);
                             } else {
-                              navigate(`/ticket-detalhes/${maintenance.id}`);
+                              (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${maintenance.id}`));
                             }
                           }}
                         >

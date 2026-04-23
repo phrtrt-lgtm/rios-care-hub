@@ -1,4 +1,5 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { saveScrollPosition } from "@/lib/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 export function VotacoesPendentes() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { user, profile } = useAuth();
 
   const { data: pendingProposals, isLoading } = useQuery({
@@ -83,7 +85,7 @@ export function VotacoesPendentes() {
             <Card
               key={proposal.id}
               className="cursor-pointer hover:border-primary transition-colors"
-              onClick={() => navigate(`/votacao-detalhes/${proposal.id}`)}
+              onClick={() => (saveScrollPosition(pathname), navigate(`/votacao-detalhes/${proposal.id}`))}
             >
               <CardContent className="pt-4">
                 <div className="flex items-start justify-between gap-4">

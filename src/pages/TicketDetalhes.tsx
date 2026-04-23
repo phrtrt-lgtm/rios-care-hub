@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { goBack } from "@/lib/navigation";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { goBack, saveScrollPosition } from "@/lib/navigation";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useReadReceipts } from "@/hooks/useReadReceipts";
@@ -78,6 +78,7 @@ interface Message {
 export default function TicketDetalhes() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { user, profile } = useAuth();
   const { toast } = useToast();
   const [ticket, setTicket] = useState<Ticket | null>(null);
@@ -1199,7 +1200,7 @@ export default function TicketDetalhes() {
         } : null}
         onSuccess={(chargeId) => {
           if (chargeId) {
-            navigate(`/cobranca/${chargeId}`);
+            (saveScrollPosition(pathname), navigate(`/cobranca/${chargeId}`));
           } else {
             fetchTicketData();
           }

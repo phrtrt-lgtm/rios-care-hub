@@ -5,7 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Building2, MessageSquare } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { saveScrollPosition } from "@/lib/navigation";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LoadingScreen } from "@/components/LoadingScreen";
@@ -39,6 +40,7 @@ export const TicketList = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   // Update current time every minute for live countdown
   useEffect(() => {
@@ -180,7 +182,7 @@ export const TicketList = () => {
               <Card
                 key={ticket.id}
                 className="cursor-pointer hover-lift hover:border-primary/20 overflow-hidden group animate-fade-in"
-                onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
+                onClick={() => (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${ticket.id}`))}
                 style={{ animationDelay: `${tickets.indexOf(ticket) * 50}ms` }}
               >
                 <div className="flex gap-4 p-4">

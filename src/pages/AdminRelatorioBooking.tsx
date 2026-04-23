@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { goBack } from "@/lib/navigation";
+import { useNavigate, useLocation } from "react-router-dom";
+import { goBack, saveScrollPosition } from "@/lib/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,6 +48,7 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
 
 const AdminRelatorioBooking = () => {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { profile } = useAuth();
   const [commissions, setCommissions] = useState<BookingCommission[]>([]);
   const [loading, setLoading] = useState(true);
@@ -249,7 +250,7 @@ const AdminRelatorioBooking = () => {
                 <div
                   key={c.id}
                   className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/30 cursor-pointer transition-colors"
-                  onClick={() => navigate(`/comissao-booking/${c.id}`)}
+                  onClick={() => (saveScrollPosition(pathname), navigate(`/comissao-booking/${c.id}`))}
                 >
                   {c.property?.cover_photo_url ? (
                     <img

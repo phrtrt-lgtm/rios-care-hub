@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { saveScrollPosition } from "@/lib/navigation";
 import { MessageSquare, Building2, Ticket, ChevronRight, ExternalLink } from "lucide-react";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useChatPreloader } from "@/hooks/useChatPreloader";
@@ -50,6 +51,7 @@ const TICKET_TYPE_LABELS: Record<string, string> = {
 export function OwnerTicketsPreview() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [selectedTicket, setSelectedTicket] = useState<OwnerTicket | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
 
@@ -163,7 +165,7 @@ export function OwnerTicketsPreview() {
                   >
                     <div
                       className="p-2.5 cursor-pointer hover:bg-muted/50 transition-colors"
-                      onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
+                      onClick={() => (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${ticket.id}`))}
                     >
                       <div className="flex items-center gap-2">
                         {/* Property photo */}
