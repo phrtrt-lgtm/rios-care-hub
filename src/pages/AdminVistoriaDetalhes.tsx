@@ -17,7 +17,8 @@ import EditInspectionDialog from '@/components/EditInspectionDialog';
 import { RoutineChecklistDisplay } from '@/components/RoutineChecklistDisplay';
 import { preloadMediaUrls } from '@/hooks/useMediaCache';
 import { InspectionCommentThread } from '@/components/comments/InspectionCommentThread';
-import { ArrowLeft, Calendar, User, CheckCircle2, AlertTriangle, Headphones, FileText, Building2, Wrench, Plus, Sparkles, Loader2, Pencil, RefreshCw, Import } from 'lucide-react';
+import { ArrowLeft, Calendar, User, CheckCircle2, AlertTriangle, Headphones, FileText, Building2, Wrench, Plus, Sparkles, Loader2, Pencil, RefreshCw, Import, ChevronDown } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -49,6 +50,7 @@ interface Attachment {
   file_name?: string;
   file_type?: string;
   size_bytes?: number;
+  maintenance_ticket_id?: string | null;
 }
 
 // Component to show audio with duration
@@ -319,6 +321,8 @@ export default function AdminVistoriaDetalhes() {
   const videoAttachments = attachments.filter(a => a.file_type?.startsWith('video/'));
   const audioAttachments = attachments.filter(a => a.file_type?.startsWith('audio/'));
   const mediaAttachments = [...imageAttachments, ...videoAttachments];
+  const pendingMedia = mediaAttachments.filter(a => !a.maintenance_ticket_id);
+  const linkedMedia = mediaAttachments.filter(a => !!a.maintenance_ticket_id);
 
   const handleMediaClick = (attachment: Attachment) => {
     const index = mediaAttachments.findIndex(a => a.id === attachment.id);
@@ -554,20 +558,55 @@ export default function AdminVistoriaDetalhes() {
               <div className="flex items-center gap-2 mb-4">
                 <Wrench className="h-5 w-5 text-primary" />
                 <h3 className="font-semibold">Fotos e Vídeos</h3>
-                <Badge variant="secondary">{mediaAttachments.length}</Badge>
+                <Badge variant="secondary">{pendingMedia.length}</Badge>
               </div>
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
-                {mediaAttachments.map((attachment) => (
-                  <MediaThumbnail
-                    key={attachment.id}
-                    src={attachment.file_url}
-                    fileType={attachment.file_type}
-                    fileName={attachment.file_name}
-                    size="lg"
-                    onClick={() => handleMediaClick(attachment)}
-                  />
-                ))}
-              </div>
+              {pendingMedia.length > 0 ? (
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+                  {pendingMedia.map((attachment) => (
+                    <MediaThumbnail
+                      key={attachment.id}
+                      src={attachment.file_url}
+                      fileType={attachment.file_type}
+                      fileName={attachment.file_name}
+                      size="lg"
+                      onClick={() => handleMediaClick(attachment)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground py-4 text-center">
+                  Todas as fotos desta vistoria já foram atribuídas a manutenções.
+                </p>
+              )}
+
+              {linkedMedia.length > 0 && (
+                <Collapsible className="mt-4">
+                  <CollapsibleTrigger asChild>
+                    <button className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                      <ChevronDown className="h-4 w-4" />
+                      Já em manutenção ({linkedMedia.length})
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 mt-2">
+                      {linkedMedia.map((att) => (
+                        <div key={att.id} className="relative aspect-square rounded-lg overflow-hidden">
+                          <img
+                            src={att.file_url}
+                            alt={att.file_name || 'Foto'}
+                            className="w-full h-full object-cover opacity-50 grayscale"
+                          />
+                          <div className="absolute top-1 left-1">
+                            <div className="bg-background/80 rounded p-0.5">
+                              <Wrench className="h-3 w-3 text-muted-foreground" />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
             </Card>
           )}
 

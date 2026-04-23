@@ -1184,7 +1184,7 @@ export default function AdminManutencoesLista() {
       const inspectionIds = (data || []).map(i => i.id);
       const { data: attachments } = await supabase
         .from("cleaning_inspection_attachments")
-        .select("id, inspection_id, file_url, file_name, file_type")
+        .select("id, inspection_id, file_url, file_name, file_type, maintenance_ticket_id")
         .in("inspection_id", inspectionIds);
 
       // Fetch owner names

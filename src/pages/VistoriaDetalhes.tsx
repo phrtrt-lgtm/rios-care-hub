@@ -6,7 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Calendar, User, Headphones, FileText, CheckCircle2, AlertTriangle, Building2 } from "lucide-react";
+import { ArrowLeft, Calendar, User, Headphones, FileText, CheckCircle2, AlertTriangle, Building2, Wrench, ChevronDown } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LoadingScreen } from "@/components/LoadingScreen";
@@ -35,6 +36,7 @@ interface Attachment {
   file_url: string;
   file_name: string | null;
   file_type: string | null;
+  maintenance_ticket_id?: string | null;
 }
 
 export default function VistoriaDetalhes() {
@@ -119,6 +121,8 @@ export default function VistoriaDetalhes() {
   const videoAttachments = attachments.filter(a => a.file_type?.startsWith('video/'));
   const audioAttachments = attachments.filter(a => a.file_type?.startsWith('audio/'));
   const mediaAttachments = [...imageAttachments, ...videoAttachments];
+  const pendingMedia = mediaAttachments.filter(a => !a.maintenance_ticket_id);
+  const linkedMedia = mediaAttachments.filter(a => !!a.maintenance_ticket_id);
 
   const handleMediaClick = (attachment: Attachment) => {
     const index = mediaAttachments.findIndex(a => a.id === attachment.id);
@@ -268,20 +272,55 @@ export default function VistoriaDetalhes() {
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-4">
                   <h3 className="font-semibold">Fotos e Vídeos</h3>
-                  <Badge variant="secondary">{mediaAttachments.length}</Badge>
+                  <Badge variant="secondary">{pendingMedia.length}</Badge>
                 </div>
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                  {mediaAttachments.map((media) => (
-                    <MediaThumbnail
-                      key={media.id}
-                      src={media.file_url}
-                      fileType={media.file_type}
-                      fileName={media.file_name}
-                      size="lg"
-                      onClick={() => handleMediaClick(media)}
-                    />
-                  ))}
-                </div>
+                {pendingMedia.length > 0 ? (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                    {pendingMedia.map((media) => (
+                      <MediaThumbnail
+                        key={media.id}
+                        src={media.file_url}
+                        fileType={media.file_type}
+                        fileName={media.file_name}
+                        size="lg"
+                        onClick={() => handleMediaClick(media)}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground py-4 text-center">
+                    Todas as fotos desta vistoria já foram atribuídas a manutenções.
+                  </p>
+                )}
+
+                {linkedMedia.length > 0 && (
+                  <Collapsible className="mt-4">
+                    <CollapsibleTrigger asChild>
+                      <button className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                        <ChevronDown className="h-4 w-4" />
+                        Já em manutenção ({linkedMedia.length})
+                      </button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
+                        {linkedMedia.map((att) => (
+                          <div key={att.id} className="relative aspect-square rounded-lg overflow-hidden">
+                            <img
+                              src={att.file_url}
+                              alt={att.file_name || 'Foto'}
+                              className="w-full h-full object-cover opacity-50 grayscale"
+                            />
+                            <div className="absolute top-1 left-1">
+                              <div className="bg-background/80 rounded p-0.5">
+                                <Wrench className="h-3 w-3 text-muted-foreground" />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                )}
               </CardContent>
             </Card>
           )}

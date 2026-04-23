@@ -964,6 +964,7 @@ export type Database = {
           file_url: string
           id: string
           inspection_id: string
+          maintenance_ticket_id: string | null
           size_bytes: number | null
         }
         Insert: {
@@ -973,6 +974,7 @@ export type Database = {
           file_url: string
           id?: string
           inspection_id: string
+          maintenance_ticket_id?: string | null
           size_bytes?: number | null
         }
         Update: {
@@ -982,6 +984,7 @@ export type Database = {
           file_url?: string
           id?: string
           inspection_id?: string
+          maintenance_ticket_id?: string | null
           size_bytes?: number | null
         }
         Relationships: [
@@ -990,6 +993,13 @@ export type Database = {
             columns: ["inspection_id"]
             isOneToOne: false
             referencedRelation: "cleaning_inspections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cleaning_inspection_attachments_maintenance_ticket_id_fkey"
+            columns: ["maintenance_ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
             referencedColumns: ["id"]
           },
         ]

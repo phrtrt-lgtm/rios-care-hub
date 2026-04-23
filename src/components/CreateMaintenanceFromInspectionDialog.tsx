@@ -20,6 +20,7 @@ interface Attachment {
   file_url: string;
   file_name?: string;
   file_type?: string;
+  maintenance_ticket_id?: string | null;
 }
 
 interface CreateMaintenanceFromInspectionDialogProps {
@@ -129,7 +130,9 @@ export function CreateMaintenanceFromInspectionDialog({
   };
 
   const selectAllAttachments = () => {
-    setSelectedAttachments(mediaAttachments.map(a => a.id));
+    setSelectedAttachments(
+      mediaAttachments.filter((a) => !a.maintenance_ticket_id).map((a) => a.id)
+    );
   };
 
   const deselectAllAttachments = () => {
@@ -225,6 +228,19 @@ export function CreateMaintenanceFromInspectionDialog({
             })),
           }),
         });
+      }
+
+      // Link selected attachments to the new maintenance ticket (non-blocking)
+      if (selectedAttachments.length > 0) {
+        const { error: linkError } = await supabase
+          .from('cleaning_inspection_attachments')
+          .update({ maintenance_ticket_id: ticket.id })
+          .in('id', selectedAttachments);
+
+        if (linkError) {
+          console.error('Erro ao vincular anexos:', linkError);
+          toast.warning('Manutenção criada, mas alguns anexos não foram vinculados');
+        }
       }
 
       toast.success('Manutenção criada com sucesso!');
@@ -408,7 +424,14 @@ export function CreateMaintenanceFromInspectionDialog({
           {mediaAttachments.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label>Selecionar Anexos da Vistoria</Label>
+                <Label>
+                  Selecionar fotos desta vistoria
+                  {mediaAttachments.some((a) => a.maintenance_ticket_id) && (
+                    <span className="ml-2 text-xs text-muted-foreground font-normal">
+                      ({mediaAttachments.filter((a) => a.maintenance_ticket_id).length} já em manutenção)
+                    </span>
+                  )}
+                </Label>
                 <div className="flex gap-2">
                   <Button type="button" variant="ghost" size="sm" onClick={selectAllAttachments}>
                     Todos
@@ -421,30 +444,46 @@ export function CreateMaintenanceFromInspectionDialog({
               <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-[200px] overflow-y-auto p-1">
                 {mediaAttachments.map((attachment) => {
                   const isSelected = selectedAttachments.includes(attachment.id);
+                  const isLinked = !!attachment.maintenance_ticket_id;
                   return (
                     <div
                       key={attachment.id}
-                      className={`relative aspect-square rounded-lg overflow-hidden cursor-pointer border-2 transition-all ${
-                        isSelected ? 'border-primary ring-2 ring-primary/30' : 'border-transparent hover:border-muted-foreground/30'
+                      title={isLinked ? 'Esta foto já foi vinculada a uma manutenção' : undefined}
+                      className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                        isLinked
+                          ? 'border-muted cursor-not-allowed'
+                          : isSelected
+                            ? 'border-primary ring-2 ring-primary/30 cursor-pointer'
+                            : 'border-transparent hover:border-muted-foreground/30 cursor-pointer'
                       }`}
-                      onClick={() => toggleAttachment(attachment.id)}
+                      onClick={() => !isLinked && toggleAttachment(attachment.id)}
                     >
                       {attachment.file_type?.startsWith('image/') ? (
                         <img
                           src={attachment.file_url}
                           alt={attachment.file_name || 'Anexo'}
-                          className="w-full h-full object-cover"
+                          className={`w-full h-full object-cover ${isLinked ? 'opacity-40 grayscale' : ''}`}
                         />
                       ) : (
-                        <div className="w-full h-full bg-muted flex items-center justify-center">
+                        <div className={`w-full h-full bg-muted flex items-center justify-center ${isLinked ? 'opacity-40 grayscale' : ''}`}>
                           {getAttachmentIcon(attachment.file_type)}
                         </div>
                       )}
-                      <div className={`absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center ${
-                        isSelected ? 'bg-primary text-primary-foreground' : 'bg-background/80 border border-muted-foreground/30'
-                      }`}>
-                        {isSelected && <Check className="h-3 w-3" />}
-                      </div>
+                      {isLinked ? (
+                        <div className="absolute inset-0 flex items-end justify-center pb-1 pointer-events-none">
+                          <span className="text-[9px] font-medium bg-black/60 text-white px-1.5 py-0.5 rounded">
+                            Em manutenção
+                          </span>
+                        </div>
+                      ) : (
+                        <div
+                          className={`absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center ${
+                            isSelected ? 'bg-primary text-primary-foreground' : 'bg-background/80 border border-muted-foreground/30'
+                          }`}
+                        >
+                          {isSelected && <Check className="h-3 w-3" />}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
