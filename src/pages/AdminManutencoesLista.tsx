@@ -589,7 +589,7 @@ function GroupRow({
             </td>
 
             {/* Status */}
-            <td className="p-0 w-[140px]">
+            <td className="p-0 w-[140px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
               <EditableCell
                 value={item.list_status || "em_progresso"}
                 type="select"
