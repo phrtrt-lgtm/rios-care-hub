@@ -80,6 +80,16 @@ const LIST_STATUSES = [
   { value: "enviar_proprietario", label: "Enviar ao Proprietário", color: "bg-primary" },
 ];
 
+// Cost responsible options shown in the list. 'pending' means the team hasn't
+// decided yet — owner does not see the maintenance and no notification is sent.
+// Selecting any other value triggers the "ticket created" notification flow.
+const COST_RESPONSIBLE_OPTIONS = [
+  { value: "pending", label: "Em espera", color: "bg-muted-foreground" },
+  { value: "owner", label: "Proprietário", color: "bg-primary" },
+  { value: "pm", label: "Gestão", color: "bg-info" },
+  { value: "guest", label: "Hóspede", color: "bg-warning" },
+];
+
 const GROUPS = [
   { id: "em_progresso", label: "Em Progresso", color: "border-l-amber-500" },
   { id: "concluidas", label: "Manutenções Concluídas", color: "border-l-green-500" },
