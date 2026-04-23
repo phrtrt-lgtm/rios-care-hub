@@ -36,7 +36,7 @@ type TicketStatus = "novo" | "em_analise" | "aguardando_info" | "em_execucao" | 
 type ListStatus = "em_progresso" | "feito" | "enviar_proprietario";
 
 type SortDirection = "asc" | "desc" | null;
-type SortField = "subject" | "property" | "amount_cents" | "management_contribution_cents" | "scheduled_at" | "service_type" | "list_status";
+type SortField = "subject" | "property" | "amount_cents" | "management_contribution_cents" | "created_at" | "service_type" | "list_status";
 
 interface MaintenanceItem {
   id: string;
