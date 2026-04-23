@@ -20,6 +20,7 @@ interface Attachment {
   file_url: string;
   file_name?: string;
   file_type?: string;
+  maintenance_ticket_id?: string | null;
 }
 
 interface CreateMaintenanceFromInspectionDialogProps {
