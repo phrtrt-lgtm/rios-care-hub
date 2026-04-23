@@ -304,7 +304,11 @@ export default function NovaCobranca({ embedded = false, editId, onSaved, onCanc
           : (asDraft ? "A cobrança foi salva como rascunho." : "A cobrança foi criada e o proprietário foi notificado."),
       });
 
-      navigate(isEditMode ? '/admin/manutencoes-lista' : '/painel');
+      if (embedded) {
+        onSaved?.();
+      } else {
+        navigate(isEditMode ? '/admin/manutencoes-lista' : '/painel');
+      }
     } catch (error: any) {
       toast({
         title: isEditMode ? "Erro ao atualizar cobrança" : "Erro ao criar cobrança",
