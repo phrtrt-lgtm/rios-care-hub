@@ -22,8 +22,7 @@ export interface MaintenanceFormData {
   category?: string | null;
   status?: string;
   cost_total_cents: number;
-  cost_responsible: 'owner' | 'management' | 'split';
-  split_owner_percent?: number | null;
+  cost_responsible: 'owner' | 'management';
   due_at?: string | null;
 }
 
