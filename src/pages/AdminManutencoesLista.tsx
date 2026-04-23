@@ -431,6 +431,7 @@ function GroupRow({
       {/* Group Items */}
       {isExpanded && sortedItems.map((item) => {
         const unread = unreadCounts[item.id] || 0;
+        const isCharge = ["cobrancas_vencidas", "cobrancas"].includes(group.id);
         return (
           <tr 
             key={item.id}
@@ -441,7 +442,6 @@ function GroupRow({
             )}
             {...(onOpenSheet
               ? (() => {
-                  const isCharge = ["cobrancas_vencidas", "cobrancas"].includes(group.id);
                   const route = isCharge ? `/cobranca/${item.id}` : `/manutencao/${item.id}`;
                   return getRowHandlers(route, () => onOpenSheet!(item.id));
                 })()
