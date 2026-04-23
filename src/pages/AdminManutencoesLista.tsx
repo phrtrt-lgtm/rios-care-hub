@@ -130,7 +130,7 @@ function SortableHeader({ label, field, currentSort, direction, onSort, classNam
 // ===== INLINE EDIT CELL COMPONENT =====
 interface EditableCellProps {
   value: string | number | null;
-  type: "text" | "currency" | "date" | "select";
+  type: "text" | "currency" | "date" | "select" | "multi-select";
   options?: { value: string; label: string; color?: string }[];
   onSave: (newValue: string | number | null) => void;
   className?: string;
@@ -170,6 +170,88 @@ function EditableCell({ value, type, options, onSave, className, placeholder }: 
     }
   }, [handleSave, value]);
 
+  if (type === "multi-select") {
+    // Value stored as CSV string. Dedupe + filter empties.
+    const selectedValues = String(value || "")
+      .split(",")
+      .map((v) => v.trim())
+      .filter(Boolean);
+    // De-duplicate options by canonical value (lower-case) so legacy + new options don't repeat
+    const uniqueOptions = options?.filter((opt, idx, arr) => {
+      return arr.findIndex((o) => o.label === opt.label) === idx;
+    }) || [];
+    const selectedOptions = uniqueOptions.filter((o) =>
+      selectedValues.some(
+        (sv) => sv === o.value || sv.toLowerCase() === o.value.toLowerCase() || sv === o.label,
+      ),
+    );
+
+    const toggleValue = (optValue: string) => {
+      const exists = selectedValues.some(
+        (sv) => sv === optValue || sv.toLowerCase() === optValue.toLowerCase(),
+      );
+      let next: string[];
+      if (exists) {
+        next = selectedValues.filter(
+          (sv) => sv !== optValue && sv.toLowerCase() !== optValue.toLowerCase(),
+        );
+      } else {
+        next = [...selectedValues, optValue];
+      }
+      onSave(next.length > 0 ? next.join(",") : null);
+    };
+
+    return (
+      <Popover>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className={cn(
+              "h-8 w-full flex items-center gap-1 px-2 rounded hover:bg-muted/50 transition-colors text-sm overflow-hidden",
+              className,
+            )}
+            data-no-sheet
+          >
+            {selectedOptions.length > 0 ? (
+              <div className="flex items-center gap-1 flex-wrap">
+                {selectedOptions.slice(0, 2).map((opt) => (
+                  <Badge key={opt.value} className={cn("text-white text-[10px] px-1.5 py-0", opt.color)}>
+                    {opt.label}
+                  </Badge>
+                ))}
+                {selectedOptions.length > 2 && (
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                    +{selectedOptions.length - 2}
+                  </Badge>
+                )}
+              </div>
+            ) : (
+              <span className="text-muted-foreground text-sm">{placeholder || "—"}</span>
+            )}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-56 p-2" align="start" data-no-sheet>
+          <div className="flex flex-col gap-1 max-h-72 overflow-y-auto">
+            {uniqueOptions.map((opt) => {
+              const isSelected = selectedOptions.some((s) => s.label === opt.label);
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => toggleValue(opt.value)}
+                  className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted/50 transition-colors text-left"
+                >
+                  <Checkbox checked={isSelected} className="pointer-events-none" />
+                  <Badge className={cn("text-white text-xs", opt.color)}>{opt.label}</Badge>
+                </button>
+              );
+            })}
+          </div>
+        </PopoverContent>
+      </Popover>
+    );
+  }
+
   if (type === "select") {
     const selectedOption = options?.find(o => o.value === value);
     return (
@@ -177,7 +259,7 @@ function EditableCell({ value, type, options, onSave, className, placeholder }: 
         value={String(value || "")} 
         onValueChange={(v) => onSave(v)}
       >
-        <SelectTrigger className={cn("h-8 border-0 bg-transparent hover:bg-muted/50 transition-colors", className)}>
+        <SelectTrigger className={cn("h-8 border-0 bg-transparent hover:bg-muted/50 transition-colors", className)} data-no-sheet>
           {selectedOption ? (
             <Badge className={cn("text-white text-xs", selectedOption.color)}>
               {selectedOption.label}
@@ -186,7 +268,7 @@ function EditableCell({ value, type, options, onSave, className, placeholder }: 
             <span className="text-muted-foreground text-sm">{placeholder || "—"}</span>
           )}
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent data-no-sheet>
           {options?.map(opt => (
             <SelectItem key={opt.value} value={opt.value}>
               <Badge className={cn("text-white text-xs", opt.color)}>{opt.label}</Badge>
@@ -199,7 +281,7 @@ function EditableCell({ value, type, options, onSave, className, placeholder }: 
 
   if (isEditing) {
     return (
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1" data-no-sheet>
         <Input
           ref={inputRef}
           value={editValue}
@@ -222,9 +304,11 @@ function EditableCell({ value, type, options, onSave, className, placeholder }: 
 
   return (
     <div
-      onClick={() => {
+      data-no-sheet
+      onClick={(e) => {
+        e.stopPropagation();
         setEditValue(type === "currency" && typeof value === "number" 
-          ? (value / 100).toFixed(2).replace(".", ",")
+          ? (value / 100).toFixed(2).replace(",", ",")
           : String(value ?? "")
         );
         setIsEditing(true);
