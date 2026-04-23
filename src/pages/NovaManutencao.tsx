@@ -42,8 +42,7 @@ export default function NovaManutencao() {
   const [uploadedFiles, setUploadedFiles] = useState<ReadyAttachment[]>([]);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [costResponsible, setCostResponsible] = useState<'owner' | 'management' | 'split' | 'guest'>('owner');
-  const [splitOwnerPercent, setSplitOwnerPercent] = useState<number | null>(50);
+  const [costResponsible, setCostResponsible] = useState<'owner' | 'management' | 'guest'>('owner');
   const [guestCheckoutDate, setGuestCheckoutDate] = useState<string>("");
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
