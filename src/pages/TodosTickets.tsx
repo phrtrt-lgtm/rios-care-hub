@@ -734,6 +734,14 @@ const TodosTickets = () => {
                   )}
                 </CardContent>
               </Card>
+
+              {hasMore && (
+                <div className="flex justify-center pt-2">
+                  <Button variant="outline" onClick={() => setVisibleCount((v) => v + 100)}>
+                    Carregar mais ({filteredTickets.length - visibleCount} restantes)
+                  </Button>
+                </div>
+              )}
             </div>
           );
         })()}
