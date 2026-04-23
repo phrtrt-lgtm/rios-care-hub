@@ -41,6 +41,9 @@ export default function NovaCobranca() {
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const isReposicao = searchParams.get("reposicao") === "true";
+  const editChargeId = searchParams.get("edit");
+  const isEditMode = !!editChargeId;
+  const [loadingCharge, setLoadingCharge] = useState(isEditMode);
 
   const [formData, setFormData] = useState({
     owner_id: searchParams.get("owner_id") || "",
@@ -78,6 +81,41 @@ export default function NovaCobranca() {
       fetchProperties(formData.owner_id);
     }
   }, []);
+
+  // Load existing charge for edit mode
+  useEffect(() => {
+    if (!isEditMode || !editChargeId) return;
+    (async () => {
+      try {
+        const { data: charge, error } = await supabase
+          .from('charges')
+          .select('*')
+          .eq('id', editChargeId)
+          .maybeSingle();
+        if (error) throw error;
+        if (!charge) {
+          toast({ title: 'Cobrança não encontrada', variant: 'destructive' });
+          navigate('/admin/manutencoes-lista');
+          return;
+        }
+        setFormData({
+          owner_id: charge.owner_id || '',
+          property_id: charge.property_id || '',
+          title: charge.title || '',
+          description: charge.description || '',
+          category: charge.category || charge.service_type || '',
+          amount_cents: charge.amount_cents ? String(Math.round(charge.amount_cents / 100)) : '',
+          management_contribution_cents: charge.management_contribution_cents ? String(Math.round(charge.management_contribution_cents / 100)) : '',
+          due_date: charge.due_date || '',
+        });
+        if (charge.owner_id) await fetchProperties(charge.owner_id);
+      } catch (err: any) {
+        toast({ title: 'Erro ao carregar cobrança', description: err.message, variant: 'destructive' });
+      } finally {
+        setLoadingCharge(false);
+      }
+    })();
+  }, [isEditMode, editChargeId]);
 
   const fetchOwners = async () => {
     const { data, error } = await supabase
