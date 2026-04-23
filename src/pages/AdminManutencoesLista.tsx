@@ -353,6 +353,7 @@ interface GroupRowProps {
   onUploadAttachment: (item: MaintenanceItem) => void;
   uploadingItemId: string | null;
   onOpenSheet?: (id: string) => void;
+  onEdit: (item: MaintenanceItem, isCharge: boolean) => void;
 }
 
 function GroupRow({ 
@@ -371,7 +372,8 @@ function GroupRow({
   onOpenAttachments,
   onUploadAttachment,
   uploadingItemId,
-  onOpenSheet
+  onOpenSheet,
+  onEdit
 }: GroupRowProps) {
   // Sort items within the group
   const sortedItems = useMemo(() => {
@@ -430,7 +432,7 @@ function GroupRow({
         )}
         onClick={onToggle}
       >
-        <td colSpan={10} className="p-2">
+        <td colSpan={11} className="p-2">
           <div className="flex items-center gap-2 font-medium">
             {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
             <span>{group.label}</span>
@@ -630,6 +632,24 @@ function GroupRow({
                   className="justify-center"
                 />
               )}
+            </td>
+
+            {/* Editar */}
+            <td className="p-0 w-[44px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-center px-1 py-2">
+                <button
+                  type="button"
+                  className="p-1.5 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(item, isCharge);
+                  }}
+                  title="Editar"
+                  aria-label="Editar"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </td>
           </tr>
         );
@@ -2265,12 +2285,13 @@ export default function AdminManutencoesLista() {
                   <th className="text-center px-1 py-2 font-medium w-[120px]">Responsável</th>
                   <SortableHeader label="Label" field="service_type" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[120px]" />
                   <SortableHeader label="Status" field="list_status" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[140px]" />
+                  <th className="text-center px-1 py-2 font-medium w-[44px]">Editar</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={10} className="text-center p-8 text-muted-foreground">
+                    <td colSpan={11} className="text-center p-8 text-muted-foreground">
                       Carregando...
                     </td>
                   </tr>
@@ -2300,6 +2321,12 @@ export default function AdminManutencoesLista() {
                           onOpenSheet={(id) => {
                             const isCharge = ["cobrancas_vencidas", "cobrancas"].includes(group.id);
                             openSheet(id, isCharge ? "cobranca" : "maintenance");
+                          }}
+                          onEdit={(item, isCharge) => {
+                            const path = isCharge
+                              ? `/nova-cobranca?edit=${item.id}`
+                              : `/admin/nova-manutencao?edit=${item.id}`;
+                            navigate(path);
                           }}
                         />
 
@@ -2374,7 +2401,7 @@ export default function AdminManutencoesLista() {
                         {/* "+ Adicionar item" row */}
                         {isExpanded && !isInlineActive && (
                           <tr className="border-b">
-                            <td colSpan={10} className="p-0">
+                            <td colSpan={11} className="p-0">
                               <button
                                 className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors group"
                                 onClick={() => handleStartInlineAdd(group.id)}

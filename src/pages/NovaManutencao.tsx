@@ -54,6 +54,10 @@ export default function NovaManutencao() {
   const [searchParams] = useSearchParams();
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const editTicketId = searchParams.get('edit');
+  const isEditMode = !!editTicketId;
+  const [loadingTicket, setLoadingTicket] = useState(isEditMode);
+
   useEffect(() => {
     // Only admins, agents, and maintenance can access this page
     if (profile && !['admin', 'agent', 'maintenance'].includes(profile.role)) {
@@ -62,6 +66,42 @@ export default function NovaManutencao() {
     }
     fetchProperties();
   }, [profile, navigate]);
+
+  // Load existing ticket for edit mode
+  useEffect(() => {
+    if (!isEditMode || !editTicketId) return;
+    (async () => {
+      try {
+        const { data: ticket, error } = await supabase
+          .from('tickets')
+          .select('*')
+          .eq('id', editTicketId)
+          .maybeSingle();
+        if (error) throw error;
+        if (!ticket) {
+          toast.error('Manutenção não encontrada');
+          navigate('/admin/manutencoes-lista');
+          return;
+        }
+        setSubject(ticket.subject || '');
+        setDescription(ticket.description || '');
+        setPriority((ticket.priority as any) || 'normal');
+        setPropertyId(ticket.property_id || '');
+        const cr = ticket.cost_responsible;
+        setCostResponsible(
+          cr === 'pm' ? 'management' : (cr as any) || 'pending'
+        );
+        setGuestCheckoutDate(ticket.guest_checkout_date || '');
+        if (ticket.essential) setOwnerActionMode('essential');
+        else if (ticket.owner_decision === 'pm_will_fix') setOwnerActionMode('pm_immediate');
+        else setOwnerActionMode('pending_decision');
+      } catch (err: any) {
+        toast.error('Erro ao carregar manutenção: ' + err.message);
+      } finally {
+        setLoadingTicket(false);
+      }
+    })();
+  }, [isEditMode, editTicketId, navigate]);
 
   // Pre-select property from URL parameter
   useEffect(() => {
@@ -256,42 +296,70 @@ export default function NovaManutencao() {
       // Determine if this is essential (immediate action) or needs owner decision
       const isEssential = ownerActionMode === 'essential';
       const ownerDecision = ownerActionMode === 'pm_immediate' ? 'pm_will_fix' : null;
-      
+
       // Set 72h deadline for owner decision if mode is pending_decision
-      const ownerActionDueAt = ownerActionMode === 'pending_decision' 
+      const ownerActionDueAt = ownerActionMode === 'pending_decision'
         ? new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString()
         : null;
 
-      // Create maintenance ticket
-      const { data: ticket, error: ticketError } = await supabase
-        .from("tickets")
-        .insert([{
-          owner_id: selectedProperty.owner_id,
-          created_by: user!.id,
-          ticket_type: "manutencao" as const,
-          kind: "maintenance",
-          subject,
-          description,
-          priority,
-          property_id: propertyId,
-          cost_responsible: dbCostResponsible,
-          guest_checkout_date: costResponsible === 'guest' && guestCheckoutDate ? guestCheckoutDate : null,
-          essential: isEssential,
-          owner_decision: ownerDecision,
-          owner_action_due_at: ownerActionDueAt,
-        }])
-        .select()
-        .single();
+      let ticketId: string;
 
-      if (ticketError) throw ticketError;
+      if (isEditMode && editTicketId) {
+        // UPDATE existing ticket
+        const { error: updateError } = await supabase
+          .from('tickets')
+          .update({
+            owner_id: selectedProperty.owner_id,
+            subject,
+            description,
+            priority,
+            property_id: propertyId,
+            cost_responsible: dbCostResponsible,
+            guest_checkout_date: costResponsible === 'guest' && guestCheckoutDate ? guestCheckoutDate : null,
+            essential: isEssential,
+            owner_decision: ownerDecision,
+            owner_action_due_at: ownerActionDueAt,
+          })
+          .eq('id', editTicketId);
+        if (updateError) throw updateError;
+        ticketId = editTicketId;
+      } else {
+        // INSERT new ticket
+        const { data: ticket, error: ticketError } = await supabase
+          .from("tickets")
+          .insert([{
+            owner_id: selectedProperty.owner_id,
+            created_by: user!.id,
+            ticket_type: "manutencao" as const,
+            kind: "maintenance",
+            subject,
+            description,
+            priority,
+            property_id: propertyId,
+            cost_responsible: dbCostResponsible,
+            guest_checkout_date: costResponsible === 'guest' && guestCheckoutDate ? guestCheckoutDate : null,
+            essential: isEssential,
+            owner_decision: ownerDecision,
+            owner_action_due_at: ownerActionDueAt,
+          }])
+          .select()
+          .single();
 
-      // Create initial message with uploaded attachments
-      if (uploadedFiles.length > 0 || description) {
+        if (ticketError) throw ticketError;
+        ticketId = ticket.id;
+      }
+
+      // Append message with new attachments (only when there are uploads, or for new ticket initial message)
+      const shouldCreateMessage = !isEditMode
+        ? (uploadedFiles.length > 0 || description)
+        : uploadedFiles.length > 0;
+
+      if (shouldCreateMessage) {
         const session = await supabase.auth.getSession();
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-        
-        await fetch(`${supabaseUrl}/functions/v1/create-ticket-message/${ticket.id}`, {
+
+        await fetch(`${supabaseUrl}/functions/v1/create-ticket-message/${ticketId}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -300,7 +368,7 @@ export default function NovaManutencao() {
           },
           body: JSON.stringify({
             author_type: 'agent',
-            message: description || null,
+            message: isEditMode ? null : (description || null),
             attachments: uploadedFiles.map(f => ({
               file_url: f.file_url,
               file_type: f.file_type,
@@ -311,13 +379,11 @@ export default function NovaManutencao() {
         });
       }
 
-      // Send notification for owner decision if applicable.
-      // 'pending' (Em espera) MUST NOT notify the owner — the maintenance stays
-      // hidden until the team defines a real responsible.
-      if (ownerActionMode === 'pending_decision' && costResponsible === 'owner') {
+      // Send notification for owner decision only on creation (not edit)
+      if (!isEditMode && ownerActionMode === 'pending_decision' && costResponsible === 'owner') {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-        
+
         fetch(`${supabaseUrl}/functions/v1/notify-owner-decision`, {
           method: 'POST',
           headers: {
@@ -326,16 +392,16 @@ export default function NovaManutencao() {
           },
           body: JSON.stringify({
             type: 'decision_pending',
-            ticketId: ticket.id,
+            ticketId,
           }),
         }).catch(err => console.error('Failed to send decision notification:', err));
       }
 
-      toast.success("Manutenção criada com sucesso!");
-      navigate(`/admin/manutencoes`);
+      toast.success(isEditMode ? "Manutenção atualizada!" : "Manutenção criada com sucesso!");
+      navigate(`/admin/manutencoes-lista`);
     } catch (error: any) {
-      console.error("Error creating maintenance:", error);
-      toast.error(error.message || "Erro ao criar manutenção");
+      console.error("Error saving maintenance:", error);
+      toast.error(error.message || "Erro ao salvar manutenção");
     } finally {
       setLoading(false);
     }
@@ -362,16 +428,16 @@ export default function NovaManutencao() {
           <Button variant="ghost" size="icon" type="button" onClick={handleGoBack}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-xl font-semibold">Nova Manutenção</h1>
+          <h1 className="text-xl font-semibold">{isEditMode ? 'Editar Manutenção' : 'Nova Manutenção'}</h1>
         </div>
       </header>
 
       <main className="container mx-auto max-w-2xl px-4 py-8">
         <Card className="shadow-xl">
           <CardHeader>
-            <CardTitle>Criar manutenção</CardTitle>
+            <CardTitle>{isEditMode ? 'Editar manutenção' : 'Criar manutenção'}</CardTitle>
             <CardDescription>
-              Registre um novo chamado de manutenção para uma unidade
+              {isEditMode ? 'Atualize as informações deste chamado' : 'Registre um novo chamado de manutenção para uma unidade'}
             </CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
@@ -655,14 +721,14 @@ export default function NovaManutencao() {
                 )}
               </div>
 
-              <Button type="submit" className="w-full" disabled={loading || uploading}>
+              <Button type="submit" className="w-full" disabled={loading || uploading || loadingTicket}>
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Criando...
+                    {isEditMode ? 'Salvando...' : 'Criando...'}
                   </>
                 ) : (
-                  "Criar Manutenção"
+                  isEditMode ? 'Salvar Alterações' : 'Criar Manutenção'
                 )}
               </Button>
             </CardContent>

@@ -41,6 +41,9 @@ export default function NovaCobranca() {
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const isReposicao = searchParams.get("reposicao") === "true";
+  const editChargeId = searchParams.get("edit");
+  const isEditMode = !!editChargeId;
+  const [loadingCharge, setLoadingCharge] = useState(isEditMode);
 
   const [formData, setFormData] = useState({
     owner_id: searchParams.get("owner_id") || "",
@@ -78,6 +81,41 @@ export default function NovaCobranca() {
       fetchProperties(formData.owner_id);
     }
   }, []);
+
+  // Load existing charge for edit mode
+  useEffect(() => {
+    if (!isEditMode || !editChargeId) return;
+    (async () => {
+      try {
+        const { data: charge, error } = await supabase
+          .from('charges')
+          .select('*')
+          .eq('id', editChargeId)
+          .maybeSingle();
+        if (error) throw error;
+        if (!charge) {
+          toast({ title: 'Cobrança não encontrada', variant: 'destructive' });
+          navigate('/admin/manutencoes-lista');
+          return;
+        }
+        setFormData({
+          owner_id: charge.owner_id || '',
+          property_id: charge.property_id || '',
+          title: charge.title || '',
+          description: charge.description || '',
+          category: charge.category || charge.service_type || '',
+          amount_cents: charge.amount_cents ? String(Math.round(charge.amount_cents / 100)) : '',
+          management_contribution_cents: charge.management_contribution_cents ? String(Math.round(charge.management_contribution_cents / 100)) : '',
+          due_date: charge.due_date || '',
+        });
+        if (charge.owner_id) await fetchProperties(charge.owner_id);
+      } catch (err: any) {
+        toast({ title: 'Erro ao carregar cobrança', description: err.message, variant: 'destructive' });
+      } finally {
+        setLoadingCharge(false);
+      }
+    })();
+  }, [isEditMode, editChargeId]);
 
   const fetchOwners = async () => {
     const { data, error } = await supabase
@@ -170,31 +208,53 @@ export default function NovaCobranca() {
     setLoading(true);
 
     try {
-      // Create charge
-      const { data: charge, error: chargeError } = await supabase
-        .from('charges')
-        .insert({
-          owner_id: formData.owner_id,
-          property_id: formData.property_id || null,
-          title: formData.title,
-          description: formData.description || null,
-          category: formData.category || null,
-          amount_cents: parseInt(formData.amount_cents) * 100, // Convert to cents
-          management_contribution_cents: formData.management_contribution_cents ? parseInt(formData.management_contribution_cents) * 100 : 0,
-          due_date: formData.due_date || null,
-          status: asDraft ? 'draft' : 'sent'
-        })
-        .select()
-        .single();
+      let chargeId: string;
 
-      if (chargeError) throw chargeError;
+      if (isEditMode && editChargeId) {
+        // UPDATE existing charge
+        const { error: updateError } = await supabase
+          .from('charges')
+          .update({
+            owner_id: formData.owner_id,
+            property_id: formData.property_id || null,
+            title: formData.title,
+            description: formData.description || null,
+            category: formData.category || null,
+            amount_cents: parseInt(formData.amount_cents) * 100,
+            management_contribution_cents: formData.management_contribution_cents ? parseInt(formData.management_contribution_cents) * 100 : 0,
+            due_date: formData.due_date || null,
+          })
+          .eq('id', editChargeId);
+        if (updateError) throw updateError;
+        chargeId = editChargeId;
+      } else {
+        // INSERT new charge
+        const { data: charge, error: chargeError } = await supabase
+          .from('charges')
+          .insert({
+            owner_id: formData.owner_id,
+            property_id: formData.property_id || null,
+            title: formData.title,
+            description: formData.description || null,
+            category: formData.category || null,
+            amount_cents: parseInt(formData.amount_cents) * 100, // Convert to cents
+            management_contribution_cents: formData.management_contribution_cents ? parseInt(formData.management_contribution_cents) * 100 : 0,
+            due_date: formData.due_date || null,
+            status: asDraft ? 'draft' : 'sent'
+          })
+          .select()
+          .single();
 
-      // Upload attachments
+        if (chargeError) throw chargeError;
+        chargeId = charge.id;
+      }
+
+      // Upload new attachments (if any)
       for (const file of attachments) {
         // Compress video if it's a video file
         const processedFile = await processFileForUpload(file);
         const fileExt = processedFile.name.split('.').pop();
-        const filePath = `charges/${charge.id}/${Date.now()}.${fileExt}`;
+        const filePath = `charges/${chargeId}/${Date.now()}.${fileExt}`;
 
         const { error: uploadError } = await supabase.storage
           .from('attachments')
@@ -205,7 +265,7 @@ export default function NovaCobranca() {
         const { error: dbError } = await supabase
           .from('charge_attachments')
           .insert({
-            charge_id: charge.id,
+            charge_id: chargeId,
             file_name: processedFile.name,
             file_path: filePath,
             file_size: processedFile.size,
@@ -216,30 +276,31 @@ export default function NovaCobranca() {
         if (dbError) throw dbError;
       }
 
-      // Enviar notificação por email e push se não for rascunho
-      if (!asDraft) {
+      // Enviar notificação por email e push apenas para CRIAÇÃO (não rascunho, não edição)
+      if (!isEditMode && !asDraft) {
         try {
           await supabase.functions.invoke('send-charge-email', {
             body: {
               type: 'charge_created',
-              chargeId: charge.id,
+              chargeId,
             },
           });
         } catch (notifyError) {
           console.error('Erro ao enviar notificação:', notifyError);
-          // Não bloqueia a criação se falhar a notificação
         }
       }
 
       toast({
-        title: asDraft ? "Rascunho salvo!" : "Cobrança criada!",
-        description: asDraft ? "A cobrança foi salva como rascunho." : "A cobrança foi criada e o proprietário foi notificado.",
+        title: isEditMode ? "Cobrança atualizada!" : (asDraft ? "Rascunho salvo!" : "Cobrança criada!"),
+        description: isEditMode
+          ? "As alterações foram salvas."
+          : (asDraft ? "A cobrança foi salva como rascunho." : "A cobrança foi criada e o proprietário foi notificado."),
       });
 
-      navigate('/painel');
+      navigate(isEditMode ? '/admin/manutencoes-lista' : '/painel');
     } catch (error: any) {
       toast({
-        title: "Erro ao criar cobrança",
+        title: isEditMode ? "Erro ao atualizar cobrança" : "Erro ao criar cobrança",
         description: error.message,
         variant: "destructive",
       });
@@ -262,7 +323,7 @@ export default function NovaCobranca() {
       <main className="container mx-auto px-4 py-8 max-w-2xl">
         <Card>
           <CardHeader>
-            <CardTitle>{isReposicao ? "Reposição de Item" : "Nova Cobrança"}</CardTitle>
+            <CardTitle>{isEditMode ? "Editar Cobrança" : (isReposicao ? "Reposição de Item" : "Nova Cobrança")}</CardTitle>
             {isReposicao && (
               <p className="text-sm text-muted-foreground">
                 Registre a compra de itens para o imóvel. O aporte da gestão cobre 100% automaticamente.
@@ -464,21 +525,23 @@ export default function NovaCobranca() {
               </div>
 
               <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => navigate('/painel')}>
+                <Button type="button" variant="outline" onClick={() => navigate(isEditMode ? '/admin/manutencoes-lista' : '/painel')}>
                   Cancelar
                 </Button>
-                <Button 
-                  type="button" 
-                  variant="secondary" 
-                  disabled={loading}
-                  onClick={(e) => handleSubmit(e, true)}
-                >
+                {!isEditMode && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={loading}
+                    onClick={(e) => handleSubmit(e, true)}
+                  >
+                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Salvar Rascunho
+                  </Button>
+                )}
+                <Button type="submit" disabled={loading || loadingCharge}>
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Salvar Rascunho
-                </Button>
-                <Button type="submit" disabled={loading}>
-                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Criar e Enviar
+                  {isEditMode ? "Salvar Alterações" : "Criar e Enviar"}
                 </Button>
               </div>
             </form>
