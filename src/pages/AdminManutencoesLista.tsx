@@ -344,8 +344,16 @@ function GroupRow({
             key={item.id}
             className={cn(
               "border-b hover:bg-muted/30 transition-colors group h-10",
-              selectedIds.has(item.id) && "bg-primary/5"
+              selectedIds.has(item.id) && "bg-primary/5",
+              onOpenSheet && "cursor-pointer"
             )}
+            {...(onOpenSheet
+              ? (() => {
+                  const isCharge = ["cobrancas_vencidas", "cobrancas"].includes(group.id);
+                  const route = isCharge ? `/cobranca/${item.id}` : `/manutencao/${item.id}`;
+                  return getRowHandlers(route, () => onOpenSheet!(item.id));
+                })()
+              : {})}
           >
             {/* Checkbox */}
             <td className="p-0 w-[40px]" onClick={(e) => e.stopPropagation()}>
@@ -691,9 +699,10 @@ function VistoriasTable({
       <tr 
         key={inspection.id}
         className={cn(
-          "border-b hover:bg-muted/30 transition-colors h-12",
+          "border-b hover:bg-muted/30 transition-colors h-12 cursor-pointer",
           isSelected && "bg-primary/5"
         )}
+        {...getRowHandlers(`/admin/vistoria/${inspection.id}`, () => openSheet(inspection.id, "vistoria"))}
       >
         {/* Checkbox */}
         <td 
@@ -993,6 +1002,7 @@ export default function AdminManutencoesLista() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { open: detailSheetOpen, entityId: detailEntityId, entityType: detailEntityType, openSheet, closeSheet } = useDetailSheet();
   const [search, setSearch] = useState("");
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
     em_progresso: false,
@@ -2140,6 +2150,10 @@ export default function AdminManutencoesLista() {
                           onOpenAttachments={handleOpenAttachments}
                           onUploadAttachment={handleUploadAttachment}
                           uploadingItemId={uploadingItemId}
+                          onOpenSheet={(id) => {
+                            const isCharge = ["cobrancas_vencidas", "cobrancas"].includes(group.id);
+                            openSheet(id, isCharge ? "cobranca" : "maintenance");
+                          }}
                         />
 
                         {/* Inline form row */}
