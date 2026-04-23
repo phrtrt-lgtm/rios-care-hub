@@ -489,23 +489,6 @@ function GroupRow({
               </TooltipProvider>
             </td>
 
-            {/* Chat / Mensagens não lidas */}
-            <td className="p-0 w-[44px]">
-              <div
-                className="flex items-center justify-center px-1 py-2 cursor-pointer hover:bg-muted/50 rounded transition-colors"
-                onClick={() => onOpenChat(item)}
-              >
-                <div className="relative">
-                  <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                  {unread > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center text-[10px] font-bold bg-destructive text-destructive-foreground rounded-full px-1">
-                      {unread > 9 ? "9+" : unread}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </td>
-
             {/* Imóvel */}
             <td className="p-0 w-[140px] max-w-[140px]">
               <TooltipProvider delayDuration={300}>
@@ -520,28 +503,6 @@ function GroupRow({
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-            </td>
-
-            {/* Valor */}
-            <td className="p-0 w-[90px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
-              <EditableCell
-                value={item.amount_cents || null}
-                type="currency"
-                placeholder="R$ 0,00"
-                onSave={(val) => onUpdateItem(item.id, "amount_cents", val, isCharge)}
-                className="justify-center font-medium"
-              />
-            </td>
-
-            {/* Aporte Gestão */}
-            <td className="p-0 w-[90px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
-              <EditableCell
-                value={item.management_contribution_cents || null}
-                type="currency"
-                placeholder="R$ 0,00"
-                onSave={(val) => onUpdateItem(item.id, "management_contribution_cents", val, isCharge)}
-                className="justify-center text-success"
-              />
             </td>
 
             {/* Data (criação) */}
@@ -589,23 +550,7 @@ function GroupRow({
               </div>
             </td>
 
-            {/* Responsável pelo custo */}
-            <td className="p-0 w-[120px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
-              {isCharge ? (
-                <div className="px-1 py-2 text-sm text-center text-muted-foreground">
-                  {COST_RESPONSIBLE_OPTIONS.find(o => o.value === item.cost_responsible)?.label || "—"}
-                </div>
-              ) : (
-                <EditableCell
-                  value={item.cost_responsible || "pending"}
-                  type="select"
-                  options={COST_RESPONSIBLE_OPTIONS}
-                  onSave={(val) => onUpdateItem(item.id, "cost_responsible", val, false)}
-                  className="justify-center"
-                />
-              )}
-            </td>
-
+            {/* Label (service_type) */}
             <td className="p-0 w-[120px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
               <EditableCell
                 value={item.service_type || null}
@@ -632,6 +577,62 @@ function GroupRow({
                   className="justify-center"
                 />
               )}
+            </td>
+
+            {/* Responsável pelo custo */}
+            <td className="p-0 w-[120px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
+              {isCharge ? (
+                <div className="px-1 py-2 text-sm text-center text-muted-foreground">
+                  {COST_RESPONSIBLE_OPTIONS.find(o => o.value === item.cost_responsible)?.label || "—"}
+                </div>
+              ) : (
+                <EditableCell
+                  value={item.cost_responsible || "pending"}
+                  type="select"
+                  options={COST_RESPONSIBLE_OPTIONS}
+                  onSave={(val) => onUpdateItem(item.id, "cost_responsible", val, false)}
+                  className="justify-center"
+                />
+              )}
+            </td>
+
+            {/* Valor */}
+            <td className="p-0 w-[90px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
+              <EditableCell
+                value={item.amount_cents || null}
+                type="currency"
+                placeholder="R$ 0,00"
+                onSave={(val) => onUpdateItem(item.id, "amount_cents", val, isCharge)}
+                className="justify-center font-medium"
+              />
+            </td>
+
+            {/* Aporte Gestão */}
+            <td className="p-0 w-[90px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
+              <EditableCell
+                value={item.management_contribution_cents || null}
+                type="currency"
+                placeholder="R$ 0,00"
+                onSave={(val) => onUpdateItem(item.id, "management_contribution_cents", val, isCharge)}
+                className="justify-center text-success"
+              />
+            </td>
+
+            {/* Chat / Mensagens não lidas */}
+            <td className="p-0 w-[44px]">
+              <div
+                className="flex items-center justify-center px-1 py-2 cursor-pointer hover:bg-muted/50 rounded transition-colors"
+                onClick={() => onOpenChat(item)}
+              >
+                <div className="relative">
+                  <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                  {unread > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center text-[10px] font-bold bg-destructive text-destructive-foreground rounded-full px-1">
+                      {unread > 9 ? "9+" : unread}
+                    </span>
+                  )}
+                </div>
+              </div>
             </td>
 
             {/* Editar */}
