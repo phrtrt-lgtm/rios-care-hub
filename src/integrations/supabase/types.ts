@@ -1146,12 +1146,57 @@ export type Database = {
         }
         Relationships: []
       }
+      financial_report_audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          actor_name: string | null
+          actor_role: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          report_id: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          actor_name?: string | null
+          actor_role?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          report_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          actor_name?: string | null
+          actor_role?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          report_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_report_audit_log_report_fk"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "financial_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       financial_reports: {
         Row: {
+          archive_reason: string | null
+          archived_at: string | null
+          archived_by: string | null
           commission_percentage: number
           created_at: string
           created_by: string | null
           id: string
+          internal_notes: string | null
           owner_id: string
           period_end: string | null
           period_start: string | null
@@ -1161,12 +1206,17 @@ export type Database = {
           report_type: string
           status: string
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
+          archive_reason?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
           commission_percentage?: number
           created_at?: string
           created_by?: string | null
           id?: string
+          internal_notes?: string | null
           owner_id: string
           period_end?: string | null
           period_start?: string | null
@@ -1176,12 +1226,17 @@ export type Database = {
           report_type: string
           status?: string
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
+          archive_reason?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
           commission_percentage?: number
           created_at?: string
           created_by?: string | null
           id?: string
+          internal_notes?: string | null
           owner_id?: string
           period_end?: string | null
           period_start?: string | null
@@ -1191,6 +1246,7 @@ export type Database = {
           report_type?: string
           status?: string
           updated_at?: string
+          updated_by?: string | null
         }
         Relationships: [
           {
@@ -2644,6 +2700,14 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      delete_financial_report: {
+        Args: {
+          p_actor_name: string
+          p_actor_role: string
+          p_report_id: string
+        }
+        Returns: undefined
       }
       has_role: {
         Args: {
