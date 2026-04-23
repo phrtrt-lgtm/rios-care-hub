@@ -295,9 +295,9 @@ function GroupRow({
           aValue = a.management_contribution_cents || 0;
           bValue = b.management_contribution_cents || 0;
           break;
-        case "scheduled_at":
-          aValue = a.scheduled_at || "";
-          bValue = b.scheduled_at || "";
+        case "created_at":
+          aValue = a.created_at || "";
+          bValue = b.created_at || "";
           break;
         case "service_type":
           aValue = (a.service_type || "").toLowerCase();
@@ -431,15 +431,11 @@ function GroupRow({
               />
             </td>
 
-            {/* Data */}
+            {/* Data (criação) */}
             <td className="p-0 w-[100px]">
-              <EditableCell
-                value={item.scheduled_at}
-                type="date"
-                placeholder="—"
-                onSave={(val) => onUpdateItem(item.id, "scheduled_at", val)}
-                className="justify-center"
-              />
+              <div className="px-2 py-2 text-sm text-center text-muted-foreground">
+                {item.created_at ? format(new Date(item.created_at), "dd MMM", { locale: ptBR }) : "—"}
+              </div>
             </td>
 
             {/* Anexos */}
@@ -2108,7 +2104,7 @@ export default function AdminManutencoesLista() {
                   <SortableHeader label="Imóvel" field="property" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-left w-[130px] max-w-[130px]" />
                   <SortableHeader label="Valor" field="amount_cents" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-right w-[120px]" />
                   <SortableHeader label="Aporte Gestão" field="management_contribution_cents" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-right w-[120px]" />
-                  <SortableHeader label="Data" field="scheduled_at" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[100px]" />
+                  <SortableHeader label="Data" field="created_at" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[100px]" />
                   <th className="text-center px-2 py-2 font-medium w-[60px]">Anexos</th>
                   <SortableHeader label="Label" field="service_type" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[130px]" />
                   <SortableHeader label="Status" field="list_status" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[150px]" />
