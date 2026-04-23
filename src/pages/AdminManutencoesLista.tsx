@@ -330,7 +330,7 @@ interface GroupRowProps {
   items: MaintenanceItem[];
   isExpanded: boolean;
   onToggle: () => void;
-  onUpdateItem: (id: string, field: string, value: any) => void;
+  onUpdateItem: (id: string, field: string, value: any, isCharge?: boolean) => void;
   onOpenChat: (item: MaintenanceItem) => void;
   unreadCounts: Record<string, number>;
   selectedIds: Set<string>;
