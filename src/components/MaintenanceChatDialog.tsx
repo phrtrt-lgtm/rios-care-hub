@@ -385,7 +385,7 @@ export function MaintenanceChatDialog({
                 isOwnMessage
                   ? "bg-primary text-primary-foreground"
                   : authorIsTeam
-                  ? "bg-blue-500/10 border border-blue-500/20"
+                  ? "bg-info/10 border border-info/30/20"
                   : "bg-muted"
               }`}
             >
@@ -494,7 +494,7 @@ export function MaintenanceChatDialog({
                 </div>
               )}
               {isTeamMember && ticketDetails?.status === 'concluido' && (
-                <Badge variant="secondary" className="mt-1.5 bg-green-500/20 text-green-700 dark:text-green-400 text-xs">
+                <Badge variant="secondary" className="mt-1.5 bg-success/20 text-success text-xs">
                   <CheckCircle2 className="h-3 w-3 mr-1" />
                   Concluído
                 </Badge>

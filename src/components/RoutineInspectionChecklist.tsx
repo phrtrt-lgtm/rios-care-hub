@@ -125,39 +125,39 @@ function CheckItem({ icon, label, value, notes, onValueChange, onNotesChange, fi
           htmlFor={`${fieldId}-ok`}
           className={`flex-1 cursor-pointer border rounded-lg p-2 flex flex-col items-center gap-1 transition-all text-center ${
             value === 'ok' 
-              ? 'border-green-500 bg-green-50 dark:bg-green-950' 
-              : 'hover:border-green-300'
+              ? 'border-success/30 bg-success/10 dark:bg-green-950' 
+              : 'hover:border-success/30'
           }`}
         >
           <RadioGroupItem value="ok" id={`${fieldId}-ok`} className="sr-only" />
-          <CheckCircle2 className={`h-5 w-5 ${value === 'ok' ? 'text-green-600' : 'text-muted-foreground'}`} />
-          <span className={`text-xs font-medium ${value === 'ok' ? 'text-green-600' : 'text-muted-foreground'}`}>OK</span>
+          <CheckCircle2 className={`h-5 w-5 ${value === 'ok' ? 'text-success' : 'text-muted-foreground'}`} />
+          <span className={`text-xs font-medium ${value === 'ok' ? 'text-success' : 'text-muted-foreground'}`}>OK</span>
         </label>
         
         <label 
           htmlFor={`${fieldId}-problema`}
           className={`flex-1 cursor-pointer border rounded-lg p-2 flex flex-col items-center gap-1 transition-all text-center ${
             value === 'problema' 
-              ? 'border-red-500 bg-red-50 dark:bg-red-950' 
-              : 'hover:border-red-300'
+              ? 'border-destructive/30 bg-destructive/10 dark:bg-red-950' 
+              : 'hover:border-destructive/30'
           }`}
         >
           <RadioGroupItem value="problema" id={`${fieldId}-problema`} className="sr-only" />
-          <AlertCircle className={`h-5 w-5 ${value === 'problema' ? 'text-red-600' : 'text-muted-foreground'}`} />
-          <span className={`text-xs font-medium ${value === 'problema' ? 'text-red-600' : 'text-muted-foreground'}`}>Problema</span>
+          <AlertCircle className={`h-5 w-5 ${value === 'problema' ? 'text-destructive' : 'text-muted-foreground'}`} />
+          <span className={`text-xs font-medium ${value === 'problema' ? 'text-destructive' : 'text-muted-foreground'}`}>Problema</span>
         </label>
         
         <label 
           htmlFor={`${fieldId}-na`}
           className={`flex-1 cursor-pointer border rounded-lg p-2 flex flex-col items-center gap-1 transition-all text-center ${
             value === 'na' 
-              ? 'border-gray-500 bg-gray-50 dark:bg-gray-900' 
-              : 'hover:border-gray-300'
+              ? 'border-gray-500 bg-muted dark:bg-gray-900' 
+              : 'hover:border-border'
           }`}
         >
           <RadioGroupItem value="na" id={`${fieldId}-na`} className="sr-only" />
-          <MinusCircle className={`h-5 w-5 ${value === 'na' ? 'text-gray-600' : 'text-muted-foreground'}`} />
-          <span className={`text-xs font-medium ${value === 'na' ? 'text-gray-600' : 'text-muted-foreground'}`}>N/A</span>
+          <MinusCircle className={`h-5 w-5 ${value === 'na' ? 'text-muted-foreground' : 'text-muted-foreground'}`} />
+          <span className={`text-xs font-medium ${value === 'na' ? 'text-muted-foreground' : 'text-muted-foreground'}`}>N/A</span>
         </label>
       </RadioGroup>
       
@@ -190,7 +190,7 @@ export default function RoutineInspectionChecklist({ data, onChange }: Props) {
           <label 
             className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all ${
               data.ac_filters_cleaned 
-                ? 'border-green-500 bg-green-50 dark:bg-green-950' 
+                ? 'border-success/30 bg-success/10 dark:bg-green-950' 
                 : 'hover:border-primary/50'
             }`}
           >
@@ -198,14 +198,14 @@ export default function RoutineInspectionChecklist({ data, onChange }: Props) {
               checked={data.ac_filters_cleaned}
               onCheckedChange={(checked) => updateField('ac_filters_cleaned', !!checked)}
             />
-            <Wind className="h-5 w-5 text-blue-500" />
+            <Wind className="h-5 w-5 text-info" />
             <span className="font-medium">Limpeza dos Filtros de Ar-condicionado</span>
           </label>
           
           <label 
             className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all ${
               data.batteries_replaced 
-                ? 'border-green-500 bg-green-50 dark:bg-green-950' 
+                ? 'border-success/30 bg-success/10 dark:bg-green-950' 
                 : 'hover:border-primary/50'
             }`}
           >
@@ -213,7 +213,7 @@ export default function RoutineInspectionChecklist({ data, onChange }: Props) {
               checked={data.batteries_replaced}
               onCheckedChange={(checked) => updateField('batteries_replaced', !!checked)}
             />
-            <Battery className="h-5 w-5 text-yellow-500" />
+            <Battery className="h-5 w-5 text-warning" />
             <span className="font-medium">Substituição de Pilhas (controles e fechaduras)</span>
           </label>
         </div>
@@ -329,17 +329,17 @@ export default function RoutineInspectionChecklist({ data, onChange }: Props) {
         </div>
         
         {/* Orientação sobre Áudios */}
-        <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+        <div className="mt-4 p-4 bg-info/10 dark:bg-blue-950/30 border border-info/30 rounded-lg">
           <div className="flex gap-3">
             <div className="flex-shrink-0">
-              <Mic className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <Mic className="h-5 w-5 text-info" />
             </div>
             <div className="space-y-2">
-              <h4 className="font-medium text-blue-900 dark:text-blue-100 flex items-center gap-2">
+              <h4 className="font-medium text-info dark:text-blue-100 flex items-center gap-2">
                 <Info className="h-4 w-4" />
                 Importante: Gravação de Áudios
               </h4>
-              <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-disc list-inside">
+              <ul className="text-sm text-info dark:text-blue-200 space-y-1 list-disc list-inside">
                 <li>Para cada item marcado como <strong>"Problema"</strong>, grave um áudio explicando o que foi encontrado</li>
                 <li>Grave também áudios de <strong>outros problemas</strong> encontrados no imóvel que não estão na lista</li>
                 <li>Você pode gravar <strong>vários áudios curtos</strong>, um para cada problema — isso facilita organizar a lista de manutenções</li>

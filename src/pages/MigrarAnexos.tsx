@@ -107,7 +107,7 @@ export default function MigrarAnexos() {
                       <div className="text-sm text-muted-foreground">Total</div>
                     </div>
                     <div className="p-4 bg-background rounded-lg">
-                      <div className="text-3xl font-bold text-green-600">{result.migrated}</div>
+                      <div className="text-3xl font-bold text-success">{result.migrated}</div>
                       <div className="text-sm text-muted-foreground">Migrados</div>
                     </div>
                   </div>

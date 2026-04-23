@@ -178,41 +178,41 @@ export function ProposalBulkPurchasePanel({ proposalId }: ProposalBulkPurchasePa
     `R$ ${(cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
 
   return (
-    <Card className="border-0 shadow-md border-blue-200 dark:border-blue-800">
+    <Card className="border-0 shadow-md border-info/30">
       <CardHeader className="pb-4">
         <CardTitle className="flex items-center gap-2 text-lg">
-          <ShoppingCart className="h-5 w-5 text-blue-600" />
+          <ShoppingCart className="h-5 w-5 text-info" />
           Lista de Compras em Lote
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Summary Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 text-center">
-            <Package className="h-5 w-5 text-blue-600 mx-auto mb-1" />
+          <div className="p-3 rounded-lg bg-info/10 dark:bg-blue-950/30 text-center">
+            <Package className="h-5 w-5 text-info mx-auto mb-1" />
             <p className="text-xs text-muted-foreground">Total Itens</p>
-            <p className="text-xl font-bold text-blue-600">
+            <p className="text-xl font-bold text-info">
               {itemTotals.reduce((sum, i) => sum + i.totalQuantity, 0)}
             </p>
           </div>
-          <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 text-center">
-            <Check className="h-5 w-5 text-green-600 mx-auto mb-1" />
+          <div className="p-3 rounded-lg bg-success/10 dark:bg-green-950/30 text-center">
+            <Check className="h-5 w-5 text-success mx-auto mb-1" />
             <p className="text-xs text-muted-foreground">Pagos</p>
-            <p className="text-xl font-bold text-green-600">
+            <p className="text-xl font-bold text-success">
               {itemTotals.reduce((sum, i) => sum + i.paidQuantity, 0)}
             </p>
           </div>
-          <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 text-center">
-            <DollarSign className="h-5 w-5 text-amber-600 mx-auto mb-1" />
+          <div className="p-3 rounded-lg bg-warning/10 dark:bg-amber-950/30 text-center">
+            <DollarSign className="h-5 w-5 text-warning mx-auto mb-1" />
             <p className="text-xs text-muted-foreground">Total</p>
-            <p className="text-lg font-bold text-amber-600">
+            <p className="text-lg font-bold text-warning">
               {formatCurrency(grandTotalCents)}
             </p>
           </div>
-          <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-center">
-            <DollarSign className="h-5 w-5 text-emerald-600 mx-auto mb-1" />
+          <div className="p-3 rounded-lg bg-success/10 dark:bg-emerald-950/30 text-center">
+            <DollarSign className="h-5 w-5 text-success mx-auto mb-1" />
             <p className="text-xs text-muted-foreground">Recebido</p>
-            <p className="text-lg font-bold text-emerald-600">
+            <p className="text-lg font-bold text-success">
               {formatCurrency(paidTotalCents)}
             </p>
           </div>
@@ -248,7 +248,7 @@ export function ProposalBulkPurchasePanel({ proposalId }: ProposalBulkPurchasePa
                       <Badge variant="outline">{item.totalQuantity}</Badge>
                     </TableCell>
                     <TableCell className="text-center">
-                      <Badge variant="secondary" className="bg-green-100 text-green-700">
+                      <Badge variant="secondary" className="bg-success/10 text-success">
                         {item.paidQuantity}
                       </Badge>
                     </TableCell>
@@ -262,7 +262,7 @@ export function ProposalBulkPurchasePanel({ proposalId }: ProposalBulkPurchasePa
                   <TableCell className="text-center">
                     {itemTotals.reduce((sum, i) => sum + i.totalQuantity, 0)}
                   </TableCell>
-                  <TableCell className="text-center text-green-600">
+                  <TableCell className="text-center text-success">
                     {itemTotals.reduce((sum, i) => sum + i.paidQuantity, 0)}
                   </TableCell>
                   <TableCell className="text-right">
@@ -295,8 +295,8 @@ export function ProposalBulkPurchasePanel({ proposalId }: ProposalBulkPurchasePa
                 key={purchase.ownerId}
                 className={`p-4 rounded-lg border ${
                   purchase.paid 
-                    ? 'bg-green-50/50 dark:bg-green-950/20 border-green-200 dark:border-green-800' 
-                    : 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800'
+                    ? 'bg-success/10/50 dark:bg-green-950/20 border-success/30' 
+                    : 'bg-warning/10/50 dark:bg-amber-950/20 border-warning/30'
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -307,12 +307,12 @@ export function ProposalBulkPurchasePanel({ proposalId }: ProposalBulkPurchasePa
                         {purchase.propertyName || purchase.ownerName}
                       </span>
                       {purchase.paid ? (
-                        <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs">
+                        <Badge variant="secondary" className="bg-success/10 text-success text-xs">
                           <Check className="h-3 w-3 mr-1" />
                           Pago
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-300 text-xs">
+                        <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30 text-xs">
                           <Clock className="h-3 w-3 mr-1" />
                           Aguardando
                         </Badge>
@@ -333,7 +333,7 @@ export function ProposalBulkPurchasePanel({ proposalId }: ProposalBulkPurchasePa
                   </div>
                   
                   <div className="text-right">
-                    <p className={`text-lg font-bold ${purchase.paid ? 'text-green-600' : 'text-amber-600'}`}>
+                    <p className={`text-lg font-bold ${purchase.paid ? 'text-success' : 'text-warning'}`}>
                       {formatCurrency(purchase.totalCents)}
                     </p>
                   </div>

@@ -104,7 +104,7 @@ export function InspectionCalendar({
           <h3 className="font-semibold text-sm">Calendário de Vistorias</h3>
           <div className="flex items-center gap-2 text-xs">
             <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded-full bg-green-500/30" />
+              <div className="w-3 h-3 rounded-full bg-success/30" />
               <span className="text-muted-foreground">OK</span>
             </div>
             <div className="flex items-center gap-1">

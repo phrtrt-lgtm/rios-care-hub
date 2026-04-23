@@ -170,19 +170,19 @@ const AdminManutencoesConluidas = () => {
     switch (responsible) {
       case "guest":
         return (
-          <Badge variant="outline" className="text-xs bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30">
+          <Badge variant="outline" className="text-xs bg-warning/10 text-warning border-warning/30/30">
             Hóspede
           </Badge>
         );
       case "pm":
         return (
-          <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30">
+          <Badge variant="outline" className="text-xs bg-info/10 text-info border-info/30/30">
             Gestão
           </Badge>
         );
       default:
         return (
-          <Badge variant="outline" className="text-xs bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/30">
+          <Badge variant="outline" className="text-xs bg-success/10 text-success border-success/30/30">
             Proprietário
           </Badge>
         );

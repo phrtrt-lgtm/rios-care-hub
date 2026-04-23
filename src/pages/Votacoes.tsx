@@ -93,7 +93,7 @@ export default function Votacoes() {
       return <Badge variant="secondary">Expirado</Badge>;
     }
     if (proposal.status === 'approved') {
-      return <Badge className="bg-green-600">Aprovado</Badge>;
+      return <Badge className="bg-success">Aprovado</Badge>;
     }
     if (proposal.status === 'rejected') {
       return <Badge variant="destructive">Rejeitado</Badge>;
@@ -107,15 +107,15 @@ export default function Votacoes() {
     return (
       <div className="flex gap-2 items-center text-sm">
         <span className="flex items-center gap-1">
-          <CheckCircle2 className="h-4 w-4 text-green-600" />
+          <CheckCircle2 className="h-4 w-4 text-success" />
           {approved}
         </span>
         <span className="flex items-center gap-1">
-          <XCircle className="h-4 w-4 text-red-600" />
+          <XCircle className="h-4 w-4 text-destructive" />
           {rejected}
         </span>
         <span className="flex items-center gap-1">
-          <Clock className="h-4 w-4 text-yellow-600" />
+          <Clock className="h-4 w-4 text-warning" />
           {pending}
         </span>
       </div>

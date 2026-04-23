@@ -410,13 +410,13 @@ export default function EditInspectionDialog({
                   htmlFor="edit-status-ok"
                   className={`cursor-pointer border-2 rounded-xl p-4 flex flex-col items-center gap-2 transition-all ${
                     inspectionStatus === 'OK' 
-                      ? 'border-green-500 bg-green-50 dark:bg-green-950' 
-                      : 'border-border hover:border-green-300'
+                      ? 'border-success/30 bg-success/10 dark:bg-green-950' 
+                      : 'border-border hover:border-success/30'
                   }`}
                 >
                   <RadioGroupItem value="OK" id="edit-status-ok" className="sr-only" />
-                  <CheckCircle2 className={`h-10 w-10 ${inspectionStatus === 'OK' ? 'text-green-600' : 'text-muted-foreground'}`} />
-                  <span className={`text-lg font-bold ${inspectionStatus === 'OK' ? 'text-green-600' : 'text-muted-foreground'}`}>
+                  <CheckCircle2 className={`h-10 w-10 ${inspectionStatus === 'OK' ? 'text-success' : 'text-muted-foreground'}`} />
+                  <span className={`text-lg font-bold ${inspectionStatus === 'OK' ? 'text-success' : 'text-muted-foreground'}`}>
                     OK
                   </span>
                 </label>
@@ -425,13 +425,13 @@ export default function EditInspectionDialog({
                   htmlFor="edit-status-nao"
                   className={`cursor-pointer border-2 rounded-xl p-4 flex flex-col items-center gap-2 transition-all ${
                     inspectionStatus === 'NÃO' 
-                      ? 'border-red-500 bg-red-50 dark:bg-red-950' 
-                      : 'border-border hover:border-red-300'
+                      ? 'border-destructive/30 bg-destructive/10 dark:bg-red-950' 
+                      : 'border-border hover:border-destructive/30'
                   }`}
                 >
                   <RadioGroupItem value="NÃO" id="edit-status-nao" className="sr-only" />
-                  <XCircle className={`h-10 w-10 ${inspectionStatus === 'NÃO' ? 'text-red-600' : 'text-muted-foreground'}`} />
-                  <span className={`text-lg font-bold ${inspectionStatus === 'NÃO' ? 'text-red-600' : 'text-muted-foreground'}`}>
+                  <XCircle className={`h-10 w-10 ${inspectionStatus === 'NÃO' ? 'text-destructive' : 'text-muted-foreground'}`} />
+                  <span className={`text-lg font-bold ${inspectionStatus === 'NÃO' ? 'text-destructive' : 'text-muted-foreground'}`}>
                     NÃO
                   </span>
                 </label>
@@ -482,7 +482,7 @@ export default function EditInspectionDialog({
                         <img src={att.file_url} alt="" className="w-full h-full object-cover" />
                         <button
                           onClick={() => handleRemoveExistingAttachment(att.id)}
-                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                          className="absolute top-1 right-1 bg-destructive text-white rounded-full p-1 hover:bg-destructive"
                         >
                           <Trash2 className="h-3 w-3" />
                         </button>
@@ -501,7 +501,7 @@ export default function EditInspectionDialog({
                         <Video className="h-8 w-8 text-muted-foreground" />
                         <button
                           onClick={() => handleRemoveExistingAttachment(att.id)}
-                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                          className="absolute top-1 right-1 bg-destructive text-white rounded-full p-1 hover:bg-destructive"
                         >
                           <Trash2 className="h-3 w-3" />
                         </button>
@@ -520,7 +520,7 @@ export default function EditInspectionDialog({
                         <audio controls src={att.file_url} className="flex-1 h-8" />
                         <button
                           onClick={() => handleRemoveExistingAttachment(att.id)}
-                          className="bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                          className="bg-destructive text-white rounded-full p-1 hover:bg-destructive"
                         >
                           <Trash2 className="h-3 w-3" />
                         </button>
@@ -531,15 +531,15 @@ export default function EditInspectionDialog({
               )}
 
               {attachmentsToDelete.length > 0 && (
-                <div className="mt-3 p-2 bg-red-50 dark:bg-red-950 rounded-lg">
-                  <p className="text-sm text-red-600 dark:text-red-400">
+                <div className="mt-3 p-2 bg-destructive/10 dark:bg-red-950 rounded-lg">
+                  <p className="text-sm text-destructive">
                     {attachmentsToDelete.length} anexo(s) serão removidos ao salvar
                   </p>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => setAttachmentsToDelete([])}
-                    className="text-red-600 hover:text-red-700 mt-1"
+                    className="text-destructive hover:text-destructive mt-1"
                   >
                     Desfazer remoções
                   </Button>
@@ -582,7 +582,7 @@ export default function EditInspectionDialog({
                           </span>
                         )}
                         {!audio.uploading && !audio.transcribing && audio.url && (
-                          <CheckCircle2 className="h-4 w-4 text-green-600 ml-auto" />
+                          <CheckCircle2 className="h-4 w-4 text-success ml-auto" />
                         )}
                       </div>
                       <AudioPlayer file={audio.file} />
@@ -603,10 +603,10 @@ export default function EditInspectionDialog({
             )}
             
             {combinedSummary && (
-              <div className="mt-4 p-4 bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/20 rounded-xl">
+              <div className="mt-4 p-4 bg-gradient-to-br from-primary/10 to-info/10 border border-primary/30/20 rounded-xl">
                 <div className="flex items-center gap-2 mb-2">
-                  <Sparkles className="h-5 w-5 text-purple-600" />
-                  <span className="font-semibold text-purple-700 dark:text-purple-300">Nova Análise da IA</span>
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  <span className="font-semibold text-primary dark:text-purple-300">Nova Análise da IA</span>
                 </div>
                 <div className="text-sm whitespace-pre-wrap">
                   {combinedSummary}
@@ -661,12 +661,12 @@ export default function EditInspectionDialog({
                     </>
                   ) : hasErrors ? (
                     <>
-                      <XCircle className="h-4 w-4 text-red-600" />
+                      <XCircle className="h-4 w-4 text-destructive" />
                       Alguns arquivos com erro
                     </>
                   ) : (
                     <>
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      <CheckCircle2 className="h-4 w-4 text-success" />
                       {uploadedFiles.length} novo(s) arquivo(s) pronto(s)
                     </>
                   )}
@@ -677,10 +677,10 @@ export default function EditInspectionDialog({
                       key={index} 
                       className={`relative aspect-square rounded-lg overflow-hidden border-2 ${
                         uploadedFile.error 
-                          ? 'border-red-500' 
+                          ? 'border-destructive/30' 
                           : uploadedFile.compressing || uploadedFile.uploading 
                             ? 'border-primary/50' 
-                            : 'border-green-500'
+                            : 'border-success/30'
                       }`}
                     >
                       {uploadedFile.file.type.startsWith('image/') ? (
@@ -715,7 +715,7 @@ export default function EditInspectionDialog({
                       {!uploadedFile.uploading && !uploadedFile.compressing && (
                         <button
                           onClick={() => handleRemoveFile(uploadedFile.file)}
-                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                          className="absolute top-1 right-1 bg-destructive text-white rounded-full p-1 hover:bg-destructive"
                         >
                           <Trash2 className="h-3 w-3" />
                         </button>

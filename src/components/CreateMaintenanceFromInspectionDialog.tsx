@@ -358,9 +358,9 @@ export function CreateMaintenanceFromInspectionDialog({
             </RadioGroup>
 
             {costResponsible === 'pm' && (
-              <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950/30">
-                <AlertTriangle className="h-4 w-4 text-blue-500" />
-                <AlertDescription className="text-blue-700 dark:text-blue-300">
+              <Alert className="border-info/30 bg-info/10 dark:bg-blue-950/30">
+                <AlertTriangle className="h-4 w-4 text-info" />
+                <AlertDescription className="text-info dark:text-blue-300">
                   Esta manutenção <strong>não será visível</strong> para o proprietário. Use para manutenções internas ou de responsabilidade da gestão.
                 </AlertDescription>
               </Alert>
@@ -368,9 +368,9 @@ export function CreateMaintenanceFromInspectionDialog({
 
             {costResponsible === 'guest' && (
               <>
-                <Alert className="border-orange-200 bg-orange-50 dark:bg-orange-950/30">
-                  <AlertTriangle className="h-4 w-4 text-orange-500" />
-                  <AlertDescription className="text-orange-700 dark:text-orange-300">
+                <Alert className="border-warning/30 bg-warning/10 dark:bg-orange-950/30">
+                  <AlertTriangle className="h-4 w-4 text-warning" />
+                  <AlertDescription className="text-warning dark:text-orange-300">
                     Esta manutenção <strong>não será visível</strong> para o proprietário. O lembrete de cobrança será exibido 14 dias após o check-out.
                   </AlertDescription>
                 </Alert>

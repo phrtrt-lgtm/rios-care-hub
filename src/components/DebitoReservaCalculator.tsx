@@ -314,7 +314,7 @@ export const DebitoReservaCalculator = ({
                         onClick={handleCopy}
                       >
                         {copied ? (
-                          <Check className="h-4 w-4 text-green-500" />
+                          <Check className="h-4 w-4 text-success" />
                         ) : (
                           <Copy className="h-4 w-4" />
                         )}
@@ -329,16 +329,16 @@ export const DebitoReservaCalculator = ({
 
               {/* Breakdown */}
               <div className="grid grid-cols-2 gap-3">
-                <Card className="bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800">
+                <Card className="bg-warning/10 dark:bg-amber-950/30 border-warning/30">
                   <CardContent className="p-3">
                     <p className="text-xs text-muted-foreground">Comissão Base</p>
-                    <p className="text-xl font-bold text-amber-700 dark:text-amber-400">{baseCommissionNum.toFixed(0)}%</p>
+                    <p className="text-xl font-bold text-warning">{baseCommissionNum.toFixed(0)}%</p>
                   </CardContent>
                 </Card>
-                <Card className="bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800">
+                <Card className="bg-warning/10 dark:bg-orange-950/30 border-warning/30">
                   <CardContent className="p-3">
                     <p className="text-xs text-muted-foreground">Extra p/ Débito</p>
-                    <p className="text-xl font-bold text-orange-600 dark:text-orange-400">
+                    <p className="text-xl font-bold text-warning">
                       +{extraPercentRounded}%
                     </p>
                     <p className="text-xs text-muted-foreground">
@@ -361,7 +361,7 @@ export const DebitoReservaCalculator = ({
                   {extraFromRounding > 0.01 && (
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-muted-foreground">Extra (arredondamento):</span>
-                      <span className="font-medium text-amber-600">- {formatCurrency(extraFromRounding)}</span>
+                      <span className="font-medium text-warning">- {formatCurrency(extraFromRounding)}</span>
                     </div>
                   )}
                   <Separator />
@@ -374,11 +374,11 @@ export const DebitoReservaCalculator = ({
 
               {/* Status */}
               {debtCoverage >= totalDebt ? (
-                <div className="text-center text-sm text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/30 rounded-lg p-2">
+                <div className="text-center text-sm text-success bg-success/10 dark:bg-green-950/30 rounded-lg p-2">
                   ✓ Cobre toda a dívida nesta reserva
                 </div>
               ) : (
-                <div className="text-center text-sm text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/30 rounded-lg p-2">
+                <div className="text-center text-sm text-warning bg-warning/10 dark:bg-orange-950/30 rounded-lg p-2">
                   ⚠️ Restará {formatCurrency(totalDebt - debtCoverage)} de dívida
                 </div>
               )}

@@ -146,7 +146,7 @@ export function BookingCommissionChatDialog({ open, onOpenChange, commissionId, 
                   <div
                     className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm ${
                       msg.is_internal
-                        ? "bg-yellow-100 text-yellow-900 dark:bg-yellow-900/40 dark:text-yellow-200 border border-yellow-300"
+                        ? "bg-warning/10 text-warning dark:bg-yellow-900/40 dark:text-yellow-200 border border-warning/30"
                         : own
                         ? "bg-primary text-primary-foreground"
                         : "bg-muted text-foreground"
@@ -179,7 +179,7 @@ export function BookingCommissionChatDialog({ open, onOpenChange, commissionId, 
                 onClick={() => setIsInternal(!isInternal)}
                 className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${
                   isInternal
-                    ? "bg-yellow-100 text-yellow-800 border-yellow-300"
+                    ? "bg-warning/10 text-warning border-warning/30"
                     : "bg-muted text-muted-foreground border-muted-foreground/30"
                 }`}
               >

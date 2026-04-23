@@ -37,12 +37,12 @@ interface ArchivedItem {
 
 // ===== CONSTANTS =====
 const SERVICE_LABELS = [
-  { value: "refrigeracao", label: "Refrigeração", color: "bg-blue-500" },
-  { value: "eletrica", label: "Elétrica", color: "bg-yellow-500" },
-  { value: "hidraulica", label: "Hidráulica", color: "bg-cyan-500" },
-  { value: "marcenaria", label: "Marcenaria", color: "bg-amber-700" },
+  { value: "refrigeracao", label: "Refrigeração", color: "bg-info" },
+  { value: "eletrica", label: "Elétrica", color: "bg-warning" },
+  { value: "hidraulica", label: "Hidráulica", color: "bg-info" },
+  { value: "marcenaria", label: "Marcenaria", color: "bg-warning" },
   { value: "estrutural", label: "Estrutural", color: "bg-slate-600" },
-  { value: "itens", label: "Itens", color: "bg-purple-500" },
+  { value: "itens", label: "Itens", color: "bg-primary" },
 ];
 
 // ===== SORTABLE HEADER COMPONENT =====

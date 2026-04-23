@@ -52,24 +52,24 @@ interface MaintenanceItem {
 
 // ===== CONSTANTS =====
 const SERVICE_LABELS = [
-  { value: "refrigeracao", label: "Refrigeração", color: "bg-blue-500" },
-  { value: "eletrica", label: "Elétrica", color: "bg-yellow-500" },
-  { value: "hidraulica", label: "Hidráulica", color: "bg-cyan-500" },
-  { value: "marcenaria", label: "Marcenaria", color: "bg-amber-700" },
+  { value: "refrigeracao", label: "Refrigeração", color: "bg-info" },
+  { value: "eletrica", label: "Elétrica", color: "bg-warning" },
+  { value: "hidraulica", label: "Hidráulica", color: "bg-info" },
+  { value: "marcenaria", label: "Marcenaria", color: "bg-warning" },
   { value: "estrutural", label: "Estrutural", color: "bg-slate-600" },
-  { value: "itens", label: "Itens", color: "bg-purple-500" },
+  { value: "itens", label: "Itens", color: "bg-primary" },
   // Support legacy values stored as labels
-  { value: "Refrigeração", label: "Refrigeração", color: "bg-blue-500" },
-  { value: "Elétrica", label: "Elétrica", color: "bg-yellow-500" },
-  { value: "Hidráulica", label: "Hidráulica", color: "bg-cyan-500" },
-  { value: "Marcenaria", label: "Marcenaria", color: "bg-amber-700" },
+  { value: "Refrigeração", label: "Refrigeração", color: "bg-info" },
+  { value: "Elétrica", label: "Elétrica", color: "bg-warning" },
+  { value: "Hidráulica", label: "Hidráulica", color: "bg-info" },
+  { value: "Marcenaria", label: "Marcenaria", color: "bg-warning" },
   { value: "Estrutural", label: "Estrutural", color: "bg-slate-600" },
-  { value: "Itens", label: "Itens", color: "bg-purple-500" },
+  { value: "Itens", label: "Itens", color: "bg-primary" },
 ];
 
 const LIST_STATUSES = [
-  { value: "em_progresso", label: "Em Progresso", color: "bg-amber-500" },
-  { value: "feito", label: "Feito", color: "bg-green-500" },
+  { value: "em_progresso", label: "Em Progresso", color: "bg-warning" },
+  { value: "feito", label: "Feito", color: "bg-success" },
   { value: "enviar_proprietario", label: "Enviar ao Proprietário", color: "bg-primary" },
 ];
 
@@ -420,7 +420,7 @@ function GroupRow({
                 type="currency"
                 placeholder="R$ 0,00"
                 onSave={(val) => onUpdateItem(item.id, "management_contribution_cents", val)}
-                className="justify-end text-green-600"
+                className="justify-end text-success"
               />
             </td>
 
@@ -743,7 +743,7 @@ function VistoriasTable({
           <div className="flex justify-center px-2 py-2">
             <Badge 
               variant={hasProblems ? "destructive" : "secondary"}
-              className={hasProblems ? "" : "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"}
+              className={hasProblems ? "" : "bg-success/10 text-success dark:bg-green-900 dark:text-green-300"}
             >
               {hasProblems ? "NÃO" : "OK"}
             </Badge>
@@ -797,7 +797,7 @@ function VistoriasTable({
               <span>{inspection.attachments.length}</span>
             </button>
             {inspection.audio_url && (
-              <FileAudio className="h-3.5 w-3.5 text-blue-500" />
+              <FileAudio className="h-3.5 w-3.5 text-info" />
             )}
           </div>
         </td>

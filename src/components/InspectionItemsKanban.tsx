@@ -41,10 +41,10 @@ interface PropertyInspectionItemsKanbanProps {
 
 const COLUMNS = [
   { key: 'pending', label: 'Pendente', color: 'bg-muted' },
-  { key: 'management', label: 'Gestão', color: 'bg-blue-500/20' },
-  { key: 'owner', label: 'Proprietário', color: 'bg-amber-500/20' },
-  { key: 'guest', label: 'Hóspede', color: 'bg-purple-500/20' },
-  { key: 'completed', label: 'Concluído', color: 'bg-green-500/20' },
+  { key: 'management', label: 'Gestão', color: 'bg-info/20' },
+  { key: 'owner', label: 'Proprietário', color: 'bg-warning/20' },
+  { key: 'guest', label: 'Hóspede', color: 'bg-primary/20' },
+  { key: 'completed', label: 'Concluído', color: 'bg-success/20' },
 ] as const;
 
 const CATEGORY_PATTERNS: { pattern: RegExp; category: string; emoji: string }[] = [
@@ -519,7 +519,7 @@ export function PropertyInspectionItemsKanban({
 
   if (loading) {
     return (
-      <Card className="border-amber-500/30">
+      <Card className="border-warning/30/30">
         <CardContent className="py-8 flex justify-center">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </CardContent>
@@ -858,7 +858,7 @@ export function PropertyInspectionItemsKanban({
                                 !isOwnerView && !isEditing ? 'cursor-grab active:cursor-grabbing' : ''
                               } ${draggedItem === item.id ? 'opacity-50' : ''} ${
                                 selectedItems.has(item.id) ? 'ring-2 ring-primary' : ''
-                              } ${item.maintenance_ticket_id ? 'border-green-500/50' : ''}`}
+                              } ${item.maintenance_ticket_id ? 'border-success/30/50' : ''}`}
                             >
                               <div className="flex items-start gap-2">
                                 <div className="flex flex-col items-center gap-1 pt-0.5">
@@ -958,7 +958,7 @@ export function PropertyInspectionItemsKanban({
                                         </Tooltip>
                                       </TooltipProvider>
                                       {item.maintenance_ticket_id && (
-                                        <div className="flex items-center gap-1 mt-1 text-green-600">
+                                        <div className="flex items-center gap-1 mt-1 text-success">
                                           <Check className="h-3 w-3" />
                                           <span className="text-xs">Manutenção criada</span>
                                         </div>

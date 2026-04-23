@@ -34,11 +34,11 @@ interface PaidCharge {
 const PAID_STATUSES = ["paid", "pago_no_vencimento", "pago_antecipado", "pago_com_atraso", "debited"];
 
 const statusLabel: Record<string, { label: string; color: string }> = {
-  paid: { label: "Pago", color: "bg-green-100 text-green-800" },
-  pago_no_vencimento: { label: "Pago no Venc.", color: "bg-green-100 text-green-800" },
-  pago_antecipado: { label: "Pago Antecipado", color: "bg-emerald-100 text-emerald-800" },
-  pago_com_atraso: { label: "Pago c/ Atraso", color: "bg-yellow-100 text-yellow-800" },
-  debited: { label: "Debitado Reserva", color: "bg-blue-100 text-blue-800" },
+  paid: { label: "Pago", color: "bg-success/10 text-success" },
+  pago_no_vencimento: { label: "Pago no Venc.", color: "bg-success/10 text-success" },
+  pago_antecipado: { label: "Pago Antecipado", color: "bg-success/10 text-success" },
+  pago_com_atraso: { label: "Pago c/ Atraso", color: "bg-warning/10 text-warning" },
+  debited: { label: "Debitado Reserva", color: "bg-info/10 text-info" },
 };
 
 const AdminRelatorioCobrancas = () => {
@@ -279,29 +279,29 @@ const AdminRelatorioCobrancas = () => {
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="border-green-200 bg-green-50/50">
+          <Card className="border-success/30 bg-success/10/50">
             <CardContent className="pt-4 pb-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-full bg-green-100">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
+                <div className="p-2 rounded-full bg-success/10">
+                  <CheckCircle className="h-5 w-5 text-success" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Pagas pelo Sistema</p>
-                  <p className="text-xl font-bold text-green-700">{formatBRL(totalPagas)}</p>
+                  <p className="text-xl font-bold text-success">{formatBRL(totalPagas)}</p>
                   <p className="text-xs text-muted-foreground">{pagasCharges.length} cobranças</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="border-blue-200 bg-blue-50/50">
+          <Card className="border-info/30 bg-info/10/50">
             <CardContent className="pt-4 pb-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-full bg-blue-100">
-                  <CreditCard className="h-5 w-5 text-blue-600" />
+                <div className="p-2 rounded-full bg-info/10">
+                  <CreditCard className="h-5 w-5 text-info" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Debitadas em Reserva</p>
-                  <p className="text-xl font-bold text-blue-700">{formatBRL(totalDebitadas)}</p>
+                  <p className="text-xl font-bold text-info">{formatBRL(totalDebitadas)}</p>
                   <p className="text-xs text-muted-foreground">{debitadasCharges.length} cobranças</p>
                 </div>
               </div>

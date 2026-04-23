@@ -289,7 +289,7 @@ export default function ImportarComissoesBooking() {
               <div key={s} className="flex items-center gap-1">
                 <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold
                   ${step === s ? "bg-primary text-primary-foreground" :
-                    step > s ? "bg-green-500 text-white" : "bg-muted text-muted-foreground"}`}>
+                    step > s ? "bg-success text-white" : "bg-muted text-muted-foreground"}`}>
                   {step > s ? "✓" : s}
                 </div>
                 {s < 3 && <ChevronRight className="h-3 w-3" />}
@@ -425,7 +425,7 @@ export default function ImportarComissoesBooking() {
                     return (
                       <Card
                         key={mapping.spreadsheetName}
-                        className={`border ${isSkipped ? "opacity-50 bg-muted/20" : mapping.autoMatched ? "border-green-500/40" : "border-yellow-500/40"}`}
+                        className={`border ${isSkipped ? "opacity-50 bg-muted/20" : mapping.autoMatched ? "border-success/30/40" : "border-warning/30/40"}`}
                       >
                         <CardContent className="py-4 px-4">
                           <div className="flex flex-col gap-3">

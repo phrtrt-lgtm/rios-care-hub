@@ -468,7 +468,7 @@ ${guardrails ? `REGRAS DE SEGURANÇA:\n${guardrails}\n` : ""}`;
                         <TableCell>{template.order_index}</TableCell>
                         <TableCell>
                           {template.enabled ? (
-                            <span className="text-green-600">Ativo</span>
+                            <span className="text-success">Ativo</span>
                           ) : (
                             <span className="text-muted-foreground">Inativo</span>
                           )}

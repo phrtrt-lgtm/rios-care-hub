@@ -57,17 +57,17 @@ interface PropertySummary {
 }
 
 const statusColors: Record<string, string> = {
-  novo: "bg-blue-100 text-blue-800",
-  em_analise: "bg-yellow-100 text-yellow-800",
-  aguardando_info: "bg-orange-100 text-orange-800",
-  em_execucao: "bg-purple-100 text-purple-800",
-  concluido: "bg-green-100 text-green-800",
-  cancelado: "bg-gray-100 text-gray-800",
-  draft: "bg-gray-100 text-gray-800",
-  pending: "bg-yellow-100 text-yellow-800",
-  paid: "bg-green-100 text-green-800",
-  contested: "bg-red-100 text-red-800",
-  debited: "bg-blue-100 text-blue-800",
+  novo: "bg-info/10 text-info",
+  em_analise: "bg-warning/10 text-warning",
+  aguardando_info: "bg-warning/10 text-warning",
+  em_execucao: "bg-primary/10 text-primary",
+  concluido: "bg-success/10 text-success",
+  cancelado: "bg-muted text-gray-800",
+  draft: "bg-muted text-gray-800",
+  pending: "bg-warning/10 text-warning",
+  paid: "bg-success/10 text-success",
+  contested: "bg-destructive/10 text-destructive",
+  debited: "bg-info/10 text-info",
 };
 
 const statusLabels: Record<string, string> = {
@@ -269,7 +269,7 @@ export default function ResumoPropriedades() {
                       {property.tickets.length > 0 && (
                         <div>
                           <div className="flex items-center gap-2 mb-2">
-                            <Ticket className="h-4 w-4 text-blue-600" />
+                            <Ticket className="h-4 w-4 text-info" />
                             <span className="font-medium text-sm">Tickets ({property.tickets.length})</span>
                           </div>
                           <div className="space-y-1 pl-6">
@@ -298,7 +298,7 @@ export default function ResumoPropriedades() {
                       {property.charges.length > 0 && (
                         <div>
                           <div className="flex items-center gap-2 mb-2">
-                            <Receipt className="h-4 w-4 text-orange-600" />
+                            <Receipt className="h-4 w-4 text-warning" />
                             <span className="font-medium text-sm">Cobranças ({property.charges.length})</span>
                           </div>
                           <div className="space-y-1 pl-6">
@@ -332,7 +332,7 @@ export default function ResumoPropriedades() {
                       {property.maintenances.length > 0 && (
                         <div>
                           <div className="flex items-center gap-2 mb-2">
-                            <Wrench className="h-4 w-4 text-purple-600" />
+                            <Wrench className="h-4 w-4 text-primary" />
                             <span className="font-medium text-sm">Manutenções ({property.maintenances.length})</span>
                           </div>
                           <div className="space-y-1 pl-6">
@@ -361,7 +361,7 @@ export default function ResumoPropriedades() {
                       {property.inspections.length > 0 && (
                         <div>
                           <div className="flex items-center gap-2 mb-2">
-                            <ClipboardCheck className="h-4 w-4 text-green-600" />
+                            <ClipboardCheck className="h-4 w-4 text-success" />
                             <span className="font-medium text-sm">Vistorias ({property.inspections.length})</span>
                           </div>
                           <div className="space-y-1 pl-6">
