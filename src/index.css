@@ -288,10 +288,12 @@ All colors MUST be HSL.
    evitando quebras de página dentro de blocos importantes.
    ============================================================ */
 @media print {
-  /* Página A4 com margens generosas */
+  /* Página A4 com margens consistentes em TODAS as páginas.
+     IMPORTANTE: o usuário deve manter "Margens: Padrão" no diálogo
+     de impressão. Se escolher "Nenhuma", o @page é ignorado. */
   @page {
     size: A4;
-    margin: 12mm 10mm;
+    margin: 15mm 12mm 15mm 12mm;
   }
 
   /* Reset global p/ impressão */
@@ -300,6 +302,8 @@ All colors MUST be HSL.
     color: #000 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   /* Forçar cores em todos os elementos (gradientes, badges, headers) */
@@ -328,11 +332,24 @@ All colors MUST be HSL.
     max-width: 100% !important;
   }
 
-  /* O wrapper principal do relatório (bg-card rounded-xl shadow-sm border) */
+  /* O wrapper principal do relatório.
+     Removendo bordas/sombras/radius — quem cuida do respiro
+     entre o conteúdo e a borda do papel é a regra @page acima. */
   [data-report-root] {
     box-shadow: none !important;
     border: none !important;
     border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Garantir respiro vertical no INÍCIO de cada nova página.
+     Quando uma seção começa numa nova página, adiciona um pequeno
+     espaço acima para o conteúdo não colar na margem do papel. */
+  [data-pdf-section] {
+    padding-top: 4mm !important;
+    padding-bottom: 4mm !important;
   }
 
   /* Evitar quebras dentro de blocos visuais críticos.
@@ -397,6 +414,15 @@ All colors MUST be HSL.
     resize: none !important;
     overflow: visible !important;
     height: auto !important;
+  }
+
+  /* Respiro lateral nos blocos de detalhamento mensal,
+     que tendem a colar nas bordas em páginas 2+ */
+  [data-pdf-section^="month-"],
+  [data-pdf-section="resumo-geral"],
+  [data-pdf-section="detalhamento-title"] {
+    padding-left: 2mm !important;
+    padding-right: 2mm !important;
   }
 }
 
