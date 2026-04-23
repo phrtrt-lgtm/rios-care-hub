@@ -594,9 +594,20 @@ const MinhasCobrancas = () => {
                   </div>
                 </Card>
               );
-            })}
-          </div>
-        )}
+                  })}
+                </div>
+              )}
+
+              {hasMore && (
+                <div className="flex justify-center pt-2">
+                  <Button variant="outline" onClick={() => setVisibleCount((v) => v + 100)}>
+                    Carregar mais ({filteredCharges.length - visibleCount} restantes)
+                  </Button>
+                </div>
+              )}
+            </>
+          );
+        })()}
       </main>
     </div>
   );
