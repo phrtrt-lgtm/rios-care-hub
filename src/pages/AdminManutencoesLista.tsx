@@ -515,7 +515,7 @@ function GroupRow({
                 value={item.amount_cents || null}
                 type="currency"
                 placeholder="R$ 0,00"
-                onSave={(val) => onUpdateItem(item.id, "amount_cents", val)}
+                onSave={(val) => onUpdateItem(item.id, "amount_cents", val, isCharge)}
                 className="justify-center font-medium"
               />
             </td>
@@ -526,7 +526,7 @@ function GroupRow({
                 value={item.management_contribution_cents || null}
                 type="currency"
                 placeholder="R$ 0,00"
-                onSave={(val) => onUpdateItem(item.id, "management_contribution_cents", val)}
+                onSave={(val) => onUpdateItem(item.id, "management_contribution_cents", val, isCharge)}
                 className="justify-center text-success"
               />
             </td>
@@ -583,20 +583,26 @@ function GroupRow({
                 type="multi-select"
                 options={SERVICE_LABELS}
                 placeholder="Selecionar"
-                onSave={(val) => onUpdateItem(item.id, "service_type", val)}
+                onSave={(val) => onUpdateItem(item.id, "service_type", val, isCharge)}
                 className="justify-center"
               />
             </td>
 
             {/* Status */}
             <td className="p-0 w-[140px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
-              <EditableCell
-                value={item.list_status || "em_progresso"}
-                type="select"
-                options={LIST_STATUSES}
-                onSave={(val) => onUpdateItem(item.id, "list_status", val)}
-                className="justify-center"
-              />
+              {isCharge ? (
+                <div className="px-1 py-2 text-sm text-center text-muted-foreground">
+                  {item.list_status === "feito" ? "Pago" : "Pendente"}
+                </div>
+              ) : (
+                <EditableCell
+                  value={item.list_status || "em_progresso"}
+                  type="select"
+                  options={LIST_STATUSES}
+                  onSave={(val) => onUpdateItem(item.id, "list_status", val, false)}
+                  className="justify-center"
+                />
+              )}
             </td>
           </tr>
         );
