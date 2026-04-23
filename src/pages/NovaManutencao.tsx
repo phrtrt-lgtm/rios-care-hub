@@ -428,16 +428,16 @@ export default function NovaManutencao() {
           <Button variant="ghost" size="icon" type="button" onClick={handleGoBack}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-xl font-semibold">Nova Manutenção</h1>
+          <h1 className="text-xl font-semibold">{isEditMode ? 'Editar Manutenção' : 'Nova Manutenção'}</h1>
         </div>
       </header>
 
       <main className="container mx-auto max-w-2xl px-4 py-8">
         <Card className="shadow-xl">
           <CardHeader>
-            <CardTitle>Criar manutenção</CardTitle>
+            <CardTitle>{isEditMode ? 'Editar manutenção' : 'Criar manutenção'}</CardTitle>
             <CardDescription>
-              Registre um novo chamado de manutenção para uma unidade
+              {isEditMode ? 'Atualize as informações deste chamado' : 'Registre um novo chamado de manutenção para uma unidade'}
             </CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
@@ -721,14 +721,14 @@ export default function NovaManutencao() {
                 )}
               </div>
 
-              <Button type="submit" className="w-full" disabled={loading || uploading}>
+              <Button type="submit" className="w-full" disabled={loading || uploading || loadingTicket}>
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Criando...
+                    {isEditMode ? 'Salvando...' : 'Criando...'}
                   </>
                 ) : (
-                  "Criar Manutenção"
+                  isEditMode ? 'Salvar Alterações' : 'Criar Manutenção'
                 )}
               </Button>
             </CardContent>
