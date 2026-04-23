@@ -428,73 +428,56 @@ const TodosTickets = () => {
 
         {/* Filtros */}
         <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="h-5 w-5" />
-              Filtros
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-5">
-              <div className="relative md:col-span-2">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar por assunto, proprietário ou unidade..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os Status</SelectItem>
-                  <SelectItem value="novo">Novo</SelectItem>
-                  <SelectItem value="em_analise">Em Análise</SelectItem>
-                  <SelectItem value="em_execucao">Em Execução</SelectItem>
-                  <SelectItem value="aguardando_info">Aguardando Info</SelectItem>
-                  <SelectItem value="concluido">Concluído</SelectItem>
-                  <SelectItem value="cancelado">Cancelado</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Prioridade" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas as Prioridades</SelectItem>
-                  <SelectItem value="baixa">Baixa</SelectItem>
-                  <SelectItem value="normal">Normal</SelectItem>
-                  <SelectItem value="alta">Alta</SelectItem>
-                  <SelectItem value="urgente">Urgente</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os Tipos</SelectItem>
-                  <SelectItem value="manutencao">Manutenção</SelectItem>
-                  <SelectItem value="financeiro">Financeiro</SelectItem>
-                  <SelectItem value="duvida">Dúvida</SelectItem>
-                  <SelectItem value="reclamacao">Reclamação</SelectItem>
-                  <SelectItem value="outro">Outro</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Ordenar por" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="recent">Mais recentes primeiro</SelectItem>
-                  <SelectItem value="oldest">Mais antigos primeiro</SelectItem>
-                  <SelectItem value="sla">SLA (vencendo antes)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <CardContent className="pt-6">
+            <ListFilters
+              {...filtersHook}
+              searchPlaceholder="Buscar por assunto, proprietário ou unidade..."
+              statusOptions={[
+                { value: "novo", label: "Novo" },
+                { value: "em_analise", label: "Em Análise" },
+                { value: "em_execucao", label: "Em Execução" },
+                { value: "aguardando_info", label: "Aguardando Info" },
+                { value: "concluido", label: "Concluído" },
+                { value: "cancelado", label: "Cancelado" },
+              ]}
+              priorityOptions={[
+                { value: "baixa", label: "Baixa" },
+                { value: "normal", label: "Normal" },
+                { value: "alta", label: "Alta" },
+                { value: "urgente", label: "Urgente" },
+              ]}
+              propertyOptions={propertyOptions}
+              showDateRange
+              totalCount={tickets.length}
+              filteredCount={filteredTickets.length}
+              extra={
+                <>
+                  <Select value={typeFilter} onValueChange={setTypeFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Tipo" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover z-50">
+                      <SelectItem value="all">Todos os tipos</SelectItem>
+                      <SelectItem value="manutencao">Manutenção</SelectItem>
+                      <SelectItem value="financeiro">Financeiro</SelectItem>
+                      <SelectItem value="duvida">Dúvida</SelectItem>
+                      <SelectItem value="reclamacao">Reclamação</SelectItem>
+                      <SelectItem value="outro">Outro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Ordenar por" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover z-50">
+                      <SelectItem value="recent">Mais recentes</SelectItem>
+                      <SelectItem value="oldest">Mais antigos</SelectItem>
+                      <SelectItem value="sla">SLA (vencendo antes)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </>
+              }
+            />
           </CardContent>
         </Card>
 
