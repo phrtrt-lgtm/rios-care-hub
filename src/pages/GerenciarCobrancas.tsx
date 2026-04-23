@@ -18,8 +18,6 @@ import { EditChargeDialog } from "@/components/EditChargeDialog";
 import { DebitoReservaCalculator } from "@/components/DebitoReservaCalculator";
 import { ReserveDebitsTable } from "@/components/ReserveDebitsTable";
 import { OpenChargesTable } from "@/components/OpenChargesTable";
-import { ListFilters } from "@/components/list/ListFilters";
-import { useListFilters } from "@/hooks/useListFilters";
 import {
   AlertDialog,
   AlertDialogAction,
