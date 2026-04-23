@@ -281,3 +281,106 @@ All colors MUST be HSL.
     @apply active:scale-95 transition-transform duration-150;
   }
 }
+
+/* ============================================================
+   PRINT STYLES - Relatório Financeiro
+   Garante impressão em A4 sem cortes feios, mantendo cores e
+   evitando quebras de página dentro de blocos importantes.
+   ============================================================ */
+@media print {
+  /* Página A4 com margens generosas */
+  @page {
+    size: A4;
+    margin: 12mm 10mm;
+  }
+
+  /* Reset global p/ impressão */
+  html, body {
+    background: #ffffff !important;
+    color: #000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Forçar cores em todos os elementos (gradientes, badges, headers) */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* Esconder elementos de UI que não são parte do relatório */
+  .no-print,
+  [data-no-print],
+  nav,
+  header.app-header,
+  .sticky {
+    display: none !important;
+  }
+
+  /* Containers do relatório: remover sombras pesadas e bordas externas
+     que ficam estranhas no papel; manter cards internos */
+  body .container,
+  body .min-h-screen {
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+  }
+
+  /* O wrapper principal do relatório (bg-card rounded-xl shadow-sm border) */
+  [data-report-root] {
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+  }
+
+  /* Evitar quebras dentro de blocos visuais críticos */
+  .print-avoid-break,
+  [data-pdf-section],
+  table,
+  thead,
+  tfoot {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Cabeçalho de tabela repete em cada página */
+  thead { display: table-header-group !important; }
+  tfoot { display: table-footer-group !important; }
+  tr    { page-break-inside: avoid !important; break-inside: avoid !important; }
+
+  /* Cards (KPIs, mês, resumo) não devem cortar */
+  .rounded-xl,
+  .rounded-2xl,
+  .rounded-lg {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Headings nunca ficam soltos no fim da página */
+  h1, h2, h3, h4 {
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+  }
+
+  /* Esconder a versão mobile (cards de reservas) e mostrar a tabela */
+  .sm\:hidden { display: none !important; }
+  .hidden.sm\:block { display: block !important; }
+
+  /* Garantir que recharts/SVG renderizem em preto sobre branco */
+  svg { max-width: 100% !important; height: auto !important; }
+
+  /* Tipografia ligeiramente menor pra caber melhor */
+  body { font-size: 11px !important; }
+
+  /* Textarea de observações: mostrar como texto e remover borda */
+  textarea {
+    border: none !important;
+    padding: 0 !important;
+    resize: none !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+}
+
