@@ -190,14 +190,6 @@ export const useUpsertMaintenance = () => {
 
   return useMutation({
     mutationFn: async (data: MaintenanceFormData) => {
-      // Validações
-      if (data.cost_responsible === 'split' && (data.split_owner_percent == null)) {
-        throw new Error('Percentual do proprietário é obrigatório quando dividido');
-      }
-      if (data.cost_responsible !== 'split') {
-        data.split_owner_percent = null;
-      }
-
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) throw new Error('Não autenticado');
 
@@ -210,7 +202,7 @@ export const useUpsertMaintenance = () => {
         status: data.status || 'draft',
         amount_cents: data.cost_total_cents,
         cost_responsible: data.cost_responsible,
-        split_owner_percent: data.split_owner_percent,
+        split_owner_percent: null,
         due_date: data.due_at || null,
       };
 
