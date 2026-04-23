@@ -75,7 +75,7 @@ const TodosTickets = () => {
 
   useEffect(() => {
     filterTickets();
-  }, [searchTerm, statusFilter, priorityFilter, typeFilter, sortBy, tickets]);
+  }, [debouncedSearch, filters.status, filters.priority, filters.property, filters.dateFrom, filters.dateTo, typeFilter, sortBy, tickets]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -169,23 +169,13 @@ const TodosTickets = () => {
   };
 
   const filterTickets = () => {
-    let filtered = [...tickets];
-
-    if (searchTerm) {
-      filtered = filtered.filter(ticket => 
-        ticket.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        ticket.owner.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (ticket.property?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(ticket => ticket.status === statusFilter);
-    }
-
-    if (priorityFilter !== 'all') {
-      filtered = filtered.filter(ticket => ticket.priority === priorityFilter);
-    }
+    let filtered = applyTo(tickets, {
+      searchFields: (t) => [t.subject, t.description, t.owner.name, t.property?.name],
+      status: (t) => t.status,
+      priority: (t) => t.priority,
+      propertyId: (t) => t.property?.id ?? null,
+      date: (t) => t.created_at,
+    });
 
     if (typeFilter !== 'all') {
       filtered = filtered.filter(ticket => ticket.ticket_type === typeFilter);
@@ -215,7 +205,17 @@ const TodosTickets = () => {
     });
 
     setFilteredTickets(filtered);
+    setVisibleCount(100);
   };
+
+  // Build property options from loaded tickets
+  const propertyOptions = (() => {
+    const map = new Map<string, string>();
+    tickets.forEach((t) => {
+      if (t.property?.id) map.set(t.property.id, t.property.name);
+    });
+    return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
+  })();
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
