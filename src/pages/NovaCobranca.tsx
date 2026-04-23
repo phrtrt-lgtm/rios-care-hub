@@ -208,31 +208,53 @@ export default function NovaCobranca() {
     setLoading(true);
 
     try {
-      // Create charge
-      const { data: charge, error: chargeError } = await supabase
-        .from('charges')
-        .insert({
-          owner_id: formData.owner_id,
-          property_id: formData.property_id || null,
-          title: formData.title,
-          description: formData.description || null,
-          category: formData.category || null,
-          amount_cents: parseInt(formData.amount_cents) * 100, // Convert to cents
-          management_contribution_cents: formData.management_contribution_cents ? parseInt(formData.management_contribution_cents) * 100 : 0,
-          due_date: formData.due_date || null,
-          status: asDraft ? 'draft' : 'sent'
-        })
-        .select()
-        .single();
+      let chargeId: string;
 
-      if (chargeError) throw chargeError;
+      if (isEditMode && editChargeId) {
+        // UPDATE existing charge
+        const { error: updateError } = await supabase
+          .from('charges')
+          .update({
+            owner_id: formData.owner_id,
+            property_id: formData.property_id || null,
+            title: formData.title,
+            description: formData.description || null,
+            category: formData.category || null,
+            amount_cents: parseInt(formData.amount_cents) * 100,
+            management_contribution_cents: formData.management_contribution_cents ? parseInt(formData.management_contribution_cents) * 100 : 0,
+            due_date: formData.due_date || null,
+          })
+          .eq('id', editChargeId);
+        if (updateError) throw updateError;
+        chargeId = editChargeId;
+      } else {
+        // INSERT new charge
+        const { data: charge, error: chargeError } = await supabase
+          .from('charges')
+          .insert({
+            owner_id: formData.owner_id,
+            property_id: formData.property_id || null,
+            title: formData.title,
+            description: formData.description || null,
+            category: formData.category || null,
+            amount_cents: parseInt(formData.amount_cents) * 100, // Convert to cents
+            management_contribution_cents: formData.management_contribution_cents ? parseInt(formData.management_contribution_cents) * 100 : 0,
+            due_date: formData.due_date || null,
+            status: asDraft ? 'draft' : 'sent'
+          })
+          .select()
+          .single();
 
-      // Upload attachments
+        if (chargeError) throw chargeError;
+        chargeId = charge.id;
+      }
+
+      // Upload new attachments (if any)
       for (const file of attachments) {
         // Compress video if it's a video file
         const processedFile = await processFileForUpload(file);
         const fileExt = processedFile.name.split('.').pop();
-        const filePath = `charges/${charge.id}/${Date.now()}.${fileExt}`;
+        const filePath = `charges/${chargeId}/${Date.now()}.${fileExt}`;
 
         const { error: uploadError } = await supabase.storage
           .from('attachments')
@@ -243,7 +265,7 @@ export default function NovaCobranca() {
         const { error: dbError } = await supabase
           .from('charge_attachments')
           .insert({
-            charge_id: charge.id,
+            charge_id: chargeId,
             file_name: processedFile.name,
             file_path: filePath,
             file_size: processedFile.size,
@@ -254,30 +276,31 @@ export default function NovaCobranca() {
         if (dbError) throw dbError;
       }
 
-      // Enviar notificação por email e push se não for rascunho
-      if (!asDraft) {
+      // Enviar notificação por email e push apenas para CRIAÇÃO (não rascunho, não edição)
+      if (!isEditMode && !asDraft) {
         try {
           await supabase.functions.invoke('send-charge-email', {
             body: {
               type: 'charge_created',
-              chargeId: charge.id,
+              chargeId,
             },
           });
         } catch (notifyError) {
           console.error('Erro ao enviar notificação:', notifyError);
-          // Não bloqueia a criação se falhar a notificação
         }
       }
 
       toast({
-        title: asDraft ? "Rascunho salvo!" : "Cobrança criada!",
-        description: asDraft ? "A cobrança foi salva como rascunho." : "A cobrança foi criada e o proprietário foi notificado.",
+        title: isEditMode ? "Cobrança atualizada!" : (asDraft ? "Rascunho salvo!" : "Cobrança criada!"),
+        description: isEditMode
+          ? "As alterações foram salvas."
+          : (asDraft ? "A cobrança foi salva como rascunho." : "A cobrança foi criada e o proprietário foi notificado."),
       });
 
-      navigate('/painel');
+      navigate(isEditMode ? '/admin/manutencoes-lista' : '/painel');
     } catch (error: any) {
       toast({
-        title: "Erro ao criar cobrança",
+        title: isEditMode ? "Erro ao atualizar cobrança" : "Erro ao criar cobrança",
         description: error.message,
         variant: "destructive",
       });
