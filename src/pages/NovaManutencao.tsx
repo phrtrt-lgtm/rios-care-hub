@@ -490,12 +490,6 @@ export default function NovaManutencao() {
                       Hóspede
                     </Label>
                   </div>
-                  <div className="flex items-center space-x-2 border rounded-lg p-3">
-                    <RadioGroupItem value="split" id="cost-split" />
-                    <Label htmlFor="cost-split" className="font-normal cursor-pointer flex-1">
-                      Dividido
-                    </Label>
-                  </div>
                 </RadioGroup>
 
                 {costResponsible === 'management' && (
