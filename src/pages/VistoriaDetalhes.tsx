@@ -36,6 +36,7 @@ interface Attachment {
   file_url: string;
   file_name: string | null;
   file_type: string | null;
+  maintenance_ticket_id?: string | null;
 }
 
 export default function VistoriaDetalhes() {
