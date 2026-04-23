@@ -7,14 +7,20 @@ import { FinancialReportView } from "@/components/report/FinancialReportView";
 import { ReportData } from "@/lib/report-types";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import { ReportAuditLog } from "@/components/report/admin/ReportAuditLog";
 
 export default function OwnerRelatorioFinanceiro() {
   const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const isTeam =
+    profile?.role === "admin" ||
+    profile?.role === "agent" ||
+    profile?.role === "maintenance";
 
   useEffect(() => {
     const fetchReport = async () => {
@@ -66,8 +72,12 @@ export default function OwnerRelatorioFinanceiro() {
     <div className="min-h-screen bg-background">
       <FinancialReportView
         data={reportData}
-        onBack={() => navigate("/minha-caixa")}
+        onBack={() =>
+          navigate(isTeam ? "/admin/relatorios-financeiros" : "/minha-caixa")
+        }
       />
+      {isTeam && id && <ReportAuditLog reportId={id} />}
     </div>
   );
 }
+
