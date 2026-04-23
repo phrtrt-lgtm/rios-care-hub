@@ -476,7 +476,6 @@ export function FinancialReportView({ data, onBack, hideBackButton = false, forc
                     { label: 'Ticket Médio', value: formatReportCurrency(kpis.avgPerBooking), sub: 'por reserva', icon: Ticket },
                     { label: 'Estadia Média', value: `${kpis.avgStay} noites`, sub: 'por hóspede', icon: BedDouble },
                     { label: 'Total Noites', value: `${kpis.totalNights}`, sub: `de ${kpis.periodDays} dias no período`, icon: Calendar },
-                    ...(kpis.topChannel ? [{ label: 'Canal Top', value: kpis.topChannel.name, sub: `${kpis.topChannel.count} reservas · ${formatReportCurrency(kpis.topChannel.revenue)}`, icon: Star }] : []),
                   ].map((kpi, i) => {
                     const Icon = kpi.icon;
                     return (
