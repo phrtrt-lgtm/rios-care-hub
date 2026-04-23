@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { sanitizeFilename } from "@/lib/storage";
 import { VoiceToTextInput } from "@/components/VoiceToTextInput";
-import { MaintenanceCostSplit } from "@/components/MaintenanceCostSplit";
+
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { processFileForUpload } from "@/lib/processVideoForUpload";
 
@@ -42,8 +42,7 @@ export default function NovaManutencao() {
   const [uploadedFiles, setUploadedFiles] = useState<ReadyAttachment[]>([]);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [costResponsible, setCostResponsible] = useState<'owner' | 'management' | 'split' | 'guest'>('owner');
-  const [splitOwnerPercent, setSplitOwnerPercent] = useState<number | null>(50);
+  const [costResponsible, setCostResponsible] = useState<'owner' | 'management' | 'guest'>('owner');
   const [guestCheckoutDate, setGuestCheckoutDate] = useState<string>("");
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -343,7 +342,6 @@ export default function NovaManutencao() {
       case 'owner': return 'Proprietário';
       case 'management': return 'Gestão';
       case 'guest': return 'Hóspede';
-      case 'split': return 'Dividido';
       default: return '';
     }
   };
@@ -490,12 +488,6 @@ export default function NovaManutencao() {
                       Hóspede
                     </Label>
                   </div>
-                  <div className="flex items-center space-x-2 border rounded-lg p-3">
-                    <RadioGroupItem value="split" id="cost-split" />
-                    <Label htmlFor="cost-split" className="font-normal cursor-pointer flex-1">
-                      Dividido
-                    </Label>
-                  </div>
                 </RadioGroup>
 
                 {costResponsible === 'management' && (
@@ -531,21 +523,6 @@ export default function NovaManutencao() {
                   </div>
                 )}
 
-                {costResponsible === 'split' && (
-                  <div className="space-y-2 pl-4 border-l-2 border-muted">
-                    <Label>Percentual do proprietário (%)</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={splitOwnerPercent ?? 50}
-                      onChange={(e) => setSplitOwnerPercent(Number(e.target.value))}
-                    />
-                    <p className="text-sm text-muted-foreground">
-                      Gestão pagará: {100 - (splitOwnerPercent ?? 50)}%
-                    </p>
-                  </div>
-                )}
               </div>
 
               {/* Owner Decision Mode - only show for owner-responsible costs */}
