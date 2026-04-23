@@ -2,7 +2,13 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Plus, LogOut, DollarSign, ClipboardCheck, Ticket, BookOpen, Wrench, BarChart3, GraduationCap } from "lucide-react";
+import { Plus, LogOut, DollarSign, ClipboardCheck, Ticket, BookOpen, Wrench, BarChart3, GraduationCap, MoreHorizontal } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { TicketList } from "@/components/TicketList";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -73,43 +79,56 @@ export default function MinhaCaixa() {
       {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <img src="/logo.png" alt="RIOS" className="h-6 object-contain" />
-              
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <button
+                onClick={() => navigate("/minha-caixa")}
+                className="flex-shrink-0"
+                aria-label="Início"
+              >
+                <img src="/logo.png" alt="RIOS" className="h-6 object-contain" />
+              </button>
+
+              {/* Ação primária — só aparece em desktop. No mobile fica no MobileBottomNav. */}
               <Button
-                onClick={() => navigate("/minhas-cobrancas")} 
-                variant="ghost"
-                size="icon"
+                onClick={() => navigate("/novo-ticket")}
+                variant="default"
+                size="sm"
+                className="hidden sm:inline-flex"
               >
-                <DollarSign className="h-5 w-5" />
+                <Plus className="h-4 w-4 mr-2" />
+                Novo chamado
               </Button>
 
-              <Button 
-                onClick={() => navigate("/meus-chamados")} 
-                variant="ghost"
-                size="icon"
-              >
-                <Ticket className="h-5 w-5" />
-              </Button>
-
-              <Button 
-                onClick={() => navigate("/novo-ticket")} 
-                variant="ghost"
-                size="icon"
-              >
-                <Plus className="h-5 w-5" />
-              </Button>
-              
-              {hasInspectionAccess && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => navigate("/vistorias")}
-                >
-                  <ClipboardCheck className="h-5 w-5" />
-                </Button>
-              )}
+              {/* Mais ações — desktop apenas */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="hidden sm:inline-flex"
+                  >
+                    <MoreHorizontal className="h-4 w-4 mr-2" />
+                    Mais
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56 bg-popover">
+                  <DropdownMenuItem onClick={() => navigate("/minhas-cobrancas")}>
+                    <DollarSign className="h-4 w-4 mr-2" />
+                    Minhas cobranças
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/meus-chamados")}>
+                    <Ticket className="h-4 w-4 mr-2" />
+                    Meus chamados
+                  </DropdownMenuItem>
+                  {hasInspectionAccess && (
+                    <DropdownMenuItem onClick={() => navigate("/vistorias")}>
+                      <ClipboardCheck className="h-4 w-4 mr-2" />
+                      Vistorias
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             <div className="flex items-center gap-2">
