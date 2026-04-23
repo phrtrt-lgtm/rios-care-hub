@@ -1047,6 +1047,107 @@ export default function AdminManutencoesLista() {
     return () => clearTimeout(timer);
   }, [search]);
 
+  // Inline add state
+  const [inlineAdd, setInlineAdd] = useState<{
+    groupId: string;
+    subject: string;
+    propertyId: string;
+    amountCents: string;
+  } | null>(null);
+  const [inlineLoading, setInlineLoading] = useState(false);
+  const inlineInputRef = useRef<HTMLInputElement>(null);
+
+  // Properties for inline form
+  const { data: propertiesList } = useQuery({
+    queryKey: ["properties-inline-add"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("properties")
+        .select("id, name, owner_id")
+        .order("name");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const handleStartInlineAdd = useCallback((groupId: string) => {
+    setInlineAdd({ groupId, subject: "", propertyId: "", amountCents: "" });
+    setExpandedGroups((prev) => ({ ...prev, [groupId]: true }));
+  }, []);
+
+  const handleInlineCancel = useCallback(() => {
+    setInlineAdd(null);
+  }, []);
+
+  const handleInlineSave = useCallback(async () => {
+    if (!inlineAdd || !inlineAdd.subject.trim() || inlineLoading) return;
+    if (!inlineAdd.propertyId) {
+      toast.error("Selecione um imóvel");
+      return;
+    }
+
+    setInlineLoading(true);
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) throw new Error("Não autenticado");
+
+      const prop = propertiesList?.find((p) => p.id === inlineAdd.propertyId);
+      const ownerId = prop?.owner_id;
+      if (!ownerId) throw new Error("Imóvel sem proprietário associado");
+
+      const isTicketGroup = ["em_progresso", "concluidas"].includes(inlineAdd.groupId);
+
+      if (isTicketGroup) {
+        const { error } = await supabase.from("tickets").insert({
+          subject: inlineAdd.subject.trim(),
+          description: inlineAdd.subject.trim(),
+          property_id: inlineAdd.propertyId,
+          owner_id: ownerId,
+          created_by: authUser.id,
+          ticket_type: "manutencao",
+          kind: "maintenance",
+          status: inlineAdd.groupId === "concluidas" ? "concluido" : "novo",
+        });
+        if (error) throw error;
+      } else {
+        const rawAmount = inlineAdd.amountCents.replace(/[^\d,]/g, "").replace(",", ".");
+        const amountCents = Math.round((parseFloat(rawAmount) || 0) * 100);
+
+        const { error } = await supabase.from("charges").insert({
+          title: inlineAdd.subject.trim(),
+          property_id: inlineAdd.propertyId,
+          owner_id: ownerId,
+          amount_cents: amountCents,
+          management_contribution_cents: 0,
+          status: "pendente",
+          currency: "BRL",
+        });
+        if (error) throw error;
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["maintenance-list-view"] });
+      queryClient.invalidateQueries({ queryKey: ["pending-charges-list"] });
+
+      setInlineAdd(null);
+      toast.success("Item adicionado");
+    } catch (err: any) {
+      console.error("Inline add error:", err);
+      toast.error(err.message || "Erro ao adicionar item");
+    } finally {
+      setInlineLoading(false);
+    }
+  }, [inlineAdd, inlineLoading, propertiesList, queryClient]);
+
+  const handleInlineKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleInlineSave();
+    } else if (e.key === "Escape") {
+      handleInlineCancel();
+    }
+  }, [handleInlineSave, handleInlineCancel]);
+
+
   // Fetch vistorias (inspections)
   const { data: inspections } = useQuery({
     queryKey: ["inspections-for-list"],
