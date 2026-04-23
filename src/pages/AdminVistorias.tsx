@@ -394,6 +394,13 @@ export default function AdminVistorias() {
           transcriptSummary={selectedInspection.transcript_summary}
         />
       )}
+
+      <DetailSheet
+        open={detailSheet.open}
+        onClose={detailSheet.closeSheet}
+        entityId={detailSheet.entityId}
+        entityType={detailSheet.entityType}
+      />
     </div>
   );
 }
