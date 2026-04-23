@@ -196,6 +196,39 @@ export default function CobrancaDetalhes() {
         fetchMessages(),
         fetchAttachments()
       ]);
+
+      // Auto-regenerar link/PIX se a cobrança está vencida e ainda não foi paga
+      // Isso garante que vencidas sempre tenham um link válido pronto pra usar
+      const isUnpaid = !['paid', 'pago_antecipado', 'pago_no_vencimento', 'pago_com_atraso', 'cancelled', 'debited'].includes(enrichedCharge.status);
+      const isOverdue = enrichedCharge.due_date ? new Date(enrichedCharge.due_date) < new Date() : false;
+      const hasExistingLink = !!enrichedCharge.payment_link;
+
+      if (isUnpaid && isOverdue && hasExistingLink) {
+        console.log('[CobrancaDetalhes] Cobrança vencida detectada, regenerando link em background...');
+        // Fire-and-forget: não bloqueia a UI
+        supabase.functions
+          .invoke('create-mercadopago-payment', { body: { chargeId: id } })
+          .then(({ data, error }) => {
+            if (error) {
+              console.error('[CobrancaDetalhes] Erro ao auto-regenerar link:', error);
+              return;
+            }
+            if (data?.payment_link && data.payment_link !== enrichedCharge.payment_link) {
+              console.log('[CobrancaDetalhes] Link regenerado com sucesso, atualizando UI');
+              // Recarrega só a charge (não as mensagens) para refletir o novo link
+              supabase
+                .from('charges')
+                .select('*, profiles!charges_owner_id_fkey (name, photo_url), properties (name)')
+                .eq('id', id)
+                .single()
+                .then(({ data: refreshed }) => {
+                  if (refreshed) {
+                    setCharge({ ...refreshed, property: refreshed.properties } as any);
+                  }
+                });
+            }
+          });
+      }
     } catch (error: any) {
       toast({
         title: "Erro ao carregar cobrança",
