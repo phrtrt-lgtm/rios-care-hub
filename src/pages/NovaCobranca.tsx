@@ -320,6 +320,22 @@ export default function NovaCobranca({ embedded = false, editId, onSaved, onCanc
     }
   };
 
+  if (embedded) {
+    return (
+      <div className="space-y-2">
+        {isReposicao && (
+          <p className="text-sm text-muted-foreground">
+            Registre a compra de itens para o imóvel. O aporte da gestão cobre 100% automaticamente.
+          </p>
+        )}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* form fields rendered below */}
+          <EmbeddedFormContent />
+        </form>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       <header className="border-b bg-card/50 backdrop-blur-sm">
