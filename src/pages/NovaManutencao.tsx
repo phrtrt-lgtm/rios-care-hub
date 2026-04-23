@@ -296,42 +296,70 @@ export default function NovaManutencao() {
       // Determine if this is essential (immediate action) or needs owner decision
       const isEssential = ownerActionMode === 'essential';
       const ownerDecision = ownerActionMode === 'pm_immediate' ? 'pm_will_fix' : null;
-      
+
       // Set 72h deadline for owner decision if mode is pending_decision
-      const ownerActionDueAt = ownerActionMode === 'pending_decision' 
+      const ownerActionDueAt = ownerActionMode === 'pending_decision'
         ? new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString()
         : null;
 
-      // Create maintenance ticket
-      const { data: ticket, error: ticketError } = await supabase
-        .from("tickets")
-        .insert([{
-          owner_id: selectedProperty.owner_id,
-          created_by: user!.id,
-          ticket_type: "manutencao" as const,
-          kind: "maintenance",
-          subject,
-          description,
-          priority,
-          property_id: propertyId,
-          cost_responsible: dbCostResponsible,
-          guest_checkout_date: costResponsible === 'guest' && guestCheckoutDate ? guestCheckoutDate : null,
-          essential: isEssential,
-          owner_decision: ownerDecision,
-          owner_action_due_at: ownerActionDueAt,
-        }])
-        .select()
-        .single();
+      let ticketId: string;
 
-      if (ticketError) throw ticketError;
+      if (isEditMode && editTicketId) {
+        // UPDATE existing ticket
+        const { error: updateError } = await supabase
+          .from('tickets')
+          .update({
+            owner_id: selectedProperty.owner_id,
+            subject,
+            description,
+            priority,
+            property_id: propertyId,
+            cost_responsible: dbCostResponsible,
+            guest_checkout_date: costResponsible === 'guest' && guestCheckoutDate ? guestCheckoutDate : null,
+            essential: isEssential,
+            owner_decision: ownerDecision,
+            owner_action_due_at: ownerActionDueAt,
+          })
+          .eq('id', editTicketId);
+        if (updateError) throw updateError;
+        ticketId = editTicketId;
+      } else {
+        // INSERT new ticket
+        const { data: ticket, error: ticketError } = await supabase
+          .from("tickets")
+          .insert([{
+            owner_id: selectedProperty.owner_id,
+            created_by: user!.id,
+            ticket_type: "manutencao" as const,
+            kind: "maintenance",
+            subject,
+            description,
+            priority,
+            property_id: propertyId,
+            cost_responsible: dbCostResponsible,
+            guest_checkout_date: costResponsible === 'guest' && guestCheckoutDate ? guestCheckoutDate : null,
+            essential: isEssential,
+            owner_decision: ownerDecision,
+            owner_action_due_at: ownerActionDueAt,
+          }])
+          .select()
+          .single();
 
-      // Create initial message with uploaded attachments
-      if (uploadedFiles.length > 0 || description) {
+        if (ticketError) throw ticketError;
+        ticketId = ticket.id;
+      }
+
+      // Append message with new attachments (only when there are uploads, or for new ticket initial message)
+      const shouldCreateMessage = !isEditMode
+        ? (uploadedFiles.length > 0 || description)
+        : uploadedFiles.length > 0;
+
+      if (shouldCreateMessage) {
         const session = await supabase.auth.getSession();
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-        
-        await fetch(`${supabaseUrl}/functions/v1/create-ticket-message/${ticket.id}`, {
+
+        await fetch(`${supabaseUrl}/functions/v1/create-ticket-message/${ticketId}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -340,7 +368,7 @@ export default function NovaManutencao() {
           },
           body: JSON.stringify({
             author_type: 'agent',
-            message: description || null,
+            message: isEditMode ? null : (description || null),
             attachments: uploadedFiles.map(f => ({
               file_url: f.file_url,
               file_type: f.file_type,
@@ -351,13 +379,11 @@ export default function NovaManutencao() {
         });
       }
 
-      // Send notification for owner decision if applicable.
-      // 'pending' (Em espera) MUST NOT notify the owner — the maintenance stays
-      // hidden until the team defines a real responsible.
-      if (ownerActionMode === 'pending_decision' && costResponsible === 'owner') {
+      // Send notification for owner decision only on creation (not edit)
+      if (!isEditMode && ownerActionMode === 'pending_decision' && costResponsible === 'owner') {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-        
+
         fetch(`${supabaseUrl}/functions/v1/notify-owner-decision`, {
           method: 'POST',
           headers: {
@@ -366,16 +392,16 @@ export default function NovaManutencao() {
           },
           body: JSON.stringify({
             type: 'decision_pending',
-            ticketId: ticket.id,
+            ticketId,
           }),
         }).catch(err => console.error('Failed to send decision notification:', err));
       }
 
-      toast.success("Manutenção criada com sucesso!");
-      navigate(`/admin/manutencoes`);
+      toast.success(isEditMode ? "Manutenção atualizada!" : "Manutenção criada com sucesso!");
+      navigate(`/admin/manutencoes-lista`);
     } catch (error: any) {
-      console.error("Error creating maintenance:", error);
-      toast.error(error.message || "Erro ao criar manutenção");
+      console.error("Error saving maintenance:", error);
+      toast.error(error.message || "Erro ao salvar manutenção");
     } finally {
       setLoading(false);
     }
