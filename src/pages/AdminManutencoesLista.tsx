@@ -633,6 +633,24 @@ function GroupRow({
                 />
               )}
             </td>
+
+            {/* Editar */}
+            <td className="p-0 w-[44px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-center px-1 py-2">
+                <button
+                  type="button"
+                  className="p-1.5 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(item, isCharge);
+                  }}
+                  title="Editar"
+                  aria-label="Editar"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </td>
           </tr>
         );
       })}
