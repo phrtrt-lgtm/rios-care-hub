@@ -429,7 +429,7 @@ export function FinancialReportView({ data, onBack, hideBackButton = false, forc
               <div className="bg-primary px-4 sm:px-8 py-5 sm:py-6 text-primary-foreground">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="bg-primary-foreground rounded-lg p-2"><img src={logo} alt="Rios Hospedagens" className="h-7 sm:h-8 w-auto" /></div>
+                    <div className="bg-white rounded-lg p-2 shadow-sm"><img src={logo} alt="Rios Hospedagens" className="h-7 sm:h-8 w-auto" /></div>
                     <div><h1 className="text-lg sm:text-xl font-bold">Rios Hospedagens</h1><p className="text-xs sm:text-sm text-primary-foreground/80">Relatórios Financeiros</p></div>
                   </div>
                   <div className="flex items-center justify-between sm:justify-end gap-3">
