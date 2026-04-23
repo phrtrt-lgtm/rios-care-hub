@@ -319,7 +319,7 @@ export default function Manutencoes() {
                   </tr>
                 ) : maintenances && maintenances.length > 0 ? (
                   maintenances
-                    .filter((m: any) => !activeFilters.serviceType || m.service_type === activeFilters.serviceType)
+                    .filter((m: any) => !activeFilters.serviceType || (m.service_type && String(m.service_type).split(",").map((s: string) => s.trim()).includes(activeFilters.serviceType)))
                     .map((m: any) => (
                     <tr
                       key={m.id}
