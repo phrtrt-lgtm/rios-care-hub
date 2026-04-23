@@ -123,8 +123,11 @@ export default function CobrancaDetalhes() {
   const [generatingPaymentLink, setGeneratingPaymentLink] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [previewAsOwner, setPreviewAsOwner] = useState(false);
 
-  const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance';
+  const isTeamMemberRaw = profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance';
+  // Quando equipe ativa "Visualizar como proprietário", a UI renderiza igual ao que o proprietário enxerga
+  const isTeamMember = isTeamMemberRaw && !previewAsOwner;
 
   // Read receipts for messages
   const messageIds = useMemo(() => messages.map(m => m.id), [messages]);
@@ -964,6 +967,21 @@ export default function CobrancaDetalhes() {
         </div>
       </header>
 
+      {isTeamMemberRaw && previewAsOwner && (
+        <div className="bg-amber-500 text-white px-4 py-2 text-center text-sm font-medium flex items-center justify-center gap-3 flex-wrap">
+          <Eye className="h-4 w-4" />
+          <span>Você está vendo esta cobrança como o proprietário a enxerga</span>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setPreviewAsOwner(false)}
+            className="h-7 bg-white/95 text-amber-700 hover:bg-white"
+          >
+            Voltar à visão da equipe
+          </Button>
+        </div>
+      )}
+
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         <Card className="mb-6 overflow-hidden">
           <CardHeader className="space-y-6">
@@ -1010,6 +1028,15 @@ export default function CobrancaDetalhes() {
                     <Button 
                       variant="outline"
                       size="sm"
+                      onClick={() => setPreviewAsOwner(true)}
+                      title="Ver exatamente o que o proprietário enxerga (PIX, QR Code, link de pagamento)"
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      Ver como proprietário
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      size="sm"
                       onClick={() => setEditDialogOpen(true)}
                     >
                       <Pencil className="h-4 w-4 mr-2" />
@@ -1024,6 +1051,17 @@ export default function CobrancaDetalhes() {
                       Excluir
                     </Button>
                   </>
+                )}
+                {isTeamMemberRaw && previewAsOwner && (
+                  <Button 
+                    variant="default"
+                    size="sm"
+                    onClick={() => setPreviewAsOwner(false)}
+                    className="bg-amber-500 hover:bg-amber-600 text-white"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Sair da visão do proprietário
+                  </Button>
                 )}
               </div>
             </div>
