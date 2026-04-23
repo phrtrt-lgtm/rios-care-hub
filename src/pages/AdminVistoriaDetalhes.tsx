@@ -318,9 +318,12 @@ export default function AdminVistoriaDetalhes() {
   };
 
   const imageAttachments = attachments.filter(a => a.file_type?.startsWith('image/'));
+  const imageAttachments = attachments.filter(a => a.file_type?.startsWith('image/'));
   const videoAttachments = attachments.filter(a => a.file_type?.startsWith('video/'));
   const audioAttachments = attachments.filter(a => a.file_type?.startsWith('audio/'));
   const mediaAttachments = [...imageAttachments, ...videoAttachments];
+  const pendingMedia = mediaAttachments.filter(a => !a.maintenance_ticket_id);
+  const linkedMedia = mediaAttachments.filter(a => !!a.maintenance_ticket_id);
 
   const handleMediaClick = (attachment: Attachment) => {
     const index = mediaAttachments.findIndex(a => a.id === attachment.id);
