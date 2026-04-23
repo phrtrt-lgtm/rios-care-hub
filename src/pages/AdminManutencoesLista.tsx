@@ -2332,10 +2332,13 @@ export default function AdminManutencoesLista() {
                             openSheet(id, isCharge ? "cobranca" : "maintenance");
                           }}
                           onEdit={(item, isCharge) => {
-                            const path = isCharge
-                              ? `/nova-cobranca?edit=${item.id}`
-                              : `/admin/nova-manutencao?edit=${item.id}`;
-                            navigate(path);
+                            if (isCharge) {
+                              setEditChargeId(item.id);
+                              setEditChargeOpen(true);
+                            } else {
+                              setEditMaintenanceId(item.id);
+                              setEditMaintenanceOpen(true);
+                            }
                           }}
                         />
 
