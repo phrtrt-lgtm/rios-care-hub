@@ -1,7 +1,8 @@
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { ExternalLink } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { saveScrollPosition } from '@/lib/navigation';
 import { DetailEntityType } from '@/hooks/useDetailSheet';
 import { MaintenanceDetailSheetContent } from './MaintenanceDetailSheetContent';
 import { VistoriaDetailSheetContent } from './VistoriaDetailSheetContent';
@@ -30,11 +31,13 @@ function getEntityTitle(entityType: DetailEntityType): string {
 
 export function DetailSheet({ open, onClose, entityId, entityType }: DetailSheetProps) {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   if (!entityId || !entityType) return null;
 
   const fullRoute = getEntityRoute(entityType, entityId);
   const goToFullPage = () => {
+    saveScrollPosition(pathname);
     onClose();
     navigate(fullRoute);
   };
