@@ -1465,7 +1465,7 @@ export default function AdminManutencoesLista() {
           owner:profiles!charges_owner_id_fkey(id, name),
           ticket_id
         `)
-        .in("status", ["pendente", "pending", "draft", "sent", "contested"])
+        .in("status", ["pendente", "pending", "sent", "contested"])
         .is("paid_at", null)
         .is("archived_at", null)
         .order("due_date", { ascending: true });
@@ -1523,21 +1523,22 @@ export default function AdminManutencoesLista() {
           let chargeId: string;
 
           if (existingCharges && existingCharges.length > 0) {
-            // Atualizar TODAS as cobranças vinculadas para "pendente"
+            // Atualizar a cobrança existente para "sent" (envia ao proprietário)
             const { error: updateError } = await supabase
               .from("charges")
               .update({
-                status: "pendente",
+                status: "sent",
                 amount_cents: ticket.amount_cents || existingCharges[0].amount_cents || 0,
                 management_contribution_cents: ticket.management_contribution_cents ?? 0,
                 service_type: ticket.service_type || null,
+                cost_responsible: ticket.cost_responsible || "owner",
               })
               .eq("ticket_id", id)
               .is("archived_at", null);
             if (updateError) throw updateError;
             chargeId = existingCharges[0].id;
           } else {
-            // Criar nova cobrança com status "pendente"
+            // Criar nova cobrança já enviada ao proprietário
             const { data: newCharge, error: chargeError } = await supabase
               .from("charges")
               .insert({
@@ -1548,8 +1549,8 @@ export default function AdminManutencoesLista() {
                 amount_cents: ticket.amount_cents || 0,
                 management_contribution_cents: ticket.management_contribution_cents || 0,
                 service_type: ticket.service_type || null,
-                cost_responsible: "owner",
-                status: "pendente",
+                cost_responsible: ticket.cost_responsible || "owner",
+                status: "sent",
               })
               .select("id")
               .single();
@@ -1581,6 +1582,15 @@ export default function AdminManutencoesLista() {
               .update({ status: "concluido" })
               .eq("id", id);
             if (ticketError) throw ticketError;
+          }
+
+          // Notificar o proprietário (email + push + notificação interna)
+          try {
+            await supabase.functions.invoke("send-charge-email", {
+              body: { type: "charge_created", chargeId },
+            });
+          } catch (notifyErr) {
+            console.warn("Falha ao notificar proprietário (não crítico):", notifyErr);
           }
 
           toast.success("Cobrança criada e enviada ao proprietário!");
