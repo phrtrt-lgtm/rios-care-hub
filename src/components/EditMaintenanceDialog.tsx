@@ -1,27 +1,27 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import NovaCobranca from "@/pages/NovaCobranca";
+import NovaManutencao from "@/pages/NovaManutencao";
 
-interface EditChargeDialogProps {
-  chargeId: string | null;
+interface EditMaintenanceDialogProps {
+  ticketId: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved?: () => void;
 }
 
-export function EditChargeDialog({ chargeId, open, onOpenChange, onSaved }: EditChargeDialogProps) {
+export function EditMaintenanceDialog({ ticketId, open, onOpenChange, onSaved }: EditMaintenanceDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{chargeId ? "Editar Cobrança" : "Nova Cobrança"}</DialogTitle>
+          <DialogTitle>{ticketId ? "Editar Manutenção" : "Nova Manutenção"}</DialogTitle>
           <DialogDescription>
-            {chargeId ? "Atualize as informações desta cobrança" : "Crie uma nova cobrança"}
+            {ticketId ? "Atualize as informações deste chamado" : "Registre um novo chamado de manutenção"}
           </DialogDescription>
         </DialogHeader>
         {open && (
-          <NovaCobranca
+          <NovaManutencao
             embedded
-            editId={chargeId ?? undefined}
+            editId={ticketId ?? undefined}
             onCancel={() => onOpenChange(false)}
             onSaved={() => {
               onSaved?.();
