@@ -191,6 +191,18 @@ export function MaintenanceChatDialog({
     }
   }, [open]);
 
+  // Load mentionable users for this ticket
+  useEffect(() => {
+    if (!open || !ticketId) return;
+    (async () => {
+      const { data } = await supabase.rpc(
+        "get_ticket_mentionable_users" as any,
+        { _ticket_id: ticketId }
+      );
+      if (data) setMentionableUsers(data as MentionableUser[]);
+    })();
+  }, [open, ticketId]);
+
   const handleSend = async () => {
     if (!newMessage.trim() && selectedFiles.length === 0) return;
     if (sending) return;
