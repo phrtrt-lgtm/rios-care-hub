@@ -248,7 +248,20 @@ export function MaintenanceChatDialog({
 
       const success = await sendMessage(newMessage, attachments);
       if (success) {
+        // Fire and forget — notify mentioned users
+        if (mentionedIds.length > 0 && ticketId && user) {
+          supabase.functions.invoke("notify-mentions", {
+            body: {
+              entity_type: "ticket",
+              entity_id: ticketId,
+              mentioned_user_ids: mentionedIds,
+              author_id: user.id,
+              body: newMessage,
+            },
+          }).catch((e) => console.warn("notify-mentions failed", e));
+        }
         setNewMessage("");
+        setMentionedIds([]);
         setSelectedFiles([]);
       }
     } catch (error: any) {
