@@ -476,7 +476,6 @@ export function FinancialReportView({ data, onBack, hideBackButton = false, forc
                     { label: 'Ticket Médio', value: formatReportCurrency(kpis.avgPerBooking), sub: 'por reserva', icon: Ticket },
                     { label: 'Estadia Média', value: `${kpis.avgStay} noites`, sub: 'por hóspede', icon: BedDouble },
                     { label: 'Total Noites', value: `${kpis.totalNights}`, sub: `de ${kpis.periodDays} dias no período`, icon: Calendar },
-                    ...(kpis.topChannel ? [{ label: 'Canal Top', value: kpis.topChannel.name, sub: `${kpis.topChannel.count} reservas · ${formatReportCurrency(kpis.topChannel.revenue)}`, icon: Star }] : []),
                   ].map((kpi, i) => {
                     const Icon = kpi.icon;
                     return (
@@ -489,24 +488,7 @@ export function FinancialReportView({ data, onBack, hideBackButton = false, forc
                     );
                   })}
                 </div>
-                {/* Channels */}
-                {kpis.channels.length > 1 && (
-                  <div className="mb-6 sm:mb-8">
-                    <SectionSeparator title="Receita por Canal" />
-                    <div className="space-y-2">
-                      {kpis.channels.map(ch => {
-                        const pct = kpis.mainRevenue > 0 ? Math.round((ch.revenue / kpis.mainRevenue) * 100) : 0;
-                        return (
-                          <div key={ch.name} className="flex items-center gap-2 sm:gap-3">
-                            <span className="text-xs sm:text-sm font-medium text-foreground w-16 sm:w-24 shrink-0 truncate">{ch.name}</span>
-                            <div className="flex-1 h-2.5 sm:h-3 bg-muted rounded-full overflow-hidden"><div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} /></div>
-                            <span className="text-[10px] sm:text-sm text-muted-foreground shrink-0 text-right">{formatReportCurrency(ch.revenue)} ({pct}%)</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+                {/* Channels section removed per request */}
                 {/* Best month */}
                 {kpis.bestMonth && monthGroups.length > 1 && (
                   <div className="rounded-xl border border-border bg-accent/10 p-3 sm:p-4 mb-6 sm:mb-8 flex items-center gap-3">
