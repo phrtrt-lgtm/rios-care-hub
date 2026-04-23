@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { goBack } from "@/lib/navigation";
+import { useNavigate, useLocation } from "react-router-dom";
+import { goBack, saveScrollPosition } from "@/lib/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,6 +51,7 @@ export default function MinhasComissoesBooking() {
   useScrollRestoration();
   const { user, profile } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [generatingPayment, setGeneratingPayment] = useState(false);
   const [groupPayment, setGroupPayment] = useState<{
@@ -286,7 +287,7 @@ export default function MinhasComissoesBooking() {
               <CommissionCard
                 key={c.id}
                 commission={c}
-                onClick={() => navigate(`/minha-comissao-booking/${c.id}`)}
+                onClick={() => { saveScrollPosition(pathname); navigate(`/minha-comissao-booking/${c.id}`); }}
                 selectable
                 selected={selectedIds.has(c.id)}
                 onToggleSelect={() => toggleSelect(c.id)}
@@ -300,7 +301,7 @@ export default function MinhasComissoesBooking() {
           <div className="space-y-2">
             <h2 className="text-sm font-semibold text-muted-foreground">Pagas</h2>
             {paid.map(c => (
-              <CommissionCard key={c.id} commission={c} onClick={() => navigate(`/minha-comissao-booking/${c.id}`)} faded />
+              <CommissionCard key={c.id} commission={c} onClick={() => { saveScrollPosition(pathname); navigate(`/minha-comissao-booking/${c.id}`); }} faded />
             ))}
           </div>
         )}

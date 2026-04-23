@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { goBack } from "@/lib/navigation";
+import { useNavigate, useLocation } from "react-router-dom";
+import { goBack, saveScrollPosition } from "@/lib/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -59,6 +59,7 @@ const PAID_STATUSES = ["paid", "pago_no_vencimento", "pago_antecipado", "pago_co
 const BookingComissoes = () => {
   useScrollRestoration();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { profile } = useAuth();
   const { toast } = useToast();
   const [commissions, setCommissions] = useState<BookingCommission[]>([]);
@@ -271,7 +272,7 @@ const BookingComissoes = () => {
                 <Card
                   key={c.id}
                   className="cursor-pointer hover:shadow-md transition-all"
-                  onClick={() => navigate(`/comissao-booking/${c.id}`)}
+                  onClick={() => { saveScrollPosition(pathname); navigate(`/comissao-booking/${c.id}`); }}
                 >
                   <CardContent className="py-3 px-4">
                     <div className="flex items-center gap-3">

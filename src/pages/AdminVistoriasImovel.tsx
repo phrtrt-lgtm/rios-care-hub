@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { goBack } from "@/lib/navigation";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { goBack, saveScrollPosition } from "@/lib/navigation";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { LoadingScreen } from '@/components/LoadingScreen';
@@ -60,6 +60,7 @@ export default function AdminVistoriasImovel() {
   useScrollRestoration();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { toast } = useToast();
   const { profile, loading: authLoading } = useAuth();
   const [property, setProperty] = useState<Property | null>(null);
@@ -581,7 +582,7 @@ export default function AdminVistoriasImovel() {
                             ? 'bg-success/20 text-success' 
                             : 'bg-destructive/20 text-destructive'
                         }`}
-                        onClick={() => navigate(`/admin/vistoria/${inspection.id}`)}
+                        onClick={() => { saveScrollPosition(pathname); navigate(`/admin/vistoria/${inspection.id}`); }}
                       >
                         {inspection.notes === 'OK' ? (
                           <CheckCircle2 className="h-6 w-6" />
@@ -593,7 +594,7 @@ export default function AdminVistoriasImovel() {
                       {/* Content */}
                       <div 
                         className="flex-1 min-w-0 cursor-pointer"
-                        onClick={() => navigate(`/admin/vistoria/${inspection.id}`)}
+                        onClick={() => { saveScrollPosition(pathname); navigate(`/admin/vistoria/${inspection.id}`); }}
                       >
                         <div className="flex items-center justify-between gap-2 mb-1">
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">

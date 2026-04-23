@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { goBack } from "@/lib/navigation";
+import { useNavigate, useLocation } from "react-router-dom";
+import { goBack, saveScrollPosition } from "@/lib/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,6 +56,7 @@ const MinhasCobrancas = () => {
   useScrollRestoration();
   const { user, profile } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [charges, setCharges] = useState<Charge[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCharges, setSelectedCharges] = useState<string[]>([]);
@@ -505,7 +506,7 @@ const MinhasCobrancas = () => {
                     {/* Conteúdo principal */}
                     <div 
                       className="flex-1 p-4 cursor-pointer"
-                      onClick={() => navigate(`/cobranca/${charge.id}`)}
+                      onClick={() => { saveScrollPosition(pathname); navigate(`/cobranca/${charge.id}`); }}
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 space-y-2">

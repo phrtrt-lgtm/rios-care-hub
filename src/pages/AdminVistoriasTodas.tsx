@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { goBack } from "@/lib/navigation";
+import { useNavigate, useLocation } from "react-router-dom";
+import { goBack, saveScrollPosition } from "@/lib/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -62,6 +62,7 @@ export default function AdminVistoriasTodas() {
   useScrollRestoration();
   const { profile } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [inspections, setInspections] = useState<Inspection[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
@@ -362,7 +363,7 @@ export default function AdminVistoriasTodas() {
                             size="sm"
                             variant="outline"
                             className="w-full gap-2"
-                            onClick={() => navigate(`/admin/vistoria/${inspection.id}`)}
+                            onClick={() => { saveScrollPosition(pathname); navigate(`/admin/vistoria/${inspection.id}`); }}
                           >
                             <ExternalLink className="h-4 w-4" />
                             Ver vistoria completa
