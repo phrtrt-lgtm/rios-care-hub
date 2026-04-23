@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { goBack } from "@/lib/navigation";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { LoadingScreen } from '@/components/LoadingScreen';
@@ -105,7 +106,7 @@ export default function AdminVistoriasConfiguracoes() {
   return (
     <div className="container mx-auto p-4 space-y-4">
       <div className="flex items-center gap-2">
-        <Button variant="ghost" onClick={() => navigate('/admin/vistorias')}>← Voltar</Button>
+        <Button variant="ghost" onClick={() => goBack(navigate, '/admin/vistorias')}>← Voltar</Button>
         <h1 className="text-2xl font-bold">Configurações de Vistorias</h1>
       </div>
 

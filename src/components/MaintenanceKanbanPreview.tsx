@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { saveScrollPosition } from "@/lib/navigation";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,7 @@ type ServiceProvider = {
 
 export function MaintenanceKanbanPreview() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { user } = useAuth();
   const [tickets, setTickets] = useState<MaintenanceTicket[]>([]);
   const [providers, setProviders] = useState<ServiceProvider[]>([]);
@@ -318,7 +320,7 @@ export function MaintenanceKanbanPreview() {
                     <div
                       key={ticket.id}
                       className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors overflow-hidden"
-                      onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
+                      onClick={() => (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${ticket.id}`))}
                     >
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium truncate">{ticket.property?.name || "Sem unidade"}</p>
@@ -372,7 +374,7 @@ export function MaintenanceKanbanPreview() {
                       <div
                         key={ticket.id}
                         className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors overflow-hidden"
-                        onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
+                        onClick={() => (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${ticket.id}`))}
                       >
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-medium truncate">{ticket.property?.name || "Sem unidade"}</p>
@@ -433,7 +435,7 @@ export function MaintenanceKanbanPreview() {
                     <div
                       key={ticket.id}
                       className="flex items-center gap-2 p-2 rounded-lg bg-info/10 dark:bg-blue-950/30 hover:bg-info/10 dark:hover:bg-blue-950/50 cursor-pointer transition-colors overflow-hidden"
-                      onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
+                      onClick={() => (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${ticket.id}`))}
                     >
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium truncate">{ticket.property?.name || "Sem unidade"}</p>
@@ -484,7 +486,7 @@ export function MaintenanceKanbanPreview() {
                       <div
                         key={ticket.id}
                         className="flex items-center gap-2 p-2 rounded-lg bg-info/10 dark:bg-blue-950/30 hover:bg-info/10 dark:hover:bg-blue-950/50 cursor-pointer transition-colors overflow-hidden"
-                        onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
+                        onClick={() => (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${ticket.id}`))}
                       >
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-medium truncate">{ticket.property?.name || "Sem unidade"}</p>

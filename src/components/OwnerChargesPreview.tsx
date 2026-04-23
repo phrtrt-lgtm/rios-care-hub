@@ -11,7 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { format, differenceInDays, isPast, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { saveScrollPosition } from "@/lib/navigation";
 import { 
   MessageSquare, 
   Building2, 
@@ -62,6 +63,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secon
 export function OwnerChargesPreview() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [selectedCharge, setSelectedCharge] = useState<OwnerCharge | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [pixDialogOpen, setPixDialogOpen] = useState(false);
@@ -446,7 +448,7 @@ export function OwnerChargesPreview() {
                 >
                   <div
                     className="p-2.5 cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => navigate(`/cobranca/${charge.id}`)}
+                    onClick={() => (saveScrollPosition(pathname), navigate(`/cobranca/${charge.id}`))}
                   >
                     {/* Top row: checkbox + photo + info */}
                     <div className="flex items-center gap-2">
@@ -579,7 +581,7 @@ export function OwnerChargesPreview() {
                 <div
                   key={charge.id}
                   className="rounded-lg border bg-card overflow-hidden cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => navigate(`/cobranca/${charge.id}`)}
+                  onClick={() => (saveScrollPosition(pathname), navigate(`/cobranca/${charge.id}`))}
                 >
                   <div className="p-2.5">
                     <div className="flex items-center gap-2">

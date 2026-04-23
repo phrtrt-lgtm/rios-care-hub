@@ -34,8 +34,10 @@ import { AIConsultaWidget } from "@/components/AIConsultaWidget";
 
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { StatsCard } from "@/components/StatsCard";
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 
 export default function Painel() {
+  useScrollRestoration();
   const { profile, user, signOut } = useAuth();
   const [photoUrl, setPhotoUrl] = useState(profile?.photo_url);
   const { open: searchOpen, setOpen: setSearchOpen } = useGlobalSearch();

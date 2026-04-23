@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { goBack, saveScrollPosition } from "@/lib/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +16,7 @@ import { ptBR } from "date-fns/locale";
 import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
 import { ListFilters } from "@/components/list/ListFilters";
 import { useListFilters } from "@/hooks/useListFilters";
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 
 interface Ticket {
   id: string;
@@ -47,8 +49,10 @@ interface Ticket {
 }
 
 const TodosTickets = () => {
+  useScrollRestoration();
   const { user, profile } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [filteredTickets, setFilteredTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -383,7 +387,7 @@ const TodosTickets = () => {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate("/painel")}
+            onClick={() => goBack(navigate, "/painel")}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
@@ -580,7 +584,7 @@ const TodosTickets = () => {
                         className="h-8 w-8"
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/ticket-detalhes/${ticket.id}`);
+                          (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${ticket.id}`));
                         }}
                         title="Ver detalhes"
                       >

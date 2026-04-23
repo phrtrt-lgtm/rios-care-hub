@@ -15,7 +15,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Send, Loader2, MessageSquare, Building, ExternalLink, Paperclip, X, Sparkles } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { saveScrollPosition } from "@/lib/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { processFileForUpload } from "@/lib/processVideoForUpload";
 import { sanitizeFilename } from "@/lib/storage";
@@ -67,6 +68,7 @@ export function ChargeChatDialog({
   propertyName,
 }: ChargeChatDialogProps) {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { toast } = useToast();
   const { user, profile } = useAuth();
   const [messages, setMessages] = useState<ChargeMessage[]>([]);
@@ -512,7 +514,7 @@ export function ChargeChatDialog({
                   className="text-xs h-auto p-0 text-primary"
                   onClick={() => {
                     onOpenChange(false);
-                    navigate(`/cobranca/${chargeId}`);
+                    (saveScrollPosition(pathname), navigate(`/cobranca/${chargeId}`));
                   }}
                 >
                   <ExternalLink className="h-3 w-3 mr-1" />

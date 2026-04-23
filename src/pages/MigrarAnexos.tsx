@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Download } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { goBack } from "@/lib/navigation";
 
 export default function MigrarAnexos() {
   const [loading, setLoading] = useState(false);
@@ -51,7 +52,7 @@ export default function MigrarAnexos() {
       <div className="container mx-auto max-w-2xl">
         <Button 
           variant="ghost" 
-          onClick={() => navigate("/painel")}
+          onClick={() => goBack(navigate, "/painel")}
           className="mb-6"
         >
           ← Voltar ao Painel

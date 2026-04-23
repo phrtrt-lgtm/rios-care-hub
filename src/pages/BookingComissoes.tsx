@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { goBack, saveScrollPosition } from "@/lib/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +17,7 @@ import { differenceInDays, isPast, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { BookingCommissionChatDialog } from "@/components/BookingCommissionChatDialog";
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 
 export interface BookingCommission {
   id: string;
@@ -55,7 +57,9 @@ const OPEN_STATUSES = ["sent", "pendente", "overdue", "draft"];
 const PAID_STATUSES = ["paid", "pago_no_vencimento", "pago_antecipado", "pago_com_atraso"];
 
 const BookingComissoes = () => {
+  useScrollRestoration();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { profile } = useAuth();
   const { toast } = useToast();
   const [commissions, setCommissions] = useState<BookingCommission[]>([]);
@@ -149,7 +153,7 @@ const BookingComissoes = () => {
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/painel")}>
+            <Button variant="ghost" size="sm" onClick={() => goBack(navigate, "/minha-caixa")}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Voltar
             </Button>
@@ -268,7 +272,7 @@ const BookingComissoes = () => {
                 <Card
                   key={c.id}
                   className="cursor-pointer hover:shadow-md transition-all"
-                  onClick={() => navigate(`/comissao-booking/${c.id}`)}
+                  onClick={() => { saveScrollPosition(pathname); navigate(`/comissao-booking/${c.id}`); }}
                 >
                   <CardContent className="py-3 px-4">
                     <div className="flex items-center gap-3">

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { goBack, saveScrollPosition } from "@/lib/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Plus, Building2, Clock, MessageSquare, ChevronRight, Ticket } from "lucide-react";
@@ -50,6 +51,7 @@ const typeColors: Record<string, string> = {
 export default function MeusChamados() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("abertos");
@@ -172,7 +174,7 @@ export default function MeusChamados() {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => navigate("/minha-caixa")}
+                onClick={() => goBack(navigate, "/minha-caixa")}
                 className="shrink-0"
               >
                 <ArrowLeft className="h-5 w-5" />
@@ -271,7 +273,7 @@ export default function MeusChamados() {
                   <div
                     key={ticket.id}
                     className="bg-card border rounded-lg p-3 cursor-pointer transition-all hover:shadow-md hover:border-primary/30 active:scale-[0.99]"
-                    onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
+                    onClick={() => (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${ticket.id}`))}
                   >
                     {/* Row 1: Property + Status + Type + SLA */}
                     <div className="flex items-center gap-2 mb-2">

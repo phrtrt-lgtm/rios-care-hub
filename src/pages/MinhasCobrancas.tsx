@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { goBack, saveScrollPosition } from "@/lib/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +17,7 @@ import { formatBRL } from "@/lib/format";
 import { CHARGE_CATEGORIES } from "@/constants/chargeCategories";
 import { ListFilters } from "@/components/list/ListFilters";
 import { useListFilters } from "@/hooks/useListFilters";
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 
 interface Charge {
   id: string;
@@ -51,8 +53,10 @@ interface ChargeAttachment {
 }
 
 const MinhasCobrancas = () => {
+  useScrollRestoration();
   const { user, profile } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [charges, setCharges] = useState<Charge[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCharges, setSelectedCharges] = useState<string[]>([]);
@@ -215,7 +219,7 @@ const MinhasCobrancas = () => {
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       <header className="border-b bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto flex h-16 items-center px-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/minha-caixa")}>
+          <Button variant="ghost" size="sm" onClick={() => goBack(navigate, "/minha-caixa")}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Voltar
           </Button>
@@ -502,7 +506,7 @@ const MinhasCobrancas = () => {
                     {/* Conteúdo principal */}
                     <div 
                       className="flex-1 p-4 cursor-pointer"
-                      onClick={() => navigate(`/cobranca/${charge.id}`)}
+                      onClick={() => { saveScrollPosition(pathname); navigate(`/cobranca/${charge.id}`); }}
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 space-y-2">

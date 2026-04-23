@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { goBack, saveScrollPosition } from "@/lib/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +41,7 @@ export default function NovoTicketInterno() {
   const [isGenerating, setIsGenerating] = useState(false);
   const { user, profile } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   useEffect(() => {
     if (profile?.role !== 'admin') {
@@ -218,7 +220,7 @@ export default function NovoTicketInterno() {
         }
 
         toast.success("Ticket interno criado e equipe notificada!");
-        navigate(`/ticket-detalhes/${ticket.id}`);
+        (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${ticket.id}`));
       }
     } catch (error: any) {
       console.error("Erro ao criar ticket:", error);
@@ -232,7 +234,7 @@ export default function NovoTicketInterno() {
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       <header className="border-b bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto flex h-16 items-center px-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/painel")}>
+          <Button variant="ghost" size="sm" onClick={() => goBack(navigate, "/painel")}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Voltar
           </Button>

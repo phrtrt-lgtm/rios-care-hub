@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { saveScrollPosition } from "@/lib/navigation";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ type Charge = {
 
 export function ChargesKanbanPreview() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { profile } = useAuth();
   const [charges, setCharges] = useState<Charge[]>([]);
   const [loading, setLoading] = useState(true);
@@ -109,7 +111,7 @@ export function ChargesKanbanPreview() {
             ? "bg-destructive/10 dark:bg-red-950/30 hover:bg-destructive/10 dark:hover:bg-red-950/50" 
             : "bg-muted/50 hover:bg-muted"
         }`}
-        onClick={() => navigate(`/cobranca/${charge.id}`)}
+        onClick={() => (saveScrollPosition(pathname), navigate(`/cobranca/${charge.id}`))}
       >
         <div className="flex-1 min-w-0">
           <p className="text-xs font-medium truncate">

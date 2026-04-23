@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { goBack, saveScrollPosition } from "@/lib/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +14,7 @@ import { formatBRL } from "@/lib/format";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 
 interface BookingCommission {
   id: string;
@@ -46,8 +48,10 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
 const OPEN_STATUSES = ["sent", "pendente", "overdue"];
 
 export default function MinhasComissoesBooking() {
+  useScrollRestoration();
   const { user, profile } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [generatingPayment, setGeneratingPayment] = useState(false);
   const [groupPayment, setGroupPayment] = useState<{
@@ -134,7 +138,7 @@ export default function MinhasComissoesBooking() {
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       <header className="border-b bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto flex h-14 items-center gap-3 px-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/minha-caixa")}>
+          <Button variant="ghost" size="icon" onClick={() => goBack(navigate, "/minha-caixa")}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex items-center gap-2">
@@ -283,7 +287,7 @@ export default function MinhasComissoesBooking() {
               <CommissionCard
                 key={c.id}
                 commission={c}
-                onClick={() => navigate(`/minha-comissao-booking/${c.id}`)}
+                onClick={() => { saveScrollPosition(pathname); navigate(`/minha-comissao-booking/${c.id}`); }}
                 selectable
                 selected={selectedIds.has(c.id)}
                 onToggleSelect={() => toggleSelect(c.id)}
@@ -297,7 +301,7 @@ export default function MinhasComissoesBooking() {
           <div className="space-y-2">
             <h2 className="text-sm font-semibold text-muted-foreground">Pagas</h2>
             {paid.map(c => (
-              <CommissionCard key={c.id} commission={c} onClick={() => navigate(`/minha-comissao-booking/${c.id}`)} faded />
+              <CommissionCard key={c.id} commission={c} onClick={() => { saveScrollPosition(pathname); navigate(`/minha-comissao-booking/${c.id}`); }} faded />
             ))}
           </div>
         )}

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { goBack, saveScrollPosition } from "@/lib/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,6 +48,7 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
 
 const AdminRelatorioBooking = () => {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { profile } = useAuth();
   const [commissions, setCommissions] = useState<BookingCommission[]>([]);
   const [loading, setLoading] = useState(true);
@@ -147,7 +149,7 @@ const AdminRelatorioBooking = () => {
       <div className="max-w-5xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4 flex-wrap">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/booking-comissoes")}>
+          <Button variant="ghost" size="icon" onClick={() => goBack(navigate, "/painel")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1">
@@ -248,7 +250,7 @@ const AdminRelatorioBooking = () => {
                 <div
                   key={c.id}
                   className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/30 cursor-pointer transition-colors"
-                  onClick={() => navigate(`/comissao-booking/${c.id}`)}
+                  onClick={() => (saveScrollPosition(pathname), navigate(`/comissao-booking/${c.id}`))}
                 >
                   {c.property?.cover_photo_url ? (
                     <img

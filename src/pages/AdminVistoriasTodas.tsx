@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { goBack, saveScrollPosition } from "@/lib/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,6 +25,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ListFilters } from "@/components/list/ListFilters";
 import { useListFilters } from "@/hooks/useListFilters";
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 
 const PAGE_SIZE = 50;
 
@@ -57,8 +59,10 @@ interface ExpandedData {
 }
 
 export default function AdminVistoriasTodas() {
+  useScrollRestoration();
   const { profile } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [inspections, setInspections] = useState<Inspection[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
@@ -169,7 +173,7 @@ export default function AdminVistoriasTodas() {
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4">
           <div className="flex h-16 items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/admin/vistorias")}>
+            <Button variant="ghost" size="icon" onClick={() => goBack(navigate, "/admin/vistorias")}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1">
@@ -359,7 +363,7 @@ export default function AdminVistoriasTodas() {
                             size="sm"
                             variant="outline"
                             className="w-full gap-2"
-                            onClick={() => navigate(`/admin/vistoria/${inspection.id}`)}
+                            onClick={() => { saveScrollPosition(pathname); navigate(`/admin/vistoria/${inspection.id}`); }}
                           >
                             <ExternalLink className="h-4 w-4" />
                             Ver vistoria completa

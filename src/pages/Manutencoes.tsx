@@ -10,13 +10,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { formatBRL, formatDateTime } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Filter, Building2, ArrowLeft } from "lucide-react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { goBack } from "@/lib/navigation";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
+import { goBack, saveScrollPosition } from "@/lib/navigation";
 import { supabase } from "@/integrations/supabase/client";
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 
 export default function Manutencoes() {
+  useScrollRestoration();
   const { profile, user } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [status, setStatus] = useState<string>("");
@@ -321,7 +324,7 @@ export default function Manutencoes() {
                     <tr
                       key={m.id}
                       className="border-t hover:bg-accent cursor-pointer transition-colors"
-                      onClick={() => navigate(`/cobranca/${m.id}`)}
+                      onClick={() => { saveScrollPosition(pathname); navigate(`/cobranca/${m.id}`); }}
                     >
                       <td className="p-3">{formatDateTime(m.created_at)}</td>
                       <td className="p-3">{m.property?.name || '-'}</td>

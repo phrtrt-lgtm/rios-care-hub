@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from "react-router-dom";
+import { saveScrollPosition } from "@/lib/navigation";
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +33,7 @@ interface GuestChargePending {
 
 export function GuestChargeReminders() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [pendingCharges, setPendingCharges] = useState<GuestChargePending[]>([]);
   const [loading, setLoading] = useState(true);
   const [dismissingId, setDismissingId] = useState<string | null>(null);
@@ -158,7 +160,7 @@ export function GuestChargeReminders() {
               <div
                 key={charge.id}
                 className="flex items-center gap-3 p-3 bg-success/10/50 dark:bg-green-900/20 rounded-lg cursor-pointer hover:bg-success/10 dark:hover:bg-green-900/30 transition-colors"
-                onClick={() => navigate(`/ticket-detalhes/${charge.id}`)}
+                onClick={() => (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${charge.id}`))}
               >
                 <Building2 className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                 <div className="flex-1 min-w-0">
@@ -203,7 +205,7 @@ export function GuestChargeReminders() {
               <div
                 key={charge.id}
                 className="flex items-center gap-3 p-3 bg-background/50 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
-                onClick={() => navigate(`/ticket-detalhes/${charge.id}`)}
+                onClick={() => (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${charge.id}`))}
               >
                 <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 <div className="flex-1 min-w-0">

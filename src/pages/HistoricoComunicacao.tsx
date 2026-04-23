@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { goBack } from "@/lib/navigation";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { goBack, saveScrollPosition } from "@/lib/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -56,6 +56,7 @@ interface OwnerInfo {
 export default function HistoricoComunicacao() {
   const { ownerId } = useParams();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { profile } = useAuth();
   const [ownerInfo, setOwnerInfo] = useState<OwnerInfo | null>(null);
   const [events, setEvents] = useState<CommunicationEvent[]>([]);
@@ -257,7 +258,7 @@ export default function HistoricoComunicacao() {
 
   const navigateToDetail = (event: CommunicationEvent) => {
     if (event.type === "ticket_message" && event.metadata.ticketId) {
-      navigate(`/ticket-detalhes/${event.metadata.ticketId}`);
+      (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${event.metadata.ticketId}`));
     } else if (event.type === "charge_message" && event.metadata.chargeId) {
       navigate(`/cobranca-detalhes/${event.metadata.chargeId}`);
     }

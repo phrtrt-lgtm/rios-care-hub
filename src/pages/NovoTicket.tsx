@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { goBack } from "@/lib/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -322,7 +323,7 @@ export default function NovoTicket() {
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       <header className="border-b bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto flex h-16 items-center gap-4 px-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/minha-caixa")}>
+          <Button variant="ghost" size="icon" onClick={() => goBack(navigate, "/painel")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h1 className="text-xl font-semibold">Novo Chamado</h1>

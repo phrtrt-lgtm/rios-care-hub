@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { goBack } from "@/lib/navigation";
+import { goBack, saveScrollPosition } from "@/lib/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ import {
   ClipboardCheck,
   ArrowLeft
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { MobileHeader } from "@/components/MobileHeader";
@@ -87,6 +87,7 @@ const statusLabels: Record<string, string> = {
 export default function ResumoPropriedades() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [expandedProperties, setExpandedProperties] = useState<Set<string>>(new Set());
 
   const role = profile?.role;
@@ -306,7 +307,7 @@ export default function ResumoPropriedades() {
                               <div
                                 key={charge.id}
                                 className="flex items-center justify-between text-sm py-1 px-2 rounded hover:bg-muted/50 cursor-pointer"
-                                onClick={() => navigate(`/cobranca/${charge.id}`)}
+                                onClick={() => (saveScrollPosition(pathname), navigate(`/cobranca/${charge.id}`))}
                               >
                                 <span className="truncate flex-1">{charge.title}</span>
                                 <div className="flex items-center gap-2">
@@ -340,7 +341,7 @@ export default function ResumoPropriedades() {
                               <div
                                 key={maintenance.id}
                                 className="flex items-center justify-between text-sm py-1 px-2 rounded hover:bg-muted/50 cursor-pointer"
-                                onClick={() => navigate(`/manutencao/${maintenance.id}`)}
+                                onClick={() => (saveScrollPosition(pathname), navigate(`/manutencao/${maintenance.id}`))}
                               >
                                 <span className="truncate flex-1">{maintenance.title}</span>
                                 <div className="flex items-center gap-2">

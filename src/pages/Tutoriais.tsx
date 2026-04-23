@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { goBack } from "@/lib/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -697,7 +698,7 @@ export default function Tutoriais() {
       <main className="container mx-auto px-4 py-6">
         <Button 
           variant="ghost" 
-          onClick={() => navigate(-1)}
+          onClick={() => goBack(navigate, "/painel")}
           className="mb-4"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />

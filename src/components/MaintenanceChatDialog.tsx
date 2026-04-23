@@ -18,7 +18,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Send, Loader2, MessageSquare, Building, ExternalLink, Paperclip, X, Sparkles, CheckCircle2, DollarSign } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { saveScrollPosition } from "@/lib/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { ResponseTemplatesPicker } from "@/components/ResponseTemplatesPicker";
 import { ConversationSummaryButton } from "@/components/ConversationSummaryButton";
@@ -56,6 +57,7 @@ export function MaintenanceChatDialog({
   onTicketUpdated,
 }: MaintenanceChatDialogProps) {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user, profile } = useAuth();
@@ -486,7 +488,7 @@ export function MaintenanceChatDialog({
                     className="text-xs h-auto p-0 text-primary"
                     onClick={() => {
                       onOpenChange(false);
-                      navigate(`/ticket-detalhes/${ticketId}`);
+                      (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${ticketId}`));
                     }}
                   >
                     <ExternalLink className="h-3 w-3 mr-1" />

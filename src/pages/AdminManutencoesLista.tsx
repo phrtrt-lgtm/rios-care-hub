@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { goBack } from "@/lib/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useChatPreloader } from "@/hooks/useChatPreloader";
@@ -28,6 +29,7 @@ import { Pencil } from "lucide-react";
 import { useDetailSheet } from "@/hooks/useDetailSheet";
 import { DetailSheet } from "@/components/detail-sheet/DetailSheet";
 import { getRowHandlers } from "@/lib/row-interaction";
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 // ===== TYPES =====
 type TicketStatus = "novo" | "em_analise" | "aguardando_info" | "em_execucao" | "concluido" | "cancelado";
 
@@ -991,6 +993,7 @@ function VistoriasTable({
 
 // ===== MAIN COMPONENT =====
 export default function AdminManutencoesLista() {
+  useScrollRestoration();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -1924,7 +1927,7 @@ export default function AdminManutencoesLista() {
       <div className="max-w-[1600px] mx-auto space-y-4">
         {/* Header */}
         <div className="flex items-center gap-4 flex-wrap">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/painel")}>
+          <Button variant="ghost" size="icon" onClick={() => goBack(navigate, "/painel")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1 min-w-[200px]">

@@ -29,6 +29,7 @@ import {
 import { EmptyState } from '@/components/ui/empty-state';
 import { format, isSameDay, parseISO, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 
 interface Property {
   id: string;
@@ -62,6 +63,7 @@ interface InspectionDate {
 }
 
 export default function AdminVistorias() {
+  useScrollRestoration();
   const navigate = useNavigate();
   const { profile, loading: authLoading } = useAuth();
   const [allInspections, setAllInspections] = useState<Inspection[]>([]);

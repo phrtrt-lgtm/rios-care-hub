@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { goBack, saveScrollPosition } from "@/lib/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { Button } from "@/components/ui/button";
@@ -91,6 +92,7 @@ const KANBAN_COLUMNS = [
 
 const AdminChamadosKanban = () => {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { user } = useAuth();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | TicketType>("all");
@@ -205,7 +207,7 @@ const AdminChamadosKanban = () => {
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4 flex-wrap">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/painel")}>
+          <Button variant="ghost" size="icon" onClick={() => goBack(navigate, "/painel")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1 min-w-[200px]">
@@ -279,7 +281,7 @@ const AdminChamadosKanban = () => {
                         <Card
                           key={ticket.id}
                           className="cursor-pointer hover:shadow-md transition-shadow"
-                          onClick={() => navigate(`/ticket-detalhes/${ticket.id}`)}
+                          onClick={() => (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${ticket.id}`))}
                         >
                           <CardContent className="p-3 space-y-2">
                             {/* Property */}

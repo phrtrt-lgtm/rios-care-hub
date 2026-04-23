@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { goBack } from "@/lib/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -315,7 +316,7 @@ const Propriedades = () => {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate("/todos-tickets")}
+            onClick={() => goBack(navigate, "/painel")}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
