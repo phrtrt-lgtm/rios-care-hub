@@ -25,6 +25,9 @@ import { CreateMaintenanceFromInspectionDialog } from "@/components/CreateMainte
 import EditInspectionDialog from "@/components/EditInspectionDialog";
 import { ReserveDebitsTable } from "@/components/ReserveDebitsTable";
 import { Pencil } from "lucide-react";
+import { useDetailSheet } from "@/hooks/useDetailSheet";
+import { DetailSheet } from "@/components/detail-sheet/DetailSheet";
+import { getRowHandlers } from "@/lib/row-interaction";
 // ===== TYPES =====
 type TicketStatus = "novo" | "em_analise" | "aguardando_info" | "em_execucao" | "concluido" | "cancelado";
 
@@ -244,6 +247,7 @@ interface GroupRowProps {
   onOpenAttachments: (item: MaintenanceItem) => void;
   onUploadAttachment: (item: MaintenanceItem) => void;
   uploadingItemId: string | null;
+  onOpenSheet?: (id: string) => void;
 }
 
 function GroupRow({ 
@@ -261,7 +265,8 @@ function GroupRow({
   onSort,
   onOpenAttachments,
   onUploadAttachment,
-  uploadingItemId
+  uploadingItemId,
+  onOpenSheet
 }: GroupRowProps) {
   // Sort items within the group
   const sortedItems = useMemo(() => {

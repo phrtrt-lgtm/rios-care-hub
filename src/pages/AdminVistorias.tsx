@@ -10,6 +10,9 @@ import { Badge } from '@/components/ui/badge';
 import { InspectionCalendar } from '@/components/InspectionCalendar';
 import { QuickInspectionAttachmentButton } from '@/components/QuickInspectionAttachmentButton';
 import { CreateMaintenanceFromInspectionDialog } from '@/components/CreateMaintenanceFromInspectionDialog';
+import { useDetailSheet } from '@/hooks/useDetailSheet';
+import { DetailSheet } from '@/components/detail-sheet/DetailSheet';
+import { getRowHandlers } from '@/lib/row-interaction';
 import {
   Settings,
   List,
@@ -68,6 +71,7 @@ export default function AdminVistorias() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [maintenanceDialogOpen, setMaintenanceDialogOpen] = useState(false);
   const [selectedInspection, setSelectedInspection] = useState<Inspection | null>(null);
+  const detailSheet = useDetailSheet();
 
   useEffect(() => {
     if (!authLoading) {
@@ -195,11 +199,15 @@ export default function AdminVistorias() {
         ? 'bg-destructive/10 dark:bg-red-950/30 hover:bg-destructive/15 dark:hover:bg-red-950/50'
         : 'bg-muted/50 hover:bg-muted';
 
+    const handlers = getRowHandlers(`/admin/vistoria/${inspection.id}`, () =>
+      detailSheet.openSheet(inspection.id, 'vistoria'),
+    );
+
     return (
       <div
         key={inspection.id}
+        {...handlers}
         className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors overflow-hidden ${baseClass}`}
-        onClick={() => navigate(`/admin/vistoria/${inspection.id}`)}
       >
         {/* Thumbnail */}
         <div className="h-9 w-9 rounded-md overflow-hidden flex-shrink-0 bg-muted">
@@ -225,7 +233,7 @@ export default function AdminVistorias() {
           </p>
         </div>
 
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-1 shrink-0" data-no-sheet>
           <QuickInspectionAttachmentButton
             inspectionId={inspection.id}
             onSuccess={fetchData}
@@ -386,6 +394,13 @@ export default function AdminVistorias() {
           transcriptSummary={selectedInspection.transcript_summary}
         />
       )}
+
+      <DetailSheet
+        open={detailSheet.open}
+        onClose={detailSheet.closeSheet}
+        entityId={detailSheet.entityId}
+        entityType={detailSheet.entityType}
+      />
     </div>
   );
 }
