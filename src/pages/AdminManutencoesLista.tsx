@@ -587,7 +587,23 @@ function GroupRow({
               </div>
             </td>
 
-            {/* Label (Categoria) */}
+            {/* Responsável pelo custo */}
+            <td className="p-0 w-[120px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
+              {isCharge ? (
+                <div className="px-1 py-2 text-sm text-center text-muted-foreground">
+                  {COST_RESPONSIBLE_OPTIONS.find(o => o.value === item.cost_responsible)?.label || "—"}
+                </div>
+              ) : (
+                <EditableCell
+                  value={item.cost_responsible || "pending"}
+                  type="select"
+                  options={COST_RESPONSIBLE_OPTIONS}
+                  onSave={(val) => onUpdateItem(item.id, "cost_responsible", val, false)}
+                  className="justify-center"
+                />
+              )}
+            </td>
+
             <td className="p-0 w-[120px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
               <EditableCell
                 value={item.service_type || null}
