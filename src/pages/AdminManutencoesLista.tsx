@@ -587,6 +587,7 @@ interface VistoriasTableProps {
   onToggleInspectionSelection: (id: string, shiftKey: boolean) => void;
   onArchiveInspections: () => void;
   archivingInspections: boolean;
+  onOpenSheet: (id: string) => void;
 }
 
 function VistoriasTable({
@@ -605,6 +606,7 @@ function VistoriasTable({
   onToggleInspectionSelection,
   onArchiveInspections,
   archivingInspections,
+  onOpenSheet,
 }: VistoriasTableProps) {
   const [sortField, setSortField] = useState<InspectionSortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
@@ -702,7 +704,7 @@ function VistoriasTable({
           "border-b hover:bg-muted/30 transition-colors h-12 cursor-pointer",
           isSelected && "bg-primary/5"
         )}
-        {...getRowHandlers(`/admin/vistoria/${inspection.id}`, () => openSheet(inspection.id, "vistoria"))}
+        {...getRowHandlers(`/admin/vistoria/${inspection.id}`, () => onOpenSheet(inspection.id))}
       >
         {/* Checkbox */}
         <td 
@@ -2100,6 +2102,7 @@ export default function AdminManutencoesLista() {
           onToggleInspectionSelection={handleToggleInspectionSelection}
           onArchiveInspections={handleArchiveInspections}
           archivingInspections={archivingInspections}
+          onOpenSheet={(id) => openSheet(id, "vistoria")}
         />
 
         {/* Maintenances Table */}
