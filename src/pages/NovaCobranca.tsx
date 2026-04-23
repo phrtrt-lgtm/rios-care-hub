@@ -323,7 +323,7 @@ export default function NovaCobranca() {
       <main className="container mx-auto px-4 py-8 max-w-2xl">
         <Card>
           <CardHeader>
-            <CardTitle>{isReposicao ? "Reposição de Item" : "Nova Cobrança"}</CardTitle>
+            <CardTitle>{isEditMode ? "Editar Cobrança" : (isReposicao ? "Reposição de Item" : "Nova Cobrança")}</CardTitle>
             {isReposicao && (
               <p className="text-sm text-muted-foreground">
                 Registre a compra de itens para o imóvel. O aporte da gestão cobre 100% automaticamente.
@@ -525,21 +525,23 @@ export default function NovaCobranca() {
               </div>
 
               <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => navigate('/painel')}>
+                <Button type="button" variant="outline" onClick={() => navigate(isEditMode ? '/admin/manutencoes-lista' : '/painel')}>
                   Cancelar
                 </Button>
-                <Button 
-                  type="button" 
-                  variant="secondary" 
-                  disabled={loading}
-                  onClick={(e) => handleSubmit(e, true)}
-                >
+                {!isEditMode && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={loading}
+                    onClick={(e) => handleSubmit(e, true)}
+                  >
+                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Salvar Rascunho
+                  </Button>
+                )}
+                <Button type="submit" disabled={loading || loadingCharge}>
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Salvar Rascunho
-                </Button>
-                <Button type="submit" disabled={loading}>
-                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Criar e Enviar
+                  {isEditMode ? "Salvar Alterações" : "Criar e Enviar"}
                 </Button>
               </div>
             </form>
