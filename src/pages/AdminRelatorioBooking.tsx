@@ -9,8 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft, Search, TrendingUp, CheckCircle, Building2, User,
-  Calendar, Percent, Sparkles, DollarSign
+  Calendar, Percent, Sparkles, DollarSign, Receipt
 } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
+import { SectionSkeleton } from "@/components/ui/section-skeleton";
 import { formatBRL, formatDate } from "@/lib/format";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -231,12 +233,13 @@ const AdminRelatorioBooking = () => {
 
         {/* List */}
         {loading ? (
-          <div className="text-center py-12 text-muted-foreground">Carregando...</div>
+          <SectionSkeleton rows={3} showHeader={false} />
         ) : filtered.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            <CheckCircle className="h-10 w-10 mx-auto mb-2 opacity-30" />
-            <p>Nenhuma comissão paga no período selecionado.</p>
-          </div>
+          <EmptyState
+            icon={<Receipt className="h-6 w-6" />}
+            title="Nenhuma comissão paga no período"
+            description="Ajuste os filtros ou selecione outro intervalo de datas."
+          />
         ) : (
           <div className="space-y-2">
             {filtered.map((c) => {

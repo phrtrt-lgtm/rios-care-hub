@@ -7,8 +7,9 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { LogOut } from 'lucide-react';
+import { LogOut, Building2 } from 'lucide-react';
 import { AvatarUpload } from '@/components/AvatarUpload';
+import { EmptyState } from '@/components/ui/empty-state';
 
 interface Property {
   id: string;
@@ -222,9 +223,11 @@ export default function Faxineira() {
         </div>
         
         {properties.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">Nenhum imóvel atribuído.</p>
-          </div>
+          <EmptyState
+            icon={<Building2 className="h-6 w-6" />}
+            title="Nenhum imóvel atribuído"
+            description="Você ainda não tem propriedades vinculadas. Fale com a administração para receber acesso."
+          />
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {properties.map((property) => (

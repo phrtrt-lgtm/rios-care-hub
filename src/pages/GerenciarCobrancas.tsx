@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, DollarSign, Search, Trash2, Calculator, CreditCard, Building2, BarChart3 } from "lucide-react";
+import { ArrowLeft, DollarSign, Search, Trash2, Calculator, CreditCard, Building2, BarChart3, Receipt } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -494,12 +495,11 @@ const GerenciarCobrancas = () => {
 
             {/* Property List for Debit */}
             {debitoPropertyGroups.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <CreditCard className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground">Nenhuma cobrança pendente de débito em reserva.</p>
-                </CardContent>
-              </Card>
+              <EmptyState
+                icon={<Receipt className="h-6 w-6" />}
+                title="Nenhuma cobrança pendente"
+                description="Não há cobranças aguardando débito em reserva no momento."
+              />
             ) : (
               <div className="space-y-3">
                 {debitoPropertyGroups.map((group) => (

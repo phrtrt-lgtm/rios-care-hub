@@ -4,7 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, CheckCircle2, XCircle, Clock, Trash2 } from "lucide-react";
+import { Plus, Calendar, CheckCircle2, XCircle, Clock, Trash2, Vote } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
+import { SectionSkeleton } from "@/components/ui/section-skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
@@ -168,13 +170,13 @@ export default function Votacoes() {
         )}
 
         {isLoading ? (
-          <div className="text-center py-12">Carregando...</div>
+          <SectionSkeleton rows={3} showHeader={false} />
         ) : proposals?.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <p className="text-muted-foreground">Nenhuma proposta encontrada</p>
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={<Vote className="h-6 w-6" />}
+            title="Nenhuma proposta encontrada"
+            description="As propostas de votação aparecerão aqui quando forem criadas."
+          />
         ) : (
           <div className="grid gap-4">
             {proposals?.map((proposal) => (
