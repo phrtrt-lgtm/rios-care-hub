@@ -133,9 +133,9 @@ const handler = async (req: Request): Promise<Response> => {
           if (member.role === "admin") {
             canView = true;
           }
-          // Maintenance can see: duvida, informacao, bloqueio_data, manutencao, cobranca
+          // Maintenance can see everything EXCEPT: bloqueio_data, financeiro, conversar_hospedes, duvida
           else if (member.role === "maintenance") {
-            canView = ["duvida", "informacao", "bloqueio_data", "manutencao", "cobranca"].includes(ticket.ticket_type);
+            canView = !["bloqueio_data", "financeiro", "conversar_hospedes", "duvida"].includes(ticket.ticket_type);
           }
           // Agent can see: duvida, informacao, conversar_hospedes, bloqueio_data
           else if (member.role === "agent") {
