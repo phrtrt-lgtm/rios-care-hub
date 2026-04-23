@@ -489,7 +489,17 @@ export default function AdminManutencoesArquivo() {
                   </tr>
                 ) : (
                   filteredAndSortedItems.map((item) => {
-                    const serviceLabel = SERVICE_LABELS.find(s => s.value === item.service_type);
+                    const serviceValues = String(item.service_type || "")
+                      .split(",")
+                      .map((v) => v.trim())
+                      .filter(Boolean);
+                    const serviceLabels = serviceValues
+                      .map((v) =>
+                        SERVICE_LABELS.find(
+                          (s) => s.value === v || s.value.toLowerCase() === v.toLowerCase() || s.label === v,
+                        ),
+                      )
+                      .filter(Boolean) as typeof SERVICE_LABELS;
                     const handleRowClick = (e: React.MouseEvent) => {
                       // Don't navigate if clicking checkbox
                       if ((e.target as HTMLElement).closest('[role="checkbox"]')) return;
@@ -562,11 +572,13 @@ export default function AdminManutencoesArquivo() {
                           </div>
                         </td>
                         <td className="px-2 py-2 w-[130px]">
-                          <div className="flex justify-center">
-                            {serviceLabel ? (
-                              <Badge className={cn("text-primary-foreground text-xs", serviceLabel.color)}>
-                                {serviceLabel.label}
-                              </Badge>
+                          <div className="flex flex-wrap justify-center gap-1">
+                            {serviceLabels.length > 0 ? (
+                              serviceLabels.map((s) => (
+                                <Badge key={s.value} className={cn("text-primary-foreground text-xs", s.color)}>
+                                  {s.label}
+                                </Badge>
+                              ))
                             ) : (
                               <span className="text-muted-foreground">—</span>
                             )}

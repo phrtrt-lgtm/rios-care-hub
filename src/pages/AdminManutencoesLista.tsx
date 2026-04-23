@@ -12,6 +12,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -129,7 +130,7 @@ function SortableHeader({ label, field, currentSort, direction, onSort, classNam
 // ===== INLINE EDIT CELL COMPONENT =====
 interface EditableCellProps {
   value: string | number | null;
-  type: "text" | "currency" | "date" | "select";
+  type: "text" | "currency" | "date" | "select" | "multi-select";
   options?: { value: string; label: string; color?: string }[];
   onSave: (newValue: string | number | null) => void;
   className?: string;
@@ -169,6 +170,88 @@ function EditableCell({ value, type, options, onSave, className, placeholder }: 
     }
   }, [handleSave, value]);
 
+  if (type === "multi-select") {
+    // Value stored as CSV string. Dedupe + filter empties.
+    const selectedValues = String(value || "")
+      .split(",")
+      .map((v) => v.trim())
+      .filter(Boolean);
+    // De-duplicate options by canonical value (lower-case) so legacy + new options don't repeat
+    const uniqueOptions = options?.filter((opt, idx, arr) => {
+      return arr.findIndex((o) => o.label === opt.label) === idx;
+    }) || [];
+    const selectedOptions = uniqueOptions.filter((o) =>
+      selectedValues.some(
+        (sv) => sv === o.value || sv.toLowerCase() === o.value.toLowerCase() || sv === o.label,
+      ),
+    );
+
+    const toggleValue = (optValue: string) => {
+      const exists = selectedValues.some(
+        (sv) => sv === optValue || sv.toLowerCase() === optValue.toLowerCase(),
+      );
+      let next: string[];
+      if (exists) {
+        next = selectedValues.filter(
+          (sv) => sv !== optValue && sv.toLowerCase() !== optValue.toLowerCase(),
+        );
+      } else {
+        next = [...selectedValues, optValue];
+      }
+      onSave(next.length > 0 ? next.join(",") : null);
+    };
+
+    return (
+      <Popover>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className={cn(
+              "h-8 w-full flex items-center gap-1 px-2 rounded hover:bg-muted/50 transition-colors text-sm overflow-hidden",
+              className,
+            )}
+            data-no-sheet
+          >
+            {selectedOptions.length > 0 ? (
+              <div className="flex items-center gap-1 flex-wrap">
+                {selectedOptions.slice(0, 2).map((opt) => (
+                  <Badge key={opt.value} className={cn("text-white text-[10px] px-1.5 py-0", opt.color)}>
+                    {opt.label}
+                  </Badge>
+                ))}
+                {selectedOptions.length > 2 && (
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                    +{selectedOptions.length - 2}
+                  </Badge>
+                )}
+              </div>
+            ) : (
+              <span className="text-muted-foreground text-sm">{placeholder || "—"}</span>
+            )}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-56 p-2" align="start" data-no-sheet>
+          <div className="flex flex-col gap-1 max-h-72 overflow-y-auto">
+            {uniqueOptions.map((opt) => {
+              const isSelected = selectedOptions.some((s) => s.label === opt.label);
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => toggleValue(opt.value)}
+                  className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted/50 transition-colors text-left"
+                >
+                  <Checkbox checked={isSelected} className="pointer-events-none" />
+                  <Badge className={cn("text-white text-xs", opt.color)}>{opt.label}</Badge>
+                </button>
+              );
+            })}
+          </div>
+        </PopoverContent>
+      </Popover>
+    );
+  }
+
   if (type === "select") {
     const selectedOption = options?.find(o => o.value === value);
     return (
@@ -176,7 +259,7 @@ function EditableCell({ value, type, options, onSave, className, placeholder }: 
         value={String(value || "")} 
         onValueChange={(v) => onSave(v)}
       >
-        <SelectTrigger className={cn("h-8 border-0 bg-transparent hover:bg-muted/50 transition-colors", className)}>
+        <SelectTrigger className={cn("h-8 border-0 bg-transparent hover:bg-muted/50 transition-colors", className)} data-no-sheet>
           {selectedOption ? (
             <Badge className={cn("text-white text-xs", selectedOption.color)}>
               {selectedOption.label}
@@ -185,7 +268,7 @@ function EditableCell({ value, type, options, onSave, className, placeholder }: 
             <span className="text-muted-foreground text-sm">{placeholder || "—"}</span>
           )}
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent data-no-sheet>
           {options?.map(opt => (
             <SelectItem key={opt.value} value={opt.value}>
               <Badge className={cn("text-white text-xs", opt.color)}>{opt.label}</Badge>
@@ -198,7 +281,7 @@ function EditableCell({ value, type, options, onSave, className, placeholder }: 
 
   if (isEditing) {
     return (
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1" data-no-sheet>
         <Input
           ref={inputRef}
           value={editValue}
@@ -221,7 +304,9 @@ function EditableCell({ value, type, options, onSave, className, placeholder }: 
 
   return (
     <div
-      onClick={() => {
+      data-no-sheet
+      onClick={(e) => {
+        e.stopPropagation();
         setEditValue(type === "currency" && typeof value === "number" 
           ? (value / 100).toFixed(2).replace(".", ",")
           : String(value ?? "")
@@ -245,7 +330,7 @@ interface GroupRowProps {
   items: MaintenanceItem[];
   isExpanded: boolean;
   onToggle: () => void;
-  onUpdateItem: (id: string, field: string, value: any) => void;
+  onUpdateItem: (id: string, field: string, value: any, isCharge?: boolean) => void;
   onOpenChat: (item: MaintenanceItem) => void;
   unreadCounts: Record<string, number>;
   selectedIds: Set<string>;
@@ -346,6 +431,7 @@ function GroupRow({
       {/* Group Items */}
       {isExpanded && sortedItems.map((item) => {
         const unread = unreadCounts[item.id] || 0;
+        const isCharge = ["cobrancas_vencidas", "cobrancas"].includes(group.id);
         return (
           <tr 
             key={item.id}
@@ -356,7 +442,6 @@ function GroupRow({
             )}
             {...(onOpenSheet
               ? (() => {
-                  const isCharge = ["cobrancas_vencidas", "cobrancas"].includes(group.id);
                   const route = isCharge ? `/cobranca/${item.id}` : `/manutencao/${item.id}`;
                   return getRowHandlers(route, () => onOpenSheet!(item.id));
                 })()
@@ -425,23 +510,23 @@ function GroupRow({
             </td>
 
             {/* Valor */}
-            <td className="p-0 w-[90px]">
+            <td className="p-0 w-[90px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
               <EditableCell
                 value={item.amount_cents || null}
                 type="currency"
                 placeholder="R$ 0,00"
-                onSave={(val) => onUpdateItem(item.id, "amount_cents", val)}
+                onSave={(val) => onUpdateItem(item.id, "amount_cents", val, isCharge)}
                 className="justify-center font-medium"
               />
             </td>
 
             {/* Aporte Gestão */}
-            <td className="p-0 w-[90px]">
+            <td className="p-0 w-[90px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
               <EditableCell
                 value={item.management_contribution_cents || null}
                 type="currency"
                 placeholder="R$ 0,00"
-                onSave={(val) => onUpdateItem(item.id, "management_contribution_cents", val)}
+                onSave={(val) => onUpdateItem(item.id, "management_contribution_cents", val, isCharge)}
                 className="justify-center text-success"
               />
             </td>
@@ -492,26 +577,32 @@ function GroupRow({
             </td>
 
             {/* Label (Categoria) */}
-            <td className="p-0 w-[120px]">
+            <td className="p-0 w-[120px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
               <EditableCell
                 value={item.service_type || null}
-                type="select"
+                type="multi-select"
                 options={SERVICE_LABELS}
                 placeholder="Selecionar"
-                onSave={(val) => onUpdateItem(item.id, "service_type", val)}
+                onSave={(val) => onUpdateItem(item.id, "service_type", val, isCharge)}
                 className="justify-center"
               />
             </td>
 
             {/* Status */}
-            <td className="p-0 w-[140px]">
-              <EditableCell
-                value={item.list_status || "em_progresso"}
-                type="select"
-                options={LIST_STATUSES}
-                onSave={(val) => onUpdateItem(item.id, "list_status", val)}
-                className="justify-center"
-              />
+            <td className="p-0 w-[140px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
+              {isCharge ? (
+                <div className="px-1 py-2 text-sm text-center text-muted-foreground">
+                  {item.list_status === "feito" ? "Pago" : "Pendente"}
+                </div>
+              ) : (
+                <EditableCell
+                  value={item.list_status || "em_progresso"}
+                  type="select"
+                  options={LIST_STATUSES}
+                  onSave={(val) => onUpdateItem(item.id, "list_status", val, false)}
+                  className="justify-center"
+                />
+              )}
             </td>
           </tr>
         );
