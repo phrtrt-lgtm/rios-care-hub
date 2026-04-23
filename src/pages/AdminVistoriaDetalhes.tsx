@@ -318,7 +318,6 @@ export default function AdminVistoriaDetalhes() {
   };
 
   const imageAttachments = attachments.filter(a => a.file_type?.startsWith('image/'));
-  const imageAttachments = attachments.filter(a => a.file_type?.startsWith('image/'));
   const videoAttachments = attachments.filter(a => a.file_type?.startsWith('video/'));
   const audioAttachments = attachments.filter(a => a.file_type?.startsWith('audio/'));
   const mediaAttachments = [...imageAttachments, ...videoAttachments];
