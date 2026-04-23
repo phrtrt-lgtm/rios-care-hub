@@ -2122,26 +2122,115 @@ export default function AdminManutencoesLista() {
                     </td>
                   </tr>
                 ) : (
-                  GROUPS.map(group => (
-                    <GroupRow
-                      key={group.id}
-                      group={group}
-                      items={groupedItems[group.id as keyof typeof groupedItems] || []}
-                      isExpanded={expandedGroups[group.id] ?? false}
-                      onToggle={() => toggleGroup(group.id)}
-                      onUpdateItem={handleUpdateItem}
-                      onOpenChat={handleOpenChat}
-                      unreadCounts={unreadCounts}
-                      selectedIds={selectedIds}
-                      onToggleSelection={toggleSelection}
-                      sortField={sortField}
-                      sortDirection={sortDirection}
-                      onSort={handleSort}
-                      onOpenAttachments={handleOpenAttachments}
-                      onUploadAttachment={handleUploadAttachment}
-                      uploadingItemId={uploadingItemId}
-                    />
-                  ))
+                  GROUPS.map(group => {
+                    const isExpanded = expandedGroups[group.id] ?? false;
+                    const isChargeGroup = ["cobrancas_vencidas", "cobrancas"].includes(group.id);
+                    const isInlineActive = inlineAdd?.groupId === group.id;
+                    return (
+                      <React.Fragment key={group.id}>
+                        <GroupRow
+                          group={group}
+                          items={groupedItems[group.id as keyof typeof groupedItems] || []}
+                          isExpanded={isExpanded}
+                          onToggle={() => toggleGroup(group.id)}
+                          onUpdateItem={handleUpdateItem}
+                          onOpenChat={handleOpenChat}
+                          unreadCounts={unreadCounts}
+                          selectedIds={selectedIds}
+                          onToggleSelection={toggleSelection}
+                          sortField={sortField}
+                          sortDirection={sortDirection}
+                          onSort={handleSort}
+                          onOpenAttachments={handleOpenAttachments}
+                          onUploadAttachment={handleUploadAttachment}
+                          uploadingItemId={uploadingItemId}
+                        />
+
+                        {/* Inline form row */}
+                        {isExpanded && isInlineActive && (
+                          <tr className="border-b bg-muted/20">
+                            <td className="p-0 w-[40px]" />
+                            <td className="p-0" colSpan={2}>
+                              <input
+                                ref={inlineInputRef}
+                                autoFocus
+                                type="text"
+                                placeholder={isChargeGroup ? "Título da cobrança..." : "Nome da manutenção..."}
+                                value={inlineAdd!.subject}
+                                onChange={(e) => setInlineAdd((prev) => prev ? { ...prev, subject: e.target.value } : null)}
+                                onKeyDown={handleInlineKeyDown}
+                                className="w-full h-10 px-3 text-sm bg-transparent border-0 border-b-2 border-primary focus:outline-none placeholder:text-muted-foreground"
+                              />
+                            </td>
+                            <td className="p-0 w-[130px]">
+                              <Select
+                                value={inlineAdd!.propertyId}
+                                onValueChange={(val) => setInlineAdd((prev) => prev ? { ...prev, propertyId: val } : null)}
+                              >
+                                <SelectTrigger className="h-10 border-0 border-b-2 border-transparent focus:border-primary rounded-none text-sm">
+                                  <SelectValue placeholder="Imóvel..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {propertiesList?.map((p) => (
+                                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </td>
+                            {isChargeGroup ? (
+                              <td className="p-0 w-[120px]">
+                                <input
+                                  type="text"
+                                  placeholder="R$ 0,00"
+                                  value={inlineAdd!.amountCents}
+                                  onChange={(e) => setInlineAdd((prev) => prev ? { ...prev, amountCents: e.target.value } : null)}
+                                  onKeyDown={handleInlineKeyDown}
+                                  className="w-full h-10 px-3 text-sm bg-transparent border-0 border-b-2 border-transparent focus:border-primary focus:outline-none placeholder:text-muted-foreground text-right"
+                                />
+                              </td>
+                            ) : (
+                              <td className="p-0 w-[120px]" />
+                            )}
+                            <td colSpan={4} className="p-0" />
+                            <td className="p-0 w-[150px]">
+                              <div className="flex items-center justify-center gap-1 px-2">
+                                <button
+                                  onClick={handleInlineSave}
+                                  disabled={inlineLoading || !inlineAdd!.subject.trim() || !inlineAdd!.propertyId}
+                                  className="p-1.5 rounded hover:bg-primary/10 text-primary disabled:opacity-40 disabled:cursor-not-allowed"
+                                  title="Salvar (Enter)"
+                                >
+                                  {inlineLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                                </button>
+                                <button
+                                  onClick={handleInlineCancel}
+                                  className="p-1.5 rounded hover:bg-muted text-muted-foreground"
+                                  title="Cancelar (Esc)"
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+
+                        {/* "+ Adicionar item" row */}
+                        {isExpanded && !isInlineActive && (
+                          <tr className="border-b">
+                            <td colSpan={10} className="p-0">
+                              <button
+                                className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors group"
+                                onClick={() => handleStartInlineAdd(group.id)}
+                              >
+                                <Plus className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100 transition-opacity" />
+                                <span>Adicionar item</span>
+                              </button>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })
                 )}
               </tbody>
             </table>
