@@ -2312,6 +2312,12 @@ export default function AdminManutencoesLista() {
                             const isCharge = ["cobrancas_vencidas", "cobrancas"].includes(group.id);
                             openSheet(id, isCharge ? "cobranca" : "maintenance");
                           }}
+                          onEdit={(item, isCharge) => {
+                            const path = isCharge
+                              ? `/nova-cobranca?edit=${item.id}`
+                              : `/admin/nova-manutencao?edit=${item.id}`;
+                            navigate(path);
+                          }}
                         />
 
                         {/* Inline form row */}
