@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { goBack } from "@/lib/navigation";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { LoadingScreen } from "@/components/LoadingScreen";
@@ -58,7 +59,7 @@ export default function OwnerRelatorioFinanceiro() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4">
         <p className="text-muted-foreground">{error}</p>
-        <Button variant="outline" onClick={() => navigate(-1)}>
+        <Button variant="outline" onClick={() => goBack(navigate, "/painel")}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Voltar
         </Button>
