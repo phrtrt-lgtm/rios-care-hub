@@ -2506,6 +2506,32 @@ export default function AdminManutencoesLista() {
           entityId={detailEntityId}
           entityType={detailEntityType}
         />
+
+        {/* Edit dialogs (pop-ups) */}
+        <EditMaintenanceDialog
+          ticketId={editMaintenanceId}
+          open={editMaintenanceOpen}
+          onOpenChange={(o) => {
+            setEditMaintenanceOpen(o);
+            if (!o) setEditMaintenanceId(null);
+          }}
+          onSaved={() => {
+            queryClient.invalidateQueries({ queryKey: ["admin-maintenance-tickets"] });
+            queryClient.invalidateQueries({ queryKey: ["admin-charges-list"] });
+          }}
+        />
+        <EditChargeFullDialog
+          chargeId={editChargeId}
+          open={editChargeOpen}
+          onOpenChange={(o) => {
+            setEditChargeOpen(o);
+            if (!o) setEditChargeId(null);
+          }}
+          onSaved={() => {
+            queryClient.invalidateQueries({ queryKey: ["admin-charges-list"] });
+            queryClient.invalidateQueries({ queryKey: ["admin-maintenance-tickets"] });
+          }}
+        />
       </div>
     </div>
   );
