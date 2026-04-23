@@ -37,14 +37,29 @@ export function restoreScrollPosition(pathname: string) {
 }
 
 /**
- * Volta para a página anterior respeitando o histórico do browser.
- * Se não houver histórico (PWA, link direto), navega para o fallback.
+ * Volta para a página anterior do app respeitando o histórico do react-router.
+ *
+ * Estratégia (em ordem):
+ *  1. Se o react-router tem uma entrada anterior dentro do app (idx > 0),
+ *     usa navigate(-1) para reproduzir o botão voltar do navegador.
+ *  2. Caso contrário (entrou direto via link, notificação, abrir nova aba,
+ *     PWA standalone, etc.), navega para o fallback informado.
+ *
+ * Isso evita "saltos" estranhos onde o usuário entra direto numa rota e
+ * o voltar leva para outro site / página de login antiga.
  *
  * @param navigate - função navigate do react-router-dom
- * @param fallback - rota de fallback quando não há histórico (default: "/painel")
+ * @param fallback - rota de fallback quando não há histórico interno (default: "/painel")
  */
 export function goBack(navigate: NavigateFunction, fallback = "/painel") {
-  if (window.history.length > 1) {
+  // O react-router mantém um índice da entrada atual dentro do histórico do app.
+  // Se idx > 0, há pelo menos uma página anterior do nosso app no histórico.
+  const state = (typeof window !== "undefined" ? window.history.state : null) as
+    | { idx?: number }
+    | null;
+  const idx = state?.idx ?? 0;
+
+  if (idx > 0) {
     navigate(-1);
   } else {
     navigate(fallback, { replace: true });
