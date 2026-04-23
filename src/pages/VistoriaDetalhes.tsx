@@ -12,6 +12,7 @@ import { LoadingScreen } from "@/components/LoadingScreen";
 import { MediaThumbnail } from "@/components/MediaThumbnail";
 import { MediaGallery } from "@/components/MediaGallery";
 import { preloadMediaUrls } from "@/hooks/useMediaCache";
+import { InspectionCommentThread } from "@/components/comments/InspectionCommentThread";
 
 interface Inspection {
   id: string;
@@ -256,6 +257,9 @@ export default function VistoriaDetalhes() {
               </CardContent>
             </Card>
           )}
+
+          {/* Comments */}
+          {inspection && <InspectionCommentThread inspectionId={inspection.id} />}
 
           {/* Media Gallery */}
           {mediaAttachments.length > 0 && (

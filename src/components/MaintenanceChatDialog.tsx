@@ -26,6 +26,8 @@ import { processFileForUpload } from "@/lib/processVideoForUpload";
 import { sanitizeFilename } from "@/lib/storage";
 import { NativeMediaPicker } from "@/components/NativeMediaPicker";
 import { toast as sonnerToast } from "sonner";
+import { MentionInput, MentionableUser, extractMentionedIds } from "@/components/comments/MentionInput";
+import { MentionText } from "@/components/comments/MentionText";
 
 interface MaintenanceChatDialogProps {
   open: boolean;
@@ -61,6 +63,8 @@ export function MaintenanceChatDialog({
     open ? ticketId : null
   );
   const [newMessage, setNewMessage] = useState("");
+  const [mentionedIds, setMentionedIds] = useState<string[]>([]);
+  const [mentionableUsers, setMentionableUsers] = useState<MentionableUser[]>([]);
   const [aiCommand, setAiCommand] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
@@ -187,6 +191,18 @@ export function MaintenanceChatDialog({
     }
   }, [open]);
 
+  // Load mentionable users for this ticket
+  useEffect(() => {
+    if (!open || !ticketId) return;
+    (async () => {
+      const { data } = await supabase.rpc(
+        "get_ticket_mentionable_users" as any,
+        { _ticket_id: ticketId }
+      );
+      if (data) setMentionableUsers(data as MentionableUser[]);
+    })();
+  }, [open, ticketId]);
+
   const handleSend = async () => {
     if (!newMessage.trim() && selectedFiles.length === 0) return;
     if (sending) return;
@@ -232,7 +248,20 @@ export function MaintenanceChatDialog({
 
       const success = await sendMessage(newMessage, attachments);
       if (success) {
+        // Fire and forget — notify mentioned users
+        if (mentionedIds.length > 0 && ticketId && user) {
+          supabase.functions.invoke("notify-mentions", {
+            body: {
+              entity_type: "ticket",
+              entity_id: ticketId,
+              mentioned_user_ids: mentionedIds,
+              author_id: user.id,
+              body: newMessage,
+            },
+          }).catch((e) => console.warn("notify-mentions failed", e));
+        }
         setNewMessage("");
+        setMentionedIds([]);
         setSelectedFiles([]);
       }
     } catch (error: any) {
@@ -389,7 +418,7 @@ export function MaintenanceChatDialog({
                   : "bg-muted"
               }`}
             >
-              <p className="whitespace-pre-wrap break-words">{message.body}</p>
+              <MentionText body={message.body} className={isOwnMessage ? "text-primary-foreground" : ""} />
             </div>
           )}
           
@@ -633,15 +662,22 @@ export function MaintenanceChatDialog({
                 className="h-9 w-9 flex-shrink-0"
               />
               
-              <Textarea
-                ref={textareaRef}
-                value={newMessage}
-                onChange={handleInputChange}
-                onKeyDown={handleKeyDown}
-                placeholder="Mensagem para enviar..."
-                className="min-h-[40px] max-h-[120px] resize-none flex-1"
-                rows={1}
-              />
+              <div className="flex-1">
+                <MentionInput
+                  value={newMessage}
+                  onChange={(v, ids) => {
+                    setNewMessage(v);
+                    setMentionedIds(ids);
+                    setTyping(v.length > 0);
+                  }}
+                  users={mentionableUsers}
+                  placeholder="Mensagem para enviar... use @ para mencionar"
+                  rows={1}
+                  disabled={sending}
+                  onSubmit={handleSend}
+                  className="min-h-[40px]"
+                />
+              </div>
               
               <Button
                 onClick={handleSend}

@@ -364,6 +364,7 @@ export type Database = {
           created_at: string
           id: string
           is_internal: boolean
+          mentioned_user_ids: string[]
         }
         Insert: {
           author_id: string
@@ -372,6 +373,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_internal?: boolean
+          mentioned_user_ids?: string[]
         }
         Update: {
           author_id?: string
@@ -380,6 +382,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_internal?: boolean
+          mentioned_user_ids?: string[]
         }
         Relationships: [
           {
@@ -718,6 +721,7 @@ export type Database = {
           created_at: string
           id: string
           is_internal: boolean
+          mentioned_user_ids: string[]
         }
         Insert: {
           author_id: string
@@ -726,6 +730,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_internal?: boolean
+          mentioned_user_ids?: string[]
         }
         Update: {
           author_id?: string
@@ -734,6 +739,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_internal?: boolean
+          mentioned_user_ids?: string[]
         }
         Relationships: [
           {
@@ -1254,6 +1260,50 @@ export type Database = {
             columns: ["property_id"]
             isOneToOne: false
             referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inspection_comments: {
+        Row: {
+          attachments: Json
+          author_id: string
+          body: string
+          created_at: string
+          deleted_at: string | null
+          edited_at: string | null
+          id: string
+          inspection_id: string
+          mentioned_user_ids: string[]
+        }
+        Insert: {
+          attachments?: Json
+          author_id: string
+          body: string
+          created_at?: string
+          deleted_at?: string | null
+          edited_at?: string | null
+          id?: string
+          inspection_id: string
+          mentioned_user_ids?: string[]
+        }
+        Update: {
+          attachments?: Json
+          author_id?: string
+          body?: string
+          created_at?: string
+          deleted_at?: string | null
+          edited_at?: string | null
+          id?: string
+          inspection_id?: string
+          mentioned_user_ids?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inspection_comments_inspection_id_fkey"
+            columns: ["inspection_id"]
+            isOneToOne: false
+            referencedRelation: "cleaning_inspections"
             referencedColumns: ["id"]
           },
         ]
@@ -2543,6 +2593,7 @@ export type Database = {
           created_at: string
           id: string
           is_internal: boolean
+          mentioned_user_ids: string[]
           ticket_id: string
         }
         Insert: {
@@ -2551,6 +2602,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_internal?: boolean
+          mentioned_user_ids?: string[]
           ticket_id: string
         }
         Update: {
@@ -2559,6 +2611,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_internal?: boolean
+          mentioned_user_ids?: string[]
           ticket_id?: string
         }
         Relationships: [
@@ -2717,6 +2770,33 @@ export type Database = {
           p_report_id: string
         }
         Returns: undefined
+      }
+      get_charge_mentionable_users: {
+        Args: { _charge_id: string }
+        Returns: {
+          id: string
+          name: string
+          photo_url: string
+          role: string
+        }[]
+      }
+      get_inspection_mentionable_users: {
+        Args: { _inspection_id: string }
+        Returns: {
+          id: string
+          name: string
+          photo_url: string
+          role: string
+        }[]
+      }
+      get_ticket_mentionable_users: {
+        Args: { _ticket_id: string }
+        Returns: {
+          id: string
+          name: string
+          photo_url: string
+          role: string
+        }[]
       }
       has_role: {
         Args: {

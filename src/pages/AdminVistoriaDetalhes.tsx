@@ -16,6 +16,7 @@ import { CreateMaintenanceFromInspectionDialog } from '@/components/CreateMainte
 import EditInspectionDialog from '@/components/EditInspectionDialog';
 import { RoutineChecklistDisplay } from '@/components/RoutineChecklistDisplay';
 import { preloadMediaUrls } from '@/hooks/useMediaCache';
+import { InspectionCommentThread } from '@/components/comments/InspectionCommentThread';
 import { ArrowLeft, Calendar, User, CheckCircle2, AlertTriangle, Headphones, FileText, Building2, Wrench, Plus, Sparkles, Loader2, Pencil, RefreshCw, Import } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -543,6 +544,9 @@ export default function AdminVistoriaDetalhes() {
               </div>
             </Card>
           )}
+
+          {/* Comments */}
+          {inspection && <InspectionCommentThread inspectionId={inspection.id} />}
 
           {/* Media Gallery */}
           {mediaAttachments.length > 0 && (
