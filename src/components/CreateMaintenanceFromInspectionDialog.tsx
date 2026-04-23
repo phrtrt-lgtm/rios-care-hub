@@ -230,6 +230,19 @@ export function CreateMaintenanceFromInspectionDialog({
         });
       }
 
+      // Link selected attachments to the new maintenance ticket (non-blocking)
+      if (selectedAttachments.length > 0) {
+        const { error: linkError } = await supabase
+          .from('cleaning_inspection_attachments')
+          .update({ maintenance_ticket_id: ticket.id })
+          .in('id', selectedAttachments);
+
+        if (linkError) {
+          console.error('Erro ao vincular anexos:', linkError);
+          toast.warning('Manutenção criada, mas alguns anexos não foram vinculados');
+        }
+      }
+
       toast.success('Manutenção criada com sucesso!');
       onMaintenanceCreated?.(ticket.id);
       onOpenChange(false);
