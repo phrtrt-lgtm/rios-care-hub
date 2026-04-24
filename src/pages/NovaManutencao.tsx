@@ -406,7 +406,12 @@ export default function NovaManutencao({ editId, onClose, onSaved }: NovaManuten
       }
 
       toast.success(isEditMode ? "Manutenção atualizada!" : "Manutenção criada com sucesso!");
-      navigate(`/admin/manutencoes-lista`);
+      if (isModal) {
+        onSaved?.();
+        onClose?.();
+      } else {
+        navigate(`/admin/manutencoes-lista`);
+      }
     } catch (error: any) {
       console.error("Error saving maintenance:", error);
       toast.error(error.message || "Erro ao salvar manutenção");
