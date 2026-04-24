@@ -39,7 +39,7 @@ export function DetailSheet({ open, onClose, entityId, entityType }: DetailSheet
   const goToFullPage = () => {
     saveScrollPosition(pathname);
     onClose();
-    navigate(fullRoute);
+    navigate(fullRoute, { state: { from: pathname } });
   };
 
   return (
