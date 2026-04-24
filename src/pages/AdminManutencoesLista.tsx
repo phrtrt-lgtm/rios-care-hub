@@ -25,6 +25,7 @@ import { MediaGallery } from "@/components/MediaGallery";
 import { uploadFileWithCompression, FileUploadProgress } from "@/lib/fileUpload";
 import { CreateMaintenanceFromInspectionDialog } from "@/components/CreateMaintenanceFromInspectionDialog";
 import EditInspectionDialog from "@/components/EditInspectionDialog";
+import { EditMaintenanceDialog } from "@/components/EditMaintenanceDialog";
 import { ReserveDebitsTable } from "@/components/ReserveDebitsTable";
 import { Pencil } from "lucide-react";
 import { useDetailSheet } from "@/hooks/useDetailSheet";
