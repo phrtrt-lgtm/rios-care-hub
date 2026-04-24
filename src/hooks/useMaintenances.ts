@@ -98,9 +98,9 @@ export const useMaintenances = (filters?: MaintenanceFilters) => {
 };
 
 export const useMaintenance = (id?: string) => {
-  return useQuery({
+  return useQuery<any>({
     queryKey: ["maintenance", id],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       if (!id) return null;
 
       // 1) Try as charge first (existing behavior)
