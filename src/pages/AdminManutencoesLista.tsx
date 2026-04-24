@@ -475,15 +475,12 @@ function GroupRow({
               </div>
             </td>
 
-            {/* Nome da Manutenção - Abre Chat */}
+            {/* Nome da Manutenção - Abre painel lateral */}
             <td className="p-0 w-[220px] max-w-[220px]">
               <TooltipProvider delayDuration={300}>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div
-                      className="px-1 py-2 font-medium text-sm cursor-pointer hover:text-primary transition-colors truncate text-center"
-                      onClick={() => onOpenChat(item)}
-                    >
+                    <div className="px-1 py-2 font-medium text-sm hover:text-primary transition-colors truncate text-center">
                       <span className="truncate">{item.subject}</span>
                     </div>
                   </TooltipTrigger>
@@ -491,17 +488,14 @@ function GroupRow({
                     <p>{item.subject}</p>
                   </TooltipContent>
                 </Tooltip>
-              </TooltipProvider>
+              </td>
             </td>
 
-            {/* Chat / Mensagens não lidas */}
+            {/* Atualizações / Comentários da equipe (preview no painel) */}
             <td className="p-0 w-[44px]">
-              <div
-                className="flex items-center justify-center px-1 py-2 cursor-pointer hover:bg-muted/50 rounded transition-colors"
-                onClick={() => onOpenChat(item)}
-              >
+              <div className="flex items-center justify-center px-1 py-2">
                 <div className="relative">
-                  <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                  <MessageSquare className="h-4 w-4 text-muted-foreground/50" />
                   {unread > 0 && (
                     <span className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center text-[10px] font-bold bg-destructive text-destructive-foreground rounded-full px-1">
                       {unread > 9 ? "9+" : unread}
