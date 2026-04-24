@@ -2,20 +2,35 @@ import { useParams, useNavigate } from "react-router-dom";
 import { goBack } from "@/lib/navigation";
 import { useMaintenance } from "@/hooks/useMaintenances";
 import { MaintenancePaymentForm } from "@/components/MaintenancePaymentForm";
+import { MaintenanceUpdatesThread } from "@/components/MaintenanceUpdatesThread";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { formatBRL, formatDateTime, formatDate } from "@/lib/format";
-import { ArrowLeft, Download, Loader2, FileText, Calendar, DollarSign, Info } from "lucide-react";
+import { ArrowLeft, Loader2, FileText, Calendar, DollarSign, Info } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { MediaThumbnail } from "@/components/MediaThumbnail";
 import { MediaGallery } from "@/components/MediaGallery";
 import { preloadMediaUrls } from "@/hooks/useMediaCache";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import JSZip from "jszip";
 import { useState, useEffect } from "react";
+
+interface ManutencaoDetalhesProps {
+  /** When provided, render without page chrome (for use inside a Dialog). */
+  embedded?: boolean;
+  /** Optional id override (when used in a Dialog without router params). */
+  idOverride?: string;
+}
+
+export default function ManutencaoDetalhes({ embedded = false, idOverride }: ManutencaoDetalhesProps = {}) {
+  const params = useParams();
+  const id = idOverride ?? params.id;
+  const navigate = useNavigate();
+  const { profile } = useAuth();
+  const { data: maintenance, isLoading } = useMaintenance(id);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryStartIndex, setGalleryStartIndex] = useState(0);
+
 
 export default function ManutencaoDetalhes() {
   const { id } = useParams();
@@ -32,25 +47,32 @@ export default function ManutencaoDetalhes() {
     if (maintenance?.attachments && maintenance.attachments.length > 0) {
       const mediaUrls = maintenance.attachments
         .filter((a: any) => a.file_type?.startsWith('image/') || a.file_type?.startsWith('video/'))
-        .map((a: any) => a.file_url);
+        .map((a: any) => a.file_url)
+        .filter(Boolean);
       if (mediaUrls.length > 0) {
         preloadMediaUrls(mediaUrls);
       }
     }
   }, [maintenance]);
 
+  const wrapperClass = embedded
+    ? "space-y-6"
+    : "container mx-auto p-6 space-y-6";
+
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="text-center py-12">Carregando...</div>
+      <div className={wrapperClass}>
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
       </div>
     );
   }
 
   if (!maintenance) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="text-center py-12">Manutenção não encontrada</div>
+      <div className={wrapperClass}>
+        <div className="text-center py-12 text-muted-foreground">Manutenção não encontrada</div>
       </div>
     );
   }
@@ -86,15 +108,23 @@ export default function ManutencaoDetalhes() {
     return `Dividido - Proprietário: ${ownerPercent}% | Gestão: ${managementPercent}%`;
   };
 
+  const hasFinancials = (maintenance.amount_cents || 0) > 0 || maintenance.source !== "ticket" || !!maintenance.charge_id;
+  const ticketIdForUpdates: string | null =
+    maintenance.source === "ticket" ? maintenance.id : maintenance.ticket_id ?? null;
+  const chargeIdForUpdates: string | null =
+    maintenance.source === "charge" ? maintenance.id : maintenance.charge_id ?? null;
+
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className={wrapperClass}>
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => goBack(navigate, "/admin/manutencoes-lista")}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
+        {!embedded && (
+          <Button variant="ghost" size="icon" onClick={() => goBack(navigate, "/admin/manutencoes-lista")}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        )}
         <div className="flex-1">
-          <h1 className="text-3xl font-bold">{maintenance.title}</h1>
-          <p className="text-muted-foreground">
+          <h1 className={embedded ? "text-xl font-bold" : "text-3xl font-bold"}>{maintenance.title}</h1>
+          <p className="text-muted-foreground text-sm">
             Criado em {formatDateTime(maintenance.created_at)}
           </p>
         </div>
@@ -102,7 +132,7 @@ export default function ManutencaoDetalhes() {
       </div>
 
       {/* Informações principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className={hasFinancials ? "grid grid-cols-1 md:grid-cols-2 gap-6" : "grid grid-cols-1 gap-6"}>
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
@@ -126,7 +156,7 @@ export default function ManutencaoDetalhes() {
             {maintenance.description && (
               <div>
                 <div className="text-sm text-muted-foreground">Descrição</div>
-                <div className="text-sm">{maintenance.description}</div>
+                <div className="text-sm whitespace-pre-wrap">{maintenance.description}</div>
               </div>
             )}
 
@@ -150,56 +180,60 @@ export default function ManutencaoDetalhes() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <DollarSign className="h-4 w-4" />
-              Informações Financeiras
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div>
-              <div className="text-sm text-muted-foreground">Valor Total</div>
-              <div className="text-2xl font-bold">{formatBRL(maintenance.amount_cents)}</div>
-            </div>
-
-            {managementContribution > 0 && (
+        {hasFinancials && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <DollarSign className="h-4 w-4" />
+                Informações Financeiras
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
               <div>
-                <div className="text-sm text-muted-foreground">Contribuição da Gestão</div>
-                <div className="text-xl font-semibold text-success">- {formatBRL(managementContribution)}</div>
+                <div className="text-sm text-muted-foreground">Valor Total</div>
+                <div className="text-2xl font-bold">{formatBRL(maintenance.amount_cents)}</div>
               </div>
-            )}
 
-            <div>
-              <div className="text-sm text-muted-foreground">Valor Devido (Proprietário)</div>
-              <div className="text-2xl font-bold text-primary">
-                {formatBRL(ownerDue)}
+              {managementContribution > 0 && (
+                <div>
+                  <div className="text-sm text-muted-foreground">Contribuição da Gestão</div>
+                  <div className="text-xl font-semibold text-success">- {formatBRL(managementContribution)}</div>
+                </div>
+              )}
+
+              <div>
+                <div className="text-sm text-muted-foreground">Valor Devido (Proprietário)</div>
+                <div className="text-2xl font-bold text-primary">
+                  {formatBRL(ownerDue)}
+                </div>
               </div>
-            </div>
 
-            <div>
-              <div className="text-sm text-muted-foreground">Responsável pelo Custo</div>
-              <div className="font-medium text-sm">
-                {getResponsibleLabel()}
+              <div>
+                <div className="text-sm text-muted-foreground">Responsável pelo Custo</div>
+                <div className="font-medium text-sm">
+                  {getResponsibleLabel()}
+                </div>
               </div>
-            </div>
 
-            <Separator />
+              <Separator />
 
-            <div>
-              <div className="text-sm text-muted-foreground">Total Pago</div>
-              <div className="text-xl font-semibold text-success">{formatBRL(totalPaid)}</div>
-            </div>
+              <div>
+                <div className="text-sm text-muted-foreground">Total Pago</div>
+                <div className="text-xl font-semibold text-success">{formatBRL(totalPaid)}</div>
+              </div>
 
-            <div>
-              <div className="text-sm text-muted-foreground">Restante</div>
-              <div className="text-xl font-semibold text-warning">{formatBRL(remaining)}</div>
-            </div>
-          </CardContent>
-        </Card>
+              <div>
+                <div className="text-sm text-muted-foreground">Restante</div>
+                <div className="text-xl font-semibold text-warning">{formatBRL(remaining)}</div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
-      {/* Pagamentos */}
+      {/* Pagamentos (apenas quando há cobrança) */}
+      {hasFinancials && (
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Pagamentos</CardTitle>
@@ -277,6 +311,7 @@ export default function ManutencaoDetalhes() {
           )}
         </CardContent>
       </Card>
+      )}
 
       {/* Anexos */}
       {maintenance.attachments && maintenance.attachments.length > 0 && (
@@ -351,41 +386,50 @@ export default function ManutencaoDetalhes() {
         </Card>
       )}
 
-      {/* Status da cobrança */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Info className="h-4 w-4" />
-            Informações da Cobrança
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3 text-sm">
-            <div>
-              <span className="text-muted-foreground">Status: </span>
-              {getStatusBadge(maintenance.status)}
+      {/* Acompanhamento (timeline da equipe → proprietário) */}
+      <MaintenanceUpdatesThread
+        ticketId={ticketIdForUpdates}
+        chargeId={chargeIdForUpdates}
+      />
+
+      {/* Status da cobrança (apenas quando há cobrança) */}
+      {hasFinancials && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Info className="h-4 w-4" />
+              Informações da Cobrança
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3 text-sm">
+              <div>
+                <span className="text-muted-foreground">Status: </span>
+                {getStatusBadge(maintenance.status)}
+              </div>
+              {maintenance.paid_at && (
+                <div>
+                  <span className="text-muted-foreground">Pago em: </span>
+                  <span>{formatDateTime(maintenance.paid_at)}</span>
+                </div>
+              )}
+              {maintenance.contested_at && (
+                <div>
+                  <span className="text-muted-foreground">Contestado em: </span>
+                  <span>{formatDateTime(maintenance.contested_at)}</span>
+                </div>
+              )}
+              {maintenance.debited_at && (
+                <div>
+                  <span className="text-muted-foreground">Debitado em: </span>
+                  <span>{formatDateTime(maintenance.debited_at)}</span>
+                </div>
+              )}
             </div>
-            {maintenance.paid_at && (
-              <div>
-                <span className="text-muted-foreground">Pago em: </span>
-                <span>{formatDateTime(maintenance.paid_at)}</span>
-              </div>
-            )}
-            {maintenance.contested_at && (
-              <div>
-                <span className="text-muted-foreground">Contestado em: </span>
-                <span>{formatDateTime(maintenance.contested_at)}</span>
-              </div>
-            )}
-            {maintenance.debited_at && (
-              <div>
-                <span className="text-muted-foreground">Debitado em: </span>
-                <span>{formatDateTime(maintenance.debited_at)}</span>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
+

@@ -98,12 +98,13 @@ export const useMaintenances = (filters?: MaintenanceFilters) => {
 };
 
 export const useMaintenance = (id?: string) => {
-  return useQuery({
+  return useQuery<any>({
     queryKey: ["maintenance", id],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       if (!id) return null;
-      
-      const { data: charge, error } = await supabase
+
+      // 1) Try as charge first (existing behavior)
+      const { data: charge } = await supabase
         .from("charges")
         .select(`
           *,
@@ -111,27 +112,119 @@ export const useMaintenance = (id?: string) => {
           owner:profiles!charges_owner_id_fkey(id, name, email)
         `)
         .eq("id", id)
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
+      if (charge) {
+        const { data: payments } = await supabase
+          .from("charge_payments")
+          .select("*")
+          .eq("charge_id", id)
+          .order("payment_date", { ascending: false });
 
-      // Fetch payments from charge_payments
-      const { data: payments } = await supabase
-        .from("charge_payments")
+        const { data: rawAttachments } = await supabase
+          .from("charge_attachments")
+          .select("*")
+          .eq("charge_id", id)
+          .order("created_at", { ascending: false });
+
+        // Normalize attachment shape (file_url + file_type)
+        const attachments = (rawAttachments || []).map((a: any) => ({
+          ...a,
+          file_url: a.file_path
+            ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/charge-attachments/${a.file_path}`
+            : null,
+          file_type: a.mime_type_override || a.mime_type,
+          size_bytes: a.file_size,
+        }));
+
+        const paid_cents = payments?.reduce((sum, p) => sum + p.amount_cents, 0) || 0;
+
+        return { ...charge, source: "charge" as const, payments, attachments, paid_cents };
+      }
+
+      // 2) Fallback to ticket (maintenance created by team without a charge yet)
+      const { data: ticket, error: ticketError } = await supabase
+        .from("tickets")
+        .select(`
+          id,
+          subject,
+          description,
+          status,
+          created_at,
+          owner_id,
+          property_id,
+          ticket_type,
+          scheduled_at,
+          cost_responsible,
+          property:properties(id, name),
+          owner:profiles!tickets_owner_id_fkey(id, name, email)
+        `)
+        .eq("id", id)
+        .maybeSingle();
+
+      if (ticketError) throw ticketError;
+      if (!ticket) return null;
+
+      // Look for a linked charge (when maintenance is finalized with a charge)
+      const { data: linkedCharge } = await supabase
+        .from("charges")
+        .select("id, amount_cents, management_contribution_cents, status, paid_at, contested_at, debited_at, due_date")
+        .eq("ticket_id", id)
+        .maybeSingle();
+
+      // Fetch ticket attachments
+      const { data: rawTicketAttachments } = await supabase
+        .from("ticket_attachments" as any)
         .select("*")
-        .eq("charge_id", id)
-        .order("payment_date", { ascending: false });
-
-      // Fetch attachments
-      const { data: attachments } = await supabase
-        .from("charge_attachments")
-        .select("*")
-        .eq("charge_id", id)
+        .eq("ticket_id", id)
         .order("created_at", { ascending: false });
 
-      const paid_cents = payments?.reduce((sum, p) => sum + p.amount_cents, 0) || 0;
+      const attachments = (rawTicketAttachments || []).map((a: any) => ({
+        id: a.id,
+        file_name: a.file_name,
+        file_url: a.file_path
+          ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/ticket-attachments/${a.file_path}`
+          : null,
+        file_type: a.mime_type_override || a.mime_type,
+        size_bytes: a.file_size,
+      }));
 
-      return { ...charge, payments, attachments, paid_cents };
+      let payments: any[] = [];
+      let paid_cents = 0;
+      if (linkedCharge?.id) {
+        const { data: pays } = await supabase
+          .from("charge_payments")
+          .select("*")
+          .eq("charge_id", linkedCharge.id)
+          .order("payment_date", { ascending: false });
+        payments = pays || [];
+        paid_cents = payments.reduce((s, p) => s + p.amount_cents, 0);
+      }
+
+      return {
+        id: ticket.id,
+        source: "ticket" as const,
+        title: ticket.subject,
+        description: ticket.description,
+        status: ticket.status,
+        created_at: ticket.created_at,
+        owner_id: ticket.owner_id,
+        property_id: ticket.property_id,
+        property: ticket.property,
+        owner: ticket.owner,
+        ticket_id: ticket.id,
+        charge_id: linkedCharge?.id ?? null,
+        amount_cents: linkedCharge?.amount_cents ?? 0,
+        management_contribution_cents: linkedCharge?.management_contribution_cents ?? 0,
+        due_date: linkedCharge?.due_date ?? null,
+        paid_at: linkedCharge?.paid_at ?? null,
+        contested_at: linkedCharge?.contested_at ?? null,
+        debited_at: linkedCharge?.debited_at ?? null,
+        category: null,
+        attachments,
+        payments,
+        paid_cents,
+      };
     },
     enabled: !!id,
   });

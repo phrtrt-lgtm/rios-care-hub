@@ -13,7 +13,7 @@ import { saveScrollPosition } from "@/lib/navigation";
 import { Wrench, Calendar, Clock, CheckCircle2, Building2, MessageSquare, ChevronRight, Users } from "lucide-react";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useChatPreloader } from "@/hooks/useChatPreloader";
-import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
+import { MaintenanceDetailsDialog } from "@/components/MaintenanceDetailsDialog";
 import { toast } from "sonner";
 
 interface MaintenanceTicket {
@@ -211,7 +211,7 @@ export function OwnerMaintenanceProgress() {
                 <div
                   key={ticket.id}
                   className="p-4 rounded-lg border bg-card hover:bg-muted/50 cursor-pointer transition-colors group"
-                  onClick={() => (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${ticket.id}`))}
+                  onClick={() => { setSelectedTicket(ticket); setChatOpen(true); markAsRead(ticket.id); }}
                 >
                   <div className="flex items-start gap-3 mb-4">
                     {/* Property photo */}
@@ -359,15 +359,13 @@ export function OwnerMaintenanceProgress() {
         </CardContent>
       </Card>
 
-      <MaintenanceChatDialog
+      <MaintenanceDetailsDialog
         open={chatOpen}
         onOpenChange={(open) => {
           setChatOpen(open);
           if (!open) setSelectedTicket(null);
         }}
-        ticketId={selectedTicket?.id || null}
-        ticketSubject={selectedTicket?.subject || ""}
-        propertyName={selectedTicket?.property?.name || ""}
+        maintenanceId={selectedTicket?.id || null}
       />
     </>
   );
