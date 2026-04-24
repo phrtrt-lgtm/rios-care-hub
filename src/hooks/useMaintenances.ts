@@ -127,11 +127,13 @@ export const useMaintenance = (id?: string) => {
           .eq("charge_id", id)
           .order("created_at", { ascending: false });
 
-        // Normalize attachment shape (file_url + file_type)
+        // Normalize attachment shape (file_url via serve-attachment edge fn)
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const attachments = (rawAttachments || []).map((a: any) => ({
           ...a,
-          file_url: a.file_path
-            ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/charge-attachments/${a.file_path}`
+          file_url: `${supabaseUrl}/functions/v1/serve-attachment/${a.id}/file`,
+          poster_url: a.poster_path
+            ? `${supabaseUrl}/functions/v1/serve-attachment/${a.id}/poster`
             : null,
           file_type: a.mime_type_override || a.mime_type,
           size_bytes: a.file_size,
