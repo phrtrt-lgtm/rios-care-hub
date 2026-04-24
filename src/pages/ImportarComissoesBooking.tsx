@@ -135,6 +135,7 @@ export default function ImportarComissoesBooking() {
           systemPropertyId: matched ? matched.id : null,
           commissionPercent: 22,
           autoMatched: !!matched,
+          selected: !!matched, // pré-seleciona apenas vinculados
         };
       });
       setMappings(newMappings);
