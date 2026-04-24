@@ -218,7 +218,7 @@ export default function ImportarComissoesBooking() {
     cleaning_fee_cents: number;
     status: string;
     created_by: string;
-    due_date: null;
+    due_date: string | null;
     notes: string | null;
   };
   const inserts: CommissionInsert[] = [];
@@ -244,7 +244,7 @@ export default function ImportarComissoesBooking() {
             cleaning_fee_cents: Math.round(r.cleaning_fee * 100),
             status: "sent",
             created_by: profile.id,
-            due_date: null,
+            due_date: dueDate || null,
             notes: r.channel ? `Canal: ${r.channel}` : null,
           });
         }
