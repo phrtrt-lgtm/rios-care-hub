@@ -1740,6 +1740,12 @@ export default function AdminManutencoesLista() {
           );
         });
       } else {
+        // Regular optimistic update
+        queryClient.setQueryData(["maintenance-list-view"], (old: MaintenanceItem[] | undefined) => {
+          if (!old) return old;
+          return old.map(t => t.id === id ? { ...t, [field]: value } : t);
+        });
+      }
 
       return { previousTickets, previousCharges };
     },
