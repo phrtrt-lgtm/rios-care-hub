@@ -132,7 +132,7 @@ export default function ManutencaoDetalhes() {
       </div>
 
       {/* Informações principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className={hasFinancials ? "grid grid-cols-1 md:grid-cols-2 gap-6" : "grid grid-cols-1 gap-6"}>
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
@@ -156,7 +156,7 @@ export default function ManutencaoDetalhes() {
             {maintenance.description && (
               <div>
                 <div className="text-sm text-muted-foreground">Descrição</div>
-                <div className="text-sm">{maintenance.description}</div>
+                <div className="text-sm whitespace-pre-wrap">{maintenance.description}</div>
               </div>
             )}
 
@@ -180,53 +180,55 @@ export default function ManutencaoDetalhes() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <DollarSign className="h-4 w-4" />
-              Informações Financeiras
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div>
-              <div className="text-sm text-muted-foreground">Valor Total</div>
-              <div className="text-2xl font-bold">{formatBRL(maintenance.amount_cents)}</div>
-            </div>
-
-            {managementContribution > 0 && (
+        {hasFinancials && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <DollarSign className="h-4 w-4" />
+                Informações Financeiras
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
               <div>
-                <div className="text-sm text-muted-foreground">Contribuição da Gestão</div>
-                <div className="text-xl font-semibold text-success">- {formatBRL(managementContribution)}</div>
+                <div className="text-sm text-muted-foreground">Valor Total</div>
+                <div className="text-2xl font-bold">{formatBRL(maintenance.amount_cents)}</div>
               </div>
-            )}
 
-            <div>
-              <div className="text-sm text-muted-foreground">Valor Devido (Proprietário)</div>
-              <div className="text-2xl font-bold text-primary">
-                {formatBRL(ownerDue)}
+              {managementContribution > 0 && (
+                <div>
+                  <div className="text-sm text-muted-foreground">Contribuição da Gestão</div>
+                  <div className="text-xl font-semibold text-success">- {formatBRL(managementContribution)}</div>
+                </div>
+              )}
+
+              <div>
+                <div className="text-sm text-muted-foreground">Valor Devido (Proprietário)</div>
+                <div className="text-2xl font-bold text-primary">
+                  {formatBRL(ownerDue)}
+                </div>
               </div>
-            </div>
 
-            <div>
-              <div className="text-sm text-muted-foreground">Responsável pelo Custo</div>
-              <div className="font-medium text-sm">
-                {getResponsibleLabel()}
+              <div>
+                <div className="text-sm text-muted-foreground">Responsável pelo Custo</div>
+                <div className="font-medium text-sm">
+                  {getResponsibleLabel()}
+                </div>
               </div>
-            </div>
 
-            <Separator />
+              <Separator />
 
-            <div>
-              <div className="text-sm text-muted-foreground">Total Pago</div>
-              <div className="text-xl font-semibold text-success">{formatBRL(totalPaid)}</div>
-            </div>
+              <div>
+                <div className="text-sm text-muted-foreground">Total Pago</div>
+                <div className="text-xl font-semibold text-success">{formatBRL(totalPaid)}</div>
+              </div>
 
-            <div>
-              <div className="text-sm text-muted-foreground">Restante</div>
-              <div className="text-xl font-semibold text-warning">{formatBRL(remaining)}</div>
-            </div>
-          </CardContent>
-        </Card>
+              <div>
+                <div className="text-sm text-muted-foreground">Restante</div>
+                <div className="text-xl font-semibold text-warning">{formatBRL(remaining)}</div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Pagamentos */}
