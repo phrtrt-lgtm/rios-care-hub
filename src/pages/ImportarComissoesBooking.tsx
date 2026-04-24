@@ -456,7 +456,17 @@ export default function ImportarComissoesBooking() {
                     return (
                       <Card
                         key={mapping.spreadsheetName}
-                        className={`border ${isSkipped ? "opacity-50 bg-muted/20" : !mapping.selected ? "opacity-60" : mapping.autoMatched ? "border-success/30/40" : "border-warning/30/40"}`}
+                        className={`border ${
+                          isSkipped
+                            ? "bg-muted/20 border-muted"
+                            : !mapping.systemPropertyId
+                            ? "border-warning/50 bg-warning/5"
+                            : !mapping.selected
+                            ? "border-border bg-muted/10"
+                            : mapping.autoMatched
+                            ? "border-success/40"
+                            : "border-warning/40"
+                        }`}
                       >
                         <CardContent className="py-4 px-4">
                           <div className="flex flex-col gap-3">
