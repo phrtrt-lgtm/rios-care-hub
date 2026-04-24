@@ -231,7 +231,9 @@ export default function ManutencaoDetalhes() {
         )}
       </div>
 
-      {/* Pagamentos */}
+      {/* Pagamentos (apenas quando há cobrança) */}
+      {hasFinancials && (
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Pagamentos</CardTitle>
@@ -309,6 +311,7 @@ export default function ManutencaoDetalhes() {
           )}
         </CardContent>
       </Card>
+      )}
 
       {/* Anexos */}
       {maintenance.attachments && maintenance.attachments.length > 0 && (
