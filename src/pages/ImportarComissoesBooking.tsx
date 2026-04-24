@@ -497,6 +497,7 @@ export default function ImportarComissoesBooking() {
                                     {" · "}<span>{sysProp.owner_name}</span>
                                   </p>
                                 )}
+                                </div>
                               </div>
                               <div className="text-right shrink-0 text-xs text-muted-foreground">
                                 <p className="font-semibold text-foreground">{stats.count} reserva{stats.count !== 1 ? "s" : ""}</p>
