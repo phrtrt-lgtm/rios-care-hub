@@ -1662,6 +1662,17 @@ export default function AdminManutencoesLista() {
             .update({ scheduled_at: value })
             .eq("id", id);
           if (error) throw error;
+        } else if (field === "list_status") {
+          // Persist the list-status change to the underlying ticket.
+          // - "feito"        -> ticket.status = "concluido"
+          // - "em_progresso" -> reopen the ticket as "em_execucao"
+          const newTicketStatus =
+            value === "feito" ? "concluido" : "em_execucao";
+          const { error } = await supabase
+            .from("tickets")
+            .update({ status: newTicketStatus })
+            .eq("id", id);
+          if (error) throw error;
         }
       }
     },
@@ -1716,6 +1727,18 @@ export default function AdminManutencoesLista() {
             return [optimisticCharge, ...base];
           });
         }
+      } else if (field === "list_status") {
+        // Optimistically reflect the move between "Em Progresso" and
+        // "Concluídas" by also updating the underlying ticket.status.
+        const newTicketStatus = value === "feito" ? "concluido" : "em_execucao";
+        queryClient.setQueryData(["maintenance-list-view"], (old: MaintenanceItem[] | undefined) => {
+          if (!old) return old;
+          return old.map(t =>
+            t.id === id
+              ? { ...t, list_status: value, status: newTicketStatus as TicketStatus }
+              : t
+          );
+        });
       } else {
         // Regular optimistic update
         queryClient.setQueryData(["maintenance-list-view"], (old: MaintenanceItem[] | undefined) => {
