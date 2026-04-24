@@ -29,7 +29,13 @@ interface Property {
   owner_id: string;
 }
 
-export default function NovaCobranca() {
+interface NovaCobrancaProps {
+  editId?: string;
+  onClose?: () => void;
+  onSaved?: () => void;
+}
+
+export default function NovaCobranca({ editId, onClose, onSaved }: NovaCobrancaProps = {}) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { profile } = useAuth();
@@ -41,8 +47,9 @@ export default function NovaCobranca() {
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const isReposicao = searchParams.get("reposicao") === "true";
-  const editChargeId = searchParams.get("edit");
+  const editChargeId = editId ?? searchParams.get("edit");
   const isEditMode = !!editChargeId;
+  const isModal = !!onClose;
   const [loadingCharge, setLoadingCharge] = useState(isEditMode);
 
   const [formData, setFormData] = useState({
