@@ -614,10 +614,10 @@ export function MaintenanceChatDialog({
             </div>
           )}
 
-          {/* Input area — only team members can write to keep operation focused */}
-          {isTeamMember ? (
-            <div className="p-3 border-t flex-shrink-0 space-y-2">
-              {/* Row 1: Microphone + AI Command + Generate Button (team only) */}
+          {/* Input area */}
+          <div className="p-3 border-t flex-shrink-0 space-y-2">
+            {/* Row 1: Microphone + AI Command + Generate Button (team only) */}
+            {isTeamMember && (
               <div className="flex gap-2 items-end">
                 <VoiceToTextInput
                   onTranscript={handleVoiceTranscript}
@@ -648,57 +648,53 @@ export function MaintenanceChatDialog({
                   <span className="text-xs hidden sm:inline">Gerar</span>
                 </Button>
               </div>
-
-              {/* Row 2: Templates + Attachment + Message + Send */}
-              <div className="flex gap-2 items-end">
-                <ResponseTemplatesPicker
-                  onSelect={(content) => setNewMessage(prev => prev ? `${prev}\n${content}` : content)}
+            )}
+            
+            {/* Row 2: Templates + Attachment + Message + Send */}
+            <div className="flex gap-2 items-end">
+              <ResponseTemplatesPicker
+                onSelect={(content) => setNewMessage(prev => prev ? `${prev}\n${content}` : content)}
+                disabled={sending}
+              />
+              
+              <NativeMediaPicker
+                onFilesSelected={(files) => setSelectedFiles(prev => [...prev, ...files])}
+                disabled={sending}
+                buttonSize="icon"
+                className="h-9 w-9 flex-shrink-0"
+              />
+              
+              <div className="flex-1">
+                <MentionInput
+                  value={newMessage}
+                  onChange={(v, ids) => {
+                    setNewMessage(v);
+                    setMentionedIds(ids);
+                    setTyping(v.length > 0);
+                  }}
+                  users={mentionableUsers}
+                  placeholder="Mensagem para enviar... use @ para mencionar"
+                  rows={1}
                   disabled={sending}
+                  onSubmit={handleSend}
+                  className="min-h-[40px]"
                 />
-
-                <NativeMediaPicker
-                  onFilesSelected={(files) => setSelectedFiles(prev => [...prev, ...files])}
-                  disabled={sending}
-                  buttonSize="icon"
-                  className="h-9 w-9 flex-shrink-0"
-                />
-
-                <div className="flex-1">
-                  <MentionInput
-                    value={newMessage}
-                    onChange={(v, ids) => {
-                      setNewMessage(v);
-                      setMentionedIds(ids);
-                      setTyping(v.length > 0);
-                    }}
-                    users={mentionableUsers}
-                    placeholder="Mensagem para enviar... use @ para mencionar"
-                    rows={1}
-                    disabled={sending}
-                    onSubmit={handleSend}
-                    className="min-h-[40px]"
-                  />
-                </div>
-
-                <Button
-                  onClick={handleSend}
-                  disabled={(!newMessage.trim() && selectedFiles.length === 0) || sending || uploadingFiles.size > 0}
-                  size="icon"
-                  className="h-10 w-10 flex-shrink-0"
-                >
-                  {sending || uploadingFiles.size > 0 ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4" />
-                  )}
-                </Button>
               </div>
+              
+              <Button
+                onClick={handleSend}
+                disabled={(!newMessage.trim() && selectedFiles.length === 0) || sending || uploadingFiles.size > 0}
+                size="icon"
+                className="h-10 w-10 flex-shrink-0"
+              >
+                {sending || uploadingFiles.size > 0 ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
             </div>
-          ) : (
-            <div className="p-3 border-t flex-shrink-0 text-center text-xs text-muted-foreground bg-muted/30">
-              Apenas a equipe pode enviar mensagens neste chat. Em caso de dúvidas, entre em contato pelos canais de atendimento.
-            </div>
-          )}
+          </div>
         </DialogContent>
       </Dialog>
 

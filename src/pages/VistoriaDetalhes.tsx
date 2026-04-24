@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { goBack } from "@/lib/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -43,6 +43,7 @@ export default function VistoriaDetalhes() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [inspection, setInspection] = useState<Inspection | null>(null);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -153,7 +154,7 @@ export default function VistoriaDetalhes() {
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4">
           <div className="flex h-16 items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => goBack(navigate, "/admin/vistorias")}>
+            <Button variant="ghost" size="icon" onClick={() => goBack(navigate, "/minha-caixa", location)}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1">

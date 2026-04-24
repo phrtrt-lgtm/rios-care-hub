@@ -31,8 +31,6 @@ import { useDetailSheet } from "@/hooks/useDetailSheet";
 import { DetailSheet } from "@/components/detail-sheet/DetailSheet";
 import { getRowHandlers } from "@/lib/row-interaction";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
-import { EditMaintenanceDialog } from "@/components/EditMaintenanceDialog";
-import { EditChargeFullDialog } from "@/components/EditChargeFullDialog";
 // ===== TYPES =====
 type TicketStatus = "novo" | "em_analise" | "aguardando_info" | "em_execucao" | "concluido" | "cancelado";
 
@@ -491,6 +489,23 @@ function GroupRow({
               </TooltipProvider>
             </td>
 
+            {/* Chat / Mensagens não lidas */}
+            <td className="p-0 w-[44px]">
+              <div
+                className="flex items-center justify-center px-1 py-2 cursor-pointer hover:bg-muted/50 rounded transition-colors"
+                onClick={() => onOpenChat(item)}
+              >
+                <div className="relative">
+                  <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                  {unread > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center text-[10px] font-bold bg-destructive text-destructive-foreground rounded-full px-1">
+                      {unread > 9 ? "9+" : unread}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </td>
+
             {/* Imóvel */}
             <td className="p-0 w-[140px] max-w-[140px]">
               <TooltipProvider delayDuration={300}>
@@ -505,6 +520,28 @@ function GroupRow({
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
+            </td>
+
+            {/* Valor */}
+            <td className="p-0 w-[90px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
+              <EditableCell
+                value={item.amount_cents || null}
+                type="currency"
+                placeholder="R$ 0,00"
+                onSave={(val) => onUpdateItem(item.id, "amount_cents", val, isCharge)}
+                className="justify-center font-medium"
+              />
+            </td>
+
+            {/* Aporte Gestão */}
+            <td className="p-0 w-[90px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
+              <EditableCell
+                value={item.management_contribution_cents || null}
+                type="currency"
+                placeholder="R$ 0,00"
+                onSave={(val) => onUpdateItem(item.id, "management_contribution_cents", val, isCharge)}
+                className="justify-center text-success"
+              />
             </td>
 
             {/* Data (criação) */}
@@ -552,7 +589,23 @@ function GroupRow({
               </div>
             </td>
 
-            {/* Label (service_type) */}
+            {/* Responsável pelo custo */}
+            <td className="p-0 w-[120px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
+              {isCharge ? (
+                <div className="px-1 py-2 text-sm text-center text-muted-foreground">
+                  {COST_RESPONSIBLE_OPTIONS.find(o => o.value === item.cost_responsible)?.label || "—"}
+                </div>
+              ) : (
+                <EditableCell
+                  value={item.cost_responsible || "pending"}
+                  type="select"
+                  options={COST_RESPONSIBLE_OPTIONS}
+                  onSave={(val) => onUpdateItem(item.id, "cost_responsible", val, false)}
+                  className="justify-center"
+                />
+              )}
+            </td>
+
             <td className="p-0 w-[120px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
               <EditableCell
                 value={item.service_type || null}
@@ -579,62 +632,6 @@ function GroupRow({
                   className="justify-center"
                 />
               )}
-            </td>
-
-            {/* Responsável pelo custo */}
-            <td className="p-0 w-[120px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
-              {isCharge ? (
-                <div className="px-1 py-2 text-sm text-center text-muted-foreground">
-                  {COST_RESPONSIBLE_OPTIONS.find(o => o.value === item.cost_responsible)?.label || "—"}
-                </div>
-              ) : (
-                <EditableCell
-                  value={item.cost_responsible || "pending"}
-                  type="select"
-                  options={COST_RESPONSIBLE_OPTIONS}
-                  onSave={(val) => onUpdateItem(item.id, "cost_responsible", val, false)}
-                  className="justify-center"
-                />
-              )}
-            </td>
-
-            {/* Valor */}
-            <td className="p-0 w-[90px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
-              <EditableCell
-                value={item.amount_cents || null}
-                type="currency"
-                placeholder="R$ 0,00"
-                onSave={(val) => onUpdateItem(item.id, "amount_cents", val, isCharge)}
-                className="justify-center font-medium"
-              />
-            </td>
-
-            {/* Aporte Gestão */}
-            <td className="p-0 w-[90px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
-              <EditableCell
-                value={item.management_contribution_cents || null}
-                type="currency"
-                placeholder="R$ 0,00"
-                onSave={(val) => onUpdateItem(item.id, "management_contribution_cents", val, isCharge)}
-                className="justify-center text-success"
-              />
-            </td>
-
-            {/* Chat / Mensagens não lidas */}
-            <td className="p-0 w-[44px]">
-              <div
-                className="flex items-center justify-center px-1 py-2 cursor-pointer hover:bg-muted/50 rounded transition-colors"
-                onClick={() => onOpenChat(item)}
-              >
-                <div className="relative">
-                  <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                  {unread > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center text-[10px] font-bold bg-destructive text-destructive-foreground rounded-full px-1">
-                      {unread > 9 ? "9+" : unread}
-                    </span>
-                  )}
-                </div>
-              </div>
             </td>
 
             {/* Editar */}
@@ -1197,12 +1194,6 @@ export default function AdminManutencoesLista() {
   const [uploadingItemId, setUploadingItemId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pendingUploadItem, setPendingUploadItem] = useState<MaintenanceItem | null>(null);
-
-  // Edit dialogs state
-  const [editMaintenanceId, setEditMaintenanceId] = useState<string | null>(null);
-  const [editMaintenanceOpen, setEditMaintenanceOpen] = useState(false);
-  const [editChargeId, setEditChargeId] = useState<string | null>(null);
-  const [editChargeOpen, setEditChargeOpen] = useState(false);
 
   // Debounced search
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -2285,15 +2276,15 @@ export default function AdminManutencoesLista() {
                 <tr className="h-10">
                   <th className="w-[36px] px-1 py-2"></th>
                   <SortableHeader label="Manutenção" field="subject" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[220px] max-w-[220px]" />
+                  <th className="text-center px-1 py-2 font-medium w-[44px]">Chat</th>
                   <SortableHeader label="Imóvel" field="property" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[140px] max-w-[140px]" />
-                  <SortableHeader label="Data" field="created_at" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[80px]" />
-                  <th className="text-center px-1 py-2 font-medium w-[70px]">Anexos</th>
-                  <SortableHeader label="Label" field="service_type" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[120px]" />
-                  <SortableHeader label="Status" field="list_status" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[140px]" />
-                  <th className="text-center px-1 py-2 font-medium w-[120px]">Responsável</th>
                   <SortableHeader label="Valor" field="amount_cents" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[90px]" />
                   <SortableHeader label="Aporte" field="management_contribution_cents" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[90px]" />
-                  <th className="text-center px-1 py-2 font-medium w-[44px]">Chat</th>
+                  <SortableHeader label="Data" field="created_at" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[80px]" />
+                  <th className="text-center px-1 py-2 font-medium w-[70px]">Anexos</th>
+                  <th className="text-center px-1 py-2 font-medium w-[120px]">Responsável</th>
+                  <SortableHeader label="Label" field="service_type" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[120px]" />
+                  <SortableHeader label="Status" field="list_status" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[140px]" />
                   <th className="text-center px-1 py-2 font-medium w-[44px]">Editar</th>
                 </tr>
               </thead>
@@ -2332,13 +2323,10 @@ export default function AdminManutencoesLista() {
                             openSheet(id, isCharge ? "cobranca" : "maintenance");
                           }}
                           onEdit={(item, isCharge) => {
-                            if (isCharge) {
-                              setEditChargeId(item.id);
-                              setEditChargeOpen(true);
-                            } else {
-                              setEditMaintenanceId(item.id);
-                              setEditMaintenanceOpen(true);
-                            }
+                            const path = isCharge
+                              ? `/nova-cobranca?edit=${item.id}`
+                              : `/admin/nova-manutencao?edit=${item.id}`;
+                            navigate(path);
                           }}
                         />
 
@@ -2505,32 +2493,6 @@ export default function AdminManutencoesLista() {
           onClose={closeSheet}
           entityId={detailEntityId}
           entityType={detailEntityType}
-        />
-
-        {/* Edit dialogs (pop-ups) */}
-        <EditMaintenanceDialog
-          ticketId={editMaintenanceId}
-          open={editMaintenanceOpen}
-          onOpenChange={(o) => {
-            setEditMaintenanceOpen(o);
-            if (!o) setEditMaintenanceId(null);
-          }}
-          onSaved={() => {
-            queryClient.invalidateQueries({ queryKey: ["admin-maintenance-tickets"] });
-            queryClient.invalidateQueries({ queryKey: ["admin-charges-list"] });
-          }}
-        />
-        <EditChargeFullDialog
-          chargeId={editChargeId}
-          open={editChargeOpen}
-          onOpenChange={(o) => {
-            setEditChargeOpen(o);
-            if (!o) setEditChargeId(null);
-          }}
-          onSaved={() => {
-            queryClient.invalidateQueries({ queryKey: ["admin-charges-list"] });
-            queryClient.invalidateQueries({ queryKey: ["admin-maintenance-tickets"] });
-          }}
         />
       </div>
     </div>

@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { goBack } from "@/lib/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -177,7 +176,7 @@ export default function Insights() {
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 pb-20 md:pb-0">
       <header className="border-b bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto flex h-14 items-center px-4 gap-3">
-          <Button variant="ghost" size="icon" onClick={() => goBack(navigate, "/painel")}>
+          <Button variant="ghost" size="icon" onClick={() => navigate("/painel")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex items-center gap-2">

@@ -29,14 +29,7 @@ interface Property {
   owner_id: string;
 }
 
-interface NovaCobrancaProps {
-  embedded?: boolean;
-  editId?: string;
-  onSaved?: () => void;
-  onCancel?: () => void;
-}
-
-export default function NovaCobranca({ embedded = false, editId, onSaved, onCancel }: NovaCobrancaProps = {}) {
+export default function NovaCobranca() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { profile } = useAuth();
@@ -48,7 +41,7 @@ export default function NovaCobranca({ embedded = false, editId, onSaved, onCanc
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const isReposicao = searchParams.get("reposicao") === "true";
-  const editChargeId = editId ?? searchParams.get("edit");
+  const editChargeId = searchParams.get("edit");
   const isEditMode = !!editChargeId;
   const [loadingCharge, setLoadingCharge] = useState(isEditMode);
 
@@ -304,11 +297,7 @@ export default function NovaCobranca({ embedded = false, editId, onSaved, onCanc
           : (asDraft ? "A cobrança foi salva como rascunho." : "A cobrança foi criada e o proprietário foi notificado."),
       });
 
-      if (embedded) {
-        onSaved?.();
-      } else {
-        navigate(isEditMode ? '/admin/manutencoes-lista' : '/painel');
-      }
+      navigate(isEditMode ? '/admin/manutencoes-lista' : '/painel');
     } catch (error: any) {
       toast({
         title: isEditMode ? "Erro ao atualizar cobrança" : "Erro ao criar cobrança",
@@ -320,8 +309,29 @@ export default function NovaCobranca({ embedded = false, editId, onSaved, onCanc
     }
   };
 
-  const formElement = (
-    <form onSubmit={handleSubmit} className="space-y-4">
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+      <header className="border-b bg-card/50 backdrop-blur-sm">
+        <div className="container mx-auto flex h-16 items-center px-4">
+          <Button variant="ghost" size="sm" onClick={() => goBack(navigate, "/gerenciar-cobrancas")}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Voltar
+          </Button>
+        </div>
+      </header>
+
+      <main className="container mx-auto px-4 py-8 max-w-2xl">
+        <Card>
+          <CardHeader>
+            <CardTitle>{isEditMode ? "Editar Cobrança" : (isReposicao ? "Reposição de Item" : "Nova Cobrança")}</CardTitle>
+            {isReposicao && (
+              <p className="text-sm text-muted-foreground">
+                Registre a compra de itens para o imóvel. O aporte da gestão cobre 100% automaticamente.
+              </p>
+            )}
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="owner_id">Proprietário *</Label>
                 <Select 
@@ -515,7 +525,7 @@ export default function NovaCobranca({ embedded = false, editId, onSaved, onCanc
               </div>
 
               <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => embedded ? onCancel?.() : navigate(isEditMode ? '/admin/manutencoes-lista' : '/painel')}>
+                <Button type="button" variant="outline" onClick={() => navigate(isEditMode ? '/admin/manutencoes-lista' : '/painel')}>
                   Cancelar
                 </Button>
                 {!isEditMode && (
@@ -534,45 +544,7 @@ export default function NovaCobranca({ embedded = false, editId, onSaved, onCanc
                   {isEditMode ? "Salvar Alterações" : "Criar e Enviar"}
                 </Button>
               </div>
-    </form>
-  );
-
-  if (embedded) {
-    return (
-      <div className="space-y-2">
-        {isReposicao && (
-          <p className="text-sm text-muted-foreground">
-            Registre a compra de itens para o imóvel. O aporte da gestão cobre 100% automaticamente.
-          </p>
-        )}
-        {formElement}
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
-      <header className="border-b bg-card/50 backdrop-blur-sm">
-        <div className="container mx-auto flex h-16 items-center px-4">
-          <Button variant="ghost" size="sm" onClick={() => goBack(navigate, "/gerenciar-cobrancas")}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar
-          </Button>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-8 max-w-2xl">
-        <Card>
-          <CardHeader>
-            <CardTitle>{isEditMode ? "Editar Cobrança" : (isReposicao ? "Reposição de Item" : "Nova Cobrança")}</CardTitle>
-            {isReposicao && (
-              <p className="text-sm text-muted-foreground">
-                Registre a compra de itens para o imóvel. O aporte da gestão cobre 100% automaticamente.
-              </p>
-            )}
-          </CardHeader>
-          <CardContent>
-            {formElement}
+            </form>
           </CardContent>
         </Card>
       </main>

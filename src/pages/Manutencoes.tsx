@@ -175,7 +175,7 @@ export default function Manutencoes() {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => goBack(navigate, '/painel')}>
+          <Button variant="ghost" size="icon" onClick={() => navigate('/painel')}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h1 className="text-3xl font-bold">Manutenções</h1>

@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { goBack } from '@/lib/navigation';
 import { ReportFileUpload } from '@/components/report/ReportFileUpload';
 import { ReportStepIndicator } from '@/components/report/ReportStepIndicator';
 import { ReportReservationsTable } from '@/components/report/ReportReservationsTable';
@@ -520,7 +519,7 @@ export default function RelatorioFinanceiro() {
       <div className="mx-auto max-w-5xl px-4 py-6 space-y-6">
         {/* Header */}
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => currentStep === 1 ? goBack(navigate, '/painel') : (currentStep === 2 ? handleBackToStep1() : handleBackToStep2())}>
+          <Button variant="ghost" size="icon" onClick={() => currentStep === 1 ? navigate(-1) : (currentStep === 2 ? handleBackToStep1() : handleBackToStep2())}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>

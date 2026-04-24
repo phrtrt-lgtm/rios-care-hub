@@ -185,7 +185,7 @@ export function VistoriasKanbanPreview() {
                       <div
                         key={inspection.id}
                         className="flex items-center gap-2 p-2 rounded-lg bg-destructive/10 dark:bg-red-950/30 hover:bg-destructive/10 dark:hover:bg-red-950/50 cursor-pointer transition-colors overflow-hidden"
-                        onClick={() => (saveScrollPosition(pathname), navigate(`/admin/vistoria/${inspection.id}`))}
+                        onClick={() => (saveScrollPosition(pathname), navigate(`/admin/vistoria/${inspection.id}`, { state: { from: pathname } }))}
                       >
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-medium truncate">{inspection.property?.name || 'Imóvel'}</p>
@@ -219,7 +219,7 @@ export function VistoriasKanbanPreview() {
                         <div
                           key={inspection.id}
                           className="flex items-center gap-2 p-2 rounded-lg bg-destructive/10 dark:bg-red-950/30 hover:bg-destructive/10 dark:hover:bg-red-950/50 cursor-pointer transition-colors overflow-hidden"
-                          onClick={() => (saveScrollPosition(pathname), navigate(`/admin/vistoria/${inspection.id}`))}
+                          onClick={() => (saveScrollPosition(pathname), navigate(`/admin/vistoria/${inspection.id}`, { state: { from: pathname } }))}
                         >
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-medium truncate">{inspection.property?.name || 'Imóvel'}</p>
@@ -263,7 +263,7 @@ export function VistoriasKanbanPreview() {
                       <div
                         key={inspection.id}
                         className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors overflow-hidden"
-                        onClick={() => (saveScrollPosition(pathname), navigate(`/admin/vistoria/${inspection.id}`))}
+                        onClick={() => (saveScrollPosition(pathname), navigate(`/admin/vistoria/${inspection.id}`, { state: { from: pathname } }))}
                       >
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-medium truncate">{inspection.property?.name || 'Imóvel'}</p>
@@ -296,7 +296,7 @@ export function VistoriasKanbanPreview() {
                         <div
                           key={inspection.id}
                           className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors overflow-hidden"
-                          onClick={() => (saveScrollPosition(pathname), navigate(`/admin/vistoria/${inspection.id}`))}
+                          onClick={() => (saveScrollPosition(pathname), navigate(`/admin/vistoria/${inspection.id}`, { state: { from: pathname } }))}
                         >
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-medium truncate">{inspection.property?.name || 'Imóvel'}</p>
