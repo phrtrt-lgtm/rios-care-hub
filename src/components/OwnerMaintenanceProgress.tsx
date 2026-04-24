@@ -13,7 +13,7 @@ import { saveScrollPosition } from "@/lib/navigation";
 import { Wrench, Calendar, Clock, CheckCircle2, Building2, MessageSquare, ChevronRight, Users } from "lucide-react";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useChatPreloader } from "@/hooks/useChatPreloader";
-import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
+import { MaintenanceDetailsDialog } from "@/components/MaintenanceDetailsDialog";
 import { toast } from "sonner";
 
 interface MaintenanceTicket {
