@@ -182,8 +182,8 @@ export default function ImportarComissoesBooking() {
     );
   };
 
-  // Totais do rodapé
-  const linkedMappings = mappings.filter(m => m.systemPropertyId !== "skip" && m.systemPropertyId !== null);
+  // Totais do rodapé — apenas selecionados E vinculados
+  const linkedMappings = mappings.filter(m => m.selected && m.systemPropertyId && m.systemPropertyId !== "skip");
   const totalToGenerate = filteredReservations.filter(r =>
     linkedMappings.some(m => m.spreadsheetName === r.property_name)
   ).length;
@@ -192,6 +192,15 @@ export default function ImportarComissoesBooking() {
     const stats = getPropertyStats(m.spreadsheetName);
     return acc + stats.totalCommission;
   }, 0);
+
+  const selectableCount = mappings.filter(m => m.systemPropertyId && m.systemPropertyId !== "skip").length;
+  const allSelected = selectableCount > 0 && mappings.filter(m => m.selected).length === selectableCount;
+  const toggleAll = (checked: boolean) => {
+    setMappings(prev => prev.map(m => ({
+      ...m,
+      selected: checked && !!m.systemPropertyId && m.systemPropertyId !== "skip" ? true : false,
+    })));
+  };
 
   // ─── Etapa 3: Gerar cobranças ──────────────────────────────────
   const handleGenerate = async () => {
