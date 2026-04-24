@@ -68,6 +68,7 @@ export default function ImportarComissoesBooking() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [includeCancelled, setIncludeCancelled] = useState(false);
+  const [dueDate, setDueDate] = useState("");
 
   // Etapa 3
   const [generating, setGenerating] = useState(false);
