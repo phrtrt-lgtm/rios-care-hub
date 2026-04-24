@@ -18,6 +18,7 @@ import { format } from "date-fns";
 import { parseSpreadsheet, ParsedReservation } from "@/lib/spreadsheetParser";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface SystemProperty {
   id: string;
@@ -31,6 +32,7 @@ interface PropertyMapping {
   systemPropertyId: string | null; // null = skip
   commissionPercent: number;
   autoMatched: boolean;
+  selected: boolean;
 }
 
 // Normalize para matching: lowercase + sem acentos
