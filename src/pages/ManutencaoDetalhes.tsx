@@ -31,17 +31,6 @@ export default function ManutencaoDetalhes({ embedded = false, idOverride }: Man
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryStartIndex, setGalleryStartIndex] = useState(0);
 
-
-export default function ManutencaoDetalhes() {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const { profile } = useAuth();
-  const { data: maintenance, isLoading } = useMaintenance(id);
-  const { toast } = useToast();
-  const [downloadingAll, setDownloadingAll] = useState(false);
-  const [galleryOpen, setGalleryOpen] = useState(false);
-  const [galleryStartIndex, setGalleryStartIndex] = useState(0);
-
   // Preload attachments when maintenance loads
   useEffect(() => {
     if (maintenance?.attachments && maintenance.attachments.length > 0) {
