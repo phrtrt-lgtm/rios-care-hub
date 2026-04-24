@@ -2490,6 +2490,18 @@ export default function AdminManutencoesLista() {
           />
         )}
 
+        {/* Edit Maintenance / Charge Dialog */}
+        <EditMaintenanceDialog
+          open={editMaintenanceDialog.open}
+          onOpenChange={(open) => setEditMaintenanceDialog((prev) => ({ ...prev, open }))}
+          editId={editMaintenanceDialog.id}
+          type={editMaintenanceDialog.type}
+          onSaved={() => {
+            queryClient.invalidateQueries({ queryKey: ["maintenance-list"] });
+            queryClient.invalidateQueries({ queryKey: ["charges-list"] });
+          }}
+        />
+
         {/* Detail Sheet (preview lateral) */}
         <DetailSheet
           open={detailSheetOpen}
