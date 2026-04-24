@@ -1662,6 +1662,17 @@ export default function AdminManutencoesLista() {
             .update({ scheduled_at: value })
             .eq("id", id);
           if (error) throw error;
+        } else if (field === "list_status") {
+          // Persist the list-status change to the underlying ticket.
+          // - "feito"        -> ticket.status = "concluido"
+          // - "em_progresso" -> reopen the ticket as "em_execucao"
+          const newTicketStatus =
+            value === "feito" ? "concluido" : "em_execucao";
+          const { error } = await supabase
+            .from("tickets")
+            .update({ status: newTicketStatus })
+            .eq("id", id);
+          if (error) throw error;
         }
       }
     },
