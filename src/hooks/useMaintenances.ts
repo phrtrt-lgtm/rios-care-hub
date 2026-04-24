@@ -127,11 +127,13 @@ export const useMaintenance = (id?: string) => {
           .eq("charge_id", id)
           .order("created_at", { ascending: false });
 
-        // Normalize attachment shape (file_url + file_type)
+        // Normalize attachment shape (file_url via serve-attachment edge fn)
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const attachments = (rawAttachments || []).map((a: any) => ({
           ...a,
-          file_url: a.file_path
-            ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/charge-attachments/${a.file_path}`
+          file_url: `${supabaseUrl}/functions/v1/serve-attachment/${a.id}/file`,
+          poster_url: a.poster_path
+            ? `${supabaseUrl}/functions/v1/serve-attachment/${a.id}/poster`
             : null,
           file_type: a.mime_type_override || a.mime_type,
           size_bytes: a.file_size,
@@ -172,21 +174,43 @@ export const useMaintenance = (id?: string) => {
         .eq("ticket_id", id)
         .maybeSingle();
 
-      // Fetch ticket attachments
-      const { data: rawTicketAttachments } = await supabase
-        .from("ticket_attachments" as any)
-        .select("*")
-        .eq("ticket_id", id)
-        .order("created_at", { ascending: false });
+      // Fetch ticket attachments — anexos podem estar ligados pelo ticket_id OU
+      // pelo message_id (mensagens daquele ticket). Buscar ambos e mesclar.
+      const [{ data: directAtt }, { data: msgRows }] = await Promise.all([
+        supabase
+          .from("ticket_attachments" as any)
+          .select("*")
+          .eq("ticket_id", id)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("ticket_messages" as any)
+          .select("id")
+          .eq("ticket_id", id),
+      ]);
 
-      const attachments = (rawTicketAttachments || []).map((a: any) => ({
+      let viaMessages: any[] = [];
+      const messageIds = (msgRows || []).map((m: any) => m.id);
+      if (messageIds.length > 0) {
+        const { data: msgAtt } = await supabase
+          .from("ticket_attachments" as any)
+          .select("*")
+          .in("message_id", messageIds)
+          .order("created_at", { ascending: false });
+        viaMessages = msgAtt || [];
+      }
+
+      // De-duplicar por id
+      const merged = new Map<string, any>();
+      [...(directAtt || []), ...viaMessages].forEach((a: any) => {
+        if (!merged.has(a.id)) merged.set(a.id, a);
+      });
+
+      const attachments = Array.from(merged.values()).map((a: any) => ({
         id: a.id,
-        file_name: a.file_name,
-        file_url: a.file_path
-          ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/ticket-attachments/${a.file_path}`
-          : null,
-        file_type: a.mime_type_override || a.mime_type,
-        size_bytes: a.file_size,
+        file_name: a.file_name || a.name || 'Anexo',
+        file_url: a.file_url,
+        file_type: a.file_type || a.mime_type,
+        size_bytes: a.size_bytes ?? a.file_size ?? null,
       }));
 
       let payments: any[] = [];
