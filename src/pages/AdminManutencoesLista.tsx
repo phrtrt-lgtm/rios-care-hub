@@ -1675,12 +1675,47 @@ export default function AdminManutencoesLista() {
       const previousCharges = queryClient.getQueryData(["pending-charges-list"]);
 
       if (field === "list_status" && value === "enviar_proprietario") {
-        // Optimistically REMOVE the ticket from the maintenance list —
-        // it will appear in "Cobranças Pendentes" after refetch
+        // Snapshot the ticket BEFORE removing it so we can mirror it
+        // into the "Cobranças Pendentes" list optimistically.
+        const ticketsCache = queryClient.getQueryData<MaintenanceItem[]>(["maintenance-list-view"]);
+        const movingTicket = ticketsCache?.find(t => t.id === id);
+
+        // Optimistically REMOVE the ticket from the maintenance list
         queryClient.setQueryData(["maintenance-list-view"], (old: MaintenanceItem[] | undefined) => {
           if (!old) return old;
           return old.filter(t => t.id !== id);
         });
+
+        // Optimistically INSERT into the pending charges list so the row
+        // visually transitions to "Cobranças Pendentes" without waiting for refetch.
+        if (movingTicket) {
+          const todayIso = new Date().toISOString();
+          const dueDate = new Date();
+          dueDate.setDate(dueDate.getDate() + 7);
+          const optimisticCharge = {
+            id: `optimistic-${movingTicket.id}`,
+            title: movingTicket.subject,
+            amount_cents: movingTicket.amount_cents ?? 0,
+            management_contribution_cents: movingTicket.management_contribution_cents ?? 0,
+            service_type: movingTicket.service_type ?? null,
+            category: null as string | null,
+            created_at: todayIso,
+            due_date: dueDate.toISOString().slice(0, 10),
+            status: "sent",
+            cost_responsible: movingTicket.cost_responsible ?? "owner",
+            property: movingTicket.property,
+            owner: movingTicket.owner,
+            ticket_id: movingTicket.id,
+            attachments_count: movingTicket.attachments_count ?? 0,
+            __optimistic: true,
+          };
+          queryClient.setQueryData(["pending-charges-list"], (old: any[] | undefined) => {
+            const base = Array.isArray(old) ? old : [];
+            // Avoid duplicates if a refetch already brought the real charge
+            if (base.some(c => c.ticket_id === movingTicket.id)) return base;
+            return [optimisticCharge, ...base];
+          });
+        }
       } else {
         // Regular optimistic update
         queryClient.setQueryData(["maintenance-list-view"], (old: MaintenanceItem[] | undefined) => {
