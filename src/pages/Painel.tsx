@@ -317,14 +317,30 @@ export default function Painel() {
           </div>
         )}
 
-        {/* Kanban Boards - masonry layout (cada card só ocupa a altura do seu conteúdo) */}
+        {/* Kanban Boards - Operações (Manutenções, Vistorias, Cobranças) */}
         {(profile?.role === "admin" || profile?.role === "maintenance" || profile?.role === "agent") && (
-          <div className="mb-6 min-w-0 columns-1 md:columns-2 lg:columns-4 gap-3 [&>*]:mb-3 [&>*]:break-inside-avoid">
-            <MaintenanceKanbanPreview />
-            <VistoriasKanbanPreview />
-            <ChargesKanbanPreview />
-            <ChamadosKanbanPreview />
-          </div>
+          <>
+            <div className="mb-3 flex items-center gap-2">
+              <div className="h-5 w-1 rounded-full bg-primary" />
+              <h3 className="text-base font-semibold">Operações</h3>
+              <span className="text-xs text-muted-foreground">Manutenções, vistorias e cobranças</span>
+            </div>
+            <div className="mb-6 min-w-0 columns-1 md:columns-2 lg:columns-3 gap-3 [&>*]:mb-3 [&>*]:break-inside-avoid">
+              <MaintenanceKanbanPreview />
+              <VistoriasKanbanPreview />
+              <ChargesKanbanPreview />
+            </div>
+
+            {/* Área dedicada — Chamados */}
+            <div className="mb-3 flex items-center gap-2">
+              <div className="h-5 w-1 rounded-full bg-info" />
+              <h3 className="text-base font-semibold">Chamados</h3>
+              <span className="text-xs text-muted-foreground">Atendimento e solicitações dos proprietários</span>
+            </div>
+            <div className="mb-6 min-w-0 rounded-xl border border-info/20 bg-info/5 p-3">
+              <ChamadosKanbanPreview />
+            </div>
+          </>
         )}
 
         {/* Booking Comissões */}
