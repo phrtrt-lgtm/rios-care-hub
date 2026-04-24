@@ -431,22 +431,28 @@ export default function NovaManutencao({ editId, onClose, onSaved }: NovaManuten
   };
 
   const handleGoBack = () => {
+    if (isModal) {
+      onClose?.();
+      return;
+    }
     goBack(navigate, "/admin/manutencoes-lista");
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
-      <header className="border-b bg-card/50 backdrop-blur-sm">
-        <div className="container mx-auto flex h-16 items-center gap-4 px-4">
-          <Button variant="ghost" size="icon" type="button" onClick={handleGoBack}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-xl font-semibold">{isEditMode ? 'Editar Manutenção' : 'Nova Manutenção'}</h1>
-        </div>
-      </header>
+    <div className={isModal ? "" : "min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5"}>
+      {!isModal && (
+        <header className="border-b bg-card/50 backdrop-blur-sm">
+          <div className="container mx-auto flex h-16 items-center gap-4 px-4">
+            <Button variant="ghost" size="icon" type="button" onClick={handleGoBack}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-xl font-semibold">{isEditMode ? 'Editar Manutenção' : 'Nova Manutenção'}</h1>
+          </div>
+        </header>
+      )}
 
-      <main className="container mx-auto max-w-2xl px-4 py-8">
-        <Card className="shadow-xl">
+      <main className={isModal ? "" : "container mx-auto max-w-2xl px-4 py-8"}>
+        <Card className={isModal ? "shadow-none border-0" : "shadow-xl"}>
           <CardHeader>
             <CardTitle>{isEditMode ? 'Editar manutenção' : 'Criar manutenção'}</CardTitle>
             <CardDescription>
