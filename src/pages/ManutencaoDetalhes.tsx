@@ -47,25 +47,32 @@ export default function ManutencaoDetalhes() {
     if (maintenance?.attachments && maintenance.attachments.length > 0) {
       const mediaUrls = maintenance.attachments
         .filter((a: any) => a.file_type?.startsWith('image/') || a.file_type?.startsWith('video/'))
-        .map((a: any) => a.file_url);
+        .map((a: any) => a.file_url)
+        .filter(Boolean);
       if (mediaUrls.length > 0) {
         preloadMediaUrls(mediaUrls);
       }
     }
   }, [maintenance]);
 
+  const wrapperClass = embedded
+    ? "space-y-6"
+    : "container mx-auto p-6 space-y-6";
+
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="text-center py-12">Carregando...</div>
+      <div className={wrapperClass}>
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
       </div>
     );
   }
 
   if (!maintenance) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="text-center py-12">Manutenção não encontrada</div>
+      <div className={wrapperClass}>
+        <div className="text-center py-12 text-muted-foreground">Manutenção não encontrada</div>
       </div>
     );
   }
