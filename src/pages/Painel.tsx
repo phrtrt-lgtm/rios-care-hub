@@ -320,8 +320,8 @@ export default function Painel() {
         {/* Kanban Boards - masonry layout (cada card só ocupa a altura do seu conteúdo) */}
         {(profile?.role === "admin" || profile?.role === "maintenance" || profile?.role === "agent") && (
           <div className="mb-6 min-w-0 columns-1 md:columns-2 lg:columns-4 gap-3 [&>*]:mb-3 [&>*]:break-inside-avoid">
-            <VistoriasKanbanPreview />
             <MaintenanceKanbanPreview />
+            <VistoriasKanbanPreview />
             <ChargesKanbanPreview />
             <ChamadosKanbanPreview />
           </div>
