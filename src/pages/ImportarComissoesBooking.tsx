@@ -590,7 +590,7 @@ export default function ImportarComissoesBooking() {
                     </Button>
                     <Button
                       size="sm"
-                      disabled={totalToGenerate === 0 || generating}
+                      disabled={totalToGenerate === 0 || generating || !dueDate}
                       onClick={handleGenerate}
                     >
                       {generating ? (
