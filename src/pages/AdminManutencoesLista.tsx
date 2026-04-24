@@ -25,6 +25,7 @@ import { MediaGallery } from "@/components/MediaGallery";
 import { uploadFileWithCompression, FileUploadProgress } from "@/lib/fileUpload";
 import { CreateMaintenanceFromInspectionDialog } from "@/components/CreateMaintenanceFromInspectionDialog";
 import EditInspectionDialog from "@/components/EditInspectionDialog";
+import { EditMaintenanceDialog } from "@/components/EditMaintenanceDialog";
 import { ReserveDebitsTable } from "@/components/ReserveDebitsTable";
 import { Pencil } from "lucide-react";
 import { useDetailSheet } from "@/hooks/useDetailSheet";
@@ -1168,6 +1169,7 @@ export default function AdminManutencoesLista() {
   const [selectedInspection, setSelectedInspection] = useState<InspectionItem | null>(null);
   const [editInspectionDialogOpen, setEditInspectionDialogOpen] = useState(false);
   const [inspectionToEdit, setInspectionToEdit] = useState<InspectionItem | null>(null);
+  const [editMaintenanceDialog, setEditMaintenanceDialog] = useState<{ open: boolean; id: string | null; type: "maintenance" | "charge" }>({ open: false, id: null, type: "maintenance" });
   
   // Inspection selection state
   const [selectedInspectionIds, setSelectedInspectionIds] = useState<Set<string>>(new Set());
@@ -2323,10 +2325,11 @@ export default function AdminManutencoesLista() {
                             openSheet(id, isCharge ? "cobranca" : "maintenance");
                           }}
                           onEdit={(item, isCharge) => {
-                            const path = isCharge
-                              ? `/nova-cobranca?edit=${item.id}`
-                              : `/admin/nova-manutencao?edit=${item.id}`;
-                            navigate(path);
+                            setEditMaintenanceDialog({
+                              open: true,
+                              id: item.id,
+                              type: isCharge ? "charge" : "maintenance",
+                            });
                           }}
                         />
 
@@ -2486,6 +2489,18 @@ export default function AdminManutencoesLista() {
             }}
           />
         )}
+
+        {/* Edit Maintenance / Charge Dialog */}
+        <EditMaintenanceDialog
+          open={editMaintenanceDialog.open}
+          onOpenChange={(open) => setEditMaintenanceDialog((prev) => ({ ...prev, open }))}
+          editId={editMaintenanceDialog.id}
+          type={editMaintenanceDialog.type}
+          onSaved={() => {
+            queryClient.invalidateQueries({ queryKey: ["maintenance-list"] });
+            queryClient.invalidateQueries({ queryKey: ["charges-list"] });
+          }}
+        />
 
         {/* Detail Sheet (preview lateral) */}
         <DetailSheet

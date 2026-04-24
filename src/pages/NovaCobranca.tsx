@@ -29,7 +29,13 @@ interface Property {
   owner_id: string;
 }
 
-export default function NovaCobranca() {
+interface NovaCobrancaProps {
+  editId?: string;
+  onClose?: () => void;
+  onSaved?: () => void;
+}
+
+export default function NovaCobranca({ editId, onClose, onSaved }: NovaCobrancaProps = {}) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { profile } = useAuth();
@@ -41,8 +47,9 @@ export default function NovaCobranca() {
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const isReposicao = searchParams.get("reposicao") === "true";
-  const editChargeId = searchParams.get("edit");
+  const editChargeId = editId ?? searchParams.get("edit");
   const isEditMode = !!editChargeId;
+  const isModal = !!onClose;
   const [loadingCharge, setLoadingCharge] = useState(isEditMode);
 
   const [formData, setFormData] = useState({
@@ -95,7 +102,8 @@ export default function NovaCobranca() {
         if (error) throw error;
         if (!charge) {
           toast({ title: 'Cobrança não encontrada', variant: 'destructive' });
-          navigate('/admin/manutencoes-lista');
+          if (isModal) onClose?.();
+          else navigate('/admin/manutencoes-lista');
           return;
         }
         setFormData({
@@ -297,7 +305,12 @@ export default function NovaCobranca() {
           : (asDraft ? "A cobrança foi salva como rascunho." : "A cobrança foi criada e o proprietário foi notificado."),
       });
 
-      navigate(isEditMode ? '/admin/manutencoes-lista' : '/painel');
+      if (isModal) {
+        onSaved?.();
+        onClose?.();
+      } else {
+        navigate(isEditMode ? '/admin/manutencoes-lista' : '/painel');
+      }
     } catch (error: any) {
       toast({
         title: isEditMode ? "Erro ao atualizar cobrança" : "Erro ao criar cobrança",
@@ -310,18 +323,20 @@ export default function NovaCobranca() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
-      <header className="border-b bg-card/50 backdrop-blur-sm">
-        <div className="container mx-auto flex h-16 items-center px-4">
-          <Button variant="ghost" size="sm" onClick={() => goBack(navigate, "/gerenciar-cobrancas")}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar
-          </Button>
-        </div>
-      </header>
+    <div className={isModal ? "" : "min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5"}>
+      {!isModal && (
+        <header className="border-b bg-card/50 backdrop-blur-sm">
+          <div className="container mx-auto flex h-16 items-center px-4">
+            <Button variant="ghost" size="sm" onClick={() => goBack(navigate, "/gerenciar-cobrancas")}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Voltar
+            </Button>
+          </div>
+        </header>
+      )}
 
-      <main className="container mx-auto px-4 py-8 max-w-2xl">
-        <Card>
+      <main className={isModal ? "" : "container mx-auto px-4 py-8 max-w-2xl"}>
+        <Card className={isModal ? "shadow-none border-0" : ""}>
           <CardHeader>
             <CardTitle>{isEditMode ? "Editar Cobrança" : (isReposicao ? "Reposição de Item" : "Nova Cobrança")}</CardTitle>
             {isReposicao && (
@@ -525,7 +540,7 @@ export default function NovaCobranca() {
               </div>
 
               <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => navigate(isEditMode ? '/admin/manutencoes-lista' : '/painel')}>
+                <Button type="button" variant="outline" onClick={() => isModal ? onClose?.() : navigate(isEditMode ? '/admin/manutencoes-lista' : '/painel')}>
                   Cancelar
                 </Button>
                 {!isEditMode && (

@@ -34,7 +34,13 @@ interface Property {
   profiles?: { name: string };
 }
 
-export default function NovaManutencao() {
+interface NovaManutencaoProps {
+  editId?: string;
+  onClose?: () => void;
+  onSaved?: () => void;
+}
+
+export default function NovaManutencao({ editId, onClose, onSaved }: NovaManutencaoProps = {}) {
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<"normal" | "urgente">("normal");
@@ -54,8 +60,9 @@ export default function NovaManutencao() {
   const [searchParams] = useSearchParams();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const editTicketId = searchParams.get('edit');
+  const editTicketId = editId ?? searchParams.get('edit');
   const isEditMode = !!editTicketId;
+  const isModal = !!onClose;
   const [loadingTicket, setLoadingTicket] = useState(isEditMode);
 
   useEffect(() => {
@@ -80,7 +87,8 @@ export default function NovaManutencao() {
         if (error) throw error;
         if (!ticket) {
           toast.error('Manutenção não encontrada');
-          navigate('/admin/manutencoes-lista');
+          if (isModal) onClose?.();
+          else navigate('/admin/manutencoes-lista');
           return;
         }
         setSubject(ticket.subject || '');
@@ -398,7 +406,12 @@ export default function NovaManutencao() {
       }
 
       toast.success(isEditMode ? "Manutenção atualizada!" : "Manutenção criada com sucesso!");
-      navigate(`/admin/manutencoes-lista`);
+      if (isModal) {
+        onSaved?.();
+        onClose?.();
+      } else {
+        navigate(`/admin/manutencoes-lista`);
+      }
     } catch (error: any) {
       console.error("Error saving maintenance:", error);
       toast.error(error.message || "Erro ao salvar manutenção");
@@ -418,22 +431,28 @@ export default function NovaManutencao() {
   };
 
   const handleGoBack = () => {
+    if (isModal) {
+      onClose?.();
+      return;
+    }
     goBack(navigate, "/admin/manutencoes-lista");
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
-      <header className="border-b bg-card/50 backdrop-blur-sm">
-        <div className="container mx-auto flex h-16 items-center gap-4 px-4">
-          <Button variant="ghost" size="icon" type="button" onClick={handleGoBack}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-xl font-semibold">{isEditMode ? 'Editar Manutenção' : 'Nova Manutenção'}</h1>
-        </div>
-      </header>
+    <div className={isModal ? "" : "min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5"}>
+      {!isModal && (
+        <header className="border-b bg-card/50 backdrop-blur-sm">
+          <div className="container mx-auto flex h-16 items-center gap-4 px-4">
+            <Button variant="ghost" size="icon" type="button" onClick={handleGoBack}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-xl font-semibold">{isEditMode ? 'Editar Manutenção' : 'Nova Manutenção'}</h1>
+          </div>
+        </header>
+      )}
 
-      <main className="container mx-auto max-w-2xl px-4 py-8">
-        <Card className="shadow-xl">
+      <main className={isModal ? "" : "container mx-auto max-w-2xl px-4 py-8"}>
+        <Card className={isModal ? "shadow-none border-0" : "shadow-xl"}>
           <CardHeader>
             <CardTitle>{isEditMode ? 'Editar manutenção' : 'Criar manutenção'}</CardTitle>
             <CardDescription>
