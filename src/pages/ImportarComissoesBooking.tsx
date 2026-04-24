@@ -514,6 +514,7 @@ export default function ImportarComissoesBooking() {
                                   onValueChange={(v) => updateMapping(mapping.spreadsheetName, {
                                     systemPropertyId: v === "skip" ? "skip" : v,
                                     autoMatched: false,
+                                    selected: v !== "skip",
                                   })}
                                 >
                                   <SelectTrigger className="text-sm">
