@@ -87,7 +87,8 @@ export default function NovaManutencao({ editId, onClose, onSaved }: NovaManuten
         if (error) throw error;
         if (!ticket) {
           toast.error('Manutenção não encontrada');
-          navigate('/admin/manutencoes-lista');
+          if (isModal) onClose?.();
+          else navigate('/admin/manutencoes-lista');
           return;
         }
         setSubject(ticket.subject || '');
