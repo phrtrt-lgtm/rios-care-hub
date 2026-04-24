@@ -403,7 +403,7 @@ export default function ImportarComissoesBooking() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Filtros */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-muted/30 rounded-lg">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-3 bg-muted/30 rounded-lg">
                   <div className="space-y-1">
                     <Label className="text-xs">Check-in a partir de</Label>
                     <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
@@ -411,6 +411,10 @@ export default function ImportarComissoesBooking() {
                   <div className="space-y-1">
                     <Label className="text-xs">Check-in até</Label>
                     <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Vencimento das cobranças</Label>
+                    <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
                   </div>
                   <div className="flex items-end gap-2 pb-1">
                     <Switch
@@ -424,10 +428,23 @@ export default function ImportarComissoesBooking() {
                   </div>
                 </div>
 
-                {/* Resumo de filtros ativos */}
-                <p className="text-sm text-muted-foreground">
-                  {filteredReservations.length} reservas no período selecionado
-                </p>
+                {/* Resumo de filtros + selecionar todos */}
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <p className="text-sm text-muted-foreground">
+                    {filteredReservations.length} reservas no período · {linkedMappings.length} de {selectableCount} imóvel(is) selecionado(s)
+                    {!dueDate && <span className="ml-2 text-warning">⚠ Defina um vencimento</span>}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="select-all"
+                      checked={allSelected}
+                      onCheckedChange={(c) => toggleAll(!!c)}
+                    />
+                    <Label htmlFor="select-all" className="text-sm cursor-pointer">
+                      {allSelected ? "Desmarcar todos" : "Selecionar todos vinculados"}
+                    </Label>
+                  </div>
+                </div>
 
                 {/* Tabela de imóveis */}
                 <div className="space-y-3">
