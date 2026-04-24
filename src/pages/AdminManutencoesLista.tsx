@@ -1530,12 +1530,14 @@ export default function AdminManutencoesLista() {
             throw new Error("Proprietário não encontrado para este ticket");
           }
 
-          // Buscar TODAS as cobranças vinculadas (pode haver múltiplas)
+          // Buscar cobranças vinculadas que ainda estejam ABERTAS (não pagas).
+          // Cobranças já pagas não devem ser reabertas — geramos uma nova.
           const { data: existingCharges, error: chargeQueryError } = await supabase
             .from("charges")
-            .select("id, amount_cents")
+            .select("id, amount_cents, paid_at, status")
             .eq("ticket_id", id)
             .is("archived_at", null)
+            .is("paid_at", null)
             .order("created_at", { ascending: false });
 
           if (chargeQueryError) throw chargeQueryError;
@@ -1543,20 +1545,20 @@ export default function AdminManutencoesLista() {
           let chargeId: string;
 
           if (existingCharges && existingCharges.length > 0) {
-            // Atualizar a cobrança existente para "sent" (envia ao proprietário)
+            // Atualizar a cobrança aberta existente para "sent" (envia ao proprietário)
+            const openCharge = existingCharges[0];
             const { error: updateError } = await supabase
               .from("charges")
               .update({
                 status: "sent",
-                amount_cents: ticket.amount_cents || existingCharges[0].amount_cents || 0,
+                amount_cents: ticket.amount_cents || openCharge.amount_cents || 0,
                 management_contribution_cents: ticket.management_contribution_cents ?? 0,
                 service_type: ticket.service_type || null,
                 cost_responsible: ticket.cost_responsible || "owner",
               })
-              .eq("ticket_id", id)
-              .is("archived_at", null);
+              .eq("id", openCharge.id);
             if (updateError) throw updateError;
-            chargeId = existingCharges[0].id;
+            chargeId = openCharge.id;
           } else {
             // Criar nova cobrança já enviada ao proprietário
             const { data: newCharge, error: chargeError } = await supabase
