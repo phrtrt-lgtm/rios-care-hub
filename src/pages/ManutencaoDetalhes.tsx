@@ -2,20 +2,35 @@ import { useParams, useNavigate } from "react-router-dom";
 import { goBack } from "@/lib/navigation";
 import { useMaintenance } from "@/hooks/useMaintenances";
 import { MaintenancePaymentForm } from "@/components/MaintenancePaymentForm";
+import { MaintenanceUpdatesThread } from "@/components/MaintenanceUpdatesThread";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { formatBRL, formatDateTime, formatDate } from "@/lib/format";
-import { ArrowLeft, Download, Loader2, FileText, Calendar, DollarSign, Info } from "lucide-react";
+import { ArrowLeft, Loader2, FileText, Calendar, DollarSign, Info } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { MediaThumbnail } from "@/components/MediaThumbnail";
 import { MediaGallery } from "@/components/MediaGallery";
 import { preloadMediaUrls } from "@/hooks/useMediaCache";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import JSZip from "jszip";
 import { useState, useEffect } from "react";
+
+interface ManutencaoDetalhesProps {
+  /** When provided, render without page chrome (for use inside a Dialog). */
+  embedded?: boolean;
+  /** Optional id override (when used in a Dialog without router params). */
+  idOverride?: string;
+}
+
+export default function ManutencaoDetalhes({ embedded = false, idOverride }: ManutencaoDetalhesProps = {}) {
+  const params = useParams();
+  const id = idOverride ?? params.id;
+  const navigate = useNavigate();
+  const { profile } = useAuth();
+  const { data: maintenance, isLoading } = useMaintenance(id);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryStartIndex, setGalleryStartIndex] = useState(0);
+
 
 export default function ManutencaoDetalhes() {
   const { id } = useParams();
