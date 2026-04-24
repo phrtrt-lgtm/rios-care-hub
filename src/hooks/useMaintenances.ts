@@ -174,14 +174,38 @@ export const useMaintenance = (id?: string) => {
         .eq("ticket_id", id)
         .maybeSingle();
 
-      // Fetch ticket attachments (table already stores file_url, file_type, etc.)
-      const { data: rawTicketAttachments } = await supabase
-        .from("ticket_attachments" as any)
-        .select("*")
-        .eq("ticket_id", id)
-        .order("created_at", { ascending: false });
+      // Fetch ticket attachments — anexos podem estar ligados pelo ticket_id OU
+      // pelo message_id (mensagens daquele ticket). Buscar ambos e mesclar.
+      const [{ data: directAtt }, { data: msgRows }] = await Promise.all([
+        supabase
+          .from("ticket_attachments" as any)
+          .select("*")
+          .eq("ticket_id", id)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("ticket_messages" as any)
+          .select("id")
+          .eq("ticket_id", id),
+      ]);
 
-      const attachments = (rawTicketAttachments || []).map((a: any) => ({
+      let viaMessages: any[] = [];
+      const messageIds = (msgRows || []).map((m: any) => m.id);
+      if (messageIds.length > 0) {
+        const { data: msgAtt } = await supabase
+          .from("ticket_attachments" as any)
+          .select("*")
+          .in("message_id", messageIds)
+          .order("created_at", { ascending: false });
+        viaMessages = msgAtt || [];
+      }
+
+      // De-duplicar por id
+      const merged = new Map<string, any>();
+      [...(directAtt || []), ...viaMessages].forEach((a: any) => {
+        if (!merged.has(a.id)) merged.set(a.id, a);
+      });
+
+      const attachments = Array.from(merged.values()).map((a: any) => ({
         id: a.id,
         file_name: a.file_name || a.name || 'Anexo',
         file_url: a.file_url,
