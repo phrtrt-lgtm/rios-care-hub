@@ -488,7 +488,7 @@ function GroupRow({
                     <p>{item.subject}</p>
                   </TooltipContent>
                 </Tooltip>
-              </td>
+              </TooltipProvider>
             </td>
 
             {/* Atualizações / Comentários da equipe (preview no painel) */}
