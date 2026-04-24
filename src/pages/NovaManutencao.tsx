@@ -34,7 +34,13 @@ interface Property {
   profiles?: { name: string };
 }
 
-export default function NovaManutencao() {
+interface NovaManutencaoProps {
+  editId?: string;
+  onClose?: () => void;
+  onSaved?: () => void;
+}
+
+export default function NovaManutencao({ editId, onClose, onSaved }: NovaManutencaoProps = {}) {
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<"normal" | "urgente">("normal");
