@@ -102,7 +102,8 @@ export default function NovaCobranca({ editId, onClose, onSaved }: NovaCobrancaP
         if (error) throw error;
         if (!charge) {
           toast({ title: 'Cobrança não encontrada', variant: 'destructive' });
-          navigate('/admin/manutencoes-lista');
+          if (isModal) onClose?.();
+          else navigate('/admin/manutencoes-lista');
           return;
         }
         setFormData({
