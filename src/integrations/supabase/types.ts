@@ -1514,6 +1514,42 @@ export type Database = {
         }
         Relationships: []
       }
+      maintenance_updates: {
+        Row: {
+          attachments: Json
+          author_id: string
+          body: string
+          charge_id: string | null
+          created_at: string
+          deleted_at: string | null
+          edited_at: string | null
+          id: string
+          ticket_id: string | null
+        }
+        Insert: {
+          attachments?: Json
+          author_id: string
+          body: string
+          charge_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          edited_at?: string | null
+          id?: string
+          ticket_id?: string | null
+        }
+        Update: {
+          attachments?: Json
+          author_id?: string
+          body?: string
+          charge_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          edited_at?: string | null
+          id?: string
+          ticket_id?: string | null
+        }
+        Relationships: []
+      }
       message_read_receipts: {
         Row: {
           id: string
