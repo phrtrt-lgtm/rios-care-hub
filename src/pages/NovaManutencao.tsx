@@ -60,9 +60,9 @@ export default function NovaManutencao({ editId, onClose, onSaved }: NovaManuten
   const [searchParams] = useSearchParams();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const editTicketId = searchParams.get('edit');
+  const editTicketId = editId ?? searchParams.get('edit');
   const isEditMode = !!editTicketId;
-  const [loadingTicket, setLoadingTicket] = useState(isEditMode);
+  const isModal = !!onClose;
 
   useEffect(() => {
     // Only admins, agents, and maintenance can access this page
