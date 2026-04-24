@@ -1727,13 +1727,19 @@ export default function AdminManutencoesLista() {
             return [optimisticCharge, ...base];
           });
         }
-      } else {
-        // Regular optimistic update
+      } else if (field === "list_status") {
+        // Optimistically reflect the move between "Em Progresso" and
+        // "Concluídas" by also updating the underlying ticket.status.
+        const newTicketStatus = value === "feito" ? "concluido" : "em_execucao";
         queryClient.setQueryData(["maintenance-list-view"], (old: MaintenanceItem[] | undefined) => {
           if (!old) return old;
-          return old.map(t => t.id === id ? { ...t, [field]: value } : t);
+          return old.map(t =>
+            t.id === id
+              ? { ...t, list_status: value, status: newTicketStatus as TicketStatus }
+              : t
+          );
         });
-      }
+      } else {
 
       return { previousTickets, previousCharges };
     },
