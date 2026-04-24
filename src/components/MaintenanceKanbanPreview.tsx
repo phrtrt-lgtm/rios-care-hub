@@ -352,7 +352,7 @@ export function MaintenanceKanbanPreview() {
                           onClick={(e) => openScheduleDialog(ticket, e)}
                         >
                           <Calendar className="h-3 w-3" />
-                          <span className="hidden sm:inline ml-1">Agendar</span>
+                          
                         </Button>
                         <Button
                           variant="outline"
@@ -361,7 +361,7 @@ export function MaintenanceKanbanPreview() {
                           onClick={(e) => openCompleteDialog(ticket, e)}
                         >
                           <CheckCircle className="h-3 w-3" />
-                          <span className="hidden sm:inline ml-1">Concluir</span>
+                          
                         </Button>
                         <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                       </div>
@@ -406,7 +406,7 @@ export function MaintenanceKanbanPreview() {
                             onClick={(e) => openScheduleDialog(ticket, e)}
                           >
                             <Calendar className="h-3 w-3" />
-                            <span className="hidden sm:inline ml-1">Agendar</span>
+                            
                           </Button>
                           <Button
                             variant="outline"
@@ -415,7 +415,7 @@ export function MaintenanceKanbanPreview() {
                             onClick={(e) => openCompleteDialog(ticket, e)}
                           >
                             <CheckCircle className="h-3 w-3" />
-                            <span className="hidden sm:inline ml-1">Concluir</span>
+                            
                           </Button>
                           <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                         </div>
@@ -473,7 +473,7 @@ export function MaintenanceKanbanPreview() {
                           onClick={(e) => openCompleteDialog(ticket, e)}
                         >
                           <CheckCircle className="h-3 w-3" />
-                          <span className="hidden sm:inline ml-1">Concluir</span>
+                          
                         </Button>
                         <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                       </div>
@@ -524,7 +524,7 @@ export function MaintenanceKanbanPreview() {
                             onClick={(e) => openCompleteDialog(ticket, e)}
                           >
                             <CheckCircle className="h-3 w-3" />
-                            <span className="hidden sm:inline ml-1">Concluir</span>
+                            
                           </Button>
                           <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                         </div>
