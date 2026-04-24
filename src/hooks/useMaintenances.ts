@@ -174,7 +174,7 @@ export const useMaintenance = (id?: string) => {
         .eq("ticket_id", id)
         .maybeSingle();
 
-      // Fetch ticket attachments
+      // Fetch ticket attachments (table already stores file_url, file_type, etc.)
       const { data: rawTicketAttachments } = await supabase
         .from("ticket_attachments" as any)
         .select("*")
@@ -183,12 +183,10 @@ export const useMaintenance = (id?: string) => {
 
       const attachments = (rawTicketAttachments || []).map((a: any) => ({
         id: a.id,
-        file_name: a.file_name,
-        file_url: a.file_path
-          ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/ticket-attachments/${a.file_path}`
-          : null,
-        file_type: a.mime_type_override || a.mime_type,
-        size_bytes: a.file_size,
+        file_name: a.file_name || a.name || 'Anexo',
+        file_url: a.file_url,
+        file_type: a.file_type || a.mime_type,
+        size_bytes: a.size_bytes ?? a.file_size ?? null,
       }));
 
       let payments: any[] = [];
