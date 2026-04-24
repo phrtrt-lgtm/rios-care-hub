@@ -540,7 +540,7 @@ export default function NovaCobranca({ editId, onClose, onSaved }: NovaCobrancaP
               </div>
 
               <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => navigate(isEditMode ? '/admin/manutencoes-lista' : '/painel')}>
+                <Button type="button" variant="outline" onClick={() => isModal ? onClose?.() : navigate(isEditMode ? '/admin/manutencoes-lista' : '/painel')}>
                   Cancelar
                 </Button>
                 {!isEditMode && (
