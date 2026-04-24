@@ -18,6 +18,7 @@ import { format } from "date-fns";
 import { parseSpreadsheet, ParsedReservation } from "@/lib/spreadsheetParser";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface SystemProperty {
   id: string;
@@ -31,6 +32,7 @@ interface PropertyMapping {
   systemPropertyId: string | null; // null = skip
   commissionPercent: number;
   autoMatched: boolean;
+  selected: boolean;
 }
 
 // Normalize para matching: lowercase + sem acentos
@@ -66,6 +68,7 @@ export default function ImportarComissoesBooking() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [includeCancelled, setIncludeCancelled] = useState(false);
+  const [dueDate, setDueDate] = useState("");
 
   // Etapa 3
   const [generating, setGenerating] = useState(false);
@@ -132,6 +135,7 @@ export default function ImportarComissoesBooking() {
           systemPropertyId: matched ? matched.id : null,
           commissionPercent: 22,
           autoMatched: !!matched,
+          selected: !!matched, // pré-seleciona apenas vinculados
         };
       });
       setMappings(newMappings);
@@ -178,8 +182,8 @@ export default function ImportarComissoesBooking() {
     );
   };
 
-  // Totais do rodapé
-  const linkedMappings = mappings.filter(m => m.systemPropertyId !== "skip" && m.systemPropertyId !== null);
+  // Totais do rodapé — apenas selecionados E vinculados
+  const linkedMappings = mappings.filter(m => m.selected && m.systemPropertyId && m.systemPropertyId !== "skip");
   const totalToGenerate = filteredReservations.filter(r =>
     linkedMappings.some(m => m.spreadsheetName === r.property_name)
   ).length;
@@ -188,6 +192,15 @@ export default function ImportarComissoesBooking() {
     const stats = getPropertyStats(m.spreadsheetName);
     return acc + stats.totalCommission;
   }, 0);
+
+  const selectableCount = mappings.filter(m => m.systemPropertyId && m.systemPropertyId !== "skip").length;
+  const allSelected = selectableCount > 0 && mappings.filter(m => m.selected).length === selectableCount;
+  const toggleAll = (checked: boolean) => {
+    setMappings(prev => prev.map(m => ({
+      ...m,
+      selected: checked && !!m.systemPropertyId && m.systemPropertyId !== "skip" ? true : false,
+    })));
+  };
 
   // ─── Etapa 3: Gerar cobranças ──────────────────────────────────
   const handleGenerate = async () => {
@@ -205,7 +218,7 @@ export default function ImportarComissoesBooking() {
     cleaning_fee_cents: number;
     status: string;
     created_by: string;
-    due_date: null;
+    due_date: string | null;
     notes: string | null;
   };
   const inserts: CommissionInsert[] = [];
@@ -231,7 +244,7 @@ export default function ImportarComissoesBooking() {
             cleaning_fee_cents: Math.round(r.cleaning_fee * 100),
             status: "sent",
             created_by: profile.id,
-            due_date: null,
+            due_date: dueDate || null,
             notes: r.channel ? `Canal: ${r.channel}` : null,
           });
         }
@@ -390,7 +403,7 @@ export default function ImportarComissoesBooking() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Filtros */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-muted/30 rounded-lg">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-3 bg-muted/30 rounded-lg">
                   <div className="space-y-1">
                     <Label className="text-xs">Check-in a partir de</Label>
                     <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
@@ -398,6 +411,10 @@ export default function ImportarComissoesBooking() {
                   <div className="space-y-1">
                     <Label className="text-xs">Check-in até</Label>
                     <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Vencimento das cobranças</Label>
+                    <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
                   </div>
                   <div className="flex items-end gap-2 pb-1">
                     <Switch
@@ -411,10 +428,23 @@ export default function ImportarComissoesBooking() {
                   </div>
                 </div>
 
-                {/* Resumo de filtros ativos */}
-                <p className="text-sm text-muted-foreground">
-                  {filteredReservations.length} reservas no período selecionado
-                </p>
+                {/* Resumo de filtros + selecionar todos */}
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <p className="text-sm text-muted-foreground">
+                    {filteredReservations.length} reservas no período · {linkedMappings.length} de {selectableCount} imóvel(is) selecionado(s)
+                    {!dueDate && <span className="ml-2 text-warning">⚠ Defina um vencimento</span>}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="select-all"
+                      checked={allSelected}
+                      onCheckedChange={(c) => toggleAll(!!c)}
+                    />
+                    <Label htmlFor="select-all" className="text-sm cursor-pointer">
+                      {allSelected ? "Desmarcar todos" : "Selecionar todos vinculados"}
+                    </Label>
+                  </div>
+                </div>
 
                 {/* Tabela de imóveis */}
                 <div className="space-y-3">
@@ -426,13 +456,20 @@ export default function ImportarComissoesBooking() {
                     return (
                       <Card
                         key={mapping.spreadsheetName}
-                        className={`border ${isSkipped ? "opacity-50 bg-muted/20" : mapping.autoMatched ? "border-success/30/40" : "border-warning/30/40"}`}
+                        className={`border ${isSkipped ? "opacity-50 bg-muted/20" : !mapping.selected ? "opacity-60" : mapping.autoMatched ? "border-success/30/40" : "border-warning/30/40"}`}
                       >
                         <CardContent className="py-4 px-4">
                           <div className="flex flex-col gap-3">
-                            {/* Linha 1: Nome planilha + badge + match */}
+                            {/* Linha 1: Checkbox + Nome planilha + badge + match */}
                             <div className="flex items-start justify-between gap-3 flex-wrap">
-                              <div className="flex-1 min-w-0">
+                              <div className="flex items-start gap-3 flex-1 min-w-0">
+                                <Checkbox
+                                  checked={mapping.selected}
+                                  disabled={isSkipped || !mapping.systemPropertyId}
+                                  onCheckedChange={(c) => updateMapping(mapping.spreadsheetName, { selected: !!c })}
+                                  className="mt-0.5"
+                                />
+                                <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <p className="font-semibold text-sm">{mapping.spreadsheetName}</p>
                                   {mapping.autoMatched && !isSkipped && (
@@ -460,6 +497,7 @@ export default function ImportarComissoesBooking() {
                                     {" · "}<span>{sysProp.owner_name}</span>
                                   </p>
                                 )}
+                                </div>
                               </div>
                               <div className="text-right shrink-0 text-xs text-muted-foreground">
                                 <p className="font-semibold text-foreground">{stats.count} reserva{stats.count !== 1 ? "s" : ""}</p>
@@ -476,6 +514,7 @@ export default function ImportarComissoesBooking() {
                                   onValueChange={(v) => updateMapping(mapping.spreadsheetName, {
                                     systemPropertyId: v === "skip" ? "skip" : v,
                                     autoMatched: false,
+                                    selected: v !== "skip",
                                   })}
                                 >
                                   <SelectTrigger className="text-sm">
@@ -551,7 +590,7 @@ export default function ImportarComissoesBooking() {
                     </Button>
                     <Button
                       size="sm"
-                      disabled={totalToGenerate === 0 || generating}
+                      disabled={totalToGenerate === 0 || generating || !dueDate}
                       onClick={handleGenerate}
                     >
                       {generating ? (
