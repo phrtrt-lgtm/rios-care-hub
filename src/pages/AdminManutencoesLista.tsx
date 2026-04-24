@@ -1606,16 +1606,30 @@ export default function AdminManutencoesLista() {
             if (ticketError) throw ticketError;
           }
 
+          // Detect if the trigger auto-paid the charge because management covers 100%.
+          const fullyCoveredByManagement =
+            (ticket.management_contribution_cents ?? 0) >= (ticket.amount_cents ?? 0) &&
+            (ticket.amount_cents ?? 0) > 0;
+
           // Notificar o proprietário (email + push + notificação interna)
-          try {
-            await supabase.functions.invoke("send-charge-email", {
-              body: { type: "charge_created", chargeId },
-            });
-          } catch (notifyErr) {
-            console.warn("Falha ao notificar proprietário (não crítico):", notifyErr);
+          // Pulamos quando o aporte da gestão cobre 100% (não há cobrança a pagar).
+          if (!fullyCoveredByManagement) {
+            try {
+              await supabase.functions.invoke("send-charge-email", {
+                body: { type: "charge_created", chargeId },
+              });
+            } catch (notifyErr) {
+              console.warn("Falha ao notificar proprietário (não crítico):", notifyErr);
+            }
           }
 
-          toast.success("Cobrança criada e enviada ao proprietário!");
+          if (fullyCoveredByManagement) {
+            toast.success("Manutenção finalizada — aporte da gestão cobriu 100% do custo.");
+          } else if ((ticket.amount_cents ?? 0) === 0) {
+            toast.success("Manutenção enviada ao proprietário sem valor de cobrança.");
+          } else {
+            toast.success("Cobrança criada e enviada ao proprietário!");
+          }
           return;
         }
 
