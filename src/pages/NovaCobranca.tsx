@@ -323,18 +323,20 @@ export default function NovaCobranca({ editId, onClose, onSaved }: NovaCobrancaP
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
-      <header className="border-b bg-card/50 backdrop-blur-sm">
-        <div className="container mx-auto flex h-16 items-center px-4">
-          <Button variant="ghost" size="sm" onClick={() => goBack(navigate, "/gerenciar-cobrancas")}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar
-          </Button>
-        </div>
-      </header>
+    <div className={isModal ? "" : "min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5"}>
+      {!isModal && (
+        <header className="border-b bg-card/50 backdrop-blur-sm">
+          <div className="container mx-auto flex h-16 items-center px-4">
+            <Button variant="ghost" size="sm" onClick={() => goBack(navigate, "/gerenciar-cobrancas")}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Voltar
+            </Button>
+          </div>
+        </header>
+      )}
 
-      <main className="container mx-auto px-4 py-8 max-w-2xl">
-        <Card>
+      <main className={isModal ? "" : "container mx-auto px-4 py-8 max-w-2xl"}>
+        <Card className={isModal ? "shadow-none border-0" : ""}>
           <CardHeader>
             <CardTitle>{isEditMode ? "Editar Cobrança" : (isReposicao ? "Reposição de Item" : "Nova Cobrança")}</CardTitle>
             {isReposicao && (
