@@ -13,6 +13,7 @@ import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
+import { MaintenanceDetailsDialog } from "@/components/MaintenanceDetailsDialog";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { ListFilters } from "@/components/list/ListFilters";
 import { useListFilters } from "@/hooks/useListFilters";
@@ -83,7 +84,7 @@ export default function MeusChamados() {
     setLoading(true);
     let query = supabase
       .from("tickets")
-      .select("*, properties(name, cover_photo_url), kind, essential, owner_decision, owner_action_due_at, sla_due_at, cost_responsible")
+      .select("*, properties(name, cover_photo_url), kind, essential, owner_decision, owner_action_due_at, sla_due_at, cost_responsible, created_by")
       .eq("owner_id", user?.id)
       .or("cost_responsible.is.null,cost_responsible.eq.owner,cost_responsible.eq.pm,cost_responsible.eq.split");
 
@@ -160,6 +161,9 @@ export default function MeusChamados() {
     setChatOpen(true);
     markAsRead(ticket.id);
   };
+
+  const isMaintenanceCreatedByTeam = (ticket: any) =>
+    ticket.ticket_type === "manutencao" && ticket.created_by !== user?.id;
 
   if (loading) {
     return <LoadingScreen message="Carregando chamados..." />;
@@ -273,7 +277,16 @@ export default function MeusChamados() {
                   <div
                     key={ticket.id}
                     className="bg-card border rounded-lg p-3 cursor-pointer transition-all hover:shadow-md hover:border-primary/30 active:scale-[0.99]"
-                    onClick={() => (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${ticket.id}`))}
+                    onClick={() => {
+                      if (isMaintenanceCreatedByTeam(ticket)) {
+                        setSelectedTicket(ticket);
+                        setChatOpen(true);
+                        markAsRead(ticket.id);
+                      } else {
+                        saveScrollPosition(pathname);
+                        navigate(`/ticket-detalhes/${ticket.id}`);
+                      }
+                    }}
                   >
                     {/* Row 1: Property + Status + Type + SLA */}
                     <div className="flex items-center gap-2 mb-2">
@@ -372,15 +385,23 @@ export default function MeusChamados() {
         </div>
       </main>
 
-      {/* Chat Dialog */}
+      {/* Chat / Detalhes Dialog */}
       {selectedTicket && (
-        <MaintenanceChatDialog
-          open={chatOpen}
-          onOpenChange={setChatOpen}
-          ticketId={selectedTicket.id}
-          ticketSubject={selectedTicket.subject}
-          propertyName={selectedTicket.properties?.name}
-        />
+        isMaintenanceCreatedByTeam(selectedTicket) ? (
+          <MaintenanceDetailsDialog
+            open={chatOpen}
+            onOpenChange={setChatOpen}
+            maintenanceId={selectedTicket.id}
+          />
+        ) : (
+          <MaintenanceChatDialog
+            open={chatOpen}
+            onOpenChange={setChatOpen}
+            ticketId={selectedTicket.id}
+            ticketSubject={selectedTicket.subject}
+            propertyName={selectedTicket.properties?.name}
+          />
+        )
       )}
     </div>
   );
