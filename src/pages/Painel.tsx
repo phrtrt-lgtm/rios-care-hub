@@ -317,9 +317,9 @@ export default function Painel() {
           </div>
         )}
 
-        {/* Kanban Boards - 2 columns layout */}
+        {/* Kanban Boards - masonry layout (cada card só ocupa a altura do seu conteúdo) */}
         {(profile?.role === "admin" || profile?.role === "maintenance" || profile?.role === "agent") && (
-          <div className="mb-6 grid gap-3 min-w-0 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 auto-rows-fr items-stretch [&>*]:h-full">
+          <div className="mb-6 min-w-0 columns-1 md:columns-2 lg:columns-4 gap-3 [&>*]:mb-3 [&>*]:break-inside-avoid">
             <MaintenanceKanbanPreview />
             <ChargesKanbanPreview />
             <VistoriasKanbanPreview />
