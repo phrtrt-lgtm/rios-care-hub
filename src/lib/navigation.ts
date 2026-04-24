@@ -1,4 +1,4 @@
-import type { NavigateFunction } from "react-router-dom";
+import type { NavigateFunction, Location } from "react-router-dom";
 
 const SCROLL_KEY_PREFIX = "scroll_pos:";
 
@@ -37,13 +37,29 @@ export function restoreScrollPosition(pathname: string) {
 }
 
 /**
- * Volta para a página anterior respeitando o histórico do browser.
- * Se não houver histórico (PWA, link direto), navega para o fallback.
+ * Volta para a página anterior respeitando a origem registrada (location.state.from)
+ * ou o histórico do browser. Se nada estiver disponível, vai para o fallback.
+ *
+ * Padrão de uso recomendado nas páginas de origem:
+ *   navigate('/destino', { state: { from: pathname } })
+ *
+ * E na página destino, no clique do botão voltar:
+ *   goBack(navigate, '/fallback', location)
  *
  * @param navigate - função navigate do react-router-dom
- * @param fallback - rota de fallback quando não há histórico (default: "/painel")
+ * @param fallback - rota de fallback quando não há origem nem histórico
+ * @param location - objeto de location atual (para ler state.from)
  */
-export function goBack(navigate: NavigateFunction, fallback = "/painel") {
+export function goBack(
+  navigate: NavigateFunction,
+  fallback = "/painel",
+  location?: Location
+) {
+  const from = (location?.state as { from?: string } | null)?.from;
+  if (from && typeof from === "string") {
+    navigate(from);
+    return;
+  }
   if (window.history.length > 1) {
     navigate(-1);
   } else {
