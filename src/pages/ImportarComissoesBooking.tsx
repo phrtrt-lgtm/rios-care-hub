@@ -456,13 +456,20 @@ export default function ImportarComissoesBooking() {
                     return (
                       <Card
                         key={mapping.spreadsheetName}
-                        className={`border ${isSkipped ? "opacity-50 bg-muted/20" : mapping.autoMatched ? "border-success/30/40" : "border-warning/30/40"}`}
+                        className={`border ${isSkipped ? "opacity-50 bg-muted/20" : !mapping.selected ? "opacity-60" : mapping.autoMatched ? "border-success/30/40" : "border-warning/30/40"}`}
                       >
                         <CardContent className="py-4 px-4">
                           <div className="flex flex-col gap-3">
-                            {/* Linha 1: Nome planilha + badge + match */}
+                            {/* Linha 1: Checkbox + Nome planilha + badge + match */}
                             <div className="flex items-start justify-between gap-3 flex-wrap">
-                              <div className="flex-1 min-w-0">
+                              <div className="flex items-start gap-3 flex-1 min-w-0">
+                                <Checkbox
+                                  checked={mapping.selected}
+                                  disabled={isSkipped || !mapping.systemPropertyId}
+                                  onCheckedChange={(c) => updateMapping(mapping.spreadsheetName, { selected: !!c })}
+                                  className="mt-0.5"
+                                />
+                                <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <p className="font-semibold text-sm">{mapping.spreadsheetName}</p>
                                   {mapping.autoMatched && !isSkipped && (
