@@ -386,41 +386,50 @@ export default function ManutencaoDetalhes() {
         </Card>
       )}
 
-      {/* Status da cobrança */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Info className="h-4 w-4" />
-            Informações da Cobrança
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3 text-sm">
-            <div>
-              <span className="text-muted-foreground">Status: </span>
-              {getStatusBadge(maintenance.status)}
+      {/* Acompanhamento (timeline da equipe → proprietário) */}
+      <MaintenanceUpdatesThread
+        ticketId={ticketIdForUpdates}
+        chargeId={chargeIdForUpdates}
+      />
+
+      {/* Status da cobrança (apenas quando há cobrança) */}
+      {hasFinancials && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Info className="h-4 w-4" />
+              Informações da Cobrança
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3 text-sm">
+              <div>
+                <span className="text-muted-foreground">Status: </span>
+                {getStatusBadge(maintenance.status)}
+              </div>
+              {maintenance.paid_at && (
+                <div>
+                  <span className="text-muted-foreground">Pago em: </span>
+                  <span>{formatDateTime(maintenance.paid_at)}</span>
+                </div>
+              )}
+              {maintenance.contested_at && (
+                <div>
+                  <span className="text-muted-foreground">Contestado em: </span>
+                  <span>{formatDateTime(maintenance.contested_at)}</span>
+                </div>
+              )}
+              {maintenance.debited_at && (
+                <div>
+                  <span className="text-muted-foreground">Debitado em: </span>
+                  <span>{formatDateTime(maintenance.debited_at)}</span>
+                </div>
+              )}
             </div>
-            {maintenance.paid_at && (
-              <div>
-                <span className="text-muted-foreground">Pago em: </span>
-                <span>{formatDateTime(maintenance.paid_at)}</span>
-              </div>
-            )}
-            {maintenance.contested_at && (
-              <div>
-                <span className="text-muted-foreground">Contestado em: </span>
-                <span>{formatDateTime(maintenance.contested_at)}</span>
-              </div>
-            )}
-            {maintenance.debited_at && (
-              <div>
-                <span className="text-muted-foreground">Debitado em: </span>
-                <span>{formatDateTime(maintenance.debited_at)}</span>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
+
