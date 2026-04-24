@@ -108,15 +108,23 @@ export default function ManutencaoDetalhes() {
     return `Dividido - Proprietário: ${ownerPercent}% | Gestão: ${managementPercent}%`;
   };
 
+  const hasFinancials = (maintenance.amount_cents || 0) > 0 || maintenance.source !== "ticket" || !!maintenance.charge_id;
+  const ticketIdForUpdates: string | null =
+    maintenance.source === "ticket" ? maintenance.id : maintenance.ticket_id ?? null;
+  const chargeIdForUpdates: string | null =
+    maintenance.source === "charge" ? maintenance.id : maintenance.charge_id ?? null;
+
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className={wrapperClass}>
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => goBack(navigate, "/admin/manutencoes-lista")}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
+        {!embedded && (
+          <Button variant="ghost" size="icon" onClick={() => goBack(navigate, "/admin/manutencoes-lista")}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        )}
         <div className="flex-1">
-          <h1 className="text-3xl font-bold">{maintenance.title}</h1>
-          <p className="text-muted-foreground">
+          <h1 className={embedded ? "text-xl font-bold" : "text-3xl font-bold"}>{maintenance.title}</h1>
+          <p className="text-muted-foreground text-sm">
             Criado em {formatDateTime(maintenance.created_at)}
           </p>
         </div>
