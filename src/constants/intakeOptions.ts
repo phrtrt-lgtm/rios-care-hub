@@ -77,12 +77,14 @@ export interface RoomEntry {
 }
 
 export interface IntakeFormData {
-  // Step 1
+  // Step 1 - Sobre você
   owner_name: string;
   owner_email: string;
   owner_phone: string;
   property_nickname: string;
   property_address: string;
+  previously_listed_airbnb: boolean | null;
+  // Step 2 - Ficha técnica
   bedrooms_count: number;
   living_rooms_count: number;
   bathrooms_count: number;
