@@ -97,6 +97,54 @@ export const useMaintenances = (filters?: MaintenanceFilters) => {
   });
 };
 
+// Busca anexos de vistoria vinculados a um ticket de manutenção
+// (criados quando uma manutenção foi gerada a partir de uma vistoria)
+async function fetchInspectionAttachmentsForTicket(ticketId: string) {
+  if (!ticketId) return [];
+
+  // 1) Diretamente vinculados via maintenance_ticket_id
+  const { data: directLinked } = await supabase
+    .from('cleaning_inspection_attachments')
+    .select('id, file_url, file_name, file_type, size_bytes, created_at, inspection_id')
+    .eq('maintenance_ticket_id', ticketId);
+
+  // 2) Indiretamente: anexos da mesma vistoria cujos itens viraram esse ticket
+  const { data: linkedItems } = await supabase
+    .from('inspection_items')
+    .select('inspection_id')
+    .eq('maintenance_ticket_id', ticketId);
+
+  const inspectionIds = Array.from(
+    new Set((linkedItems || []).map((i: any) => i.inspection_id).filter(Boolean)),
+  );
+
+  let viaInspection: any[] = [];
+  if (inspectionIds.length > 0) {
+    const { data } = await supabase
+      .from('cleaning_inspection_attachments')
+      .select('id, file_url, file_name, file_type, size_bytes, created_at, inspection_id')
+      .in('inspection_id', inspectionIds);
+    viaInspection = data || [];
+  }
+
+  // De-duplicar por id
+  const merged = new Map<string, any>();
+  [...(directLinked || []), ...viaInspection].forEach((a) => {
+    if (!merged.has(a.id)) merged.set(a.id, a);
+  });
+
+  return Array.from(merged.values()).map((a) => ({
+    id: `insp-${a.id}`,
+    file_url: a.file_url,
+    file_name: a.file_name || 'Anexo da vistoria',
+    file_type: a.file_type,
+    size_bytes: a.size_bytes ?? null,
+    created_at: a.created_at,
+    from_inspection: true as const,
+    inspection_id: a.inspection_id,
+  }));
+}
+
 export const useMaintenance = (id?: string) => {
   return useQuery<any>({
     queryKey: ["maintenance", id],
