@@ -189,7 +189,14 @@ export const useMaintenance = (id?: string) => {
 
         const paid_cents = payments?.reduce((sum, p) => sum + p.amount_cents, 0) || 0;
 
-        return { ...charge, source: "charge" as const, payments, attachments, paid_cents };
+        // Anexos vindos da vistoria que originou esta manutenção (via ticket vinculado)
+        const inspectionAttachments = charge.ticket_id
+          ? await fetchInspectionAttachmentsForTicket(charge.ticket_id)
+          : [];
+
+        const allAttachments = [...attachments, ...inspectionAttachments];
+
+        return { ...charge, source: "charge" as const, payments, attachments: allAttachments, paid_cents };
       }
 
       // 2) Fallback to ticket (maintenance created by team without a charge yet)
