@@ -256,12 +256,12 @@ export default function CadastroImovel() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[hsl(var(--rios-blue))]/5 via-background to-[hsl(var(--rios-blue))]/10 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-[hsl(var(--rios-terra))]/8 via-background to-[hsl(var(--rios-terra))]/12 relative overflow-hidden">
       {/* Decorative background blobs */}
       <div aria-hidden className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full bg-[hsl(var(--rios-blue))]/15 blur-3xl" />
-        <div className="absolute top-1/2 -left-40 w-[400px] h-[400px] rounded-full bg-[hsl(var(--rios-blue-light))]/15 blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-[350px] h-[350px] rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full bg-[hsl(var(--rios-terra))]/20 blur-3xl" />
+        <div className="absolute top-1/2 -left-40 w-[400px] h-[400px] rounded-full bg-[hsl(var(--rios-terra-light))]/18 blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 w-[350px] h-[350px] rounded-full bg-[hsl(var(--rios-blue))]/10 blur-3xl" />
       </div>
 
       <div className="relative">
@@ -347,8 +347,8 @@ function BrandHeader() {
           alt="RIOS"
           className="h-12 md:h-14 w-auto"
         />
-        <div className="hidden sm:block border-l border-[hsl(var(--rios-blue))]/20 pl-4">
-          <p className="text-xs uppercase tracking-[0.2em] text-[hsl(var(--rios-blue))] font-semibold">Hospedagens</p>
+        <div className="hidden sm:block border-l border-[hsl(var(--rios-terra))]/30 pl-4">
+          <p className="text-xs uppercase tracking-[0.2em] text-[hsl(var(--rios-terra))] font-semibold">Hospedagens</p>
           <p className="text-[10px] text-muted-foreground">Operação & Gestão</p>
         </div>
       </motion.div>
@@ -359,7 +359,7 @@ function BrandHeader() {
         transition={{ delay: 0.1 }}
         className="mt-8 space-y-3"
       >
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[hsl(var(--rios-blue))]/10 text-[hsl(var(--rios-blue))] text-xs font-medium">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[hsl(var(--rios-terra))]/15 text-[hsl(var(--rios-terra))] text-xs font-medium ring-1 ring-[hsl(var(--rios-terra))]/20">
           <Sparkles className="h-3 w-3" />
           Cadastro exclusivo de novos parceiros
         </div>
@@ -390,7 +390,7 @@ function StepProgress({ current }: { current: number }) {
                   initial={{ width: 0 }}
                   animate={{ width: isActive || isDone ? "100%" : "0%" }}
                   transition={{ duration: 0.4 }}
-                  className="h-full bg-gradient-to-r from-[hsl(var(--rios-blue))] via-[hsl(var(--rios-blue-light))] to-primary"
+                  className="h-full bg-gradient-to-r from-[hsl(var(--rios-terra))] via-[hsl(var(--rios-terra-light))] to-[hsl(var(--rios-blue))]"
                 />
               </div>
               <div className="flex items-center gap-1.5 text-[10px] md:text-xs">
@@ -942,7 +942,7 @@ function SuccessScreen({ ownerName, email }: { ownerName: string; email: string 
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.2, type: "spring" }}
-            className="h-20 w-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-[hsl(var(--rios-blue))] to-[hsl(var(--rios-blue-light))] flex items-center justify-center shadow-xl"
+            className="h-20 w-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-[hsl(var(--rios-terra))] to-[hsl(var(--rios-terra-light))] flex items-center justify-center shadow-xl"
           >
             <Check className="h-10 w-10 text-primary-foreground" strokeWidth={3} />
           </motion.div>
