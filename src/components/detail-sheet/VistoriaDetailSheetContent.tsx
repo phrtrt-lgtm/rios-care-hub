@@ -216,23 +216,38 @@ export function VistoriaDetailSheetContent({ id, onOpenFull }: Props) {
             Fotos ({imageAttachments.length})
           </p>
           <div className="grid grid-cols-3 gap-2">
-            {imageAttachments.slice(0, 6).map((att) => (
-              <a
-                key={att.id}
-                href={att.file_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="aspect-square rounded-md overflow-hidden border bg-muted block"
-              >
-                <img
-                  src={att.file_url}
-                  alt={att.file_name || 'Foto'}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
-              </a>
-            ))}
+            {imageAttachments.slice(0, 6).map((att) => {
+              const isLinked = !!att.maintenance_ticket_id;
+              return (
+                <a
+                  key={att.id}
+                  href={att.file_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`relative aspect-square rounded-md overflow-hidden border bg-muted block ${
+                    isLinked ? 'ring-2 ring-primary/40' : ''
+                  }`}
+                >
+                  <img
+                    src={att.file_url}
+                    alt={att.file_name || 'Foto'}
+                    className={`w-full h-full object-cover ${isLinked ? 'opacity-80' : ''}`}
+                    loading="lazy"
+                  />
+                  {isLinked && (
+                    <div className="absolute top-1 left-1 bg-primary text-primary-foreground rounded-full p-0.5 shadow-sm">
+                      <ClipboardCheck className="h-3 w-3" />
+                    </div>
+                  )}
+                </a>
+              );
+            })}
           </div>
+          {imageAttachments.some((a) => a.maintenance_ticket_id) && (
+            <p className="text-[11px] text-muted-foreground mt-1.5 flex items-center gap-1">
+              <ClipboardCheck className="h-3 w-3 text-primary" /> Já virou manutenção
+            </p>
+          )}
           {imageAttachments.length > 6 && (
             <p className="text-xs text-muted-foreground mt-2 text-center">
               +{imageAttachments.length - 6} fotos
