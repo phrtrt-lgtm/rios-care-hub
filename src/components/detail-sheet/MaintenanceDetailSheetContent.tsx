@@ -107,6 +107,8 @@ export function MaintenanceDetailSheetContent({ id, onOpenFull }: Props) {
     file_name: a.file_name,
     file_type: a.file_type || a.mime_type,
     size_bytes: a.size_bytes ?? a.file_size ?? null,
+    from_inspection: a.from_inspection ?? false,
+    inspection_id: a.inspection_id ?? null,
   }));
 
   const handleUploadClick = (e: React.MouseEvent) => {
