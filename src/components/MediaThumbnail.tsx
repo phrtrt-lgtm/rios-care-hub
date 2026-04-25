@@ -31,9 +31,10 @@ export const MediaThumbnail = memo(({
   const [loading, setLoading] = useState(true);
   const { loadMedia, getCachedUrl } = useMediaCache();
 
-  const isVideo = fileType?.startsWith('video/');
-  const isImage = fileType?.startsWith('image/');
-  const isPDF = fileType === 'application/pdf';
+  const kind = detectMediaKind(fileType, fileName, src);
+  const isVideo = kind === 'video';
+  const isImage = kind === 'image';
+  const isPDF = kind === 'pdf';
 
   useEffect(() => {
     let cancelled = false;
