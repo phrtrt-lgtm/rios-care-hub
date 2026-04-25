@@ -259,6 +259,11 @@ serve(async (req) => {
     }
 
     // --- Envia e-mails (não bloqueia em caso de falha) ---
+    console.log("[email] RESEND_API_KEY present:", !!RESEND_API_KEY);
+    console.log("[email] MAIL_FROM:", MAIL_FROM);
+    console.log("[email] ADMIN_NOTIFY_EMAILS:", ADMIN_NOTIFY_EMAILS);
+    console.log("[email] owner email:", email);
+
     if (RESEND_API_KEY) {
       const adminHtml = buildAdminEmailHtml(payload, submission.id, PORTAL_URL);
       const ownerHtml = buildOwnerWelcomeHtml(payload.owner_name, magicLink);
@@ -273,9 +278,14 @@ serve(async (req) => {
             },
             body: JSON.stringify({ from: MAIL_FROM, to, subject, html }),
           });
-          if (!res.ok) console.error("Email send failed", subject, await res.text());
+          const responseText = await res.text();
+          if (!res.ok) {
+            console.error(`[email] FAIL → to=${JSON.stringify(to)} subject="${subject}" status=${res.status} body=${responseText}`);
+          } else {
+            console.log(`[email] OK → to=${JSON.stringify(to)} subject="${subject}" response=${responseText}`);
+          }
         } catch (e) {
-          console.error("Email send error", subject, e);
+          console.error(`[email] ERROR → to=${JSON.stringify(to)} subject="${subject}"`, e);
         }
       };
 
@@ -285,10 +295,12 @@ serve(async (req) => {
           `🏠 Nova ficha: ${payload.owner_name} — ${payload.property_nickname || payload.property_address.slice(0, 40)}`,
           adminHtml
         );
+      } else {
+        console.warn("[email] ADMIN_NOTIFY_EMAILS vazio — nenhuma notificação admin será enviada");
       }
       await sendEmail([email], "Recebemos sua ficha — RIOS Hospedagens", ownerHtml);
     } else {
-      console.warn("RESEND_API_KEY not set, skipping email send");
+      console.warn("[email] RESEND_API_KEY not set, skipping email send");
     }
 
     return new Response(
