@@ -1298,7 +1298,7 @@ function ToggleRow({
       style={{ borderColor: "hsl(206 20% 88%)" }}
     >
       <div className="flex items-center gap-3">
-        <Icon className="h-4 w-4" style={{ color: "hsl(206 56% 22% / 0.6)" }} />
+        <Icon className="h-4 w-4 text-[hsl(206_56%_22%/0.6)]" />
         <span className="text-sm font-medium" style={{ color: "hsl(206 56% 22%)" }}>
           {label}
         </span>
