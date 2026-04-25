@@ -290,6 +290,67 @@ serve(async (req) => {
     const INVALID_ADMIN_NOTIFY_EMAILS = ADMIN_NOTIFY_EMAILS.filter((value) => !isValidEmail(value));
     const PORTAL_URL = "https://portal.rioshospedagens.com.br";
 
+    // --- Modo TESTE: ?test=1 envia uma amostra para os admins, sem persistir nada ---
+    const url = new URL(req.url);
+    if (url.searchParams.get("test") === "1") {
+      if (!RESEND_API_KEY) {
+        return new Response(JSON.stringify({ error: "RESEND_API_KEY não configurada" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const samplePayload: IntakePayload = {
+        owner_name: "Maria Exemplo (TESTE)",
+        owner_email: "exemplo@rios.test",
+        owner_phone: "(11) 98765-4321",
+        property_address: "Rua das Tulipas, 180 — Apto 404, Pinheiros, São Paulo/SP",
+        property_nickname: "Tulipas 404",
+        bedrooms_count: 2,
+        living_rooms_count: 1,
+        bathrooms_count: 2,
+        suites_count: 1,
+        building_floors: 12,
+        apartment_floor: 4,
+        property_levels: 1,
+        has_elevator: true,
+        has_wifi: true,
+        max_capacity: 5,
+        parking_spots: 1,
+        rooms_data: [
+          { name: "Suíte master", floor: 1, beds: [{ type: "Casal", count: 1 }], hasAC: true, hasTV: true, hasBalcony: true },
+          { name: "Quarto 2", floor: 1, beds: [{ type: "Solteiro", count: 2 }], hasAC: true },
+          { name: "Sala de estar", floor: 1, beds: [{ type: "Sofá-cama", count: 1 }], hasTV: true, hasBalcony: true },
+        ],
+        kitchen_items: ["Geladeira", "Fogão 4 bocas", "Microondas", "Cafeteira", "Liquidificador", "Jogo de panelas"],
+        special_amenities: ["Ar-condicionado em todos os quartos", "Smart TV", "Roupa de cama premium"],
+        condo_amenities: ["Piscina", "Academia", "Churrasqueira", "Portaria 24h"],
+        notes: "Imóvel reformado em 2024. Disponível a partir de janeiro.\nPreferência por estadias acima de 3 noites.",
+        previously_listed_airbnb: false,
+      };
+      const adminHtml = buildAdminEmailHtml(samplePayload, "TESTE-" + crypto.randomUUID().slice(0, 8), PORTAL_URL);
+      const validAdminEmails = ADMIN_NOTIFY_EMAILS.filter((value) => isValidEmail(value));
+      const recipients = validAdminEmails.length > 0 ? validAdminEmails : ["rioslagoon@gmail.com"];
+      const subject = "🧪 [TESTE] Pré-visualização da ficha técnica — RIOS";
+
+      const results = await Promise.all(recipients.map(async (to) => {
+        const res = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${RESEND_API_KEY}`,
+          },
+          body: JSON.stringify({ from: MAIL_FROM, to: [to], subject, html: adminHtml }),
+        });
+        const body = await res.text();
+        return { to, status: res.status, ok: res.ok, body };
+      }));
+
+      return new Response(JSON.stringify({ test: true, recipients, results }, null, 2), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const payload = (await req.json()) as IntakePayload;
 
     // --- Validação básica ---
