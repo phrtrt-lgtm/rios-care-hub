@@ -242,7 +242,10 @@ serve(async (req) => {
         kitchen_items: payload.kitchen_items || [],
         special_amenities: payload.special_amenities || [],
         condo_amenities: payload.condo_amenities || [],
-        notes: payload.notes?.trim() || null,
+        notes: [
+          payload.previously_listed_airbnb === true ? "[Já anunciou em plataformas anteriormente]" : payload.previously_listed_airbnb === false ? "[Primeira experiência com aluguel por temporada]" : null,
+          payload.notes?.trim() || null,
+        ].filter(Boolean).join("\n\n") || null,
         status: "novo",
         ip_address: ipAddress,
         user_agent: userAgent,
