@@ -390,7 +390,7 @@ function StepProgress({ current }: { current: number }) {
                   initial={{ width: 0 }}
                   animate={{ width: isActive || isDone ? "100%" : "0%" }}
                   transition={{ duration: 0.4 }}
-                  className="h-full bg-gradient-to-r from-[hsl(var(--rios-blue))] via-[hsl(var(--rios-blue-light))] to-primary"
+                  className="h-full bg-gradient-to-r from-[hsl(var(--rios-terra))] via-[hsl(var(--rios-terra-light))] to-[hsl(var(--rios-blue))]"
                 />
               </div>
               <div className="flex items-center gap-1.5 text-[10px] md:text-xs">
