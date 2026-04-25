@@ -206,11 +206,20 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange }: MediaG
                 )}
                 {isVideo && (
                   <video
-                    src={currentBlobUrl}
                     controls
                     className="max-w-full max-h-full w-auto h-auto"
                     autoPlay
-                  />
+                    playsInline
+                  >
+                    <source
+                      src={currentBlobUrl}
+                      type={
+                        currentItem.file_type?.startsWith('video/')
+                          ? currentItem.file_type
+                          : 'video/mp4'
+                      }
+                    />
+                  </video>
                 )}
                 {isPDF && (
                   <div className="w-full h-full flex flex-col items-center justify-center gap-4">
