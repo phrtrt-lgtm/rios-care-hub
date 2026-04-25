@@ -708,6 +708,15 @@ export default function AdminVistoriaDetalhes() {
         transcriptSummary={transcriptSummaryForDialog}
       />
 
+      <LinkInspectionAttachmentsDialog
+        open={linkDialogOpen}
+        onOpenChange={setLinkDialogOpen}
+        propertyId={property.id}
+        inspectionCreatedAt={inspection.created_at}
+        attachments={attachments}
+        onLinked={fetchData}
+      />
+
       <EditInspectionDialog
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
