@@ -77,6 +77,8 @@ import RelatoriosPropriedade from "./pages/RelatoriosPropriedade";
 import AdminFichasImoveis from "./pages/AdminFichasImoveis";
 import AdminRelatoriosFinanceiros from "./pages/AdminRelatoriosFinanceiros";
 import AdminRelatoriosProprietario from "./pages/AdminRelatoriosProprietario";
+import CadastroImovel from "./pages/CadastroImovel";
+import AdminCadastrosProprietarios from "./pages/AdminCadastrosProprietarios";
 const queryClient = new QueryClient();
 
 const App = () => (
