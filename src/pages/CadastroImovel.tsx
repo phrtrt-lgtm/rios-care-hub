@@ -53,12 +53,15 @@ import {
 } from "@/constants/intakeOptions";
 
 const STEPS = [
-  { id: 1, title: "Sobre você", icon: User, description: "Identificação e ficha técnica" },
-  { id: 2, title: "Cômodos", icon: BedDouble, description: "Camas e equipamentos" },
-  { id: 3, title: "Cozinha & especiais", icon: ChefHat, description: "O que torna seu imóvel único" },
-  { id: 4, title: "Condomínio", icon: Building2, description: "Comodidades do prédio" },
-  { id: 5, title: "Revisão", icon: PartyPopper, description: "Confira e envie" },
+  { id: 1, title: "Sobre você", icon: User, description: "Identificação do proprietário" },
+  { id: 2, title: "Ficha técnica", icon: Building2, description: "Números essenciais do imóvel" },
+  { id: 3, title: "Cômodos", icon: BedDouble, description: "Camas e equipamentos" },
+  { id: 4, title: "Cozinha & especiais", icon: ChefHat, description: "O que torna seu imóvel único" },
+  { id: 5, title: "Condomínio", icon: Building2, description: "Comodidades do prédio" },
+  { id: 6, title: "Revisão", icon: PartyPopper, description: "Confira e envie" },
 ];
+
+const TOTAL_STEPS = STEPS.length;
 
 const initialForm: IntakeFormData = {
   owner_name: "",
@@ -66,6 +69,7 @@ const initialForm: IntakeFormData = {
   owner_phone: "",
   property_nickname: "",
   property_address: "",
+  previously_listed_airbnb: null,
   bedrooms_count: 1,
   living_rooms_count: 1,
   bathrooms_count: 1,
@@ -185,13 +189,17 @@ export default function CadastroImovel() {
         form.owner_name.trim().length > 1 &&
         /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.owner_email) &&
         form.property_address.trim().length > 4 &&
+        form.previously_listed_airbnb !== null
+      );
+    }
+    if (step === 2) {
+      return (
         form.bedrooms_count > 0 &&
         form.bathrooms_count > 0 &&
         form.max_capacity > 0
       );
     }
-    if (step === 2) {
-      // Pelo menos os quartos com 1 cama cada
+    if (step === 3) {
       return form.rooms_data.filter((r) => r.type === "bedroom").every((r) => r.beds.length > 0);
     }
     return true;
@@ -202,7 +210,7 @@ export default function CadastroImovel() {
       toast.error("Preencha os campos obrigatórios para continuar");
       return;
     }
-    setStep((s) => Math.min(5, s + 1));
+    setStep((s) => Math.min(TOTAL_STEPS, s + 1));
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -268,18 +276,19 @@ export default function CadastroImovel() {
               transition={{ duration: 0.3 }}
             >
               {step === 1 && <Step1 form={form} update={update} />}
-              {step === 2 && <Step2 form={form} updateRoom={updateRoom} />}
-              {step === 3 && (
-                <Step3
+              {step === 2 && <Step2Tech form={form} update={update} />}
+              {step === 3 && <Step3Rooms form={form} updateRoom={updateRoom} />}
+              {step === 4 && (
+                <Step4KitchenSpecial
                   form={form}
                   toggleKitchen={(v) => toggleArr("kitchen_items", v)}
                   toggleSpecial={(v) => toggleArr("special_amenities", v)}
                 />
               )}
-              {step === 4 && (
-                <Step4 form={form} toggleCondo={(v) => toggleArr("condo_amenities", v)} />
+              {step === 5 && (
+                <Step5Condo form={form} toggleCondo={(v) => toggleArr("condo_amenities", v)} />
               )}
-              {step === 5 && <Step5 form={form} update={update} />}
+              {step === 6 && <Step6Review form={form} update={update} />}
             </motion.div>
           </AnimatePresence>
 
@@ -295,7 +304,7 @@ export default function CadastroImovel() {
               Voltar
             </Button>
 
-            {step < 5 ? (
+            {step < TOTAL_STEPS ? (
               <Button onClick={next} size="lg" className="gap-2 shadow-lg">
                 Continuar
                 <ArrowRight className="h-4 w-4" />
@@ -365,7 +374,7 @@ function BrandHeader() {
 function StepProgress({ current }: { current: number }) {
   return (
     <div className="container max-w-5xl mx-auto px-4 pb-8">
-      <div className="grid grid-cols-5 gap-2">
+      <div className="grid grid-cols-6 gap-2">
         {STEPS.map((s) => {
           const Icon = s.icon;
           const isActive = current === s.id;
@@ -468,10 +477,60 @@ function Step1({
             />
           </Field>
         </div>
-      </Card>
 
+        <div className="mt-6">
+          <p className="text-sm font-medium mb-3">
+            Já alugou pelo Airbnb (ou outra plataforma) antes? *
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { value: true, label: "Sim, já anunciei", emoji: "✅" },
+              { value: false, label: "Não, será a primeira vez", emoji: "🌱" },
+            ].map((opt) => {
+              const isActive = form.previously_listed_airbnb === opt.value;
+              return (
+                <button
+                  key={String(opt.value)}
+                  type="button"
+                  onClick={() => update("previously_listed_airbnb", opt.value)}
+                  className={`relative rounded-xl border-2 p-4 text-left transition-all ${
+                    isActive
+                      ? "border-primary bg-primary/5 shadow-md"
+                      : "border-border hover:border-primary/40 bg-card"
+                  }`}
+                >
+                  <div className="text-2xl mb-1">{opt.emoji}</div>
+                  <div className="text-sm font-semibold">{opt.label}</div>
+                  {isActive && (
+                    <div className="absolute top-2 right-2 h-5 w-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                      <Check className="h-3 w-3" />
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+/* ------------------------------- STEP 2 TECH ------------------------------ */
+function Step2Tech({
+  form,
+  update,
+}: {
+  form: IntakeFormData;
+  update: <K extends keyof IntakeFormData>(k: K, v: IntakeFormData[K]) => void;
+}) {
+  return (
+    <div className="space-y-6">
       <Card className="p-6 md:p-8 shadow-xl border-primary/10">
-        <h3 className="text-lg font-semibold mb-1">Ficha técnica</h3>
+        <h3 className="text-lg font-semibold mb-1 flex items-center gap-2">
+          <Building2 className="h-5 w-5 text-primary" />
+          Ficha técnica
+        </h3>
         <p className="text-sm text-muted-foreground mb-6">Os números essenciais do seu imóvel.</p>
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -496,7 +555,7 @@ function Step1({
 }
 
 /* --------------------------------- STEP 2 -------------------------------- */
-function Step2({
+function Step3Rooms({
   form,
   updateRoom,
 }: {
@@ -727,7 +786,7 @@ function RoomCard({
 }
 
 /* --------------------------------- STEP 3 -------------------------------- */
-function Step3({
+function Step4KitchenSpecial({
   form,
   toggleKitchen,
   toggleSpecial,
@@ -780,7 +839,7 @@ function Step3({
 }
 
 /* --------------------------------- STEP 4 -------------------------------- */
-function Step4({ form, toggleCondo }: { form: IntakeFormData; toggleCondo: (v: string) => void }) {
+function Step5Condo({ form, toggleCondo }: { form: IntakeFormData; toggleCondo: (v: string) => void }) {
   return (
     <Card className="p-6 md:p-8 shadow-xl border-primary/10">
       <h3 className="text-lg font-semibold mb-1 flex items-center gap-2">
@@ -804,7 +863,7 @@ function Step4({ form, toggleCondo }: { form: IntakeFormData; toggleCondo: (v: s
 }
 
 /* --------------------------------- STEP 5 -------------------------------- */
-function Step5({
+function Step6Review({
   form,
   update,
 }: {

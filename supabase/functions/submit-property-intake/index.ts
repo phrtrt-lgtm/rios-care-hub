@@ -28,6 +28,7 @@ interface IntakePayload {
   special_amenities: string[];
   condo_amenities: string[];
   notes?: string;
+  previously_listed_airbnb?: boolean | null;
 }
 
 function isValidEmail(email: string) {
@@ -77,6 +78,7 @@ function buildAdminEmailHtml(data: IntakePayload, submissionId: string, portalUr
       <tr><td style="padding:6px 0;color:#64748b;">Vagas de garagem</td><td style="text-align:right;color:#0f172a;font-weight:600;">${data.parking_spots}</td></tr>
       <tr><td style="padding:6px 0;color:#64748b;">Elevador</td><td style="text-align:right;color:#0f172a;font-weight:600;">${fmtBool(data.has_elevator)}</td></tr>
       <tr><td style="padding:6px 0;color:#64748b;">Wi-Fi</td><td style="text-align:right;color:#0f172a;font-weight:600;">${fmtBool(data.has_wifi)}</td></tr>
+      <tr><td style="padding:6px 0;color:#64748b;">Já alugou pelo Airbnb?</td><td style="text-align:right;color:#0f172a;font-weight:600;">${data.previously_listed_airbnb === true ? "Sim" : data.previously_listed_airbnb === false ? "Não (primeira vez)" : "—"}</td></tr>
     </table>
 
     <h3 style="color:#0f172a;font-size:16px;margin:24px 0 8px;">Cômodos</h3>
@@ -240,7 +242,10 @@ serve(async (req) => {
         kitchen_items: payload.kitchen_items || [],
         special_amenities: payload.special_amenities || [],
         condo_amenities: payload.condo_amenities || [],
-        notes: payload.notes?.trim() || null,
+        notes: [
+          payload.previously_listed_airbnb === true ? "[Já anunciou em plataformas anteriormente]" : payload.previously_listed_airbnb === false ? "[Primeira experiência com aluguel por temporada]" : null,
+          payload.notes?.trim() || null,
+        ].filter(Boolean).join("\n\n") || null,
         status: "novo",
         ip_address: ipAddress,
         user_agent: userAgent,
