@@ -273,12 +273,12 @@ function buildAdminEmailHtml(data: IntakePayload, submissionId: string, portalUr
     <!-- CTA -->
     <tr><td style="padding:36px 32px;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-        <tr><td align="center" style="padding:20px;background:${BG_SOFT};border-radius:12px;">
-          <p style="margin:0 0 14px;color:${TEXT_MID};font-size:13px;">Acesse o painel para revisar e dar sequência ao cadastro</p>
-          <a href="${portalUrl}/admin/cadastros-proprietarios" style="display:inline-block;background:${BRAND_TERRA};color:#fff;padding:13px 28px;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;">Ver no painel →</a>
+        <tr><td align="center" style="padding:24px;background:${BG_SOFT};border-radius:12px;">
+          <p style="margin:0 0 16px;color:${TEXT_MID};font-size:15px;">Acesse o painel para revisar e dar sequência ao cadastro</p>
+          <a href="${portalUrl}/admin/cadastros-proprietarios" style="display:inline-block;background:${BRAND_TERRA};color:#fff;padding:14px 32px;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;">Ver no painel →</a>
         </td></tr>
       </table>
-      <p style="margin:18px 0 0;color:${TEXT_MUTED};font-size:11px;text-align:center;">ID da submissão: ${escapeHtml(submissionId)}</p>
+      <p style="margin:18px 0 0;color:${TEXT_MUTED};font-size:12px;text-align:center;">ID da submissão: ${escapeHtml(submissionId)}</p>
     </td></tr>
   `;
 
