@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useMediaCache } from "@/hooks/useMediaCache";
 import { MediaThumbnail } from "./MediaThumbnail";
 import { Skeleton } from "@/components/ui/skeleton";
+import { detectMediaKind } from "@/lib/mediaType";
 
 interface MediaItem {
   id: string;
