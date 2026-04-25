@@ -558,24 +558,42 @@ export default function AdminVistoriaDetalhes() {
           {/* Media Gallery */}
           {mediaAttachments.length > 0 && (
             <Card className="p-4">
-              <div className="flex items-center gap-2 mb-4">
-                <Wrench className="h-5 w-5 text-primary" />
-                <h3 className="font-semibold">Fotos e Vídeos</h3>
-                <Badge variant="secondary">{pendingMedia.length}</Badge>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Wrench className="h-5 w-5 text-primary" />
+                  <h3 className="font-semibold">Fotos e Vídeos</h3>
+                  <Badge variant="secondary">{mediaAttachments.length}</Badge>
+                </div>
+                {pendingMedia.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setLinkDialogOpen(true)}
+                    className="gap-1.5"
+                  >
+                    <Wrench className="h-3.5 w-3.5" />
+                    Já virou manutenção
+                  </Button>
+                )}
               </div>
               {pendingMedia.length > 0 ? (
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
-                  {pendingMedia.map((attachment) => (
-                    <MediaThumbnail
-                      key={attachment.id}
-                      src={attachment.file_url}
-                      fileType={attachment.file_type}
-                      fileName={attachment.file_name}
-                      size="lg"
-                      onClick={() => handleMediaClick(attachment)}
-                    />
-                  ))}
-                </div>
+                <>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Pendentes ({pendingMedia.length})
+                  </p>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+                    {pendingMedia.map((attachment) => (
+                      <MediaThumbnail
+                        key={attachment.id}
+                        src={attachment.file_url}
+                        fileType={attachment.file_type}
+                        fileName={attachment.file_name}
+                        size="lg"
+                        onClick={() => handleMediaClick(attachment)}
+                      />
+                    ))}
+                  </div>
+                </>
               ) : (
                 <p className="text-sm text-muted-foreground py-4 text-center">
                   Todas as fotos desta vistoria já foram atribuídas a manutenções.
@@ -583,32 +601,37 @@ export default function AdminVistoriaDetalhes() {
               )}
 
               {linkedMedia.length > 0 && (
-                <Collapsible className="mt-4">
-                  <CollapsibleTrigger asChild>
-                    <button className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-                      <ChevronDown className="h-4 w-4" />
-                      Já em manutenção ({linkedMedia.length})
-                    </button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 mt-2">
-                      {linkedMedia.map((att) => (
-                        <div key={att.id} className="relative aspect-square rounded-lg overflow-hidden">
+                <div className="mt-4">
+                  <p className="text-xs font-medium text-primary flex items-center gap-1.5 mb-2">
+                    <Wrench className="h-3 w-3" />
+                    Já viraram manutenção ({linkedMedia.length})
+                  </p>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+                    {linkedMedia.map((att) => (
+                      <button
+                        key={att.id}
+                        type="button"
+                        onClick={() => handleMediaClick(att)}
+                        className="relative aspect-square rounded-lg overflow-hidden ring-2 ring-primary/40 group"
+                      >
+                        {att.file_type?.startsWith('image/') ? (
                           <img
                             src={att.file_url}
                             alt={att.file_name || 'Foto'}
-                            className="w-full h-full object-cover opacity-50 grayscale"
+                            className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity"
                           />
-                          <div className="absolute top-1 left-1">
-                            <div className="bg-background/80 rounded p-0.5">
-                              <Wrench className="h-3 w-3 text-muted-foreground" />
-                            </div>
+                        ) : (
+                          <div className="w-full h-full bg-muted flex items-center justify-center">
+                            <Wrench className="h-6 w-6 text-muted-foreground" />
                           </div>
+                        )}
+                        <div className="absolute top-1 left-1 bg-primary text-primary-foreground rounded-full p-1 shadow-md">
+                          <Wrench className="h-3 w-3" />
                         </div>
-                      ))}
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               )}
             </Card>
           )}
