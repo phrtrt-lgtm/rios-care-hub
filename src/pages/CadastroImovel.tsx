@@ -353,7 +353,7 @@ function BrandHeader() {
               className="h-14 md:h-16 w-auto"
             />
           </div>
-          <div className="hidden sm:block border-l-2 border-[hsl(var(--rios-blue))]/25 pl-5">
+          <div className="border-l-2 border-[hsl(var(--rios-blue))]/25 pl-4 sm:pl-5">
             <p className="text-sm md:text-base uppercase tracking-[0.22em] text-[hsl(var(--rios-blue))] font-bold leading-tight">Hospedagens</p>
             <p className="text-xs md:text-sm text-muted-foreground mt-1 tracking-wide">Operação & Gestão</p>
           </div>
