@@ -344,18 +344,18 @@ function BrandHeader() {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-5"
+          className="flex items-center gap-3 sm:gap-5"
         >
-          <div className="p-2.5 rounded-2xl bg-[hsl(var(--rios-blue))]/5 ring-1 ring-[hsl(var(--rios-blue))]/15">
+          <div className="shrink-0 p-2 sm:p-2.5 rounded-2xl bg-[hsl(var(--rios-blue))]/5 ring-1 ring-[hsl(var(--rios-blue))]/15">
             <img
               src={riosLogo}
               alt="RIOS"
-              className="h-14 md:h-16 w-auto"
+              className="h-10 sm:h-14 md:h-16 w-auto object-contain"
             />
           </div>
-          <div className="border-l-2 border-[hsl(var(--rios-blue))]/25 pl-4 sm:pl-5">
-            <p className="text-sm md:text-base uppercase tracking-[0.22em] text-[hsl(var(--rios-blue))] font-bold leading-tight">Hospedagens</p>
-            <p className="text-xs md:text-sm text-muted-foreground mt-1 tracking-wide">Operação & Gestão</p>
+          <div className="min-w-0 border-l-2 border-[hsl(var(--rios-blue))]/25 pl-3 sm:pl-5">
+            <p className="text-xs sm:text-base uppercase tracking-[0.22em] text-[hsl(var(--rios-blue))] font-bold leading-tight">Hospedagens</p>
+            <p className="text-[11px] sm:text-sm text-muted-foreground mt-1 tracking-wide">Operação & Gestão</p>
           </div>
         </motion.div>
 
