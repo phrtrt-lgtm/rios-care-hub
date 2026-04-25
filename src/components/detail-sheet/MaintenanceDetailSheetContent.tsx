@@ -21,6 +21,7 @@ import {
   Loader2,
   Pencil,
   ImageIcon,
+  ClipboardCheck,
 } from 'lucide-react';
 import { CHARGE_CATEGORIES } from '@/constants/chargeCategories';
 import { MediaThumbnail } from '@/components/MediaThumbnail';
