@@ -321,27 +321,43 @@ export function MaintenanceDetailSheetContent({ id, onOpenFull }: Props) {
             <span className="text-xs">Clique para adicionar fotos, vídeos ou documentos</span>
           </button>
         ) : (
-          <div className="grid grid-cols-3 gap-2">
-            {allAttachments.map((att, idx) => (
-              <button
-                key={att.id}
-                type="button"
-                onClick={() => {
-                  setGalleryIndex(idx);
-                  setGalleryOpen(true);
-                }}
-                className="aspect-square rounded-md overflow-hidden border bg-muted relative group hover:ring-2 hover:ring-primary/40 transition-all"
-              >
-                <MediaThumbnail
-                  src={att.file_url}
-                  fileType={att.file_type}
-                  fileName={att.file_name}
-                  size="lg"
-                />
-                <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/10 transition-colors" />
-              </button>
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-3 gap-2">
+              {allAttachments.map((att, idx) => (
+                <button
+                  key={att.id}
+                  type="button"
+                  onClick={() => {
+                    setGalleryIndex(idx);
+                    setGalleryOpen(true);
+                  }}
+                  className={`aspect-square rounded-md overflow-hidden border bg-muted relative group hover:ring-2 hover:ring-primary/40 transition-all ${
+                    att.from_inspection ? 'border-info/40 ring-1 ring-info/20' : ''
+                  }`}
+                  title={att.from_inspection ? 'Anexo vindo da vistoria' : att.file_name}
+                >
+                  <MediaThumbnail
+                    src={att.file_url}
+                    fileType={att.file_type}
+                    fileName={att.file_name}
+                    size="lg"
+                  />
+                  {att.from_inspection && (
+                    <div className="absolute top-1 left-1 bg-info text-info-foreground rounded-full p-1 shadow-sm">
+                      <ClipboardCheck className="h-3 w-3" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/10 transition-colors" />
+                </button>
+              ))}
+            </div>
+            {allAttachments.some((a) => a.from_inspection) && (
+              <p className="text-[11px] text-muted-foreground mt-2 flex items-center gap-1">
+                <ClipboardCheck className="h-3 w-3 text-info" />
+                Anexos com este ícone vieram da vistoria de origem
+              </p>
+            )}
+          </>
         )}
       </div>
 
