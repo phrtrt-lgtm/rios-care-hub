@@ -340,14 +340,16 @@ function BrandHeader() {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center gap-3"
+        className="flex items-center gap-4"
       >
-        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg">
-          <Home className="h-6 w-6 text-primary-foreground" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">RIOS</h1>
-          <p className="text-xs text-muted-foreground">Operação e Gestão de Hospedagens</p>
+        <img
+          src={riosLogo}
+          alt="RIOS"
+          className="h-12 md:h-14 w-auto"
+        />
+        <div className="hidden sm:block border-l border-[hsl(var(--rios-blue))]/20 pl-4">
+          <p className="text-xs uppercase tracking-[0.2em] text-[hsl(var(--rios-blue))] font-semibold">Hospedagens</p>
+          <p className="text-[10px] text-muted-foreground">Operação & Gestão</p>
         </div>
       </motion.div>
 
@@ -357,7 +359,7 @@ function BrandHeader() {
         transition={{ delay: 0.1 }}
         className="mt-8 space-y-3"
       >
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[hsl(var(--rios-blue))]/10 text-[hsl(var(--rios-blue))] text-xs font-medium">
           <Sparkles className="h-3 w-3" />
           Cadastro exclusivo de novos parceiros
         </div>
