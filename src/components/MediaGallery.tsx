@@ -56,7 +56,7 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange }: MediaG
     if (!open || !currentItem) return;
 
     // PDFs use the original URL directly in iframe (blob URLs don't work in iframes)
-    if (currentItem.file_type === 'application/pdf') {
+    if (isPDF) {
       setCurrentBlobUrl(currentItem.file_url);
       setLoading(false);
       return;
