@@ -14,6 +14,7 @@ import {
   ExternalLink,
   CheckCircle2,
   AlertTriangle,
+  ClipboardCheck,
 } from 'lucide-react';
 
 interface Props {
