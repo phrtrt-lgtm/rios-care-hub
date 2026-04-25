@@ -53,12 +53,15 @@ import {
 } from "@/constants/intakeOptions";
 
 const STEPS = [
-  { id: 1, title: "Sobre você", icon: User, description: "Identificação e ficha técnica" },
-  { id: 2, title: "Cômodos", icon: BedDouble, description: "Camas e equipamentos" },
-  { id: 3, title: "Cozinha & especiais", icon: ChefHat, description: "O que torna seu imóvel único" },
-  { id: 4, title: "Condomínio", icon: Building2, description: "Comodidades do prédio" },
-  { id: 5, title: "Revisão", icon: PartyPopper, description: "Confira e envie" },
+  { id: 1, title: "Sobre você", icon: User, description: "Identificação do proprietário" },
+  { id: 2, title: "Ficha técnica", icon: Building2, description: "Números essenciais do imóvel" },
+  { id: 3, title: "Cômodos", icon: BedDouble, description: "Camas e equipamentos" },
+  { id: 4, title: "Cozinha & especiais", icon: ChefHat, description: "O que torna seu imóvel único" },
+  { id: 5, title: "Condomínio", icon: Building2, description: "Comodidades do prédio" },
+  { id: 6, title: "Revisão", icon: PartyPopper, description: "Confira e envie" },
 ];
+
+const TOTAL_STEPS = STEPS.length;
 
 const initialForm: IntakeFormData = {
   owner_name: "",
@@ -66,6 +69,7 @@ const initialForm: IntakeFormData = {
   owner_phone: "",
   property_nickname: "",
   property_address: "",
+  previously_listed_airbnb: null,
   bedrooms_count: 1,
   living_rooms_count: 1,
   bathrooms_count: 1,
