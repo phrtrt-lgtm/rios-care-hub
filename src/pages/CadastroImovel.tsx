@@ -367,7 +367,7 @@ function BrandHeader() {
           Vamos conhecer o seu imóvel
         </h2>
         <p className="text-muted-foreground max-w-xl">
-          Preencha as informações abaixo. Em seguida, nossa equipe entra em contato para uma reunião exclusiva e os próximos passos da parceria.
+          Preencha as informações abaixo e já realizamos seu <strong className="text-foreground">pré-cadastro na plataforma RIOS</strong>. Em seguida, nossa equipe entra em contato para uma reunião exclusiva e os próximos passos da parceria.
         </p>
       </motion.div>
     </header>
