@@ -528,7 +528,7 @@ function Step1({
 }) {
   return (
     <div className="space-y-6">
-      <EditorialCard number="01.A" title="Sobre você" subtitle="Como podemos te chamar?">
+      <EditorialCard title="Sobre você" subtitle="Como podemos te chamar?">
         <div className="grid md:grid-cols-2 gap-5">
           <Field label="Nome completo" required icon={User}>
             <Input
@@ -585,7 +585,7 @@ function Step1({
       </EditorialCard>
 
       <EditorialCard
-        number="01.B"
+       
         title="Ficha técnica"
         subtitle="Os números essenciais do seu imóvel."
       >
@@ -623,7 +623,7 @@ function Step2({
 
   return (
     <EditorialCard
-      number="02"
+     
       title="Cômodos & camas"
       subtitle={`Configure cada cômodo gerado a partir da ficha técnica.${
         totalFloors > 1 ? " Selecione em qual pavimento cada um se encontra." : ""
@@ -893,7 +893,7 @@ function Step3({
   return (
     <div className="space-y-6">
       <EditorialCard
-        number="03.A"
+       
         title="Itens da cozinha"
         subtitle="Marque tudo que está disponível."
       >
@@ -911,7 +911,7 @@ function Step3({
       </EditorialCard>
 
       <EditorialCard
-        number="03.B"
+       
         title="Comodidades especiais"
         subtitle="O que torna seu imóvel único?"
       >
@@ -935,7 +935,7 @@ function Step3({
 function Step4({ form, toggleCondo }: { form: IntakeFormData; toggleCondo: (v: string) => void }) {
   return (
     <EditorialCard
-      number="04"
+     
       title="Comodidades do condomínio"
       subtitle="Estrutura compartilhada disponível aos hóspedes."
     >
@@ -969,7 +969,7 @@ function Step5({
 
   return (
     <div className="space-y-6">
-      <EditorialCard number="05" title="Tudo certo?" subtitle="Revise as informações antes de enviar.">
+      <EditorialCard title="Tudo certo?" subtitle="Revise as informações antes de enviar.">
         <div className="grid md:grid-cols-2 gap-x-8 gap-y-1 mb-8">
           <SummaryItem label="Proprietário" value={form.owner_name} />
           <SummaryItem label="E-mail" value={form.owner_email} />
@@ -1016,7 +1016,7 @@ function Step5({
       </EditorialCard>
 
       <EditorialCard
-        number="05.B"
+       
         title="Algo a mais?"
         subtitle="Conte algo que devemos saber antes da conversa (opcional)."
       >
