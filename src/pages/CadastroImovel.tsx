@@ -942,7 +942,7 @@ function SuccessScreen({ ownerName, email }: { ownerName: string; email: string 
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.2, type: "spring" }}
-            className="h-20 w-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-xl"
+            className="h-20 w-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-[hsl(var(--rios-blue))] to-[hsl(var(--rios-blue-light))] flex items-center justify-center shadow-xl"
           >
             <Check className="h-10 w-10 text-primary-foreground" strokeWidth={3} />
           </motion.div>
