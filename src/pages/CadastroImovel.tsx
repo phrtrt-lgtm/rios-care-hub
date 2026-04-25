@@ -354,10 +354,8 @@ function BrandHeader() {
             />
           </div>
           <div className="hidden sm:block border-l-2 border-[hsl(var(--rios-blue))]/25 pl-5">
-            <p className="text-sm md:text-base uppercase tracking-[0.22em] text-[hsl(var(--rios-blue))] font-bold leading-tight">
-              Operação <span className="text-[hsl(var(--rios-terra))]">&</span> Gestão
-            </p>
-            <p className="text-xs md:text-sm text-muted-foreground mt-1 tracking-wide">de Hospedagens de alto padrão</p>
+            <p className="text-sm md:text-base uppercase tracking-[0.22em] text-[hsl(var(--rios-blue))] font-bold leading-tight">Hospedagens</p>
+            <p className="text-xs md:text-sm text-muted-foreground mt-1 tracking-wide">Operação & Gestão</p>
           </div>
         </motion.div>
 
