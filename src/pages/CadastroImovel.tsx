@@ -347,8 +347,8 @@ function BrandHeader() {
           alt="RIOS"
           className="h-12 md:h-14 w-auto"
         />
-        <div className="hidden sm:block border-l border-[hsl(var(--rios-blue))]/20 pl-4">
-          <p className="text-xs uppercase tracking-[0.2em] text-[hsl(var(--rios-blue))] font-semibold">Hospedagens</p>
+        <div className="hidden sm:block border-l border-[hsl(var(--rios-terra))]/30 pl-4">
+          <p className="text-xs uppercase tracking-[0.2em] text-[hsl(var(--rios-terra))] font-semibold">Hospedagens</p>
           <p className="text-[10px] text-muted-foreground">Operação & Gestão</p>
         </div>
       </motion.div>
@@ -359,7 +359,7 @@ function BrandHeader() {
         transition={{ delay: 0.1 }}
         className="mt-8 space-y-3"
       >
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[hsl(var(--rios-blue))]/10 text-[hsl(var(--rios-blue))] text-xs font-medium">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[hsl(var(--rios-terra))]/15 text-[hsl(var(--rios-terra))] text-xs font-medium ring-1 ring-[hsl(var(--rios-terra))]/20">
           <Sparkles className="h-3 w-3" />
           Cadastro exclusivo de novos parceiros
         </div>
