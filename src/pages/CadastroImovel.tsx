@@ -340,22 +340,24 @@ function BrandHeader() {
       {/* Faixa decorativa superior em azul da logo */}
       <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[hsl(var(--rios-blue))] via-[hsl(var(--rios-blue-light))] to-[hsl(var(--rios-terra))]" />
 
-      <div className="container max-w-5xl mx-auto px-4 pt-10 pb-6">
+      <div className="container max-w-5xl mx-auto px-4 pt-10 pb-8">
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-4"
+          className="flex items-center gap-5"
         >
-          <div className="p-2 rounded-xl bg-[hsl(var(--rios-blue))]/5 ring-1 ring-[hsl(var(--rios-blue))]/15">
+          <div className="p-2.5 rounded-2xl bg-[hsl(var(--rios-blue))]/5 ring-1 ring-[hsl(var(--rios-blue))]/15">
             <img
               src={riosLogo}
               alt="RIOS"
-              className="h-12 md:h-14 w-auto"
+              className="h-14 md:h-16 w-auto"
             />
           </div>
-          <div className="hidden sm:block border-l border-[hsl(var(--rios-blue))]/30 pl-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-[hsl(var(--rios-blue))] font-semibold">Hospedagens</p>
-            <p className="text-[10px] text-muted-foreground">Operação & Gestão</p>
+          <div className="hidden sm:block border-l-2 border-[hsl(var(--rios-blue))]/25 pl-5">
+            <p className="text-sm md:text-base uppercase tracking-[0.22em] text-[hsl(var(--rios-blue))] font-bold leading-tight">
+              Operação <span className="text-[hsl(var(--rios-terra))]">&</span> Gestão
+            </p>
+            <p className="text-xs md:text-sm text-muted-foreground mt-1 tracking-wide">de Hospedagens de alto padrão</p>
           </div>
         </motion.div>
 
@@ -369,10 +371,7 @@ function BrandHeader() {
             <Sparkles className="h-3 w-3" />
             Cadastro exclusivo de novos parceiros
           </div>
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight max-w-2xl leading-tight">
-            Vamos conhecer o seu <span className="text-[hsl(var(--rios-blue))]">imóvel</span>
-          </h2>
-          <p className="text-muted-foreground max-w-xl">
+          <p className="text-muted-foreground max-w-xl text-base leading-relaxed">
             Preencha as informações abaixo e já realizamos seu <strong className="text-foreground">pré-cadastro na plataforma RIOS</strong>. Em seguida, nossa equipe entra em contato para uma reunião exclusiva e os próximos passos da parceria.
           </p>
         </motion.div>
