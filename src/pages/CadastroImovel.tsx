@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import riosLogo from "@/assets/rios-logo.png";
 import {
   Home,
   ArrowRight,
