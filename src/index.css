@@ -9,8 +9,9 @@ All colors MUST be HSL.
 @layer base {
   :root {
     /* RIOS Color Palette */
-    --rios-blue: 206 56% 22%;        /* #1C3A57 - Azul principal RIOS */
-    --rios-blue-light: 206 45% 35%;  /* Azul mais claro */
+    --rios-blue: 204 48% 42%;        /* Azul da logo - tom médio/vibrante */
+    --rios-blue-light: 204 55% 58%;  /* Azul claro */
+    --rios-blue-deep: 206 56% 22%;   /* Azul profundo (uso pontual) */
     --rios-terra: 20 63% 48%;        /* #C8642A - Terracota */
     --rios-terra-light: 20 55% 60%;  /* Terracota mais claro */
     

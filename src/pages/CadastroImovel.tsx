@@ -336,40 +336,47 @@ export default function CadastroImovel() {
 /* ----------------------------- BRAND HEADER ----------------------------- */
 function BrandHeader() {
   return (
-    <header className="container max-w-5xl mx-auto px-4 pt-10 pb-6">
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-center gap-4"
-      >
-        <img
-          src={riosLogo}
-          alt="RIOS"
-          className="h-12 md:h-14 w-auto"
-        />
-        <div className="hidden sm:block border-l border-[hsl(var(--rios-terra))]/30 pl-4">
-          <p className="text-xs uppercase tracking-[0.2em] text-[hsl(var(--rios-terra))] font-semibold">Hospedagens</p>
-          <p className="text-[10px] text-muted-foreground">Operação & Gestão</p>
-        </div>
-      </motion.div>
+    <header className="relative">
+      {/* Faixa decorativa superior em azul da logo */}
+      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[hsl(var(--rios-blue))] via-[hsl(var(--rios-blue-light))] to-[hsl(var(--rios-terra))]" />
 
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="mt-8 space-y-3"
-      >
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[hsl(var(--rios-terra))]/15 text-[hsl(var(--rios-terra))] text-xs font-medium ring-1 ring-[hsl(var(--rios-terra))]/20">
-          <Sparkles className="h-3 w-3" />
-          Cadastro exclusivo de novos parceiros
-        </div>
-        <h2 className="text-3xl md:text-4xl font-bold tracking-tight max-w-2xl leading-tight">
-          Vamos conhecer o seu imóvel
-        </h2>
-        <p className="text-muted-foreground max-w-xl">
-          Preencha as informações abaixo e já realizamos seu <strong className="text-foreground">pré-cadastro na plataforma RIOS</strong>. Em seguida, nossa equipe entra em contato para uma reunião exclusiva e os próximos passos da parceria.
-        </p>
-      </motion.div>
+      <div className="container max-w-5xl mx-auto px-4 pt-10 pb-6">
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-4"
+        >
+          <div className="p-2 rounded-xl bg-[hsl(var(--rios-blue))]/5 ring-1 ring-[hsl(var(--rios-blue))]/15">
+            <img
+              src={riosLogo}
+              alt="RIOS"
+              className="h-12 md:h-14 w-auto"
+            />
+          </div>
+          <div className="hidden sm:block border-l border-[hsl(var(--rios-blue))]/30 pl-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-[hsl(var(--rios-blue))] font-semibold">Hospedagens</p>
+            <p className="text-[10px] text-muted-foreground">Operação & Gestão</p>
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="mt-8 space-y-3"
+        >
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[hsl(var(--rios-blue))]/10 text-[hsl(var(--rios-blue))] text-xs font-medium ring-1 ring-[hsl(var(--rios-blue))]/20">
+            <Sparkles className="h-3 w-3" />
+            Cadastro exclusivo de novos parceiros
+          </div>
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight max-w-2xl leading-tight">
+            Vamos conhecer o seu <span className="text-[hsl(var(--rios-blue))]">imóvel</span>
+          </h2>
+          <p className="text-muted-foreground max-w-xl">
+            Preencha as informações abaixo e já realizamos seu <strong className="text-foreground">pré-cadastro na plataforma RIOS</strong>. Em seguida, nossa equipe entra em contato para uma reunião exclusiva e os próximos passos da parceria.
+          </p>
+        </motion.div>
+      </div>
     </header>
   );
 }
