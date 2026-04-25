@@ -320,21 +320,41 @@ export default function ManutencaoDetalhes({ embedded = false, idOverride }: Man
               return (
                 <div className="space-y-4">
                   {mediaAttachments.length > 0 && (
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-                      {mediaAttachments.map((attachment: any, idx: number) => (
-                        <MediaThumbnail
-                          key={attachment.id}
-                          src={attachment.file_url}
-                          fileType={attachment.file_type}
-                          fileName={attachment.file_name}
-                          size="lg"
-                          onClick={() => {
-                            setGalleryStartIndex(idx);
-                            setGalleryOpen(true);
-                          }}
-                        />
-                      ))}
-                    </div>
+                    <>
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                        {mediaAttachments.map((attachment: any, idx: number) => (
+                          <div
+                            key={attachment.id}
+                            className={`relative ${
+                              attachment.from_inspection ? 'ring-1 ring-info/30 rounded-md' : ''
+                            }`}
+                            title={attachment.from_inspection ? 'Anexo vindo da vistoria' : attachment.file_name}
+                          >
+                            <MediaThumbnail
+                              src={attachment.file_url}
+                              fileType={attachment.file_type}
+                              fileName={attachment.file_name}
+                              size="lg"
+                              onClick={() => {
+                                setGalleryStartIndex(idx);
+                                setGalleryOpen(true);
+                              }}
+                            />
+                            {attachment.from_inspection && (
+                              <div className="absolute top-1 left-1 bg-info text-info-foreground rounded-full p-1 shadow-sm pointer-events-none z-10">
+                                <ClipboardCheck className="h-3 w-3" />
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      {mediaAttachments.some((a: any) => a.from_inspection) && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                          <ClipboardCheck className="h-3.5 w-3.5 text-info" />
+                          Anexos com este ícone vieram da vistoria de origem desta manutenção
+                        </p>
+                      )}
+                    </>
                   )}
                   {otherAttachments.length > 0 && (
                     <div className="space-y-2">
