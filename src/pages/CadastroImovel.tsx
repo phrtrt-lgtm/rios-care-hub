@@ -485,7 +485,6 @@ function StepProgress({ current }: { current: number }) {
 /* --------------------------------- CARD WRAPPER --------------------------- */
 function EditorialCard({
   children,
-  number,
   title,
   subtitle,
 }: {
@@ -496,37 +495,24 @@ function EditorialCard({
 }) {
   return (
     <div
-      className="relative rounded-2xl bg-white/80 backdrop-blur-sm border p-6 md:p-10 shadow-[0_20px_60px_-30px_hsl(206_56%_22%/0.25)]"
+      className="relative rounded-2xl bg-white/90 backdrop-blur-sm border p-6 md:p-8 shadow-[0_10px_40px_-20px_hsl(206_56%_22%/0.2)]"
       style={{ borderColor: "hsl(206 20% 90%)" }}
     >
-      <div className="flex items-baseline gap-4 mb-2">
-        {number && (
-          <span
-            className="text-xs tracking-[0.3em] uppercase font-medium"
-            style={{ color: "hsl(20 63% 48%)" }}
-          >
-            {number}
-          </span>
-        )}
-        <h3
-          className="text-2xl md:text-3xl tracking-tight"
-          style={{
-            fontFamily: "'Fraunces', Georgia, serif",
-            fontWeight: 400,
-            color: "hsl(206 56% 22%)",
-          }}
-        >
-          {title}
-        </h3>
-      </div>
+      <h3
+        className="text-xl md:text-2xl font-semibold tracking-tight"
+        style={{ color: "hsl(206 56% 22%)" }}
+      >
+        {title}
+      </h3>
       {subtitle && (
         <p
-          className="text-sm mb-7 max-w-xl"
+          className="text-sm mt-1.5 mb-6 max-w-xl"
           style={{ color: "hsl(206 30% 45%)" }}
         >
           {subtitle}
         </p>
       )}
+      {!subtitle && <div className="mb-6" />}
       {children}
     </div>
   );
@@ -542,7 +528,7 @@ function Step1({
 }) {
   return (
     <div className="space-y-6">
-      <EditorialCard number="01.A" title="Sobre você" subtitle="Como podemos te chamar?">
+      <EditorialCard title="Sobre você" subtitle="Como podemos te chamar?">
         <div className="grid md:grid-cols-2 gap-5">
           <Field label="Nome completo" required icon={User}>
             <Input
@@ -599,7 +585,7 @@ function Step1({
       </EditorialCard>
 
       <EditorialCard
-        number="01.B"
+       
         title="Ficha técnica"
         subtitle="Os números essenciais do seu imóvel."
       >
@@ -637,7 +623,7 @@ function Step2({
 
   return (
     <EditorialCard
-      number="02"
+     
       title="Cômodos & camas"
       subtitle={`Configure cada cômodo gerado a partir da ficha técnica.${
         totalFloors > 1 ? " Selecione em qual pavimento cada um se encontra." : ""
@@ -907,7 +893,7 @@ function Step3({
   return (
     <div className="space-y-6">
       <EditorialCard
-        number="03.A"
+       
         title="Itens da cozinha"
         subtitle="Marque tudo que está disponível."
       >
@@ -925,7 +911,7 @@ function Step3({
       </EditorialCard>
 
       <EditorialCard
-        number="03.B"
+       
         title="Comodidades especiais"
         subtitle="O que torna seu imóvel único?"
       >
@@ -949,7 +935,7 @@ function Step3({
 function Step4({ form, toggleCondo }: { form: IntakeFormData; toggleCondo: (v: string) => void }) {
   return (
     <EditorialCard
-      number="04"
+     
       title="Comodidades do condomínio"
       subtitle="Estrutura compartilhada disponível aos hóspedes."
     >
@@ -983,7 +969,7 @@ function Step5({
 
   return (
     <div className="space-y-6">
-      <EditorialCard number="05" title="Tudo certo?" subtitle="Revise as informações antes de enviar.">
+      <EditorialCard title="Tudo certo?" subtitle="Revise as informações antes de enviar.">
         <div className="grid md:grid-cols-2 gap-x-8 gap-y-1 mb-8">
           <SummaryItem label="Proprietário" value={form.owner_name} />
           <SummaryItem label="E-mail" value={form.owner_email} />
@@ -1030,7 +1016,7 @@ function Step5({
       </EditorialCard>
 
       <EditorialCard
-        number="05.B"
+       
         title="Algo a mais?"
         subtitle="Conte algo que devemos saber antes da conversa (opcional)."
       >
@@ -1221,59 +1207,80 @@ function NumberField({
   hint?: string;
   icon?: React.ComponentType<{ className?: string }>;
 }) {
+  const inc = () => onChange(Math.min(max, value + 1));
+  const dec = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onChange(Math.max(min, value - 1));
+  };
+  const isMax = value >= max;
+  const isMin = value <= min;
+  const isActive = value > 0;
+
   return (
-    <div className="space-y-2">
-      <Label
-        className="text-[10px] tracking-[0.25em] uppercase font-medium flex items-center gap-1.5"
-        style={{ color: "hsl(206 30% 45%)" }}
+    <div className="space-y-1.5">
+      <button
+        type="button"
+        onClick={inc}
+        disabled={isMax}
+        className="group relative w-full text-left rounded-xl border bg-white px-4 py-3 transition-all hover:shadow-md active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+        style={{
+          borderColor: isActive ? "hsl(20 63% 48% / 0.4)" : "hsl(206 20% 88%)",
+          background: isActive ? "hsl(20 63% 48% / 0.04)" : "white",
+        }}
       >
-        {Icon && <Icon className="h-3 w-3" />}
-        {label}
-        {required && (
-          <span style={{ color: "hsl(20 63% 48%)" }} className="ml-0.5">
-            ·
-          </span>
-        )}
-      </Label>
-      <div
-        className="flex items-center gap-1 rounded-lg bg-white h-11 border transition-colors focus-within:border-primary"
-        style={{ borderColor: "hsl(206 20% 88%)" }}
-      >
-        <Button
-          size="icon"
-          variant="ghost"
-          className="h-10 w-10 shrink-0 rounded-md"
-          onClick={() => onChange(Math.max(min, value - 1))}
-          type="button"
-        >
-          <Minus className="h-3 w-3" />
-        </Button>
-        <input
-          type="number"
-          value={value}
-          onChange={(e) => {
-            const n = Number(e.target.value);
-            if (!isNaN(n)) onChange(Math.max(min, Math.min(max, n)));
-          }}
-          className="flex-1 h-full bg-transparent text-center text-base outline-none"
-          style={{
-            fontFamily: "'Fraunces', serif",
-            fontWeight: 500,
-            color: "hsl(206 56% 22%)",
-          }}
-        />
-        <Button
-          size="icon"
-          variant="ghost"
-          className="h-10 w-10 shrink-0 rounded-md"
-          onClick={() => onChange(Math.min(max, value + 1))}
-          type="button"
-        >
-          <Plus className="h-3 w-3" />
-        </Button>
-      </div>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 min-w-0">
+            {Icon && (
+              <Icon className="h-3.5 w-3.5 shrink-0 text-[hsl(206_56%_22%/0.55)]" />
+            )}
+            <span
+              className="text-[11px] font-medium truncate"
+              style={{ color: "hsl(206 30% 40%)" }}
+            >
+              {label}
+              {required && (
+                <span style={{ color: "hsl(20 63% 48%)" }}> *</span>
+              )}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {!isMin && (
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={dec}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onChange(Math.max(min, value - 1));
+                  }
+                }}
+                className="h-6 w-6 inline-flex items-center justify-center rounded-md border bg-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted cursor-pointer"
+                style={{ borderColor: "hsl(206 20% 85%)" }}
+                aria-label="Diminuir"
+              >
+                <Minus className="h-3 w-3" style={{ color: "hsl(206 56% 22%)" }} />
+              </span>
+            )}
+            <span
+              className="inline-flex items-center justify-center h-7 min-w-[28px] px-1.5 rounded-md text-sm font-bold tabular-nums"
+              style={{
+                background: isActive ? "hsl(20 63% 48%)" : "hsl(206 20% 92%)",
+                color: isActive ? "white" : "hsl(206 30% 50%)",
+              }}
+            >
+              {value}
+            </span>
+            <Plus
+              className="h-3.5 w-3.5 transition-transform group-hover:scale-110 group-active:scale-95"
+              style={{ color: isActive ? "hsl(20 63% 48%)" : "hsl(206 30% 55%)" }}
+            />
+          </div>
+        </div>
+      </button>
       {hint && (
-        <p className="text-[10px] italic" style={{ color: "hsl(206 30% 55%)" }}>
+        <p className="text-[10px] pl-1" style={{ color: "hsl(206 30% 55%)" }}>
           {hint}
         </p>
       )}
