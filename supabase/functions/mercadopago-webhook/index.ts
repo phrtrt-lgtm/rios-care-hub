@@ -451,16 +451,20 @@ const handler = async (req: Request): Promise<Response> => {
               }
             } else {
               console.log(`Payment record already exists for charge ${chargeId}, skipping insert`);
-              // Ensure charge status is updated even if payment record already exists
-              const currentChargeStatus = status === 'approved'
-                ? getPaymentStatus(charge.due_date, paidAt)
-                : baseChargeStatus;
-              await supabase
-                .from('charges')
-                .update({ status: currentChargeStatus, paid_at: paidAt, updated_at: new Date().toISOString() })
-                .eq('id', chargeId)
-                .in('status', ['sent', 'pendente', 'overdue']); // only update if still unpaid
-              console.log(`Ensured charge ${chargeId} status updated to ${currentChargeStatus}`);
+            }
+
+            // ALWAYS ensure charge status reflects the payment, regardless of whether
+            // the payment record was just created or already existed (idempotent retry safety)
+            const currentChargeStatus = getPaymentStatus(charge.due_date, paidAt);
+            const { error: forceUpdateError } = await supabase
+              .from('charges')
+              .update({ status: currentChargeStatus, paid_at: paidAt, updated_at: new Date().toISOString() })
+              .eq('id', chargeId)
+              .not('status', 'in', '(arquivado,debited,cancelled,pago_antecipado,pago_no_vencimento,pago_com_atraso)');
+            if (forceUpdateError) {
+              console.error(`Error force-updating charge ${chargeId} status:`, forceUpdateError);
+            } else {
+              console.log(`Charge ${chargeId} status guaranteed as ${currentChargeStatus}`);
             }
 
             // Update owner score
@@ -544,26 +548,47 @@ const handler = async (req: Request): Promise<Response> => {
 
       // Criar registro de pagamento se foi aprovado
       if (status === 'approved') {
-        const paymentRecord = {
-          charge_id: chargeId,
-          amount_cents: charge.amount_cents - (charge.management_contribution_cents || 0),
-          payment_date: paidAt,
-          method: 'mercadopago',
-          applies_to: 'total',
-          note: `Pagamento MercadoPago ID: ${paymentId}`,
-          proof_file_url: receiptUrl,
-          created_by: charge.owner_id,
-        };
-
-        const { error: paymentError } = await supabase
+        // Check for duplicate payment record (retry safety)
+        const { data: existingSinglePayment } = await supabase
           .from('charge_payments')
-          .insert(paymentRecord);
+          .select('id')
+          .eq('charge_id', chargeId)
+          .eq('method', 'mercadopago')
+          .maybeSingle();
 
-        if (paymentError) {
-          console.error('Error creating payment record:', paymentError);
+        if (!existingSinglePayment) {
+          const paymentRecord = {
+            charge_id: chargeId,
+            amount_cents: charge.amount_cents - (charge.management_contribution_cents || 0),
+            payment_date: paidAt,
+            method: 'mercadopago',
+            applies_to: 'total',
+            note: `Pagamento MercadoPago ID: ${paymentId}`,
+            proof_file_url: receiptUrl,
+            created_by: charge.owner_id,
+          };
+
+          const { error: paymentError } = await supabase
+            .from('charge_payments')
+            .insert(paymentRecord);
+
+          if (paymentError) {
+            console.error('Error creating payment record:', paymentError);
+          } else {
+            console.log('Payment record created successfully');
+          }
         } else {
-          console.log('Payment record created successfully');
+          console.log('Payment record already exists, skipping insert');
         }
+
+        // ALWAYS guarantee charge status (idempotent retry safety)
+        const guaranteedStatus = getPaymentStatus(charge.due_date, paidAt);
+        await supabase
+          .from('charges')
+          .update({ status: guaranteedStatus, paid_at: paidAt, updated_at: new Date().toISOString() })
+          .eq('id', chargeId)
+          .not('status', 'in', '(arquivado,debited,cancelled,pago_antecipado,pago_no_vencimento,pago_com_atraso)');
+        console.log(`Charge ${chargeId} status guaranteed as ${guaranteedStatus}`);
 
         // Update owner score
         await updateOwnerScore(supabase, charge.owner_id, chargeId, charge.due_date, paidAt);
