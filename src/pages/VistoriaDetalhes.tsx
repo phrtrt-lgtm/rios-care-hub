@@ -295,32 +295,37 @@ export default function VistoriaDetalhes() {
                 )}
 
                 {linkedMedia.length > 0 && (
-                  <Collapsible className="mt-4">
-                    <CollapsibleTrigger asChild>
-                      <button className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-                        <ChevronDown className="h-4 w-4" />
-                        Já em manutenção ({linkedMedia.length})
-                      </button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
-                        {linkedMedia.map((att) => (
-                          <div key={att.id} className="relative aspect-square rounded-lg overflow-hidden">
+                  <div className="mt-4">
+                    <p className="text-xs font-medium text-primary flex items-center gap-1.5 mb-2">
+                      <Wrench className="h-3 w-3" />
+                      Já viraram manutenção ({linkedMedia.length})
+                    </p>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                      {linkedMedia.map((att) => (
+                        <button
+                          key={att.id}
+                          type="button"
+                          onClick={() => handleMediaClick(att)}
+                          className="relative aspect-square rounded-lg overflow-hidden ring-2 ring-primary/40 group"
+                        >
+                          {att.file_type?.startsWith('image/') ? (
                             <img
                               src={att.file_url}
                               alt={att.file_name || 'Foto'}
-                              className="w-full h-full object-cover opacity-50 grayscale"
+                              className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity"
                             />
-                            <div className="absolute top-1 left-1">
-                              <div className="bg-background/80 rounded p-0.5">
-                                <Wrench className="h-3 w-3 text-muted-foreground" />
-                              </div>
+                          ) : (
+                            <div className="w-full h-full bg-muted flex items-center justify-center">
+                              <Wrench className="h-6 w-6 text-muted-foreground" />
                             </div>
+                          )}
+                          <div className="absolute top-1 left-1 bg-primary text-primary-foreground rounded-full p-1 shadow-md">
+                            <Wrench className="h-3 w-3" />
                           </div>
-                        ))}
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </CardContent>
             </Card>
