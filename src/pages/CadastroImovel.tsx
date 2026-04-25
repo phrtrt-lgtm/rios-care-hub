@@ -276,18 +276,19 @@ export default function CadastroImovel() {
               transition={{ duration: 0.3 }}
             >
               {step === 1 && <Step1 form={form} update={update} />}
-              {step === 2 && <Step2 form={form} updateRoom={updateRoom} />}
-              {step === 3 && (
-                <Step3
+              {step === 2 && <Step2Tech form={form} update={update} />}
+              {step === 3 && <Step3Rooms form={form} updateRoom={updateRoom} />}
+              {step === 4 && (
+                <Step4KitchenSpecial
                   form={form}
                   toggleKitchen={(v) => toggleArr("kitchen_items", v)}
                   toggleSpecial={(v) => toggleArr("special_amenities", v)}
                 />
               )}
-              {step === 4 && (
-                <Step4 form={form} toggleCondo={(v) => toggleArr("condo_amenities", v)} />
+              {step === 5 && (
+                <Step5Condo form={form} toggleCondo={(v) => toggleArr("condo_amenities", v)} />
               )}
-              {step === 5 && <Step5 form={form} update={update} />}
+              {step === 6 && <Step6Review form={form} update={update} />}
             </motion.div>
           </AnimatePresence>
 
@@ -303,7 +304,7 @@ export default function CadastroImovel() {
               Voltar
             </Button>
 
-            {step < 5 ? (
+            {step < TOTAL_STEPS ? (
               <Button onClick={next} size="lg" className="gap-2 shadow-lg">
                 Continuar
                 <ArrowRight className="h-4 w-4" />
