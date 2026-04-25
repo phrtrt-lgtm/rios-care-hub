@@ -189,13 +189,17 @@ export default function CadastroImovel() {
         form.owner_name.trim().length > 1 &&
         /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.owner_email) &&
         form.property_address.trim().length > 4 &&
+        form.previously_listed_airbnb !== null
+      );
+    }
+    if (step === 2) {
+      return (
         form.bedrooms_count > 0 &&
         form.bathrooms_count > 0 &&
         form.max_capacity > 0
       );
     }
-    if (step === 2) {
-      // Pelo menos os quartos com 1 cama cada
+    if (step === 3) {
       return form.rooms_data.filter((r) => r.type === "bedroom").every((r) => r.beds.length > 0);
     }
     return true;
@@ -206,7 +210,7 @@ export default function CadastroImovel() {
       toast.error("Preencha os campos obrigatórios para continuar");
       return;
     }
-    setStep((s) => Math.min(5, s + 1));
+    setStep((s) => Math.min(TOTAL_STEPS, s + 1));
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
