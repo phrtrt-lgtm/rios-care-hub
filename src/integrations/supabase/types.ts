@@ -1915,6 +1915,111 @@ export type Database = {
           },
         ]
       }
+      property_intake_submissions: {
+        Row: {
+          apartment_floor: number | null
+          assigned_to: string | null
+          bathrooms_count: number
+          bedrooms_count: number
+          building_floors: number | null
+          condo_amenities: Json
+          created_at: string
+          has_elevator: boolean
+          has_wifi: boolean
+          id: string
+          internal_notes: string | null
+          ip_address: string | null
+          kitchen_items: Json
+          living_rooms_count: number
+          max_capacity: number
+          notes: string | null
+          owner_email: string
+          owner_name: string
+          owner_phone: string | null
+          owner_profile_id: string | null
+          parking_spots: number
+          property_address: string
+          property_levels: number
+          property_nickname: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          rooms_data: Json
+          special_amenities: Json
+          status: string
+          suites_count: number
+          updated_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          apartment_floor?: number | null
+          assigned_to?: string | null
+          bathrooms_count?: number
+          bedrooms_count?: number
+          building_floors?: number | null
+          condo_amenities?: Json
+          created_at?: string
+          has_elevator?: boolean
+          has_wifi?: boolean
+          id?: string
+          internal_notes?: string | null
+          ip_address?: string | null
+          kitchen_items?: Json
+          living_rooms_count?: number
+          max_capacity?: number
+          notes?: string | null
+          owner_email: string
+          owner_name: string
+          owner_phone?: string | null
+          owner_profile_id?: string | null
+          parking_spots?: number
+          property_address: string
+          property_levels?: number
+          property_nickname?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          rooms_data?: Json
+          special_amenities?: Json
+          status?: string
+          suites_count?: number
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          apartment_floor?: number | null
+          assigned_to?: string | null
+          bathrooms_count?: number
+          bedrooms_count?: number
+          building_floors?: number | null
+          condo_amenities?: Json
+          created_at?: string
+          has_elevator?: boolean
+          has_wifi?: boolean
+          id?: string
+          internal_notes?: string | null
+          ip_address?: string | null
+          kitchen_items?: Json
+          living_rooms_count?: number
+          max_capacity?: number
+          notes?: string | null
+          owner_email?: string
+          owner_name?: string
+          owner_phone?: string | null
+          owner_profile_id?: string | null
+          parking_spots?: number
+          property_address?: string
+          property_levels?: number
+          property_nickname?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          rooms_data?: Json
+          special_amenities?: Json
+          status?: string
+          suites_count?: number
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       proposal_attachments: {
         Row: {
           created_at: string
