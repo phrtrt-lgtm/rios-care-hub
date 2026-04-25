@@ -67,7 +67,7 @@ export function LinkInspectionAttachmentsDialog({
     const load = async () => {
       setLoadingTickets(true);
       try {
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from('tickets')
           .select('id, subject, created_at, status')
           .eq('property_id', propertyId)
@@ -76,7 +76,7 @@ export function LinkInspectionAttachmentsDialog({
           .order('created_at', { ascending: false })
           .limit(20);
         if (error) throw error;
-        setTickets(data || []);
+        setTickets((data as Ticket[]) || []);
       } catch (err) {
         console.error('Erro ao carregar manutenções:', err);
         toast.error('Erro ao carregar manutenções');
