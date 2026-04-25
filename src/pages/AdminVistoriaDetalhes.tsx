@@ -122,6 +122,7 @@ export default function AdminVistoriaDetalhes() {
   const [extraPrompt, setExtraPrompt] = useState('');
   const [importingToKanban, setImportingToKanban] = useState(false);
   const [routineChecklist, setRoutineChecklist] = useState<any>(null);
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!authLoading) {
