@@ -374,7 +374,7 @@ function BrandHeader() {
 function StepProgress({ current }: { current: number }) {
   return (
     <div className="container max-w-5xl mx-auto px-4 pb-8">
-      <div className="grid grid-cols-5 gap-2">
+      <div className="grid grid-cols-6 gap-2">
         {STEPS.map((s) => {
           const Icon = s.icon;
           const isActive = current === s.id;
