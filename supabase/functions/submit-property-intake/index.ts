@@ -35,9 +35,105 @@ function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+/* ----------------------------------------------------------------------------
+ * Layout RIOS padrão (mesmo template usado em ticket_created_owner,
+ * inspection_created, charge_created, etc.):
+ *   - Background: #f5f7fb
+ *   - Card: #ffffff, border-radius 12px
+ *   - Header: #0f3150 (azul RIOS), texto branco
+ *   - Botão CTA: #d36b4d (terracota), texto branco, border-radius 10px
+ *   - Tipografia: Arial,Helvetica,sans-serif
+ *   - Footer: #f0f2f7 com assinatura "Equipe RIOS"
+ * -------------------------------------------------------------------------- */
+
+const EMAIL_BG = "#f5f7fb";
+const CARD_BG = "#ffffff";
+const HEADER_BG = "#0f3150";
+const BUTTON_BG = "#d36b4d";
+const TEXT_DARK = "#11243a";
+const TEXT_BODY = "#334155";
+const TEXT_MUTED = "#64748b";
+const FOOTER_BG = "#f0f2f7";
+const FONT = "Arial,Helvetica,sans-serif";
+
+function emailShell(opts: { title: string; preheader: string; heading: string; bodyHtml: string; ctaUrl?: string; ctaLabel?: string; footerNote?: string }) {
+  const { title, preheader, heading, bodyHtml, ctaUrl, ctaLabel, footerNote } = opts;
+  return `<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <title>${title}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      .preheader { display:none!important; visibility:hidden; opacity:0; color:transparent; height:0; width:0; overflow:hidden; mso-hide:all; }
+      @media (prefers-color-scheme: dark) {
+        .card { background:#0b1e33 !important; }
+        .text { color:#f1f5f9 !important; }
+        .muted { color:#cbd5e1 !important; }
+        .btn { background:${BUTTON_BG} !important; }
+      }
+      a { color:${HEADER_BG}; }
+    </style>
+  </head>
+  <body style="margin:0;padding:0;background:${EMAIL_BG};">
+    <div class="preheader">${preheader}</div>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:${EMAIL_BG};">
+      <tr>
+        <td align="center" style="padding:24px;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:640px;background:${CARD_BG};border-radius:12px;overflow:hidden;">
+            <tr>
+              <td style="background:${HEADER_BG};padding:20px;">
+                <h1 style="margin:0;font-family:${FONT};font-size:20px;line-height:24px;color:#ffffff;">
+                  Rios • Portal do Proprietário
+                </h1>
+              </td>
+            </tr>
+            <tr>
+              <td class="card" style="padding:24px;background:${CARD_BG};">
+                <h2 style="margin:0 0 12px;font-family:${FONT};font-size:18px;line-height:24px;color:${HEADER_BG};">
+                  ${heading}
+                </h2>
+                ${bodyHtml}
+                ${ctaUrl && ctaLabel ? `
+                <!--[if mso]>
+                <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="${ctaUrl}" arcsize="10%" stroke="f" fillcolor="${BUTTON_BG}" style="height:44px;v-text-anchor:middle;width:240px;">
+                  <w:anchorlock/>
+                  <center style="color:#ffffff;font-family:${FONT};font-size:16px;">${ctaLabel}</center>
+                </v:roundrect>
+                <![endif]-->
+                <!--[if !mso]><!-->
+                <a href="${ctaUrl}" class="btn" style="display:inline-block;background:${BUTTON_BG};color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:10px;font-family:${FONT};font-size:16px;line-height:20px;text-align:center;margin-top:8px;">
+                  ${ctaLabel}
+                </a>
+                <!--<![endif]-->
+                ` : ""}
+                ${footerNote ? `<p class="muted" style="margin:16px 0 0;font-family:${FONT};font-size:12px;line-height:18px;color:${TEXT_MUTED};">${footerNote}</p>` : ""}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 24px;background:${FOOTER_BG};">
+                <p style="margin:0 0 6px;font-family:${FONT};font-size:12px;line-height:18px;color:${TEXT_BODY};">
+                  Abraços,<br><strong>Equipe RIOS</strong>
+                </p>
+                <p style="margin:0;font-family:${FONT};font-size:11px;line-height:16px;color:${TEXT_MUTED};">
+                  Este é um e-mail automático. Em caso de dúvidas, acesse o Portal.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+}
+
 function buildAdminEmailHtml(data: IntakePayload, submissionId: string, portalUrl: string) {
   const fmtBool = (v: boolean) => (v ? "Sim" : "Não");
   const list = (arr: string[]) => (arr?.length ? arr.join(", ") : "—");
+  const rowStyle = `font-family:${FONT};font-size:14px;line-height:22px;color:${TEXT_BODY};padding:6px 0;`;
+  const sectionTitle = `font-family:${FONT};font-size:15px;line-height:22px;color:${HEADER_BG};margin:20px 0 8px;font-weight:700;`;
+
   const roomsSummary = (data.rooms_data as Array<{ name?: string; type?: string; floor?: number; beds?: Array<{ type: string; count: number }>; hasAC?: boolean; hasTV?: boolean; hasBalcony?: boolean; hasOutdoorArea?: boolean }>).map((r, i) => {
     const beds = (r.beds || []).map(b => `${b.count}× ${b.type}`).join(", ") || "—";
     const features = [
@@ -46,90 +142,90 @@ function buildAdminEmailHtml(data: IntakePayload, submissionId: string, portalUr
       r.hasBalcony && "Varanda",
       r.hasOutdoorArea && "Área externa",
     ].filter(Boolean).join(" · ");
-    return `<li style="margin-bottom:6px;"><strong>${r.name || `Cômodo ${i + 1}`}</strong> (Pav. ${r.floor || 1}) — Camas: ${beds}${features ? ` · ${features}` : ""}</li>`;
+    return `<li style="margin-bottom:6px;font-family:${FONT};font-size:14px;line-height:22px;color:${TEXT_BODY};"><strong>${r.name || `Cômodo ${i + 1}`}</strong> (Pav. ${r.floor || 1}) — Camas: ${beds}${features ? ` · ${features}` : ""}</li>`;
   }).join("");
 
-  return `<!DOCTYPE html>
-<html><head><meta charset="utf-8"></head>
-<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f5f5;margin:0;padding:0;">
-<div style="max-width:680px;margin:0 auto;background:#fff;">
-  <div style="background:linear-gradient(135deg,#0ea5e9 0%,#6366f1 100%);padding:32px;text-align:center;">
-    <h1 style="color:#fff;margin:0;font-size:24px;">RIOS</h1>
-    <p style="color:rgba(255,255,255,0.9);margin:6px 0 0;font-size:14px;">Nova ficha de potencial proprietário</p>
-  </div>
-  <div style="padding:32px;">
-    <h2 style="color:#0f172a;font-size:20px;margin:0 0 16px;">${data.owner_name}</h2>
-    <p style="color:#475569;margin:0 0 4px;">📧 ${data.owner_email}</p>
-    ${data.owner_phone ? `<p style="color:#475569;margin:0 0 16px;">📱 ${data.owner_phone}</p>` : ""}
-
-    <h3 style="color:#0f172a;font-size:16px;margin:24px 0 8px;">Imóvel</h3>
-    <p style="color:#334155;margin:0 0 8px;"><strong>${data.property_nickname || "Sem apelido"}</strong></p>
-    <p style="color:#475569;margin:0 0 12px;">📍 ${data.property_address}</p>
-
-    <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
-      <tr><td style="padding:6px 0;color:#64748b;">Quartos</td><td style="text-align:right;color:#0f172a;font-weight:600;">${data.bedrooms_count}</td></tr>
-      <tr><td style="padding:6px 0;color:#64748b;">Salas</td><td style="text-align:right;color:#0f172a;font-weight:600;">${data.living_rooms_count}</td></tr>
-      <tr><td style="padding:6px 0;color:#64748b;">Banheiros</td><td style="text-align:right;color:#0f172a;font-weight:600;">${data.bathrooms_count}</td></tr>
-      <tr><td style="padding:6px 0;color:#64748b;">Suítes</td><td style="text-align:right;color:#0f172a;font-weight:600;">${data.suites_count}</td></tr>
-      <tr><td style="padding:6px 0;color:#64748b;">Pavimentos do imóvel</td><td style="text-align:right;color:#0f172a;font-weight:600;">${data.property_levels}</td></tr>
-      <tr><td style="padding:6px 0;color:#64748b;">Andares do prédio</td><td style="text-align:right;color:#0f172a;font-weight:600;">${data.building_floors ?? "—"}</td></tr>
-      <tr><td style="padding:6px 0;color:#64748b;">Andar do apartamento</td><td style="text-align:right;color:#0f172a;font-weight:600;">${data.apartment_floor ?? "—"}</td></tr>
-      <tr><td style="padding:6px 0;color:#64748b;">Capacidade máxima</td><td style="text-align:right;color:#0f172a;font-weight:600;">${data.max_capacity} pessoas</td></tr>
-      <tr><td style="padding:6px 0;color:#64748b;">Vagas de garagem</td><td style="text-align:right;color:#0f172a;font-weight:600;">${data.parking_spots}</td></tr>
-      <tr><td style="padding:6px 0;color:#64748b;">Elevador</td><td style="text-align:right;color:#0f172a;font-weight:600;">${fmtBool(data.has_elevator)}</td></tr>
-      <tr><td style="padding:6px 0;color:#64748b;">Wi-Fi</td><td style="text-align:right;color:#0f172a;font-weight:600;">${fmtBool(data.has_wifi)}</td></tr>
-      <tr><td style="padding:6px 0;color:#64748b;">Já alugou pelo Airbnb?</td><td style="text-align:right;color:#0f172a;font-weight:600;">${data.previously_listed_airbnb === true ? "Sim" : data.previously_listed_airbnb === false ? "Não (primeira vez)" : "—"}</td></tr>
+  const body = `
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 12px;">
+      <tr><td style="${rowStyle}"><strong>Proprietário:</strong> ${data.owner_name}</td></tr>
+      <tr><td style="${rowStyle}"><strong>E-mail:</strong> ${data.owner_email}</td></tr>
+      ${data.owner_phone ? `<tr><td style="${rowStyle}"><strong>Telefone:</strong> ${data.owner_phone}</td></tr>` : ""}
     </table>
 
-    <h3 style="color:#0f172a;font-size:16px;margin:24px 0 8px;">Cômodos</h3>
-    <ul style="color:#334155;padding-left:20px;margin:0 0 16px;">${roomsSummary || "<li>—</li>"}</ul>
+    <p style="${sectionTitle}">Imóvel</p>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 12px;">
+      <tr><td style="${rowStyle}"><strong>Apelido:</strong> ${data.property_nickname || "—"}</td></tr>
+      <tr><td style="${rowStyle}"><strong>Endereço:</strong> ${data.property_address}</td></tr>
+    </table>
 
-    <h3 style="color:#0f172a;font-size:16px;margin:24px 0 8px;">Cozinha</h3>
-    <p style="color:#334155;margin:0 0 16px;">${list(data.kitchen_items)}</p>
+    <p style="${sectionTitle}">Características</p>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 12px;border-collapse:collapse;">
+      <tr><td style="${rowStyle}">Quartos</td><td style="${rowStyle};text-align:right;color:${TEXT_DARK};font-weight:600;">${data.bedrooms_count}</td></tr>
+      <tr><td style="${rowStyle}">Salas</td><td style="${rowStyle};text-align:right;color:${TEXT_DARK};font-weight:600;">${data.living_rooms_count}</td></tr>
+      <tr><td style="${rowStyle}">Banheiros</td><td style="${rowStyle};text-align:right;color:${TEXT_DARK};font-weight:600;">${data.bathrooms_count}</td></tr>
+      <tr><td style="${rowStyle}">Suítes</td><td style="${rowStyle};text-align:right;color:${TEXT_DARK};font-weight:600;">${data.suites_count}</td></tr>
+      <tr><td style="${rowStyle}">Pavimentos do imóvel</td><td style="${rowStyle};text-align:right;color:${TEXT_DARK};font-weight:600;">${data.property_levels}</td></tr>
+      <tr><td style="${rowStyle}">Andares do prédio</td><td style="${rowStyle};text-align:right;color:${TEXT_DARK};font-weight:600;">${data.building_floors ?? "—"}</td></tr>
+      <tr><td style="${rowStyle}">Andar do apartamento</td><td style="${rowStyle};text-align:right;color:${TEXT_DARK};font-weight:600;">${data.apartment_floor ?? "—"}</td></tr>
+      <tr><td style="${rowStyle}">Capacidade máxima</td><td style="${rowStyle};text-align:right;color:${TEXT_DARK};font-weight:600;">${data.max_capacity} pessoas</td></tr>
+      <tr><td style="${rowStyle}">Vagas de garagem</td><td style="${rowStyle};text-align:right;color:${TEXT_DARK};font-weight:600;">${data.parking_spots}</td></tr>
+      <tr><td style="${rowStyle}">Elevador</td><td style="${rowStyle};text-align:right;color:${TEXT_DARK};font-weight:600;">${fmtBool(data.has_elevator)}</td></tr>
+      <tr><td style="${rowStyle}">Wi-Fi</td><td style="${rowStyle};text-align:right;color:${TEXT_DARK};font-weight:600;">${fmtBool(data.has_wifi)}</td></tr>
+      <tr><td style="${rowStyle}">Já alugou pelo Airbnb?</td><td style="${rowStyle};text-align:right;color:${TEXT_DARK};font-weight:600;">${data.previously_listed_airbnb === true ? "Sim" : data.previously_listed_airbnb === false ? "Não (primeira vez)" : "—"}</td></tr>
+    </table>
 
-    <h3 style="color:#0f172a;font-size:16px;margin:24px 0 8px;">Comodidades especiais</h3>
-    <p style="color:#334155;margin:0 0 16px;">${list(data.special_amenities)}</p>
+    <p style="${sectionTitle}">Cômodos</p>
+    <ul style="padding-left:20px;margin:0 0 16px;">${roomsSummary || `<li style="font-family:${FONT};color:${TEXT_BODY};">—</li>`}</ul>
 
-    <h3 style="color:#0f172a;font-size:16px;margin:24px 0 8px;">Comodidades do condomínio</h3>
-    <p style="color:#334155;margin:0 0 16px;">${list(data.condo_amenities)}</p>
+    <p style="${sectionTitle}">Cozinha</p>
+    <p style="margin:0 0 16px;font-family:${FONT};font-size:14px;line-height:22px;color:${TEXT_BODY};">${list(data.kitchen_items)}</p>
 
-    ${data.notes ? `<h3 style="color:#0f172a;font-size:16px;margin:24px 0 8px;">Observações</h3><p style="color:#334155;margin:0 0 16px;white-space:pre-wrap;">${data.notes}</p>` : ""}
+    <p style="${sectionTitle}">Comodidades especiais</p>
+    <p style="margin:0 0 16px;font-family:${FONT};font-size:14px;line-height:22px;color:${TEXT_BODY};">${list(data.special_amenities)}</p>
 
-    <div style="margin-top:32px;padding-top:24px;border-top:1px solid #e2e8f0;">
-      <a href="${portalUrl}/admin/cadastros-proprietarios" style="display:inline-block;background:#6366f1;color:#fff;padding:12px 24px;text-decoration:none;border-radius:8px;font-weight:600;">Ver no painel</a>
-    </div>
-    <p style="color:#94a3b8;font-size:12px;margin-top:16px;">Submission ID: ${submissionId}</p>
-  </div>
-</div>
-</body></html>`;
+    <p style="${sectionTitle}">Comodidades do condomínio</p>
+    <p style="margin:0 0 16px;font-family:${FONT};font-size:14px;line-height:22px;color:${TEXT_BODY};">${list(data.condo_amenities)}</p>
+
+    ${data.notes ? `<p style="${sectionTitle}">Observações</p><p style="margin:0 0 16px;font-family:${FONT};font-size:14px;line-height:22px;color:${TEXT_BODY};white-space:pre-wrap;">${data.notes}</p>` : ""}
+  `;
+
+  return emailShell({
+    title: "Nova ficha de potencial proprietário",
+    preheader: `Nova ficha recebida de ${data.owner_name} — ${data.property_nickname || data.property_address.slice(0, 60)}`,
+    heading: "🏠 Nova ficha de potencial proprietário",
+    bodyHtml: body,
+    ctaUrl: `${portalUrl}/admin/cadastros-proprietarios`,
+    ctaLabel: "Ver no painel",
+    footerNote: `Submission ID: <strong>${submissionId}</strong>`,
+  });
 }
 
 function buildOwnerWelcomeHtml(name: string, magicLink: string | null) {
-  return `<!DOCTYPE html>
-<html><head><meta charset="utf-8"></head>
-<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f5f5;margin:0;padding:0;">
-<div style="max-width:600px;margin:0 auto;background:#fff;">
-  <div style="background:linear-gradient(135deg,#0ea5e9 0%,#6366f1 100%);padding:48px 32px;text-align:center;">
-    <h1 style="color:#fff;margin:0;font-size:32px;letter-spacing:1px;">RIOS</h1>
-    <p style="color:rgba(255,255,255,0.9);margin:8px 0 0;font-size:14px;">Operação e Gestão de Hospedagens</p>
-  </div>
-  <div style="padding:40px 32px;">
-    <h2 style="color:#0f172a;margin:0 0 16px;">Olá ${name}, recebemos sua ficha 🎉</h2>
-    <p style="color:#475569;line-height:1.6;font-size:15px;">
+  const body = `
+    <p class="text" style="margin:0 0 14px;font-family:${FONT};font-size:15px;line-height:22px;color:${TEXT_DARK};">
+      Olá <strong>${name}</strong>, recebemos sua ficha com sucesso 🎉
+    </p>
+    <p class="text" style="margin:0 0 14px;font-family:${FONT};font-size:15px;line-height:22px;color:${TEXT_DARK};">
       Sua proposta de parceria está em análise pela nossa equipe. Em breve entraremos em contato para agendar uma reunião e detalhar os próximos passos.
     </p>
     ${magicLink ? `
-    <p style="color:#475569;line-height:1.6;font-size:15px;margin-top:24px;">
-      Enquanto isso, criamos seu acesso ao portal. Defina sua senha clicando no botão abaixo:
+    <p class="text" style="margin:0 0 8px;font-family:${FONT};font-size:15px;line-height:22px;color:${TEXT_DARK};">
+      Enquanto isso, já criamos seu acesso ao Portal. Defina sua senha clicando no botão abaixo:
     </p>
-    <div style="text-align:center;margin:32px 0;">
-      <a href="${magicLink}" style="display:inline-block;background:#6366f1;color:#fff;padding:14px 32px;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;">Definir minha senha</a>
-    </div>
-    ` : ""}
-    <p style="color:#94a3b8;font-size:13px;margin-top:32px;">— Equipe RIOS</p>
-  </div>
-</div>
-</body></html>`;
+    ` : `
+    <p class="text" style="margin:0 0 8px;font-family:${FONT};font-size:15px;line-height:22px;color:${TEXT_DARK};">
+      Acompanhe novidades e o status da parceria pelo Portal do Proprietário.
+    </p>
+    `}
+  `;
+  return emailShell({
+    title: "Recebemos sua ficha — RIOS",
+    preheader: `Olá ${name}, recebemos sua ficha. ${magicLink ? "Defina sua senha de acesso ao Portal." : "Em breve nossa equipe entrará em contato."}`,
+    heading: "✅ Ficha recebida com sucesso",
+    bodyHtml: body,
+    ctaUrl: magicLink || "https://portal.rioshospedagens.com.br/login",
+    ctaLabel: magicLink ? "Definir minha senha" : "Acessar o Portal",
+  });
 }
 
 serve(async (req) => {
