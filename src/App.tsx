@@ -77,6 +77,8 @@ import RelatoriosPropriedade from "./pages/RelatoriosPropriedade";
 import AdminFichasImoveis from "./pages/AdminFichasImoveis";
 import AdminRelatoriosFinanceiros from "./pages/AdminRelatoriosFinanceiros";
 import AdminRelatoriosProprietario from "./pages/AdminRelatoriosProprietario";
+import CadastroImovel from "./pages/CadastroImovel";
+import AdminCadastrosProprietarios from "./pages/AdminCadastrosProprietarios";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -91,6 +93,7 @@ const App = () => (
             <Route index element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/cadastro" element={<Cadastro />} />
+            <Route path="/cadastro-imovel" element={<CadastroImovel />} />
             <Route path="/aguardando-aprovacao" element={<AguardandoAprovacao />} />
             <Route
               path="/minha-caixa"
@@ -585,6 +588,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['admin', 'agent', 'maintenance']}>
                   <AdminRelatoriosProprietario />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/cadastros-proprietarios"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'agent']}>
+                  <AdminCadastrosProprietarios />
                 </ProtectedRoute>
               }
             />
