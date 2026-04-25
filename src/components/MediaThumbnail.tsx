@@ -2,6 +2,7 @@ import { useState, useEffect, memo } from "react";
 import { Play, FileIcon, FileTextIcon } from "lucide-react";
 import { useMediaCache, generateVideoThumbnail } from "@/hooks/useMediaCache";
 import { Skeleton } from "@/components/ui/skeleton";
+import { detectMediaKind } from "@/lib/mediaType";
 
 interface MediaThumbnailProps {
   src: string;
