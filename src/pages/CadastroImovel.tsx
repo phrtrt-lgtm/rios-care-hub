@@ -30,6 +30,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -41,7 +42,6 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import logoRios from "@/assets/rios-logo-wordmark.png";
 import {
   BED_TYPES,
   KITCHEN_ITEMS,
@@ -89,6 +89,7 @@ function uid() {
 }
 
 function buildRooms(form: IntakeFormData, existing: RoomEntry[]): RoomEntry[] {
+  // Mantém edições já feitas: tenta preservar pelo nome+type+floor
   const next: RoomEntry[] = [];
   const usedExisting = new Set<string>();
 
@@ -102,11 +103,14 @@ function buildRooms(form: IntakeFormData, existing: RoomEntry[]): RoomEntry[] {
 
   const totalFloors = Math.max(1, form.property_levels || 1);
 
+  // Quartos
   for (let i = 0; i < form.bedrooms_count; i++) {
     const isSuite = i < form.suites_count;
-    const cleanName = isSuite ? `Suíte ${i + 1}` : `Quarto ${i + 1 - form.suites_count}`;
+    const name = isSuite ? `Suíte ${i + 1}` : `Quarto ${i + 1 - form.suites_count}`;
+    // distribui igualmente entre pavimentos (se >1)
     const floor = totalFloors > 1 ? (i % totalFloors) + 1 : 1;
-    const existingRoom = findExisting("bedroom", cleanName, floor);
+    const cleanName = isSuite ? `Suíte ${i + 1}` : `Quarto ${i + 1 - form.suites_count}`;
+    const existingRoom = findExisting("bedroom", cleanName, floor) || findExisting("bedroom", name, floor);
     next.push(
       existingRoom || {
         id: uid(),
@@ -121,6 +125,7 @@ function buildRooms(form: IntakeFormData, existing: RoomEntry[]): RoomEntry[] {
       }
     );
   }
+  // Salas
   for (let i = 0; i < form.living_rooms_count; i++) {
     const name = form.living_rooms_count > 1 ? `Sala ${i + 1}` : "Sala de estar";
     const floor = totalFloors > 1 ? (i % totalFloors) + 1 : 1;
@@ -149,6 +154,7 @@ export default function CadastroImovel() {
   const [submitted, setSubmitted] = useState(false);
   const [form, setForm] = useState<IntakeFormData>(initialForm);
 
+  // Re-build rooms quando contagens mudam
   useEffect(() => {
     setForm((prev) => ({ ...prev, rooms_data: buildRooms(prev, prev.rooms_data) }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -185,6 +191,7 @@ export default function CadastroImovel() {
       );
     }
     if (step === 2) {
+      // Pelo menos os quartos com 1 cama cada
       return form.rooms_data.filter((r) => r.type === "bedroom").every((r) => r.beds.length > 0);
     }
     return true;
@@ -240,30 +247,14 @@ export default function CadastroImovel() {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden" style={{ background: "hsl(40 30% 96%)" }}>
-      {/* Fontes editoriais */}
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap"
-      />
-
-      {/* Texturas decorativas — círculos sutis, simulando aquarela */}
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 relative overflow-hidden">
+      {/* Decorative background blobs */}
       <div aria-hidden className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div
-          className="absolute -top-32 -right-32 w-[420px] h-[420px] rounded-full blur-3xl opacity-40"
-          style={{ background: "hsl(206 56% 22% / 0.18)" }}
-        />
-        <div
-          className="absolute top-1/3 -left-40 w-[380px] h-[380px] rounded-full blur-3xl opacity-30"
-          style={{ background: "hsl(20 63% 48% / 0.18)" }}
-        />
-        <div
-          className="absolute bottom-0 right-1/4 w-[300px] h-[300px] rounded-full blur-3xl opacity-25"
-          style={{ background: "hsl(38 50% 55% / 0.2)" }}
-        />
+        <div className="absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute top-1/2 -left-40 w-[400px] h-[400px] rounded-full bg-accent/10 blur-3xl" />
       </div>
 
-      <div className="relative" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
+      <div className="relative">
         <BrandHeader />
         <StepProgress current={step} />
 
@@ -271,10 +262,10 @@ export default function CadastroImovel() {
           <AnimatePresence mode="wait">
             <motion.div
               key={step}
-              initial={{ opacity: 0, y: 24 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -16 }}
-              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
             >
               {step === 1 && <Step1 form={form} update={update} />}
               {step === 2 && <Step2 form={form} updateRoom={updateRoom} />}
@@ -293,39 +284,24 @@ export default function CadastroImovel() {
           </AnimatePresence>
 
           {/* Navegação */}
-          <div className="flex items-center justify-between gap-3 mt-10">
-            <button
+          <div className="flex items-center justify-between gap-3 mt-8">
+            <Button
+              variant="ghost"
               onClick={prev}
               disabled={step === 1 || submitting}
-              className="inline-flex items-center gap-2 px-5 py-3 text-sm font-medium tracking-wide transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:gap-3"
-              style={{ color: "hsl(206 56% 22%)" }}
+              className="gap-2"
             >
               <ArrowLeft className="h-4 w-4" />
               Voltar
-            </button>
+            </Button>
 
             {step < 5 ? (
-              <button
-                onClick={next}
-                className="group inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-medium tracking-wide text-white shadow-lg transition-all hover:gap-3 hover:shadow-xl active:scale-[0.98]"
-                style={{
-                  background: "hsl(20 63% 48%)",
-                  boxShadow: "0 10px 30px -8px hsl(20 63% 48% / 0.5)",
-                }}
-              >
+              <Button onClick={next} size="lg" className="gap-2 shadow-lg">
                 Continuar
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-              </button>
+                <ArrowRight className="h-4 w-4" />
+              </Button>
             ) : (
-              <button
-                onClick={submit}
-                disabled={submitting}
-                className="group inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-medium tracking-wide text-white shadow-lg transition-all hover:gap-3 hover:shadow-xl active:scale-[0.98] disabled:opacity-60"
-                style={{
-                  background: "hsl(20 63% 48%)",
-                  boxShadow: "0 10px 30px -8px hsl(20 63% 48% / 0.5)",
-                }}
-              >
+              <Button onClick={submit} size="lg" disabled={submitting} className="gap-2 shadow-lg">
                 {submitting ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -337,7 +313,7 @@ export default function CadastroImovel() {
                     Enviar minha ficha
                   </>
                 )}
-              </button>
+              </Button>
             )}
           </div>
         </div>
@@ -349,59 +325,36 @@ export default function CadastroImovel() {
 /* ----------------------------- BRAND HEADER ----------------------------- */
 function BrandHeader() {
   return (
-    <header className="container max-w-5xl mx-auto px-4 pt-10 md:pt-14 pb-8">
+    <header className="container max-w-5xl mx-auto px-4 pt-10 pb-6">
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between"
+        className="flex items-center gap-3"
       >
-        <img
-          src={logoRios}
-          alt="RIOS Hospedagens"
-          className="h-8 md:h-10 w-auto object-contain"
-        />
-        <div
-          className="hidden md:flex items-center gap-2 text-xs tracking-[0.25em] uppercase"
-          style={{ color: "hsl(206 56% 22% / 0.6)" }}
-        >
-          <span className="h-px w-8" style={{ background: "hsl(38 50% 55%)" }} />
-          Cadastro de Parceiros
+        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg">
+          <Home className="h-6 w-6 text-primary-foreground" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">RIOS</h1>
+          <p className="text-xs text-muted-foreground">Operação e Gestão de Hospedagens</p>
         </div>
       </motion.div>
 
       <motion.div
-        initial={{ opacity: 0, y: 16 }}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.15, duration: 0.6 }}
-        className="mt-12 md:mt-16 max-w-2xl"
+        transition={{ delay: 0.1 }}
+        className="mt-8 space-y-3"
       >
-        <div className="flex items-center gap-3 mb-5">
-          <div className="h-px w-10" style={{ background: "hsl(20 63% 48%)" }} />
-          <span
-            className="text-[11px] tracking-[0.3em] uppercase font-medium"
-            style={{ color: "hsl(20 63% 48%)" }}
-          >
-            Bem-vindo
-          </span>
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+          <Sparkles className="h-3 w-3" />
+          Cadastro exclusivo de novos parceiros
         </div>
-        <h2
-          className="text-4xl md:text-5xl lg:text-6xl leading-[1.05] tracking-tight"
-          style={{
-            fontFamily: "'Fraunces', Georgia, serif",
-            fontWeight: 400,
-            color: "hsl(206 56% 22%)",
-          }}
-        >
-          Vamos conhecer o<br />
-          <span style={{ fontStyle: "italic", fontWeight: 300 }}>seu imóvel.</span>
+        <h2 className="text-3xl md:text-4xl font-bold tracking-tight max-w-2xl leading-tight">
+          Vamos conhecer o seu imóvel
         </h2>
-        <p
-          className="mt-6 text-base md:text-lg leading-relaxed max-w-xl"
-          style={{ color: "hsl(206 30% 35%)" }}
-        >
-          Preencha os detalhes abaixo e nossa equipe entrará em contato para uma
-          conversa exclusiva sobre como transformar seu imóvel em uma hospedagem
-          de excelência.
+        <p className="text-muted-foreground max-w-xl">
+          Preencha as informações abaixo. Em seguida, nossa equipe entra em contato para uma reunião exclusiva e os próximos passos da parceria.
         </p>
       </motion.div>
     </header>
@@ -411,109 +364,46 @@ function BrandHeader() {
 /* ----------------------------- PROGRESS BAR ----------------------------- */
 function StepProgress({ current }: { current: number }) {
   return (
-    <div className="container max-w-5xl mx-auto px-4 pb-10">
-      <div className="flex items-center justify-between mb-3">
-        <span
-          className="text-[11px] tracking-[0.3em] uppercase font-medium"
-          style={{ color: "hsl(206 56% 22% / 0.5)" }}
-        >
-          Etapa
-        </span>
-        <span
-          className="text-sm tracking-wider"
-          style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", color: "hsl(206 56% 22%)" }}
-        >
-          {String(current).padStart(2, "0")} <span style={{ color: "hsl(38 50% 55%)" }}>—</span>{" "}
-          {String(STEPS.length).padStart(2, "0")}
-        </span>
-      </div>
-
-      <div
-        className="h-[3px] w-full rounded-full overflow-hidden"
-        style={{ background: "hsl(206 20% 88%)" }}
-      >
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: `${(current / STEPS.length) * 100}%` }}
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="h-full rounded-full"
-          style={{
-            background: "linear-gradient(90deg, hsl(20 63% 48%), hsl(38 50% 55%))",
-          }}
-        />
-      </div>
-
-      <div className="hidden md:grid grid-cols-5 gap-2 mt-4">
+    <div className="container max-w-5xl mx-auto px-4 pb-8">
+      <div className="grid grid-cols-5 gap-2">
         {STEPS.map((s) => {
+          const Icon = s.icon;
           const isActive = current === s.id;
           const isDone = current > s.id;
           return (
-            <div key={s.id} className="flex items-center gap-2">
-              <div
-                className="h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-medium transition-all duration-300 shrink-0"
-                style={{
-                  background: isDone
-                    ? "hsl(20 63% 48%)"
-                    : isActive
-                    ? "hsl(206 56% 22%)"
-                    : "hsl(206 20% 88%)",
-                  color: isDone || isActive ? "white" : "hsl(206 30% 50%)",
-                }}
-              >
-                {isDone ? <Check className="h-3 w-3" /> : s.id}
+            <div key={s.id} className="flex flex-col items-center gap-2">
+              <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: isActive || isDone ? "100%" : "0%" }}
+                  transition={{ duration: 0.4 }}
+                  className="h-full bg-gradient-to-r from-primary to-accent"
+                />
               </div>
-              <span
-                className="text-xs font-medium truncate"
-                style={{
-                  color: isActive
-                    ? "hsl(206 56% 22%)"
-                    : isDone
-                    ? "hsl(20 63% 48%)"
-                    : "hsl(206 30% 55%)",
-                }}
-              >
-                {s.title}
-              </span>
+              <div className="flex items-center gap-1.5 text-[10px] md:text-xs">
+                <div
+                  className={`h-5 w-5 rounded-full flex items-center justify-center transition ${
+                    isDone
+                      ? "bg-primary text-primary-foreground"
+                      : isActive
+                      ? "bg-primary/20 text-primary ring-2 ring-primary/40"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {isDone ? <Check className="h-3 w-3" /> : <Icon className="h-3 w-3" />}
+                </div>
+                <span
+                  className={`hidden md:inline font-medium truncate ${
+                    isActive ? "text-foreground" : "text-muted-foreground"
+                  }`}
+                >
+                  {s.title}
+                </span>
+              </div>
             </div>
           );
         })}
       </div>
-    </div>
-  );
-}
-
-/* --------------------------------- CARD WRAPPER --------------------------- */
-function EditorialCard({
-  children,
-  title,
-  subtitle,
-}: {
-  children: React.ReactNode;
-  number?: string;
-  title: string;
-  subtitle?: string;
-}) {
-  return (
-    <div
-      className="relative rounded-2xl bg-white/90 backdrop-blur-sm border p-6 md:p-8 shadow-[0_10px_40px_-20px_hsl(206_56%_22%/0.2)]"
-      style={{ borderColor: "hsl(206 20% 90%)" }}
-    >
-      <h3
-        className="text-xl md:text-2xl font-semibold tracking-tight"
-        style={{ color: "hsl(206 56% 22%)" }}
-      >
-        {title}
-      </h3>
-      {subtitle && (
-        <p
-          className="text-sm mt-1.5 mb-6 max-w-xl"
-          style={{ color: "hsl(206 30% 45%)" }}
-        >
-          {subtitle}
-        </p>
-      )}
-      {!subtitle && <div className="mb-6" />}
-      {children}
     </div>
   );
 }
@@ -528,26 +418,28 @@ function Step1({
 }) {
   return (
     <div className="space-y-6">
-      <EditorialCard title="Sobre você" subtitle="Como podemos te chamar?">
-        <div className="grid md:grid-cols-2 gap-5">
-          <Field label="Nome completo" required icon={User}>
+      <Card className="p-6 md:p-8 shadow-xl border-primary/10">
+        <h3 className="text-lg font-semibold mb-1 flex items-center gap-2">
+          <User className="h-5 w-5 text-primary" />
+          Sobre você
+        </h3>
+        <p className="text-sm text-muted-foreground mb-6">Como podemos te chamar?</p>
+
+        <div className="grid md:grid-cols-2 gap-4">
+          <Field label="Nome completo *" icon={User}>
             <Input
               value={form.owner_name}
               onChange={(e) => update("owner_name", e.target.value)}
               placeholder="Seu nome"
               maxLength={200}
-              className="h-11 bg-transparent border-0 border-b rounded-none px-0 focus-visible:ring-0 focus-visible:border-b-2 transition-colors"
-              style={{ borderColor: "hsl(206 30% 75%)" }}
             />
           </Field>
-          <Field label="E-mail" required icon={Mail}>
+          <Field label="E-mail *" icon={Mail}>
             <Input
               type="email"
               value={form.owner_email}
               onChange={(e) => update("owner_email", e.target.value)}
               placeholder="voce@email.com"
-              className="h-11 bg-transparent border-0 border-b rounded-none px-0 focus-visible:ring-0 focus-visible:border-b-2"
-              style={{ borderColor: "hsl(206 30% 75%)" }}
             />
           </Field>
           <Field label="Telefone (WhatsApp)" icon={Phone}>
@@ -555,8 +447,6 @@ function Step1({
               value={form.owner_phone}
               onChange={(e) => update("owner_phone", e.target.value)}
               placeholder="(11) 99999-9999"
-              className="h-11 bg-transparent border-0 border-b rounded-none px-0 focus-visible:ring-0 focus-visible:border-b-2"
-              style={{ borderColor: "hsl(206 30% 75%)" }}
             />
           </Field>
           <Field label="Apelido do imóvel">
@@ -564,48 +454,43 @@ function Step1({
               value={form.property_nickname}
               onChange={(e) => update("property_nickname", e.target.value)}
               placeholder="Ex.: Cobertura Vista Mar"
-              className="h-11 bg-transparent border-0 border-b rounded-none px-0 focus-visible:ring-0 focus-visible:border-b-2"
-              style={{ borderColor: "hsl(206 30% 75%)" }}
             />
           </Field>
         </div>
 
-        <div className="mt-5">
-          <Field label="Endereço completo" required icon={MapPin}>
+        <div className="mt-4">
+          <Field label="Endereço completo *" icon={MapPin}>
             <Input
               value={form.property_address}
               onChange={(e) => update("property_address", e.target.value)}
               placeholder="Rua, número, bairro, cidade"
               maxLength={500}
-              className="h-11 bg-transparent border-0 border-b rounded-none px-0 focus-visible:ring-0 focus-visible:border-b-2"
-              style={{ borderColor: "hsl(206 30% 75%)" }}
             />
           </Field>
         </div>
-      </EditorialCard>
+      </Card>
 
-      <EditorialCard
-       
-        title="Ficha técnica"
-        subtitle="Os números essenciais do seu imóvel."
-      >
+      <Card className="p-6 md:p-8 shadow-xl border-primary/10">
+        <h3 className="text-lg font-semibold mb-1">Ficha técnica</h3>
+        <p className="text-sm text-muted-foreground mb-6">Os números essenciais do seu imóvel.</p>
+
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          <NumberField label="Quartos" required value={form.bedrooms_count} onChange={(v) => update("bedrooms_count", v)} min={1} max={20} />
+          <NumberField label="Quartos *" value={form.bedrooms_count} onChange={(v) => update("bedrooms_count", v)} min={1} max={20} />
           <NumberField label="Suítes" value={form.suites_count} onChange={(v) => update("suites_count", Math.min(v, form.bedrooms_count))} min={0} max={form.bedrooms_count} />
           <NumberField label="Salas" value={form.living_rooms_count} onChange={(v) => update("living_rooms_count", v)} min={0} max={10} />
-          <NumberField label="Banheiros" required value={form.bathrooms_count} onChange={(v) => update("bathrooms_count", v)} min={1} max={20} />
-          <NumberField label="Capacidade máxima" required value={form.max_capacity} onChange={(v) => update("max_capacity", v)} min={1} max={30} icon={Users} />
+          <NumberField label="Banheiros *" value={form.bathrooms_count} onChange={(v) => update("bathrooms_count", v)} min={1} max={20} />
+          <NumberField label="Capacidade máxima *" value={form.max_capacity} onChange={(v) => update("max_capacity", v)} min={1} max={30} icon={Users} />
           <NumberField label="Vagas garagem" value={form.parking_spots} onChange={(v) => update("parking_spots", v)} min={0} max={20} icon={Car} />
-          <NumberField label="Pavimentos do imóvel" value={form.property_levels} onChange={(v) => update("property_levels", v)} min={1} max={5} hint="Duplex/triplex contam aqui" />
+          <NumberField label="Pavimentos do imóvel" value={form.property_levels} onChange={(v) => update("property_levels", v)} min={1} max={5} hint="Imóveis duplex/triplex contam aqui" />
           <NumberField label="Andares do prédio" value={form.building_floors ?? 0} onChange={(v) => update("building_floors", v || null)} min={0} max={100} hint="0 se não souber" />
           <NumberField label="Andar do apartamento" value={form.apartment_floor ?? 0} onChange={(v) => update("apartment_floor", v || null)} min={0} max={100} hint="0 = térreo / casa" />
         </div>
 
-        <div className="mt-7 grid md:grid-cols-2 gap-3">
+        <div className="mt-6 grid md:grid-cols-2 gap-4">
           <ToggleRow icon={Building2} label="Possui elevador" value={form.has_elevator} onChange={(v) => update("has_elevator", v)} />
           <ToggleRow icon={Wifi} label="Wi-Fi disponível" value={form.has_wifi} onChange={(v) => update("has_wifi", v)} />
         </div>
-      </EditorialCard>
+      </Card>
     </div>
   );
 }
@@ -622,67 +507,63 @@ function Step2({
   const floorsArray = Array.from({ length: totalFloors }, (_, i) => i + 1);
 
   return (
-    <EditorialCard
-     
-      title="Cômodos & camas"
-      subtitle={`Configure cada cômodo gerado a partir da ficha técnica.${
-        totalFloors > 1 ? " Selecione em qual pavimento cada um se encontra." : ""
-      }`}
-    >
-      {floorsArray.map((floor) => {
-        const roomsOnFloor = form.rooms_data.filter((r) => r.floor === floor);
-        if (totalFloors === 1) {
+    <div className="space-y-6">
+      <Card className="p-6 md:p-8 shadow-xl border-primary/10">
+        <h3 className="text-lg font-semibold mb-1 flex items-center gap-2">
+          <BedDouble className="h-5 w-5 text-primary" />
+          Cômodos & camas
+        </h3>
+        <p className="text-sm text-muted-foreground mb-6">
+          Configure cada cômodo gerado a partir da ficha técnica.
+          {totalFloors > 1 && " Selecione em qual pavimento cada um se encontra."}
+        </p>
+
+        {floorsArray.map((floor) => {
+          const roomsOnFloor = form.rooms_data.filter((r) => r.floor === floor);
+          if (totalFloors === 1) {
+            return (
+              <div key={floor} className="space-y-4">
+                {roomsOnFloor.map((room) => (
+                  <RoomCard
+                    key={room.id}
+                    room={room}
+                    floors={floorsArray}
+                    showFloorPicker={false}
+                    updateRoom={updateRoom}
+                  />
+                ))}
+              </div>
+            );
+          }
           return (
-            <div key={floor} className="space-y-4">
-              {roomsOnFloor.map((room) => (
-                <RoomCard
-                  key={room.id}
-                  room={room}
-                  floors={floorsArray}
-                  showFloorPicker={false}
-                  updateRoom={updateRoom}
-                />
-              ))}
+            <div key={floor} className="mb-6">
+              <div className="text-sm font-semibold text-primary mb-3 flex items-center gap-2">
+                <div className="h-6 w-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs">
+                  {floor}
+                </div>
+                Pavimento {floor}
+              </div>
+              <div className="space-y-3">
+                {roomsOnFloor.length === 0 && (
+                  <p className="text-xs text-muted-foreground italic pl-8">
+                    Nenhum cômodo neste pavimento. Use o seletor "Pavimento" em qualquer cômodo abaixo para realocar.
+                  </p>
+                )}
+                {roomsOnFloor.map((room) => (
+                  <RoomCard
+                    key={room.id}
+                    room={room}
+                    floors={floorsArray}
+                    showFloorPicker={true}
+                    updateRoom={updateRoom}
+                  />
+                ))}
+              </div>
             </div>
           );
-        }
-        return (
-          <div key={floor} className="mb-8 last:mb-0">
-            <div
-              className="flex items-center gap-3 mb-4"
-              style={{ color: "hsl(206 56% 22%)" }}
-            >
-              <span
-                className="text-xs tracking-[0.3em] uppercase font-medium"
-                style={{ color: "hsl(20 63% 48%)" }}
-              >
-                Pavimento {floor}
-              </span>
-              <span className="h-px flex-1" style={{ background: "hsl(38 50% 55% / 0.4)" }} />
-            </div>
-            <div className="space-y-3">
-              {roomsOnFloor.length === 0 && (
-                <p
-                  className="text-xs italic pl-2"
-                  style={{ color: "hsl(206 30% 55%)" }}
-                >
-                  Nenhum cômodo neste pavimento. Use o seletor "Pavimento" em qualquer cômodo abaixo para realocar.
-                </p>
-              )}
-              {roomsOnFloor.map((room) => (
-                <RoomCard
-                  key={room.id}
-                  room={room}
-                  floors={floorsArray}
-                  showFloorPicker={true}
-                  updateRoom={updateRoom}
-                />
-              ))}
-            </div>
-          </div>
-        );
-      })}
-    </EditorialCard>
+        })}
+      </Card>
+    </div>
   );
 }
 
@@ -704,40 +585,16 @@ function RoomCard({
     <motion.div
       initial={{ opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="rounded-xl border p-5 transition-all hover:shadow-md"
-      style={{
-        background: "hsl(40 30% 98%)",
-        borderColor: "hsl(206 20% 88%)",
-      }}
+      className="rounded-xl border-2 border-border bg-card p-4 hover:border-primary/30 transition-colors"
     >
-      <div className="flex items-start justify-between gap-3 mb-5">
+      <div className="flex items-start justify-between gap-3 mb-4">
         <div className="flex items-center gap-3">
-          <div
-            className="h-11 w-11 rounded-full flex items-center justify-center"
-            style={{
-              background: isBedroom ? "hsl(206 56% 22% / 0.08)" : "hsl(20 63% 48% / 0.1)",
-              color: isBedroom ? "hsl(206 56% 22%)" : "hsl(20 63% 48%)",
-            }}
-          >
+          <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${isBedroom ? "bg-primary/10 text-primary" : "bg-accent/10 text-accent-foreground"}`}>
             <Icon className="h-5 w-5" />
           </div>
           <div>
-            <h4
-              className="text-lg tracking-tight"
-              style={{
-                fontFamily: "'Fraunces', serif",
-                fontWeight: 500,
-                color: "hsl(206 56% 22%)",
-              }}
-            >
-              {room.name}
-            </h4>
-            <p
-              className="text-[11px] tracking-[0.2em] uppercase mt-0.5"
-              style={{ color: "hsl(206 30% 55%)" }}
-            >
-              {isBedroom ? "Quarto" : "Sala"}
-            </p>
+            <h4 className="font-semibold">{room.name}</h4>
+            <p className="text-xs text-muted-foreground">{isBedroom ? "Quarto" : "Sala"}</p>
           </div>
         </div>
         {showFloorPicker && (
@@ -771,7 +628,7 @@ function RoomCard({
                 updateRoom(room.id, { beds: newBeds });
               }}
             >
-              <SelectTrigger className="flex-1 bg-white">
+              <SelectTrigger className="flex-1">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -782,10 +639,7 @@ function RoomCard({
                 ))}
               </SelectContent>
             </Select>
-            <div
-              className="flex items-center gap-1 rounded-md bg-white border"
-              style={{ borderColor: "hsl(206 20% 88%)" }}
-            >
+            <div className="flex items-center gap-1 border rounded-md">
               <Button
                 size="icon"
                 variant="ghost"
@@ -798,12 +652,7 @@ function RoomCard({
               >
                 <Minus className="h-3 w-3" />
               </Button>
-              <span
-                className="w-6 text-center text-sm"
-                style={{ fontFamily: "'Fraunces', serif", fontWeight: 600 }}
-              >
-                {bed.count}
-              </span>
+              <span className="w-6 text-center text-sm font-semibold">{bed.count}</span>
               <Button
                 size="icon"
                 variant="ghost"
@@ -831,13 +680,10 @@ function RoomCard({
             </Button>
           </div>
         ))}
-        <button
-          type="button"
-          className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-md text-xs font-medium border border-dashed transition-all hover:bg-white"
-          style={{
-            borderColor: "hsl(20 63% 48% / 0.4)",
-            color: "hsl(20 63% 48%)",
-          }}
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2 w-full border-dashed"
           onClick={() =>
             updateRoom(room.id, {
               beds: [...room.beds, { type: isBedroom ? "solteiro" : "sofa_cama", count: 1 }],
@@ -846,7 +692,7 @@ function RoomCard({
         >
           <Plus className="h-3 w-3" />
           Adicionar {isBedroom ? "cama" : "sofá / cama"}
-        </button>
+        </Button>
       </div>
 
       {/* Equipamentos */}
@@ -892,12 +738,13 @@ function Step3({
 }) {
   return (
     <div className="space-y-6">
-      <EditorialCard
-       
-        title="Itens da cozinha"
-        subtitle="Marque tudo que está disponível."
-      >
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+      <Card className="p-6 md:p-8 shadow-xl border-primary/10">
+        <h3 className="text-lg font-semibold mb-1 flex items-center gap-2">
+          <ChefHat className="h-5 w-5 text-primary" />
+          Itens da cozinha
+        </h3>
+        <p className="text-sm text-muted-foreground mb-6">Marque tudo que está disponível.</p>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
           {KITCHEN_ITEMS.map((item) => (
             <PickChip
               key={item.value}
@@ -908,14 +755,15 @@ function Step3({
             />
           ))}
         </div>
-      </EditorialCard>
+      </Card>
 
-      <EditorialCard
-       
-        title="Comodidades especiais"
-        subtitle="O que torna seu imóvel único?"
-      >
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+      <Card className="p-6 md:p-8 shadow-xl border-primary/10">
+        <h3 className="text-lg font-semibold mb-1 flex items-center gap-2">
+          <Sparkles className="h-5 w-5 text-primary" />
+          Comodidades especiais
+        </h3>
+        <p className="text-sm text-muted-foreground mb-6">O que torna seu imóvel único?</p>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
           {SPECIAL_AMENITIES.map((item) => (
             <PickChip
               key={item.value}
@@ -926,7 +774,7 @@ function Step3({
             />
           ))}
         </div>
-      </EditorialCard>
+      </Card>
     </div>
   );
 }
@@ -934,12 +782,13 @@ function Step3({
 /* --------------------------------- STEP 4 -------------------------------- */
 function Step4({ form, toggleCondo }: { form: IntakeFormData; toggleCondo: (v: string) => void }) {
   return (
-    <EditorialCard
-     
-      title="Comodidades do condomínio"
-      subtitle="Estrutura compartilhada disponível aos hóspedes."
-    >
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+    <Card className="p-6 md:p-8 shadow-xl border-primary/10">
+      <h3 className="text-lg font-semibold mb-1 flex items-center gap-2">
+        <Building2 className="h-5 w-5 text-primary" />
+        Comodidades do condomínio
+      </h3>
+      <p className="text-sm text-muted-foreground mb-6">Estrutura compartilhada disponível aos hóspedes.</p>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
         {CONDO_AMENITIES.map((item) => (
           <PickChip
             key={item.value}
@@ -950,7 +799,7 @@ function Step4({ form, toggleCondo }: { form: IntakeFormData; toggleCondo: (v: s
           />
         ))}
       </div>
-    </EditorialCard>
+    </Card>
   );
 }
 
@@ -969,8 +818,14 @@ function Step5({
 
   return (
     <div className="space-y-6">
-      <EditorialCard title="Tudo certo?" subtitle="Revise as informações antes de enviar.">
-        <div className="grid md:grid-cols-2 gap-x-8 gap-y-1 mb-8">
+      <Card className="p-6 md:p-8 shadow-xl border-primary/10">
+        <h3 className="text-lg font-semibold mb-1 flex items-center gap-2">
+          <PartyPopper className="h-5 w-5 text-primary" />
+          Tudo certo?
+        </h3>
+        <p className="text-sm text-muted-foreground mb-6">Revise as informações antes de enviar.</p>
+
+        <div className="grid md:grid-cols-2 gap-4 mb-6">
           <SummaryItem label="Proprietário" value={form.owner_name} />
           <SummaryItem label="E-mail" value={form.owner_email} />
           <SummaryItem label="Telefone" value={form.owner_phone || "—"} />
@@ -978,7 +833,7 @@ function Step5({
           <SummaryItem label="Endereço" value={form.property_address} className="md:col-span-2" />
         </div>
 
-        <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mb-8">
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mb-6">
           <Stat label="Quartos" value={form.bedrooms_count} />
           <Stat label="Suítes" value={form.suites_count} />
           <Stat label="Salas" value={form.living_rooms_count} />
@@ -987,50 +842,25 @@ function Step5({
           <Stat label="Capacidade" value={form.max_capacity} />
         </div>
 
-        <div className="space-y-1">
-          <SummaryItem
-            label="Cozinha"
-            value={
-              form.kitchen_items.length
-                ? `${form.kitchen_items.length} itens marcados`
-                : "Nenhum item marcado"
-            }
-          />
-          <SummaryItem
-            label="Comodidades especiais"
-            value={
-              form.special_amenities.length
-                ? `${form.special_amenities.length} comodidades`
-                : "Nenhuma marcada"
-            }
-          />
-          <SummaryItem
-            label="Condomínio"
-            value={
-              form.condo_amenities.length
-                ? `${form.condo_amenities.length} comodidades`
-                : "Nenhuma marcada"
-            }
-          />
-        </div>
-      </EditorialCard>
+        <SummaryItem label="Cozinha" value={form.kitchen_items.length ? `${form.kitchen_items.length} itens marcados` : "Nenhum item marcado"} />
+        <SummaryItem label="Comodidades especiais" value={form.special_amenities.length ? `${form.special_amenities.length} comodidades` : "Nenhuma marcada"} />
+        <SummaryItem label="Condomínio" value={form.condo_amenities.length ? `${form.condo_amenities.length} comodidades` : "Nenhuma marcada"} />
+      </Card>
 
-      <EditorialCard
-       
-        title="Algo a mais?"
-        subtitle="Conte algo que devemos saber antes da conversa (opcional)."
-      >
+      <Card className="p-6 md:p-8 shadow-xl border-primary/10">
+        <Label htmlFor="notes" className="text-sm font-semibold">
+          Algo a mais que devemos saber? (opcional)
+        </Label>
         <Textarea
           id="notes"
           value={form.notes}
           onChange={(e) => update("notes", e.target.value)}
           rows={4}
           maxLength={1000}
-          className="bg-white/50 resize-none"
-          style={{ borderColor: "hsl(206 20% 85%)" }}
-          placeholder="Expectativas, melhor horário para conversarmos, particularidades do imóvel..."
+          className="mt-2"
+          placeholder="Conte sobre seu imóvel, expectativas, melhor horário para conversarmos..."
         />
-      </EditorialCard>
+      </Card>
     </div>
   );
 }
@@ -1038,120 +868,46 @@ function Step5({
 /* ----------------------------- SUCCESS SCREEN --------------------------- */
 function SuccessScreen({ ownerName, email }: { ownerName: string; email: string }) {
   return (
-    <div
-      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
-      style={{ background: "hsl(40 30% 96%)" }}
-    >
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap"
-      />
-      <div aria-hidden className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div
-          className="absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full blur-3xl opacity-30"
-          style={{ background: "hsl(20 63% 48% / 0.3)" }}
-        />
-        <div
-          className="absolute -bottom-40 -left-40 w-[450px] h-[450px] rounded-full blur-3xl opacity-25"
-          style={{ background: "hsl(206 56% 22% / 0.25)" }}
-        />
-      </div>
-
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-4">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-        className="max-w-xl w-full relative"
-        style={{ fontFamily: "'Inter', sans-serif" }}
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="max-w-lg w-full"
       >
-        <div
-          className="relative rounded-2xl bg-white/90 backdrop-blur-sm border p-10 md:p-14 text-center shadow-[0_30px_80px_-30px_hsl(206_56%_22%/0.3)]"
-          style={{ borderColor: "hsl(206 20% 90%)" }}
-        >
+        <Card className="p-8 md:p-12 text-center shadow-2xl border-primary/20">
           <motion.div
-            initial={{ scale: 0, rotate: -45 }}
-            animate={{ scale: 1, rotate: 0 }}
-            transition={{ delay: 0.3, type: "spring", stiffness: 180, damping: 14 }}
-            className="h-20 w-20 mx-auto mb-8 rounded-full flex items-center justify-center shadow-xl"
-            style={{
-              background: "linear-gradient(135deg, hsl(20 63% 48%), hsl(38 50% 55%))",
-              boxShadow: "0 20px 40px -10px hsl(20 63% 48% / 0.4)",
-            }}
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.2, type: "spring" }}
+            className="h-20 w-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-xl"
           >
-            <Check className="h-10 w-10 text-white" strokeWidth={2.5} />
+            <Check className="h-10 w-10 text-primary-foreground" strokeWidth={3} />
           </motion.div>
-
-          <div className="flex items-center justify-center gap-3 mb-5">
-            <div className="h-px w-8" style={{ background: "hsl(38 50% 55%)" }} />
-            <span
-              className="text-[11px] tracking-[0.3em] uppercase font-medium"
-              style={{ color: "hsl(20 63% 48%)" }}
-            >
-              Recebido
-            </span>
-            <div className="h-px w-8" style={{ background: "hsl(38 50% 55%)" }} />
-          </div>
-
-          <h2
-            className="text-3xl md:text-4xl mb-4 tracking-tight leading-tight"
-            style={{
-              fontFamily: "'Fraunces', serif",
-              fontWeight: 400,
-              color: "hsl(206 56% 22%)",
-            }}
-          >
-            Obrigado,{" "}
-            <span style={{ fontStyle: "italic", fontWeight: 300 }}>
-              {ownerName.split(" ")[0]}.
-            </span>
-          </h2>
-          <p
-            className="text-base leading-relaxed mb-2"
-            style={{ color: "hsl(206 30% 40%)" }}
-          >
-            Sua ficha foi recebida com cuidado. Enviamos uma confirmação para{" "}
-            <strong style={{ color: "hsl(206 56% 22%)" }}>{email}</strong> com o link para você
-            definir sua senha de acesso ao portal.
+          <h2 className="text-3xl font-bold mb-3">Recebemos sua ficha! 🎉</h2>
+          <p className="text-muted-foreground mb-2">
+            Obrigado, <strong className="text-foreground">{ownerName.split(" ")[0]}</strong>.
           </p>
-
-          <div
-            className="mt-8 rounded-xl p-6 text-left"
-            style={{ background: "hsl(40 30% 97%)", border: "1px solid hsl(206 20% 90%)" }}
-          >
-            <p
-              className="text-xs tracking-[0.25em] uppercase font-medium mb-4"
-              style={{ color: "hsl(20 63% 48%)" }}
-            >
-              Próximos passos
-            </p>
-            <ol className="space-y-4">
-              {[
-                "Nossa equipe analisa sua ficha com atenção",
-                "Entramos em contato para agendar uma conversa exclusiva",
-                "Após aprovação, liberamos seu portal completo de gestão",
-              ].map((txt, i) => (
-                <li key={i} className="flex gap-4 items-start">
-                  <span
-                    className="shrink-0 text-2xl leading-none"
-                    style={{
-                      fontFamily: "'Fraunces', serif",
-                      fontStyle: "italic",
-                      color: "hsl(20 63% 48%)",
-                    }}
-                  >
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  <span
-                    className="text-sm leading-relaxed pt-1"
-                    style={{ color: "hsl(206 30% 35%)" }}
-                  >
-                    {txt}
-                  </span>
-                </li>
-              ))}
+          <p className="text-muted-foreground mb-6">
+            Enviamos um e-mail para <strong className="text-foreground">{email}</strong> com a confirmação e o link para você definir sua senha de acesso ao portal.
+          </p>
+          <div className="rounded-lg bg-primary/5 border border-primary/10 p-4 text-sm text-left">
+            <p className="font-semibold mb-2">Próximos passos:</p>
+            <ol className="space-y-2 text-muted-foreground">
+              <li className="flex gap-2">
+                <span className="text-primary font-semibold">1.</span>
+                Nossa equipe analisa sua ficha
+              </li>
+              <li className="flex gap-2">
+                <span className="text-primary font-semibold">2.</span>
+                Entramos em contato para agendar uma reunião
+              </li>
+              <li className="flex gap-2">
+                <span className="text-primary font-semibold">3.</span>
+                Após aprovação, liberamos seu portal completo
+              </li>
             </ol>
           </div>
-        </div>
+        </Card>
       </motion.div>
     </div>
   );
@@ -1160,28 +916,18 @@ function SuccessScreen({ ownerName, email }: { ownerName: string; email: string 
 /* ------------------------------ COMPONENTS ------------------------------ */
 function Field({
   label,
-  required,
   children,
   icon: Icon,
 }: {
   label: string;
-  required?: boolean;
   children: React.ReactNode;
   icon?: React.ComponentType<{ className?: string }>;
 }) {
   return (
-    <div className="space-y-2">
-      <Label
-        className="text-[10px] tracking-[0.25em] uppercase font-medium flex items-center gap-1.5"
-        style={{ color: "hsl(206 30% 45%)" }}
-      >
+    <div className="space-y-1.5">
+      <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
         {Icon && <Icon className="h-3 w-3" />}
         {label}
-        {required && (
-          <span style={{ color: "hsl(20 63% 48%)" }} className="ml-0.5">
-            ·
-          </span>
-        )}
       </Label>
       {children}
     </div>
@@ -1190,7 +936,6 @@ function Field({
 
 function NumberField({
   label,
-  required,
   value,
   onChange,
   min,
@@ -1199,7 +944,6 @@ function NumberField({
   icon: Icon,
 }: {
   label: string;
-  required?: boolean;
   value: number;
   onChange: (v: number) => void;
   min: number;
@@ -1207,83 +951,42 @@ function NumberField({
   hint?: string;
   icon?: React.ComponentType<{ className?: string }>;
 }) {
-  const inc = () => onChange(Math.min(max, value + 1));
-  const dec = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onChange(Math.max(min, value - 1));
-  };
-  const isMax = value >= max;
-  const isMin = value <= min;
-  const isActive = value > 0;
-
   return (
     <div className="space-y-1.5">
-      <button
-        type="button"
-        onClick={inc}
-        disabled={isMax}
-        className="group relative w-full text-left rounded-xl border bg-white px-4 py-3 transition-all hover:shadow-md active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
-        style={{
-          borderColor: isActive ? "hsl(20 63% 48% / 0.4)" : "hsl(206 20% 88%)",
-          background: isActive ? "hsl(20 63% 48% / 0.04)" : "white",
-        }}
-      >
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 min-w-0">
-            {Icon && (
-              <Icon className="h-3.5 w-3.5 shrink-0 text-[hsl(206_56%_22%/0.55)]" />
-            )}
-            <span
-              className="text-[11px] font-medium truncate"
-              style={{ color: "hsl(206 30% 40%)" }}
-            >
-              {label}
-              {required && (
-                <span style={{ color: "hsl(20 63% 48%)" }}> *</span>
-              )}
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            {!isMin && (
-              <span
-                role="button"
-                tabIndex={0}
-                onClick={dec}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onChange(Math.max(min, value - 1));
-                  }
-                }}
-                className="h-6 w-6 inline-flex items-center justify-center rounded-md border bg-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted cursor-pointer"
-                style={{ borderColor: "hsl(206 20% 85%)" }}
-                aria-label="Diminuir"
-              >
-                <Minus className="h-3 w-3" style={{ color: "hsl(206 56% 22%)" }} />
-              </span>
-            )}
-            <span
-              className="inline-flex items-center justify-center h-7 min-w-[28px] px-1.5 rounded-md text-sm font-bold tabular-nums"
-              style={{
-                background: isActive ? "hsl(20 63% 48%)" : "hsl(206 20% 92%)",
-                color: isActive ? "white" : "hsl(206 30% 50%)",
-              }}
-            >
-              {value}
-            </span>
-            <Plus
-              className="h-3.5 w-3.5 transition-transform group-hover:scale-110 group-active:scale-95"
-              style={{ color: isActive ? "hsl(20 63% 48%)" : "hsl(206 30% 55%)" }}
-            />
-          </div>
-        </div>
-      </button>
-      {hint && (
-        <p className="text-[10px] pl-1" style={{ color: "hsl(206 30% 55%)" }}>
-          {hint}
-        </p>
-      )}
+      <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+        {Icon && <Icon className="h-3 w-3" />}
+        {label}
+      </Label>
+      <div className="flex items-center gap-1 border rounded-md bg-background h-10">
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-9 w-9 shrink-0"
+          onClick={() => onChange(Math.max(min, value - 1))}
+          type="button"
+        >
+          <Minus className="h-3 w-3" />
+        </Button>
+        <input
+          type="number"
+          value={value}
+          onChange={(e) => {
+            const n = Number(e.target.value);
+            if (!isNaN(n)) onChange(Math.max(min, Math.min(max, n)));
+          }}
+          className="flex-1 h-full bg-transparent text-center text-sm font-semibold outline-none"
+        />
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-9 w-9 shrink-0"
+          onClick={() => onChange(Math.min(max, value + 1))}
+          type="button"
+        >
+          <Plus className="h-3 w-3" />
+        </Button>
+      </div>
+      {hint && <p className="text-[10px] text-muted-foreground">{hint}</p>}
     </div>
   );
 }
@@ -1300,15 +1003,10 @@ function ToggleRow({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <div
-      className="flex items-center justify-between gap-3 px-4 py-3.5 rounded-lg border bg-white/60 transition-all hover:bg-white"
-      style={{ borderColor: "hsl(206 20% 88%)" }}
-    >
+    <div className="flex items-center justify-between gap-3 p-3 rounded-lg border bg-card hover:bg-muted/30 transition">
       <div className="flex items-center gap-3">
-        <Icon className="h-4 w-4 text-[hsl(206_56%_22%/0.6)]" />
-        <span className="text-sm font-medium" style={{ color: "hsl(206 56% 22%)" }}>
-          {label}
-        </span>
+        <Icon className="h-4 w-4 text-muted-foreground" />
+        <span className="text-sm font-medium">{label}</span>
       </div>
       <Switch checked={value} onCheckedChange={onChange} />
     </div>
@@ -1330,12 +1028,11 @@ function FeatureChip({
     <button
       onClick={onClick}
       type="button"
-      className="flex items-center gap-2 px-3 py-2.5 rounded-lg border text-xs font-medium transition-all"
-      style={{
-        background: active ? "hsl(20 63% 48% / 0.08)" : "white",
-        borderColor: active ? "hsl(20 63% 48%)" : "hsl(206 20% 88%)",
-        color: active ? "hsl(20 63% 48%)" : "hsl(206 30% 45%)",
-      }}
+      className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition ${
+        active
+          ? "bg-primary/10 border-primary text-primary"
+          : "bg-card border-border text-muted-foreground hover:border-primary/50"
+      }`}
     >
       <Icon className="h-3.5 w-3.5" />
       <span className="truncate">{label}</span>
@@ -1356,22 +1053,19 @@ function PickChip({
   onClick: () => void;
 }) {
   return (
-    <motion.button
+    <button
       onClick={onClick}
       type="button"
-      whileTap={{ scale: 0.97 }}
-      className="flex items-center gap-2.5 px-4 py-3.5 rounded-xl border text-sm font-medium transition-all text-left"
-      style={{
-        background: active ? "hsl(20 63% 48% / 0.08)" : "white",
-        borderColor: active ? "hsl(20 63% 48%)" : "hsl(206 20% 88%)",
-        color: active ? "hsl(206 56% 22%)" : "hsl(206 30% 40%)",
-        boxShadow: active ? "0 4px 16px -6px hsl(20 63% 48% / 0.3)" : "none",
-      }}
+      className={`flex items-center gap-2 px-3 py-3 rounded-lg border-2 text-sm font-medium transition text-left ${
+        active
+          ? "bg-primary/10 border-primary text-foreground shadow-sm"
+          : "bg-card border-border text-muted-foreground hover:border-primary/40"
+      }`}
     >
-      <span className="text-lg shrink-0">{icon}</span>
+      <span className="text-lg">{icon}</span>
       <span className="flex-1 truncate">{label}</span>
-      <Checkbox checked={active} className="pointer-events-none shrink-0" />
-    </motion.button>
+      <Checkbox checked={active} className="pointer-events-none" />
+    </button>
   );
 }
 
@@ -1385,55 +1079,18 @@ function SummaryItem({
   className?: string;
 }) {
   return (
-    <div
-      className={`py-3 border-b last:border-0 ${className}`}
-      style={{ borderColor: "hsl(206 20% 90%)" }}
-    >
-      <p
-        className="text-[10px] tracking-[0.25em] uppercase"
-        style={{ color: "hsl(206 30% 55%)" }}
-      >
-        {label}
-      </p>
-      <p
-        className="text-base mt-1 break-words"
-        style={{
-          fontFamily: "'Fraunces', serif",
-          fontWeight: 400,
-          color: "hsl(206 56% 22%)",
-        }}
-      >
-        {value}
-      </p>
+    <div className={`py-2 border-b border-border/50 last:border-0 ${className}`}>
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="text-sm font-medium mt-0.5 break-words">{value}</p>
     </div>
   );
 }
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <div
-      className="rounded-xl p-4 text-center border"
-      style={{
-        background: "hsl(40 30% 97%)",
-        borderColor: "hsl(206 20% 90%)",
-      }}
-    >
-      <p
-        className="text-3xl"
-        style={{
-          fontFamily: "'Fraunces', serif",
-          fontWeight: 500,
-          color: "hsl(20 63% 48%)",
-        }}
-      >
-        {value}
-      </p>
-      <p
-        className="text-[9px] tracking-[0.25em] uppercase mt-1.5"
-        style={{ color: "hsl(206 30% 50%)" }}
-      >
-        {label}
-      </p>
+    <div className="rounded-lg bg-primary/5 border border-primary/10 p-3 text-center">
+      <p className="text-2xl font-bold text-primary">{value}</p>
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">{label}</p>
     </div>
   );
 }
