@@ -477,10 +477,60 @@ function Step1({
             />
           </Field>
         </div>
-      </Card>
 
+        <div className="mt-6">
+          <p className="text-sm font-medium mb-3">
+            Já alugou pelo Airbnb (ou outra plataforma) antes? *
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { value: true, label: "Sim, já anunciei", emoji: "✅" },
+              { value: false, label: "Não, será a primeira vez", emoji: "🌱" },
+            ].map((opt) => {
+              const isActive = form.previously_listed_airbnb === opt.value;
+              return (
+                <button
+                  key={String(opt.value)}
+                  type="button"
+                  onClick={() => update("previously_listed_airbnb", opt.value)}
+                  className={`relative rounded-xl border-2 p-4 text-left transition-all ${
+                    isActive
+                      ? "border-primary bg-primary/5 shadow-md"
+                      : "border-border hover:border-primary/40 bg-card"
+                  }`}
+                >
+                  <div className="text-2xl mb-1">{opt.emoji}</div>
+                  <div className="text-sm font-semibold">{opt.label}</div>
+                  {isActive && (
+                    <div className="absolute top-2 right-2 h-5 w-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                      <Check className="h-3 w-3" />
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+/* ------------------------------- STEP 2 TECH ------------------------------ */
+function Step2Tech({
+  form,
+  update,
+}: {
+  form: IntakeFormData;
+  update: <K extends keyof IntakeFormData>(k: K, v: IntakeFormData[K]) => void;
+}) {
+  return (
+    <div className="space-y-6">
       <Card className="p-6 md:p-8 shadow-xl border-primary/10">
-        <h3 className="text-lg font-semibold mb-1">Ficha técnica</h3>
+        <h3 className="text-lg font-semibold mb-1 flex items-center gap-2">
+          <Building2 className="h-5 w-5 text-primary" />
+          Ficha técnica
+        </h3>
         <p className="text-sm text-muted-foreground mb-6">Os números essenciais do seu imóvel.</p>
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
