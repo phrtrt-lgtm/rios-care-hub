@@ -555,7 +555,7 @@ function Step2Tech({
 }
 
 /* --------------------------------- STEP 2 -------------------------------- */
-function Step2({
+function Step3Rooms({
   form,
   updateRoom,
 }: {
@@ -786,7 +786,7 @@ function RoomCard({
 }
 
 /* --------------------------------- STEP 3 -------------------------------- */
-function Step3({
+function Step4KitchenSpecial({
   form,
   toggleKitchen,
   toggleSpecial,
@@ -839,7 +839,7 @@ function Step3({
 }
 
 /* --------------------------------- STEP 4 -------------------------------- */
-function Step4({ form, toggleCondo }: { form: IntakeFormData; toggleCondo: (v: string) => void }) {
+function Step5Condo({ form, toggleCondo }: { form: IntakeFormData; toggleCondo: (v: string) => void }) {
   return (
     <Card className="p-6 md:p-8 shadow-xl border-primary/10">
       <h3 className="text-lg font-semibold mb-1 flex items-center gap-2">
@@ -863,7 +863,7 @@ function Step4({ form, toggleCondo }: { form: IntakeFormData; toggleCondo: (v: s
 }
 
 /* --------------------------------- STEP 5 -------------------------------- */
-function Step5({
+function Step6Review({
   form,
   update,
 }: {
