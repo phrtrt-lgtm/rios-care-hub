@@ -1010,12 +1010,24 @@ function NumberField({
   hint?: string;
   icon?: React.ComponentType<{ className?: string }>;
 }) {
+  const canIncrement = value < max;
   return (
     <div className="space-y-1.5">
-      <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-        {Icon && <Icon className="h-3 w-3" />}
-        {label}
-      </Label>
+      <div className="flex items-center justify-between gap-2">
+        <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+          {Icon && <Icon className="h-3 w-3" />}
+          {label}
+        </Label>
+        <button
+          type="button"
+          onClick={() => canIncrement && onChange(value + 1)}
+          disabled={!canIncrement}
+          aria-label={`Adicionar ${label}`}
+          className="h-6 w-6 rounded-full bg-primary/10 hover:bg-primary/20 active:scale-95 text-primary flex items-center justify-center transition disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+        >
+          <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
+        </button>
+      </div>
       <div className="flex items-center gap-1 border rounded-md bg-background h-10">
         <Button
           size="icon"
