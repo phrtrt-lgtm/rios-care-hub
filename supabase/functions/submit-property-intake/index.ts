@@ -59,19 +59,38 @@ function escapeHtml(value: unknown): string {
 function statRow(label: string, value: string | number) {
   return `
     <tr>
-      <td style="padding:10px 0;border-bottom:1px solid ${BORDER};color:${TEXT_MID};font-size:13px;">${escapeHtml(label)}</td>
-      <td style="padding:10px 0;border-bottom:1px solid ${BORDER};color:${TEXT_DARK};font-size:13px;font-weight:600;text-align:right;">${escapeHtml(value)}</td>
+      <td style="padding:14px 0;border-bottom:1px solid ${BORDER};color:${TEXT_MID};font-size:15px;">${escapeHtml(label)}</td>
+      <td style="padding:14px 0;border-bottom:1px solid ${BORDER};color:${TEXT_DARK};font-size:16px;font-weight:700;text-align:right;">${escapeHtml(value)}</td>
     </tr>`;
+}
+
+// Bloco em grade 2 colunas para estatísticas — mais visual e legível
+function statBlocks(items: Array<{ label: string; value: string | number }>): string {
+  const cells = items.map(
+    (it) => `
+      <td width="50%" valign="top" style="padding:6px;">
+        <div style="background:${BG_SOFT};border:1px solid ${BORDER};border-radius:10px;padding:14px 16px;">
+          <p style="margin:0 0 4px;color:${TEXT_MUTED};font-size:12px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;">${escapeHtml(it.label)}</p>
+          <p style="margin:0;color:${TEXT_DARK};font-size:18px;font-weight:700;">${escapeHtml(it.value)}</p>
+        </div>
+      </td>`
+  );
+  // agrupa de 2 em 2 em <tr>
+  const rows: string[] = [];
+  for (let i = 0; i < cells.length; i += 2) {
+    rows.push(`<tr>${cells[i] || ""}${cells[i + 1] || `<td width="50%" style="padding:6px;"></td>`}</tr>`);
+  }
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:-6px;">${rows.join("")}</table>`;
 }
 
 function pillList(items: string[]): string {
   if (!items?.length) {
-    return `<p style="margin:0;color:${TEXT_MUTED};font-size:13px;font-style:italic;">Nenhum item informado</p>`;
+    return `<p style="margin:0;color:${TEXT_MUTED};font-size:14px;font-style:italic;">Nenhum item informado</p>`;
   }
-  return `<div style="line-height:2;">${items
+  return `<div style="line-height:2.2;">${items
     .map(
       (item) =>
-        `<span style="display:inline-block;background:${BG_SOFT};border:1px solid ${BORDER};color:${TEXT_DARK};font-size:12px;padding:4px 10px;border-radius:999px;margin:0 4px 4px 0;">${escapeHtml(
+        `<span style="display:inline-block;background:${BG_SOFT};border:1px solid ${BORDER};color:${TEXT_DARK};font-size:14px;font-weight:500;padding:7px 14px;border-radius:999px;margin:0 6px 6px 0;">${escapeHtml(
           item
         )}</span>`
     )
@@ -80,10 +99,10 @@ function pillList(items: string[]): string {
 
 function sectionTitle(title: string, subtitle?: string) {
   return `
-  <tr><td style="padding:28px 32px 8px;">
-    <h3 style="margin:0;color:${BRAND_BLUE};font-size:14px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">${escapeHtml(title)}</h3>
-    ${subtitle ? `<p style="margin:4px 0 0;color:${TEXT_MUTED};font-size:12px;">${escapeHtml(subtitle)}</p>` : ""}
-    <div style="height:2px;width:36px;background:${BRAND_TERRA};margin-top:10px;border-radius:2px;"></div>
+  <tr><td style="padding:36px 32px 12px;">
+    <h3 style="margin:0;color:${BRAND_BLUE};font-size:16px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;">${escapeHtml(title)}</h3>
+    ${subtitle ? `<p style="margin:6px 0 0;color:${TEXT_MUTED};font-size:14px;">${escapeHtml(subtitle)}</p>` : ""}
+    <div style="height:3px;width:44px;background:${BRAND_TERRA};margin-top:12px;border-radius:2px;"></div>
   </td></tr>`;
 }
 
