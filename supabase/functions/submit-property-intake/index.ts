@@ -152,26 +152,53 @@ function buildAdminEmailHtml(data: IntakePayload, submissionId: string, portalUr
   const fmtBool = (v: boolean) => (v ? "✓ Sim" : "— Não");
   const rooms = (data.rooms_data as Array<{ name?: string; type?: string; floor?: number; beds?: Array<{ type: string; count: number }>; hasAC?: boolean; hasTV?: boolean; hasBalcony?: boolean; hasOutdoorArea?: boolean }>) || [];
 
+  // Agrupa cômodos por pavimento
+  const roomsByFloor = new Map<number, typeof rooms>();
+  rooms.forEach((r) => {
+    const floor = r.floor || 1;
+    if (!roomsByFloor.has(floor)) roomsByFloor.set(floor, []);
+    roomsByFloor.get(floor)!.push(r);
+  });
+  const sortedFloors = Array.from(roomsByFloor.keys()).sort((a, b) => a - b);
+
+  const floorLabel = (floor: number) => {
+    if (floor === 0) return "Térreo";
+    if (floor === 1 && data.property_levels === 1) return "Pavimento único";
+    return `${floor}º Pavimento`;
+  };
+
+  const renderRoomCard = (r: typeof rooms[number], i: number) => {
+    const beds = (r.beds || []).map((b) => `${b.count}× ${b.type}`).join(" · ") || "Sem camas informadas";
+    const features = [
+      r.hasAC && "❄ Ar-condicionado",
+      r.hasTV && "📺 TV",
+      r.hasBalcony && "🌿 Varanda",
+      r.hasOutdoorArea && "🌳 Área externa",
+    ].filter(Boolean) as string[];
+    return `
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid ${BORDER};border-radius:12px;margin-bottom:12px;box-shadow:0 1px 3px rgba(15,49,80,0.04);">
+        <tr><td style="padding:18px 20px;">
+          <p style="margin:0 0 10px;color:${BRAND_BLUE};font-size:17px;font-weight:700;line-height:1.3;">${escapeHtml(r.name || `Cômodo ${i + 1}`)}</p>
+          <p style="margin:0 0 ${features.length ? "12px" : "0"};color:${TEXT_DARK};font-size:15px;line-height:1.5;"><span style="color:${TEXT_MUTED};">🛏</span> ${escapeHtml(beds)}</p>
+          ${features.length ? `<div style="line-height:2;">${features.map((f) => `<span style="display:inline-block;background:${BG_SOFT};border:1px solid ${BORDER};color:${TEXT_DARK};font-size:13px;font-weight:500;padding:5px 11px;border-radius:6px;margin:0 5px 5px 0;">${escapeHtml(f)}</span>`).join("")}</div>` : ""}
+        </td></tr>
+      </table>`;
+  };
+
   const roomsHtml = rooms.length
-    ? rooms.map((r, i) => {
-        const beds = (r.beds || []).map((b) => `${b.count}× ${b.type}`).join(" · ") || "Sem camas informadas";
-        const features = [
-          r.hasAC && "Ar-condicionado",
-          r.hasTV && "TV",
-          r.hasBalcony && "Varanda",
-          r.hasOutdoorArea && "Área externa",
-        ].filter(Boolean) as string[];
-        return `
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BG_SOFT};border:1px solid ${BORDER};border-radius:10px;margin-bottom:10px;">
-            <tr><td style="padding:14px 16px;">
-              <p style="margin:0 0 4px;color:${BRAND_BLUE};font-size:14px;font-weight:700;">${escapeHtml(r.name || `Cômodo ${i + 1}`)}</p>
-              <p style="margin:0 0 8px;color:${TEXT_MUTED};font-size:11px;">Pavimento ${escapeHtml(r.floor || 1)}</p>
-              <p style="margin:0 0 ${features.length ? "8px" : "0"};color:${TEXT_DARK};font-size:13px;">🛏 ${escapeHtml(beds)}</p>
-              ${features.length ? `<div>${features.map((f) => `<span style="display:inline-block;background:#fff;border:1px solid ${BORDER};color:${TEXT_MID};font-size:11px;padding:3px 8px;border-radius:4px;margin:0 4px 4px 0;">${escapeHtml(f)}</span>`).join("")}</div>` : ""}
-            </td></tr>
-          </table>`;
-      }).join("")
-    : `<p style="margin:0;color:${TEXT_MUTED};font-size:13px;font-style:italic;">Nenhum cômodo cadastrado</p>`;
+    ? sortedFloors
+        .map((floor) => {
+          const floorRooms = roomsByFloor.get(floor)!;
+          return `
+            <div style="margin-bottom:24px;">
+              <div style="display:inline-block;background:${BRAND_BLUE};color:#fff;font-size:13px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:6px 14px;border-radius:6px;margin-bottom:12px;">
+                ${escapeHtml(floorLabel(floor))} · ${floorRooms.length} ${floorRooms.length === 1 ? "ambiente" : "ambientes"}
+              </div>
+              ${floorRooms.map((r, i) => renderRoomCard(r, i)).join("")}
+            </div>`;
+        })
+        .join("")
+    : `<p style="margin:0;color:${TEXT_MUTED};font-size:14px;font-style:italic;">Nenhum cômodo cadastrado</p>`;
 
   const airbnbStatus = data.previously_listed_airbnb === true
     ? "Sim — já tem experiência"
@@ -183,12 +210,12 @@ function buildAdminEmailHtml(data: IntakePayload, submissionId: string, portalUr
     <!-- Owner card -->
     <tr><td style="padding:32px 32px 0;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg,${BG_SOFT} 0%,#fff 100%);border:1px solid ${BORDER};border-radius:12px;">
-        <tr><td style="padding:20px 22px;">
-          <p style="margin:0 0 4px;color:${TEXT_MUTED};font-size:11px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;">Proprietário</p>
-          <h2 style="margin:0 0 12px;color:${TEXT_DARK};font-size:20px;font-weight:700;">${escapeHtml(data.owner_name)}</h2>
-          <table role="presentation" cellpadding="0" cellspacing="0" style="font-size:13px;color:${TEXT_MID};">
-            <tr><td style="padding:2px 0;">✉ <a href="mailto:${escapeHtml(data.owner_email)}" style="color:${BRAND_BLUE_LIGHT};text-decoration:none;">${escapeHtml(data.owner_email)}</a></td></tr>
-            ${data.owner_phone ? `<tr><td style="padding:2px 0;">📞 ${escapeHtml(data.owner_phone)}</td></tr>` : ""}
+        <tr><td style="padding:22px 24px;">
+          <p style="margin:0 0 6px;color:${TEXT_MUTED};font-size:12px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;">Proprietário</p>
+          <h2 style="margin:0 0 14px;color:${TEXT_DARK};font-size:22px;font-weight:700;">${escapeHtml(data.owner_name)}</h2>
+          <table role="presentation" cellpadding="0" cellspacing="0" style="font-size:15px;color:${TEXT_MID};">
+            <tr><td style="padding:3px 0;">✉ <a href="mailto:${escapeHtml(data.owner_email)}" style="color:${BRAND_BLUE_LIGHT};text-decoration:none;">${escapeHtml(data.owner_email)}</a></td></tr>
+            ${data.owner_phone ? `<tr><td style="padding:3px 0;">📞 ${escapeHtml(data.owner_phone)}</td></tr>` : ""}
           </table>
         </td></tr>
       </table>
@@ -197,14 +224,21 @@ function buildAdminEmailHtml(data: IntakePayload, submissionId: string, portalUr
     <!-- Property -->
     ${sectionTitle("Imóvel", data.property_nickname || "Sem apelido")}
     <tr><td style="padding:0 32px;">
-      <p style="margin:0 0 14px;color:${TEXT_DARK};font-size:14px;line-height:1.5;">📍 ${escapeHtml(data.property_address)}</p>
+      <p style="margin:0 0 18px;color:${TEXT_DARK};font-size:16px;line-height:1.5;font-weight:500;">📍 ${escapeHtml(data.property_address)}</p>
+      ${statBlocks([
+        { label: "Quartos", value: data.bedrooms_count },
+        { label: "Suítes", value: data.suites_count },
+        { label: "Banheiros", value: data.bathrooms_count },
+        { label: "Salas", value: data.living_rooms_count },
+        { label: "Capacidade", value: `${data.max_capacity} pessoas` },
+        { label: "Garagem", value: `${data.parking_spots} ${data.parking_spots === 1 ? "vaga" : "vagas"}` },
+      ])}
+    </td></tr>
+
+    <!-- Estrutura -->
+    ${sectionTitle("Estrutura do imóvel")}
+    <tr><td style="padding:0 32px;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-        ${statRow("Quartos", data.bedrooms_count)}
-        ${statRow("Suítes", data.suites_count)}
-        ${statRow("Banheiros", data.bathrooms_count)}
-        ${statRow("Salas", data.living_rooms_count)}
-        ${statRow("Capacidade máxima", `${data.max_capacity} pessoas`)}
-        ${statRow("Vagas de garagem", data.parking_spots)}
         ${statRow("Pavimentos do imóvel", data.property_levels)}
         ${statRow("Andares do prédio", data.building_floors ?? "—")}
         ${statRow("Andar do apartamento", data.apartment_floor ?? "—")}
@@ -215,7 +249,7 @@ function buildAdminEmailHtml(data: IntakePayload, submissionId: string, portalUr
     </td></tr>
 
     <!-- Rooms -->
-    ${sectionTitle("Cômodos detalhados", `${rooms.length} ${rooms.length === 1 ? "ambiente" : "ambientes"}`)}
+    ${sectionTitle("Cômodos por pavimento", `${rooms.length} ${rooms.length === 1 ? "ambiente no total" : "ambientes no total"}`)}
     <tr><td style="padding:0 32px;">${roomsHtml}</td></tr>
 
     <!-- Kitchen -->
@@ -233,7 +267,7 @@ function buildAdminEmailHtml(data: IntakePayload, submissionId: string, portalUr
     ${data.notes ? `
     ${sectionTitle("Observações do proprietário")}
     <tr><td style="padding:0 32px;">
-      <div style="background:${BG_SOFT};border-left:3px solid ${BRAND_TERRA};padding:14px 16px;border-radius:0 8px 8px 0;color:${TEXT_DARK};font-size:13px;line-height:1.6;white-space:pre-wrap;">${escapeHtml(data.notes)}</div>
+      <div style="background:${BG_SOFT};border-left:3px solid ${BRAND_TERRA};padding:18px 20px;border-radius:0 10px 10px 0;color:${TEXT_DARK};font-size:15px;line-height:1.7;white-space:pre-wrap;">${escapeHtml(data.notes)}</div>
     </td></tr>` : ""}
 
     <!-- CTA -->
