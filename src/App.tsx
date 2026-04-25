@@ -591,6 +591,14 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/admin/cadastros-proprietarios"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'agent']}>
+                  <AdminCadastrosProprietarios />
+                </ProtectedRoute>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
           </SessionHandlerWrapper>
