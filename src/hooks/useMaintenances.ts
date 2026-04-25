@@ -260,13 +260,17 @@ export const useMaintenance = (id?: string) => {
         if (!merged.has(a.id)) merged.set(a.id, a);
       });
 
-      const attachments = Array.from(merged.values()).map((a: any) => ({
+      const ticketAttachments = Array.from(merged.values()).map((a: any) => ({
         id: a.id,
         file_name: a.file_name || a.name || 'Anexo',
         file_url: a.file_url,
         file_type: a.file_type || a.mime_type,
         size_bytes: a.size_bytes ?? a.file_size ?? null,
       }));
+
+      // Anexos vindos da vistoria que originou esta manutenção
+      const inspectionAttachments = await fetchInspectionAttachmentsForTicket(ticket.id);
+      const attachments = [...ticketAttachments, ...inspectionAttachments];
 
       let payments: any[] = [];
       let paid_cents = 0;
