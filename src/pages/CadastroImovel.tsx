@@ -950,9 +950,15 @@ function SuccessScreen({ ownerName, email }: { ownerName: string; email: string 
           <p className="text-muted-foreground mb-2">
             Obrigado, <strong className="text-foreground">{ownerName.split(" ")[0]}</strong>.
           </p>
-          <p className="text-muted-foreground mb-6">
-            Enviamos um e-mail para <strong className="text-foreground">{email}</strong> com a confirmação e o link para você definir sua senha de acesso ao portal.
+          <p className="text-muted-foreground mb-4">
+            Já realizamos seu <strong className="text-[hsl(var(--rios-terra))]">pré-cadastro na plataforma RIOS</strong> e enviamos um e-mail para <strong className="text-foreground">{email}</strong> com a confirmação e o link para você definir sua senha de acesso ao portal.
           </p>
+          <div className="rounded-lg bg-[hsl(var(--rios-terra))]/8 border border-[hsl(var(--rios-terra))]/20 p-4 text-sm text-left mb-4">
+            <p className="font-semibold mb-1 text-[hsl(var(--rios-terra))]">✨ Acesso antecipado ao portal</p>
+            <p className="text-muted-foreground text-xs leading-relaxed">
+              Sua conta já está criada como <strong>proprietário em pré-cadastro</strong>. Após a reunião e aprovação da parceria, liberamos automaticamente todos os recursos: cobranças, manutenções, vistorias, relatórios financeiros e mais.
+            </p>
+          </div>
           <div className="rounded-lg bg-primary/5 border border-primary/10 p-4 text-sm text-left">
             <p className="font-semibold mb-2">Próximos passos:</p>
             <ol className="space-y-2 text-muted-foreground">
