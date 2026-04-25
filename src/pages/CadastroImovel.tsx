@@ -485,7 +485,6 @@ function StepProgress({ current }: { current: number }) {
 /* --------------------------------- CARD WRAPPER --------------------------- */
 function EditorialCard({
   children,
-  number,
   title,
   subtitle,
 }: {
@@ -496,37 +495,24 @@ function EditorialCard({
 }) {
   return (
     <div
-      className="relative rounded-2xl bg-white/80 backdrop-blur-sm border p-6 md:p-10 shadow-[0_20px_60px_-30px_hsl(206_56%_22%/0.25)]"
+      className="relative rounded-2xl bg-white/90 backdrop-blur-sm border p-6 md:p-8 shadow-[0_10px_40px_-20px_hsl(206_56%_22%/0.2)]"
       style={{ borderColor: "hsl(206 20% 90%)" }}
     >
-      <div className="flex items-baseline gap-4 mb-2">
-        {number && (
-          <span
-            className="text-xs tracking-[0.3em] uppercase font-medium"
-            style={{ color: "hsl(20 63% 48%)" }}
-          >
-            {number}
-          </span>
-        )}
-        <h3
-          className="text-2xl md:text-3xl tracking-tight"
-          style={{
-            fontFamily: "'Fraunces', Georgia, serif",
-            fontWeight: 400,
-            color: "hsl(206 56% 22%)",
-          }}
-        >
-          {title}
-        </h3>
-      </div>
+      <h3
+        className="text-xl md:text-2xl font-semibold tracking-tight"
+        style={{ color: "hsl(206 56% 22%)" }}
+      >
+        {title}
+      </h3>
       {subtitle && (
         <p
-          className="text-sm mb-7 max-w-xl"
+          className="text-sm mt-1.5 mb-6 max-w-xl"
           style={{ color: "hsl(206 30% 45%)" }}
         >
           {subtitle}
         </p>
       )}
+      {!subtitle && <div className="mb-6" />}
       {children}
     </div>
   );
