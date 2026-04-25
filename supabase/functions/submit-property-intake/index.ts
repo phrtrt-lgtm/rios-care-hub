@@ -142,7 +142,12 @@ serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
     const MAIL_FROM = Deno.env.get("MAIL_FROM") || "RIOS <onboarding@resend.dev>";
-    const ADMIN_NOTIFY_EMAILS = (Deno.env.get("ADMIN_NOTIFY_EMAILS") || "").split(",").map(s => s.trim()).filter(Boolean);
+    const rawAdminNotifyEmails = Deno.env.get("ADMIN_NOTIFY_EMAILS") || "";
+    const ADMIN_NOTIFY_EMAILS = rawAdminNotifyEmails
+      .split(/[;,\n]+/)
+      .map((s) => s.trim().toLowerCase())
+      .filter((value, index, arr) => Boolean(value) && arr.indexOf(value) === index);
+    const INVALID_ADMIN_NOTIFY_EMAILS = ADMIN_NOTIFY_EMAILS.filter((value) => !isValidEmail(value));
     const PORTAL_URL = "https://portal.rioshospedagens.com.br";
 
     const payload = (await req.json()) as IntakePayload;
@@ -262,13 +267,14 @@ serve(async (req) => {
     console.log("[email] RESEND_API_KEY present:", !!RESEND_API_KEY);
     console.log("[email] MAIL_FROM:", MAIL_FROM);
     console.log("[email] ADMIN_NOTIFY_EMAILS:", ADMIN_NOTIFY_EMAILS);
+    console.log("[email] INVALID_ADMIN_NOTIFY_EMAILS:", INVALID_ADMIN_NOTIFY_EMAILS);
     console.log("[email] owner email:", email);
 
     if (RESEND_API_KEY) {
       const adminHtml = buildAdminEmailHtml(payload, submission.id, PORTAL_URL);
       const ownerHtml = buildOwnerWelcomeHtml(payload.owner_name, magicLink);
 
-      const sendEmail = async (to: string[], subject: string, html: string) => {
+      const sendEmail = async (to: string, subject: string, html: string) => {
         try {
           const res = await fetch("https://api.resend.com/emails", {
             method: "POST",
@@ -276,29 +282,32 @@ serve(async (req) => {
               "Content-Type": "application/json",
               Authorization: `Bearer ${RESEND_API_KEY}`,
             },
-            body: JSON.stringify({ from: MAIL_FROM, to, subject, html }),
+            body: JSON.stringify({ from: MAIL_FROM, to: [to], subject, html }),
           });
           const responseText = await res.text();
           if (!res.ok) {
-            console.error(`[email] FAIL → to=${JSON.stringify(to)} subject="${subject}" status=${res.status} body=${responseText}`);
+            console.error(`[email] FAIL → to=${to} subject="${subject}" status=${res.status} body=${responseText}`);
+            return { ok: false, to, status: res.status, body: responseText };
           } else {
-            console.log(`[email] OK → to=${JSON.stringify(to)} subject="${subject}" response=${responseText}`);
+            console.log(`[email] OK → to=${to} subject="${subject}" response=${responseText}`);
+            return { ok: true, to, status: res.status, body: responseText };
           }
         } catch (e) {
-          console.error(`[email] ERROR → to=${JSON.stringify(to)} subject="${subject}"`, e);
+          console.error(`[email] ERROR → to=${to} subject="${subject}"`, e);
+          return { ok: false, to, status: 0, body: e instanceof Error ? e.message : String(e) };
         }
       };
 
-      if (ADMIN_NOTIFY_EMAILS.length > 0) {
-        await sendEmail(
-          ADMIN_NOTIFY_EMAILS,
-          `🏠 Nova ficha: ${payload.owner_name} — ${payload.property_nickname || payload.property_address.slice(0, 40)}`,
-          adminHtml
-        );
+      const validAdminEmails = ADMIN_NOTIFY_EMAILS.filter((value) => isValidEmail(value));
+
+      if (validAdminEmails.length > 0) {
+        const adminSubject = `🏠 Nova ficha: ${payload.owner_name} — ${payload.property_nickname || payload.property_address.slice(0, 40)}`;
+        const adminResults = await Promise.all(validAdminEmails.map((adminEmail) => sendEmail(adminEmail, adminSubject, adminHtml)));
+        console.log("[email] admin send summary:", adminResults);
       } else {
         console.warn("[email] ADMIN_NOTIFY_EMAILS vazio — nenhuma notificação admin será enviada");
       }
-      await sendEmail([email], "Recebemos sua ficha — RIOS Hospedagens", ownerHtml);
+      await sendEmail(email, "Recebemos sua ficha — RIOS Hospedagens", ownerHtml);
     } else {
       console.warn("[email] RESEND_API_KEY not set, skipping email send");
     }
