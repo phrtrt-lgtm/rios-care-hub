@@ -256,11 +256,12 @@ export default function CadastroImovel() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-[hsl(var(--rios-blue))]/5 via-background to-[hsl(var(--rios-blue))]/10 relative overflow-hidden">
       {/* Decorative background blobs */}
       <div aria-hidden className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full bg-primary/10 blur-3xl" />
-        <div className="absolute top-1/2 -left-40 w-[400px] h-[400px] rounded-full bg-accent/10 blur-3xl" />
+        <div className="absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full bg-[hsl(var(--rios-blue))]/15 blur-3xl" />
+        <div className="absolute top-1/2 -left-40 w-[400px] h-[400px] rounded-full bg-[hsl(var(--rios-blue-light))]/15 blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 w-[350px] h-[350px] rounded-full bg-primary/10 blur-3xl" />
       </div>
 
       <div className="relative">
