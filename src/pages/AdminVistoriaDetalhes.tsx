@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { MediaThumbnail } from '@/components/MediaThumbnail';
 import { MediaGallery } from '@/components/MediaGallery';
 import { CreateMaintenanceFromInspectionDialog } from '@/components/CreateMaintenanceFromInspectionDialog';
+import { LinkInspectionAttachmentsDialog } from '@/components/LinkInspectionAttachmentsDialog';
 import EditInspectionDialog from '@/components/EditInspectionDialog';
 import { RoutineChecklistDisplay } from '@/components/RoutineChecklistDisplay';
 import { preloadMediaUrls } from '@/hooks/useMediaCache';
