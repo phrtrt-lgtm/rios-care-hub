@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useMediaCache } from "@/hooks/useMediaCache";
 import { MediaThumbnail } from "./MediaThumbnail";
 import { Skeleton } from "@/components/ui/skeleton";
+import { detectMediaKind } from "@/lib/mediaType";
 
 interface MediaItem {
   id: string;
@@ -28,9 +29,12 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange }: MediaG
   const { loadMedia, preloadMedia, getCachedUrl } = useMediaCache();
 
   const currentItem = items[currentIndex];
-  const isVideo = currentItem?.file_type?.startsWith('video/');
-  const isImage = currentItem?.file_type?.startsWith('image/');
-  const isPDF = currentItem?.file_type === 'application/pdf';
+  const currentKind = currentItem
+    ? detectMediaKind(currentItem.file_type, currentItem.file_name, currentItem.file_url)
+    : 'other';
+  const isVideo = currentKind === 'video';
+  const isImage = currentKind === 'image';
+  const isPDF = currentKind === 'pdf';
 
   // Memoize items URLs to avoid unnecessary re-renders
   const itemUrls = useMemo(() => items.map(item => item.file_url), [items]);
@@ -52,7 +56,7 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange }: MediaG
     if (!open || !currentItem) return;
 
     // PDFs use the original URL directly in iframe (blob URLs don't work in iframes)
-    if (currentItem.file_type === 'application/pdf') {
+    if (isPDF) {
       setCurrentBlobUrl(currentItem.file_url);
       setLoading(false);
       return;
@@ -202,11 +206,20 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange }: MediaG
                 )}
                 {isVideo && (
                   <video
-                    src={currentBlobUrl}
                     controls
                     className="max-w-full max-h-full w-auto h-auto"
                     autoPlay
-                  />
+                    playsInline
+                  >
+                    <source
+                      src={currentBlobUrl}
+                      type={
+                        currentItem.file_type?.startsWith('video/')
+                          ? currentItem.file_type
+                          : 'video/mp4'
+                      }
+                    />
+                  </video>
                 )}
                 {isPDF && (
                   <div className="w-full h-full flex flex-col items-center justify-center gap-4">
