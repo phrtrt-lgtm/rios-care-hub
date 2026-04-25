@@ -28,6 +28,7 @@ interface IntakePayload {
   special_amenities: string[];
   condo_amenities: string[];
   notes?: string;
+  previously_listed_airbnb?: boolean | null;
 }
 
 function isValidEmail(email: string) {
