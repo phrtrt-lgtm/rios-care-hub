@@ -124,47 +124,210 @@ const initialForm: UpdateForm = {
 };
 
 /* =========================================================
- *  Parser leve da ficha .md (best-effort)
+ *  Parser da ficha .md — entende o formato real (tabelas)
  * ========================================================= */
-function parseMarkdownFicha(md: string) {
-  const result: {
-    maxCapacity?: number;
-    extraGuestFee?: string;
-    checkIn?: string;
-    checkOut?: string;
-    petsAllowed?: boolean;
-    cleaningFee?: string;
-    rooms: { name: string }[];
-  } = { rooms: [] };
+interface ParsedRoom {
+  name: string;
+  beds: BedItem[];
+  amenities: AmenityItem[];
+}
+interface ParsedFicha {
+  maxCapacity?: number;
+  extraGuestFee?: string;
+  checkIn?: string;
+  checkOut?: string;
+  petsAllowed?: boolean;
+  petsMax?: number;
+  petsSize?: "pequeno" | "medio" | "grande" | "qualquer";
+  petFeePerStay?: string;
+  cleaningFee?: string;
+  rooms: ParsedRoom[];
+  extraMattresses: ExtraMattress[];
+}
 
-  if (!md) return result;
-  const text = md.toLowerCase();
+/** Normaliza horário no formato "15h", "15h00", "15:00", "15h30", "a partir de 15h" → "HH:MM" */
+function normalizeTime(raw: string): string | undefined {
+  if (!raw) return undefined;
+  const m = raw.match(/(\d{1,2})\s*(?:h|:)\s*(\d{0,2})/i);
+  if (!m) return undefined;
+  const h = m[1].padStart(2, "0");
+  const mm = (m[2] || "00").padEnd(2, "0").slice(0, 2);
+  return `${h}:${mm}`;
+}
 
-  // Capacidade (procura padrão "até X pessoas")
-  const capMatch = text.match(/at[éeé]\s+(\d{1,2})\s+pessoas?/);
-  if (capMatch) result.maxCapacity = parseInt(capMatch[1], 10);
+/** Mapeia descrição livre da cama para um BedType conhecido */
+function mapBedType(desc: string): BedType {
+  const t = desc.toLowerCase();
+  if (/king/.test(t) && /casal/.test(t)) return "casal_king";
+  if (/queen/.test(t)) return "casal_queen";
+  if (/king/.test(t) && /solteiro|super/.test(t)) return "solteiro_king";
+  if (/king/.test(t)) return "casal_king";
+  if (/casal/.test(t)) return "casal_padrao";
+  if (/beliche/.test(t)) return "beliche";
+  if (/bicama/.test(t)) return "bicama";
+  if (/sof[áa].*retr[áa]til|retr[áa]til/.test(t)) return "sofa_retratil";
+  if (/sof[áa].*cama|sof[áa]-?cama/.test(t)) return "sofa_cama";
+  if (/colch[ãa]o.*ch[ãa]o|colchão no chão/.test(t)) return "colchao_chao";
+  if (/ber[çc]o/.test(t)) return "berco";
+  if (/solteiro/.test(t)) return "solteiro";
+  return "casal_padrao";
+}
 
-  // Taxa por hóspede extra ("70 reais por dia a partir de 8")
-  const extraMatch = md.match(/(\d{1,4})\s*reais?\s+por\s+dia\s+a\s+partir/i);
-  if (extraMatch) result.extraGuestFee = extraMatch[1];
+/**
+ * Extrai camas da descrição livre tipo:
+ * "1 Cama de Casal", "2 Sofás-camas", "1 Beliche + 1 Bicama + Colchões extras solteiro"
+ * "1 Cama King (2 camas de solteiro juntas)"
+ * Retorna camas reais; colchões extras retornam separadamente.
+ */
+function extractBedsFromText(text: string): { beds: BedItem[]; extras: ExtraMattress[] } {
+  const beds: BedItem[] = [];
+  const extras: ExtraMattress[] = [];
+  if (!text) return { beds, extras };
 
-  // Check-in / out
-  const ciMatch = md.match(/check[- ]?in[^\n|]*?(\d{1,2}h\d{0,2}|\d{1,2}:\d{2})/i);
-  if (ciMatch) result.checkIn = ciMatch[1].replace("h", ":").padEnd(5, "0");
-  const coMatch = md.match(/check[- ]?out[^\n|]*?(\d{1,2}h\d{0,2}|\d{1,2}:\d{2})/i);
-  if (coMatch) result.checkOut = coMatch[1].replace("h", ":").padEnd(5, "0");
+  // Quebra por "+" ou ","
+  const parts = text.split(/\s*[+,]\s*/);
+  for (const rawPart of parts) {
+    const part = rawPart.trim();
+    if (!part) continue;
 
-  // Pet
-  if (/pode\s+pet\?[^\n|]*?\bsim\b/i.test(md)) result.petsAllowed = true;
-  if (/pode\s+pet\?[^\n|]*?\bn[ãa]o\b/i.test(md)) result.petsAllowed = false;
-
-  // Quartos/Suítes — captura nomes via headings tipo "## Suíte 1", "## Quarto 2"
-  const roomMatches = md.matchAll(/##+\s*(?:🛏️\s*)?((?:Su[ií]te|Quarto)\s*\d+)/gi);
-  for (const m of roomMatches) {
-    const name = m[1].trim();
-    if (!result.rooms.find((r) => r.name.toLowerCase() === name.toLowerCase())) {
-      result.rooms.push({ name });
+    // Detecta colchão extra
+    if (/colch[ãa]o.*extra|colch[õo]es.*extra/i.test(part)) {
+      const cMatch = part.match(/^(\d{1,2})\b/);
+      extras.push({
+        id: uid(),
+        description: part,
+        count: cMatch ? parseInt(cMatch[1], 10) : 1,
+      });
+      continue;
     }
+
+    // Captura quantidade no início (ex.: "1 Cama de Casal", "2 Sofás-camas")
+    const cMatch = part.match(/^(\d{1,2})\s+(.+)$/);
+    let count = 1;
+    let desc = part;
+    if (cMatch) {
+      count = parseInt(cMatch[1], 10) || 1;
+      desc = cMatch[2];
+    }
+
+    // Ignora trechos sem palavra-chave de cama
+    if (!/cama|sof[áa]|beliche|bicama|ber[çc]o|colch[ãa]o|king|queen|solteiro|casal/i.test(desc)) {
+      continue;
+    }
+
+    beds.push({ id: uid(), type: mapBedType(desc), count });
+  }
+
+  return { beds, extras };
+}
+
+function parseMarkdownFicha(md: string): ParsedFicha {
+  const result: ParsedFicha = { rooms: [], extraMattresses: [] };
+  if (!md) return result;
+
+  /* -------- Tabela "Informações Gerais" — extrai pares chave/valor -------- */
+  // linhas de tabela: | chave | valor |
+  const rowRegex = /^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*$/gm;
+  for (const m of md.matchAll(rowRegex)) {
+    const key = m[1].toLowerCase().replace(/[^\p{L}\d ]/gu, "").trim();
+    const value = m[2].trim();
+    if (!key || !value) continue;
+
+    if (/check\s*-?\s*in\b/.test(key)) {
+      const t = normalizeTime(value);
+      if (t) result.checkIn = t;
+    } else if (/check\s*-?\s*out\b/.test(key)) {
+      const t = normalizeTime(value);
+      if (t) result.checkOut = t;
+    } else if (/pode\s*pet|aceita\s*pet|pets?\b/.test(key)) {
+      if (/\bsim\b/i.test(value)) {
+        result.petsAllowed = true;
+        // tenta extrair quantidade e porte
+        const qty = value.match(/(\d{1,2})\s*pet/i);
+        if (qty) result.petsMax = parseInt(qty[1], 10);
+        if (/grande/i.test(value)) result.petsSize = "grande";
+        else if (/m[ée]dio/i.test(value)) result.petsSize = "medio";
+        else if (/pequeno/i.test(value)) result.petsSize = "pequeno";
+        const fee = value.match(/r?\$?\s*(\d{2,4})/i);
+        if (fee && /taxa|reais|\$/i.test(value)) result.petFeePerStay = fee[1];
+      } else if (/\bn[ãa]o\b|proibido/i.test(value)) {
+        result.petsAllowed = false;
+      }
+    } else if (/capacidade|h[óo]spedes|pessoas/.test(key)) {
+      const cap = value.match(/(\d{1,2})/);
+      if (cap) result.maxCapacity = parseInt(cap[1], 10);
+    } else if (/cobran[çc]a.*h[óo]spede|h[óo]spede.*extra|extra.*h[óo]spede/.test(key)) {
+      const fee = value.match(/(\d{1,4})\s*reais?/i);
+      if (fee) result.extraGuestFee = fee[1];
+    } else if (/limpeza|faxina/.test(key)) {
+      const fee = value.match(/r?\$?\s*(\d{2,4})/i);
+      if (fee && /\$|reais|r\$/i.test(value)) result.cleaningFee = fee[1];
+    }
+  }
+
+  /* -------- Quartos — tabelas com cabeçalho "Quarto | ... | ..." -------- */
+  // Captura blocos de tabela após cabeçalhos contendo "Quarto"
+  // Procura linhas após | Quarto | (header), depois | --- |, depois data rows
+  const lines = md.split("\n");
+  let inRoomTable = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const headerMatch = line.match(/^\|\s*Quarto\s*\|/i);
+    if (headerMatch) {
+      inRoomTable = true;
+      // pula a linha separadora "| --- | --- |"
+      continue;
+    }
+    if (inRoomTable) {
+      if (!line.trim().startsWith("|")) {
+        inRoomTable = false;
+        continue;
+      }
+      if (/^\|\s*-+\s*\|/.test(line)) continue; // separador
+      const cells = line.split("|").map((c) => c.trim()).filter((_, idx, arr) => idx > 0 && idx < arr.length - 1);
+      if (cells.length < 2) continue;
+
+      const rawName = cells[0].replace(/\*\*/g, "").trim();
+      if (!rawName || /^quarto$/i.test(rawName)) continue;
+      // Tenta achar a coluna de camas: a 2ª ou 3ª (algumas tabelas têm "Tipo" antes)
+      let bedsCell = cells[1];
+      let amenitiesCell = cells[2] || "";
+      if (cells.length >= 4 && !/cama|sof[áa]|beliche|king|queen|casal|solteiro|colch/i.test(cells[1])) {
+        // formato: | Quarto | Tipo | Camas | Itens |
+        bedsCell = cells[2];
+        amenitiesCell = cells[3] || "";
+      }
+
+      const { beds, extras } = extractBedsFromText(bedsCell);
+      result.extraMattresses.push(...extras);
+
+      // Parse comodidades (separadas por vírgula)
+      const amenities: AmenityItem[] = amenitiesCell
+        .split(/,/)
+        .map((a) => a.trim())
+        .filter((a) => a.length > 1 && !/^-+$/.test(a))
+        .map((label) => ({ id: uid(), label }));
+
+      // Limpa nome (remove "(...)")
+      const name = rawName.replace(/\s*\(.*?\)\s*$/, "").trim();
+
+      result.rooms.push({
+        name,
+        beds: beds.length > 0 ? beds : [{ id: uid(), type: "casal_queen", count: 1 }],
+        amenities,
+      });
+    }
+  }
+
+  /* -------- Diferenciais / Capacidade — busca colchões extras citados em texto -------- */
+  // Ex: "2 colchões extras"
+  const extraMattrText = md.match(/(\d{1,2})\s*colch[õo]es?\s*extras?/i);
+  if (extraMattrText && result.extraMattresses.length === 0) {
+    result.extraMattresses.push({
+      id: uid(),
+      description: "Colchões extras",
+      count: parseInt(extraMattrText[1], 10),
+    });
   }
 
   return result;
@@ -208,39 +371,54 @@ export default function AtualizacaoAnuncio() {
     (async () => {
       setLoadingFicha(true);
       try {
-        // 1) Busca ficha .md
+        // 1) Busca ficha .md (fonte primária — reflete o estado atual do anúncio)
         const { data: ficha } = await supabase
           .from("property_files")
           .select("content_md")
           .eq("property_id", form.property_id)
           .maybeSingle();
 
-        // 2) Busca submission de cadastro (rooms_data estruturado)
-        const property = properties.find((p) => p.id === form.property_id);
-        let intake: any = null;
-        if (property) {
+        const parsed = parseMarkdownFicha(ficha?.content_md || "");
+        const hasFicha = !!ficha?.content_md && parsed.rooms.length > 0;
+
+        // 2) Fallback: submission de cadastro (rooms_data estruturado)
+        let intake: { rooms_data?: unknown; max_capacity?: number } | null = null;
+        if (!hasFicha) {
           const { data: intakeData } = await supabase
             .from("property_intake_submissions")
-            .select("rooms_data, max_capacity, owner_email, owner_profile_id")
+            .select("rooms_data, max_capacity, owner_email, owner_profile_id, created_at")
             .or(
               `owner_profile_id.eq.${user?.id},owner_email.eq.${user?.email ?? "no-email"}`
             )
             .order("created_at", { ascending: false })
             .limit(20);
-          intake = (intakeData ?? []).find(
-            (s) =>
-              Array.isArray(s.rooms_data) &&
-              s.rooms_data.some((r: any) =>
-                String(r?.name || "").toLowerCase().includes(property.name.toLowerCase().split(" ")[0])
-              )
-          ) ?? intakeData?.[0];
+          const property = properties.find((p) => p.id === form.property_id);
+          if (property && intakeData) {
+            intake =
+              intakeData.find(
+                (s) =>
+                  Array.isArray(s.rooms_data) &&
+                  s.rooms_data.some((r: any) =>
+                    String(r?.name || "")
+                      .toLowerCase()
+                      .includes(property.name.toLowerCase().split(" ")[0])
+                  )
+              ) ?? intakeData[0];
+          }
         }
 
-        const parsed = parseMarkdownFicha(ficha?.content_md || "");
-
-        // Monta rooms preferindo intake.rooms_data
+        // Monta rooms — prioriza ficha .md (estado atual)
         let rooms: RoomItem[] = [];
-        if (intake?.rooms_data && Array.isArray(intake.rooms_data)) {
+        if (parsed.rooms.length > 0) {
+          rooms = parsed.rooms.map((r) => ({
+            id: uid(),
+            name: r.name,
+            beds: r.beds.length
+              ? r.beds
+              : [{ id: uid(), type: "casal_queen", count: 1 }],
+            amenities: r.amenities,
+          }));
+        } else if (intake?.rooms_data && Array.isArray(intake.rooms_data)) {
           rooms = intake.rooms_data
             .filter((r: any) => r.type === "bedroom")
             .map((r: any) => ({
@@ -253,14 +431,6 @@ export default function AtualizacaoAnuncio() {
               })),
               amenities: [],
             }));
-        }
-        if (rooms.length === 0 && parsed.rooms.length > 0) {
-          rooms = parsed.rooms.map((r) => ({
-            id: uid(),
-            name: r.name,
-            beds: [{ id: uid(), type: "casal_queen", count: 1 }],
-            amenities: [],
-          }));
         }
         if (rooms.length === 0) {
           rooms = [
@@ -276,13 +446,30 @@ export default function AtualizacaoAnuncio() {
         setForm((prev) => ({
           ...prev,
           rooms,
+          extra_mattresses:
+            parsed.extraMattresses.length > 0
+              ? parsed.extraMattresses.map((e) => ({ ...e, id: uid() }))
+              : prev.extra_mattresses,
           max_capacity:
-            intake?.max_capacity ?? parsed.maxCapacity ?? prev.max_capacity ?? 2,
+            parsed.maxCapacity ?? intake?.max_capacity ?? prev.max_capacity ?? 2,
           extra_guest_fee: parsed.extraGuestFee ?? prev.extra_guest_fee,
+          cleaning_fee: parsed.cleaningFee ?? prev.cleaning_fee,
           check_in_time: parsed.checkIn ?? prev.check_in_time,
           check_out_time: parsed.checkOut ?? prev.check_out_time,
           pets_allowed: parsed.petsAllowed ?? prev.pets_allowed,
+          pets_max: parsed.petsMax ?? prev.pets_max,
+          pets_size: parsed.petsSize ?? prev.pets_size,
+          pet_fee_per_stay: parsed.petFeePerStay ?? prev.pet_fee_per_stay,
         }));
+
+        if (hasFicha) {
+          toast.success("Dados atuais carregados da ficha do imóvel");
+        } else {
+          toast.info("Sem ficha cadastrada — preencha manualmente os campos");
+        }
+      } catch (err) {
+        console.error("Erro ao carregar ficha:", err);
+        toast.error("Não conseguimos carregar a ficha — preencha manualmente");
       } finally {
         setLoadingFicha(false);
       }
