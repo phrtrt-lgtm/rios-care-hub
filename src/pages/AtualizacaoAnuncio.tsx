@@ -371,39 +371,54 @@ export default function AtualizacaoAnuncio() {
     (async () => {
       setLoadingFicha(true);
       try {
-        // 1) Busca ficha .md
+        // 1) Busca ficha .md (fonte primária — reflete o estado atual do anúncio)
         const { data: ficha } = await supabase
           .from("property_files")
           .select("content_md")
           .eq("property_id", form.property_id)
           .maybeSingle();
 
-        // 2) Busca submission de cadastro (rooms_data estruturado)
-        const property = properties.find((p) => p.id === form.property_id);
-        let intake: any = null;
-        if (property) {
+        const parsed = parseMarkdownFicha(ficha?.content_md || "");
+        const hasFicha = !!ficha?.content_md && parsed.rooms.length > 0;
+
+        // 2) Fallback: submission de cadastro (rooms_data estruturado)
+        let intake: { rooms_data?: any[]; max_capacity?: number } | null = null;
+        if (!hasFicha) {
           const { data: intakeData } = await supabase
             .from("property_intake_submissions")
-            .select("rooms_data, max_capacity, owner_email, owner_profile_id")
+            .select("rooms_data, max_capacity, owner_email, owner_profile_id, created_at")
             .or(
               `owner_profile_id.eq.${user?.id},owner_email.eq.${user?.email ?? "no-email"}`
             )
             .order("created_at", { ascending: false })
             .limit(20);
-          intake = (intakeData ?? []).find(
-            (s) =>
-              Array.isArray(s.rooms_data) &&
-              s.rooms_data.some((r: any) =>
-                String(r?.name || "").toLowerCase().includes(property.name.toLowerCase().split(" ")[0])
-              )
-          ) ?? intakeData?.[0];
+          const property = properties.find((p) => p.id === form.property_id);
+          if (property && intakeData) {
+            intake =
+              intakeData.find(
+                (s) =>
+                  Array.isArray(s.rooms_data) &&
+                  s.rooms_data.some((r: any) =>
+                    String(r?.name || "")
+                      .toLowerCase()
+                      .includes(property.name.toLowerCase().split(" ")[0])
+                  )
+              ) ?? intakeData[0];
+          }
         }
 
-        const parsed = parseMarkdownFicha(ficha?.content_md || "");
-
-        // Monta rooms preferindo intake.rooms_data
+        // Monta rooms — prioriza ficha .md (estado atual)
         let rooms: RoomItem[] = [];
-        if (intake?.rooms_data && Array.isArray(intake.rooms_data)) {
+        if (parsed.rooms.length > 0) {
+          rooms = parsed.rooms.map((r) => ({
+            id: uid(),
+            name: r.name,
+            beds: r.beds.length
+              ? r.beds
+              : [{ id: uid(), type: "casal_queen", count: 1 }],
+            amenities: r.amenities,
+          }));
+        } else if (intake?.rooms_data && Array.isArray(intake.rooms_data)) {
           rooms = intake.rooms_data
             .filter((r: any) => r.type === "bedroom")
             .map((r: any) => ({
@@ -416,14 +431,6 @@ export default function AtualizacaoAnuncio() {
               })),
               amenities: [],
             }));
-        }
-        if (rooms.length === 0 && parsed.rooms.length > 0) {
-          rooms = parsed.rooms.map((r) => ({
-            id: uid(),
-            name: r.name,
-            beds: [{ id: uid(), type: "casal_queen", count: 1 }],
-            amenities: [],
-          }));
         }
         if (rooms.length === 0) {
           rooms = [
@@ -439,13 +446,30 @@ export default function AtualizacaoAnuncio() {
         setForm((prev) => ({
           ...prev,
           rooms,
+          extra_mattresses:
+            parsed.extraMattresses.length > 0
+              ? parsed.extraMattresses.map((e) => ({ ...e, id: uid() }))
+              : prev.extra_mattresses,
           max_capacity:
-            intake?.max_capacity ?? parsed.maxCapacity ?? prev.max_capacity ?? 2,
+            parsed.maxCapacity ?? intake?.max_capacity ?? prev.max_capacity ?? 2,
           extra_guest_fee: parsed.extraGuestFee ?? prev.extra_guest_fee,
+          cleaning_fee: parsed.cleaningFee ?? prev.cleaning_fee,
           check_in_time: parsed.checkIn ?? prev.check_in_time,
           check_out_time: parsed.checkOut ?? prev.check_out_time,
           pets_allowed: parsed.petsAllowed ?? prev.pets_allowed,
+          pets_max: parsed.petsMax ?? prev.pets_max,
+          pets_size: parsed.petsSize ?? prev.pets_size,
+          pet_fee_per_stay: parsed.petFeePerStay ?? prev.pet_fee_per_stay,
         }));
+
+        if (hasFicha) {
+          toast.success("Dados atuais carregados da ficha do imóvel");
+        } else {
+          toast.info("Sem ficha cadastrada — preencha manualmente os campos");
+        }
+      } catch (err) {
+        console.error("Erro ao carregar ficha:", err);
+        toast.error("Não conseguimos carregar a ficha — preencha manualmente");
       } finally {
         setLoadingFicha(false);
       }
