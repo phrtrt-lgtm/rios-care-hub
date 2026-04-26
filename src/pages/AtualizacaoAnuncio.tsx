@@ -91,7 +91,12 @@ interface UpdateForm {
   // Camas e cômodos
   rooms: RoomItem[];
   extra_mattresses: ExtraMattress[];
-  // Observações
+  // Observações por etapa
+  notes_step1: string;
+  notes_step2: string;
+  notes_step3: string;
+  notes_step4: string;
+  // Observações finais
   notes: string;
 }
 
