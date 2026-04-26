@@ -79,6 +79,7 @@ import AdminRelatoriosFinanceiros from "./pages/AdminRelatoriosFinanceiros";
 import AdminRelatoriosProprietario from "./pages/AdminRelatoriosProprietario";
 import CadastroImovel from "./pages/CadastroImovel";
 import AdminCadastrosProprietarios from "./pages/AdminCadastrosProprietarios";
+import AtualizacaoAnuncio from "./pages/AtualizacaoAnuncio";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -94,6 +95,14 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/cadastro" element={<Cadastro />} />
             <Route path="/cadastro-imovel" element={<CadastroImovel />} />
+            <Route
+              path="/atualizacao-anuncio"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <AtualizacaoAnuncio />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/aguardando-aprovacao" element={<AguardandoAprovacao />} />
             <Route
               path="/minha-caixa"
