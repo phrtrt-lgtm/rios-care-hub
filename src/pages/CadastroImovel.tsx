@@ -71,6 +71,7 @@ const initialForm: IntakeFormData = {
   property_nickname: "",
   property_address: "",
   previously_listed_airbnb: null,
+  notes_step1: "",
   bedrooms_count: 1,
   living_rooms_count: 1,
   bathrooms_count: 1,
@@ -82,15 +83,48 @@ const initialForm: IntakeFormData = {
   has_wifi: true,
   max_capacity: 2,
   parking_spots: 0,
+  notes_step2: "",
   rooms_data: [],
+  notes_step3: "",
   kitchen_items: [],
   special_amenities: [],
+  notes_step4: "",
   condo_amenities: [],
+  notes_step5: "",
   notes: "",
 };
 
 function uid() {
   return Math.random().toString(36).slice(2, 10);
+}
+
+function StepNotes({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <Card className="p-5 md:p-6 shadow-md border-dashed border-primary/20 bg-primary/[0.02]">
+      <Label className="text-sm font-semibold flex items-center gap-2">
+        <Sparkles className="h-4 w-4 text-primary" />
+        Observações desta etapa (opcional)
+      </Label>
+      <p className="text-xs text-muted-foreground mt-1 mb-3">
+        Adicione qualquer nuance, detalhe ou contexto sobre as informações desta etapa.
+      </p>
+      <Textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        rows={3}
+        maxLength={1000}
+        placeholder={placeholder ?? "Ex.: alguma particularidade que devemos saber..."}
+      />
+    </Card>
+  );
 }
 
 function buildRooms(form: IntakeFormData, existing: RoomEntry[]): RoomEntry[] {
@@ -223,8 +257,20 @@ export default function CadastroImovel() {
   const submit = async () => {
     setSubmitting(true);
     try {
+      // Consolida observações por etapa dentro do campo `notes`
+      const stepNotesParts = [
+        form.notes_step1 && `[Sobre você] ${form.notes_step1}`,
+        form.notes_step2 && `[Ficha técnica] ${form.notes_step2}`,
+        form.notes_step3 && `[Cômodos] ${form.notes_step3}`,
+        form.notes_step4 && `[Cozinha & especiais] ${form.notes_step4}`,
+        form.notes_step5 && `[Condomínio] ${form.notes_step5}`,
+        form.notes && `[Observações finais] ${form.notes}`,
+      ].filter(Boolean);
+      const consolidatedNotes = stepNotesParts.join("\n\n");
+
       const payload = {
         ...form,
+        notes: consolidatedNotes,
         rooms_data: form.rooms_data.map((r) => ({
           name: r.name,
           type: r.type,
@@ -277,18 +323,59 @@ export default function CadastroImovel() {
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
             >
-              {step === 1 && <Step1 form={form} update={update} />}
-              {step === 2 && <Step2Tech form={form} update={update} />}
-              {step === 3 && <Step3Rooms form={form} updateRoom={updateRoom} />}
+              {step === 1 && (
+                <div className="space-y-6">
+                  <Step1 form={form} update={update} />
+                  <StepNotes
+                    value={form.notes_step1}
+                    onChange={(v) => update("notes_step1", v)}
+                    placeholder="Ex.: melhor horário para conversarmos, contexto sobre a parceria..."
+                  />
+                </div>
+              )}
+              {step === 2 && (
+                <div className="space-y-6">
+                  <Step2Tech form={form} update={update} />
+                  <StepNotes
+                    value={form.notes_step2}
+                    onChange={(v) => update("notes_step2", v)}
+                    placeholder="Ex.: detalhes sobre pavimentos, áreas técnicas, particularidades da estrutura..."
+                  />
+                </div>
+              )}
+              {step === 3 && (
+                <div className="space-y-6">
+                  <Step3Rooms form={form} updateRoom={updateRoom} />
+                  <StepNotes
+                    value={form.notes_step3}
+                    onChange={(v) => update("notes_step3", v)}
+                    placeholder="Ex.: colchões extras, acessórios de cama, observações sobre os cômodos..."
+                  />
+                </div>
+              )}
               {step === 4 && (
-                <Step4KitchenSpecial
-                  form={form}
-                  toggleKitchen={(v) => toggleArr("kitchen_items", v)}
-                  toggleSpecial={(v) => toggleArr("special_amenities", v)}
-                />
+                <div className="space-y-6">
+                  <Step4KitchenSpecial
+                    form={form}
+                    toggleKitchen={(v) => toggleArr("kitchen_items", v)}
+                    toggleSpecial={(v) => toggleArr("special_amenities", v)}
+                  />
+                  <StepNotes
+                    value={form.notes_step4}
+                    onChange={(v) => update("notes_step4", v)}
+                    placeholder="Ex.: utensílios diferenciados, marca de eletrodomésticos, comodidades extras..."
+                  />
+                </div>
               )}
               {step === 5 && (
-                <Step5Condo form={form} toggleCondo={(v) => toggleArr("condo_amenities", v)} />
+                <div className="space-y-6">
+                  <Step5Condo form={form} toggleCondo={(v) => toggleArr("condo_amenities", v)} />
+                  <StepNotes
+                    value={form.notes_step5}
+                    onChange={(v) => update("notes_step5", v)}
+                    placeholder="Ex.: regras do condomínio, horários da piscina, restrições, taxas extras..."
+                  />
+                </div>
               )}
               {step === 6 && <Step6Review form={form} update={update} />}
             </motion.div>

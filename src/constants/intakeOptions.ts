@@ -20,10 +20,11 @@ export const KITCHEN_ITEMS = [
   { value: "liquidificador", label: "Liquidificador", icon: "🥤" },
   { value: "sanduicheira", label: "Sanduicheira", icon: "🥪" },
   { value: "cafeteira", label: "Cafeteira elétrica", icon: "☕" },
+  { value: "cafeteira_capsula", label: "Cafeteira de cápsula", icon: "☕" },
   { value: "microondas", label: "Microondas", icon: "🍱" },
   { value: "maquina_lavar", label: "Máquina de lavar", icon: "🧺" },
   { value: "lava_loucas", label: "Lava-louças", icon: "🍽️" },
-  { value: "forno_eletrico", label: "Forno elétrico", icon: "🥧" },
+  { value: "forno", label: "Forno", icon: "🥧" },
 ] as const;
 
 export const SPECIAL_AMENITIES = [
@@ -33,10 +34,9 @@ export const SPECIAL_AMENITIES = [
   { value: "jacuzzi", label: "Jacuzzi / hidromassagem", icon: "🛁" },
   { value: "vista_mar", label: "Vista para o mar", icon: "🌊" },
   { value: "vista_montanha", label: "Vista para montanha", icon: "⛰️" },
-  { value: "lareira", label: "Lareira", icon: "🔥" },
   { value: "deck", label: "Deck / terraço", icon: "🌅" },
   { value: "jardim", label: "Jardim privativo", icon: "🌿" },
-  { value: "home_office", label: "Home office", icon: "💻" },
+  { value: "home_office", label: "Espaço para trabalho", icon: "💻" },
 ] as const;
 
 export const CONDO_AMENITIES = [
@@ -45,12 +45,10 @@ export const CONDO_AMENITIES = [
   { value: "piscina_condo", label: "Piscina do condomínio", icon: "🏊" },
   { value: "sauna_condo", label: "Sauna do condomínio", icon: "🧖" },
   { value: "salao_festas", label: "Salão de festas", icon: "🎉" },
-  { value: "playground", label: "Playground", icon: "🎠" },
+  { value: "salao_jogos", label: "Salão de jogos", icon: "🎲" },
   { value: "quadra_esportes", label: "Quadra de esportes", icon: "⚽" },
   { value: "churrasqueira_condo", label: "Churrasqueira coletiva", icon: "🍖" },
   { value: "elevador_servico", label: "Elevador de serviço", icon: "🛗" },
-  { value: "cameras", label: "Câmeras de segurança", icon: "📹" },
-  { value: "cerca_eletrica", label: "Cerca elétrica", icon: "⚡" },
   { value: "praia_proxima", label: "Praia próxima (até 500m)", icon: "🏖️" },
 ] as const;
 
@@ -84,6 +82,7 @@ export interface IntakeFormData {
   property_nickname: string;
   property_address: string;
   previously_listed_airbnb: boolean | null;
+  notes_step1: string;
   // Step 2 - Ficha técnica
   bedrooms_count: number;
   living_rooms_count: number;
@@ -96,13 +95,17 @@ export interface IntakeFormData {
   has_wifi: boolean;
   max_capacity: number;
   parking_spots: number;
-  // Step 2
+  notes_step2: string;
+  // Step 3 - Cômodos
   rooms_data: RoomEntry[];
-  // Step 3
+  notes_step3: string;
+  // Step 4 - Cozinha & especiais
   kitchen_items: KitchenItem[];
   special_amenities: SpecialAmenity[];
-  // Step 4
+  notes_step4: string;
+  // Step 5 - Condomínio
   condo_amenities: CondoAmenity[];
-  // Step 5
+  notes_step5: string;
+  // Step 6 - Revisão (observações finais)
   notes: string;
 }
