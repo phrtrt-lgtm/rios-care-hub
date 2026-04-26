@@ -1160,7 +1160,7 @@ function Step2Rules({
         <p className="text-sm text-muted-foreground mb-6">
           Capacidade puxada da sua ficha. Ajuste se quiser mudar.
         </p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <NumberField
             label="Capacidade máxima atual"
             value={form.max_capacity}
@@ -1178,16 +1178,6 @@ function Step2Rules({
                   "extra_guest_fee",
                   e.target.value.replace(/[^\d.,]/g, "")
                 )
-              }
-            />
-          </Field>
-          <Field label="Taxa de faxina (R$)" icon={DollarSign}>
-            <Input
-              inputMode="numeric"
-              placeholder="Ex: 250"
-              value={form.cleaning_fee}
-              onChange={(e) =>
-                update("cleaning_fee", e.target.value.replace(/[^\d.,]/g, ""))
               }
             />
           </Field>
@@ -1788,7 +1778,6 @@ ${petsBlock}
 ### 👥 Capacidade & taxas
 - Capacidade máxima: **${form.max_capacity}** hóspedes
 - Taxa por hóspede extra/diária: **${form.extra_guest_fee ? `R$ ${form.extra_guest_fee}` : "—"}**
-- Taxa de faxina: **${form.cleaning_fee ? `R$ ${form.cleaning_fee}` : "—"}**
 ${stepNote(form.notes_step2)}
 ### 🛏️ Cômodos & camas
 ${roomsBlock || "_Nenhum quarto informado._"}
