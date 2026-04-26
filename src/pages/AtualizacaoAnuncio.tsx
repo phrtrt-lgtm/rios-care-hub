@@ -1626,6 +1626,40 @@ function SuccessScreen({
 }
 
 /* =========================================================
+ *  Campo de observações reutilizável (em cada etapa)
+ * ========================================================= */
+function StepNotesField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <Card className="p-5 md:p-6 shadow-md border-primary/10 bg-muted/20">
+      <div className="flex items-center gap-2 mb-2">
+        <MessageSquare className="h-4 w-4 text-primary" />
+        <h4 className="text-sm font-semibold">Observações desta etapa</h4>
+      </div>
+      <p className="text-xs text-muted-foreground mb-3">
+        Algum detalhe ou nuance que precisamos saber sobre o que você acabou de preencher?
+      </p>
+      <Textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Opcional — escreva qualquer observação sobre esta etapa."
+        rows={3}
+        maxLength={1000}
+        className="text-sm"
+      />
+      <p className="text-[11px] text-muted-foreground mt-1 text-right">
+        {value.length}/1000
+      </p>
+    </Card>
+  );
+}
+
+/* =========================================================
  *  Componentes utilitários
  * ========================================================= */
 function Field({
