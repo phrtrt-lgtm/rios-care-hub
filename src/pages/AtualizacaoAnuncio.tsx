@@ -367,12 +367,9 @@ function parseMarkdownFicha(md: string): ParsedFicha {
         label,
       }));
 
-      // Se a "coluna" se chama Extra e só tem colchões, vira colchão extra (não quarto)
-      const isExtraOnly =
-        /^extra/i.test(rawName) &&
-        beds.length === 0 &&
-        bedTexts.some((t) => /colch[ãa]o/i.test(t));
-      if (isExtraOnly) {
+      // Coluna "Extra" → vai para colchões extras (não é quarto real)
+      const isExtraColumn = /^extra/i.test(rawName);
+      if (isExtraColumn) {
         for (const t of bedTexts) {
           const m = t.match(/^(\d{1,2})\s+(.+)$/);
           result.extraMattresses.push({
