@@ -228,8 +228,20 @@ export default function CadastroImovel() {
   const submit = async () => {
     setSubmitting(true);
     try {
+      // Consolida observações por etapa dentro do campo `notes`
+      const stepNotesParts = [
+        form.notes_step1 && `[Sobre você] ${form.notes_step1}`,
+        form.notes_step2 && `[Ficha técnica] ${form.notes_step2}`,
+        form.notes_step3 && `[Cômodos] ${form.notes_step3}`,
+        form.notes_step4 && `[Cozinha & especiais] ${form.notes_step4}`,
+        form.notes_step5 && `[Condomínio] ${form.notes_step5}`,
+        form.notes && `[Observações finais] ${form.notes}`,
+      ].filter(Boolean);
+      const consolidatedNotes = stepNotesParts.join("\n\n");
+
       const payload = {
         ...form,
+        notes: consolidatedNotes,
         rooms_data: form.rooms_data.map((r) => ({
           name: r.name,
           type: r.type,
