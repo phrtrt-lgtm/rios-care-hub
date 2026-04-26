@@ -455,7 +455,16 @@ export default function AtualizacaoAnuncio() {
           .maybeSingle();
 
         const parsed = parseMarkdownFicha(ficha?.content_md || "");
-        const hasFicha = !!ficha?.content_md && parsed.rooms.length > 0;
+        // Considera "ficha encontrada" se o .md existe e algo relevante foi extraído
+        const extractedAnything =
+          parsed.rooms.length > 0 ||
+          parsed.maxCapacity !== undefined ||
+          parsed.checkIn !== undefined ||
+          parsed.checkOut !== undefined ||
+          parsed.petsAllowed !== undefined ||
+          parsed.extraGuestFee !== undefined ||
+          parsed.cleaningFee !== undefined;
+        const hasFicha = !!ficha?.content_md && extractedAnything;
 
         // 2) Fallback: submission de cadastro (rooms_data estruturado)
         let intake: { rooms_data?: unknown; max_capacity?: number } | null = null;
