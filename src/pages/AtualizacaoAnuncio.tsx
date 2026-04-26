@@ -1778,7 +1778,6 @@ ${petsBlock}
 ### 👥 Capacidade & taxas
 - Capacidade máxima: **${form.max_capacity}** hóspedes
 - Taxa por hóspede extra/diária: **${form.extra_guest_fee ? `R$ ${form.extra_guest_fee}` : "—"}**
-- Taxa de faxina: **${form.cleaning_fee ? `R$ ${form.cleaning_fee}` : "—"}**
 ${stepNote(form.notes_step2)}
 ### 🛏️ Cômodos & camas
 ${roomsBlock || "_Nenhum quarto informado._"}
