@@ -82,6 +82,7 @@ export interface IntakeFormData {
   property_nickname: string;
   property_address: string;
   previously_listed_airbnb: boolean | null;
+  notes_step1: string;
   // Step 2 - Ficha técnica
   bedrooms_count: number;
   living_rooms_count: number;
@@ -94,13 +95,17 @@ export interface IntakeFormData {
   has_wifi: boolean;
   max_capacity: number;
   parking_spots: number;
-  // Step 2
+  notes_step2: string;
+  // Step 3 - Cômodos
   rooms_data: RoomEntry[];
-  // Step 3
+  notes_step3: string;
+  // Step 4 - Cozinha & especiais
   kitchen_items: KitchenItem[];
   special_amenities: SpecialAmenity[];
-  // Step 4
+  notes_step4: string;
+  // Step 5 - Condomínio
   condo_amenities: CondoAmenity[];
-  // Step 5
+  notes_step5: string;
+  // Step 6 - Revisão (observações finais)
   notes: string;
 }
