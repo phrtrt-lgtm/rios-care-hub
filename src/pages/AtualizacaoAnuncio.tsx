@@ -221,12 +221,22 @@ function extractBedsFromText(text: string): { beds: BedItem[]; extras: ExtraMatt
   return { beds, extras };
 }
 
+/** Divide uma linha de tabela markdown em células (descarta primeiro/último vazios). */
+function splitMdRow(line: string): string[] {
+  const trimmed = line.trim().replace(/^\|/, "").replace(/\|$/, "");
+  return trimmed.split("|").map((c) => c.trim());
+}
+
+/** Detecta se uma string parece um separador de tabela (ex.: ":---" ou "----") */
+function isSeparatorRow(line: string): boolean {
+  return /^\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?\s*$/.test(line.trim());
+}
+
 function parseMarkdownFicha(md: string): ParsedFicha {
   const result: ParsedFicha = { rooms: [], extraMattresses: [] };
   if (!md) return result;
 
-  /* -------- Tabela "Informações Gerais" — extrai pares chave/valor -------- */
-  // linhas de tabela: | chave | valor |
+  /* -------- Tabela "Informações Gerais" — pares chave/valor -------- */
   const rowRegex = /^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*$/gm;
   for (const m of md.matchAll(rowRegex)) {
     const key = m[1].toLowerCase().replace(/[^\p{L}\d ]/gu, "").trim();
@@ -240,76 +250,138 @@ function parseMarkdownFicha(md: string): ParsedFicha {
       const t = normalizeTime(value);
       if (t) result.checkOut = t;
     } else if (/pode\s*pet|aceita\s*pet|pets?\b/.test(key)) {
-      if (/\bsim\b/i.test(value)) {
-        result.petsAllowed = true;
-        // tenta extrair quantidade e porte
-        const qty = value.match(/(\d{1,2})\s*pet/i);
-        if (qty) result.petsMax = parseInt(qty[1], 10);
-        if (/grande/i.test(value)) result.petsSize = "grande";
-        else if (/m[ée]dio/i.test(value)) result.petsSize = "medio";
-        else if (/pequeno/i.test(value)) result.petsSize = "pequeno";
-        const fee = value.match(/r?\$?\s*(\d{2,4})/i);
-        if (fee && /taxa|reais|\$/i.test(value)) result.petFeePerStay = fee[1];
-      } else if (/\bn[ãa]o\b|proibido/i.test(value)) {
+      const lower = value.toLowerCase();
+      const hasNo = /\bn[ãa]o\b|proibido|nao aceita|n[ãa]o aceita/.test(lower);
+      const hasSize = /pequeno|m[ée]dio|grande|qualquer\s*porte/.test(lower);
+      const hasYes = /\bsim\b|aceita|permitido|permite|apenas|somente/.test(lower);
+      if (hasNo && !hasYes && !hasSize) {
         result.petsAllowed = false;
+      } else if (hasYes || hasSize) {
+        result.petsAllowed = true;
+        // porte
+        if (/grande/.test(lower)) result.petsSize = "grande";
+        else if (/m[ée]dio/.test(lower)) result.petsSize = "medio";
+        else if (/pequeno/.test(lower)) result.petsSize = "pequeno";
+        else if (/qualquer/.test(lower)) result.petsSize = "qualquer";
+        // quantidade — pega último número da string (ex.: "Apenas pequeno porte, 2")
+        const numbers = value.match(/\d{1,2}/g);
+        if (numbers && numbers.length > 0) {
+          // se houver indicação clara de taxa (R$), ignora o número como quantidade
+          const lastNum = parseInt(numbers[numbers.length - 1], 10);
+          if (!Number.isNaN(lastNum) && lastNum > 0 && lastNum <= 10) {
+            result.petsMax = lastNum;
+          }
+        }
+        // taxa por estadia/dia
+        const fee = value.match(/r\$?\s*(\d{2,4})|(\d{2,4})\s*(?:reais|por\s*dia|por\s*estadia|\/dia|\/estadia)/i);
+        if (fee) result.petFeePerStay = fee[1] || fee[2];
       }
-    } else if (/capacidade|h[óo]spedes|pessoas/.test(key)) {
+    } else if (/capacidade|h[óo]spedes|pessoas/.test(key) && !/cobran|extra|taxa/.test(key)) {
       const cap = value.match(/(\d{1,2})/);
       if (cap) result.maxCapacity = parseInt(cap[1], 10);
-    } else if (/cobran[çc]a.*h[óo]spede|h[óo]spede.*extra|extra.*h[óo]spede/.test(key)) {
-      const fee = value.match(/(\d{1,4})\s*reais?/i);
-      if (fee) result.extraGuestFee = fee[1];
-    } else if (/limpeza|faxina/.test(key)) {
-      const fee = value.match(/r?\$?\s*(\d{2,4})/i);
-      if (fee && /\$|reais|r\$/i.test(value)) result.cleaningFee = fee[1];
+    } else if (/cobran[çc]a.*h[óo]spede|h[óo]spede.*extra|extra.*h[óo]spede|taxa.*h[óo]spede/.test(key)) {
+      // Valor: procura número logo após "hóspedes" ou um número isolado
+      // Ex.: "A partir de 6 hóspedes 40 por dia" → 40
+      const afterGuests = value.match(/h[óo]spedes?\s*[,.\-]?\s*(?:r\$\s*)?(\d{1,4})/i);
+      if (afterGuests) {
+        result.extraGuestFee = afterGuests[1];
+      } else {
+        // fallback: último número da string (ignora "6" se houver mais números depois)
+        const nums = value.match(/\d{1,4}/g);
+        if (nums && nums.length > 0) {
+          result.extraGuestFee = nums[nums.length - 1];
+        }
+      }
+    } else if (/(taxa|valor|pre[çc]o).*(limpeza|faxina)|^limpeza$|^faxina$/.test(key)) {
+      // "Tempo de Limpeza" deve ser ignorado (não é valor)
+      if (!/tempo/.test(key)) {
+        const fee = value.match(/r?\$?\s*(\d{2,4})/i);
+        if (fee && /\$|reais|r\$|\d/.test(value)) result.cleaningFee = fee[1];
+      }
     }
   }
 
-  /* -------- Quartos — tabelas com cabeçalho "Quarto | ... | ..." -------- */
-  // Captura blocos de tabela após cabeçalhos contendo "Quarto"
-  // Procura linhas após | Quarto | (header), depois | --- |, depois data rows
+  /* -------- Quartos — formato transposto: cada quarto é uma COLUNA -------- */
+  // Ex.:
+  //   | Quarto 1 (Suíte) | Quarto 2 | Quarto 3 | Extra |
+  //   | :--- | :--- | :--- | :--- |
+  //   | Cama Queen | Cama de Casal | Cama de Casal | 1 Colchão de Solteiro |
+  //   | Ar-condicionado | Ar-condicionado | Ar-condicionado | - |
   const lines = md.split("\n");
-  let inRoomTable = false;
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    const headerMatch = line.match(/^\|\s*Quarto\s*\|/i);
-    if (headerMatch) {
-      inRoomTable = true;
-      // pula a linha separadora "| --- | --- |"
-      continue;
+    if (!line.trim().startsWith("|")) continue;
+    // header tem que conter ao menos uma célula com "Quarto"
+    const headerCells = splitMdRow(line);
+    const isRoomHeader =
+      headerCells.length >= 2 &&
+      headerCells.some((c) => /^quarto\s*\d|^su[íi]te|^extra$/i.test(c.replace(/\*\*/g, "").trim()));
+    if (!isRoomHeader) continue;
+    // próxima linha precisa ser separador
+    const next = lines[i + 1];
+    if (!next || !isSeparatorRow(next)) continue;
+
+    // Coleta linhas de dados
+    const dataRows: string[][] = [];
+    let j = i + 2;
+    while (j < lines.length && lines[j].trim().startsWith("|")) {
+      const row = splitMdRow(lines[j]);
+      if (row.length === headerCells.length) dataRows.push(row);
+      j++;
     }
-    if (inRoomTable) {
-      if (!line.trim().startsWith("|")) {
-        inRoomTable = false;
+    i = j - 1;
+    if (dataRows.length === 0) continue;
+
+    // Para cada coluna (=quarto), agrega dados de todas as linhas
+    for (let col = 0; col < headerCells.length; col++) {
+      const rawName = headerCells[col].replace(/\*\*/g, "").trim();
+      if (!rawName || rawName === "-") continue;
+
+      // Coleta valores não-vazios da coluna
+      const colValues = dataRows
+        .map((r) => (r[col] || "").trim())
+        .filter((v) => v && v !== "-");
+
+      if (colValues.length === 0) continue;
+
+      // Identifica linha de camas (geralmente a 1ª) — qualquer texto que pareça cama
+      const bedTexts: string[] = [];
+      const amenityTexts: string[] = [];
+      for (const v of colValues) {
+        if (/cama|sof[áa]|beliche|bicama|king|queen|colch[ãa]o|ber[çc]o|solteiro|casal/i.test(v)) {
+          bedTexts.push(v);
+        } else {
+          amenityTexts.push(v);
+        }
+      }
+
+      const beds: BedItem[] = [];
+      for (const bt of bedTexts) {
+        const { beds: b, extras } = extractBedsFromText(bt);
+        beds.push(...b);
+        result.extraMattresses.push(...extras);
+      }
+
+      const amenities: AmenityItem[] = amenityTexts.map((label) => ({
+        id: uid(),
+        label,
+      }));
+
+      // Coluna "Extra" → vai para colchões extras (não é quarto real)
+      const isExtraColumn = /^extra/i.test(rawName);
+      if (isExtraColumn) {
+        for (const t of bedTexts) {
+          const m = t.match(/^(\d{1,2})\s+(.+)$/);
+          result.extraMattresses.push({
+            id: uid(),
+            description: m ? m[2] : t,
+            count: m ? parseInt(m[1], 10) : 1,
+          });
+        }
         continue;
       }
-      if (/^\|\s*-+\s*\|/.test(line)) continue; // separador
-      const cells = line.split("|").map((c) => c.trim()).filter((_, idx, arr) => idx > 0 && idx < arr.length - 1);
-      if (cells.length < 2) continue;
 
-      const rawName = cells[0].replace(/\*\*/g, "").trim();
-      if (!rawName || /^quarto$/i.test(rawName)) continue;
-      // Tenta achar a coluna de camas: a 2ª ou 3ª (algumas tabelas têm "Tipo" antes)
-      let bedsCell = cells[1];
-      let amenitiesCell = cells[2] || "";
-      if (cells.length >= 4 && !/cama|sof[áa]|beliche|king|queen|casal|solteiro|colch/i.test(cells[1])) {
-        // formato: | Quarto | Tipo | Camas | Itens |
-        bedsCell = cells[2];
-        amenitiesCell = cells[3] || "";
-      }
-
-      const { beds, extras } = extractBedsFromText(bedsCell);
-      result.extraMattresses.push(...extras);
-
-      // Parse comodidades (separadas por vírgula)
-      const amenities: AmenityItem[] = amenitiesCell
-        .split(/,/)
-        .map((a) => a.trim())
-        .filter((a) => a.length > 1 && !/^-+$/.test(a))
-        .map((label) => ({ id: uid(), label }));
-
-      // Limpa nome (remove "(...)")
-      const name = rawName.replace(/\s*\(.*?\)\s*$/, "").trim();
+      const name = rawName.replace(/\s*\(.*?\)\s*$/, "").trim() || rawName;
 
       result.rooms.push({
         name,
@@ -319,15 +391,16 @@ function parseMarkdownFicha(md: string): ParsedFicha {
     }
   }
 
-  /* -------- Diferenciais / Capacidade — busca colchões extras citados em texto -------- */
-  // Ex: "2 colchões extras"
-  const extraMattrText = md.match(/(\d{1,2})\s*colch[õo]es?\s*extras?/i);
-  if (extraMattrText && result.extraMattresses.length === 0) {
-    result.extraMattresses.push({
-      id: uid(),
-      description: "Colchões extras",
-      count: parseInt(extraMattrText[1], 10),
-    });
+  /* -------- Colchões extras citados em texto livre -------- */
+  if (result.extraMattresses.length === 0) {
+    const extraMattrText = md.match(/(\d{1,2})\s*colch[õo]es?\s*extras?/i);
+    if (extraMattrText) {
+      result.extraMattresses.push({
+        id: uid(),
+        description: "Colchões extras",
+        count: parseInt(extraMattrText[1], 10),
+      });
+    }
   }
 
   return result;
@@ -379,7 +452,16 @@ export default function AtualizacaoAnuncio() {
           .maybeSingle();
 
         const parsed = parseMarkdownFicha(ficha?.content_md || "");
-        const hasFicha = !!ficha?.content_md && parsed.rooms.length > 0;
+        // Considera "ficha encontrada" se o .md existe e algo relevante foi extraído
+        const extractedAnything =
+          parsed.rooms.length > 0 ||
+          parsed.maxCapacity !== undefined ||
+          parsed.checkIn !== undefined ||
+          parsed.checkOut !== undefined ||
+          parsed.petsAllowed !== undefined ||
+          parsed.extraGuestFee !== undefined ||
+          parsed.cleaningFee !== undefined;
+        const hasFicha = !!ficha?.content_md && extractedAnything;
 
         // 2) Fallback: submission de cadastro (rooms_data estruturado)
         let intake: { rooms_data?: unknown; max_capacity?: number } | null = null;
