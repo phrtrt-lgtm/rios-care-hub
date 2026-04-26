@@ -382,7 +382,7 @@ export default function AtualizacaoAnuncio() {
         const hasFicha = !!ficha?.content_md && parsed.rooms.length > 0;
 
         // 2) Fallback: submission de cadastro (rooms_data estruturado)
-        let intake: { rooms_data?: any[]; max_capacity?: number } | null = null;
+        let intake: { rooms_data?: unknown; max_capacity?: number } | null = null;
         if (!hasFicha) {
           const { data: intakeData } = await supabase
             .from("property_intake_submissions")
