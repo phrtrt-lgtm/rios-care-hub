@@ -240,7 +240,6 @@ function buildAdminEmailHtml(data: IntakePayload, submissionId: string, portalUr
     <tr><td style="padding:0 32px;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
         ${statRow("Pavimentos do imóvel", data.property_levels)}
-        ${statRow("Andares do prédio", data.building_floors ?? "—")}
         ${statRow("Andar do apartamento", data.apartment_floor ?? "—")}
         ${statRow("Elevador", fmtBool(data.has_elevator))}
         ${statRow("Wi-Fi", fmtBool(data.has_wifi))}
