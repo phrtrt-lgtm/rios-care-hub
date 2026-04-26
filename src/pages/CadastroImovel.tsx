@@ -98,6 +98,35 @@ function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
+function StepNotes({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <Card className="p-5 md:p-6 shadow-md border-dashed border-primary/20 bg-primary/[0.02]">
+      <Label className="text-sm font-semibold flex items-center gap-2">
+        <Sparkles className="h-4 w-4 text-primary" />
+        Observações desta etapa (opcional)
+      </Label>
+      <p className="text-xs text-muted-foreground mt-1 mb-3">
+        Adicione qualquer nuance, detalhe ou contexto sobre as informações desta etapa.
+      </p>
+      <Textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        rows={3}
+        maxLength={1000}
+        placeholder={placeholder ?? "Ex.: alguma particularidade que devemos saber..."}
+      />
+    </Card>
+  );
+}
+
 function buildRooms(form: IntakeFormData, existing: RoomEntry[]): RoomEntry[] {
   // Mantém edições já feitas: tenta preservar pelo nome+type+floor
   const next: RoomEntry[] = [];
