@@ -493,9 +493,9 @@ export default function AtualizacaoAnuncio() {
                               count: Number(b.count) || 1,
                             }))
                         : [],
-                      amenities: Array.isArray(r.amenities)
-                        ? r.amenities.map((a: string) => ({ id: uid(), label: a }))
-                        : [],
+                      // Não pré-preenchemos comodidades dos quartos:
+                      // o proprietário só adiciona se houver comodidade nova.
+                      amenities: [],
                     }))
                   : [],
                 extraMattresses: Array.isArray(d.extraMattresses)
