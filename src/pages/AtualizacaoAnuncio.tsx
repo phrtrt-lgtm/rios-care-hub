@@ -451,7 +451,59 @@ export default function AtualizacaoAnuncio() {
           .eq("property_id", form.property_id)
           .maybeSingle();
 
-        const parsed = parseMarkdownFicha(ficha?.content_md || "");
+        // 1.1) Tenta extrair via IA (mais robusto que regex)
+        let parsed: ParsedFicha = { rooms: [], extraMattresses: [] };
+        if (ficha?.content_md) {
+          try {
+            const { data: aiRes, error: aiErr } = await supabase.functions.invoke(
+              "parse-ficha-anuncio",
+              { body: { markdown: ficha.content_md } },
+            );
+            if (aiErr) throw aiErr;
+            const d = aiRes?.data;
+            if (d) {
+              parsed = {
+                checkIn: d.checkIn || undefined,
+                checkOut: d.checkOut || undefined,
+                maxCapacity: d.maxCapacity > 0 ? d.maxCapacity : undefined,
+                petsAllowed: typeof d.petsAllowed === "boolean" ? d.petsAllowed : undefined,
+                petsMax: d.petsMax > 0 ? d.petsMax : undefined,
+                petsSize: d.petsSize || undefined,
+                petFeePerStay: d.petFeePerStay || undefined,
+                extraGuestFee: d.extraGuestFee || undefined,
+                cleaningFee: d.cleaningFee || undefined,
+                rooms: Array.isArray(d.rooms)
+                  ? d.rooms.map((r: any) => ({
+                      name: r.name || "Quarto",
+                      beds: Array.isArray(r.beds)
+                        ? r.beds
+                            .filter((b: any) => BED_TYPES.some((bt) => bt.value === b.type))
+                            .map((b: any) => ({
+                              id: uid(),
+                              type: b.type as BedType,
+                              count: Number(b.count) || 1,
+                            }))
+                        : [],
+                      amenities: Array.isArray(r.amenities)
+                        ? r.amenities.map((a: string) => ({ id: uid(), label: a }))
+                        : [],
+                    }))
+                  : [],
+                extraMattresses: Array.isArray(d.extraMattresses)
+                  ? d.extraMattresses.map((e: any) => ({
+                      id: uid(),
+                      description: e.description || "Colchão extra",
+                      count: Number(e.count) || 1,
+                    }))
+                  : [],
+              };
+            }
+          } catch (aiErr) {
+            console.warn("IA falhou, usando parser regex como fallback:", aiErr);
+            parsed = parseMarkdownFicha(ficha.content_md);
+          }
+        }
+
         // Considera "ficha encontrada" se o .md existe e algo relevante foi extraído
         const extractedAnything =
           parsed.rooms.length > 0 ||
