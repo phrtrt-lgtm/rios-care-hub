@@ -125,6 +125,10 @@ const initialForm: UpdateForm = {
   cleaning_fee: "",
   rooms: [],
   extra_mattresses: [],
+  notes_step1: "",
+  notes_step2: "",
+  notes_step3: "",
+  notes_step4: "",
   notes: "",
 };
 
