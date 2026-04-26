@@ -95,6 +95,14 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/cadastro" element={<Cadastro />} />
             <Route path="/cadastro-imovel" element={<CadastroImovel />} />
+            <Route
+              path="/atualizacao-anuncio"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <AtualizacaoAnuncio />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/aguardando-aprovacao" element={<AguardandoAprovacao />} />
             <Route
               path="/minha-caixa"
