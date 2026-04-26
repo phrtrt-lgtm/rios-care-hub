@@ -4,6 +4,133 @@ import { Resend } from "https://esm.sh/resend@2.0.0";
 import { renderTemplate, getTemplate } from "../_shared/template-renderer.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+
+/** Escapa HTML para uso seguro dentro de blocos renderizados. */
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/**
+ * Converte o markdown da descrição do ticket em HTML estilizado,
+ * casando com a identidade visual do portal RIOS (azul #0f3150 + laranja #d36b4d).
+ * Suporta: ## h2, ### h3, **bold**, _italic_, listas (- com indentação),
+ * blockquotes (>), parágrafos e quebras simples.
+ */
+function markdownToStyledHtml(md: string): string {
+  if (!md || !md.trim()) return "";
+
+  const inline = (s: string) =>
+    escapeHtml(s)
+      .replace(/\*\*(.+?)\*\*/g, '<strong style="color:#0f3150;">$1</strong>')
+      .replace(/(^|\s)_([^_\n]+)_/g, '$1<em style="color:#475569;">$2</em>');
+
+  const lines = md.replace(/\r\n/g, "\n").split("\n");
+  const out: string[] = [];
+  let i = 0;
+
+  // Buffer de listas aninhadas (apenas 2 níveis pelo formato da ficha)
+  type ListItem = { text: string; children: ListItem[] };
+  const flushList = (items: ListItem[]) => {
+    if (!items.length) return "";
+    const renderItems = (arr: ListItem[]): string =>
+      arr
+        .map(
+          (it) =>
+            `<li style="margin:4px 0;">${inline(it.text)}${
+              it.children.length
+                ? `<ul style="margin:6px 0 0;padding-left:20px;color:#475569;">${renderItems(
+                    it.children,
+                  )}</ul>`
+                : ""
+            }</li>`,
+        )
+        .join("");
+    return `<ul style="margin:8px 0 14px;padding-left:22px;color:#1f2937;font-size:14px;line-height:22px;">${renderItems(
+      items,
+    )}</ul>`;
+  };
+
+  while (i < lines.length) {
+    const raw = lines[i];
+    const line = raw.trimEnd();
+
+    // pular linhas vazias
+    if (!line.trim()) {
+      i++;
+      continue;
+    }
+
+    // H2
+    if (/^##\s+/.test(line)) {
+      out.push(
+        `<h2 style="margin:18px 0 10px;font-family:Arial,Helvetica,sans-serif;font-size:18px;line-height:24px;color:#0f3150;border-bottom:2px solid #d36b4d;padding-bottom:6px;">${inline(
+          line.replace(/^##\s+/, ""),
+        )}</h2>`,
+      );
+      i++;
+      continue;
+    }
+
+    // H3
+    if (/^###\s+/.test(line)) {
+      out.push(
+        `<h3 style="margin:18px 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:22px;color:#0f3150;background:#f0f4f9;padding:8px 12px;border-left:3px solid #d36b4d;border-radius:4px;">${inline(
+          line.replace(/^###\s+/, ""),
+        )}</h3>`,
+      );
+      i++;
+      continue;
+    }
+
+    // Blockquote (observação do proprietário)
+    if (/^>\s?/.test(line)) {
+      const quoteLines: string[] = [];
+      while (i < lines.length && /^>\s?/.test(lines[i])) {
+        quoteLines.push(lines[i].replace(/^>\s?/, ""));
+        i++;
+      }
+      out.push(
+        `<blockquote style="margin:12px 0;padding:10px 14px;background:#fff7f3;border-left:4px solid #d36b4d;border-radius:6px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;color:#7a3d28;">${inline(
+          quoteLines.join(" ").trim(),
+        )}</blockquote>`,
+      );
+      continue;
+    }
+
+    // Listas (com itens indentados de 2 espaços para sub-itens)
+    if (/^\s*-\s+/.test(line)) {
+      const items: ListItem[] = [];
+      while (i < lines.length && /^\s*-\s+/.test(lines[i])) {
+        const cur = lines[i];
+        const indent = cur.match(/^(\s*)/)?.[1].length ?? 0;
+        const text = cur.replace(/^\s*-\s+/, "");
+        if (indent >= 2 && items.length) {
+          items[items.length - 1].children.push({ text, children: [] });
+        } else {
+          items.push({ text, children: [] });
+        }
+        i++;
+      }
+      out.push(flushList(items));
+      continue;
+    }
+
+    // Parágrafo padrão
+    out.push(
+      `<p style="margin:6px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:22px;color:#1f2937;">${inline(
+        line,
+      )}</p>`,
+    );
+    i++;
+  }
+
+  return out.join("\n");
+}
 const adminEmails = (Deno.env.get("ADMIN_NOTIFY_EMAILS") || "").split(",");
 
 const corsHeaders = {
