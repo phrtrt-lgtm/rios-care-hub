@@ -71,6 +71,7 @@ const initialForm: IntakeFormData = {
   property_nickname: "",
   property_address: "",
   previously_listed_airbnb: null,
+  notes_step1: "",
   bedrooms_count: 1,
   living_rooms_count: 1,
   bathrooms_count: 1,
@@ -82,10 +83,14 @@ const initialForm: IntakeFormData = {
   has_wifi: true,
   max_capacity: 2,
   parking_spots: 0,
+  notes_step2: "",
   rooms_data: [],
+  notes_step3: "",
   kitchen_items: [],
   special_amenities: [],
+  notes_step4: "",
   condo_amenities: [],
+  notes_step5: "",
   notes: "",
 };
 
