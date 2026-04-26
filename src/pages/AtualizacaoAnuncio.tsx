@@ -91,7 +91,12 @@ interface UpdateForm {
   // Camas e cômodos
   rooms: RoomItem[];
   extra_mattresses: ExtraMattress[];
-  // Observações
+  // Observações por etapa
+  notes_step1: string;
+  notes_step2: string;
+  notes_step3: string;
+  notes_step4: string;
+  // Observações finais
   notes: string;
 }
 
@@ -120,6 +125,10 @@ const initialForm: UpdateForm = {
   cleaning_fee: "",
   rooms: [],
   extra_mattresses: [],
+  notes_step1: "",
+  notes_step2: "",
+  notes_step3: "",
+  notes_step4: "",
   notes: "",
 };
 
@@ -484,9 +493,9 @@ export default function AtualizacaoAnuncio() {
                               count: Number(b.count) || 1,
                             }))
                         : [],
-                      amenities: Array.isArray(r.amenities)
-                        ? r.amenities.map((a: string) => ({ id: uid(), label: a }))
-                        : [],
+                      // Não pré-preenchemos comodidades dos quartos:
+                      // o proprietário só adiciona se houver comodidade nova.
+                      amenities: [],
                     }))
                   : [],
                 extraMattresses: Array.isArray(d.extraMattresses)
@@ -550,7 +559,7 @@ export default function AtualizacaoAnuncio() {
             beds: r.beds.length
               ? r.beds
               : [{ id: uid(), type: "casal_queen", count: 1 }],
-            amenities: r.amenities,
+            amenities: [],
           }));
         } else if (intake?.rooms_data && Array.isArray(intake.rooms_data)) {
           rooms = intake.rooms_data
@@ -791,6 +800,33 @@ export default function AtualizacaoAnuncio() {
                 />
               )}
               {step === 4 && <Step4ExtraMattresses form={form} update={update} />}
+              {step >= 1 && step <= 4 && (
+                <div className="mt-6">
+                  <StepNotesField
+                    value={
+                      step === 1
+                        ? form.notes_step1
+                        : step === 2
+                        ? form.notes_step2
+                        : step === 3
+                        ? form.notes_step3
+                        : form.notes_step4
+                    }
+                    onChange={(v) =>
+                      update(
+                        step === 1
+                          ? "notes_step1"
+                          : step === 2
+                          ? "notes_step2"
+                          : step === 3
+                          ? "notes_step3"
+                          : "notes_step4",
+                        v
+                      )
+                    }
+                  />
+                </div>
+              )}
               {step === 5 && <Step5Notes form={form} update={update} />}
             </motion.div>
           </AnimatePresence>
@@ -1590,6 +1626,40 @@ function SuccessScreen({
 }
 
 /* =========================================================
+ *  Campo de observações reutilizável (em cada etapa)
+ * ========================================================= */
+function StepNotesField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <Card className="p-5 md:p-6 shadow-md border-primary/10 bg-muted/20">
+      <div className="flex items-center gap-2 mb-2">
+        <MessageSquare className="h-4 w-4 text-primary" />
+        <h4 className="text-sm font-semibold">Observações desta etapa</h4>
+      </div>
+      <p className="text-xs text-muted-foreground mb-3">
+        Algum detalhe ou nuance que precisamos saber sobre o que você acabou de preencher?
+      </p>
+      <Textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Opcional — escreva qualquer observação sobre esta etapa."
+        rows={3}
+        maxLength={1000}
+        className="text-sm"
+      />
+      <p className="text-[11px] text-muted-foreground mt-1 text-right">
+        {value.length}/1000
+      </p>
+    </Card>
+  );
+}
+
+/* =========================================================
  *  Componentes utilitários
  * ========================================================= */
 function Field({
@@ -1702,9 +1772,12 @@ function buildMarkdownSummary(form: UpdateForm, propertyName: string): string {
         .join("\n")
     : "_Nenhum colchão extra informado._";
 
+  const stepNote = (n: string) =>
+    n.trim() ? `\n> 💬 _Observação do proprietário:_ ${n.trim()}\n` : "";
+
   return `## 📝 Solicitação de atualização do anúncio
 **Imóvel:** ${propertyName}
-
+${stepNote(form.notes_step1)}
 ### 🕒 Horários
 - Check-in a partir de: **${form.check_in_time}**
 - Check-out até: **${form.check_out_time}**
@@ -1716,14 +1789,14 @@ ${petsBlock}
 - Capacidade máxima: **${form.max_capacity}** hóspedes
 - Taxa por hóspede extra/diária: **${form.extra_guest_fee ? `R$ ${form.extra_guest_fee}` : "—"}**
 - Taxa de faxina: **${form.cleaning_fee ? `R$ ${form.cleaning_fee}` : "—"}**
-
+${stepNote(form.notes_step2)}
 ### 🛏️ Cômodos & camas
 ${roomsBlock || "_Nenhum quarto informado._"}
-
+${stepNote(form.notes_step3)}
 ### 🛌 Colchões extras
 ${mattressBlock}
-
-### 💬 Observações
+${stepNote(form.notes_step4)}
+### 💬 Observações finais
 ${form.notes.trim() || "_Sem observações adicionais._"}
 `;
 }
