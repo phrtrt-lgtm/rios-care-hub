@@ -1772,9 +1772,12 @@ function buildMarkdownSummary(form: UpdateForm, propertyName: string): string {
         .join("\n")
     : "_Nenhum colchão extra informado._";
 
+  const stepNote = (n: string) =>
+    n.trim() ? `\n> 💬 _Observação do proprietário:_ ${n.trim()}\n` : "";
+
   return `## 📝 Solicitação de atualização do anúncio
 **Imóvel:** ${propertyName}
-
+${stepNote(form.notes_step1)}
 ### 🕒 Horários
 - Check-in a partir de: **${form.check_in_time}**
 - Check-out até: **${form.check_out_time}**
@@ -1786,14 +1789,14 @@ ${petsBlock}
 - Capacidade máxima: **${form.max_capacity}** hóspedes
 - Taxa por hóspede extra/diária: **${form.extra_guest_fee ? `R$ ${form.extra_guest_fee}` : "—"}**
 - Taxa de faxina: **${form.cleaning_fee ? `R$ ${form.cleaning_fee}` : "—"}**
-
+${stepNote(form.notes_step2)}
 ### 🛏️ Cômodos & camas
 ${roomsBlock || "_Nenhum quarto informado._"}
-
+${stepNote(form.notes_step3)}
 ### 🛌 Colchões extras
 ${mattressBlock}
-
-### 💬 Observações
+${stepNote(form.notes_step4)}
+### 💬 Observações finais
 ${form.notes.trim() || "_Sem observações adicionais._"}
 `;
 }
