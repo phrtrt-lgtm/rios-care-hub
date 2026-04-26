@@ -559,7 +559,7 @@ export default function AtualizacaoAnuncio() {
             beds: r.beds.length
               ? r.beds
               : [{ id: uid(), type: "casal_queen", count: 1 }],
-            amenities: r.amenities,
+            amenities: [],
           }));
         } else if (intake?.rooms_data && Array.isArray(intake.rooms_data)) {
           rooms = intake.rooms_data
