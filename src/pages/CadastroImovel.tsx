@@ -636,7 +636,6 @@ function Step2Tech({
           <NumberField label="Capacidade máxima *" value={form.max_capacity} onChange={(v) => update("max_capacity", v)} min={1} max={30} icon={Users} />
           <NumberField label="Vagas garagem" value={form.parking_spots} onChange={(v) => update("parking_spots", v)} min={0} max={20} icon={Car} />
           <NumberField label="Pavimentos do imóvel" value={form.property_levels} onChange={(v) => update("property_levels", v)} min={1} max={5} hint="Imóveis duplex/triplex contam aqui" />
-          <NumberField label="Andares do prédio" value={form.building_floors ?? 0} onChange={(v) => update("building_floors", v || null)} min={0} max={100} hint="0 se não souber" />
           <NumberField label="Andar do apartamento" value={form.apartment_floor ?? 0} onChange={(v) => update("apartment_floor", v || null)} min={0} max={100} hint="0 = térreo / casa" />
         </div>
 
