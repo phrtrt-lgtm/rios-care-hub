@@ -323,18 +323,59 @@ export default function CadastroImovel() {
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
             >
-              {step === 1 && <Step1 form={form} update={update} />}
-              {step === 2 && <Step2Tech form={form} update={update} />}
-              {step === 3 && <Step3Rooms form={form} updateRoom={updateRoom} />}
+              {step === 1 && (
+                <div className="space-y-6">
+                  <Step1 form={form} update={update} />
+                  <StepNotes
+                    value={form.notes_step1}
+                    onChange={(v) => update("notes_step1", v)}
+                    placeholder="Ex.: melhor horário para conversarmos, contexto sobre a parceria..."
+                  />
+                </div>
+              )}
+              {step === 2 && (
+                <div className="space-y-6">
+                  <Step2Tech form={form} update={update} />
+                  <StepNotes
+                    value={form.notes_step2}
+                    onChange={(v) => update("notes_step2", v)}
+                    placeholder="Ex.: detalhes sobre pavimentos, áreas técnicas, particularidades da estrutura..."
+                  />
+                </div>
+              )}
+              {step === 3 && (
+                <div className="space-y-6">
+                  <Step3Rooms form={form} updateRoom={updateRoom} />
+                  <StepNotes
+                    value={form.notes_step3}
+                    onChange={(v) => update("notes_step3", v)}
+                    placeholder="Ex.: colchões extras, acessórios de cama, observações sobre os cômodos..."
+                  />
+                </div>
+              )}
               {step === 4 && (
-                <Step4KitchenSpecial
-                  form={form}
-                  toggleKitchen={(v) => toggleArr("kitchen_items", v)}
-                  toggleSpecial={(v) => toggleArr("special_amenities", v)}
-                />
+                <div className="space-y-6">
+                  <Step4KitchenSpecial
+                    form={form}
+                    toggleKitchen={(v) => toggleArr("kitchen_items", v)}
+                    toggleSpecial={(v) => toggleArr("special_amenities", v)}
+                  />
+                  <StepNotes
+                    value={form.notes_step4}
+                    onChange={(v) => update("notes_step4", v)}
+                    placeholder="Ex.: utensílios diferenciados, marca de eletrodomésticos, comodidades extras..."
+                  />
+                </div>
               )}
               {step === 5 && (
-                <Step5Condo form={form} toggleCondo={(v) => toggleArr("condo_amenities", v)} />
+                <div className="space-y-6">
+                  <Step5Condo form={form} toggleCondo={(v) => toggleArr("condo_amenities", v)} />
+                  <StepNotes
+                    value={form.notes_step5}
+                    onChange={(v) => update("notes_step5", v)}
+                    placeholder="Ex.: regras do condomínio, horários da piscina, restrições, taxas extras..."
+                  />
+                </div>
               )}
               {step === 6 && <Step6Review form={form} update={update} />}
             </motion.div>
