@@ -197,6 +197,7 @@ const handler = async (req: Request): Promise<Response> => {
           ticket_priority: ticket.priority === "urgente" ? "Urgente" : "Normal",
           ticket_priority_badge: ticket.priority === "urgente" ? "🔴 Urgente" : "Normal",
           ticket_description: ticket.description,
+          ticket_description_html: markdownToStyledHtml(ticket.description || ""),
           property_name: ticket.properties?.name || "",
           property_address: ticket.properties?.address || "",
           sla_time: ticket.priority === "urgente" ? "6 horas" : "24 horas",
