@@ -800,6 +800,33 @@ export default function AtualizacaoAnuncio() {
                 />
               )}
               {step === 4 && <Step4ExtraMattresses form={form} update={update} />}
+              {step >= 1 && step <= 4 && (
+                <div className="mt-6">
+                  <StepNotesField
+                    value={
+                      step === 1
+                        ? form.notes_step1
+                        : step === 2
+                        ? form.notes_step2
+                        : step === 3
+                        ? form.notes_step3
+                        : form.notes_step4
+                    }
+                    onChange={(v) =>
+                      update(
+                        step === 1
+                          ? "notes_step1"
+                          : step === 2
+                          ? "notes_step2"
+                          : step === 3
+                          ? "notes_step3"
+                          : "notes_step4",
+                        v
+                      )
+                    }
+                  />
+                </div>
+              )}
               {step === 5 && <Step5Notes form={form} update={update} />}
             </motion.div>
           </AnimatePresence>
