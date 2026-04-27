@@ -1198,12 +1198,8 @@ export default function TicketDetalhes() {
           owner: { id: ticket.owner_id, name: ticket.profiles?.name || "" },
           property: ticket.properties ? { id: ticket.property_id!, name: ticket.properties.name } : null,
         } : null}
-        onSuccess={(chargeId) => {
-          if (chargeId) {
-            (saveScrollPosition(pathname), navigate(`/cobranca/${chargeId}`));
-          } else {
-            fetchTicketData();
-          }
+        onSuccess={() => {
+          fetchTicketData();
         }}
       />
     </div>
