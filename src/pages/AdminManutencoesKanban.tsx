@@ -727,12 +727,9 @@ const AdminManutencoesKanban = () => {
             owner: selectedTicket.owner,
             property: selectedTicket.property,
           } : null}
-          onSuccess={(chargeId) => {
+          onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ["maintenance-tickets-kanban"] });
             setSelectedTicket(null);
-            if (chargeId) {
-              (saveScrollPosition(pathname), navigate(`/cobranca/${chargeId}`));
-            }
           }}
         />
 
