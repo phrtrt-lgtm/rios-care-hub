@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowLeft, Send, Paperclip, Loader2, Sparkles, FileText, ChevronDown, X, Download, ZoomIn, Upload, Calendar, CheckCircle } from "lucide-react";
 import { CompleteMaintenanceDialog } from "@/components/CompleteMaintenanceDialog";
+import { SendToChargeButton } from "@/components/SendToChargeButton";
 import { ptBR } from "date-fns/locale";
 import { ConversationSummaryButton } from "@/components/ConversationSummaryButton";
 import { AttachmentBubble } from "@/components/AttachmentBubble";
