@@ -331,9 +331,7 @@ export function CompleteMaintenanceDialog({
                 ? "Salvando..."
                 : costResponsible === "guest"
                 ? "Concluir (Hóspede)"
-                : costResponsible === "pm"
-                ? "Concluir (Gestão paga)"
-                : "Concluir e Cobrar"}
+                : "Concluir manutenção"}
             </Button>
           </div>
         </div>
