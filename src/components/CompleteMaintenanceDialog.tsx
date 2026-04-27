@@ -24,7 +24,7 @@ interface CompleteMaintenanceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   ticket: CompleteMaintenanceTicket | null;
-  onSuccess?: (chargeId?: string) => void;
+  onSuccess?: () => void;
 }
 
 export function CompleteMaintenanceDialog({
