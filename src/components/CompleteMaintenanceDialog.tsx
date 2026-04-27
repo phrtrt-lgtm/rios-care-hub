@@ -147,7 +147,7 @@ export function CompleteMaintenanceDialog({
         <DialogHeader>
           <DialogTitle>Concluir Manutenção</DialogTitle>
           <DialogDescription>
-            Defina o responsável pelo custo e finalize a manutenção
+            Defina o responsável pelo custo e os valores. A cobrança só será criada e enviada ao proprietário quando você clicar em "Enviar para Cobrança".
           </DialogDescription>
         </DialogHeader>
 
