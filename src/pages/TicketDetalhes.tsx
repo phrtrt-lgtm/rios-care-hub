@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowLeft, Send, Paperclip, Loader2, Sparkles, FileText, ChevronDown, X, Download, ZoomIn, Upload, Calendar, CheckCircle } from "lucide-react";
 import { CompleteMaintenanceDialog } from "@/components/CompleteMaintenanceDialog";
+import { SendToChargeButton } from "@/components/SendToChargeButton";
 import { ptBR } from "date-fns/locale";
 import { ConversationSummaryButton } from "@/components/ConversationSummaryButton";
 import { AttachmentBubble } from "@/components/AttachmentBubble";
@@ -860,9 +861,27 @@ export default function TicketDetalhes() {
                     onClick={() => setCompleteDialogOpen(true)}
                   >
                     <CheckCircle className="h-4 w-4 mr-1" />
-                    Concluir e Cobrar
+                    Concluir Manutenção
                   </Button>
                 </div>
+              )}
+              {isTeamMember && isMaintenance && ticket.status === 'concluido' && (
+                <SendToChargeButton
+                  ticket={{
+                    id: ticket.id,
+                    subject: ticket.subject,
+                    owner_id: ticket.owner_id,
+                    property_id: ticket.property_id,
+                    cost_responsible: (ticket as any).cost_responsible || null,
+                    charge_draft_amount_cents: (ticket as any).charge_draft_amount_cents ?? null,
+                    charge_draft_management_contribution_cents: (ticket as any).charge_draft_management_contribution_cents ?? null,
+                    charge_draft_category: (ticket as any).charge_draft_category ?? null,
+                    charge_draft_title: (ticket as any).charge_draft_title ?? null,
+                    charge_sent_at: (ticket as any).charge_sent_at ?? null,
+                  }}
+                  size="sm"
+                  onSuccess={(chargeId) => navigate(`/cobranca/${chargeId}`)}
+                />
               )}
               {isTeamMember && !isMaintenance && canUpdate && (
                 <Select
@@ -1198,12 +1217,8 @@ export default function TicketDetalhes() {
           owner: { id: ticket.owner_id, name: ticket.profiles?.name || "" },
           property: ticket.properties ? { id: ticket.property_id!, name: ticket.properties.name } : null,
         } : null}
-        onSuccess={(chargeId) => {
-          if (chargeId) {
-            (saveScrollPosition(pathname), navigate(`/cobranca/${chargeId}`));
-          } else {
-            fetchTicketData();
-          }
+        onSuccess={() => {
+          fetchTicketData();
         }}
       />
     </div>

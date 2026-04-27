@@ -2788,6 +2788,11 @@ export type Database = {
           assigned_to: string | null
           blocked_dates_end: string | null
           blocked_dates_start: string | null
+          charge_draft_amount_cents: number | null
+          charge_draft_category: string | null
+          charge_draft_management_contribution_cents: number | null
+          charge_draft_title: string | null
+          charge_sent_at: string | null
           cost_responsible: string | null
           created_at: string
           created_by: string
@@ -2815,6 +2820,11 @@ export type Database = {
           assigned_to?: string | null
           blocked_dates_end?: string | null
           blocked_dates_start?: string | null
+          charge_draft_amount_cents?: number | null
+          charge_draft_category?: string | null
+          charge_draft_management_contribution_cents?: number | null
+          charge_draft_title?: string | null
+          charge_sent_at?: string | null
           cost_responsible?: string | null
           created_at?: string
           created_by: string
@@ -2842,6 +2852,11 @@ export type Database = {
           assigned_to?: string | null
           blocked_dates_end?: string | null
           blocked_dates_start?: string | null
+          charge_draft_amount_cents?: number | null
+          charge_draft_category?: string | null
+          charge_draft_management_contribution_cents?: number | null
+          charge_draft_title?: string | null
+          charge_sent_at?: string | null
           cost_responsible?: string | null
           created_at?: string
           created_by?: string
