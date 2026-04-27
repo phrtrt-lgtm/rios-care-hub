@@ -93,115 +93,41 @@ export function CompleteMaintenanceDialog({
 
     setSaving(true);
     try {
-      // 1. Update ticket to concluded + cost_responsible
-      const { error: ticketErr } = await supabase
-        .from("tickets")
-        .update({ status: "concluido", cost_responsible: costResponsible })
-        .eq("id", ticket.id);
-      if (ticketErr) throw ticketErr;
+      const amountCents = costResponsible !== "guest" ? Math.round(amountNum * 100) : null;
+      const mgmtCents = costResponsible === "pm"
+        ? amountCents
+        : costResponsible === "owner"
+        ? Math.round(contributionNum * 100)
+        : null;
 
-      let chargeId: string | undefined;
+      // Update ticket: concluded + cost_responsible + draft fields (NO charge created here)
+      const updatePayload: any = {
+        status: "concluido",
+        cost_responsible: costResponsible,
+      };
 
       if (costResponsible !== "guest") {
-        const amountCents = Math.round(amountNum * 100);
-        const mgmtCents = costResponsible === "pm"
-          ? amountCents // gestão assume 100%
-          : Math.round(contributionNum * 100);
-
-        // 2. Check for existing archived charge linked to this ticket (reactivate)
-        const { data: existingCharges } = await supabase
-          .from("charges")
-          .select("id")
-          .eq("ticket_id", ticket.id)
-          .not("archived_at", "is", null)
-          .order("created_at", { ascending: false })
-          .limit(1);
-
-        if (existingCharges && existingCharges.length > 0) {
-          // Reactivate archived charge
-          const { error: updateErr } = await supabase
-            .from("charges")
-            .update({
-              title: title || ticket.subject,
-              amount_cents: amountCents,
-              management_contribution_cents: mgmtCents,
-              cost_responsible: costResponsible,
-              category: category || null,
-              status: "sent",
-              archived_at: null,
-            })
-            .eq("id", existingCharges[0].id);
-          if (updateErr) throw updateErr;
-          chargeId = existingCharges[0].id;
-        } else {
-          // 3. Create new charge
-          const { data: newCharge, error: chargeErr } = await supabase
-            .from("charges")
-            .insert({
-              owner_id: ticket.owner?.id!,
-              property_id: ticket.property?.id || null,
-              ticket_id: ticket.id,
-              title: title || ticket.subject,
-              amount_cents: amountCents,
-              management_contribution_cents: mgmtCents,
-              cost_responsible: costResponsible,
-              category: category || null,
-              status: "sent",
-            })
-            .select("id")
-            .single();
-          if (chargeErr) throw chargeErr;
-          chargeId = newCharge.id;
-        }
-
-        // 4. Send charge_created email notification
-        if (chargeId) {
-          try {
-            await supabase.functions.invoke("send-charge-email", {
-              body: { type: "charge_created", chargeId },
-            });
-          } catch (emailErr) {
-            console.warn("Email notification failed (non-critical):", emailErr);
-          }
-        }
-
-        // 5. Migrate ticket attachments → charge_attachments
-        if (chargeId) {
-          const { data: ticketAttachments } = await supabase
-            .from("ticket_attachments")
-            .select("*")
-            .eq("ticket_id", ticket.id);
-
-          if (ticketAttachments && ticketAttachments.length > 0) {
-            const mapped = ticketAttachments.map((a: any) => ({
-              charge_id: chargeId,
-              file_name: a.file_name || a.file_url?.split("/").pop() || "arquivo",
-              file_path: a.file_url || a.file_path || "",
-              file_size: a.size_bytes || a.file_size || null,
-              mime_type: a.file_type || a.mime_type || null,
-              created_by: a.author_id || user.id,
-            }));
-            await supabase.from("charge_attachments").insert(mapped);
-          }
-        }
-
+        updatePayload.charge_draft_amount_cents = amountCents;
+        updatePayload.charge_draft_management_contribution_cents = mgmtCents;
+        updatePayload.charge_draft_category = category || null;
+        updatePayload.charge_draft_title = title || ticket.subject;
       } else {
-        // Guest responsible: set guest_checkout_date via ticket update
-        await supabase
-          .from("tickets")
-          .update({ guest_checkout_date: guestCheckoutDate } as any)
-          .eq("id", ticket.id);
+        updatePayload.guest_checkout_date = guestCheckoutDate;
       }
+
+      const { error: ticketErr } = await supabase
+        .from("tickets")
+        .update(updatePayload)
+        .eq("id", ticket.id);
+      if (ticketErr) throw ticketErr;
 
       toast.success(
         costResponsible === "guest"
           ? "Manutenção concluída! Aviso automático configurado para o check-out."
-          : costResponsible === "pm"
-          ? "Manutenção concluída com aporte integral da gestão!"
-          : "Manutenção concluída e cobrança criada!"
+          : "Manutenção concluída! Use 'Enviar para Cobrança' quando estiver pronto."
       );
       onOpenChange(false);
-      onSuccess?.(chargeId);
+      onSuccess?.();
     } catch (err: any) {
       toast.error("Erro ao concluir: " + err.message);
     } finally {
