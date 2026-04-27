@@ -860,7 +860,7 @@ export default function TicketDetalhes() {
                     onClick={() => setCompleteDialogOpen(true)}
                   >
                     <CheckCircle className="h-4 w-4 mr-1" />
-                    Concluir e Cobrar
+                    Concluir Manutenção
                   </Button>
                 </div>
               )}
