@@ -122,6 +122,12 @@ export default function ManutencaoDetalhes({ embedded = false, idOverride }: Man
             Criado em {formatDateTime(maintenance.created_at)}
           </p>
         </div>
+        {isTeam && (
+          <Button variant="outline" size="sm" onClick={() => setEditOpen(true)} className="gap-2">
+            <Pencil className="h-4 w-4" />
+            Editar
+          </Button>
+        )}
         {getStatusBadge(maintenance.status)}
       </div>
 
