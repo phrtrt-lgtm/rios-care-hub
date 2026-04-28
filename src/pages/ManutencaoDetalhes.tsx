@@ -12,6 +12,7 @@ import { ArrowLeft, Loader2, FileText, Calendar, DollarSign, Info, ClipboardChec
 import { useAuth } from "@/hooks/useAuth";
 import { MediaThumbnail } from "@/components/MediaThumbnail";
 import { MediaGallery } from "@/components/MediaGallery";
+import { deleteAttachmentRow } from "@/lib/deleteAttachment";
 import { preloadMediaUrls } from "@/hooks/useMediaCache";
 import { useState, useEffect } from "react";
 
