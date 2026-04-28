@@ -71,6 +71,25 @@ export function MaintenanceDetailSheetContent({ id, onOpenFull }: Props) {
   const [uploading, setUploading] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name?: string | null } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteAttachment = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      // Maintenance attachments are stored in ticket_attachments (or charge_attachments when source=charge)
+      const table = isCharge ? 'charge_attachments' : 'ticket_attachments';
+      const ok = await deleteAttachmentRow(table as any, deleteTarget.id);
+      if (ok) {
+        await queryClient.invalidateQueries({ queryKey: ['maintenance', id] });
+        await refetch();
+        setDeleteTarget(null);
+      }
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   if (isLoading) {
     return (
