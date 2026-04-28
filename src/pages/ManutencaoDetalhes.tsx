@@ -454,6 +454,20 @@ export default function ManutencaoDetalhes({ embedded = false, idOverride }: Man
           </CardContent>
         </Card>
       )}
+
+      {isTeam && (
+        <EditMaintenanceDialog
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          editId={maintenance.id}
+          type={maintenance.source === "charge" ? "charge" : "maintenance"}
+          onSaved={() => {
+            queryClient.invalidateQueries({ queryKey: ["maintenance", id] });
+            queryClient.invalidateQueries({ queryKey: ["maintenances"] });
+            queryClient.invalidateQueries({ queryKey: ["charges-list"] });
+          }}
+        />
+      )}
     </div>
   );
 }
