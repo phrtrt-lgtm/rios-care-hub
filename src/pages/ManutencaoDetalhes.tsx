@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { MediaThumbnail } from "@/components/MediaThumbnail";
 import { MediaGallery } from "@/components/MediaGallery";
 import { deleteAttachmentRow } from "@/lib/deleteAttachment";
+import { DeleteAttachmentButton } from "@/components/DeleteAttachmentButton";
 import { preloadMediaUrls } from "@/hooks/useMediaCache";
 import { useState, useEffect } from "react";
 import { EditMaintenanceDialog } from "@/components/EditMaintenanceDialog";
