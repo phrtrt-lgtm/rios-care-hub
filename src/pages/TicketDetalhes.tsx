@@ -1012,6 +1012,10 @@ export default function TicketDetalhes() {
                           <AttachmentBubble
                             key={attachment.id}
                             {...attachment}
+                            onDelete={isTeam ? async () => {
+                              const ok = await deleteAttachmentRow("ticket_attachments", attachment.id);
+                              if (ok) fetchMessages();
+                            } : undefined}
                             onPreview={() => {
                               if (attachment.file_type?.startsWith('image/') || attachment.file_type?.startsWith('video/') || attachment.file_type === 'application/pdf') {
                                 const index = allMediaItems.findIndex(item => item.id === attachment.id);
