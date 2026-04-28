@@ -48,6 +48,9 @@ interface InspectionData {
 export function VistoriaDetailSheetContent({ id, onOpenFull }: Props) {
   const [inspection, setInspection] = useState<InspectionData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
+  const { profile } = useAuth();
+  const isTeam = profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance';
 
   useEffect(() => {
     let cancelled = false;
