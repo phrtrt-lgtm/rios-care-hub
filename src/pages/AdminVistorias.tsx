@@ -82,6 +82,7 @@ export default function AdminVistorias() {
           supabase
             .from('cleaning_inspections')
             .select('id, property_id, notes, created_at')
+            .is('archived_at', null)
             .order('created_at', { ascending: false }),
         ]);
 
