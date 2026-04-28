@@ -20,6 +20,7 @@ import { SendToChargeButton } from "@/components/SendToChargeButton";
 import { ptBR } from "date-fns/locale";
 import { ConversationSummaryButton } from "@/components/ConversationSummaryButton";
 import { AttachmentBubble } from "@/components/AttachmentBubble";
+import { deleteAttachmentRow } from "@/lib/deleteAttachment";
 import { MediaGallery } from "@/components/MediaGallery";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { ReadReceiptDisplay } from "@/components/ReadReceiptDisplay";
