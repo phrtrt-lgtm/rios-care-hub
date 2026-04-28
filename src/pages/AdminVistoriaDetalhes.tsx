@@ -754,6 +754,10 @@ export default function AdminVistoriaDetalhes() {
         initialIndex={galleryStartIndex}
         open={galleryOpen}
         onOpenChange={setGalleryOpen}
+        onDelete={async (item) => {
+          const ok = await deleteAttachmentRow("cleaning_inspection_attachments", item.id);
+          if (ok) fetchData();
+        }}
       />
 
       <CreateMaintenanceFromInspectionDialog
