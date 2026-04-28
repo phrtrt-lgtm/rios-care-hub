@@ -1,11 +1,12 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Download, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, X, Trash2 } from "lucide-react";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useMediaCache } from "@/hooks/useMediaCache";
 import { MediaThumbnail } from "./MediaThumbnail";
 import { Skeleton } from "@/components/ui/skeleton";
 import { detectMediaKind } from "@/lib/mediaType";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 
 interface MediaItem {
   id: string;
@@ -20,13 +21,18 @@ interface MediaGalleryProps {
   initialIndex: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Optional delete handler. If provided, shows trash icon in toolbar with confirmation. */
+  onDelete?: (item: MediaItem, index: number) => void | Promise<void>;
 }
 
-export const MediaGallery = ({ items, initialIndex, open, onOpenChange }: MediaGalleryProps) => {
+export const MediaGallery = ({ items, initialIndex, open, onOpenChange, onDelete }: MediaGalleryProps) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [currentBlobUrl, setCurrentBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const { loadMedia, preloadMedia, getCachedUrl } = useMediaCache();
+
 
   const currentItem = items[currentIndex];
   const currentKind = currentItem
