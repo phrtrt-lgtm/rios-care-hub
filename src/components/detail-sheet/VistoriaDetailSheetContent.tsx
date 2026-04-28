@@ -16,6 +16,8 @@ import {
   AlertTriangle,
   ClipboardCheck,
 } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { DeleteAttachmentButton } from '@/components/DeleteAttachmentButton';
 
 interface Props {
   id: string;
