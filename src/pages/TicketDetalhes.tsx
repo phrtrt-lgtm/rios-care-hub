@@ -112,6 +112,7 @@ export default function TicketDetalhes() {
   const [savingSchedule, setSavingSchedule] = useState(false);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [completing, setCompleting] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance';
   const canUpdate = ticket?.status !== 'concluido' && ticket?.status !== 'cancelado';
