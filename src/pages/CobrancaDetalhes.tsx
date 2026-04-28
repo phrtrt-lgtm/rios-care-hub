@@ -18,6 +18,7 @@ import { AuthenticatedImage, AuthenticatedVideo, VideoThumbnail } from "@/compon
 import { MediaGallery } from "@/components/MediaGallery";
 import { preloadMediaUrls } from "@/hooks/useMediaCache";
 import { AttachmentBubble } from "@/components/AttachmentBubble";
+import { deleteAttachmentRow } from "@/lib/deleteAttachment";
 import { ReadReceiptDisplay } from "@/components/ReadReceiptDisplay";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
