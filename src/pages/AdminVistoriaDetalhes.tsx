@@ -624,7 +624,7 @@ export default function AdminVistoriaDetalhes() {
                           size="lg"
                           onClick={() => handleMediaClick(attachment)}
                         />
-                        <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="absolute top-1 right-1 opacity-90 group-hover:opacity-100 transition-opacity">
                           <DeleteAttachmentButton
                             table="cleaning_inspection_attachments"
                             attachmentId={attachment.id}
@@ -671,7 +671,7 @@ export default function AdminVistoriaDetalhes() {
                             <Wrench className="h-3 w-3" />
                           </div>
                         </button>
-                        <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="absolute top-1 right-1 opacity-90 group-hover:opacity-100 transition-opacity">
                           <DeleteAttachmentButton
                             table="cleaning_inspection_attachments"
                             attachmentId={att.id}
@@ -707,7 +707,7 @@ export default function AdminVistoriaDetalhes() {
                           <span className="mt-1 text-primary">Abrir</span>
                         </div>
                       </a>
-                      <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="absolute top-1 right-1 opacity-90 group-hover:opacity-100 transition-opacity">
                         <DeleteAttachmentButton
                           table="cleaning_inspection_attachments"
                           attachmentId={attachment.id}
