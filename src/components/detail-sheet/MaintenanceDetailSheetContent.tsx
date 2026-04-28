@@ -22,11 +22,14 @@ import {
   Pencil,
   ImageIcon,
   ClipboardCheck,
+  Trash2,
 } from 'lucide-react';
 import { CHARGE_CATEGORIES } from '@/constants/chargeCategories';
 import { MediaThumbnail } from '@/components/MediaThumbnail';
 import { MediaGallery } from '@/components/MediaGallery';
 import { MaintenanceUpdatesThread } from '@/components/MaintenanceUpdatesThread';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
+import { deleteAttachmentRow } from '@/lib/deleteAttachment';
 import { toast } from 'sonner';
 
 interface Props {
@@ -68,6 +71,24 @@ export function MaintenanceDetailSheetContent({ id, onOpenFull }: Props) {
   const [uploading, setUploading] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name?: string | null } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteAttachment = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const table = maintenance?.source === 'charge' ? 'charge_attachments' : 'ticket_attachments';
+      const ok = await deleteAttachmentRow(table as any, deleteTarget.id);
+      if (ok) {
+        await queryClient.invalidateQueries({ queryKey: ['maintenance', id] });
+        await refetch();
+        setDeleteTarget(null);
+      }
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -324,31 +345,48 @@ export function MaintenanceDetailSheetContent({ id, onOpenFull }: Props) {
           <>
             <div className="grid grid-cols-3 gap-2">
               {allAttachments.map((att, idx) => (
-                <button
+                <div
                   key={att.id}
-                  type="button"
-                  onClick={() => {
-                    setGalleryIndex(idx);
-                    setGalleryOpen(true);
-                  }}
-                  className={`aspect-square rounded-md overflow-hidden border bg-muted relative group hover:ring-2 hover:ring-primary/40 transition-all ${
+                  className={`relative group aspect-square rounded-md overflow-hidden border bg-muted hover:ring-2 hover:ring-primary/40 transition-all ${
                     att.from_inspection ? 'border-info/40 ring-1 ring-info/20' : ''
                   }`}
                   title={att.from_inspection ? 'Anexo vindo da vistoria' : att.file_name}
                 >
-                  <MediaThumbnail
-                    src={att.file_url}
-                    fileType={att.file_type}
-                    fileName={att.file_name}
-                    size="lg"
-                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGalleryIndex(idx);
+                      setGalleryOpen(true);
+                    }}
+                    className="absolute inset-0 w-full h-full"
+                  >
+                    <MediaThumbnail
+                      src={att.file_url}
+                      fileType={att.file_type}
+                      fileName={att.file_name}
+                      size="lg"
+                    />
+                  </button>
                   {att.from_inspection && (
-                    <div className="absolute top-1 left-1 bg-info text-info-foreground rounded-full p-1 shadow-sm">
+                    <div className="absolute top-1 left-1 bg-info text-info-foreground rounded-full p-1 shadow-sm pointer-events-none z-10">
                       <ClipboardCheck className="h-3 w-3" />
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/10 transition-colors" />
-                </button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="destructive"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleteTarget({ id: att.id, name: att.file_name });
+                    }}
+                    className="absolute top-1 right-1 h-7 w-7 p-0 z-20 opacity-90 hover:opacity-100 shadow"
+                    title="Excluir anexo"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                  <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/10 transition-colors pointer-events-none" />
+                </div>
               ))}
             </div>
             {allAttachments.some((a) => a.from_inspection) && (
@@ -381,6 +419,34 @@ export function MaintenanceDetailSheetContent({ id, onOpenFull }: Props) {
         initialIndex={galleryIndex}
         open={galleryOpen}
         onOpenChange={setGalleryOpen}
+        onDelete={async (item) => {
+          const table = maintenance?.source === 'charge' ? 'charge_attachments' : 'ticket_attachments';
+          const ok = await deleteAttachmentRow(table as any, item.id);
+          if (ok) {
+            await queryClient.invalidateQueries({ queryKey: ['maintenance', id] });
+            await refetch();
+          }
+        }}
+      />
+
+      <ConfirmationDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        title="Excluir anexo?"
+        description={
+          <div className="space-y-2">
+            <p>Esta ação é permanente e não pode ser desfeita.</p>
+            {deleteTarget?.name && (
+              <p className="text-xs">
+                Arquivo: <span className="font-mono">{deleteTarget.name}</span>
+              </p>
+            )}
+          </div>
+        }
+        confirmLabel="Excluir"
+        variant="destructive"
+        loading={deleting}
+        onConfirm={handleDeleteAttachment}
       />
     </div>
   );
