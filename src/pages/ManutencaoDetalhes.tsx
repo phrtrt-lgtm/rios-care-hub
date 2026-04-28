@@ -386,11 +386,19 @@ export default function ManutencaoDetalhes({ embedded = false, idOverride }: Man
                               {attachment.size_bytes ? `${(attachment.size_bytes / 1024).toFixed(1)} KB` : ''}
                             </div>
                           </div>
-                          <Button variant="outline" size="sm" asChild>
-                            <a href={attachment.file_url} target="_blank" rel="noopener noreferrer">
-                              Ver
-                            </a>
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" asChild>
+                              <a href={attachment.file_url} target="_blank" rel="noopener noreferrer">
+                                Ver
+                              </a>
+                            </Button>
+                            <DeleteAttachmentButton
+                              table={maintenance.source === 'charge' ? 'charge_attachments' : 'ticket_attachments' as any}
+                              attachmentId={attachment.id}
+                              fileName={attachment.file_name}
+                              onDeleted={() => queryClient.invalidateQueries({ queryKey: ['maintenance', id] })}
+                            />
+                          </div>
                         </div>
                       ))}
                     </div>
