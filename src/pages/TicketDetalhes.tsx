@@ -1012,7 +1012,7 @@ export default function TicketDetalhes() {
                           <AttachmentBubble
                             key={attachment.id}
                             {...attachment}
-                            onDelete={isTeam ? async () => {
+                            onDelete={isTeamMember ? async () => {
                               const ok = await deleteAttachmentRow("ticket_attachments", attachment.id);
                               if (ok) fetchMessages();
                             } : undefined}
