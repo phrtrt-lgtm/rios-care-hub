@@ -33,6 +33,8 @@ export default function ManutencaoDetalhes({ embedded = false, idOverride }: Man
   const { data: maintenance, isLoading } = useMaintenance(id);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryStartIndex, setGalleryStartIndex] = useState(0);
+  const [editOpen, setEditOpen] = useState(false);
+  const queryClient = useQueryClient();
 
   // Preload attachments when maintenance loads
   useEffect(() => {
