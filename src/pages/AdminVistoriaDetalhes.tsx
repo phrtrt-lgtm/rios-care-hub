@@ -694,18 +694,27 @@ export default function AdminVistoriaDetalhes() {
                 {attachments
                   .filter(a => !a.file_type?.startsWith('image/') && !a.file_type?.startsWith('video/') && !a.file_type?.startsWith('audio/'))
                   .map((attachment) => (
-                    <a
-                      key={attachment.id}
-                      href={attachment.file_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block group"
-                    >
-                      <div className="w-full h-20 rounded bg-muted flex flex-col items-center justify-center text-xs group-hover:bg-muted/80 transition">
-                        <span className="text-muted-foreground">{attachment.file_type || 'arquivo'}</span>
-                        <span className="mt-1 text-primary">Abrir</span>
+                    <div key={attachment.id} className="relative group">
+                      <a
+                        href={attachment.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block"
+                      >
+                        <div className="w-full h-20 rounded bg-muted flex flex-col items-center justify-center text-xs group-hover:bg-muted/80 transition">
+                          <span className="text-muted-foreground">{attachment.file_type || 'arquivo'}</span>
+                          <span className="mt-1 text-primary">Abrir</span>
+                        </div>
+                      </a>
+                      <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <DeleteAttachmentButton
+                          table="cleaning_inspection_attachments"
+                          attachmentId={attachment.id}
+                          fileName={attachment.file_name}
+                          onDeleted={fetchData}
+                        />
                       </div>
-                    </a>
+                    </div>
                   ))}
               </div>
             </Card>
