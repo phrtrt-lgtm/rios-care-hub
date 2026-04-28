@@ -185,6 +185,19 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange, onDelete
             <Download className="h-6 w-6" />
           </Button>
 
+          {/* Delete Button */}
+          {onDelete && currentItem && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-4 right-28 z-50 text-white hover:bg-destructive/40"
+              onClick={() => setConfirmDeleteOpen(true)}
+              title="Excluir anexo"
+            >
+              <Trash2 className="h-6 w-6" />
+            </Button>
+          )}
+
           {/* Previous Navigation */}
           {items.length > 1 && (
             <Button
