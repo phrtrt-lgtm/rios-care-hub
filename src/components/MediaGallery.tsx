@@ -328,6 +328,43 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange, onDelete
           )}
         </div>
       </DialogContent>
+
+      {onDelete && currentItem && (
+        <ConfirmationDialog
+          open={confirmDeleteOpen}
+          onOpenChange={setConfirmDeleteOpen}
+          title="Excluir anexo?"
+          description={
+            <div className="space-y-2">
+              <p>Esta ação é permanente e não pode ser desfeita.</p>
+              {currentItem.file_name && (
+                <p className="text-xs">
+                  Arquivo: <span className="font-mono">{currentItem.file_name}</span>
+                </p>
+              )}
+            </div>
+          }
+          confirmLabel="Excluir"
+          variant="destructive"
+          loading={deleting}
+          onConfirm={async () => {
+            if (!onDelete || !currentItem) return;
+            setDeleting(true);
+            try {
+              await onDelete(currentItem, currentIndex);
+              setConfirmDeleteOpen(false);
+              // Adjust index/close gallery if no items left
+              if (items.length <= 1) {
+                onOpenChange(false);
+              } else if (currentIndex >= items.length - 1) {
+                setCurrentIndex(Math.max(0, currentIndex - 1));
+              }
+            } finally {
+              setDeleting(false);
+            }
+          }}
+        />
+      )}
     </Dialog>
   );
 };
