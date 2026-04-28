@@ -387,6 +387,11 @@ export default function ManutencaoDetalhes({ embedded = false, idOverride }: Man
                     initialIndex={galleryStartIndex}
                     open={galleryOpen}
                     onOpenChange={setGalleryOpen}
+                    onDelete={isTeam ? async (item) => {
+                      // detect ticket vs charge by table source isn't tracked here; try ticket then charge
+                      const ok = await deleteAttachmentRow("ticket_attachments", item.id);
+                      if (ok) window.location.reload();
+                    } : undefined}
                   />
                 </div>
               );
