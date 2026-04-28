@@ -18,6 +18,7 @@ import {
   ClipboardCheck,
   ChevronRight,
   Clock,
+  Archive,
 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
 import { format, isSameDay, parseISO, startOfDay } from 'date-fns';
@@ -81,6 +82,7 @@ export default function AdminVistorias() {
           supabase
             .from('cleaning_inspections')
             .select('id, property_id, notes, created_at')
+            .is('archived_at', null)
             .order('created_at', { ascending: false }),
         ]);
 
@@ -188,6 +190,15 @@ export default function AdminVistorias() {
             >
               <List className="h-4 w-4" />
               Ver Todas
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/admin/vistorias/arquivadas')}
+              className="gap-2"
+              title="Vistorias arquivadas"
+            >
+              <Archive className="h-4 w-4" />
             </Button>
             <Button
               variant="outline"

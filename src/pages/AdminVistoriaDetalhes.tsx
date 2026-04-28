@@ -18,8 +18,10 @@ import EditInspectionDialog from '@/components/EditInspectionDialog';
 import { RoutineChecklistDisplay } from '@/components/RoutineChecklistDisplay';
 import { preloadMediaUrls } from '@/hooks/useMediaCache';
 import { InspectionCommentThread } from '@/components/comments/InspectionCommentThread';
-import { ArrowLeft, Calendar, User, CheckCircle2, AlertTriangle, Headphones, FileText, Building2, Wrench, Plus, Sparkles, Loader2, Pencil, RefreshCw, Import, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Calendar, User, CheckCircle2, AlertTriangle, Headphones, FileText, Building2, Wrench, Plus, Sparkles, Loader2, Pencil, RefreshCw, Import, ChevronDown, Archive } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ArchiveInspectionButton } from '@/components/ArchiveInspectionButton';
+import { DeleteAttachmentButton } from '@/components/DeleteAttachmentButton';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -35,6 +37,7 @@ interface Inspection {
   transcript_summary?: string;
   audio_url?: string;
   monday_item_id?: string;
+  archived_at?: string | null;
 }
 
 interface Property {
@@ -376,6 +379,17 @@ export default function AdminVistoriaDetalhes() {
               <Pencil className="h-4 w-4" />
               Editar
             </Button>
+            <ArchiveInspectionButton
+              inspectionId={inspection.id}
+              archived={!!inspection.archived_at}
+              onDone={() => {
+                if (inspection.archived_at) {
+                  fetchData();
+                } else {
+                  navigate("/admin/vistorias/todas", { replace: true });
+                }
+              }}
+            />
             <Badge 
               variant={isOk ? "secondary" : "destructive"}
               className={isOk ? "bg-success/20 text-success" : ""}
@@ -389,6 +403,14 @@ export default function AdminVistoriaDetalhes() {
 
       <main className="container mx-auto px-4 py-6 max-w-4xl">
         <div className="space-y-6">
+          {inspection.archived_at && (
+            <div className="flex items-center gap-2 rounded-md border border-warning/40 bg-warning/10 px-4 py-2 text-sm text-warning">
+              <Archive className="h-4 w-4" />
+              Vistoria arquivada em {format(new Date(inspection.archived_at), "dd/MM/yyyy", { locale: ptBR })}.
+              Use o botão "Desarquivar" para restaurar.
+            </div>
+          )}
+
           {/* Quick Maintenance Button at Top */}
           <div className="flex justify-end">
             <Button
@@ -460,7 +482,17 @@ export default function AdminVistoriaDetalhes() {
               </div>
               <div className="space-y-3">
                 {audioAttachments.map((audio, idx) => (
-                  <AudioWithDuration key={audio.id} audio={audio} index={idx} />
+                  <div key={audio.id} className="relative">
+                    <AudioWithDuration audio={audio} index={idx} />
+                    <div className="absolute top-2 right-2">
+                      <DeleteAttachmentButton
+                        table="cleaning_inspection_attachments"
+                        attachmentId={audio.id}
+                        fileName={audio.file_name}
+                        onDeleted={fetchData}
+                      />
+                    </div>
+                  </div>
                 ))}
               </div>
             </Card>
@@ -583,14 +615,23 @@ export default function AdminVistoriaDetalhes() {
                   </p>
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
                     {pendingMedia.map((attachment) => (
-                      <MediaThumbnail
-                        key={attachment.id}
-                        src={attachment.file_url}
-                        fileType={attachment.file_type}
-                        fileName={attachment.file_name}
-                        size="lg"
-                        onClick={() => handleMediaClick(attachment)}
-                      />
+                      <div key={attachment.id} className="relative group">
+                        <MediaThumbnail
+                          src={attachment.file_url}
+                          fileType={attachment.file_type}
+                          fileName={attachment.file_name}
+                          size="lg"
+                          onClick={() => handleMediaClick(attachment)}
+                        />
+                        <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <DeleteAttachmentButton
+                            table="cleaning_inspection_attachments"
+                            attachmentId={attachment.id}
+                            fileName={attachment.file_name}
+                            onDeleted={fetchData}
+                          />
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </>
@@ -608,27 +649,36 @@ export default function AdminVistoriaDetalhes() {
                   </p>
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
                     {linkedMedia.map((att) => (
-                      <button
-                        key={att.id}
-                        type="button"
-                        onClick={() => handleMediaClick(att)}
-                        className="relative aspect-square rounded-lg overflow-hidden ring-2 ring-primary/40 group"
-                      >
-                        {att.file_type?.startsWith('image/') ? (
-                          <img
-                            src={att.file_url}
-                            alt={att.file_name || 'Foto'}
-                            className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-muted flex items-center justify-center">
-                            <Wrench className="h-6 w-6 text-muted-foreground" />
+                      <div key={att.id} className="relative group">
+                        <button
+                          type="button"
+                          onClick={() => handleMediaClick(att)}
+                          className="relative aspect-square w-full rounded-lg overflow-hidden ring-2 ring-primary/40"
+                        >
+                          {att.file_type?.startsWith('image/') ? (
+                            <img
+                              src={att.file_url}
+                              alt={att.file_name || 'Foto'}
+                              className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-muted flex items-center justify-center">
+                              <Wrench className="h-6 w-6 text-muted-foreground" />
+                            </div>
+                          )}
+                          <div className="absolute top-1 left-1 bg-primary text-primary-foreground rounded-full p-1 shadow-md">
+                            <Wrench className="h-3 w-3" />
                           </div>
-                        )}
-                        <div className="absolute top-1 left-1 bg-primary text-primary-foreground rounded-full p-1 shadow-md">
-                          <Wrench className="h-3 w-3" />
+                        </button>
+                        <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <DeleteAttachmentButton
+                            table="cleaning_inspection_attachments"
+                            attachmentId={att.id}
+                            fileName={att.file_name}
+                            onDeleted={fetchData}
+                          />
                         </div>
-                      </button>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -644,18 +694,27 @@ export default function AdminVistoriaDetalhes() {
                 {attachments
                   .filter(a => !a.file_type?.startsWith('image/') && !a.file_type?.startsWith('video/') && !a.file_type?.startsWith('audio/'))
                   .map((attachment) => (
-                    <a
-                      key={attachment.id}
-                      href={attachment.file_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block group"
-                    >
-                      <div className="w-full h-20 rounded bg-muted flex flex-col items-center justify-center text-xs group-hover:bg-muted/80 transition">
-                        <span className="text-muted-foreground">{attachment.file_type || 'arquivo'}</span>
-                        <span className="mt-1 text-primary">Abrir</span>
+                    <div key={attachment.id} className="relative group">
+                      <a
+                        href={attachment.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block"
+                      >
+                        <div className="w-full h-20 rounded bg-muted flex flex-col items-center justify-center text-xs group-hover:bg-muted/80 transition">
+                          <span className="text-muted-foreground">{attachment.file_type || 'arquivo'}</span>
+                          <span className="mt-1 text-primary">Abrir</span>
+                        </div>
+                      </a>
+                      <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <DeleteAttachmentButton
+                          table="cleaning_inspection_attachments"
+                          attachmentId={attachment.id}
+                          fileName={attachment.file_name}
+                          onDeleted={fetchData}
+                        />
                       </div>
-                    </a>
+                    </div>
                   ))}
               </div>
             </Card>

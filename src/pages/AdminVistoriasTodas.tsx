@@ -19,8 +19,9 @@ import {
 import {
   ArrowLeft, Calendar, Search, Building2, User,
   ChevronDown, ChevronUp, Headphones, FileText,
-  Image, CheckCircle2, AlertTriangle, Loader2, ExternalLink
+  Image, CheckCircle2, AlertTriangle, Loader2, ExternalLink, Archive
 } from "lucide-react";
+import { ArchiveInspectionButton } from "@/components/ArchiveInspectionButton";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ListFilters } from "@/components/list/ListFilters";
@@ -103,6 +104,7 @@ export default function AdminVistoriasTodas() {
       let query = supabase
         .from("cleaning_inspections")
         .select(`*, property:properties!inner(name, cover_photo_url)`, { count: "exact" })
+        .is("archived_at", null)
         .order("created_at", { ascending: false })
         .range(from, to);
 
@@ -182,6 +184,15 @@ export default function AdminVistoriasTodas() {
                 {loading ? "Carregando..." : `${totalCount} vistorias • página ${currentPage} de ${totalPages || 1}`}
               </p>
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/admin/vistorias/arquivadas")}
+              className="gap-2"
+              title="Vistorias arquivadas"
+            >
+              <Archive className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </header>
@@ -359,15 +370,22 @@ export default function AdminVistoriasTodas() {
                             </div>
                           )}
 
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="w-full gap-2"
-                            onClick={() => { saveScrollPosition(pathname); navigate(`/admin/vistoria/${inspection.id}`); }}
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                            Ver vistoria completa
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="flex-1 gap-2"
+                              onClick={() => { saveScrollPosition(pathname); navigate(`/admin/vistoria/${inspection.id}`); }}
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                              Ver vistoria completa
+                            </Button>
+                            <ArchiveInspectionButton
+                              inspectionId={inspection.id}
+                              archived={false}
+                              onDone={fetchInspections}
+                            />
+                          </div>
                         </div>
                       )}
                     </CardContent>
