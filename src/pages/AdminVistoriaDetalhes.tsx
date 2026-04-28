@@ -482,7 +482,17 @@ export default function AdminVistoriaDetalhes() {
               </div>
               <div className="space-y-3">
                 {audioAttachments.map((audio, idx) => (
-                  <AudioWithDuration key={audio.id} audio={audio} index={idx} />
+                  <div key={audio.id} className="relative">
+                    <AudioWithDuration audio={audio} index={idx} />
+                    <div className="absolute top-2 right-2">
+                      <DeleteAttachmentButton
+                        table="cleaning_inspection_attachments"
+                        attachmentId={audio.id}
+                        fileName={audio.file_name}
+                        onDeleted={fetchData}
+                      />
+                    </div>
+                  </div>
                 ))}
               </div>
             </Card>
@@ -605,14 +615,23 @@ export default function AdminVistoriaDetalhes() {
                   </p>
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
                     {pendingMedia.map((attachment) => (
-                      <MediaThumbnail
-                        key={attachment.id}
-                        src={attachment.file_url}
-                        fileType={attachment.file_type}
-                        fileName={attachment.file_name}
-                        size="lg"
-                        onClick={() => handleMediaClick(attachment)}
-                      />
+                      <div key={attachment.id} className="relative group">
+                        <MediaThumbnail
+                          src={attachment.file_url}
+                          fileType={attachment.file_type}
+                          fileName={attachment.file_name}
+                          size="lg"
+                          onClick={() => handleMediaClick(attachment)}
+                        />
+                        <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <DeleteAttachmentButton
+                            table="cleaning_inspection_attachments"
+                            attachmentId={attachment.id}
+                            fileName={attachment.file_name}
+                            onDeleted={fetchData}
+                          />
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </>
