@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { MediaThumbnail } from '@/components/MediaThumbnail';
 import { MediaGallery } from '@/components/MediaGallery';
+import { deleteAttachmentRow } from '@/lib/deleteAttachment';
 import { CreateMaintenanceFromInspectionDialog } from '@/components/CreateMaintenanceFromInspectionDialog';
 import { LinkInspectionAttachmentsDialog } from '@/components/LinkInspectionAttachmentsDialog';
 import EditInspectionDialog from '@/components/EditInspectionDialog';
