@@ -337,7 +337,7 @@ export default function ManutencaoDetalhes({ embedded = false, idOverride }: Man
                         {mediaAttachments.map((attachment: any, idx: number) => (
                           <div
                             key={attachment.id}
-                            className={`relative ${
+                            className={`relative group ${
                               attachment.from_inspection ? 'ring-1 ring-info/30 rounded-md' : ''
                             }`}
                             title={attachment.from_inspection ? 'Anexo vindo da vistoria' : attachment.file_name}
@@ -357,6 +357,14 @@ export default function ManutencaoDetalhes({ embedded = false, idOverride }: Man
                                 <ClipboardCheck className="h-3 w-3" />
                               </div>
                             )}
+                            <div className="absolute top-1 right-1 z-20 opacity-90 group-hover:opacity-100 transition-opacity">
+                              <DeleteAttachmentButton
+                                table={maintenance.source === 'charge' ? 'charge_attachments' : 'ticket_attachments' as any}
+                                attachmentId={attachment.id}
+                                fileName={attachment.file_name}
+                                onDeleted={() => queryClient.invalidateQueries({ queryKey: ['maintenance', id] })}
+                              />
+                            </div>
                           </div>
                         ))}
                       </div>
