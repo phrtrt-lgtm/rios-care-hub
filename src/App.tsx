@@ -80,6 +80,7 @@ import AdminRelatoriosProprietario from "./pages/AdminRelatoriosProprietario";
 import CadastroImovel from "./pages/CadastroImovel";
 import AdminCadastrosProprietarios from "./pages/AdminCadastrosProprietarios";
 import AtualizacaoAnuncio from "./pages/AtualizacaoAnuncio";
+import AdminVistoriasArquivadas from "./pages/AdminVistoriasArquivadas";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -425,6 +426,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['admin', 'maintenance']}>
                   <AdminManutencoesArquivo />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/vistorias/arquivadas"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'agent', 'maintenance']}>
+                  <AdminVistoriasArquivadas />
                 </ProtectedRoute>
               }
             />
