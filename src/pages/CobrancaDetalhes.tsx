@@ -1781,6 +1781,10 @@ export default function CobrancaDetalhes() {
         initialIndex={galleryStartIndex}
         open={galleryOpen}
         onOpenChange={setGalleryOpen}
+        onDelete={isTeamMemberRaw ? async (item) => {
+          const ok = await deleteAttachmentRow("charge_attachments", item.id);
+          if (ok) fetchAttachments();
+        } : undefined}
       />
 
       {/* Dialog de confirmação de exclusão */}
