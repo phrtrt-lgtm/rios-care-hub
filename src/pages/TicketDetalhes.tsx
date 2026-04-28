@@ -1167,6 +1167,10 @@ export default function TicketDetalhes() {
         initialIndex={galleryStartIndex}
         open={galleryOpen}
         onOpenChange={setGalleryOpen}
+        onDelete={isTeamMember ? async (item) => {
+          const ok = await deleteAttachmentRow("ticket_attachments", item.id);
+          if (ok) fetchMessages();
+        } : undefined}
       />
 
       {/* Schedule Dialog */}
