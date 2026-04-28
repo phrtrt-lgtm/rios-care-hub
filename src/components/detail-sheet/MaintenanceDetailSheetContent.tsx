@@ -22,11 +22,14 @@ import {
   Pencil,
   ImageIcon,
   ClipboardCheck,
+  Trash2,
 } from 'lucide-react';
 import { CHARGE_CATEGORIES } from '@/constants/chargeCategories';
 import { MediaThumbnail } from '@/components/MediaThumbnail';
 import { MediaGallery } from '@/components/MediaGallery';
 import { MaintenanceUpdatesThread } from '@/components/MaintenanceUpdatesThread';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
+import { deleteAttachmentRow } from '@/lib/deleteAttachment';
 import { toast } from 'sonner';
 
 interface Props {
