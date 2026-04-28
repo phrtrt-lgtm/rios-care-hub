@@ -403,6 +403,14 @@ export default function AdminVistoriaDetalhes() {
 
       <main className="container mx-auto px-4 py-6 max-w-4xl">
         <div className="space-y-6">
+          {inspection.archived_at && (
+            <div className="flex items-center gap-2 rounded-md border border-warning/40 bg-warning/10 px-4 py-2 text-sm text-warning">
+              <Archive className="h-4 w-4" />
+              Vistoria arquivada em {format(new Date(inspection.archived_at), "dd/MM/yyyy", { locale: ptBR })}.
+              Use o botão "Desarquivar" para restaurar.
+            </div>
+          )}
+
           {/* Quick Maintenance Button at Top */}
           <div className="flex justify-end">
             <Button
