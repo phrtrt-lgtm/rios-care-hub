@@ -153,6 +153,7 @@ export function AttachmentBubble({
   if (isImage || isVideo) {
     return (
       <div className="relative group">
+        {DeleteOverlay}
         <div 
           onClick={() => onPreview?.(file_url, isVideo ? 'Vídeo' : 'Imagem')}
           className="cursor-pointer relative overflow-hidden rounded-lg border border-border hover:border-primary transition-colors"
@@ -187,6 +188,7 @@ export function AttachmentBubble({
             {formatSize(size_bytes)}
           </div>
         )}
+        {ConfirmModal}
       </div>
     );
   }
