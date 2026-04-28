@@ -649,27 +649,36 @@ export default function AdminVistoriaDetalhes() {
                   </p>
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
                     {linkedMedia.map((att) => (
-                      <button
-                        key={att.id}
-                        type="button"
-                        onClick={() => handleMediaClick(att)}
-                        className="relative aspect-square rounded-lg overflow-hidden ring-2 ring-primary/40 group"
-                      >
-                        {att.file_type?.startsWith('image/') ? (
-                          <img
-                            src={att.file_url}
-                            alt={att.file_name || 'Foto'}
-                            className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-muted flex items-center justify-center">
-                            <Wrench className="h-6 w-6 text-muted-foreground" />
+                      <div key={att.id} className="relative group">
+                        <button
+                          type="button"
+                          onClick={() => handleMediaClick(att)}
+                          className="relative aspect-square w-full rounded-lg overflow-hidden ring-2 ring-primary/40"
+                        >
+                          {att.file_type?.startsWith('image/') ? (
+                            <img
+                              src={att.file_url}
+                              alt={att.file_name || 'Foto'}
+                              className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-muted flex items-center justify-center">
+                              <Wrench className="h-6 w-6 text-muted-foreground" />
+                            </div>
+                          )}
+                          <div className="absolute top-1 left-1 bg-primary text-primary-foreground rounded-full p-1 shadow-md">
+                            <Wrench className="h-3 w-3" />
                           </div>
-                        )}
-                        <div className="absolute top-1 left-1 bg-primary text-primary-foreground rounded-full p-1 shadow-md">
-                          <Wrench className="h-3 w-3" />
+                        </button>
+                        <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <DeleteAttachmentButton
+                            table="cleaning_inspection_attachments"
+                            attachmentId={att.id}
+                            fileName={att.file_name}
+                            onDeleted={fetchData}
+                          />
                         </div>
-                      </button>
+                      </div>
                     ))}
                   </div>
                 </div>
