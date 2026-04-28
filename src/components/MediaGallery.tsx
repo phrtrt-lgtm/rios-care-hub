@@ -1,11 +1,12 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Download, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, X, Trash2 } from "lucide-react";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useMediaCache } from "@/hooks/useMediaCache";
 import { MediaThumbnail } from "./MediaThumbnail";
 import { Skeleton } from "@/components/ui/skeleton";
 import { detectMediaKind } from "@/lib/mediaType";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 
 interface MediaItem {
   id: string;
@@ -20,13 +21,18 @@ interface MediaGalleryProps {
   initialIndex: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Optional delete handler. If provided, shows trash icon in toolbar with confirmation. */
+  onDelete?: (item: MediaItem, index: number) => void | Promise<void>;
 }
 
-export const MediaGallery = ({ items, initialIndex, open, onOpenChange }: MediaGalleryProps) => {
+export const MediaGallery = ({ items, initialIndex, open, onOpenChange, onDelete }: MediaGalleryProps) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [currentBlobUrl, setCurrentBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const { loadMedia, preloadMedia, getCachedUrl } = useMediaCache();
+
 
   const currentItem = items[currentIndex];
   const currentKind = currentItem
@@ -179,6 +185,19 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange }: MediaG
             <Download className="h-6 w-6" />
           </Button>
 
+          {/* Delete Button */}
+          {onDelete && currentItem && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-4 right-28 z-50 text-white hover:bg-destructive/40"
+              onClick={() => setConfirmDeleteOpen(true)}
+              title="Excluir anexo"
+            >
+              <Trash2 className="h-6 w-6" />
+            </Button>
+          )}
+
           {/* Previous Navigation */}
           {items.length > 1 && (
             <Button
@@ -309,6 +328,43 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange }: MediaG
           )}
         </div>
       </DialogContent>
+
+      {onDelete && currentItem && (
+        <ConfirmationDialog
+          open={confirmDeleteOpen}
+          onOpenChange={setConfirmDeleteOpen}
+          title="Excluir anexo?"
+          description={
+            <div className="space-y-2">
+              <p>Esta ação é permanente e não pode ser desfeita.</p>
+              {currentItem.file_name && (
+                <p className="text-xs">
+                  Arquivo: <span className="font-mono">{currentItem.file_name}</span>
+                </p>
+              )}
+            </div>
+          }
+          confirmLabel="Excluir"
+          variant="destructive"
+          loading={deleting}
+          onConfirm={async () => {
+            if (!onDelete || !currentItem) return;
+            setDeleting(true);
+            try {
+              await onDelete(currentItem, currentIndex);
+              setConfirmDeleteOpen(false);
+              // Adjust index/close gallery if no items left
+              if (items.length <= 1) {
+                onOpenChange(false);
+              } else if (currentIndex >= items.length - 1) {
+                setCurrentIndex(Math.max(0, currentIndex - 1));
+              }
+            } finally {
+              setDeleting(false);
+            }
+          }}
+        />
+      )}
     </Dialog>
   );
 };

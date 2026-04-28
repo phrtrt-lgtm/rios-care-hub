@@ -18,6 +18,7 @@ import { AuthenticatedImage, AuthenticatedVideo, VideoThumbnail } from "@/compon
 import { MediaGallery } from "@/components/MediaGallery";
 import { preloadMediaUrls } from "@/hooks/useMediaCache";
 import { AttachmentBubble } from "@/components/AttachmentBubble";
+import { deleteAttachmentRow } from "@/lib/deleteAttachment";
 import { ReadReceiptDisplay } from "@/components/ReadReceiptDisplay";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -1781,6 +1782,10 @@ export default function CobrancaDetalhes() {
         initialIndex={galleryStartIndex}
         open={galleryOpen}
         onOpenChange={setGalleryOpen}
+        onDelete={isTeamMemberRaw ? async (item) => {
+          const ok = await deleteAttachmentRow("charge_attachments", item.id);
+          if (ok) fetchAttachments();
+        } : undefined}
       />
 
       {/* Dialog de confirmação de exclusão */}

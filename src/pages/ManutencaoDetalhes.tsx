@@ -12,6 +12,7 @@ import { ArrowLeft, Loader2, FileText, Calendar, DollarSign, Info, ClipboardChec
 import { useAuth } from "@/hooks/useAuth";
 import { MediaThumbnail } from "@/components/MediaThumbnail";
 import { MediaGallery } from "@/components/MediaGallery";
+import { deleteAttachmentRow } from "@/lib/deleteAttachment";
 import { preloadMediaUrls } from "@/hooks/useMediaCache";
 import { useState, useEffect } from "react";
 
@@ -387,6 +388,11 @@ export default function ManutencaoDetalhes({ embedded = false, idOverride }: Man
                     initialIndex={galleryStartIndex}
                     open={galleryOpen}
                     onOpenChange={setGalleryOpen}
+                    onDelete={isTeam ? async (item) => {
+                      // detect ticket vs charge by table source isn't tracked here; try ticket then charge
+                      const ok = await deleteAttachmentRow("ticket_attachments", item.id);
+                      if (ok) window.location.reload();
+                    } : undefined}
                   />
                 </div>
               );

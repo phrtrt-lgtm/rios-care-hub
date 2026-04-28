@@ -20,6 +20,7 @@ import { SendToChargeButton } from "@/components/SendToChargeButton";
 import { ptBR } from "date-fns/locale";
 import { ConversationSummaryButton } from "@/components/ConversationSummaryButton";
 import { AttachmentBubble } from "@/components/AttachmentBubble";
+import { deleteAttachmentRow } from "@/lib/deleteAttachment";
 import { MediaGallery } from "@/components/MediaGallery";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { ReadReceiptDisplay } from "@/components/ReadReceiptDisplay";
@@ -1012,6 +1013,10 @@ export default function TicketDetalhes() {
                           <AttachmentBubble
                             key={attachment.id}
                             {...attachment}
+                            onDelete={isTeamMember ? async () => {
+                              const ok = await deleteAttachmentRow("ticket_attachments", attachment.id);
+                              if (ok) fetchMessages();
+                            } : undefined}
                             onPreview={() => {
                               if (attachment.file_type?.startsWith('image/') || attachment.file_type?.startsWith('video/') || attachment.file_type === 'application/pdf') {
                                 const index = allMediaItems.findIndex(item => item.id === attachment.id);
@@ -1162,6 +1167,10 @@ export default function TicketDetalhes() {
         initialIndex={galleryStartIndex}
         open={galleryOpen}
         onOpenChange={setGalleryOpen}
+        onDelete={isTeamMember ? async (item) => {
+          const ok = await deleteAttachmentRow("ticket_attachments", item.id);
+          if (ok) fetchMessages();
+        } : undefined}
       />
 
       {/* Schedule Dialog */}
