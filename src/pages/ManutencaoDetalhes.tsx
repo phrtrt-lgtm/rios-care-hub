@@ -8,13 +8,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { formatBRL, formatDateTime, formatDate } from "@/lib/format";
-import { ArrowLeft, Loader2, FileText, Calendar, DollarSign, Info, ClipboardCheck } from "lucide-react";
+import { ArrowLeft, Loader2, FileText, Calendar, DollarSign, Info, ClipboardCheck, Pencil } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { MediaThumbnail } from "@/components/MediaThumbnail";
 import { MediaGallery } from "@/components/MediaGallery";
 import { deleteAttachmentRow } from "@/lib/deleteAttachment";
 import { preloadMediaUrls } from "@/hooks/useMediaCache";
 import { useState, useEffect } from "react";
+import { EditMaintenanceDialog } from "@/components/EditMaintenanceDialog";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface ManutencaoDetalhesProps {
   /** When provided, render without page chrome (for use inside a Dialog). */
@@ -31,6 +33,8 @@ export default function ManutencaoDetalhes({ embedded = false, idOverride }: Man
   const { data: maintenance, isLoading } = useMaintenance(id);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryStartIndex, setGalleryStartIndex] = useState(0);
+  const [editOpen, setEditOpen] = useState(false);
+  const queryClient = useQueryClient();
 
   // Preload attachments when maintenance loads
   useEffect(() => {
@@ -118,6 +122,12 @@ export default function ManutencaoDetalhes({ embedded = false, idOverride }: Man
             Criado em {formatDateTime(maintenance.created_at)}
           </p>
         </div>
+        {isTeam && (
+          <Button variant="outline" size="sm" onClick={() => setEditOpen(true)} className="gap-2">
+            <Pencil className="h-4 w-4" />
+            Editar
+          </Button>
+        )}
         {getStatusBadge(maintenance.status)}
       </div>
 
@@ -443,6 +453,20 @@ export default function ManutencaoDetalhes({ embedded = false, idOverride }: Man
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {isTeam && (
+        <EditMaintenanceDialog
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          editId={maintenance.id}
+          type={maintenance.source === "charge" ? "charge" : "maintenance"}
+          onSaved={() => {
+            queryClient.invalidateQueries({ queryKey: ["maintenance", id] });
+            queryClient.invalidateQueries({ queryKey: ["maintenances"] });
+            queryClient.invalidateQueries({ queryKey: ["charges-list"] });
+          }}
+        />
       )}
     </div>
   );

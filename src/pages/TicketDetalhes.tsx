@@ -14,7 +14,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Send, Paperclip, Loader2, Sparkles, FileText, ChevronDown, X, Download, ZoomIn, Upload, Calendar, CheckCircle } from "lucide-react";
+import { ArrowLeft, Send, Paperclip, Loader2, Sparkles, FileText, ChevronDown, X, Download, ZoomIn, Upload, Calendar, CheckCircle, Pencil } from "lucide-react";
+import { EditMaintenanceDialog } from "@/components/EditMaintenanceDialog";
+import { EditTicketDialog } from "@/components/EditTicketDialog";
 import { CompleteMaintenanceDialog } from "@/components/CompleteMaintenanceDialog";
 import { SendToChargeButton } from "@/components/SendToChargeButton";
 import { ptBR } from "date-fns/locale";
@@ -110,6 +112,7 @@ export default function TicketDetalhes() {
   const [savingSchedule, setSavingSchedule] = useState(false);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [completing, setCompleting] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance';
   const canUpdate = ticket?.status !== 'concluido' && ticket?.status !== 'cancelado';
@@ -806,24 +809,34 @@ export default function TicketDetalhes() {
           </Button>
           
           {isTeamMember && (
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={exportToMonday}
-              disabled={exportingToMonday}
-            >
-              {exportingToMonday ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Exportando...
-                </>
-              ) : (
-                <>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Exportar para Monday
-                </>
-              )}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setEditOpen(true)}
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+                Editar
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportToMonday}
+                disabled={exportingToMonday}
+              >
+                {exportingToMonday ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Exportando...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Exportar para Monday
+                  </>
+                )}
+              </Button>
+            </div>
           )}
         </div>
       </header>
@@ -1230,6 +1243,26 @@ export default function TicketDetalhes() {
           fetchTicketData();
         }}
       />
+
+      {/* Edit Dialog (team only) */}
+      {isTeamMember && ticket && (
+        ticket.ticket_type === 'manutencao' ? (
+          <EditMaintenanceDialog
+            open={editOpen}
+            onOpenChange={setEditOpen}
+            editId={ticket.id}
+            type="maintenance"
+            onSaved={() => fetchTicketData()}
+          />
+        ) : (
+          <EditTicketDialog
+            open={editOpen}
+            onOpenChange={setEditOpen}
+            ticketId={ticket.id}
+            onSaved={() => fetchTicketData()}
+          />
+        )
+      )}
     </div>
   );
 }
