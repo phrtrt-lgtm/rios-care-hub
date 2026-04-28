@@ -19,8 +19,9 @@ import {
 import {
   ArrowLeft, Calendar, Search, Building2, User,
   ChevronDown, ChevronUp, Headphones, FileText,
-  Image, CheckCircle2, AlertTriangle, Loader2, ExternalLink
+  Image, CheckCircle2, AlertTriangle, Loader2, ExternalLink, Archive
 } from "lucide-react";
+import { ArchiveInspectionButton } from "@/components/ArchiveInspectionButton";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ListFilters } from "@/components/list/ListFilters";
@@ -103,6 +104,7 @@ export default function AdminVistoriasTodas() {
       let query = supabase
         .from("cleaning_inspections")
         .select(`*, property:properties!inner(name, cover_photo_url)`, { count: "exact" })
+        .is("archived_at", null)
         .order("created_at", { ascending: false })
         .range(from, to);
 
