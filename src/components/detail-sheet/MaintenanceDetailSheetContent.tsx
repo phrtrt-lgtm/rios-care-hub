@@ -78,8 +78,7 @@ export function MaintenanceDetailSheetContent({ id, onOpenFull }: Props) {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      // Maintenance attachments are stored in ticket_attachments (or charge_attachments when source=charge)
-      const table = isCharge ? 'charge_attachments' : 'ticket_attachments';
+      const table = maintenance?.source === 'charge' ? 'charge_attachments' : 'ticket_attachments';
       const ok = await deleteAttachmentRow(table as any, deleteTarget.id);
       if (ok) {
         await queryClient.invalidateQueries({ queryKey: ['maintenance', id] });
