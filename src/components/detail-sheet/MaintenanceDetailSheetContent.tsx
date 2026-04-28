@@ -419,6 +419,34 @@ export function MaintenanceDetailSheetContent({ id, onOpenFull }: Props) {
         initialIndex={galleryIndex}
         open={galleryOpen}
         onOpenChange={setGalleryOpen}
+        onDelete={async (item) => {
+          const table = maintenance?.source === 'charge' ? 'charge_attachments' : 'ticket_attachments';
+          const ok = await deleteAttachmentRow(table as any, item.id);
+          if (ok) {
+            await queryClient.invalidateQueries({ queryKey: ['maintenance', id] });
+            await refetch();
+          }
+        }}
+      />
+
+      <ConfirmationDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        title="Excluir anexo?"
+        description={
+          <div className="space-y-2">
+            <p>Esta ação é permanente e não pode ser desfeita.</p>
+            {deleteTarget?.name && (
+              <p className="text-xs">
+                Arquivo: <span className="font-mono">{deleteTarget.name}</span>
+              </p>
+            )}
+          </div>
+        }
+        confirmLabel="Excluir"
+        variant="destructive"
+        loading={deleting}
+        onConfirm={handleDeleteAttachment}
       />
     </div>
   );
