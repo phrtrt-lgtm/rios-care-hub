@@ -224,27 +224,41 @@ export function VistoriaDetailSheetContent({ id, onOpenFull }: Props) {
             {imageAttachments.slice(0, 6).map((att) => {
               const isLinked = !!att.maintenance_ticket_id;
               return (
-                <a
+                <div
                   key={att.id}
-                  href={att.file_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`relative aspect-square rounded-md overflow-hidden border bg-muted block ${
+                  className={`relative aspect-square rounded-md overflow-hidden border bg-muted ${
                     isLinked ? 'ring-2 ring-primary/40' : ''
                   }`}
                 >
-                  <img
-                    src={att.file_url}
-                    alt={att.file_name || 'Foto'}
-                    className={`w-full h-full object-cover ${isLinked ? 'opacity-80' : ''}`}
-                    loading="lazy"
-                  />
+                  <a
+                    href={att.file_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="absolute inset-0 block"
+                  >
+                    <img
+                      src={att.file_url}
+                      alt={att.file_name || 'Foto'}
+                      className={`w-full h-full object-cover ${isLinked ? 'opacity-80' : ''}`}
+                      loading="lazy"
+                    />
+                  </a>
                   {isLinked && (
-                    <div className="absolute top-1 left-1 bg-primary text-primary-foreground rounded-full p-0.5 shadow-sm">
+                    <div className="absolute top-1 left-1 bg-primary text-primary-foreground rounded-full p-0.5 shadow-sm pointer-events-none z-10">
                       <ClipboardCheck className="h-3 w-3" />
                     </div>
                   )}
-                </a>
+                  {isTeam && (
+                    <div className="absolute top-1 right-1 z-20">
+                      <DeleteAttachmentButton
+                        table="cleaning_inspection_attachments"
+                        attachmentId={att.id}
+                        fileName={att.file_name}
+                        onDeleted={() => setReloadKey((k) => k + 1)}
+                      />
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>
