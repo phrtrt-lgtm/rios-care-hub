@@ -18,8 +18,10 @@ import EditInspectionDialog from '@/components/EditInspectionDialog';
 import { RoutineChecklistDisplay } from '@/components/RoutineChecklistDisplay';
 import { preloadMediaUrls } from '@/hooks/useMediaCache';
 import { InspectionCommentThread } from '@/components/comments/InspectionCommentThread';
-import { ArrowLeft, Calendar, User, CheckCircle2, AlertTriangle, Headphones, FileText, Building2, Wrench, Plus, Sparkles, Loader2, Pencil, RefreshCw, Import, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Calendar, User, CheckCircle2, AlertTriangle, Headphones, FileText, Building2, Wrench, Plus, Sparkles, Loader2, Pencil, RefreshCw, Import, ChevronDown, Archive } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ArchiveInspectionButton } from '@/components/ArchiveInspectionButton';
+import { DeleteAttachmentButton } from '@/components/DeleteAttachmentButton';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -35,6 +37,7 @@ interface Inspection {
   transcript_summary?: string;
   audio_url?: string;
   monday_item_id?: string;
+  archived_at?: string | null;
 }
 
 interface Property {
@@ -376,6 +379,17 @@ export default function AdminVistoriaDetalhes() {
               <Pencil className="h-4 w-4" />
               Editar
             </Button>
+            <ArchiveInspectionButton
+              inspectionId={inspection.id}
+              archived={!!inspection.archived_at}
+              onDone={() => {
+                if (inspection.archived_at) {
+                  fetchData();
+                } else {
+                  navigate("/admin/vistorias/todas", { replace: true });
+                }
+              }}
+            />
             <Badge 
               variant={isOk ? "secondary" : "destructive"}
               className={isOk ? "bg-success/20 text-success" : ""}
