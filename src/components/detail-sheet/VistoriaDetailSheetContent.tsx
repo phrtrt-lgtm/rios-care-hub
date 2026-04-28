@@ -91,7 +91,7 @@ export function VistoriaDetailSheetContent({ id, onOpenFull }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, reloadKey]);
 
   if (loading) {
     return (
