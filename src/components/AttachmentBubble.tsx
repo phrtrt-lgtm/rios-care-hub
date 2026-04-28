@@ -1,8 +1,10 @@
-import { FileIcon, FileTextIcon, Download, Eye, Play } from "lucide-react";
+import { FileIcon, FileTextIcon, Download, Eye, Play, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useState, useEffect } from "react";
 import { useMediaCache, generateVideoThumbnail } from "@/hooks/useMediaCache";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 
 interface AttachmentBubbleProps {
   id: string;
@@ -11,6 +13,8 @@ interface AttachmentBubbleProps {
   file_type?: string;
   size_bytes?: number;
   onPreview?: (url: string, name: string) => void;
+  /** Optional delete callback. If provided, shows a trash icon with confirmation. */
+  onDelete?: () => void | Promise<void>;
 }
 
 export function AttachmentBubble({
@@ -18,8 +22,61 @@ export function AttachmentBubble({
   file_name,
   file_type,
   size_bytes,
-  onPreview
+  onPreview,
+  onDelete
 }: AttachmentBubbleProps) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleConfirmDelete = async () => {
+    if (!onDelete) return;
+    setDeleting(true);
+    try {
+      await onDelete();
+      setConfirmOpen(false);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const DeleteOverlay = onDelete ? (
+    <Button
+      type="button"
+      size="sm"
+      variant="destructive"
+      onClick={(e) => {
+        e.stopPropagation();
+        setConfirmOpen(true);
+      }}
+      className="absolute top-1 right-1 h-7 w-7 p-0 opacity-90 hover:opacity-100 z-10"
+      title="Excluir anexo"
+    >
+      <Trash2 className="h-3.5 w-3.5" />
+    </Button>
+  ) : null;
+
+  const ConfirmModal = onDelete ? (
+    <ConfirmationDialog
+      open={confirmOpen}
+      onOpenChange={setConfirmOpen}
+      title="Excluir anexo?"
+      description={
+        <div className="space-y-2">
+          <p>Esta ação é permanente e não pode ser desfeita.</p>
+          {file_name && (
+            <p className="text-xs">
+              Arquivo: <span className="font-mono">{file_name}</span>
+            </p>
+          )}
+        </div>
+      }
+      confirmLabel="Excluir"
+      variant="destructive"
+      onConfirm={handleConfirmDelete}
+      loading={deleting}
+    />
+  ) : null;
+
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const { loadMedia, getCachedUrl } = useMediaCache();
