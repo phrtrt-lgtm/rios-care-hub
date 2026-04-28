@@ -1243,6 +1243,26 @@ export default function TicketDetalhes() {
           fetchTicketData();
         }}
       />
+
+      {/* Edit Dialog (team only) */}
+      {isTeamMember && ticket && (
+        ticket.ticket_type === 'manutencao' ? (
+          <EditMaintenanceDialog
+            open={editOpen}
+            onOpenChange={setEditOpen}
+            editId={ticket.id}
+            type="maintenance"
+            onSaved={() => fetchTicketData()}
+          />
+        ) : (
+          <EditTicketDialog
+            open={editOpen}
+            onOpenChange={setEditOpen}
+            ticketId={ticket.id}
+            onSaved={() => fetchTicketData()}
+          />
+        )
+      )}
     </div>
   );
 }
