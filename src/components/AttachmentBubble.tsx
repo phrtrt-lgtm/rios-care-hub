@@ -5,6 +5,7 @@ import { useMediaCache, generateVideoThumbnail } from "@/hooks/useMediaCache";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { resolveMimeType } from "@/lib/mediaType";
 
 interface AttachmentBubbleProps {
   id: string;
@@ -81,11 +82,14 @@ export function AttachmentBubble({
   const [loading, setLoading] = useState(true);
   const { loadMedia, getCachedUrl } = useMediaCache();
 
+  // Resolve mime type from extension when missing/generic (legacy attachments)
+  const resolvedType = resolveMimeType(file_type, file_name, file_url);
+
   // TIFF files are not supported by browsers, treat as downloads
-  const isTiff = file_type === 'image/tiff' || file_type === 'image/tif';
-  const isImage = file_type?.startsWith('image/') && !isTiff;
-  const isVideo = file_type?.startsWith('video/');
-  const isPDF = file_type === 'application/pdf';
+  const isTiff = resolvedType === 'image/tiff' || resolvedType === 'image/tif';
+  const isImage = resolvedType.startsWith('image/') && !isTiff;
+  const isVideo = resolvedType.startsWith('video/');
+  const isPDF = resolvedType === 'application/pdf';
   
   const formatSize = (bytes?: number) => {
     if (!bytes) return '';
