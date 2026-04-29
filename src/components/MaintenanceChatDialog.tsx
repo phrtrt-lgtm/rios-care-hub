@@ -61,7 +61,7 @@ export function MaintenanceChatDialog({
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user, profile } = useAuth();
-  const { messages, loading, sending, typingUsers, allMediaItems, sendMessage, setTyping } = useMaintenanceChat(
+  const { messages, loading, sending, typingUsers, allMediaItems, sendMessage, setTyping, refetch } = useMaintenanceChat(
     open ? ticketId : null
   );
   const [newMessage, setNewMessage] = useState("");
