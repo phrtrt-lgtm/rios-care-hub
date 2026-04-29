@@ -5,6 +5,7 @@ import { useMediaCache, generateVideoThumbnail } from "@/hooks/useMediaCache";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { resolveMimeType } from "@/lib/mediaType";
 
 interface AttachmentBubbleProps {
   id: string;
