@@ -671,6 +671,11 @@ export function ChargeChatDialog({
         onOpenChange={setGalleryOpen}
         items={allMediaItems}
         initialIndex={galleryStartIndex}
+        onDelete={isTeamMember ? async (item) => {
+          const { deleteAttachmentRow } = await import("@/lib/deleteAttachment");
+          const ok = await deleteAttachmentRow("charge_message_attachments", item.id);
+          if (ok) fetchMessages();
+        } : undefined}
       />
     </>
   );

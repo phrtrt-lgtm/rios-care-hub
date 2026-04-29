@@ -314,15 +314,31 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange, onDelete
           {items.length > 1 && (
             <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 z-50 flex gap-2 max-w-[80vw] overflow-x-auto py-2 px-4 bg-black/30 rounded-lg">
               {items.map((item, index) => (
-                <MediaThumbnail
-                  key={item.id}
-                  src={item.file_url}
-                  fileType={item.file_type}
-                  fileName={item.file_name}
-                  isSelected={index === currentIndex}
-                  onClick={() => setCurrentIndex(index)}
-                  size="md"
-                />
+                <div key={item.id} className="relative group/thumb shrink-0">
+                  <MediaThumbnail
+                    src={item.file_url}
+                    fileType={item.file_type}
+                    fileName={item.file_name}
+                    isSelected={index === currentIndex}
+                    onClick={() => setCurrentIndex(index)}
+                    size="md"
+                  />
+                  {onDelete && (
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute -top-1 -right-1 h-5 w-5 p-0 rounded-full opacity-90 hover:opacity-100 z-10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCurrentIndex(index);
+                        setConfirmDeleteOpen(true);
+                      }}
+                      title="Excluir anexo"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
               ))}
             </div>
           )}
