@@ -709,6 +709,11 @@ export function MaintenanceChatDialog({
         open={galleryOpen}
         onOpenChange={setGalleryOpen}
         initialIndex={galleryStartIndex}
+        onDelete={isTeamMember ? async (item) => {
+          const { deleteAttachmentRow } = await import("@/lib/deleteAttachment");
+          const ok = await deleteAttachmentRow("ticket_attachments", item.id);
+          if (ok) await refetch(true);
+        } : undefined}
       />
     </>
   );
