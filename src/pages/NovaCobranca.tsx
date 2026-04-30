@@ -9,12 +9,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Loader2, Paperclip, X, Sparkles } from "lucide-react";
+import { ArrowLeft, Loader2, Paperclip, X, Sparkles, Trash2 } from "lucide-react";
 import { VoiceToTextInput } from "@/components/VoiceToTextInput";
 import { useToast } from "@/hooks/use-toast";
 import { CHARGE_CATEGORY_OPTIONS } from "@/constants/chargeCategories";
 import { OwnerScoreCard } from "@/components/OwnerScoreCard";
 import { processFileForUpload } from "@/lib/processVideoForUpload";
+import { deleteAttachmentRow } from "@/lib/deleteAttachment";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { MediaThumbnail } from "@/components/MediaThumbnail";
+
+type ExistingChargeAttachment = {
+  id: string;
+  file_url: string;
+  file_name?: string | null;
+  file_type?: string | null;
+};
 
 interface Owner {
   id: string;
