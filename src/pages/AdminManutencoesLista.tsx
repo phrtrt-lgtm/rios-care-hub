@@ -2177,6 +2177,7 @@ export default function AdminManutencoesLista() {
         file_type: a.file_type || null,
       })));
       setGalleryInitialIndex(0);
+      setGalleryAttachmentTable("cleaning_inspection_attachments");
       setGalleryOpen(true);
     }
   }, []);
