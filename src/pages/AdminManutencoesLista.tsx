@@ -16,7 +16,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, Search, Plus, ChevronDown, ChevronRight, Paperclip, MessageSquare, ArrowUpDown, ArrowUp, ArrowDown, Archive, Loader2, FileAudio, Sparkles, Wrench, Play, Pause, BarChart3, Check, X } from "lucide-react";
+import { ArrowLeft, Search, Plus, ChevronDown, ChevronRight, Paperclip, MessageSquare, ArrowUpDown, ArrowUp, ArrowDown, Archive, Loader2, FileAudio, Sparkles, Wrench, Play, Pause, BarChart3, Check, X, Trash2 } from "lucide-react";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { cn } from "@/lib/utils";
 import { formatBRL } from "@/lib/format";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -361,6 +362,7 @@ interface GroupRowProps {
   uploadingItemId: string | null;
   onOpenSheet?: (id: string) => void;
   onEdit: (item: MaintenanceItem, isCharge: boolean) => void;
+  onDelete: (item: MaintenanceItem, isCharge: boolean) => void;
 }
 
 function GroupRow({ 
@@ -380,7 +382,8 @@ function GroupRow({
   onUploadAttachment,
   uploadingItemId,
   onOpenSheet,
-  onEdit
+  onEdit,
+  onDelete
 }: GroupRowProps) {
   // Sort items within the group
   const sortedItems = useMemo(() => {
@@ -635,9 +638,9 @@ function GroupRow({
               )}
             </td>
 
-            {/* Editar */}
-            <td className="p-0 w-[44px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-center px-1 py-2">
+            {/* Editar / Excluir */}
+            <td className="p-0 w-[76px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-center gap-1 px-1 py-2">
                 <button
                   type="button"
                   className="p-1.5 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
@@ -649,6 +652,18 @@ function GroupRow({
                   aria-label="Editar"
                 >
                   <Pencil className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(item, isCharge);
+                  }}
+                  title="Excluir"
+                  aria-label="Excluir"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
             </td>
@@ -1170,6 +1185,8 @@ export default function AdminManutencoesLista() {
   const [editInspectionDialogOpen, setEditInspectionDialogOpen] = useState(false);
   const [inspectionToEdit, setInspectionToEdit] = useState<InspectionItem | null>(null);
   const [editMaintenanceDialog, setEditMaintenanceDialog] = useState<{ open: boolean; id: string | null; type: "maintenance" | "charge" }>({ open: false, id: null, type: "maintenance" });
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; item: MaintenanceItem | null; isCharge: boolean }>({ open: false, item: null, isCharge: false });
+  const [deleting, setDeleting] = useState(false);
   
   // Inspection selection state
   const [selectedInspectionIds, setSelectedInspectionIds] = useState<Set<string>>(new Set());
@@ -2364,7 +2381,7 @@ export default function AdminManutencoesLista() {
                   <th className="text-center px-1 py-2 font-medium w-[120px]">Responsável</th>
                   <SortableHeader label="Label" field="service_type" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[120px]" />
                   <SortableHeader label="Status" field="list_status" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[140px]" />
-                  <th className="text-center px-1 py-2 font-medium w-[44px]">Editar</th>
+                  <th className="text-center px-1 py-2 font-medium w-[76px]">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -2407,6 +2424,9 @@ export default function AdminManutencoesLista() {
                               id: item.id,
                               type: isCharge ? "charge" : "maintenance",
                             });
+                          }}
+                          onDelete={(item, isCharge) => {
+                            setDeleteDialog({ open: true, item, isCharge });
                           }}
                         />
 
@@ -2584,6 +2604,50 @@ export default function AdminManutencoesLista() {
           onSaved={() => {
             queryClient.invalidateQueries({ queryKey: ["maintenance-list"] });
             queryClient.invalidateQueries({ queryKey: ["charges-list"] });
+          }}
+        />
+
+        {/* Delete Confirmation Dialog */}
+        <ConfirmationDialog
+          open={deleteDialog.open}
+          onOpenChange={(open) => setDeleteDialog((prev) => ({ ...prev, open }))}
+          title={deleteDialog.isCharge ? "Excluir cobrança?" : "Excluir manutenção?"}
+          description={
+            <>
+              <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-foreground">
+                Essa ação não pode ser desfeita. {deleteDialog.isCharge ? "A cobrança" : "A manutenção"} e todos os dados relacionados (mensagens, anexos, histórico) serão removidos permanentemente.
+              </div>
+              {deleteDialog.item && (
+                <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+                  <p className="font-medium">{deleteDialog.item.subject}</p>
+                  {deleteDialog.item.property?.name && (
+                    <p className="text-xs text-muted-foreground mt-1">{deleteDialog.item.property.name}</p>
+                  )}
+                </div>
+              )}
+            </>
+          }
+          confirmLabel="Excluir permanentemente"
+          variant="destructive"
+          requireTypedConfirmation="EXCLUIR"
+          loading={deleting}
+          onConfirm={async () => {
+            if (!deleteDialog.item) return;
+            setDeleting(true);
+            try {
+              const table = deleteDialog.isCharge ? "charges" : "tickets";
+              const { error } = await supabase.from(table).delete().eq("id", deleteDialog.item.id);
+              if (error) throw error;
+              toast.success(deleteDialog.isCharge ? "Cobrança excluída" : "Manutenção excluída");
+              setDeleteDialog({ open: false, item: null, isCharge: false });
+              queryClient.invalidateQueries({ queryKey: ["maintenance-list-view"] });
+              queryClient.invalidateQueries({ queryKey: ["pending-charges-list"] });
+            } catch (err: any) {
+              console.error(err);
+              toast.error("Erro ao excluir", { description: err.message });
+            } finally {
+              setDeleting(false);
+            }
           }}
         />
 
