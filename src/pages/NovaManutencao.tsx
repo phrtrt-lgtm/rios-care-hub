@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Loader2, Upload, X, AlertTriangle, Sparkles } from "lucide-react";
+import { ArrowLeft, Loader2, Upload, X, AlertTriangle, Sparkles, Trash2, Paperclip } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -17,6 +17,16 @@ import { VoiceToTextInput } from "@/components/VoiceToTextInput";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { processFileForUpload } from "@/lib/processVideoForUpload";
+import { deleteAttachmentRow } from "@/lib/deleteAttachment";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { MediaThumbnail } from "@/components/MediaThumbnail";
+
+type ExistingAttachment = {
+  id: string;
+  file_url: string;
+  file_name?: string | null;
+  file_type?: string | null;
+};
 
 type ReadyAttachment = { 
   file_url: string; 
@@ -63,6 +73,34 @@ export default function NovaManutencao({ editId, onClose, onSaved }: NovaManuten
   const editTicketId = editId ?? searchParams.get('edit');
   const isEditMode = !!editTicketId;
   const isModal = !!onClose;
+  const [existingAttachments, setExistingAttachments] = useState<ExistingAttachment[]>([]);
+  const [loadingAttachments, setLoadingAttachments] = useState(false);
+  const [attachmentToDelete, setAttachmentToDelete] = useState<ExistingAttachment | null>(null);
+  const [deletingAttachment, setDeletingAttachment] = useState(false);
+
+  // Load existing attachments for edit mode
+  const loadExistingAttachments = async () => {
+    if (!editTicketId) return;
+    setLoadingAttachments(true);
+    try {
+      const { data, error } = await supabase
+        .from('ticket_attachments')
+        .select('id, file_url, file_name, file_type')
+        .eq('ticket_id', editTicketId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setExistingAttachments(data || []);
+    } catch (err: any) {
+      console.error('Error loading attachments:', err);
+    } finally {
+      setLoadingAttachments(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isEditMode) loadExistingAttachments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditMode, editTicketId]);
   const [loadingTicket, setLoadingTicket] = useState(isEditMode);
 
   useEffect(() => {
@@ -696,8 +734,47 @@ export default function NovaManutencao({ editId, onClose, onSaved }: NovaManuten
                 </RadioGroup>
               </div>
 
+              {isEditMode && (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Paperclip className="h-4 w-4" />
+                    Anexos existentes {existingAttachments.length > 0 && `(${existingAttachments.length})`}
+                  </Label>
+                  {loadingAttachments ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Carregando anexos...
+                    </div>
+                  ) : existingAttachments.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Nenhum anexo nesta manutenção.</p>
+                  ) : (
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                      {existingAttachments.map((att) => (
+                        <div key={att.id} className="relative group aspect-square">
+                          <MediaThumbnail
+                            src={att.file_url}
+                            fileType={att.file_type}
+                            fileName={att.file_name}
+                            size="md"
+                          />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-1 right-1 h-7 w-7 p-0 z-10 opacity-90 hover:opacity-100"
+                            onClick={() => setAttachmentToDelete(att)}
+                            title="Excluir anexo"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="space-y-2">
-                <Label htmlFor="files">Anexos (opcional)</Label>
+                <Label htmlFor="files">{isEditMode ? 'Adicionar novos anexos' : 'Anexos (opcional)'}</Label>
                 <div className="flex items-center gap-2">
                   <Input
                     ref={inputRef}
@@ -754,6 +831,38 @@ export default function NovaManutencao({ editId, onClose, onSaved }: NovaManuten
           </form>
         </Card>
       </main>
+
+      <ConfirmationDialog
+        open={!!attachmentToDelete}
+        onOpenChange={(o) => !o && setAttachmentToDelete(null)}
+        title="Excluir anexo?"
+        description={
+          <div className="space-y-2">
+            <p>Esta ação é permanente e não pode ser desfeita.</p>
+            {attachmentToDelete?.file_name && (
+              <p className="text-xs">
+                Arquivo: <span className="font-mono">{attachmentToDelete.file_name}</span>
+              </p>
+            )}
+          </div>
+        }
+        confirmLabel="Excluir"
+        variant="destructive"
+        loading={deletingAttachment}
+        onConfirm={async () => {
+          if (!attachmentToDelete) return;
+          setDeletingAttachment(true);
+          try {
+            const ok = await deleteAttachmentRow('ticket_attachments', attachmentToDelete.id);
+            if (ok) {
+              setExistingAttachments((prev) => prev.filter((a) => a.id !== attachmentToDelete.id));
+              setAttachmentToDelete(null);
+            }
+          } finally {
+            setDeletingAttachment(false);
+          }
+        }}
+      />
     </div>
   );
 }

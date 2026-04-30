@@ -9,12 +9,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Loader2, Paperclip, X, Sparkles } from "lucide-react";
+import { ArrowLeft, Loader2, Paperclip, X, Sparkles, Trash2 } from "lucide-react";
 import { VoiceToTextInput } from "@/components/VoiceToTextInput";
 import { useToast } from "@/hooks/use-toast";
 import { CHARGE_CATEGORY_OPTIONS } from "@/constants/chargeCategories";
 import { OwnerScoreCard } from "@/components/OwnerScoreCard";
 import { processFileForUpload } from "@/lib/processVideoForUpload";
+import { deleteAttachmentRow } from "@/lib/deleteAttachment";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { MediaThumbnail } from "@/components/MediaThumbnail";
+
+type ExistingChargeAttachment = {
+  id: string;
+  file_url: string;
+  file_name?: string | null;
+  file_type?: string | null;
+};
 
 interface Owner {
   id: string;
@@ -51,6 +61,44 @@ export default function NovaCobranca({ editId, onClose, onSaved }: NovaCobrancaP
   const isEditMode = !!editChargeId;
   const isModal = !!onClose;
   const [loadingCharge, setLoadingCharge] = useState(isEditMode);
+  const [existingAttachments, setExistingAttachments] = useState<ExistingChargeAttachment[]>([]);
+  const [loadingAttachments, setLoadingAttachments] = useState(false);
+  const [attachmentToDelete, setAttachmentToDelete] = useState<ExistingChargeAttachment | null>(null);
+  const [deletingAttachment, setDeletingAttachment] = useState(false);
+
+  const loadExistingAttachments = async () => {
+    if (!editChargeId) return;
+    setLoadingAttachments(true);
+    try {
+      const { data, error } = await supabase
+        .from('charge_attachments')
+        .select('id, file_path, file_name, mime_type')
+        .eq('charge_id', editChargeId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      const items: ExistingChargeAttachment[] = (data || []).map((a: any) => {
+        const url = a.file_path?.startsWith('http')
+          ? a.file_path
+          : supabase.storage.from('attachments').getPublicUrl(a.file_path).data.publicUrl;
+        return {
+          id: a.id,
+          file_url: url,
+          file_name: a.file_name,
+          file_type: a.mime_type,
+        };
+      });
+      setExistingAttachments(items);
+    } catch (err: any) {
+      console.error('Error loading charge attachments:', err);
+    } finally {
+      setLoadingAttachments(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isEditMode) loadExistingAttachments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditMode, editChargeId]);
 
   const [formData, setFormData] = useState({
     owner_id: searchParams.get("owner_id") || "",
@@ -503,8 +551,47 @@ export default function NovaCobranca({ editId, onClose, onSaved }: NovaCobrancaP
                 />
               </div>
 
+              {isEditMode && (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Paperclip className="h-4 w-4" />
+                    Anexos existentes {existingAttachments.length > 0 && `(${existingAttachments.length})`}
+                  </Label>
+                  {loadingAttachments ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Carregando anexos...
+                    </div>
+                  ) : existingAttachments.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Nenhum anexo nesta cobrança.</p>
+                  ) : (
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                      {existingAttachments.map((att) => (
+                        <div key={att.id} className="relative group aspect-square">
+                          <MediaThumbnail
+                            src={att.file_url}
+                            fileType={att.file_type}
+                            fileName={att.file_name}
+                            size="md"
+                          />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-1 right-1 h-7 w-7 p-0 z-10 opacity-90 hover:opacity-100"
+                            onClick={() => setAttachmentToDelete(att)}
+                            title="Excluir anexo"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="space-y-2">
-                <Label>Anexos</Label>
+                <Label>{isEditMode ? 'Adicionar novos anexos' : 'Anexos'}</Label>
                 <div className="space-y-2">
                   {attachments.map((file, index) => (
                     <div key={index} className="flex items-center justify-between p-2 bg-muted rounded-md">
@@ -563,6 +650,38 @@ export default function NovaCobranca({ editId, onClose, onSaved }: NovaCobrancaP
           </CardContent>
         </Card>
       </main>
+
+      <ConfirmationDialog
+        open={!!attachmentToDelete}
+        onOpenChange={(o) => !o && setAttachmentToDelete(null)}
+        title="Excluir anexo?"
+        description={
+          <div className="space-y-2">
+            <p>Esta ação é permanente e não pode ser desfeita.</p>
+            {attachmentToDelete?.file_name && (
+              <p className="text-xs">
+                Arquivo: <span className="font-mono">{attachmentToDelete.file_name}</span>
+              </p>
+            )}
+          </div>
+        }
+        confirmLabel="Excluir"
+        variant="destructive"
+        loading={deletingAttachment}
+        onConfirm={async () => {
+          if (!attachmentToDelete) return;
+          setDeletingAttachment(true);
+          try {
+            const ok = await deleteAttachmentRow('charge_attachments', attachmentToDelete.id);
+            if (ok) {
+              setExistingAttachments((prev) => prev.filter((a) => a.id !== attachmentToDelete.id));
+              setAttachmentToDelete(null);
+            }
+          } finally {
+            setDeletingAttachment(false);
+          }
+        }}
+      />
     </div>
   );
 }
