@@ -496,3 +496,25 @@ function DarkStat({
     </div>
   );
 }
+
+function ContactInfo({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: any;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-4">
+      <div className="rounded-lg bg-primary/20 p-2 text-primary">
+        <Icon className="h-4 w-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="text-[10px] uppercase tracking-wider text-secondary-foreground/60">{label}</div>
+        <div className="truncate text-sm font-medium">{value}</div>
+      </div>
+    </div>
+  );
+}
