@@ -81,6 +81,7 @@ import CadastroImovel from "./pages/CadastroImovel";
 import AdminCadastrosProprietarios from "./pages/AdminCadastrosProprietarios";
 import AtualizacaoAnuncio from "./pages/AtualizacaoAnuncio";
 import AdminVistoriasArquivadas from "./pages/AdminVistoriasArquivadas";
+import BemVindo from "./pages/BemVindo";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -105,6 +106,7 @@ const App = () => (
               }
             />
             <Route path="/aguardando-aprovacao" element={<AguardandoAprovacao />} />
+            <Route path="/bem-vindo" element={<BemVindo />} />
             <Route
               path="/minha-caixa"
               element={

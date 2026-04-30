@@ -19,7 +19,9 @@ const Index = () => {
     
     // Redireciona apenas uma vez baseado na role
     if (profile.role === 'pending_owner' && profile.status === 'pending') {
-      navigate("/aguardando-aprovacao", { replace: true });
+      navigate("/bem-vindo", { replace: true });
+    } else if (profile.role === 'pending_owner') {
+      navigate("/bem-vindo", { replace: true });
     } else if (profile.role === 'owner') {
       navigate("/minha-caixa", { replace: true });
     } else if (profile.role === 'cleaner') {
