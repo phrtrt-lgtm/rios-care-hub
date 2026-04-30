@@ -426,7 +426,7 @@ export default function BemVindo() {
           </div>
         </section>
 
-        {/* CTA */}
+        {/* CTA - Aguardando contato */}
         <section className="mb-12">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -436,35 +436,33 @@ export default function BemVindo() {
             className="relative overflow-hidden rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/20 via-primary/10 to-transparent p-8 backdrop-blur-md md:p-12"
           >
             <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-primary/30 blur-3xl" />
-            <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-              <div className="max-w-xl">
+            <div className="relative flex flex-col gap-6">
+              <div className="max-w-2xl">
                 <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
                   <TrendingUp className="h-3 w-3" /> Próximo passo
                 </div>
-                <h3 className="mb-2 text-2xl font-bold tracking-tight md:text-3xl">
-                  Bora marcar a reunião de alinhamento?
+                <h3 className="mb-3 text-2xl font-bold tracking-tight md:text-3xl">
+                  Agora é com a gente. Aguarde nosso contato.
                 </h3>
-                <p className="text-secondary-foreground/70">
-                  É uma conversa de 30 min onde a gente entende você, mostra o método e desenha o plano do seu imóvel.
+                <p className="text-secondary-foreground/70 md:text-lg">
+                  Nossa equipe vai entrar em contato pelos canais que você informou no cadastro para agendar a
+                  reunião de alinhamento e dar sequência à curadoria do seu imóvel.
                 </p>
               </div>
-              <Button
-                size="lg"
-                className="group h-14 shrink-0 px-7 text-base font-semibold shadow-2xl shadow-primary/30"
-                onClick={() =>
-                  window.open(
-                    "https://wa.me/5521999999999?text=" +
-                      encodeURIComponent(
-                        `Olá! Sou ${profile?.name || ""} e gostaria de agendar a reunião de alinhamento.`
-                      ),
-                    "_blank"
-                  )
-                }
-              >
-                <MessageCircle className="mr-2 h-5 w-5" />
-                Falar com a equipe
-                <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
-              </Button>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                {intake?.owner_email && (
+                  <ContactInfo icon={MessageCircle} label="E-mail" value={intake.owner_email} />
+                )}
+                {intake?.owner_phone && (
+                  <ContactInfo icon={MessageCircle} label="Telefone / WhatsApp" value={intake.owner_phone} />
+                )}
+              </div>
+
+              <p className="text-xs text-secondary-foreground/60">
+                Costumamos retornar em até 1 dia útil. Confira se os dados acima estão corretos — caso precise atualizar,
+                nos avise pelos mesmos canais.
+              </p>
             </div>
           </motion.div>
         </section>
