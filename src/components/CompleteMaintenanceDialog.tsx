@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { CHARGE_CATEGORY_OPTIONS } from "@/constants/chargeCategories";
 import { toast } from "sonner";
+import { parseBRNumber } from "@/lib/parseBRNumber";
 
 export interface CompleteMaintenanceTicket {
   id: string;
