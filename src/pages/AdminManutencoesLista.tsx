@@ -169,7 +169,7 @@ function EditableCell({ value, type, options, onSave, className, placeholder }: 
   const handleSave = useCallback(() => {
     setIsEditing(false);
     if (type === "currency") {
-      const numValue = parseFloat(editValue.replace(/[^\d,.-]/g, "").replace(",", "."));
+      const numValue = parseBRNumber(editValue);
       if (!isNaN(numValue)) {
         onSave(Math.round(numValue * 100));
       }
