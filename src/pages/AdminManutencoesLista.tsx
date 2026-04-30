@@ -2607,6 +2607,50 @@ export default function AdminManutencoesLista() {
           }}
         />
 
+        {/* Delete Confirmation Dialog */}
+        <ConfirmationDialog
+          open={deleteDialog.open}
+          onOpenChange={(open) => setDeleteDialog((prev) => ({ ...prev, open }))}
+          title={deleteDialog.isCharge ? "Excluir cobrança?" : "Excluir manutenção?"}
+          description={
+            <>
+              <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-foreground">
+                Essa ação não pode ser desfeita. {deleteDialog.isCharge ? "A cobrança" : "A manutenção"} e todos os dados relacionados (mensagens, anexos, histórico) serão removidos permanentemente.
+              </div>
+              {deleteDialog.item && (
+                <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+                  <p className="font-medium">{deleteDialog.item.subject}</p>
+                  {deleteDialog.item.property?.name && (
+                    <p className="text-xs text-muted-foreground mt-1">{deleteDialog.item.property.name}</p>
+                  )}
+                </div>
+              )}
+            </>
+          }
+          confirmLabel="Excluir permanentemente"
+          variant="destructive"
+          requireTypedConfirmation="EXCLUIR"
+          loading={deleting}
+          onConfirm={async () => {
+            if (!deleteDialog.item) return;
+            setDeleting(true);
+            try {
+              const table = deleteDialog.isCharge ? "charges" : "tickets";
+              const { error } = await supabase.from(table).delete().eq("id", deleteDialog.item.id);
+              if (error) throw error;
+              toast.success(deleteDialog.isCharge ? "Cobrança excluída" : "Manutenção excluída");
+              setDeleteDialog({ open: false, item: null, isCharge: false });
+              queryClient.invalidateQueries({ queryKey: ["maintenance-list-view"] });
+              queryClient.invalidateQueries({ queryKey: ["pending-charges-list"] });
+            } catch (err: any) {
+              console.error(err);
+              toast.error("Erro ao excluir", { description: err.message });
+            } finally {
+              setDeleting(false);
+            }
+          }}
+        />
+
         {/* Detail Sheet (preview lateral) */}
         <DetailSheet
           open={detailSheetOpen}
