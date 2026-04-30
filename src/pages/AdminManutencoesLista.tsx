@@ -22,6 +22,7 @@ import { formatBRL } from "@/lib/format";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
 import { MediaGallery } from "@/components/MediaGallery";
+import { deleteAttachmentRow } from "@/lib/deleteAttachment";
 import { uploadFileWithCompression, FileUploadProgress } from "@/lib/fileUpload";
 import { CreateMaintenanceFromInspectionDialog } from "@/components/CreateMaintenanceFromInspectionDialog";
 import EditInspectionDialog from "@/components/EditInspectionDialog";
@@ -1189,6 +1190,7 @@ export default function AdminManutencoesLista() {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryItems, setGalleryItems] = useState<Array<{ id: string; file_url: string; file_name?: string | null; file_type?: string | null }>>([]);
   const [galleryInitialIndex, setGalleryInitialIndex] = useState(0);
+  const [galleryAttachmentTable, setGalleryAttachmentTable] = useState<"ticket_attachments" | "charge_attachments" | "cleaning_inspection_attachments" | null>(null);
 
   // Upload state
   const [uploadingItemId, setUploadingItemId] = useState<string | null>(null);
@@ -1919,6 +1921,7 @@ export default function AdminManutencoesLista() {
         }));
         setGalleryItems(mediaItems);
         setGalleryInitialIndex(0);
+        setGalleryAttachmentTable("charge_attachments");
         setGalleryOpen(true);
       }
     } else {
@@ -1943,6 +1946,7 @@ export default function AdminManutencoesLista() {
         }));
         setGalleryItems(mediaItems);
         setGalleryInitialIndex(0);
+        setGalleryAttachmentTable("ticket_attachments");
         setGalleryOpen(true);
       }
     }
@@ -2174,6 +2178,7 @@ export default function AdminManutencoesLista() {
         file_type: a.file_type || null,
       })));
       setGalleryInitialIndex(0);
+      setGalleryAttachmentTable("cleaning_inspection_attachments");
       setGalleryOpen(true);
     }
   }, []);
@@ -2524,6 +2529,14 @@ export default function AdminManutencoesLista() {
           initialIndex={galleryInitialIndex}
           open={galleryOpen}
           onOpenChange={setGalleryOpen}
+          onDelete={galleryAttachmentTable ? async (item) => {
+            const ok = await deleteAttachmentRow(galleryAttachmentTable, item.id);
+            if (ok) {
+              setGalleryItems((prev) => prev.filter((i) => i.id !== item.id));
+              queryClient.invalidateQueries({ queryKey: ["maintenances-list"] });
+              queryClient.invalidateQueries({ queryKey: ["inspections-for-list"] });
+            }
+          } : undefined}
         />
 
         {/* Create Maintenance from Inspection Dialog */}
