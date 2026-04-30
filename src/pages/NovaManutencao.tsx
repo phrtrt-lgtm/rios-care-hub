@@ -73,6 +73,34 @@ export default function NovaManutencao({ editId, onClose, onSaved }: NovaManuten
   const editTicketId = editId ?? searchParams.get('edit');
   const isEditMode = !!editTicketId;
   const isModal = !!onClose;
+  const [existingAttachments, setExistingAttachments] = useState<ExistingAttachment[]>([]);
+  const [loadingAttachments, setLoadingAttachments] = useState(false);
+  const [attachmentToDelete, setAttachmentToDelete] = useState<ExistingAttachment | null>(null);
+  const [deletingAttachment, setDeletingAttachment] = useState(false);
+
+  // Load existing attachments for edit mode
+  const loadExistingAttachments = async () => {
+    if (!editTicketId) return;
+    setLoadingAttachments(true);
+    try {
+      const { data, error } = await supabase
+        .from('ticket_attachments')
+        .select('id, file_url, file_name, file_type')
+        .eq('ticket_id', editTicketId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setExistingAttachments(data || []);
+    } catch (err: any) {
+      console.error('Error loading attachments:', err);
+    } finally {
+      setLoadingAttachments(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isEditMode) loadExistingAttachments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditMode, editTicketId]);
   const [loadingTicket, setLoadingTicket] = useState(isEditMode);
 
   useEffect(() => {
