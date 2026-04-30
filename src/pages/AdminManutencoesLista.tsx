@@ -1189,6 +1189,7 @@ export default function AdminManutencoesLista() {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryItems, setGalleryItems] = useState<Array<{ id: string; file_url: string; file_name?: string | null; file_type?: string | null }>>([]);
   const [galleryInitialIndex, setGalleryInitialIndex] = useState(0);
+  const [galleryAttachmentTable, setGalleryAttachmentTable] = useState<"ticket_attachments" | "charge_attachments" | "cleaning_inspection_attachments" | null>(null);
 
   // Upload state
   const [uploadingItemId, setUploadingItemId] = useState<string | null>(null);
