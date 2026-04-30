@@ -1681,6 +1681,7 @@ export type Database = {
           email: string
           id: string
           name: string
+          onboarding_stage: string | null
           payment_score: number
           phone: string | null
           photo_url: string | null
@@ -1693,6 +1694,7 @@ export type Database = {
           email: string
           id: string
           name: string
+          onboarding_stage?: string | null
           payment_score?: number
           phone?: string | null
           photo_url?: string | null
@@ -1705,6 +1707,7 @@ export type Database = {
           email?: string
           id?: string
           name?: string
+          onboarding_stage?: string | null
           payment_score?: number
           phone?: string | null
           photo_url?: string | null
