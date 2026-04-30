@@ -1167,6 +1167,7 @@ function VistoriasTable({
 export default function AdminManutencoesLista() {
   useScrollRestoration();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { open: detailSheetOpen, entityId: detailEntityId, entityType: detailEntityType, openSheet, closeSheet } = useDetailSheet();
