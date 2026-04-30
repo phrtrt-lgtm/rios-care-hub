@@ -33,6 +33,7 @@ import { useDetailSheet } from "@/hooks/useDetailSheet";
 import { DetailSheet } from "@/components/detail-sheet/DetailSheet";
 import { getRowHandlers } from "@/lib/row-interaction";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
+import { parseBRNumber } from "@/lib/parseBRNumber";
 // ===== TYPES =====
 type TicketStatus = "novo" | "em_analise" | "aguardando_info" | "em_execucao" | "concluido" | "cancelado";
 
@@ -169,7 +170,7 @@ function EditableCell({ value, type, options, onSave, className, placeholder }: 
   const handleSave = useCallback(() => {
     setIsEditing(false);
     if (type === "currency") {
-      const numValue = parseFloat(editValue.replace(/[^\d,.-]/g, "").replace(",", "."));
+      const numValue = parseBRNumber(editValue);
       if (!isNaN(numValue)) {
         onSave(Math.round(numValue * 100));
       }
@@ -1270,8 +1271,7 @@ export default function AdminManutencoesLista() {
         });
         if (error) throw error;
       } else {
-        const rawAmount = inlineAdd.amountCents.replace(/[^\d,]/g, "").replace(",", ".");
-        const amountCents = Math.round((parseFloat(rawAmount) || 0) * 100);
+        const amountCents = Math.round(parseBRNumber(inlineAdd.amountCents) * 100);
 
         const { error } = await supabase.from("charges").insert({
           title: inlineAdd.subject.trim(),
