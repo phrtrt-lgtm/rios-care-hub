@@ -161,8 +161,8 @@ export default function NovaCobranca({ editId, onClose, onSaved }: NovaCobrancaP
           title: charge.title || '',
           description: charge.description || '',
           category: charge.category || charge.service_type || '',
-          amount_cents: charge.amount_cents ? String(Math.round(charge.amount_cents / 100)) : '',
-          management_contribution_cents: charge.management_contribution_cents ? String(Math.round(charge.management_contribution_cents / 100)) : '',
+          amount_cents: charge.amount_cents ? (charge.amount_cents / 100).toFixed(2).replace('.', ',') : '',
+          management_contribution_cents: charge.management_contribution_cents ? (charge.management_contribution_cents / 100).toFixed(2).replace('.', ',') : '',
           due_date: charge.due_date || '',
         });
         if (charge.owner_id) await fetchProperties(charge.owner_id);
