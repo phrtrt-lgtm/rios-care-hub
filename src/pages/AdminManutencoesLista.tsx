@@ -638,9 +638,9 @@ function GroupRow({
               )}
             </td>
 
-            {/* Editar */}
-            <td className="p-0 w-[44px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-center px-1 py-2">
+            {/* Editar / Excluir */}
+            <td className="p-0 w-[76px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-center gap-1 px-1 py-2">
                 <button
                   type="button"
                   className="p-1.5 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
@@ -652,6 +652,18 @@ function GroupRow({
                   aria-label="Editar"
                 >
                   <Pencil className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(item, isCharge);
+                  }}
+                  title="Excluir"
+                  aria-label="Excluir"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
             </td>
