@@ -2425,6 +2425,9 @@ export default function AdminManutencoesLista() {
                               type: isCharge ? "charge" : "maintenance",
                             });
                           }}
+                          onDelete={(item, isCharge) => {
+                            setDeleteDialog({ open: true, item, isCharge });
+                          }}
                         />
 
                         {/* Inline form row */}
