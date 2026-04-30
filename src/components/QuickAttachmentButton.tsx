@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { processFileForUpload } from "@/lib/fileUpload";
+import { sanitizeFilename } from "@/lib/storage";
 
 interface QuickAttachmentButtonProps {
   ticketId: string;
@@ -39,18 +40,18 @@ export function QuickAttachmentButton({ ticketId, onSuccess }: QuickAttachmentBu
         });
 
         // Upload to storage
-        const fileExt = processedFile.name.split('.').pop();
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const safeName = sanitizeFilename(processedFile.name);
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}-${safeName}`;
         const filePath = `tickets/${ticketId}/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
-          .from('ticket-attachments')
+          .from('attachments')
           .upload(filePath, processedFile);
 
         if (uploadError) throw uploadError;
 
         const { data: { publicUrl } } = supabase.storage
-          .from('ticket-attachments')
+          .from('attachments')
           .getPublicUrl(filePath);
 
         // Create a message with the attachment
@@ -78,6 +79,7 @@ export function QuickAttachmentButton({ ticketId, onSuccess }: QuickAttachmentBu
             file_name: processedFile.name,
             file_type: processedFile.type,
             file_size: processedFile.size,
+            size_bytes: processedFile.size,
             mime_type: processedFile.type,
           });
 
