@@ -271,11 +271,10 @@ export function CompleteMaintenanceDialog({
                   <Label htmlFor="amount">Valor Total (R$) *</Label>
                   <Input
                     id="amount"
-                    type="number"
-                    step="0.01"
-                    min="0"
+                    type="text"
+                    inputMode="decimal"
                     value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
+                    onChange={(e) => setAmount(e.target.value.replace(/[^0-9.,]/g, ""))}
                     placeholder="0,00"
                   />
                 </div>
