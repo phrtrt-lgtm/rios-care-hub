@@ -1271,8 +1271,7 @@ export default function AdminManutencoesLista() {
         });
         if (error) throw error;
       } else {
-        const rawAmount = inlineAdd.amountCents.replace(/[^\d,]/g, "").replace(",", ".");
-        const amountCents = Math.round((parseFloat(rawAmount) || 0) * 100);
+        const amountCents = Math.round(parseBRNumber(inlineAdd.amountCents) * 100);
 
         const { error } = await supabase.from("charges").insert({
           title: inlineAdd.subject.trim(),
