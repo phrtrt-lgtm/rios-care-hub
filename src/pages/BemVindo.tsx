@@ -220,10 +220,10 @@ export default function BemVindo() {
             </div>
 
             {loading ? (
-              <SectionSkeleton lines={4} />
+              <SectionSkeleton />
             ) : !intake ? (
               <EmptyState
-                icon={Home}
+                icon={<Home className="h-6 w-6" />}
                 title="Pré-cadastro não encontrado"
                 description="Não localizamos seu pré-cadastro. Fale com a equipe para conferirmos."
               />
