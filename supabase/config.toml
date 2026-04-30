@@ -74,3 +74,4 @@ verify_jwt = false
 
 [functions.submit-property-intake]
 verify_jwt = false
+
