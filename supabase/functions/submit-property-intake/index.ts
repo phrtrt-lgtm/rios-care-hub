@@ -530,6 +530,14 @@ serve(async (req) => {
       userId = created.user?.id ?? null;
     }
 
+    // Marca o perfil como pendente de definir senha definitiva
+    if (userId) {
+      await supabase
+        .from("profiles")
+        .update({ must_set_password: true } as any)
+        .eq("id", userId);
+    }
+
     if (userId) {
       try {
         const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({
