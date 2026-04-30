@@ -551,8 +551,47 @@ export default function NovaCobranca({ editId, onClose, onSaved }: NovaCobrancaP
                 />
               </div>
 
+              {isEditMode && (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Paperclip className="h-4 w-4" />
+                    Anexos existentes {existingAttachments.length > 0 && `(${existingAttachments.length})`}
+                  </Label>
+                  {loadingAttachments ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Carregando anexos...
+                    </div>
+                  ) : existingAttachments.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Nenhum anexo nesta cobrança.</p>
+                  ) : (
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                      {existingAttachments.map((att) => (
+                        <div key={att.id} className="relative group aspect-square">
+                          <MediaThumbnail
+                            src={att.file_url}
+                            fileType={att.file_type}
+                            fileName={att.file_name}
+                            size="md"
+                          />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-1 right-1 h-7 w-7 p-0 z-10 opacity-90 hover:opacity-100"
+                            onClick={() => setAttachmentToDelete(att)}
+                            title="Excluir anexo"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="space-y-2">
-                <Label>Anexos</Label>
+                <Label>{isEditMode ? 'Adicionar novos anexos' : 'Anexos'}</Label>
                 <div className="space-y-2">
                   {attachments.map((file, index) => (
                     <div key={index} className="flex items-center justify-between p-2 bg-muted rounded-md">
