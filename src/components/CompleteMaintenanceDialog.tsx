@@ -76,8 +76,22 @@ export function CompleteMaintenanceDialog({
 
   if (!ticket) return null;
 
-  const amountNum = parseFloat(amount || "0");
-  const contributionNum = parseFloat(managementContribution || "0");
+  // Aceita formato BR ("2.956,06") e internacional ("2956.06")
+  const parseBRNumber = (v: string): number => {
+    if (!v) return 0;
+    const s = v.trim();
+    // Se tem vírgula, assume formato BR: pontos = milhar, vírgula = decimal
+    if (s.includes(",")) {
+      const normalized = s.replace(/\./g, "").replace(",", ".");
+      const n = parseFloat(normalized);
+      return isNaN(n) ? 0 : n;
+    }
+    const n = parseFloat(s);
+    return isNaN(n) ? 0 : n;
+  };
+
+  const amountNum = parseBRNumber(amount);
+  const contributionNum = parseBRNumber(managementContribution);
   const ownerPays = Math.max(0, amountNum - contributionNum);
 
   const handleComplete = async () => {
