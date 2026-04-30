@@ -1185,6 +1185,8 @@ export default function AdminManutencoesLista() {
   const [editInspectionDialogOpen, setEditInspectionDialogOpen] = useState(false);
   const [inspectionToEdit, setInspectionToEdit] = useState<InspectionItem | null>(null);
   const [editMaintenanceDialog, setEditMaintenanceDialog] = useState<{ open: boolean; id: string | null; type: "maintenance" | "charge" }>({ open: false, id: null, type: "maintenance" });
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; item: MaintenanceItem | null; isCharge: boolean }>({ open: false, item: null, isCharge: false });
+  const [deleting, setDeleting] = useState(false);
   
   // Inspection selection state
   const [selectedInspectionIds, setSelectedInspectionIds] = useState<Set<string>>(new Set());
