@@ -17,6 +17,16 @@ import { VoiceToTextInput } from "@/components/VoiceToTextInput";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { processFileForUpload } from "@/lib/processVideoForUpload";
+import { deleteAttachmentRow } from "@/lib/deleteAttachment";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { MediaThumbnail } from "@/components/MediaThumbnail";
+
+type ExistingAttachment = {
+  id: string;
+  file_url: string;
+  file_name?: string | null;
+  file_type?: string | null;
+};
 
 type ReadyAttachment = { 
   file_url: string; 
