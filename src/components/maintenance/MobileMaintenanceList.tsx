@@ -80,6 +80,7 @@ export function MobileMaintenanceList({
   onOpenAttachments,
   onEdit,
   onDelete,
+  onAttachmentAdded,
   onBack,
   onNew,
 }: Props) {
