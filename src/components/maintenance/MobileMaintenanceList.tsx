@@ -267,6 +267,11 @@ export function MobileMaintenanceList({
                                   </span>
                                 )}
                               </button>
+                              <QuickAttachUploader
+                                itemId={item.id}
+                                isCharge={isCharge}
+                                onSuccess={onAttachmentAdded}
+                              />
                               <button
                                 type="button"
                                 className="relative h-8 w-8 flex items-center justify-center rounded-full hover:bg-muted active:scale-95 transition-all"
