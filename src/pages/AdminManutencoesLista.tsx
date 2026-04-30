@@ -1920,6 +1920,7 @@ export default function AdminManutencoesLista() {
         }));
         setGalleryItems(mediaItems);
         setGalleryInitialIndex(0);
+        setGalleryAttachmentTable("charge_attachments");
         setGalleryOpen(true);
       }
     } else {
