@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Paperclip, Loader2 } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
