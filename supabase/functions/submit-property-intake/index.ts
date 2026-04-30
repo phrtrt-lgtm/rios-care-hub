@@ -641,9 +641,14 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, submission_id: submission.id }),
+      JSON.stringify({
+        success: true,
+        submission_id: submission.id,
+        auto_login: userId ? { email, password: tempPassword } : null,
+      }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
+
   } catch (error) {
     console.error("submit-property-intake error:", error);
     return new Response(
