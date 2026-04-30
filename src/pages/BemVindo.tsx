@@ -208,7 +208,7 @@ export default function BemVindo() {
             className="max-w-2xl text-lg text-secondary-foreground/70 md:text-xl"
           >
             Você acabou de entrar numa operação que une <span className="text-secondary-foreground">curadoria humana</span>,{" "}
-            <span className="text-secondary-foreground">inteligência de dados</span> e tecnologia própria — pra extrair o
+            <span className="text-secondary-foreground">inteligência de dados</span> e tecnologia própria pra extrair o
             máximo da sua propriedade nas plataformas.
           </motion.p>
 
@@ -462,7 +462,7 @@ export default function BemVindo() {
               </div>
 
               <p className="text-xs text-secondary-foreground/60">
-                Costumamos retornar em até 1 dia útil. Confira se os dados acima estão corretos — caso precise atualizar,
+                Costumamos retornar em até 1 dia útil. Confira se os dados acima estão corretos. Caso precise atualizar,
                 nos avise pelos mesmos canais.
               </p>
             </div>
