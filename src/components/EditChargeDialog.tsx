@@ -259,7 +259,7 @@ export function EditChargeDialog({ open, onOpenChange, charge, onSuccess }: Edit
               <p className="text-sm text-muted-foreground">Valor devido pelo proprietário:</p>
               <p className="text-lg font-bold text-primary">
                 {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-                  (parseFloat(formData.amount) || 0) - (parseFloat(formData.management_contribution) || 0)
+                  parseBRNumber(formData.amount) - parseBRNumber(formData.management_contribution)
                 )}
               </p>
             </div>
