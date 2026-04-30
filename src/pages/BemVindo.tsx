@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SectionSkeleton } from "@/components/ui/section-skeleton";
@@ -23,6 +22,10 @@ import {
   Home,
   ArrowRight,
   MessageCircle,
+  TrendingUp,
+  Zap,
+  Brain,
+  LineChart,
 } from "lucide-react";
 import riosLogo from "@/assets/rios-logo.png";
 
@@ -46,28 +49,38 @@ interface IntakeSubmission {
 const STAGES = [
   {
     key: "welcome",
-    title: "Pré-cadastro recebido",
-    description: "Suas respostas iniciais já estão com a nossa equipe.",
+    n: "01",
+    title: "Pré-cadastro",
+    description: "Recebemos suas respostas. Já estamos estudando seu imóvel.",
     icon: CheckCircle2,
   },
   {
     key: "meeting_scheduled",
+    n: "02",
     title: "Reunião de alinhamento",
-    description: "Vamos marcar uma conversa para entender você e o imóvel a fundo.",
+    description: "Conversa estratégica para entender você, o imóvel e os objetivos.",
     icon: CalendarCheck,
   },
   {
     key: "curation",
-    title: "Curadoria & diagnóstico",
-    description: "Geramos um documento interativo com nossas recomendações para maximizar seu rendimento.",
-    icon: Sparkles,
+    n: "03",
+    title: "Diagnóstico & curadoria",
+    description: "Documento interativo com nosso plano de performance e posicionamento.",
+    icon: Brain,
   },
   {
     key: "active",
-    title: "Imóvel no ar",
-    description: "Anúncios otimizados, operação rodando e portal liberado para acompanhar tudo.",
+    n: "04",
+    title: "No ar com tudo otimizado",
+    description: "Anúncios, precificação dinâmica e operação rodando sob medida.",
     icon: Rocket,
   },
+];
+
+const PILLARS = [
+  { icon: Brain, title: "Curadoria com IA", desc: "Análise de dados das principais OTAs para precificar e posicionar seu imóvel." },
+  { icon: LineChart, title: "Performance real", desc: "Painel com receita, ocupação, score e indicadores ao vivo." },
+  { icon: Zap, title: "Operação tech", desc: "App nativo, vistorias, manutenções e financeiro em um só lugar." },
 ];
 
 export default function BemVindo() {
@@ -108,238 +121,363 @@ export default function BemVindo() {
     ? (intake!.condo_amenities as string[])
     : [];
 
+  const firstName = profile?.name?.split(" ")[0] || "proprietário";
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/10">
-      <div className="mx-auto max-w-4xl px-4 py-8 md:py-12">
-        {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
-          <img src={riosLogo} alt="RIOS" className="h-10 md:h-12" />
-          <Button variant="ghost" size="sm" onClick={signOut}>
+    <div className="relative min-h-screen overflow-hidden bg-secondary text-secondary-foreground">
+      {/* Animated background blobs */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <motion.div
+          animate={{ x: [0, 60, 0], y: [0, 40, 0] }}
+          transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute -left-32 -top-32 h-[480px] w-[480px] rounded-full bg-primary/30 blur-[120px]"
+        />
+        <motion.div
+          animate={{ x: [0, -50, 0], y: [0, -30, 0] }}
+          transition={{ duration: 22, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute -right-40 top-1/3 h-[520px] w-[520px] rounded-full bg-info/25 blur-[140px]"
+        />
+        <motion.div
+          animate={{ x: [0, 40, 0], y: [0, 60, 0] }}
+          transition={{ duration: 26, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute bottom-0 left-1/3 h-[400px] w-[400px] rounded-full bg-primary/20 blur-[120px]"
+        />
+        {/* grid */}
+        <div
+          className="absolute inset-0 opacity-[0.05]"
+          style={{
+            backgroundImage:
+              "linear-gradient(hsl(var(--primary-foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary-foreground)) 1px, transparent 1px)",
+            backgroundSize: "60px 60px",
+          }}
+        />
+      </div>
+
+      <div className="relative mx-auto max-w-6xl px-5 py-6 md:px-8 md:py-10">
+        {/* Top bar */}
+        <div className="mb-12 flex items-center justify-between md:mb-20">
+          <img src={riosLogo} alt="RIOS" className="h-9 brightness-0 invert md:h-11" />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={signOut}
+            className="text-secondary-foreground/70 hover:bg-white/10 hover:text-secondary-foreground"
+          >
             <LogOut className="mr-2 h-4 w-4" />
             Sair
           </Button>
         </div>
 
-        {/* Hero */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mb-10 text-center"
-        >
-          <Badge variant="secondary" className="mb-4">
-            <Sparkles className="mr-1 h-3 w-3" />
-            Bem-vindo à família RIOS
-          </Badge>
-          <h1 className="mb-3 text-3xl font-bold tracking-tight md:text-5xl">
-            Olá, {profile?.name?.split(" ")[0] || "proprietário"} 👋
-          </h1>
-          <p className="mx-auto max-w-2xl text-base text-muted-foreground md:text-lg">
-            Recebemos seu pré-cadastro. A partir de agora, você entra em uma jornada feita
-            para extrair o máximo do seu imóvel — com curadoria, dados e operação cuidada de ponta a ponta.
-          </p>
-        </motion.div>
+        {/* HERO */}
+        <section className="mb-24 md:mb-32">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 backdrop-blur-md"
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+            </span>
+            <span className="text-xs font-medium tracking-wide text-secondary-foreground/80">
+              Pré-cadastro recebido · Bem-vindo à RIOS
+            </span>
+          </motion.div>
 
-        {/* Timeline */}
-        <Card className="mb-8 overflow-hidden border-2">
-          <CardContent className="p-6 md:p-8">
-            <h2 className="mb-6 text-lg font-semibold">Sua jornada</h2>
-            <div className="space-y-5">
-              {STAGES.map((stage, idx) => {
-                const Icon = stage.icon;
-                const isDone = idx < currentIndex || (idx === 0 && currentIndex >= 0);
-                const isCurrent = idx === currentIndex;
-                const isFuture = idx > currentIndex;
-                return (
-                  <motion.div
-                    key={stage.key}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.1 + idx * 0.08 }}
-                    className="relative flex gap-4"
-                  >
-                    {idx < STAGES.length - 1 && (
-                      <div
-                        className={`absolute left-[19px] top-10 h-full w-0.5 ${
-                          isDone ? "bg-primary" : "bg-border"
-                        }`}
-                      />
-                    )}
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.1 }}
+            className="mb-6 text-5xl font-bold leading-[0.95] tracking-tight md:text-7xl lg:text-8xl"
+          >
+            Olá, {firstName}.<br />
+            <span className="bg-gradient-to-r from-primary via-primary to-[hsl(var(--rios-terra-light))] bg-clip-text text-transparent">
+              Vamos transformar
+            </span>
+            <br />
+            seu imóvel em renda.
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.2 }}
+            className="max-w-2xl text-lg text-secondary-foreground/70 md:text-xl"
+          >
+            Você acabou de entrar numa operação que une <span className="text-secondary-foreground">curadoria humana</span>,{" "}
+            <span className="text-secondary-foreground">inteligência de dados</span> e tecnologia própria — pra extrair o
+            máximo da sua propriedade nas plataformas.
+          </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.35 }}
+            className="mt-10 flex flex-wrap gap-8 md:gap-14"
+          >
+            {[
+              { n: "+38%", l: "Receita média vs. autogestão" },
+              { n: "92%", l: "Ocupação em alta temporada" },
+              { n: "24/7", l: "Operação e suporte" },
+            ].map((s) => (
+              <div key={s.l}>
+                <div className="bg-gradient-to-br from-primary to-[hsl(var(--rios-terra-light))] bg-clip-text text-4xl font-bold text-transparent md:text-5xl">
+                  {s.n}
+                </div>
+                <div className="mt-1 text-xs uppercase tracking-wider text-secondary-foreground/60">{s.l}</div>
+              </div>
+            ))}
+          </motion.div>
+        </section>
+
+        {/* PILLARS */}
+        <section className="mb-24 grid gap-4 md:grid-cols-3 md:mb-32">
+          {PILLARS.map((p, i) => {
+            const Icon = p.icon;
+            return (
+              <motion.div
+                key={p.title}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: i * 0.1 }}
+                className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-md transition-all hover:border-primary/40 hover:bg-white/10"
+              >
+                <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary/10 blur-2xl transition-all group-hover:bg-primary/20" />
+                <div className="relative">
+                  <div className="mb-4 inline-flex rounded-xl bg-primary/20 p-3 text-primary">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <h3 className="mb-2 text-lg font-semibold">{p.title}</h3>
+                  <p className="text-sm text-secondary-foreground/70">{p.desc}</p>
+                </div>
+              </motion.div>
+            );
+          })}
+        </section>
+
+        {/* JOURNEY */}
+        <section className="mb-24 md:mb-32">
+          <div className="mb-10 flex items-end justify-between gap-6">
+            <div>
+              <p className="mb-2 text-xs font-medium uppercase tracking-[0.2em] text-primary">A jornada</p>
+              <h2 className="text-3xl font-bold tracking-tight md:text-5xl">
+                Do cadastro ao seu<br />imóvel rendendo.
+              </h2>
+            </div>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            {STAGES.map((stage, idx) => {
+              const Icon = stage.icon;
+              const isDone = idx < currentIndex;
+              const isCurrent = idx === currentIndex;
+              return (
+                <motion.div
+                  key={stage.key}
+                  initial={{ opacity: 0, y: 16 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: idx * 0.08 }}
+                  className={`relative overflow-hidden rounded-2xl border p-6 backdrop-blur-md transition-all ${
+                    isCurrent
+                      ? "border-primary/60 bg-gradient-to-br from-primary/15 to-transparent"
+                      : isDone
+                      ? "border-white/15 bg-white/5"
+                      : "border-white/10 bg-white/[0.02]"
+                  }`}
+                >
+                  <div className="flex items-start gap-4">
                     <div
-                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
-                        isDone
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : isCurrent
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-border bg-muted text-muted-foreground"
+                      className={`text-5xl font-bold leading-none tracking-tighter ${
+                        isCurrent ? "text-primary" : isDone ? "text-secondary-foreground/40" : "text-secondary-foreground/20"
                       }`}
                     >
-                      <Icon className="h-5 w-5" />
+                      {stage.n}
                     </div>
-                    <div className="flex-1 pb-2">
-                      <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex-1">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <Icon
+                          className={`h-4 w-4 ${
+                            isCurrent ? "text-primary" : isDone ? "text-secondary-foreground/60" : "text-secondary-foreground/30"
+                          }`}
+                        />
                         <h3
                           className={`font-semibold ${
-                            isFuture ? "text-muted-foreground" : ""
+                            isCurrent || isDone ? "" : "text-secondary-foreground/50"
                           }`}
                         >
                           {stage.title}
                         </h3>
                         {isDone && (
-                          <Badge variant="secondary" className="text-xs">
-                            Concluído
+                          <Badge variant="outline" className="border-white/20 bg-white/5 text-[10px] text-secondary-foreground/70">
+                            ✓ feito
                           </Badge>
                         )}
                         {isCurrent && (
-                          <Badge className="text-xs">Em andamento</Badge>
+                          <Badge className="bg-primary text-[10px] text-primary-foreground">agora</Badge>
                         )}
                       </div>
                       <p
-                        className={`mt-1 text-sm ${
-                          isFuture ? "text-muted-foreground/70" : "text-muted-foreground"
+                        className={`text-sm ${
+                          isCurrent || isDone ? "text-secondary-foreground/75" : "text-secondary-foreground/40"
                         }`}
                       >
                         {stage.description}
                       </p>
                     </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        </section>
 
-        {/* Resumo do pré-cadastro */}
-        <Card className="mb-8">
-          <CardContent className="p-6 md:p-8">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Resumo do seu imóvel</h2>
-              <Badge variant="outline" className="text-xs">
-                Pré-cadastro
-              </Badge>
-            </div>
+        {/* PROPERTY SUMMARY */}
+        <section className="mb-16">
+          <div className="mb-8">
+            <p className="mb-2 text-xs font-medium uppercase tracking-[0.2em] text-primary">Seu imóvel</p>
+            <h2 className="text-3xl font-bold tracking-tight md:text-4xl">O que já sabemos sobre ele</h2>
+          </div>
 
+          <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/5 backdrop-blur-md">
             {loading ? (
-              <SectionSkeleton />
+              <div className="p-8">
+                <SectionSkeleton />
+              </div>
             ) : !intake ? (
-              <EmptyState
-                icon={<Home className="h-6 w-6" />}
-                title="Pré-cadastro não encontrado"
-                description="Não localizamos seu pré-cadastro. Fale com a equipe para conferirmos."
-              />
+              <div className="p-8">
+                <EmptyState
+                  icon={<Home className="h-6 w-6" />}
+                  title="Pré-cadastro não encontrado"
+                  description="Não localizamos seu pré-cadastro. Fale com a equipe para conferirmos."
+                />
+              </div>
             ) : (
-              <div className="space-y-5">
-                <div>
-                  <h3 className="text-xl font-bold">
+              <div className="grid gap-0 md:grid-cols-[1.2fr_1fr]">
+                <div className="border-b border-white/10 p-8 md:border-b-0 md:border-r">
+                  <h3 className="mb-2 text-2xl font-bold tracking-tight md:text-3xl">
                     {intake.property_nickname || "Imóvel sem nome"}
                   </h3>
                   {intake.property_address && (
-                    <p className="mt-1 flex items-start gap-1.5 text-sm text-muted-foreground">
-                      <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
+                    <p className="mb-6 flex items-start gap-1.5 text-sm text-secondary-foreground/70">
+                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                       <span>{intake.property_address}</span>
                     </p>
                   )}
+
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <DarkStat icon={BedDouble} label="Quartos" value={intake.bedrooms_count} />
+                    <DarkStat icon={Bath} label="Banheiros" value={intake.bathrooms_count} />
+                    <DarkStat icon={Users} label="Capacidade" value={intake.max_capacity} />
+                    <DarkStat icon={Car} label="Vagas" value={intake.parking_spots ?? 0} />
+                  </div>
+
+                  {(intake.has_wifi || intake.has_elevator) && (
+                    <div className="mt-5 flex flex-wrap gap-2">
+                      {intake.has_wifi && (
+                        <Badge variant="outline" className="gap-1 border-white/20 bg-white/5 text-secondary-foreground/80">
+                          <Wifi className="h-3 w-3" /> Wi-Fi
+                        </Badge>
+                      )}
+                      {intake.has_elevator && (
+                        <Badge variant="outline" className="gap-1 border-white/20 bg-white/5 text-secondary-foreground/80">
+                          <Home className="h-3 w-3" /> Elevador
+                        </Badge>
+                      )}
+                    </div>
+                  )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <Stat icon={BedDouble} label="Quartos" value={intake.bedrooms_count} />
-                  <Stat icon={Bath} label="Banheiros" value={intake.bathrooms_count} />
-                  <Stat icon={Users} label="Capacidade" value={intake.max_capacity} />
-                  <Stat icon={Car} label="Vagas" value={intake.parking_spots ?? 0} />
+                <div className="space-y-5 p-8">
+                  {specialAmenities.length > 0 && (
+                    <div>
+                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">Diferenciais</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {specialAmenities.map((a) => (
+                          <Badge key={a} variant="outline" className="border-white/15 bg-white/5 text-xs text-secondary-foreground/80">
+                            {a}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {condoAmenities.length > 0 && (
+                    <div>
+                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">Condomínio</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {condoAmenities.map((a) => (
+                          <Badge key={a} variant="outline" className="border-white/15 bg-white/5 text-xs text-secondary-foreground/80">
+                            {a}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {!specialAmenities.length && !condoAmenities.length && (
+                    <p className="text-sm text-secondary-foreground/60">
+                      Detalharemos diferenciais e amenidades na reunião de alinhamento.
+                    </p>
+                  )}
                 </div>
-
-                {(intake.has_wifi || intake.has_elevator) && (
-                  <div className="flex flex-wrap gap-2">
-                    {intake.has_wifi && (
-                      <Badge variant="secondary" className="gap-1">
-                        <Wifi className="h-3 w-3" />
-                        Wi-Fi
-                      </Badge>
-                    )}
-                    {intake.has_elevator && (
-                      <Badge variant="secondary" className="gap-1">
-                        <Home className="h-3 w-3" />
-                        Elevador
-                      </Badge>
-                    )}
-                  </div>
-                )}
-
-                {specialAmenities.length > 0 && (
-                  <div>
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      Diferenciais
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {specialAmenities.map((a) => (
-                        <Badge key={a} variant="outline" className="text-xs">
-                          {a}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {condoAmenities.length > 0 && (
-                  <div>
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      Condomínio
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {condoAmenities.map((a) => (
-                        <Badge key={a} variant="outline" className="text-xs">
-                          {a}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </section>
 
-        {/* Próximo passo */}
-        <Card className="border-primary/30 bg-primary/5">
-          <CardContent className="flex flex-col items-start gap-4 p-6 md:flex-row md:items-center md:justify-between md:p-8">
-            <div className="flex items-start gap-3">
-              <div className="rounded-full bg-primary/10 p-2.5">
-                <CalendarCheck className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-semibold">Próximo passo: agendar reunião</h3>
-                <p className="text-sm text-muted-foreground">
-                  Nossa equipe entrará em contato para marcar uma conversa de alinhamento.
+        {/* CTA */}
+        <section className="mb-12">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="relative overflow-hidden rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/20 via-primary/10 to-transparent p-8 backdrop-blur-md md:p-12"
+          >
+            <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-primary/30 blur-3xl" />
+            <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+              <div className="max-w-xl">
+                <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                  <TrendingUp className="h-3 w-3" /> Próximo passo
+                </div>
+                <h3 className="mb-2 text-2xl font-bold tracking-tight md:text-3xl">
+                  Bora marcar a reunião de alinhamento?
+                </h3>
+                <p className="text-secondary-foreground/70">
+                  É uma conversa de 30 min onde a gente entende você, mostra o método e desenha o plano do seu imóvel.
                 </p>
               </div>
+              <Button
+                size="lg"
+                className="group h-14 shrink-0 px-7 text-base font-semibold shadow-2xl shadow-primary/30"
+                onClick={() =>
+                  window.open(
+                    "https://wa.me/5521999999999?text=" +
+                      encodeURIComponent(
+                        `Olá! Sou ${profile?.name || ""} e gostaria de agendar a reunião de alinhamento.`
+                      ),
+                    "_blank"
+                  )
+                }
+              >
+                <MessageCircle className="mr-2 h-5 w-5" />
+                Falar com a equipe
+                <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+              </Button>
             </div>
-            <Button
-              onClick={() =>
-                window.open(
-                  "https://wa.me/5521999999999?text=" +
-                    encodeURIComponent(
-                      `Olá! Sou ${profile?.name || ""} e gostaria de agendar a reunião de alinhamento.`
-                    ),
-                  "_blank"
-                )
-              }
-            >
-              <MessageCircle className="mr-2 h-4 w-4" />
-              Falar com a equipe
-              <ArrowRight className="ml-1.5 h-4 w-4" />
-            </Button>
-          </CardContent>
-        </Card>
+          </motion.div>
+        </section>
 
-        <p className="mt-8 text-center text-xs text-muted-foreground">
-          Acompanhamos cada etapa do seu lado. Em breve, este painel vai abrir o portal completo.
+        <p className="pb-6 text-center text-xs text-secondary-foreground/50">
+          Em breve, este painel se transforma no seu portal completo · RIOS Hospedagens
         </p>
       </div>
     </div>
   );
 }
 
-function Stat({
+function DarkStat({
   icon: Icon,
   label,
   value,
@@ -349,12 +487,12 @@ function Stat({
   value: number | null | undefined;
 }) {
   return (
-    <div className="rounded-lg border bg-card p-3">
-      <div className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-        <Icon className="h-3.5 w-3.5" />
+    <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+      <div className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-secondary-foreground/60">
+        <Icon className="h-3 w-3" />
         {label}
       </div>
-      <div className="text-xl font-semibold">{value ?? "—"}</div>
+      <div className="text-2xl font-bold tracking-tight">{value ?? "—"}</div>
     </div>
   );
 }
