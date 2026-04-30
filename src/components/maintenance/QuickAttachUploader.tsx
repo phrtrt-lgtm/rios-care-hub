@@ -130,10 +130,13 @@ export function QuickAttachUploader({ itemId, isCharge, onSuccess, className }: 
       }
 
       for (const [index, file] of limitedFiles.entries()) {
-        if (file.size > MAX_FILE_SIZE_BYTES) {
+        const isVideo = file.type.startsWith("video/");
+        const limit = isVideo ? MAX_VIDEO_SIZE_BYTES : MAX_FILE_SIZE_BYTES;
+        if (file.size > limit) {
+          const limitMb = isVideo ? 100 : 20;
           failures.push({
             name: file.name,
-            error: new Error("Arquivo acima do limite de 20MB."),
+            error: new Error(`Arquivo acima do limite de ${limitMb}MB.`),
           });
           continue;
         }
