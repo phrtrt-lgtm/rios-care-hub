@@ -362,6 +362,7 @@ interface GroupRowProps {
   uploadingItemId: string | null;
   onOpenSheet?: (id: string) => void;
   onEdit: (item: MaintenanceItem, isCharge: boolean) => void;
+  onDelete: (item: MaintenanceItem, isCharge: boolean) => void;
 }
 
 function GroupRow({ 
