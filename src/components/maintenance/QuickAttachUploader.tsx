@@ -146,13 +146,7 @@ export function QuickAttachUploader({ itemId, isCharge, onSuccess, className }: 
         {uploading ? (
           <Loader2 className="h-4 w-4 animate-spin" />
         ) : (
-          <Paperclip className="h-4 w-4" />
-        )}
-        {/* badge "+" */}
-        {!uploading && (
-          <span className="absolute mt-4 ml-4 h-3 w-3 rounded-full bg-primary text-primary-foreground text-[8px] font-bold flex items-center justify-center pointer-events-none">
-            +
-          </span>
+          <Plus className="h-4 w-4" />
         )}
       </button>
     </>
