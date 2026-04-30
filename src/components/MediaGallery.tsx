@@ -225,20 +225,21 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange, onDelete
                 )}
                 {isVideo && (
                   <video
+                    key={currentBlobUrl}
+                    src={currentBlobUrl}
                     controls
                     className="max-w-full max-h-full w-auto h-auto"
                     autoPlay
                     playsInline
-                  >
-                    <source
-                      src={currentBlobUrl}
-                      type={
-                        currentItem.file_type?.startsWith('video/')
-                          ? currentItem.file_type
-                          : 'video/mp4'
-                      }
-                    />
-                  </video>
+                    preload="metadata"
+                    onError={(e) => {
+                      console.error('[MediaGallery] Video error:', e, {
+                        url: currentItem.file_url,
+                        type: currentItem.file_type,
+                        name: currentItem.file_name,
+                      });
+                    }}
+                  />
                 )}
                 {isPDF && (
                   <div className="w-full h-full flex flex-col items-center justify-center gap-4">
