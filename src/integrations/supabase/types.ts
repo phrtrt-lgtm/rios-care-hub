@@ -1680,6 +1680,7 @@ export type Database = {
           created_at: string
           email: string
           id: string
+          must_set_password: boolean
           name: string
           onboarding_stage: string | null
           payment_score: number
@@ -1693,6 +1694,7 @@ export type Database = {
           created_at?: string
           email: string
           id: string
+          must_set_password?: boolean
           name: string
           onboarding_stage?: string | null
           payment_score?: number
@@ -1706,6 +1708,7 @@ export type Database = {
           created_at?: string
           email?: string
           id?: string
+          must_set_password?: boolean
           name?: string
           onboarding_stage?: string | null
           payment_score?: number

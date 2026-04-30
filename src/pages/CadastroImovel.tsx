@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 import {
   BED_TYPES,
   KITCHEN_ITEMS,
@@ -188,6 +189,7 @@ function buildRooms(form: IntakeFormData, existing: RoomEntry[]): RoomEntry[] {
 }
 
 export default function CadastroImovel() {
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -287,6 +289,22 @@ export default function CadastroImovel() {
       });
       if (error) throw error;
       if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
+
+      // Auto-login após cadastro: usa a senha temporária retornada pela edge function
+      const autoLogin = (data as { auto_login?: { email: string; password: string } | null })?.auto_login;
+      if (autoLogin?.email && autoLogin?.password) {
+        const { error: signInErr } = await supabase.auth.signInWithPassword({
+          email: autoLogin.email,
+          password: autoLogin.password,
+        });
+        if (!signInErr) {
+          toast.success("Cadastro recebido! Bem-vindo à RIOS.");
+          navigate("/bem-vindo", { replace: true });
+          return;
+        }
+        console.error("Auto-login falhou:", signInErr);
+      }
+
       setSubmitted(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (e) {
