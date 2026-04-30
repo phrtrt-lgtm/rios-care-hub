@@ -212,39 +212,42 @@ export function MaintenanceChatDialog({
     try {
       // Upload attachments first
       const attachments: Array<{ file_url: string; file_name: string; file_type: string; size_bytes: number; path: string }> = [];
-      
+
       if (selectedFiles.length > 0) {
         for (const file of selectedFiles) {
           setUploadingFiles(prev => new Set(prev).add(file.name));
-          
-          // Compress video if it's a video file
-          const processedFile = await processFileForUpload(file);
-          const safeName = sanitizeFilename(processedFile.name);
-          const filePath = `${ticketId}/${Date.now()}_${safeName}`;
-          
-          const { error: uploadError } = await supabase.storage
-            .from('attachments')
-            .upload(filePath, processedFile);
 
-          if (uploadError) throw uploadError;
+          try {
+            // Compress video if it's a video file
+            const processedFile = await processFileForUpload(file);
+            const safeName = sanitizeFilename(processedFile.name);
+            const filePath = `tickets/${ticketId}/${Date.now()}_${safeName}`;
 
-          const { data: { publicUrl } } = supabase.storage
-            .from('attachments')
-            .getPublicUrl(filePath);
+            const { error: uploadError } = await supabase.storage
+              .from('attachments')
+              .upload(filePath, processedFile);
 
-          attachments.push({
-            file_url: publicUrl,
-            file_name: processedFile.name,
-            file_type: processedFile.type,
-            size_bytes: processedFile.size,
-            path: filePath
-          });
-          
-          setUploadingFiles(prev => {
-            const next = new Set(prev);
-            next.delete(file.name);
-            return next;
-          });
+            if (uploadError) throw uploadError;
+
+            const { data: { publicUrl } } = supabase.storage
+              .from('attachments')
+              .getPublicUrl(filePath);
+
+            attachments.push({
+              file_url: publicUrl,
+              file_name: processedFile.name,
+              file_type: processedFile.type,
+              size_bytes: processedFile.size,
+              path: filePath
+            });
+          } finally {
+            // ALWAYS clean up upload state, even on failure
+            setUploadingFiles(prev => {
+              const next = new Set(prev);
+              next.delete(file.name);
+              return next;
+            });
+          }
         }
       }
 
@@ -267,11 +270,15 @@ export function MaintenanceChatDialog({
         setSelectedFiles([]);
       }
     } catch (error: any) {
+      console.error('[MaintenanceChat] Erro ao enviar:', error);
       toast({
         title: "Erro ao enviar mensagem",
-        description: error.message,
+        description: error?.message || "Tente novamente.",
         variant: "destructive",
       });
+    } finally {
+      // Safety net: ensure no file remains stuck in "uploading" state
+      setUploadingFiles(new Set());
     }
   };
 
