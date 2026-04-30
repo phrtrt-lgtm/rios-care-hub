@@ -2335,8 +2335,10 @@ export default function AdminManutencoesLista() {
         {/* Reuso dos diálogos da versão desktop */}
         <MaintenanceChatDialog
           open={chatDialogOpen}
-          onOpenChange={setChatDialogOpen}
-          item={selectedItem as any}
+          onOpenChange={handleCloseChat}
+          ticketId={selectedItem?.id || ""}
+          ticketSubject={selectedItem?.subject || ""}
+          propertyName={selectedItem?.property?.name}
         />
 
         <EditMaintenanceDialog
