@@ -288,12 +288,11 @@ export function CompleteMaintenanceDialog({
                   </Label>
                   <Input
                     id="contribution"
-                    type="number"
-                    step="0.01"
-                    min="0"
+                    type="text"
+                    inputMode="decimal"
                     value={managementContribution}
                     onChange={(e) => {
-                      if (costResponsible !== "pm") setManagementContribution(e.target.value);
+                      if (costResponsible !== "pm") setManagementContribution(e.target.value.replace(/[^0-9.,]/g, ""));
                     }}
                     placeholder="0,00"
                     readOnly={costResponsible === "pm"}
