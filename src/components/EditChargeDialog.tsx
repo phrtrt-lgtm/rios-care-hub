@@ -94,7 +94,7 @@ export function EditChargeDialog({ open, onOpenChange, charge, onSuccess }: Edit
       return;
     }
 
-    if (!formData.amount || parseFloat(formData.amount) <= 0) {
+    if (!formData.amount || parseBRNumber(formData.amount) <= 0) {
       toast({
         title: "Valor inválido",
         description: "Informe um valor válido para a cobrança",
@@ -111,9 +111,9 @@ export function EditChargeDialog({ open, onOpenChange, charge, onSuccess }: Edit
         description: formData.description.trim() || null,
         category: formData.category || null,
         service_type: formData.service_type.trim() || null,
-        amount_cents: Math.round(parseFloat(formData.amount) * 100),
+        amount_cents: Math.round(parseBRNumber(formData.amount) * 100),
         management_contribution_cents: formData.management_contribution 
-          ? Math.round(parseFloat(formData.management_contribution) * 100) 
+          ? Math.round(parseBRNumber(formData.management_contribution) * 100) 
           : 0,
         due_date: formData.due_date || null,
         maintenance_date: formData.maintenance_date || null,
