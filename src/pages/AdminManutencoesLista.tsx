@@ -382,7 +382,8 @@ function GroupRow({
   onUploadAttachment,
   uploadingItemId,
   onOpenSheet,
-  onEdit
+  onEdit,
+  onDelete
 }: GroupRowProps) {
   // Sort items within the group
   const sortedItems = useMemo(() => {
