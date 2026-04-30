@@ -650,6 +650,38 @@ export default function NovaCobranca({ editId, onClose, onSaved }: NovaCobrancaP
           </CardContent>
         </Card>
       </main>
+
+      <ConfirmationDialog
+        open={!!attachmentToDelete}
+        onOpenChange={(o) => !o && setAttachmentToDelete(null)}
+        title="Excluir anexo?"
+        description={
+          <div className="space-y-2">
+            <p>Esta ação é permanente e não pode ser desfeita.</p>
+            {attachmentToDelete?.file_name && (
+              <p className="text-xs">
+                Arquivo: <span className="font-mono">{attachmentToDelete.file_name}</span>
+              </p>
+            )}
+          </div>
+        }
+        confirmLabel="Excluir"
+        variant="destructive"
+        loading={deletingAttachment}
+        onConfirm={async () => {
+          if (!attachmentToDelete) return;
+          setDeletingAttachment(true);
+          try {
+            const ok = await deleteAttachmentRow('charge_attachments', attachmentToDelete.id);
+            if (ok) {
+              setExistingAttachments((prev) => prev.filter((a) => a.id !== attachmentToDelete.id));
+              setAttachmentToDelete(null);
+            }
+          } finally {
+            setDeletingAttachment(false);
+          }
+        }}
+      />
     </div>
   );
 }
