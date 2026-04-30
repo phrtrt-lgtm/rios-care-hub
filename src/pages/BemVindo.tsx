@@ -462,7 +462,7 @@ export default function BemVindo() {
               </div>
 
               <p className="text-xs text-secondary-foreground/60">
-                Costumamos retornar em até 1 dia útil. Confira se os dados acima estão corretos — caso precise atualizar,
+                Costumamos retornar em até 1 dia útil. Confira se os dados acima estão corretos. Caso precise atualizar,
                 nos avise pelos mesmos canais.
               </p>
             </div>
