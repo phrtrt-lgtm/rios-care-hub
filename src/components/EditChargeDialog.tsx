@@ -231,12 +231,11 @@ export function EditChargeDialog({ open, onOpenChange, charge, onSuccess }: Edit
               <Label htmlFor="edit-amount">Valor Total (R$) *</Label>
               <Input
                 id="edit-amount"
-                type="number"
-                step="0.01"
-                min="0"
+                type="text"
+                inputMode="decimal"
                 value={formData.amount}
-                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                placeholder="0.00"
+                onChange={(e) => setFormData({ ...formData, amount: e.target.value.replace(/[^0-9.,]/g, "") })}
+                placeholder="0,00"
               />
             </div>
 
@@ -244,12 +243,11 @@ export function EditChargeDialog({ open, onOpenChange, charge, onSuccess }: Edit
               <Label htmlFor="edit-contribution">Aporte da Gestão (R$)</Label>
               <Input
                 id="edit-contribution"
-                type="number"
-                step="0.01"
-                min="0"
+                type="text"
+                inputMode="decimal"
                 value={formData.management_contribution}
-                onChange={(e) => setFormData({ ...formData, management_contribution: e.target.value })}
-                placeholder="0.00"
+                onChange={(e) => setFormData({ ...formData, management_contribution: e.target.value.replace(/[^0-9.,]/g, "") })}
+                placeholder="0,00"
               />
             </div>
           </div>
