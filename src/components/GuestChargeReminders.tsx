@@ -21,7 +21,8 @@ import {
 import { toast } from 'sonner';
 
 interface GuestChargePending {
-  id: string;
+  id: string; // ticket id
+  charge_id?: string | null;
   subject: string;
   guest_checkout_date: string;
   property_id: string;
@@ -29,7 +30,17 @@ interface GuestChargePending {
   days_since_checkout: number;
   can_charge: boolean;
   days_until_charge: number;
+  charge_status?: string | null;
 }
+
+const PAID_STATUSES = new Set([
+  "pago_antecipado",
+  "pago_no_vencimento",
+  "pago_com_atraso",
+  "arquivado",
+  "cancelled",
+  "debited",
+]);
 
 export function GuestChargeReminders() {
   const navigate = useNavigate();
@@ -64,7 +75,7 @@ export function GuestChargeReminders() {
 
   const fetchGuestCharges = async () => {
     try {
-      // Fetch maintenance tickets with guest cost responsibility and checkout date
+      // Tickets de manutenção marcados como cobrança do hóspede com check-out informado
       const { data: tickets, error } = await supabase
         .from('tickets')
         .select(`
@@ -81,29 +92,36 @@ export function GuestChargeReminders() {
 
       if (error) throw error;
 
-      // Exclude tickets that already have a charge created (any status)
+      // Charges existentes desses tickets (independentemente do cost_responsible da charge,
+      // pois o fluxo atual cria a charge como 'owner' mesmo quando o ticket é de hóspede).
       const ticketIds = (tickets || []).map(t => t.id);
-      let chargedTicketIds = new Set<string>();
+      const chargeByTicket = new Map<string, { id: string; status: string | null }>();
       if (ticketIds.length > 0) {
         const { data: existingCharges } = await supabase
           .from('charges')
-          .select('ticket_id')
+          .select('id, ticket_id, status')
           .in('ticket_id', ticketIds)
           .not('ticket_id', 'is', null);
-        chargedTicketIds = new Set((existingCharges || []).map(c => c.ticket_id as string));
+        (existingCharges || []).forEach(c => {
+          if (c.ticket_id) chargeByTicket.set(c.ticket_id as string, { id: c.id, status: c.status });
+        });
       }
 
       const today = new Date();
       const chargesWithDays: GuestChargePending[] = (tickets || [])
-        .filter(t => !chargedTicketIds.has(t.id))
         .map(ticket => {
+          const existing = chargeByTicket.get(ticket.id);
+          // Esconde se a charge já está paga/arquivada/cancelada/debitada
+          if (existing && existing.status && PAID_STATUSES.has(existing.status)) return null;
+
           const checkoutDate = new Date(ticket.guest_checkout_date!);
           const daysSince = differenceInDays(today, checkoutDate);
           const chargeDate = addDays(checkoutDate, 14);
           const daysUntil = differenceInDays(chargeDate, today);
-          
+
           return {
             id: ticket.id,
+            charge_id: existing?.id ?? null,
             subject: ticket.subject,
             guest_checkout_date: ticket.guest_checkout_date!,
             property_id: ticket.property_id || '',
@@ -111,12 +129,12 @@ export function GuestChargeReminders() {
             days_since_checkout: daysSince,
             can_charge: daysSince >= 14,
             days_until_charge: Math.max(0, daysUntil),
-          };
+            charge_status: existing?.status ?? null,
+          } as GuestChargePending;
         })
-        // Auto-hide: cobranças prontas há mais de 10 dias somem do painel
-        // (assume-se que já foram cobradas pelo Airbnb ou processadas externamente)
+        .filter((c): c is GuestChargePending => c !== null)
+        // Auto-hide: cobranças prontas há mais de 24 dias somem (provavelmente já cobradas externamente)
         .filter(c => c.days_since_checkout < 24)
-        // Sort: can charge first, then by days until charge
         .sort((a, b) => {
           if (a.can_charge && !b.can_charge) return -1;
           if (!a.can_charge && b.can_charge) return 1;
