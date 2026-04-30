@@ -6,6 +6,19 @@ import { fetchFile, toBlobURL } from '@ffmpeg/util';
 let sharedFFmpeg: FFmpeg | null = null;
 let isFFmpegLoading = false;
 let ffmpegLoadPromise: Promise<void> | null = null;
+let compressionQueue: Promise<void> = Promise.resolve();
+
+function runCompressionExclusive<T>(operation: () => Promise<T>): Promise<T> {
+  const nextRun = compressionQueue.then(operation, operation);
+  compressionQueue = nextRun.then(() => undefined, () => undefined);
+  return nextRun;
+}
+
+function createCompressionJobId(): string {
+  return typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
 
 export interface FileUploadProgress {
   stage: 'compressing' | 'uploading' | 'done' | 'error';
@@ -112,114 +125,105 @@ export async function compressVideo(
     return file;
   }
 
-  try {
-    console.log('[VideoCompression] Starting compression for:', file.name, 'Size:', (file.size / 1024 / 1024).toFixed(2) + 'MB');
-    
-    onProgress?.({ stage: 'compressing', percent: 0, message: 'Carregando compressor...' });
-    
-    const ffmpeg = await loadFFmpeg(onProgress);
+  return runCompressionExclusive(async () => {
+    const jobId = createCompressionJobId();
+    const inputName = `${jobId}-input${getExtension(file.name, file.type)}`;
+    const outputName = `${jobId}-output.mp4`;
 
-    // Set up progress tracking
-    let lastProgress = 0;
-    ffmpeg.on('progress', ({ progress: p }) => {
-      const percent = Math.min(Math.round(p * 100), 99);
-      if (percent > lastProgress) {
-        lastProgress = percent;
-        console.log('[VideoCompression] Progress:', percent + '%');
-        onProgress?.({ 
-          stage: 'compressing', 
-          percent, 
-          message: `Comprimindo vídeo... ${percent}%` 
-        });
-      }
-    });
-
-    onProgress?.({ stage: 'compressing', percent: 5, message: 'Preparando vídeo...' });
-
-    const inputName = 'input' + getExtension(file.name, file.type);
-    const outputName = 'output.mp4';
-
-    // Write input file with timeout for large files
-    console.log('[VideoCompression] Reading file into memory...');
-    onProgress?.({ stage: 'compressing', percent: 5, message: 'Lendo arquivo...' });
-
-    let fileData: Uint8Array;
     try {
-      fileData = await fetchFile(file);
-      console.log('[VideoCompression] File read successfully, size:', fileData.length);
-    } catch (readError: any) {
-      console.error('[VideoCompression] Failed to read file:', readError);
-      // Return original file on read error
-      console.log('[VideoCompression] Returning original file due to read error');
+      console.log('[VideoCompression] Starting compression for:', file.name, 'Size:', (file.size / 1024 / 1024).toFixed(2) + 'MB');
+
+      onProgress?.({ stage: 'compressing', percent: 0, message: 'Carregando compressor...' });
+
+      const ffmpeg = await loadFFmpeg(onProgress);
+
+      let lastProgress = 0;
+      ffmpeg.on('progress', ({ progress: p }) => {
+        const percent = Math.min(Math.round(p * 100), 99);
+        if (percent > lastProgress) {
+          lastProgress = percent;
+          console.log('[VideoCompression] Progress:', percent + '%');
+          onProgress?.({
+            stage: 'compressing',
+            percent,
+            message: `Comprimindo vídeo... ${percent}%`
+          });
+        }
+      });
+
+      onProgress?.({ stage: 'compressing', percent: 5, message: 'Preparando vídeo...' });
+
+      console.log('[VideoCompression] Reading file into memory...');
+      onProgress?.({ stage: 'compressing', percent: 5, message: 'Lendo arquivo...' });
+
+      let fileData: Uint8Array;
+      try {
+        fileData = await fetchFile(file);
+        console.log('[VideoCompression] File read successfully, size:', fileData.length);
+      } catch (readError: any) {
+        console.error('[VideoCompression] Failed to read file:', readError);
+        console.log('[VideoCompression] Returning original file due to read error');
+        onProgress?.({ stage: 'done', percent: 100, message: 'Usando vídeo original' });
+        return file;
+      }
+
+      console.log('[VideoCompression] Writing input file to FFmpeg...');
+      onProgress?.({ stage: 'compressing', percent: 8, message: 'Preparando...' });
+      await ffmpeg.writeFile(inputName, fileData);
+
+      onProgress?.({ stage: 'compressing', percent: 10, message: 'Comprimindo vídeo...' });
+
+      console.log('[VideoCompression] Running FFmpeg compression...');
+      await ffmpeg.exec([
+        '-i', inputName,
+        '-vf', 'scale=-2:min(480\\,ih)',
+        '-c:v', 'libx264',
+        '-preset', 'veryfast',
+        '-crf', '32',
+        '-maxrate', '800k',
+        '-bufsize', '1200k',
+        '-c:a', 'aac',
+        '-b:a', '64k',
+        '-ar', '44100',
+        '-movflags', '+faststart',
+        '-y',
+        outputName
+      ]);
+
+      console.log('[VideoCompression] Reading output file...');
+      const data = await ffmpeg.readFile(outputName);
+
+      const byteArray = typeof data === 'string'
+        ? Array.from(new TextEncoder().encode(data))
+        : Array.from(data);
+
+      const compressedBlob = new Blob([new Uint8Array(byteArray)], { type: 'video/mp4' });
+      const outputFileName = normalizeMp4FileName(file.name);
+      const compressedFile = new File([compressedBlob], outputFileName, { type: 'video/mp4' });
+
+      const originalSize = (file.size / 1024 / 1024).toFixed(2);
+      const compressedSize = (compressedFile.size / 1024 / 1024).toFixed(2);
+      const reduction = ((1 - compressedFile.size / file.size) * 100).toFixed(1);
+      console.log(`[VideoCompression] SUCCESS: ${originalSize}MB → ${compressedSize}MB (${reduction}% reduction)`);
+
+      onProgress?.({ stage: 'done', percent: 100, message: 'Compressão concluída!' });
+
+      return compressedFile;
+    } catch (error: any) {
+      console.error('[VideoCompression] ERROR:', error);
+      console.log('[VideoCompression] Returning original file due to error');
       onProgress?.({ stage: 'done', percent: 100, message: 'Usando vídeo original' });
       return file;
+    } finally {
+      const ffmpeg = sharedFFmpeg;
+      if (ffmpeg) {
+        await Promise.allSettled([
+          ffmpeg.deleteFile(inputName),
+          ffmpeg.deleteFile(outputName),
+        ]);
+      }
     }
-
-    console.log('[VideoCompression] Writing input file to FFmpeg...');
-    onProgress?.({ stage: 'compressing', percent: 8, message: 'Preparando...' });
-    await ffmpeg.writeFile(inputName, fileData);
-
-    onProgress?.({ stage: 'compressing', percent: 10, message: 'Comprimindo vídeo...' });
-
-    // WhatsApp-style compression settings:
-    // - Lower resolution (max 480p height)
-    // - Lower bitrate (~800kbps video, 64kbps audio)
-    // - H.264 codec for maximum compatibility
-    console.log('[VideoCompression] Running FFmpeg compression...');
-    await ffmpeg.exec([
-      '-i', inputName,
-      // Scale down to max 480p height, maintain aspect ratio
-      '-vf', 'scale=-2:min(480\\,ih)',
-      // Video codec settings - aggressive compression
-      '-c:v', 'libx264',
-      '-preset', 'veryfast',
-      '-crf', '32', // Higher CRF = more compression (WhatsApp uses ~28-35)
-      '-maxrate', '800k',
-      '-bufsize', '1200k',
-      // Audio codec settings
-      '-c:a', 'aac',
-      '-b:a', '64k',
-      '-ar', '44100',
-      // Output settings
-      '-movflags', '+faststart',
-      '-y',
-      outputName
-    ]);
-
-    // Read output file
-    console.log('[VideoCompression] Reading output file...');
-    const data = await ffmpeg.readFile(outputName);
-
-    // Convert to proper array
-    const byteArray = typeof data === 'string'
-      ? Array.from(new TextEncoder().encode(data))
-      : Array.from(data);
-
-    const compressedBlob = new Blob([new Uint8Array(byteArray)], { type: 'video/mp4' });
-
-    const outputFileName = normalizeMp4FileName(file.name);
-    const compressedFile = new File([compressedBlob], outputFileName, { type: 'video/mp4' });
-
-    // Log compression results
-    const originalSize = (file.size / 1024 / 1024).toFixed(2);
-    const compressedSize = (compressedFile.size / 1024 / 1024).toFixed(2);
-    const reduction = ((1 - compressedFile.size / file.size) * 100).toFixed(1);
-    console.log(`[VideoCompression] SUCCESS: ${originalSize}MB → ${compressedSize}MB (${reduction}% reduction)`);
-
-    // Cleanup
-    await ffmpeg.deleteFile(inputName);
-    await ffmpeg.deleteFile(outputName);
-
-    onProgress?.({ stage: 'done', percent: 100, message: 'Compressão concluída!' });
-
-    return compressedFile;
-  } catch (error: any) {
-    console.error('[VideoCompression] ERROR:', error);
-    // On any error, return original file instead of failing
-    console.log('[VideoCompression] Returning original file due to error');
-    onProgress?.({ stage: 'done', percent: 100, message: 'Usando vídeo original' });
-    return file;
-  }
+  });
 }
 
 function getExtension(filename: string, mimeType?: string): string {
