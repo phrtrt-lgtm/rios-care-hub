@@ -44,6 +44,8 @@ interface IntakeSubmission {
   condo_amenities: any;
   status: string;
   created_at: string;
+  owner_email: string | null;
+  owner_phone: string | null;
 }
 
 const STAGES = [
