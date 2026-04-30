@@ -5,12 +5,12 @@ import {
   ChevronDown,
   ChevronRight,
   Paperclip,
+  Plus,
   MessageSquare,
   Pencil,
   Trash2,
   Wrench,
   Search,
-  Plus,
   ArrowLeft,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -21,6 +21,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { SectionSkeleton } from "@/components/ui/section-skeleton";
 import { cn } from "@/lib/utils";
 import { formatBRL } from "@/lib/format";
+import { QuickAttachUploader } from "@/components/maintenance/QuickAttachUploader";
 
 export interface MobileMaintenanceItem {
   id: string;
@@ -62,6 +63,7 @@ interface Props {
   onOpenAttachments: (item: MobileMaintenanceItem, isCharge: boolean) => void;
   onEdit: (item: MobileMaintenanceItem, isCharge: boolean) => void;
   onDelete: (item: MobileMaintenanceItem, isCharge: boolean) => void;
+  onAttachmentAdded?: () => void;
   onBack: () => void;
   onNew: () => void;
 }
@@ -78,6 +80,7 @@ export function MobileMaintenanceList({
   onOpenAttachments,
   onEdit,
   onDelete,
+  onAttachmentAdded,
   onBack,
   onNew,
 }: Props) {
@@ -264,6 +267,11 @@ export function MobileMaintenanceList({
                                   </span>
                                 )}
                               </button>
+                              <QuickAttachUploader
+                                itemId={item.id}
+                                isCharge={isCharge}
+                                onSuccess={onAttachmentAdded}
+                              />
                               <button
                                 type="button"
                                 className="relative h-8 w-8 flex items-center justify-center rounded-full hover:bg-muted active:scale-95 transition-all"

@@ -2328,6 +2328,10 @@ export default function AdminManutencoesLista() {
           onDelete={(item, isCharge) =>
             setDeleteDialog({ open: true, item: item as any, isCharge })
           }
+          onAttachmentAdded={() => {
+            queryClient.invalidateQueries({ queryKey: ["maintenance-list-view"] });
+            queryClient.invalidateQueries({ queryKey: ["pending-charges-list"] });
+          }}
           onBack={() => goBack(navigate, "/painel")}
           onNew={() => navigate("/admin/nova-manutencao")}
         />
