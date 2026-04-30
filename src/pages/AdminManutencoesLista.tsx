@@ -16,7 +16,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, Search, Plus, ChevronDown, ChevronRight, Paperclip, MessageSquare, ArrowUpDown, ArrowUp, ArrowDown, Archive, Loader2, FileAudio, Sparkles, Wrench, Play, Pause, BarChart3, Check, X } from "lucide-react";
+import { ArrowLeft, Search, Plus, ChevronDown, ChevronRight, Paperclip, MessageSquare, ArrowUpDown, ArrowUp, ArrowDown, Archive, Loader2, FileAudio, Sparkles, Wrench, Play, Pause, BarChart3, Check, X, Trash2 } from "lucide-react";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { cn } from "@/lib/utils";
 import { formatBRL } from "@/lib/format";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
