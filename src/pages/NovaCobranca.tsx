@@ -13,6 +13,7 @@ import { ArrowLeft, Loader2, Paperclip, X, Sparkles, Trash2 } from "lucide-react
 import { VoiceToTextInput } from "@/components/VoiceToTextInput";
 import { useToast } from "@/hooks/use-toast";
 import { CHARGE_CATEGORY_OPTIONS } from "@/constants/chargeCategories";
+import { parseBRNumber } from "@/lib/parseBRNumber";
 import { OwnerScoreCard } from "@/components/OwnerScoreCard";
 import { processFileForUpload } from "@/lib/processVideoForUpload";
 import { deleteAttachmentRow } from "@/lib/deleteAttachment";
