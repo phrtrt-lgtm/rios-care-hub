@@ -8,6 +8,12 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
 });
 
+// Required for Chrome to consider the app installable (PWA criteria).
+// Pass-through fetch handler — does NOT cache to avoid stale content issues.
+self.addEventListener('fetch', () => {
+  // Intentionally empty: lets the browser handle requests normally.
+});
+
 self.addEventListener('push', (event) => {
   console.log('Push received:', event);
   

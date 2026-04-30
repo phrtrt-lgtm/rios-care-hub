@@ -2,22 +2,9 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
-async function maybeClearPwaCache() {
-  // If running as an installed app (PWA) or inside a native wrapper, stale caches can trap users.
-  const isStandalone =
-    window.matchMedia?.("(display-mode: standalone)")?.matches ||
-    // iOS Safari legacy
-    (navigator as any).standalone === true;
-
-  const isCapacitor = typeof (window as any).Capacitor !== "undefined";
-
-  if (!isStandalone && !isCapacitor) return;
-
+async function clearStaleCaches() {
+  // Clear any HTTP caches stored by previous SW versions to avoid stale content.
   try {
-    if ("serviceWorker" in navigator) {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map((r) => r.unregister()));
-    }
     if ("caches" in window) {
       const keys = await caches.keys();
       await Promise.all(keys.map((k) => caches.delete(k)));
@@ -27,7 +14,43 @@ async function maybeClearPwaCache() {
   }
 }
 
-maybeClearPwaCache().finally(() => {
+async function registerServiceWorker() {
+  if (!("serviceWorker" in navigator)) return;
+
+  // Never register inside the Lovable editor preview iframe — it interferes
+  // with hot reload and can serve stale content.
+  const isInIframe = (() => {
+    try {
+      return window.self !== window.top;
+    } catch {
+      return true;
+    }
+  })();
+  const isPreviewHost =
+    window.location.hostname.includes("id-preview--") ||
+    window.location.hostname.includes("lovableproject.com");
+
+  if (isInIframe || isPreviewHost) {
+    // Clean up any previously registered SW in preview contexts.
+    try {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister()));
+    } catch {
+      // ignore
+    }
+    return;
+  }
+
+  try {
+    await navigator.serviceWorker.register("/sw.js");
+  } catch (err) {
+    console.warn("Service worker registration failed:", err);
+  }
+}
+
+clearStaleCaches().finally(() => {
   createRoot(document.getElementById("root")!).render(<App />);
+  // Register SW after render so it never blocks the initial paint.
+  registerServiceWorker();
 });
 
