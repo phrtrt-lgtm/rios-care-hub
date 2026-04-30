@@ -2293,6 +2293,116 @@ export default function AdminManutencoesLista() {
     setEditInspectionDialogOpen(true);
   }, []);
 
+  // Mobile-only optimized view
+  if (isMobile) {
+    const mobileGroups = [
+      { id: "em_progresso", label: "Em Progresso", borderColor: "border-l-warning", dotColor: "bg-warning" },
+      { id: "cobrancas_vencidas", label: "Cobranças Vencidas", borderColor: "border-l-destructive", dotColor: "bg-destructive" },
+      { id: "concluidas", label: "Manutenções Concluídas", borderColor: "border-l-success", dotColor: "bg-success" },
+      { id: "cobrancas", label: "Cobranças Pendentes", borderColor: "border-l-primary", dotColor: "bg-primary" },
+    ];
+
+    // Enrich items with itemType so mobile knows ticket vs charge
+    const enrichedGroupedItems: Record<string, any[]> = {
+      em_progresso: (groupedItems.em_progresso || []).map((t) => ({ ...t, itemType: "ticket" as const })),
+      concluidas: (groupedItems.concluidas || []).map((t) => ({ ...t, itemType: "ticket" as const })),
+      cobrancas_vencidas: groupedItems.cobrancas_vencidas || [],
+      cobrancas: groupedItems.cobrancas || [],
+    };
+
+    return (
+      <>
+        <MobileMaintenanceList
+          groups={mobileGroups}
+          groupedItems={enrichedGroupedItems}
+          isLoading={isLoading}
+          search={search}
+          onSearchChange={setSearch}
+          unreadCounts={unreadCounts}
+          onOpenDetail={(id, isCharge) => openSheet(id, isCharge ? "cobranca" : "maintenance")}
+          onOpenChat={(item) => handleOpenChat(item as any)}
+          onOpenAttachments={(item) => handleOpenAttachments(item as any)}
+          onEdit={(item, isCharge) =>
+            setEditMaintenanceDialog({ open: true, id: item.id, type: isCharge ? "charge" : "maintenance" })
+          }
+          onDelete={(item, isCharge) =>
+            setDeleteDialog({ open: true, item: item as any, isCharge })
+          }
+          onBack={() => goBack(navigate, "/painel")}
+          onNew={() => navigate("/admin/nova-manutencao")}
+        />
+
+        {/* Reuso dos diálogos da versão desktop */}
+        <MaintenanceChatDialog
+          open={chatDialogOpen}
+          onOpenChange={setChatDialogOpen}
+          item={selectedItem as any}
+        />
+
+        <EditMaintenanceDialog
+          open={editMaintenanceDialog.open}
+          onOpenChange={(open) => setEditMaintenanceDialog((prev) => ({ ...prev, open }))}
+          editId={editMaintenanceDialog.id}
+          type={editMaintenanceDialog.type}
+          onSaved={() => {
+            queryClient.invalidateQueries({ queryKey: ["maintenance-list"] });
+            queryClient.invalidateQueries({ queryKey: ["charges-list"] });
+          }}
+        />
+
+        <ConfirmationDialog
+          open={deleteDialog.open}
+          onOpenChange={(open) => setDeleteDialog((prev) => ({ ...prev, open }))}
+          title={deleteDialog.isCharge ? "Excluir cobrança?" : "Excluir manutenção?"}
+          description={
+            <>
+              <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-foreground">
+                Essa ação não pode ser desfeita. {deleteDialog.isCharge ? "A cobrança" : "A manutenção"} e todos os dados relacionados (mensagens, anexos, histórico) serão removidos permanentemente.
+              </div>
+              {deleteDialog.item && (
+                <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+                  <p className="font-medium">{deleteDialog.item.subject}</p>
+                  {deleteDialog.item.property?.name && (
+                    <p className="text-xs text-muted-foreground mt-1">{deleteDialog.item.property.name}</p>
+                  )}
+                </div>
+              )}
+            </>
+          }
+          confirmLabel="Excluir permanentemente"
+          variant="destructive"
+          requireTypedConfirmation="EXCLUIR"
+          loading={deleting}
+          onConfirm={async () => {
+            if (!deleteDialog.item) return;
+            setDeleting(true);
+            try {
+              const table = deleteDialog.isCharge ? "charges" : "tickets";
+              const { error } = await supabase.from(table).delete().eq("id", deleteDialog.item.id);
+              if (error) throw error;
+              toast.success(deleteDialog.isCharge ? "Cobrança excluída" : "Manutenção excluída");
+              setDeleteDialog({ open: false, item: null, isCharge: false });
+              queryClient.invalidateQueries({ queryKey: ["maintenance-list-view"] });
+              queryClient.invalidateQueries({ queryKey: ["pending-charges-list"] });
+            } catch (err: any) {
+              console.error(err);
+              toast.error("Erro ao excluir", { description: err.message });
+            } finally {
+              setDeleting(false);
+            }
+          }}
+        />
+
+        <DetailSheet
+          open={detailSheetOpen}
+          onClose={closeSheet}
+          entityId={detailEntityId}
+          entityType={detailEntityType}
+        />
+      </>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 p-4 md:p-6">
       <div className="max-w-[1600px] mx-auto space-y-4">
