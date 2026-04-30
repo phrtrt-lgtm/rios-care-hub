@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { CHARGE_CATEGORY_OPTIONS } from "@/constants/chargeCategories";
 import { toast } from "sonner";
+import { parseBRNumber } from "@/lib/parseBRNumber";
 
 export interface CompleteMaintenanceTicket {
   id: string;
@@ -76,8 +77,8 @@ export function CompleteMaintenanceDialog({
 
   if (!ticket) return null;
 
-  const amountNum = parseFloat(amount || "0");
-  const contributionNum = parseFloat(managementContribution || "0");
+  const amountNum = parseBRNumber(amount);
+  const contributionNum = parseBRNumber(managementContribution);
   const ownerPays = Math.max(0, amountNum - contributionNum);
 
   const handleComplete = async () => {
@@ -257,11 +258,10 @@ export function CompleteMaintenanceDialog({
                   <Label htmlFor="amount">Valor Total (R$) *</Label>
                   <Input
                     id="amount"
-                    type="number"
-                    step="0.01"
-                    min="0"
+                    type="text"
+                    inputMode="decimal"
                     value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
+                    onChange={(e) => setAmount(e.target.value.replace(/[^0-9.,]/g, ""))}
                     placeholder="0,00"
                   />
                 </div>
@@ -275,12 +275,11 @@ export function CompleteMaintenanceDialog({
                   </Label>
                   <Input
                     id="contribution"
-                    type="number"
-                    step="0.01"
-                    min="0"
+                    type="text"
+                    inputMode="decimal"
                     value={managementContribution}
                     onChange={(e) => {
-                      if (costResponsible !== "pm") setManagementContribution(e.target.value);
+                      if (costResponsible !== "pm") setManagementContribution(e.target.value.replace(/[^0-9.,]/g, ""));
                     }}
                     placeholder="0,00"
                     readOnly={costResponsible === "pm"}

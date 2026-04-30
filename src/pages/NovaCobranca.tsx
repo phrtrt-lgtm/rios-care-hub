@@ -13,6 +13,7 @@ import { ArrowLeft, Loader2, Paperclip, X, Sparkles, Trash2 } from "lucide-react
 import { VoiceToTextInput } from "@/components/VoiceToTextInput";
 import { useToast } from "@/hooks/use-toast";
 import { CHARGE_CATEGORY_OPTIONS } from "@/constants/chargeCategories";
+import { parseBRNumber } from "@/lib/parseBRNumber";
 import { OwnerScoreCard } from "@/components/OwnerScoreCard";
 import { processFileForUpload } from "@/lib/processVideoForUpload";
 import { deleteAttachmentRow } from "@/lib/deleteAttachment";
@@ -160,8 +161,8 @@ export default function NovaCobranca({ editId, onClose, onSaved }: NovaCobrancaP
           title: charge.title || '',
           description: charge.description || '',
           category: charge.category || charge.service_type || '',
-          amount_cents: charge.amount_cents ? String(Math.round(charge.amount_cents / 100)) : '',
-          management_contribution_cents: charge.management_contribution_cents ? String(Math.round(charge.management_contribution_cents / 100)) : '',
+          amount_cents: charge.amount_cents ? (charge.amount_cents / 100).toFixed(2).replace('.', ',') : '',
+          management_contribution_cents: charge.management_contribution_cents ? (charge.management_contribution_cents / 100).toFixed(2).replace('.', ',') : '',
           due_date: charge.due_date || '',
         });
         if (charge.owner_id) await fetchProperties(charge.owner_id);
@@ -276,8 +277,8 @@ export default function NovaCobranca({ editId, onClose, onSaved }: NovaCobrancaP
             title: formData.title,
             description: formData.description || null,
             category: formData.category || null,
-            amount_cents: parseInt(formData.amount_cents) * 100,
-            management_contribution_cents: formData.management_contribution_cents ? parseInt(formData.management_contribution_cents) * 100 : 0,
+            amount_cents: Math.round(parseBRNumber(formData.amount_cents) * 100),
+            management_contribution_cents: formData.management_contribution_cents ? Math.round(parseBRNumber(formData.management_contribution_cents) * 100) : 0,
             due_date: formData.due_date || null,
           })
           .eq('id', editChargeId);
@@ -293,8 +294,8 @@ export default function NovaCobranca({ editId, onClose, onSaved }: NovaCobrancaP
             title: formData.title,
             description: formData.description || null,
             category: formData.category || null,
-            amount_cents: parseInt(formData.amount_cents) * 100, // Convert to cents
-            management_contribution_cents: formData.management_contribution_cents ? parseInt(formData.management_contribution_cents) * 100 : 0,
+            amount_cents: Math.round(parseBRNumber(formData.amount_cents) * 100), // Convert to cents
+            management_contribution_cents: formData.management_contribution_cents ? Math.round(parseBRNumber(formData.management_contribution_cents) * 100) : 0,
             due_date: formData.due_date || null,
             status: asDraft ? 'draft' : 'sent'
           })
@@ -517,12 +518,11 @@ export default function NovaCobranca({ editId, onClose, onSaved }: NovaCobrancaP
                   <Label htmlFor="amount_cents">Valor Total (R$) *</Label>
                   <Input
                     id="amount_cents"
-                    type="number"
-                    step="0.01"
-                    min="0"
+                    type="text"
+                    inputMode="decimal"
                     value={formData.amount_cents}
-                    onChange={(e) => handleAmountChange(e.target.value)}
-                    placeholder="0.00"
+                    onChange={(e) => handleAmountChange(e.target.value.replace(/[^0-9.,]/g, ""))}
+                    placeholder="0,00"
                     required
                   />
                 </div>
@@ -531,12 +531,11 @@ export default function NovaCobranca({ editId, onClose, onSaved }: NovaCobrancaP
                   <Label htmlFor="management_contribution_cents">Aporte da Gestão (R$)</Label>
                   <Input
                     id="management_contribution_cents"
-                    type="number"
-                    step="0.01"
-                    min="0"
+                    type="text"
+                    inputMode="decimal"
                     value={formData.management_contribution_cents}
-                    onChange={(e) => setFormData({ ...formData, management_contribution_cents: e.target.value })}
-                    placeholder="0.00"
+                    onChange={(e) => setFormData({ ...formData, management_contribution_cents: e.target.value.replace(/[^0-9.,]/g, "") })}
+                    placeholder="0,00"
                   />
                 </div>
               </div>

@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { CHARGE_CATEGORY_OPTIONS } from "@/constants/chargeCategories";
+import { parseBRNumber } from "@/lib/parseBRNumber";
 
 interface EditChargeDialogProps {
   open: boolean;
@@ -57,8 +58,8 @@ export function EditChargeDialog({ open, onOpenChange, charge, onSuccess }: Edit
         description: charge.description || "",
         category: charge.category || "",
         service_type: charge.service_type || "",
-        amount: (charge.amount_cents / 100).toFixed(2),
-        management_contribution: charge.management_contribution_cents ? (charge.management_contribution_cents / 100).toFixed(2) : "",
+        amount: (charge.amount_cents / 100).toFixed(2).replace(".", ","),
+        management_contribution: charge.management_contribution_cents ? (charge.management_contribution_cents / 100).toFixed(2).replace(".", ",") : "",
         due_date: charge.due_date || "",
         maintenance_date: charge.maintenance_date || "",
         property_id: charge.property_id || "",
@@ -93,7 +94,7 @@ export function EditChargeDialog({ open, onOpenChange, charge, onSuccess }: Edit
       return;
     }
 
-    if (!formData.amount || parseFloat(formData.amount) <= 0) {
+    if (!formData.amount || parseBRNumber(formData.amount) <= 0) {
       toast({
         title: "Valor inválido",
         description: "Informe um valor válido para a cobrança",
@@ -110,9 +111,9 @@ export function EditChargeDialog({ open, onOpenChange, charge, onSuccess }: Edit
         description: formData.description.trim() || null,
         category: formData.category || null,
         service_type: formData.service_type.trim() || null,
-        amount_cents: Math.round(parseFloat(formData.amount) * 100),
+        amount_cents: Math.round(parseBRNumber(formData.amount) * 100),
         management_contribution_cents: formData.management_contribution 
-          ? Math.round(parseFloat(formData.management_contribution) * 100) 
+          ? Math.round(parseBRNumber(formData.management_contribution) * 100) 
           : 0,
         due_date: formData.due_date || null,
         maintenance_date: formData.maintenance_date || null,
@@ -231,12 +232,11 @@ export function EditChargeDialog({ open, onOpenChange, charge, onSuccess }: Edit
               <Label htmlFor="edit-amount">Valor Total (R$) *</Label>
               <Input
                 id="edit-amount"
-                type="number"
-                step="0.01"
-                min="0"
+                type="text"
+                inputMode="decimal"
                 value={formData.amount}
-                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                placeholder="0.00"
+                onChange={(e) => setFormData({ ...formData, amount: e.target.value.replace(/[^0-9.,]/g, "") })}
+                placeholder="0,00"
               />
             </div>
 
@@ -244,12 +244,11 @@ export function EditChargeDialog({ open, onOpenChange, charge, onSuccess }: Edit
               <Label htmlFor="edit-contribution">Aporte da Gestão (R$)</Label>
               <Input
                 id="edit-contribution"
-                type="number"
-                step="0.01"
-                min="0"
+                type="text"
+                inputMode="decimal"
                 value={formData.management_contribution}
-                onChange={(e) => setFormData({ ...formData, management_contribution: e.target.value })}
-                placeholder="0.00"
+                onChange={(e) => setFormData({ ...formData, management_contribution: e.target.value.replace(/[^0-9.,]/g, "") })}
+                placeholder="0,00"
               />
             </div>
           </div>
@@ -260,7 +259,7 @@ export function EditChargeDialog({ open, onOpenChange, charge, onSuccess }: Edit
               <p className="text-sm text-muted-foreground">Valor devido pelo proprietário:</p>
               <p className="text-lg font-bold text-primary">
                 {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-                  (parseFloat(formData.amount) || 0) - (parseFloat(formData.management_contribution) || 0)
+                  parseBRNumber(formData.amount) - parseBRNumber(formData.management_contribution)
                 )}
               </p>
             </div>
