@@ -2379,7 +2379,7 @@ export default function AdminManutencoesLista() {
                   <th className="text-center px-1 py-2 font-medium w-[120px]">Responsável</th>
                   <SortableHeader label="Label" field="service_type" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[120px]" />
                   <SortableHeader label="Status" field="list_status" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[140px]" />
-                  <th className="text-center px-1 py-2 font-medium w-[44px]">Editar</th>
+                  <th className="text-center px-1 py-2 font-medium w-[76px]">Ações</th>
                 </tr>
               </thead>
               <tbody>
