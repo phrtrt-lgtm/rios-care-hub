@@ -277,8 +277,8 @@ export default function NovaCobranca({ editId, onClose, onSaved }: NovaCobrancaP
             title: formData.title,
             description: formData.description || null,
             category: formData.category || null,
-            amount_cents: parseInt(formData.amount_cents) * 100,
-            management_contribution_cents: formData.management_contribution_cents ? parseInt(formData.management_contribution_cents) * 100 : 0,
+            amount_cents: Math.round(parseBRNumber(formData.amount_cents) * 100),
+            management_contribution_cents: formData.management_contribution_cents ? Math.round(parseBRNumber(formData.management_contribution_cents) * 100) : 0,
             due_date: formData.due_date || null,
           })
           .eq('id', editChargeId);
