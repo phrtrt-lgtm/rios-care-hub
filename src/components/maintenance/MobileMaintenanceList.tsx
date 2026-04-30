@@ -63,6 +63,7 @@ interface Props {
   onOpenAttachments: (item: MobileMaintenanceItem, isCharge: boolean) => void;
   onEdit: (item: MobileMaintenanceItem, isCharge: boolean) => void;
   onDelete: (item: MobileMaintenanceItem, isCharge: boolean) => void;
+  onAttachmentAdded?: () => void;
   onBack: () => void;
   onNew: () => void;
 }
