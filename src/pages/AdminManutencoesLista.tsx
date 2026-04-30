@@ -22,6 +22,7 @@ import { formatBRL } from "@/lib/format";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
 import { MediaGallery } from "@/components/MediaGallery";
+import { deleteAttachmentRow } from "@/lib/deleteAttachment";
 import { uploadFileWithCompression, FileUploadProgress } from "@/lib/fileUpload";
 import { CreateMaintenanceFromInspectionDialog } from "@/components/CreateMaintenanceFromInspectionDialog";
 import EditInspectionDialog from "@/components/EditInspectionDialog";
