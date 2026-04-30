@@ -16,6 +16,7 @@ interface Props {
 
 const MAX_FILES_PER_BATCH = 10;
 const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
+const MAX_VIDEO_SIZE_BYTES = 100 * 1024 * 1024;
 
 /**
  * Botão "+" para anexar arquivos rapidamente a uma manutenção (ticket)
