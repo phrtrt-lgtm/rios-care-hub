@@ -38,8 +38,8 @@ export class VideoTooLargeError extends Error {
 
 // If compression fails (common with some camera-recorded codecs like HEVC,
 // or em ambientes sem SharedArrayBuffer onde o FFmpeg.wasm não roda), só
-// bloqueamos originais acima do limite real do storage (20MB).
-const MAX_VIDEO_UPLOAD_BYTES = 20 * 1024 * 1024; // 20MB
+// bloqueamos originais acima do limite máximo permitido (100MB).
+const MAX_VIDEO_UPLOAD_BYTES = 100 * 1024 * 1024; // 100MB
 async function loadFFmpeg(onProgress?: ProgressCallback): Promise<FFmpeg> {
   if (sharedFFmpeg) {
     return sharedFFmpeg;
