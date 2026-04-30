@@ -178,7 +178,10 @@ export function GuestChargeReminders() {
               <div
                 key={charge.id}
                 className="flex items-center gap-3 p-3 bg-success/10/50 dark:bg-green-900/20 rounded-lg cursor-pointer hover:bg-success/10 dark:hover:bg-green-900/30 transition-colors"
-                onClick={() => (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${charge.id}`))}
+                onClick={() => {
+                  saveScrollPosition(pathname);
+                  navigate(charge.charge_id ? `/cobranca/${charge.charge_id}` : `/ticket-detalhes/${charge.id}`);
+                }}
               >
                 <Building2 className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                 <div className="flex-1 min-w-0">
