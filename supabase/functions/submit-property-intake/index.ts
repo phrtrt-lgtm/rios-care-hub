@@ -488,12 +488,18 @@ serve(async (req) => {
 
     const email = payload.owner_email.trim().toLowerCase();
 
+    // Senha temporária aleatória — usada só pra login automático nesta sessão.
+    // O proprietário definirá a senha definitiva depois (quando a equipe liberar).
+    const tempPassword = `Rios-${crypto.randomUUID()}`;
+
     // --- Tenta criar usuário (perfil será criado automaticamente como pending_owner pelo trigger) ---
     let userId: string | null = null;
     let magicLink: string | null = null;
+    let isExistingUser = false;
 
     const { data: created, error: createErr } = await supabase.auth.admin.createUser({
       email,
+      password: tempPassword,
       email_confirm: true,
       user_metadata: { name: payload.owner_name, phone: payload.owner_phone || null },
     });
@@ -501,6 +507,7 @@ serve(async (req) => {
     if (createErr) {
       const msg = createErr.message || "";
       if (msg.includes("already") || msg.includes("registered") || msg.includes("exists")) {
+        isExistingUser = true;
         const { data: existing } = await supabase
           .from("profiles")
           .select("id")
@@ -508,6 +515,14 @@ serve(async (req) => {
           .maybeSingle();
         userId = existing?.id ?? null;
         console.log("User already exists, linking to existing profile:", userId);
+
+        // Reseta a senha temporária para conseguirmos logar agora
+        if (userId) {
+          const { error: updErr } = await supabase.auth.admin.updateUserById(userId, {
+            password: tempPassword,
+          });
+          if (updErr) console.error("Error resetting temp password:", updErr);
+        }
       } else {
         console.error("Error creating user:", createErr);
       }
