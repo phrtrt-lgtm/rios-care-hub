@@ -208,7 +208,7 @@ export default function BemVindo() {
             className="max-w-2xl text-lg text-secondary-foreground/70 md:text-xl"
           >
             Você acabou de entrar numa operação que une <span className="text-secondary-foreground">curadoria humana</span>,{" "}
-            <span className="text-secondary-foreground">inteligência de dados</span> e tecnologia própria — pra extrair o
+            <span className="text-secondary-foreground">inteligência de dados</span> e tecnologia própria pra extrair o
             máximo da sua propriedade nas plataformas.
           </motion.p>
 
