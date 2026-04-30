@@ -21,6 +21,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { SectionSkeleton } from "@/components/ui/section-skeleton";
 import { cn } from "@/lib/utils";
 import { formatBRL } from "@/lib/format";
+import { QuickAttachUploader } from "@/components/maintenance/QuickAttachUploader";
 
 export interface MobileMaintenanceItem {
   id: string;
