@@ -518,12 +518,11 @@ export default function NovaCobranca({ editId, onClose, onSaved }: NovaCobrancaP
                   <Label htmlFor="amount_cents">Valor Total (R$) *</Label>
                   <Input
                     id="amount_cents"
-                    type="number"
-                    step="0.01"
-                    min="0"
+                    type="text"
+                    inputMode="decimal"
                     value={formData.amount_cents}
-                    onChange={(e) => handleAmountChange(e.target.value)}
-                    placeholder="0.00"
+                    onChange={(e) => handleAmountChange(e.target.value.replace(/[^0-9.,]/g, ""))}
+                    placeholder="0,00"
                     required
                   />
                 </div>
@@ -532,12 +531,11 @@ export default function NovaCobranca({ editId, onClose, onSaved }: NovaCobrancaP
                   <Label htmlFor="management_contribution_cents">Aporte da Gestão (R$)</Label>
                   <Input
                     id="management_contribution_cents"
-                    type="number"
-                    step="0.01"
-                    min="0"
+                    type="text"
+                    inputMode="decimal"
                     value={formData.management_contribution_cents}
-                    onChange={(e) => setFormData({ ...formData, management_contribution_cents: e.target.value })}
-                    placeholder="0.00"
+                    onChange={(e) => setFormData({ ...formData, management_contribution_cents: e.target.value.replace(/[^0-9.,]/g, "") })}
+                    placeholder="0,00"
                   />
                 </div>
               </div>
