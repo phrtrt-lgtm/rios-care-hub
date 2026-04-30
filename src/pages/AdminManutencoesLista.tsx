@@ -2401,6 +2401,21 @@ export default function AdminManutencoesLista() {
           entityId={detailEntityId}
           entityType={detailEntityType}
         />
+
+        <MediaGallery
+          items={galleryItems}
+          initialIndex={galleryInitialIndex}
+          open={galleryOpen}
+          onOpenChange={setGalleryOpen}
+          onDelete={galleryAttachmentTable ? async (item) => {
+            const ok = await deleteAttachmentRow(galleryAttachmentTable, item.id);
+            if (ok) {
+              setGalleryItems((prev) => prev.filter((i) => i.id !== item.id));
+              queryClient.invalidateQueries({ queryKey: ["maintenances-list"] });
+              queryClient.invalidateQueries({ queryKey: ["inspections-for-list"] });
+            }
+          } : undefined}
+        />
       </>
     );
   }
