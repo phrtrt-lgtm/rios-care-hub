@@ -61,6 +61,44 @@ export default function NovaCobranca({ editId, onClose, onSaved }: NovaCobrancaP
   const isEditMode = !!editChargeId;
   const isModal = !!onClose;
   const [loadingCharge, setLoadingCharge] = useState(isEditMode);
+  const [existingAttachments, setExistingAttachments] = useState<ExistingChargeAttachment[]>([]);
+  const [loadingAttachments, setLoadingAttachments] = useState(false);
+  const [attachmentToDelete, setAttachmentToDelete] = useState<ExistingChargeAttachment | null>(null);
+  const [deletingAttachment, setDeletingAttachment] = useState(false);
+
+  const loadExistingAttachments = async () => {
+    if (!editChargeId) return;
+    setLoadingAttachments(true);
+    try {
+      const { data, error } = await supabase
+        .from('charge_attachments')
+        .select('id, file_path, file_name, mime_type')
+        .eq('charge_id', editChargeId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      const items: ExistingChargeAttachment[] = (data || []).map((a: any) => {
+        const url = a.file_path?.startsWith('http')
+          ? a.file_path
+          : supabase.storage.from('attachments').getPublicUrl(a.file_path).data.publicUrl;
+        return {
+          id: a.id,
+          file_url: url,
+          file_name: a.file_name,
+          file_type: a.mime_type,
+        };
+      });
+      setExistingAttachments(items);
+    } catch (err: any) {
+      console.error('Error loading charge attachments:', err);
+    } finally {
+      setLoadingAttachments(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isEditMode) loadExistingAttachments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditMode, editChargeId]);
 
   const [formData, setFormData] = useState({
     owner_id: searchParams.get("owner_id") || "",
