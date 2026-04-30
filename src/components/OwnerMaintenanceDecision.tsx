@@ -18,26 +18,80 @@ export default function OwnerMaintenanceDecision({ ticket, onUpdate }: { ticket:
 
   if (ticket.kind !== 'maintenance' || ticket.essential) return null;
   
+  const handleMarkCompleted = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('tickets')
+        .update({ status: 'concluido' as any })
+        .eq('id', ticket.id);
+      if (error) throw error;
+
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      fetch(`${supabaseUrl}/functions/v1/notify-owner-decision`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': supabaseKey },
+        body: JSON.stringify({
+          type: 'owner_completed',
+          ticketId: ticket.id,
+        }),
+      }).catch(err => console.error('Failed to notify team:', err));
+
+      toast.success('Manutenção marcada como concluída. Obrigado!');
+      if (onUpdate) onUpdate();
+    } catch (error) {
+      console.error('Error marking as completed:', error);
+      toast.error('Erro ao concluir manutenção');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (ticket.owner_decision) {
+    if (ticket.owner_decision === 'owner_will_fix' && ticket.status !== 'concluido' && ticket.status !== 'cancelado') {
+      return (
+        <div className="p-4 border rounded-xl bg-info/10 border-info/30">
+          <div className="flex items-start gap-3 mb-3">
+            <Wrench className="h-5 w-5 mt-0.5 text-info" />
+            <div className="flex-1">
+              <p className="font-medium">Você assumiu a execução</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Quando finalizar a manutenção, avise-nos clicando no botão abaixo.
+              </p>
+            </div>
+          </div>
+          <Button
+            disabled={loading}
+            onClick={handleMarkCompleted}
+            className="w-full"
+          >
+            <CheckCircle2 className="h-4 w-4 mr-2" />
+            Avisar que a manutenção foi concluída
+          </Button>
+        </div>
+      );
+    }
+
     return (
       <div className={`p-4 border rounded-xl ${
         ticket.owner_decision === 'owner_will_fix' 
-          ? 'bg-info/10 border-info/30' 
+          ? 'bg-success/10 border-success/30' 
           : 'bg-success/10 border-success/30'
       }`}>
         <div className="flex items-start gap-3">
           <CheckCircle2 className={`h-5 w-5 mt-0.5 ${
-            ticket.owner_decision === 'owner_will_fix' ? 'text-info' : 'text-success'
+            ticket.owner_decision === 'owner_will_fix' ? 'text-success' : 'text-success'
           }`} />
           <div>
             <p className="font-medium flex items-center gap-2">
               {ticket.owner_decision === 'owner_will_fix' 
-                ? <><Wrench className="h-4 w-4" /> Você assumiu a execução</>
+                ? <><Wrench className="h-4 w-4" /> Manutenção concluída pelo proprietário</>
                 : <><Users className="h-4 w-4" /> Delegado à gestão</>}
             </p>
             <p className="text-sm text-muted-foreground mt-1">
               {ticket.owner_decision === 'owner_will_fix' 
-                ? 'Você indicou que contratará ou executará esta manutenção por conta própria.'
+                ? 'Esta manutenção foi executada por você. Obrigado!'
                 : 'A gestão cuidará de tudo. Você pode acompanhar o andamento por aqui.'}
             </p>
           </div>
