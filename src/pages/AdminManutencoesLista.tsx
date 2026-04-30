@@ -1945,6 +1945,7 @@ export default function AdminManutencoesLista() {
         }));
         setGalleryItems(mediaItems);
         setGalleryInitialIndex(0);
+        setGalleryAttachmentTable("ticket_attachments");
         setGalleryOpen(true);
       }
     }
