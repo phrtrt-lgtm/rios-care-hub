@@ -189,6 +189,7 @@ function buildRooms(form: IntakeFormData, existing: RoomEntry[]): RoomEntry[] {
 }
 
 export default function CadastroImovel() {
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
