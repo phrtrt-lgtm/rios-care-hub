@@ -3,7 +3,7 @@ import { Plus, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { processFileForUpload } from "@/lib/fileUpload";
+import { processFileForUpload, VideoTooLargeError } from "@/lib/fileUpload";
 import { sanitizeFilename } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +13,9 @@ interface Props {
   onSuccess?: () => void;
   className?: string;
 }
+
+const MAX_FILES_PER_BATCH = 10;
+const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
 
 /**
  * Botão "+" para anexar arquivos rapidamente a uma manutenção (ticket)
@@ -115,36 +118,65 @@ export function QuickAttachUploader({ itemId, isCharge, onSuccess, className }: 
     if (!files || files.length === 0 || !user) return;
     setUploading(true);
 
-    const list = Array.from(files);
-    const results = await Promise.allSettled(list.map((f, i) => uploadOne(f, i)));
-    const failures = results
-      .map((r, i) => ({ r, name: list[i].name }))
-      .filter((x) => x.r.status === "rejected");
+    try {
+      const selectedFiles = Array.from(files);
+      const limitedFiles = selectedFiles.slice(0, MAX_FILES_PER_BATCH);
+      const failures: Array<{ name: string; error: unknown }> = [];
+      let successCount = 0;
 
-    setUploading(false);
-    if (inputRef.current) inputRef.current.value = "";
+      if (selectedFiles.length > MAX_FILES_PER_BATCH) {
+        toast.warning(`Só os primeiros ${MAX_FILES_PER_BATCH} arquivos serão enviados.`);
+      }
 
-    if (failures.length === 0) {
-      toast.success(list.length > 1 ? `${list.length} anexos enviados!` : "Anexo enviado!");
-      onSuccess?.();
-      return;
-    }
+      for (const [index, file] of limitedFiles.entries()) {
+        if (file.size > MAX_FILE_SIZE_BYTES) {
+          failures.push({
+            name: file.name,
+            error: new Error("Arquivo acima do limite de 20MB."),
+          });
+          continue;
+        }
 
-    failures.forEach(({ r, name }) => {
-      const err = (r as PromiseRejectedResult).reason;
-      console.error("[QuickAttachUploader]", name, err);
-    });
+        try {
+          await uploadOne(file, index);
+          successCount += 1;
+        } catch (error) {
+          failures.push({ name: file.name, error });
+        }
+      }
 
-    if (failures.length === list.length) {
-      const first = (failures[0].r as PromiseRejectedResult).reason;
-      toast.error("Erro ao enviar anexo", {
-        description: first?.message ?? "Falha desconhecida",
+      failures.forEach(({ name, error }) => {
+        console.error("[QuickAttachUploader]", name, error);
       });
-    } else {
-      toast.warning(`${list.length - failures.length} de ${list.length} anexos enviados`, {
+
+      if (successCount === limitedFiles.length && failures.length === 0) {
+        toast.success(successCount > 1 ? `${successCount} anexos enviados!` : "Anexo enviado!");
+        onSuccess?.();
+        return;
+      }
+
+      const firstError = failures[0]?.error;
+      const firstMessage =
+        firstError instanceof VideoTooLargeError
+          ? "Um dos vídeos ficou pesado demais para envio. Grave em modo mais compatível ou envie um vídeo menor."
+          : firstError instanceof Error
+            ? firstError.message
+            : "Falha desconhecida";
+
+      if (successCount === 0) {
+        toast.error("Erro ao enviar anexo", {
+          description: firstMessage,
+        });
+        return;
+      }
+
+      toast.warning(`${successCount} de ${limitedFiles.length} anexos enviados`, {
         description: `Falharam: ${failures.map((f) => f.name).join(", ")}`,
       });
       onSuccess?.();
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
     }
   };
 
