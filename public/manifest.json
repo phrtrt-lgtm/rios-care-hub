@@ -2,7 +2,9 @@
   "name": "RIOS Proprietários",
   "short_name": "RIOS",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#ffffff",
   "theme_color": "#1f3c88",
   "description": "Portal de Proprietários RIOS Hospedagens",
@@ -11,13 +13,19 @@
       "src": "/app-icon.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "/app-icon.png",
+      "src": "/app-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
