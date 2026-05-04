@@ -123,13 +123,9 @@ serve(async (req) => {
 
     console.log("Looking for property with name:", propertyName);
 
-    // Find property and get owner_id and property_id
-    // Use limit(1) because there might be multiple properties with the same name
+    // Find property using accent-insensitive match (e.g., "Rogéria" == "Rogeria")
     const { data: properties, error: propertyError } = await supabase
-      .from('properties')
-      .select('id, owner_id, name')
-      .ilike('name', propertyName)
-      .limit(10);
+      .rpc('find_property_by_name_unaccent', { _name: propertyName });
 
     if (propertyError) {
       console.error("Error searching for property:", propertyName, propertyError);
