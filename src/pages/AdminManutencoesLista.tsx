@@ -2328,6 +2328,9 @@ export default function AdminManutencoesLista() {
           onDelete={(item, isCharge) =>
             setDeleteDialog({ open: true, item: item as any, isCharge })
           }
+          onUpdateItem={(id, field, value, isCharge) =>
+            handleUpdateItem(id, field, value, isCharge)
+          }
           onAttachmentAdded={() => {
             queryClient.invalidateQueries({ queryKey: ["maintenance-list-view"] });
             queryClient.invalidateQueries({ queryKey: ["pending-charges-list"] });

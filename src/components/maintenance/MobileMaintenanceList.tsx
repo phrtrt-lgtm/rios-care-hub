@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -17,10 +17,18 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionSkeleton } from "@/components/ui/section-skeleton";
 import { cn } from "@/lib/utils";
 import { formatBRL } from "@/lib/format";
+import { parseBRNumber } from "@/lib/parseBRNumber";
 import { QuickAttachUploader } from "@/components/maintenance/QuickAttachUploader";
 
 export interface MobileMaintenanceItem {
@@ -63,9 +71,82 @@ interface Props {
   onOpenAttachments: (item: MobileMaintenanceItem, isCharge: boolean) => void;
   onEdit: (item: MobileMaintenanceItem, isCharge: boolean) => void;
   onDelete: (item: MobileMaintenanceItem, isCharge: boolean) => void;
+  onUpdateItem?: (id: string, field: string, value: any, isCharge: boolean) => void;
   onAttachmentAdded?: () => void;
   onBack: () => void;
   onNew: () => void;
+}
+
+const STATUS_OPTIONS = [
+  { value: "em_progresso", label: "Em Progresso", color: "bg-warning" },
+  { value: "feito", label: "Feito", color: "bg-success" },
+  { value: "enviar_proprietario", label: "Enviar ao Proprietário", color: "bg-primary" },
+];
+
+interface InlineCurrencyProps {
+  value: number;
+  onSave: (cents: number) => void;
+  label: string;
+}
+
+function InlineCurrency({ value, onSave, label }: InlineCurrencyProps) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editing]);
+
+  const commit = () => {
+    setEditing(false);
+    const n = parseBRNumber(text);
+    const cents = Math.round(n * 100);
+    if (cents !== value) onSave(cents);
+  };
+
+  if (editing) {
+    return (
+      <div
+        className="flex items-center gap-1"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <span className="text-[10px] text-muted-foreground">{label}</span>
+        <Input
+          ref={inputRef}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commit();
+            else if (e.key === "Escape") setEditing(false);
+          }}
+          inputMode="decimal"
+          className="h-7 w-24 text-xs px-2"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        setText((value / 100).toFixed(2).replace(".", ","));
+        setEditing(true);
+      }}
+      className="flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-muted/60 transition-colors"
+    >
+      <span className="text-[10px] text-muted-foreground">{label}</span>
+      <span className="text-xs font-medium text-foreground">
+        {formatBRL(value || 0)}
+      </span>
+    </button>
+  );
 }
 
 export function MobileMaintenanceList({
@@ -80,6 +161,7 @@ export function MobileMaintenanceList({
   onOpenAttachments,
   onEdit,
   onDelete,
+  onUpdateItem,
   onAttachmentAdded,
   onBack,
   onNew,
@@ -210,15 +292,60 @@ export function MobileMaintenanceList({
                                   </p>
                                 )}
                               </div>
-                              {status && (
-                                <Badge
-                                  className={cn(
-                                    "text-white text-[10px] shrink-0",
-                                    status.color,
-                                  )}
-                                >
-                                  {status.label}
-                                </Badge>
+                              {/* Status: editável apenas para tickets (manutenção) */}
+                              {!isCharge && onUpdateItem ? (
+                                <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                                  <Select
+                                    value={item.list_status || ""}
+                                    onValueChange={(v) =>
+                                      onUpdateItem(item.id, "list_status", v, false)
+                                    }
+                                  >
+                                    <SelectTrigger
+                                      className="h-7 px-2 py-0 border-0 bg-transparent hover:bg-muted/60 text-xs w-auto gap-1"
+                                    >
+                                      {status ? (
+                                        <Badge
+                                          className={cn(
+                                            "text-white text-[10px] px-1.5 py-0",
+                                            status.color,
+                                          )}
+                                        >
+                                          {status.label}
+                                        </Badge>
+                                      ) : (
+                                        <span className="text-[10px] text-muted-foreground">
+                                          Definir status
+                                        </span>
+                                      )}
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {STATUS_OPTIONS.map((opt) => (
+                                        <SelectItem key={opt.value} value={opt.value}>
+                                          <Badge
+                                            className={cn(
+                                              "text-white text-xs",
+                                              opt.color,
+                                            )}
+                                          >
+                                            {opt.label}
+                                          </Badge>
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              ) : (
+                                status && (
+                                  <Badge
+                                    className={cn(
+                                      "text-white text-[10px] shrink-0",
+                                      status.color,
+                                    )}
+                                  >
+                                    {status.label}
+                                  </Badge>
+                                )
                               )}
                             </div>
 
@@ -233,18 +360,45 @@ export function MobileMaintenanceList({
                                   )}
                                 </span>
                               )}
-                              {typeof item.amount_cents === "number" &&
-                                item.amount_cents > 0 && (
-                                  <span className="font-medium text-foreground">
-                                    {formatBRL(item.amount_cents)}
-                                  </span>
-                                )}
                               {item.service_type && (
                                 <span className="truncate">
                                   {item.service_type.split(",")[0]}
                                 </span>
                               )}
                             </div>
+
+                            {/* Valores editáveis */}
+                            {onUpdateItem && (
+                              <div
+                                className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-2"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <InlineCurrency
+                                  label="Valor"
+                                  value={item.amount_cents || 0}
+                                  onSave={(cents) =>
+                                    onUpdateItem(
+                                      item.id,
+                                      "amount_cents",
+                                      cents,
+                                      isCharge,
+                                    )
+                                  }
+                                />
+                                <InlineCurrency
+                                  label="Aporte"
+                                  value={item.management_contribution_cents || 0}
+                                  onSave={(cents) =>
+                                    onUpdateItem(
+                                      item.id,
+                                      "management_contribution_cents",
+                                      cents,
+                                      isCharge,
+                                    )
+                                  }
+                                />
+                              </div>
+                            )}
 
                             {/* Ações rápidas */}
                             <div
