@@ -71,9 +71,82 @@ interface Props {
   onOpenAttachments: (item: MobileMaintenanceItem, isCharge: boolean) => void;
   onEdit: (item: MobileMaintenanceItem, isCharge: boolean) => void;
   onDelete: (item: MobileMaintenanceItem, isCharge: boolean) => void;
+  onUpdateItem?: (id: string, field: string, value: any, isCharge: boolean) => void;
   onAttachmentAdded?: () => void;
   onBack: () => void;
   onNew: () => void;
+}
+
+const STATUS_OPTIONS = [
+  { value: "em_progresso", label: "Em Progresso", color: "bg-warning" },
+  { value: "feito", label: "Feito", color: "bg-success" },
+  { value: "enviar_proprietario", label: "Enviar ao Proprietário", color: "bg-primary" },
+];
+
+interface InlineCurrencyProps {
+  value: number;
+  onSave: (cents: number) => void;
+  label: string;
+}
+
+function InlineCurrency({ value, onSave, label }: InlineCurrencyProps) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editing]);
+
+  const commit = () => {
+    setEditing(false);
+    const n = parseBRNumber(text);
+    const cents = Math.round(n * 100);
+    if (cents !== value) onSave(cents);
+  };
+
+  if (editing) {
+    return (
+      <div
+        className="flex items-center gap-1"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <span className="text-[10px] text-muted-foreground">{label}</span>
+        <Input
+          ref={inputRef}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commit();
+            else if (e.key === "Escape") setEditing(false);
+          }}
+          inputMode="decimal"
+          className="h-7 w-24 text-xs px-2"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        setText((value / 100).toFixed(2).replace(".", ","));
+        setEditing(true);
+      }}
+      className="flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-muted/60 transition-colors"
+    >
+      <span className="text-[10px] text-muted-foreground">{label}</span>
+      <span className="text-xs font-medium text-foreground">
+        {formatBRL(value || 0)}
+      </span>
+    </button>
+  );
 }
 
 export function MobileMaintenanceList({
