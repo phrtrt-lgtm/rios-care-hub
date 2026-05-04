@@ -161,6 +161,7 @@ export function MobileMaintenanceList({
   onOpenAttachments,
   onEdit,
   onDelete,
+  onUpdateItem,
   onAttachmentAdded,
   onBack,
   onNew,
