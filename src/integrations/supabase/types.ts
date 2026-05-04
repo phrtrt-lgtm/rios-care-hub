@@ -2943,6 +2943,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      find_property_by_name_unaccent: {
+        Args: { _name: string }
+        Returns: {
+          id: string
+          name: string
+          owner_id: string
+        }[]
+      }
       get_charge_mentionable_users: {
         Args: { _charge_id: string }
         Returns: {
@@ -2984,6 +2992,7 @@ export type Database = {
         Args: { p_owner_id: string; p_role: string }
         Returns: undefined
       }
+      unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
       app_role:
