@@ -292,15 +292,60 @@ export function MobileMaintenanceList({
                                   </p>
                                 )}
                               </div>
-                              {status && (
-                                <Badge
-                                  className={cn(
-                                    "text-white text-[10px] shrink-0",
-                                    status.color,
-                                  )}
-                                >
-                                  {status.label}
-                                </Badge>
+                              {/* Status: editável apenas para tickets (manutenção) */}
+                              {!isCharge && onUpdateItem ? (
+                                <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                                  <Select
+                                    value={item.list_status || ""}
+                                    onValueChange={(v) =>
+                                      onUpdateItem(item.id, "list_status", v, false)
+                                    }
+                                  >
+                                    <SelectTrigger
+                                      className="h-7 px-2 py-0 border-0 bg-transparent hover:bg-muted/60 text-xs w-auto gap-1"
+                                    >
+                                      {status ? (
+                                        <Badge
+                                          className={cn(
+                                            "text-white text-[10px] px-1.5 py-0",
+                                            status.color,
+                                          )}
+                                        >
+                                          {status.label}
+                                        </Badge>
+                                      ) : (
+                                        <span className="text-[10px] text-muted-foreground">
+                                          Definir status
+                                        </span>
+                                      )}
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {STATUS_OPTIONS.map((opt) => (
+                                        <SelectItem key={opt.value} value={opt.value}>
+                                          <Badge
+                                            className={cn(
+                                              "text-white text-xs",
+                                              opt.color,
+                                            )}
+                                          >
+                                            {opt.label}
+                                          </Badge>
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              ) : (
+                                status && (
+                                  <Badge
+                                    className={cn(
+                                      "text-white text-[10px] shrink-0",
+                                      status.color,
+                                    )}
+                                  >
+                                    {status.label}
+                                  </Badge>
+                                )
                               )}
                             </div>
 
@@ -315,18 +360,45 @@ export function MobileMaintenanceList({
                                   )}
                                 </span>
                               )}
-                              {typeof item.amount_cents === "number" &&
-                                item.amount_cents > 0 && (
-                                  <span className="font-medium text-foreground">
-                                    {formatBRL(item.amount_cents)}
-                                  </span>
-                                )}
                               {item.service_type && (
                                 <span className="truncate">
                                   {item.service_type.split(",")[0]}
                                 </span>
                               )}
                             </div>
+
+                            {/* Valores editáveis */}
+                            {onUpdateItem && (
+                              <div
+                                className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-2"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <InlineCurrency
+                                  label="Valor"
+                                  value={item.amount_cents || 0}
+                                  onSave={(cents) =>
+                                    onUpdateItem(
+                                      item.id,
+                                      "amount_cents",
+                                      cents,
+                                      isCharge,
+                                    )
+                                  }
+                                />
+                                <InlineCurrency
+                                  label="Aporte"
+                                  value={item.management_contribution_cents || 0}
+                                  onSave={(cents) =>
+                                    onUpdateItem(
+                                      item.id,
+                                      "management_contribution_cents",
+                                      cents,
+                                      isCharge,
+                                    )
+                                  }
+                                />
+                              </div>
+                            )}
 
                             {/* Ações rápidas */}
                             <div
