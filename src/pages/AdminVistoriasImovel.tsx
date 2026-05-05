@@ -343,9 +343,10 @@ export default function AdminVistoriasImovel() {
                 {activeInspections.length} vistorias registradas
               </p>
             </div>
-            <Button onClick={() => setShowInspectionDialog(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Vistoria
+            <Button onClick={() => setShowInspectionDialog(true)} size="sm" className="shrink-0">
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Nova Vistoria</span>
+              <span className="sm:hidden">Nova</span>
             </Button>
           </div>
         </div>
