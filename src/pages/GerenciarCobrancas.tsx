@@ -161,6 +161,7 @@ const GerenciarCobrancas = () => {
         .select('*')
         .eq('status', 'overdue')
         .is('archived_at', null)
+        .or('cost_responsible.is.null,cost_responsible.neq.guest')
         .order('due_date', { ascending: true });
 
       if (error) throw error;
