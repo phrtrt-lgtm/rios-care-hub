@@ -269,7 +269,7 @@ export function PlanoPerformanceSection({
           {/* Shortcuts (sticky) */}
           <div className="relative shrink-0 border-b border-white/10 bg-secondary/90 p-3 backdrop-blur-md md:px-6">
             <div className="flex flex-wrap gap-1.5">
-              {CATEGORIES.map((c) => (
+              {categories.map((c) => (
                 <a
                   key={c.key}
                   href={`#cat-${c.key}`}
@@ -312,7 +312,7 @@ export function PlanoPerformanceSection({
               </div>
 
               <div className="space-y-10">
-                {CATEGORIES.map((cat) => (
+                {categories.map((cat) => (
                   <div
                     key={cat.key}
                     id={`cat-${cat.key}`}
@@ -391,7 +391,7 @@ export function PlanoPerformanceSection({
               </div>
 
               <ul className="divide-y divide-white/5 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] shadow-lg">
-                {OBSERVATIONS.map((o) => {
+                {observations.map((o) => {
                   const Icon = o.icon;
                   return (
                     <li key={o.title} className="flex items-start gap-3 p-4">
