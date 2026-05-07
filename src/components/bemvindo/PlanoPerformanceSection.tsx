@@ -368,7 +368,7 @@ export function PlanoPerformanceSection() {
             </div>
 
             {/* Observations */}
-            <div id="cat-observacoes" className="border-t border-border/60 bg-muted/30 px-5 py-6 md:px-6 md:py-7">
+            <div id="cat-observacoes" className="border-t border-white/10 bg-primary/5 px-5 py-6 md:px-6 md:py-7">
               <div className="mb-4 flex items-center gap-2">
                 <Wand2 className="h-4 w-4 text-primary" />
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
@@ -376,22 +376,22 @@ export function PlanoPerformanceSection() {
                 </p>
               </div>
 
-              <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+              <ul className="divide-y divide-white/5 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] shadow-lg">
                 {OBSERVATIONS.map((o) => {
                   const Icon = o.icon;
                   return (
-                    <li key={o.title} className="flex items-start gap-3 p-3.5 md:p-4">
-                      <div className="shrink-0 rounded-lg bg-primary/15 p-1.5 text-primary">
-                        <Icon className="h-3.5 w-3.5" />
+                    <li key={o.title} className="flex items-start gap-3 p-4">
+                      <div className="shrink-0 rounded-lg bg-primary/20 p-2 text-primary">
+                        <Icon className="h-4 w-4" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="mb-0.5 flex flex-wrap items-center gap-2">
+                        <div className="mb-1 flex flex-wrap items-center gap-2">
                           <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">
                             {o.tag}
                           </span>
-                          <h5 className="text-[13px] font-semibold text-foreground">{o.title}</h5>
+                          <h5 className="text-sm font-semibold text-white">{o.title}</h5>
                         </div>
-                        <p className="text-[11px] leading-relaxed text-muted-foreground">
+                        <p className="text-xs leading-relaxed text-white/70">
                           {o.body}
                         </p>
                       </div>
@@ -400,7 +400,7 @@ export function PlanoPerformanceSection() {
                 })}
               </ul>
 
-              <p className="mt-5 text-[11px] italic text-muted-foreground">
+              <p className="mt-5 text-[11px] italic text-white/50">
                 * Pré-visualização ilustrativa. Seu plano final será personalizado após
                 a reunião de alinhamento, com curadoria, orçamento e cronograma
                 específicos para o seu imóvel.
@@ -408,7 +408,7 @@ export function PlanoPerformanceSection() {
             </div>
 
             {/* Chat de curadoria */}
-            <div id="cat-chat" className="border-t border-border/60 bg-background px-5 py-6 md:px-6 md:py-7">
+            <div id="cat-chat" className="border-t border-white/10 bg-secondary px-5 py-6 md:px-6 md:py-7">
               <CuradoriaChat />
             </div>
           </div>
