@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import riosLogo from "@/assets/rios-logo.png";
 import { resolveAmenities } from "@/lib/amenityLabels";
+import { PlanoPerformanceSection } from "@/components/bemvindo/PlanoPerformanceSection";
 
 interface IntakeSubmission {
   id: string;
