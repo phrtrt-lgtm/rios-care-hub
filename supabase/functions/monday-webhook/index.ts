@@ -56,6 +56,15 @@ serve(async (req) => {
         items(ids: $itemId) {
           id
           name
+          updates {
+            id
+            body
+            text_body
+            created_at
+            creator {
+              name
+            }
+          }
           column_values {
             id
             text
