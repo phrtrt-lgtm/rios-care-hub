@@ -28,6 +28,7 @@ import {
   LineChart,
 } from "lucide-react";
 import riosLogo from "@/assets/rios-logo.png";
+import { resolveAmenities } from "@/lib/amenityLabels";
 
 interface IntakeSubmission {
   id: string;
