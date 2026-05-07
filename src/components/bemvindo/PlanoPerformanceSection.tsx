@@ -305,13 +305,13 @@ export function PlanoPerformanceSection() {
                       {cat.desc}
                     </p>
 
-                    <ul className="divide-y divide-white/10 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
+                    <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
                       {cat.items.map((it) => (
                         <li
                           key={it.name}
-                          className="flex items-center gap-3 p-2.5 transition hover:bg-white/[0.04]"
+                          className="flex items-center gap-3 p-2.5 transition hover:bg-muted/50"
                         >
-                          <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-white/5">
+                          <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-muted">
                             <img
                               src={it.img}
                               alt={it.name}
@@ -323,21 +323,21 @@ export function PlanoPerformanceSection() {
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="mb-0.5 flex flex-wrap items-center gap-1.5">
-                              <h5 className="text-[13px] font-semibold leading-tight">
+                              <h5 className="text-[13px] font-semibold leading-tight text-foreground">
                                 {it.name}
                               </h5>
                               {it.priority === "essencial" && (
-                                <span className="inline-flex items-center gap-0.5 rounded-full bg-primary/90 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-primary-foreground">
+                                <span className="inline-flex items-center gap-0.5 rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-primary-foreground">
                                   <Check className="h-2.5 w-2.5" /> Essencial
                                 </span>
                               )}
                               {it.priority === "recomendado" && (
-                                <span className="inline-flex items-center rounded-full border border-white/30 bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-secondary-foreground/80">
+                                <span className="inline-flex items-center rounded-full border border-border bg-muted px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
                                   Recomendado
                                 </span>
                               )}
                             </div>
-                            <p className="line-clamp-2 text-[11px] text-secondary-foreground/65">
+                            <p className="line-clamp-2 text-[11px] text-muted-foreground">
                               {it.why}
                             </p>
                           </div>
