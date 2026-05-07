@@ -369,7 +369,10 @@ export default function BemVindo() {
 
         {/* PLANO DE PERFORMANCE (etapa 03 expandível) */}
         <div id="curadoria" className="scroll-mt-24">
-          <PlanoPerformanceSection />
+          <PlanoPerformanceSection
+            customCategories={curation?.categories}
+            customObservations={curation?.observations}
+          />
         </div>
 
         {/* PROPERTY SUMMARY */}
