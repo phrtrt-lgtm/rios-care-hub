@@ -208,7 +208,7 @@ export function PlanoPerformanceSection() {
       </motion.button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="flex h-[92vh] max-h-[92vh] max-w-5xl flex-col gap-0 overflow-hidden border-white/10 bg-secondary p-0 text-secondary-foreground">
+        <DialogContent className="flex h-[92vh] max-h-[92vh] max-w-5xl flex-col gap-0 overflow-hidden border-border bg-background p-0 text-foreground">
           <DialogTitle className="sr-only">
             Plano de Performance · Diagnóstico & Curadoria
           </DialogTitle>
