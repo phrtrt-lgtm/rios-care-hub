@@ -1060,6 +1060,30 @@ export type Database = {
           },
         ]
       }
+      curadoria_messages: {
+        Row: {
+          author_id: string
+          body: string
+          created_at: string
+          id: string
+          owner_id: string
+        }
+        Insert: {
+          author_id: string
+          body: string
+          created_at?: string
+          id?: string
+          owner_id: string
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+          owner_id?: string
+        }
+        Relationships: []
+      }
       date_block_requests: {
         Row: {
           cleaning_fee_proof_path: string | null
