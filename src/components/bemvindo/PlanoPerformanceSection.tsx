@@ -273,6 +273,17 @@ export function PlanoPerformanceSection() {
                   </span>
                 </a>
               ))}
+              <a
+                href="#cat-chat"
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.getElementById("cat-chat")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }}
+                className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5 text-[11px] font-semibold text-primary transition hover:bg-primary/20"
+              >
+                <span>💬</span>
+                <span>Conversa</span>
+              </a>
             </div>
           </div>
 
