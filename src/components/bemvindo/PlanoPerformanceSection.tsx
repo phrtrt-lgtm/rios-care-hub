@@ -1,14 +1,17 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
-  ChevronDown,
   Sparkles,
   ShoppingBag,
   Lightbulb,
   AlertTriangle,
   Wand2,
   Check,
+  ArrowRight,
+  X,
 } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 import almofadas from "@/assets/plano/decor-almofadas.jpg";
 import vaso from "@/assets/plano/decor-vaso.jpg";
