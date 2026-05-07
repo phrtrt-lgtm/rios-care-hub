@@ -208,7 +208,7 @@ export function PlanoPerformanceSection() {
       </motion.button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="flex h-[92vh] max-h-[92vh] max-w-5xl flex-col gap-0 overflow-hidden border-white/10 bg-secondary p-0 text-secondary-foreground">
+        <DialogContent className="flex h-[92vh] max-h-[92vh] max-w-5xl flex-col gap-0 overflow-hidden border-border bg-background p-0 text-foreground">
           <DialogTitle className="sr-only">
             Plano de Performance · Diagnóstico & Curadoria
           </DialogTitle>
@@ -220,9 +220,9 @@ export function PlanoPerformanceSection() {
           </div>
 
           {/* Header */}
-          <div className="relative flex shrink-0 items-start justify-between gap-4 border-b border-white/10 p-5 md:p-6">
+          <div className="relative flex shrink-0 items-start justify-between gap-4 border-b border-border/60 p-5 md:p-6">
             <div className="flex items-start gap-3">
-              <div className="rounded-2xl bg-primary/20 p-2.5 text-primary">
+              <div className="rounded-2xl bg-primary/15 p-2.5 text-primary">
                 <Sparkles className="h-4 w-4" />
               </div>
               <div>
@@ -232,10 +232,10 @@ export function PlanoPerformanceSection() {
                 <h3 className="text-lg font-bold tracking-tight md:text-xl">
                   Plano de Performance RIOS
                 </h3>
-                <p className="mt-0.5 text-xs text-secondary-foreground/70">
+                <p className="mt-0.5 text-xs text-muted-foreground">
                   {totalItems} itens · {totalEssenciais} essenciais · investimento
                   estimado{" "}
-                  <span className="text-secondary-foreground">
+                  <span className="font-semibold text-foreground">
                     R$ {orcamento.toLocaleString("pt-BR")}
                   </span>
                 </p>
@@ -245,14 +245,14 @@ export function PlanoPerformanceSection() {
               variant="ghost"
               size="icon"
               onClick={() => setOpen(false)}
-              className="shrink-0 rounded-full text-secondary-foreground/70 hover:bg-white/10 hover:text-secondary-foreground"
+              className="shrink-0 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
             >
               <X className="h-4 w-4" />
             </Button>
           </div>
 
           {/* Shortcuts (sticky) */}
-          <div className="relative shrink-0 border-b border-white/10 bg-secondary/95 p-3 backdrop-blur-md md:px-6">
+          <div className="relative shrink-0 border-b border-border/60 bg-background/95 p-3 backdrop-blur-md md:px-6">
             <div className="flex flex-wrap gap-1.5">
               {CATEGORIES.map((c) => (
                 <a
@@ -263,11 +263,11 @@ export function PlanoPerformanceSection() {
                     const el = document.getElementById(`cat-${c.key}`);
                     el?.scrollIntoView({ behavior: "smooth", block: "start" });
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-[11px] font-medium text-secondary-foreground/80 transition hover:border-primary/50 hover:bg-primary/15 hover:text-secondary-foreground"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-[11px] font-medium text-foreground/80 transition hover:border-primary/50 hover:bg-primary/10 hover:text-foreground"
                 >
                   <span>{c.emoji}</span>
                   <span>{c.title}</span>
-                  <span className="rounded-full bg-white/10 px-1.5 text-[9px] text-secondary-foreground/60">
+                  <span className="rounded-full bg-muted px-1.5 text-[9px] text-muted-foreground">
                     {c.items.length}
                   </span>
                 </a>
@@ -293,25 +293,25 @@ export function PlanoPerformanceSection() {
                     className="scroll-mt-4"
                   >
                     <div className="mb-3 flex items-baseline justify-between gap-3">
-                      <h4 className="flex items-center gap-2 text-base font-semibold">
+                      <h4 className="flex items-center gap-2 text-base font-semibold text-foreground">
                         <span className="text-lg">{cat.emoji}</span>
                         {cat.title}
                       </h4>
-                      <span className="text-[10px] uppercase tracking-wider text-secondary-foreground/50">
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
                         {cat.items.length} itens
                       </span>
                     </div>
-                    <p className="mb-3 max-w-2xl text-xs text-secondary-foreground/65">
+                    <p className="mb-3 max-w-2xl text-xs text-muted-foreground">
                       {cat.desc}
                     </p>
 
-                    <ul className="divide-y divide-white/10 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
+                    <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
                       {cat.items.map((it) => (
                         <li
                           key={it.name}
-                          className="flex items-center gap-3 p-2.5 transition hover:bg-white/[0.04]"
+                          className="flex items-center gap-3 p-2.5 transition hover:bg-muted/50"
                         >
-                          <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-white/5">
+                          <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-muted">
                             <img
                               src={it.img}
                               alt={it.name}
@@ -323,21 +323,21 @@ export function PlanoPerformanceSection() {
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="mb-0.5 flex flex-wrap items-center gap-1.5">
-                              <h5 className="text-[13px] font-semibold leading-tight">
+                              <h5 className="text-[13px] font-semibold leading-tight text-foreground">
                                 {it.name}
                               </h5>
                               {it.priority === "essencial" && (
-                                <span className="inline-flex items-center gap-0.5 rounded-full bg-primary/90 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-primary-foreground">
+                                <span className="inline-flex items-center gap-0.5 rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-primary-foreground">
                                   <Check className="h-2.5 w-2.5" /> Essencial
                                 </span>
                               )}
                               {it.priority === "recomendado" && (
-                                <span className="inline-flex items-center rounded-full border border-white/30 bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-secondary-foreground/80">
+                                <span className="inline-flex items-center rounded-full border border-border bg-muted px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
                                   Recomendado
                                 </span>
                               )}
                             </div>
-                            <p className="line-clamp-2 text-[11px] text-secondary-foreground/65">
+                            <p className="line-clamp-2 text-[11px] text-muted-foreground">
                               {it.why}
                             </p>
                           </div>
@@ -355,7 +355,7 @@ export function PlanoPerformanceSection() {
             </div>
 
             {/* Observations */}
-            <div id="cat-observacoes" className="border-t border-white/10 bg-white/[0.02] px-5 py-6 md:px-6 md:py-7">
+            <div id="cat-observacoes" className="border-t border-border/60 bg-muted/30 px-5 py-6 md:px-6 md:py-7">
               <div className="mb-4 flex items-center gap-2">
                 <Wand2 className="h-4 w-4 text-primary" />
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
@@ -363,7 +363,7 @@ export function PlanoPerformanceSection() {
                 </p>
               </div>
 
-              <ul className="divide-y divide-white/10 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]">
+              <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
                 {OBSERVATIONS.map((o) => {
                   const Icon = o.icon;
                   return (
@@ -376,9 +376,9 @@ export function PlanoPerformanceSection() {
                           <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">
                             {o.tag}
                           </span>
-                          <h5 className="text-[13px] font-semibold">{o.title}</h5>
+                          <h5 className="text-[13px] font-semibold text-foreground">{o.title}</h5>
                         </div>
-                        <p className="text-[11px] leading-relaxed text-secondary-foreground/70">
+                        <p className="text-[11px] leading-relaxed text-muted-foreground">
                           {o.body}
                         </p>
                       </div>
@@ -387,7 +387,7 @@ export function PlanoPerformanceSection() {
                 })}
               </ul>
 
-              <p className="mt-5 text-[11px] italic text-secondary-foreground/50">
+              <p className="mt-5 text-[11px] italic text-muted-foreground">
                 * Pré-visualização ilustrativa. Seu plano final será personalizado após
                 a reunião de alinhamento, com curadoria, orçamento e cronograma
                 específicos para o seu imóvel.
