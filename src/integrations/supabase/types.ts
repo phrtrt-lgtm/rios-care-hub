@@ -1800,6 +1800,7 @@ export type Database = {
           assigned_cleaner_phone: string | null
           cover_photo_url: string | null
           created_at: string
+          default_commission_percentage: number | null
           id: string
           name: string
           owner_id: string
@@ -1813,6 +1814,7 @@ export type Database = {
           assigned_cleaner_phone?: string | null
           cover_photo_url?: string | null
           created_at?: string
+          default_commission_percentage?: number | null
           id?: string
           name: string
           owner_id: string
@@ -1826,6 +1828,7 @@ export type Database = {
           assigned_cleaner_phone?: string | null
           cover_photo_url?: string | null
           created_at?: string
+          default_commission_percentage?: number | null
           id?: string
           name?: string
           owner_id?: string
