@@ -145,23 +145,37 @@ const OBSERVATIONS = [
   },
 ];
 
-export function PlanoPerformanceSection() {
-  const [open, setOpen] = useState(false);
-  const [activeCat, setActiveCat] = useState<string>(CATEGORIES[0].key);
+type Observation = { icon: any; tag: string; title: string; body: string };
 
-  const totalItems = CATEGORIES.reduce((acc, c) => acc + c.items.length, 0);
-  const totalEssenciais = CATEGORIES.reduce(
+const ICON_MAP: Record<string, any> = { Wand2, Lightbulb, AlertTriangle, Sparkles };
+
+export function PlanoPerformanceSection({
+  customCategories,
+  customObservations,
+}: {
+  customCategories?: Category[];
+  customObservations?: { icon: string; tag: string; title: string; body: string }[];
+} = {}) {
+  const [open, setOpen] = useState(false);
+  const categories = customCategories?.length ? customCategories : CATEGORIES;
+  const observations: Observation[] = customObservations?.length
+    ? customObservations.map((o) => ({ ...o, icon: ICON_MAP[o.icon] || Sparkles }))
+    : OBSERVATIONS;
+  const [activeCat, setActiveCat] = useState<string>(categories[0].key);
+
+  const totalItems = categories.reduce((acc, c) => acc + c.items.length, 0);
+  const totalEssenciais = categories.reduce(
     (acc, c) => acc + c.items.filter((i) => i.priority === "essencial").length,
     0,
   );
-  const orcamento = CATEGORIES.reduce(
+  const orcamento = categories.reduce(
     (acc, c) =>
       acc +
       c.items.reduce((s, i) => s + Number(i.price.replace(/[^\d]/g, "")), 0),
     0,
   );
 
-  const active = CATEGORIES.find((c) => c.key === activeCat)!;
+  const active = categories.find((c) => c.key === activeCat) || categories[0];
 
   return (
     <section className="mb-24 md:mb-32">
