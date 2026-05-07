@@ -175,15 +175,14 @@ export function PlanoPerformanceSection() {
         </div>
       </div>
 
-      <motion.div
-        layout
-        className="overflow-hidden rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/10 via-white/[0.03] to-transparent backdrop-blur-md"
+      {/* Trigger card */}
+      <motion.button
+        onClick={() => setOpen(true)}
+        whileHover={{ y: -2 }}
+        className="group relative w-full overflow-hidden rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/10 via-white/[0.03] to-transparent p-6 text-left backdrop-blur-md transition hover:border-primary/60 md:p-8"
       >
-        {/* Header / trigger */}
-        <button
-          onClick={() => setOpen((v) => !v)}
-          className="flex w-full items-center justify-between gap-4 p-6 text-left transition hover:bg-white/[0.03] md:p-8"
-        >
+        <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-primary/20 blur-3xl transition group-hover:bg-primary/30" />
+        <div className="relative flex flex-col items-start gap-5 md:flex-row md:items-center md:justify-between">
           <div className="flex items-start gap-4">
             <div className="rounded-2xl bg-primary/20 p-3 text-primary">
               <Sparkles className="h-5 w-5" />
@@ -201,164 +200,198 @@ export function PlanoPerformanceSection() {
               </p>
             </div>
           </div>
-          <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.3 }}>
-            <ChevronDown className="h-5 w-5 text-primary" />
-          </motion.div>
-        </button>
+          <span className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/15 px-4 py-2 text-sm font-medium text-secondary-foreground transition group-hover:bg-primary/25">
+            Abrir documento
+            <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
+          </span>
+        </div>
+      </motion.button>
 
-        <AnimatePresence initial={false}>
-          {open && (
-            <motion.div
-              key="content"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.35, ease: "easeInOut" }}
-              className="overflow-hidden border-t border-white/10"
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-h-[92vh] max-w-5xl gap-0 overflow-hidden border-white/10 bg-secondary p-0 text-secondary-foreground">
+          <DialogTitle className="sr-only">
+            Plano de Performance · Diagnóstico & Curadoria
+          </DialogTitle>
+
+          {/* Background blobs */}
+          <div className="pointer-events-none absolute inset-0 overflow-hidden">
+            <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-primary/20 blur-[120px]" />
+            <div className="absolute -right-20 bottom-0 h-80 w-80 rounded-full bg-info/15 blur-[120px]" />
+          </div>
+
+          {/* Header */}
+          <div className="relative flex items-start justify-between gap-4 border-b border-white/10 p-6 md:p-8">
+            <div className="flex items-start gap-4">
+              <div className="rounded-2xl bg-primary/20 p-3 text-primary">
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.25em] text-primary">
+                  Etapa 03 · Pré-visualização
+                </p>
+                <h3 className="text-xl font-bold tracking-tight md:text-2xl">
+                  Plano de Performance RIOS
+                </h3>
+                <p className="mt-1 text-sm text-secondary-foreground/70">
+                  {totalItems} itens · {totalEssenciais} essenciais · investimento
+                  estimado{" "}
+                  <span className="text-secondary-foreground">
+                    R$ {orcamento.toLocaleString("pt-BR")}
+                  </span>
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setOpen(false)}
+              className="shrink-0 rounded-full text-secondary-foreground/70 hover:bg-white/10 hover:text-secondary-foreground"
             >
-              {/* Lista de compras */}
-              <div className="p-6 md:p-8">
-                <div className="mb-6 flex items-center gap-2">
-                  <ShoppingBag className="h-4 w-4 text-primary" />
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
-                    Lista de compras curada
-                  </p>
-                </div>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
 
-                {/* Tabs categorias */}
-                <div className="mb-6 flex flex-wrap gap-2">
-                  {CATEGORIES.map((c) => {
-                    const isActive = c.key === activeCat;
-                    return (
-                      <button
-                        key={c.key}
-                        onClick={() => setActiveCat(c.key)}
-                        className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-xs font-medium transition ${
+          {/* Scrollable body */}
+          <div className="relative overflow-y-auto">
+            <div className="p-6 md:p-8">
+              <div className="mb-5 flex items-center gap-2">
+                <ShoppingBag className="h-4 w-4 text-primary" />
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
+                  Lista de compras curada
+                </p>
+              </div>
+
+              {/* Tabs */}
+              <div className="mb-6 flex flex-wrap gap-2">
+                {CATEGORIES.map((c) => {
+                  const isActive = c.key === activeCat;
+                  return (
+                    <button
+                      key={c.key}
+                      onClick={() => setActiveCat(c.key)}
+                      className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-xs font-medium transition ${
+                        isActive
+                          ? "border-primary/60 bg-primary/15 text-secondary-foreground"
+                          : "border-white/15 bg-white/5 text-secondary-foreground/70 hover:border-white/30"
+                      }`}
+                    >
+                      <span>{c.emoji}</span>
+                      <span>{c.title}</span>
+                      <span
+                        className={`rounded-full px-1.5 text-[10px] ${
                           isActive
-                            ? "border-primary/60 bg-primary/15 text-secondary-foreground"
-                            : "border-white/15 bg-white/5 text-secondary-foreground/70 hover:border-white/30"
+                            ? "bg-primary/30 text-primary-foreground"
+                            : "bg-white/10 text-secondary-foreground/60"
                         }`}
                       >
-                        <span>{c.emoji}</span>
-                        <span>{c.title}</span>
-                        <span
-                          className={`rounded-full px-1.5 text-[10px] ${
-                            isActive
-                              ? "bg-primary/30 text-primary-foreground"
-                              : "bg-white/10 text-secondary-foreground/60"
-                          }`}
-                        >
-                          {c.items.length}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
+                        {c.items.length}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
 
-                {/* Descrição da categoria ativa */}
-                <motion.div
-                  key={active.key}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <p className="mb-5 max-w-2xl text-sm text-secondary-foreground/75 md:text-base">
-                    {active.desc}
-                  </p>
+              {/* Active category */}
+              <motion.div
+                key={active.key}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25 }}
+              >
+                <p className="mb-5 max-w-2xl text-sm text-secondary-foreground/75">
+                  {active.desc}
+                </p>
 
-                  {/* Grid itens */}
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {active.items.map((it) => (
-                      <motion.div
-                        key={it.name}
-                        initial={{ opacity: 0, y: 12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.4 }}
-                        className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-sm transition hover:border-primary/40 hover:bg-white/[0.06]"
-                      >
-                        <div className="relative aspect-square overflow-hidden bg-white/5">
-                          <img
-                            src={it.img}
-                            alt={it.name}
-                            loading="lazy"
-                            width={512}
-                            height={512}
-                            className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                          />
+                {/* List view */}
+                <ul className="divide-y divide-white/10 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
+                  {active.items.map((it) => (
+                    <li
+                      key={it.name}
+                      className="flex items-center gap-4 p-3 transition hover:bg-white/[0.04] md:p-4"
+                    >
+                      <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-white/5 md:h-20 md:w-20">
+                        <img
+                          src={it.img}
+                          alt={it.name}
+                          loading="lazy"
+                          width={512}
+                          height={512}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-0.5 flex flex-wrap items-center gap-2">
+                          <h4 className="text-sm font-semibold leading-tight">
+                            {it.name}
+                          </h4>
                           {it.priority === "essencial" && (
-                            <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-primary/90 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-primary-foreground backdrop-blur-md">
-                              <Check className="h-3 w-3" /> Essencial
+                            <span className="inline-flex items-center gap-1 rounded-full bg-primary/90 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-primary-foreground">
+                              <Check className="h-2.5 w-2.5" /> Essencial
                             </span>
                           )}
                           {it.priority === "recomendado" && (
-                            <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full border border-white/30 bg-white/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-secondary-foreground backdrop-blur-md">
+                            <span className="inline-flex items-center rounded-full border border-white/30 bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-secondary-foreground/80">
                               Recomendado
                             </span>
                           )}
                         </div>
-                        <div className="p-4">
-                          <div className="mb-1.5 flex items-start justify-between gap-2">
-                            <h4 className="text-sm font-semibold leading-tight">{it.name}</h4>
-                            <span className="shrink-0 text-xs font-semibold text-primary">
-                              {it.price}
-                            </span>
-                          </div>
-                          <p className="text-xs text-secondary-foreground/65">{it.why}</p>
+                        <p className="line-clamp-2 text-xs text-secondary-foreground/65">
+                          {it.why}
+                        </p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <div className="text-sm font-semibold text-primary">
+                          {it.price}
                         </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                </motion.div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </motion.div>
+            </div>
+
+            {/* Observations */}
+            <div className="border-t border-white/10 bg-white/[0.02] p-6 md:p-8">
+              <div className="mb-5 flex items-center gap-2">
+                <Wand2 className="h-4 w-4 text-primary" />
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
+                  Observações & ajustes do espaço
+                </p>
               </div>
 
-              {/* Observações */}
-              <div className="border-t border-white/10 bg-white/[0.02] p-6 md:p-8">
-                <div className="mb-6 flex items-center gap-2">
-                  <Wand2 className="h-4 w-4 text-primary" />
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
-                    Observações & ajustes do espaço
-                  </p>
-                </div>
-
-                <div className="grid gap-3 md:grid-cols-2">
-                  {OBSERVATIONS.map((o, i) => {
-                    const Icon = o.icon;
-                    return (
-                      <motion.div
-                        key={o.title}
-                        initial={{ opacity: 0, y: 10 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 0.4, delay: i * 0.05 }}
-                        className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 transition hover:border-primary/30"
-                      >
-                        <div className="mb-3 flex items-center gap-2">
-                          <div className="rounded-lg bg-primary/15 p-1.5 text-primary">
-                            <Icon className="h-3.5 w-3.5" />
-                          </div>
+              <ul className="divide-y divide-white/10 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]">
+                {OBSERVATIONS.map((o) => {
+                  const Icon = o.icon;
+                  return (
+                    <li key={o.title} className="flex items-start gap-4 p-4 md:p-5">
+                      <div className="shrink-0 rounded-xl bg-primary/15 p-2 text-primary">
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-1 flex flex-wrap items-center gap-2">
                           <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">
                             {o.tag}
                           </span>
+                          <h4 className="text-sm font-semibold">{o.title}</h4>
                         </div>
-                        <h4 className="mb-1.5 text-sm font-semibold">{o.title}</h4>
                         <p className="text-xs leading-relaxed text-secondary-foreground/70">
                           {o.body}
                         </p>
-                      </motion.div>
-                    );
-                  })}
-                </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
 
-                <p className="mt-6 text-xs italic text-secondary-foreground/50">
-                  * Pré-visualização ilustrativa. Seu plano final será personalizado após a
-                  reunião de alinhamento, com curadoria, orçamento e cronograma específicos
-                  para o seu imóvel.
-                </p>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
+              <p className="mt-6 text-xs italic text-secondary-foreground/50">
+                * Pré-visualização ilustrativa. Seu plano final será personalizado após
+                a reunião de alinhamento, com curadoria, orçamento e cronograma
+                específicos para o seu imóvel.
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
