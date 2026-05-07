@@ -82,6 +82,7 @@ import AdminCadastrosProprietarios from "./pages/AdminCadastrosProprietarios";
 import AtualizacaoAnuncio from "./pages/AtualizacaoAnuncio";
 import AdminVistoriasArquivadas from "./pages/AdminVistoriasArquivadas";
 import BemVindo from "./pages/BemVindo";
+import AdminCuradoriaNova from "./pages/AdminCuradoriaNova";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -184,6 +185,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <AdminGerenciarUsuarios />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/curadoria/nova"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'agent']}>
+                  <AdminCuradoriaNova />
                 </ProtectedRoute>
               }
             />

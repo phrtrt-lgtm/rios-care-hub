@@ -1651,6 +1651,54 @@ export type Database = {
         }
         Relationships: []
       }
+      owner_curations: {
+        Row: {
+          ai_history: Json
+          categories: Json
+          created_at: string
+          created_by: string | null
+          id: string
+          observations: Json
+          owner_id: string
+          property_id: string | null
+          published_at: string | null
+          source_filename: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          ai_history?: Json
+          categories?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          observations?: Json
+          owner_id: string
+          property_id?: string | null
+          published_at?: string | null
+          source_filename?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          ai_history?: Json
+          categories?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          observations?: Json
+          owner_id?: string
+          property_id?: string | null
+          published_at?: string | null
+          source_filename?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       owner_payment_scores: {
         Row: {
           charge_id: string | null

@@ -92,6 +92,7 @@ export default function BemVindo() {
   const navigate = useNavigate();
   const [intake, setIntake] = useState<IntakeSubmission | null>(null);
   const [loading, setLoading] = useState(true);
+  const [curation, setCuration] = useState<{ categories: any[]; observations: any[] } | null>(null);
 
   const currentStage = profile?.onboarding_stage || "welcome";
   const currentIndex = STAGES.findIndex((s) => s.key === currentStage);
@@ -116,6 +117,19 @@ export default function BemVindo() {
       setLoading(false);
     };
     loadIntake();
+  }, [profile?.id]);
+
+  useEffect(() => {
+    if (!profile?.id) return;
+    supabase
+      .from("owner_curations")
+      .select("categories, observations")
+      .eq("owner_id", profile.id)
+      .eq("status", "published")
+      .order("published_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => data && setCuration(data as any));
   }, [profile?.id]);
 
   const specialAmenities = Array.isArray(intake?.special_amenities)
@@ -369,7 +383,10 @@ export default function BemVindo() {
 
         {/* PLANO DE PERFORMANCE (etapa 03 expandível) */}
         <div id="curadoria" className="scroll-mt-24">
-          <PlanoPerformanceSection />
+          <PlanoPerformanceSection
+            customCategories={curation?.categories}
+            customObservations={curation?.observations}
+          />
         </div>
 
         {/* PROPERTY SUMMARY */}
