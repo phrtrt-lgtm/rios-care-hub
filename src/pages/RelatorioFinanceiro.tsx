@@ -228,9 +228,22 @@ export default function RelatorioFinanceiro() {
 
   const handleDeselectAllProperties = () => setSelectedProperties([]);
 
-  const handleSetPropertyCommission = (property: string, commission: number) => {
+  const handleSetPropertyCommission = async (property: string, commission: number) => {
     setPropertyCommissions(prev => ({ ...prev, [property]: commission }));
     setEditingPropertyCommission(null);
+    // Persist as the property's default so it pre-fills next time
+    try {
+      const { data: matches } = await supabase.rpc('find_property_by_name_unaccent', { _name: property });
+      const target = (matches as { id: string }[] | null)?.[0];
+      if (target?.id) {
+        await supabase
+          .from('properties')
+          .update({ default_commission_percentage: commission })
+          .eq('id', target.id);
+      }
+    } catch (e) {
+      console.error('Failed to persist default commission', e);
+    }
   };
 
   const getPropertyCommission = (property: string): number => {
