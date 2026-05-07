@@ -220,9 +220,9 @@ export function PlanoPerformanceSection() {
           </div>
 
           {/* Header */}
-          <div className="relative flex shrink-0 items-start justify-between gap-4 border-b border-white/10 p-5 md:p-6">
+          <div className="relative flex shrink-0 items-start justify-between gap-4 border-b border-border/60 p-5 md:p-6">
             <div className="flex items-start gap-3">
-              <div className="rounded-2xl bg-primary/20 p-2.5 text-primary">
+              <div className="rounded-2xl bg-primary/15 p-2.5 text-primary">
                 <Sparkles className="h-4 w-4" />
               </div>
               <div>
@@ -232,10 +232,10 @@ export function PlanoPerformanceSection() {
                 <h3 className="text-lg font-bold tracking-tight md:text-xl">
                   Plano de Performance RIOS
                 </h3>
-                <p className="mt-0.5 text-xs text-secondary-foreground/70">
+                <p className="mt-0.5 text-xs text-muted-foreground">
                   {totalItems} itens · {totalEssenciais} essenciais · investimento
                   estimado{" "}
-                  <span className="text-secondary-foreground">
+                  <span className="font-semibold text-foreground">
                     R$ {orcamento.toLocaleString("pt-BR")}
                   </span>
                 </p>
@@ -245,14 +245,14 @@ export function PlanoPerformanceSection() {
               variant="ghost"
               size="icon"
               onClick={() => setOpen(false)}
-              className="shrink-0 rounded-full text-secondary-foreground/70 hover:bg-white/10 hover:text-secondary-foreground"
+              className="shrink-0 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
             >
               <X className="h-4 w-4" />
             </Button>
           </div>
 
           {/* Shortcuts (sticky) */}
-          <div className="relative shrink-0 border-b border-white/10 bg-secondary/95 p-3 backdrop-blur-md md:px-6">
+          <div className="relative shrink-0 border-b border-border/60 bg-background/95 p-3 backdrop-blur-md md:px-6">
             <div className="flex flex-wrap gap-1.5">
               {CATEGORIES.map((c) => (
                 <a
@@ -263,11 +263,11 @@ export function PlanoPerformanceSection() {
                     const el = document.getElementById(`cat-${c.key}`);
                     el?.scrollIntoView({ behavior: "smooth", block: "start" });
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-[11px] font-medium text-secondary-foreground/80 transition hover:border-primary/50 hover:bg-primary/15 hover:text-secondary-foreground"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-[11px] font-medium text-foreground/80 transition hover:border-primary/50 hover:bg-primary/10 hover:text-foreground"
                 >
                   <span>{c.emoji}</span>
                   <span>{c.title}</span>
-                  <span className="rounded-full bg-white/10 px-1.5 text-[9px] text-secondary-foreground/60">
+                  <span className="rounded-full bg-muted px-1.5 text-[9px] text-muted-foreground">
                     {c.items.length}
                   </span>
                 </a>
