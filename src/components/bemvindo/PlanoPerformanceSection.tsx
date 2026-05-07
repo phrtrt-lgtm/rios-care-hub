@@ -355,7 +355,7 @@ export function PlanoPerformanceSection() {
             </div>
 
             {/* Observations */}
-            <div id="cat-observacoes" className="border-t border-white/10 bg-white/[0.02] px-5 py-6 md:px-6 md:py-7">
+            <div id="cat-observacoes" className="border-t border-border/60 bg-muted/30 px-5 py-6 md:px-6 md:py-7">
               <div className="mb-4 flex items-center gap-2">
                 <Wand2 className="h-4 w-4 text-primary" />
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
@@ -363,7 +363,7 @@ export function PlanoPerformanceSection() {
                 </p>
               </div>
 
-              <ul className="divide-y divide-white/10 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]">
+              <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
                 {OBSERVATIONS.map((o) => {
                   const Icon = o.icon;
                   return (
@@ -376,9 +376,9 @@ export function PlanoPerformanceSection() {
                           <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">
                             {o.tag}
                           </span>
-                          <h5 className="text-[13px] font-semibold">{o.title}</h5>
+                          <h5 className="text-[13px] font-semibold text-foreground">{o.title}</h5>
                         </div>
-                        <p className="text-[11px] leading-relaxed text-secondary-foreground/70">
+                        <p className="text-[11px] leading-relaxed text-muted-foreground">
                           {o.body}
                         </p>
                       </div>
@@ -387,7 +387,7 @@ export function PlanoPerformanceSection() {
                 })}
               </ul>
 
-              <p className="mt-5 text-[11px] italic text-secondary-foreground/50">
+              <p className="mt-5 text-[11px] italic text-muted-foreground">
                 * Pré-visualização ilustrativa. Seu plano final será personalizado após
                 a reunião de alinhamento, com curadoria, orçamento e cronograma
                 específicos para o seu imóvel.
