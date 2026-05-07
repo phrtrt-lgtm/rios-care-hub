@@ -233,6 +233,35 @@ export default function BemVindo() {
               </div>
             ))}
           </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.5 }}
+            className="mt-10"
+          >
+            <button
+              type="button"
+              onClick={() => {
+                document.getElementById("curadoria")?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+              className="group relative inline-flex items-center gap-3 overflow-hidden rounded-full border border-primary/40 bg-gradient-to-r from-primary/20 via-primary/10 to-transparent px-5 py-3 backdrop-blur-md transition-all hover:border-primary/70 hover:from-primary/30"
+            >
+              <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-primary/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+              <span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-primary">
+                <Sparkles className="h-4 w-4" />
+              </span>
+              <span className="relative flex flex-col items-start leading-tight">
+                <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-primary/80">
+                  Etapa 03 · pronta pra ver
+                </span>
+                <span className="text-sm font-semibold text-secondary-foreground">
+                  Sua curadoria já está preparada
+                </span>
+              </span>
+              <ArrowRight className="relative h-4 w-4 text-primary transition-transform group-hover:translate-x-1" />
+            </button>
+          </motion.div>
         </section>
 
         {/* PILLARS */}
@@ -339,7 +368,9 @@ export default function BemVindo() {
         </section>
 
         {/* PLANO DE PERFORMANCE (etapa 03 expandível) */}
-        <PlanoPerformanceSection />
+        <div id="curadoria" className="scroll-mt-24">
+          <PlanoPerformanceSection />
+        </div>
 
         {/* PROPERTY SUMMARY */}
         <section className="mb-16">
