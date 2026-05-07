@@ -209,34 +209,34 @@ export function PlanoPerformanceSection() {
       </motion.button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="flex h-[92vh] max-h-[92vh] max-w-5xl flex-col gap-0 overflow-hidden border-border bg-background p-0 text-foreground">
+        <DialogContent className="flex h-[92vh] max-h-[92vh] max-w-5xl flex-col gap-0 overflow-hidden border-white/10 bg-secondary p-0 text-secondary-foreground">
           <DialogTitle className="sr-only">
             Plano de Performance · Diagnóstico & Curadoria
           </DialogTitle>
 
-          {/* Background blobs */}
+          {/* Background blobs (laranja em vez de azul) */}
           <div className="pointer-events-none absolute inset-0 overflow-hidden">
-            <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-primary/20 blur-[120px]" />
-            <div className="absolute -right-20 bottom-0 h-80 w-80 rounded-full bg-info/15 blur-[120px]" />
+            <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-primary/30 blur-[120px]" />
+            <div className="absolute -right-20 bottom-0 h-80 w-80 rounded-full bg-primary/20 blur-[120px]" />
           </div>
 
           {/* Header */}
-          <div className="relative flex shrink-0 items-start justify-between gap-4 border-b border-border/60 p-5 md:p-6">
+          <div className="relative flex shrink-0 items-start justify-between gap-4 border-b border-white/10 p-5 md:p-6">
             <div className="flex items-start gap-3">
-              <div className="rounded-2xl bg-primary/15 p-2.5 text-primary">
+              <div className="rounded-2xl bg-primary/20 p-2.5 text-primary">
                 <Sparkles className="h-4 w-4" />
               </div>
               <div>
                 <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.25em] text-primary">
                   Etapa 03 · Pré-visualização
                 </p>
-                <h3 className="text-lg font-bold tracking-tight md:text-xl">
+                <h3 className="text-lg font-bold tracking-tight text-white md:text-xl">
                   Plano de Performance RIOS
                 </h3>
-                <p className="mt-0.5 text-xs text-muted-foreground">
+                <p className="mt-0.5 text-xs text-white/60">
                   {totalItems} itens · {totalEssenciais} essenciais · investimento
                   estimado{" "}
-                  <span className="font-semibold text-foreground">
+                  <span className="font-semibold text-white">
                     R$ {orcamento.toLocaleString("pt-BR")}
                   </span>
                 </p>
@@ -246,14 +246,14 @@ export function PlanoPerformanceSection() {
               variant="ghost"
               size="icon"
               onClick={() => setOpen(false)}
-              className="shrink-0 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="shrink-0 rounded-full text-white/60 hover:bg-white/10 hover:text-white"
             >
               <X className="h-4 w-4" />
             </Button>
           </div>
 
           {/* Shortcuts (sticky) */}
-          <div className="relative shrink-0 border-b border-border/60 bg-background/95 p-3 backdrop-blur-md md:px-6">
+          <div className="relative shrink-0 border-b border-white/10 bg-secondary/90 p-3 backdrop-blur-md md:px-6">
             <div className="flex flex-wrap gap-1.5">
               {CATEGORIES.map((c) => (
                 <a
@@ -264,11 +264,11 @@ export function PlanoPerformanceSection() {
                     const el = document.getElementById(`cat-${c.key}`);
                     el?.scrollIntoView({ behavior: "smooth", block: "start" });
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-[11px] font-medium text-foreground/80 transition hover:border-primary/50 hover:bg-primary/10 hover:text-foreground"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-medium text-white/85 transition hover:border-primary/60 hover:bg-primary/15 hover:text-white"
                 >
                   <span>{c.emoji}</span>
                   <span>{c.title}</span>
-                  <span className="rounded-full bg-muted px-1.5 text-[9px] text-muted-foreground">
+                  <span className="rounded-full bg-white/10 px-1.5 text-[9px] text-white/70">
                     {c.items.length}
                   </span>
                 </a>
@@ -279,7 +279,7 @@ export function PlanoPerformanceSection() {
                   e.preventDefault();
                   document.getElementById("cat-chat")?.scrollIntoView({ behavior: "smooth", block: "start" });
                 }}
-                className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5 text-[11px] font-semibold text-primary transition hover:bg-primary/20"
+                className="inline-flex items-center gap-1.5 rounded-full border border-primary/50 bg-primary/20 px-3 py-1.5 text-[11px] font-semibold text-white transition hover:bg-primary/30"
               >
                 <span>💬</span>
                 <span>Conversa</span>
@@ -297,7 +297,7 @@ export function PlanoPerformanceSection() {
                 </p>
               </div>
 
-              <div className="space-y-8">
+              <div className="space-y-10">
                 {CATEGORIES.map((cat) => (
                   <div
                     key={cat.key}
@@ -305,25 +305,25 @@ export function PlanoPerformanceSection() {
                     className="scroll-mt-4"
                   >
                     <div className="mb-3 flex items-baseline justify-between gap-3">
-                      <h4 className="flex items-center gap-2 text-base font-semibold text-foreground">
+                      <h4 className="flex items-center gap-2 text-base font-semibold text-white">
                         <span className="text-lg">{cat.emoji}</span>
                         {cat.title}
                       </h4>
-                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                      <span className="text-[10px] uppercase tracking-wider text-white/50">
                         {cat.items.length} itens
                       </span>
                     </div>
-                    <p className="mb-3 max-w-2xl text-xs text-muted-foreground">
+                    <p className="mb-3 max-w-2xl text-xs text-white/65">
                       {cat.desc}
                     </p>
 
-                    <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+                    <ul className="divide-y divide-white/5 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] shadow-lg">
                       {cat.items.map((it) => (
                         <li
                           key={it.name}
-                          className="flex items-center gap-3 p-2.5 transition hover:bg-muted/50"
+                          className="flex items-center gap-4 p-3.5 transition hover:bg-primary/5"
                         >
-                          <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-muted">
+                          <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-secondary ring-1 ring-white/10">
                             <img
                               src={it.img}
                               alt={it.name}
@@ -332,10 +332,11 @@ export function PlanoPerformanceSection() {
                               height={512}
                               className="h-full w-full object-cover"
                             />
+                            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-secondary/60 via-transparent to-transparent" />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <div className="mb-0.5 flex flex-wrap items-center gap-1.5">
-                              <h5 className="text-[13px] font-semibold leading-tight text-foreground">
+                            <div className="mb-1 flex flex-wrap items-center gap-1.5">
+                              <h5 className="text-sm font-semibold leading-tight text-white">
                                 {it.name}
                               </h5>
                               {it.priority === "essencial" && (
@@ -344,17 +345,17 @@ export function PlanoPerformanceSection() {
                                 </span>
                               )}
                               {it.priority === "recomendado" && (
-                                <span className="inline-flex items-center rounded-full border border-border bg-muted px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                <span className="inline-flex items-center rounded-full border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-primary">
                                   Recomendado
                                 </span>
                               )}
                             </div>
-                            <p className="line-clamp-2 text-[11px] text-muted-foreground">
+                            <p className="line-clamp-2 text-xs text-white/65">
                               {it.why}
                             </p>
                           </div>
                           <div className="shrink-0 text-right">
-                            <div className="text-[13px] font-semibold text-primary">
+                            <div className="text-sm font-semibold text-primary">
                               {it.price}
                             </div>
                           </div>
@@ -367,7 +368,7 @@ export function PlanoPerformanceSection() {
             </div>
 
             {/* Observations */}
-            <div id="cat-observacoes" className="border-t border-border/60 bg-muted/30 px-5 py-6 md:px-6 md:py-7">
+            <div id="cat-observacoes" className="border-t border-white/10 bg-primary/5 px-5 py-6 md:px-6 md:py-7">
               <div className="mb-4 flex items-center gap-2">
                 <Wand2 className="h-4 w-4 text-primary" />
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
@@ -375,22 +376,22 @@ export function PlanoPerformanceSection() {
                 </p>
               </div>
 
-              <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+              <ul className="divide-y divide-white/5 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] shadow-lg">
                 {OBSERVATIONS.map((o) => {
                   const Icon = o.icon;
                   return (
-                    <li key={o.title} className="flex items-start gap-3 p-3.5 md:p-4">
-                      <div className="shrink-0 rounded-lg bg-primary/15 p-1.5 text-primary">
-                        <Icon className="h-3.5 w-3.5" />
+                    <li key={o.title} className="flex items-start gap-3 p-4">
+                      <div className="shrink-0 rounded-lg bg-primary/20 p-2 text-primary">
+                        <Icon className="h-4 w-4" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="mb-0.5 flex flex-wrap items-center gap-2">
+                        <div className="mb-1 flex flex-wrap items-center gap-2">
                           <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">
                             {o.tag}
                           </span>
-                          <h5 className="text-[13px] font-semibold text-foreground">{o.title}</h5>
+                          <h5 className="text-sm font-semibold text-white">{o.title}</h5>
                         </div>
-                        <p className="text-[11px] leading-relaxed text-muted-foreground">
+                        <p className="text-xs leading-relaxed text-white/70">
                           {o.body}
                         </p>
                       </div>
@@ -399,7 +400,7 @@ export function PlanoPerformanceSection() {
                 })}
               </ul>
 
-              <p className="mt-5 text-[11px] italic text-muted-foreground">
+              <p className="mt-5 text-[11px] italic text-white/50">
                 * Pré-visualização ilustrativa. Seu plano final será personalizado após
                 a reunião de alinhamento, com curadoria, orçamento e cronograma
                 específicos para o seu imóvel.
@@ -407,7 +408,7 @@ export function PlanoPerformanceSection() {
             </div>
 
             {/* Chat de curadoria */}
-            <div id="cat-chat" className="border-t border-border/60 bg-background px-5 py-6 md:px-6 md:py-7">
+            <div id="cat-chat" className="border-t border-white/10 bg-secondary px-5 py-6 md:px-6 md:py-7">
               <CuradoriaChat />
             </div>
           </div>
