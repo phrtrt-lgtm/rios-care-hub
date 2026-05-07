@@ -119,6 +119,19 @@ export default function BemVindo() {
     loadIntake();
   }, [profile?.id]);
 
+  useEffect(() => {
+    if (!profile?.id) return;
+    supabase
+      .from("owner_curations")
+      .select("categories, observations")
+      .eq("owner_id", profile.id)
+      .eq("status", "published")
+      .order("published_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => data && setCuration(data as any));
+  }, [profile?.id]);
+
   const specialAmenities = Array.isArray(intake?.special_amenities)
     ? (intake!.special_amenities as string[])
     : [];
