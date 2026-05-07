@@ -92,6 +92,7 @@ export default function BemVindo() {
   const navigate = useNavigate();
   const [intake, setIntake] = useState<IntakeSubmission | null>(null);
   const [loading, setLoading] = useState(true);
+  const [curation, setCuration] = useState<{ categories: any[]; observations: any[] } | null>(null);
 
   const currentStage = profile?.onboarding_stage || "welcome";
   const currentIndex = STAGES.findIndex((s) => s.key === currentStage);
