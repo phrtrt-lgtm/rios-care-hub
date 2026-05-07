@@ -297,7 +297,7 @@ export function PlanoPerformanceSection() {
                 </p>
               </div>
 
-              <div className="space-y-8">
+              <div className="space-y-10">
                 {CATEGORIES.map((cat) => (
                   <div
                     key={cat.key}
@@ -305,25 +305,25 @@ export function PlanoPerformanceSection() {
                     className="scroll-mt-4"
                   >
                     <div className="mb-3 flex items-baseline justify-between gap-3">
-                      <h4 className="flex items-center gap-2 text-base font-semibold text-foreground">
+                      <h4 className="flex items-center gap-2 text-base font-semibold text-white">
                         <span className="text-lg">{cat.emoji}</span>
                         {cat.title}
                       </h4>
-                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                      <span className="text-[10px] uppercase tracking-wider text-white/50">
                         {cat.items.length} itens
                       </span>
                     </div>
-                    <p className="mb-3 max-w-2xl text-xs text-muted-foreground">
+                    <p className="mb-3 max-w-2xl text-xs text-white/65">
                       {cat.desc}
                     </p>
 
-                    <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+                    <ul className="divide-y divide-white/5 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] shadow-lg">
                       {cat.items.map((it) => (
                         <li
                           key={it.name}
-                          className="flex items-center gap-3 p-2.5 transition hover:bg-muted/50"
+                          className="flex items-center gap-4 p-3.5 transition hover:bg-primary/5"
                         >
-                          <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-muted">
+                          <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-secondary ring-1 ring-white/10">
                             <img
                               src={it.img}
                               alt={it.name}
@@ -332,10 +332,11 @@ export function PlanoPerformanceSection() {
                               height={512}
                               className="h-full w-full object-cover"
                             />
+                            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-secondary/60 via-transparent to-transparent" />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <div className="mb-0.5 flex flex-wrap items-center gap-1.5">
-                              <h5 className="text-[13px] font-semibold leading-tight text-foreground">
+                            <div className="mb-1 flex flex-wrap items-center gap-1.5">
+                              <h5 className="text-sm font-semibold leading-tight text-white">
                                 {it.name}
                               </h5>
                               {it.priority === "essencial" && (
@@ -344,17 +345,17 @@ export function PlanoPerformanceSection() {
                                 </span>
                               )}
                               {it.priority === "recomendado" && (
-                                <span className="inline-flex items-center rounded-full border border-border bg-muted px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                <span className="inline-flex items-center rounded-full border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-primary">
                                   Recomendado
                                 </span>
                               )}
                             </div>
-                            <p className="line-clamp-2 text-[11px] text-muted-foreground">
+                            <p className="line-clamp-2 text-xs text-white/65">
                               {it.why}
                             </p>
                           </div>
                           <div className="shrink-0 text-right">
-                            <div className="text-[13px] font-semibold text-primary">
+                            <div className="text-sm font-semibold text-primary">
                               {it.price}
                             </div>
                           </div>
