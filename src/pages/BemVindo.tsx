@@ -338,6 +338,9 @@ export default function BemVindo() {
           </div>
         </section>
 
+        {/* PLANO DE PERFORMANCE (etapa 03 expandível) */}
+        <PlanoPerformanceSection />
+
         {/* PROPERTY SUMMARY */}
         <section className="mb-16">
           <div className="mb-8">
