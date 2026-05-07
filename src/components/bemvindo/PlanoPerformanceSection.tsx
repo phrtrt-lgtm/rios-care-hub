@@ -394,6 +394,11 @@ export function PlanoPerformanceSection() {
                 específicos para o seu imóvel.
               </p>
             </div>
+
+            {/* Chat de curadoria */}
+            <div id="cat-chat" className="border-t border-border/60 bg-background px-5 py-6 md:px-6 md:py-7">
+              <CuradoriaChat />
+            </div>
           </div>
         </DialogContent>
       </Dialog>
