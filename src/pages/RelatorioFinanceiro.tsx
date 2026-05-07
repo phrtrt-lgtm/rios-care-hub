@@ -24,6 +24,32 @@ import JSZip from 'jszip';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+
+const normalizeName = (s: string) =>
+  s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, '');
+
+async function fetchPropertyCommissionDefaults(
+  propertyNames: string[]
+): Promise<Record<string, number>> {
+  const { data, error } = await supabase
+    .from('properties')
+    .select('name, default_commission_percentage')
+    .not('default_commission_percentage', 'is', null);
+  if (error || !data) return {};
+  const map = new Map<string, number>();
+  for (const p of data as { name: string; default_commission_percentage: number | null }[]) {
+    if (p.default_commission_percentage != null) {
+      map.set(normalizeName(p.name), Number(p.default_commission_percentage));
+    }
+  }
+  const result: Record<string, number> = {};
+  for (const name of propertyNames) {
+    const v = map.get(normalizeName(name));
+    if (v != null) result[name] = v;
+  }
+  return result;
+}
 
 const STEPS = [
   { id: 1, title: 'Upload', description: 'Carregar arquivo' },
@@ -120,6 +146,10 @@ export default function RelatorioFinanceiro() {
       setStartDate(startOfMonth(combined.dateRange.min));
       setEndDate(endOfMonth(combined.dateRange.max));
 
+      // Pre-fill commissions with each property's saved default
+      const defaults = await fetchPropertyCommissionDefaults(combined.properties);
+      setPropertyCommissions(prev => ({ ...defaults, ...prev }));
+
       if (combined.properties.length === 1) {
         setSelectedProperties([combined.properties[0]]);
       }
@@ -198,9 +228,22 @@ export default function RelatorioFinanceiro() {
 
   const handleDeselectAllProperties = () => setSelectedProperties([]);
 
-  const handleSetPropertyCommission = (property: string, commission: number) => {
+  const handleSetPropertyCommission = async (property: string, commission: number) => {
     setPropertyCommissions(prev => ({ ...prev, [property]: commission }));
     setEditingPropertyCommission(null);
+    // Persist as the property's default so it pre-fills next time
+    try {
+      const { data: matches } = await supabase.rpc('find_property_by_name_unaccent', { _name: property });
+      const target = (matches as { id: string }[] | null)?.[0];
+      if (target?.id) {
+        await supabase
+          .from('properties')
+          .update({ default_commission_percentage: commission })
+          .eq('id', target.id);
+      }
+    } catch (e) {
+      console.error('Failed to persist default commission', e);
+    }
   };
 
   const getPropertyCommission = (property: string): number => {
