@@ -146,6 +146,10 @@ export default function RelatorioFinanceiro() {
       setStartDate(startOfMonth(combined.dateRange.min));
       setEndDate(endOfMonth(combined.dateRange.max));
 
+      // Pre-fill commissions with each property's saved default
+      const defaults = await fetchPropertyCommissionDefaults(combined.properties);
+      setPropertyCommissions(prev => ({ ...defaults, ...prev }));
+
       if (combined.properties.length === 1) {
         setSelectedProperties([combined.properties[0]]);
       }
