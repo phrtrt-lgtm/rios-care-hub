@@ -196,7 +196,15 @@ serve(async (req) => {
     
     const chargeData = {
       title: item.name || `Cobrança - ${propertyName}`,
-      description: null, // Removed description as per business rules
+      description: (() => {
+        const updates = (item.updates || []) as Array<{ text_body?: string; body?: string; created_at?: string }>;
+        if (!updates.length) return null;
+        const sorted = [...updates].sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime());
+        const stripped = sorted
+          .map((u) => (u.text_body || (u.body || '').replace(/<[^>]*>/g, '')).trim())
+          .filter(Boolean);
+        return stripped.length ? stripped.join('\n\n---\n\n') : null;
+      })(),
       category: category,
       service_type: serviceType, // Store the service type from Monday label
       amount_cents: Math.round(totalAmount * 100), // Convert to cents
