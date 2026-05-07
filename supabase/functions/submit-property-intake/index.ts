@@ -229,8 +229,47 @@ function buildIntakeMarkdown(data: IntakePayload): string {
         .join("\n\n")
     : "_Nenhum cômodo cadastrado._";
 
+  const AMENITY_MAP: Record<string, { label: string; icon: string }> = {
+    // Cozinha
+    air_fryer: { label: "Air fryer", icon: "🍟" },
+    fogao: { label: "Fogão", icon: "🔥" },
+    geladeira: { label: "Geladeira", icon: "❄️" },
+    liquidificador: { label: "Liquidificador", icon: "🥤" },
+    sanduicheira: { label: "Sanduicheira", icon: "🥪" },
+    cafeteira: { label: "Cafeteira elétrica", icon: "☕" },
+    cafeteira_capsula: { label: "Cafeteira de cápsula", icon: "☕" },
+    microondas: { label: "Microondas", icon: "🍱" },
+    maquina_lavar: { label: "Máquina de lavar", icon: "🧺" },
+    lava_loucas: { label: "Lava-louças", icon: "🍽️" },
+    forno: { label: "Forno", icon: "🥧" },
+    // Diferenciais
+    piscina: { label: "Piscina privativa", icon: "🏊" },
+    sauna: { label: "Sauna", icon: "🧖" },
+    churrasqueira: { label: "Churrasqueira", icon: "🍖" },
+    jacuzzi: { label: "Jacuzzi / hidromassagem", icon: "🛁" },
+    vista_mar: { label: "Vista para o mar", icon: "🌊" },
+    vista_montanha: { label: "Vista para montanha", icon: "⛰️" },
+    deck: { label: "Deck / terraço", icon: "🌅" },
+    jardim: { label: "Jardim privativo", icon: "🌿" },
+    home_office: { label: "Espaço para trabalho", icon: "💻" },
+    // Condomínio
+    portaria_24h: { label: "Portaria 24h", icon: "🛎️" },
+    academia: { label: "Academia", icon: "🏋️" },
+    piscina_condo: { label: "Piscina do condomínio", icon: "🏊" },
+    sauna_condo: { label: "Sauna do condomínio", icon: "🧖" },
+    salao_festas: { label: "Salão de festas", icon: "🎉" },
+    salao_jogos: { label: "Salão de jogos", icon: "🎲" },
+    quadra_esportes: { label: "Quadra de esportes", icon: "⚽" },
+    churrasqueira_condo: { label: "Churrasqueira coletiva", icon: "🍖" },
+    elevador_servico: { label: "Elevador de serviço", icon: "🛗" },
+    praia_proxima: { label: "Praia próxima (até 500m)", icon: "🏖️" },
+  };
+  const fmtAmenity = (raw: string) => {
+    const found = AMENITY_MAP[raw];
+    return found ? `${found.icon} ${found.label}` : `✨ ${raw}`;
+  };
   const listOrEmpty = (arr: string[]) =>
-    arr && arr.length ? arr.map((i) => `- ${i}`).join("\n") : "_Nenhum item informado._";
+    arr && arr.length ? arr.map((i) => `- ${fmtAmenity(i)}`).join("\n") : "_Nenhum item informado._";
 
   const ownerNotes = data.notes?.trim()
     ? `\n> 💬 _Observação do proprietário:_ ${data.notes.trim().replace(/\n+/g, " ")}\n`

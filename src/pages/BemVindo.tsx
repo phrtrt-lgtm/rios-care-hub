@@ -28,6 +28,8 @@ import {
   LineChart,
 } from "lucide-react";
 import riosLogo from "@/assets/rios-logo.png";
+import { resolveAmenities } from "@/lib/amenityLabels";
+import { PlanoPerformanceSection } from "@/components/bemvindo/PlanoPerformanceSection";
 
 interface IntakeSubmission {
   id: string;
@@ -336,6 +338,9 @@ export default function BemVindo() {
           </div>
         </section>
 
+        {/* PLANO DE PERFORMANCE (etapa 03 expandível) */}
+        <PlanoPerformanceSection />
+
         {/* PROPERTY SUMMARY */}
         <section className="mb-16">
           <div className="mb-8">
@@ -395,24 +400,32 @@ export default function BemVindo() {
                 <div className="space-y-5 p-8">
                   {specialAmenities.length > 0 && (
                     <div>
-                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">Diferenciais</p>
+                      <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">Diferenciais</p>
                       <div className="flex flex-wrap gap-1.5">
-                        {specialAmenities.map((a) => (
-                          <Badge key={a} variant="outline" className="border-white/15 bg-white/5 text-xs text-secondary-foreground/80">
-                            {a}
-                          </Badge>
+                        {resolveAmenities(specialAmenities).map((a, i) => (
+                          <span
+                            key={`${a.label}-${i}`}
+                            className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs text-secondary-foreground/85 backdrop-blur-sm transition hover:border-primary/40 hover:bg-white/10"
+                          >
+                            <span className="text-sm leading-none">{a.icon}</span>
+                            <span>{a.label}</span>
+                          </span>
                         ))}
                       </div>
                     </div>
                   )}
                   {condoAmenities.length > 0 && (
                     <div>
-                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">Condomínio</p>
+                      <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">Condomínio</p>
                       <div className="flex flex-wrap gap-1.5">
-                        {condoAmenities.map((a) => (
-                          <Badge key={a} variant="outline" className="border-white/15 bg-white/5 text-xs text-secondary-foreground/80">
-                            {a}
-                          </Badge>
+                        {resolveAmenities(condoAmenities).map((a, i) => (
+                          <span
+                            key={`${a.label}-${i}`}
+                            className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs text-secondary-foreground/85 backdrop-blur-sm transition hover:border-primary/40 hover:bg-white/10"
+                          >
+                            <span className="text-sm leading-none">{a.icon}</span>
+                            <span>{a.label}</span>
+                          </span>
                         ))}
                       </div>
                     </div>
