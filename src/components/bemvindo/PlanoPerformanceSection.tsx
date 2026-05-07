@@ -293,15 +293,15 @@ export function PlanoPerformanceSection() {
                     className="scroll-mt-4"
                   >
                     <div className="mb-3 flex items-baseline justify-between gap-3">
-                      <h4 className="flex items-center gap-2 text-base font-semibold">
+                      <h4 className="flex items-center gap-2 text-base font-semibold text-foreground">
                         <span className="text-lg">{cat.emoji}</span>
                         {cat.title}
                       </h4>
-                      <span className="text-[10px] uppercase tracking-wider text-secondary-foreground/50">
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
                         {cat.items.length} itens
                       </span>
                     </div>
-                    <p className="mb-3 max-w-2xl text-xs text-secondary-foreground/65">
+                    <p className="mb-3 max-w-2xl text-xs text-muted-foreground">
                       {cat.desc}
                     </p>
 
