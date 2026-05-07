@@ -208,7 +208,7 @@ export function PlanoPerformanceSection() {
       </motion.button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[92vh] max-w-5xl gap-0 overflow-hidden border-white/10 bg-secondary p-0 text-secondary-foreground">
+        <DialogContent className="flex h-[92vh] max-h-[92vh] max-w-5xl flex-col gap-0 overflow-hidden border-white/10 bg-secondary p-0 text-secondary-foreground">
           <DialogTitle className="sr-only">
             Plano de Performance · Diagnóstico & Curadoria
           </DialogTitle>
@@ -220,19 +220,19 @@ export function PlanoPerformanceSection() {
           </div>
 
           {/* Header */}
-          <div className="relative flex items-start justify-between gap-4 border-b border-white/10 p-6 md:p-8">
-            <div className="flex items-start gap-4">
-              <div className="rounded-2xl bg-primary/20 p-3 text-primary">
-                <Sparkles className="h-5 w-5" />
+          <div className="relative flex shrink-0 items-start justify-between gap-4 border-b border-white/10 p-5 md:p-6">
+            <div className="flex items-start gap-3">
+              <div className="rounded-2xl bg-primary/20 p-2.5 text-primary">
+                <Sparkles className="h-4 w-4" />
               </div>
               <div>
-                <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.25em] text-primary">
+                <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.25em] text-primary">
                   Etapa 03 · Pré-visualização
                 </p>
-                <h3 className="text-xl font-bold tracking-tight md:text-2xl">
+                <h3 className="text-lg font-bold tracking-tight md:text-xl">
                   Plano de Performance RIOS
                 </h3>
-                <p className="mt-1 text-sm text-secondary-foreground/70">
+                <p className="mt-0.5 text-xs text-secondary-foreground/70">
                   {totalItems} itens · {totalEssenciais} essenciais · investimento
                   estimado{" "}
                   <span className="text-secondary-foreground">
@@ -251,9 +251,33 @@ export function PlanoPerformanceSection() {
             </Button>
           </div>
 
+          {/* Shortcuts (sticky) */}
+          <div className="relative shrink-0 border-b border-white/10 bg-secondary/95 p-3 backdrop-blur-md md:px-6">
+            <div className="flex flex-wrap gap-1.5">
+              {CATEGORIES.map((c) => (
+                <a
+                  key={c.key}
+                  href={`#cat-${c.key}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    const el = document.getElementById(`cat-${c.key}`);
+                    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-[11px] font-medium text-secondary-foreground/80 transition hover:border-primary/50 hover:bg-primary/15 hover:text-secondary-foreground"
+                >
+                  <span>{c.emoji}</span>
+                  <span>{c.title}</span>
+                  <span className="rounded-full bg-white/10 px-1.5 text-[9px] text-secondary-foreground/60">
+                    {c.items.length}
+                  </span>
+                </a>
+              ))}
+            </div>
+          </div>
+
           {/* Scrollable body */}
-          <div className="relative overflow-y-auto">
-            <div className="p-6 md:p-8">
+          <div className="relative min-h-0 flex-1 overflow-y-auto">
+            <div className="px-5 py-6 md:px-6 md:py-7">
               <div className="mb-5 flex items-center gap-2">
                 <ShoppingBag className="h-4 w-4 text-primary" />
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
@@ -261,95 +285,120 @@ export function PlanoPerformanceSection() {
                 </p>
               </div>
 
-              {/* Tabs */}
-              <div className="mb-6 flex flex-wrap gap-2">
-                {CATEGORIES.map((c) => {
-                  const isActive = c.key === activeCat;
-                  return (
-                    <button
-                      key={c.key}
-                      onClick={() => setActiveCat(c.key)}
-                      className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-xs font-medium transition ${
-                        isActive
-                          ? "border-primary/60 bg-primary/15 text-secondary-foreground"
-                          : "border-white/15 bg-white/5 text-secondary-foreground/70 hover:border-white/30"
-                      }`}
-                    >
-                      <span>{c.emoji}</span>
-                      <span>{c.title}</span>
-                      <span
-                        className={`rounded-full px-1.5 text-[10px] ${
-                          isActive
-                            ? "bg-primary/30 text-primary-foreground"
-                            : "bg-white/10 text-secondary-foreground/60"
-                        }`}
-                      >
-                        {c.items.length}
+              <div className="space-y-8">
+                {CATEGORIES.map((cat) => (
+                  <div
+                    key={cat.key}
+                    id={`cat-${cat.key}`}
+                    className="scroll-mt-4"
+                  >
+                    <div className="mb-3 flex items-baseline justify-between gap-3">
+                      <h4 className="flex items-center gap-2 text-base font-semibold">
+                        <span className="text-lg">{cat.emoji}</span>
+                        {cat.title}
+                      </h4>
+                      <span className="text-[10px] uppercase tracking-wider text-secondary-foreground/50">
+                        {cat.items.length} itens
                       </span>
-                    </button>
-                  );
-                })}
+                    </div>
+                    <p className="mb-3 max-w-2xl text-xs text-secondary-foreground/65">
+                      {cat.desc}
+                    </p>
+
+                    <ul className="divide-y divide-white/10 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
+                      {cat.items.map((it) => (
+                        <li
+                          key={it.name}
+                          className="flex items-center gap-3 p-2.5 transition hover:bg-white/[0.04]"
+                        >
+                          <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-white/5">
+                            <img
+                              src={it.img}
+                              alt={it.name}
+                              loading="lazy"
+                              width={512}
+                              height={512}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="mb-0.5 flex flex-wrap items-center gap-1.5">
+                              <h5 className="text-[13px] font-semibold leading-tight">
+                                {it.name}
+                              </h5>
+                              {it.priority === "essencial" && (
+                                <span className="inline-flex items-center gap-0.5 rounded-full bg-primary/90 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-primary-foreground">
+                                  <Check className="h-2.5 w-2.5" /> Essencial
+                                </span>
+                              )}
+                              {it.priority === "recomendado" && (
+                                <span className="inline-flex items-center rounded-full border border-white/30 bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-secondary-foreground/80">
+                                  Recomendado
+                                </span>
+                              )}
+                            </div>
+                            <p className="line-clamp-2 text-[11px] text-secondary-foreground/65">
+                              {it.why}
+                            </p>
+                          </div>
+                          <div className="shrink-0 text-right">
+                            <div className="text-[13px] font-semibold text-primary">
+                              {it.price}
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Observations */}
+            <div id="cat-observacoes" className="border-t border-white/10 bg-white/[0.02] px-5 py-6 md:px-6 md:py-7">
+              <div className="mb-4 flex items-center gap-2">
+                <Wand2 className="h-4 w-4 text-primary" />
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
+                  Observações & ajustes do espaço
+                </p>
               </div>
 
-              {/* Active category */}
-              <motion.div
-                key={active.key}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.25 }}
-              >
-                <p className="mb-5 max-w-2xl text-sm text-secondary-foreground/75">
-                  {active.desc}
-                </p>
-
-                {/* List view */}
-                <ul className="divide-y divide-white/10 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
-                  {active.items.map((it) => (
-                    <li
-                      key={it.name}
-                      className="flex items-center gap-4 p-3 transition hover:bg-white/[0.04] md:p-4"
-                    >
-                      <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-white/5 md:h-20 md:w-20">
-                        <img
-                          src={it.img}
-                          alt={it.name}
-                          loading="lazy"
-                          width={512}
-                          height={512}
-                          className="h-full w-full object-cover"
-                        />
+              <ul className="divide-y divide-white/10 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]">
+                {OBSERVATIONS.map((o) => {
+                  const Icon = o.icon;
+                  return (
+                    <li key={o.title} className="flex items-start gap-3 p-3.5 md:p-4">
+                      <div className="shrink-0 rounded-lg bg-primary/15 p-1.5 text-primary">
+                        <Icon className="h-3.5 w-3.5" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="mb-0.5 flex flex-wrap items-center gap-2">
-                          <h4 className="text-sm font-semibold leading-tight">
-                            {it.name}
-                          </h4>
-                          {it.priority === "essencial" && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-primary/90 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-primary-foreground">
-                              <Check className="h-2.5 w-2.5" /> Essencial
-                            </span>
-                          )}
-                          {it.priority === "recomendado" && (
-                            <span className="inline-flex items-center rounded-full border border-white/30 bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-secondary-foreground/80">
-                              Recomendado
-                            </span>
-                          )}
+                          <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">
+                            {o.tag}
+                          </span>
+                          <h5 className="text-[13px] font-semibold">{o.title}</h5>
                         </div>
-                        <p className="line-clamp-2 text-xs text-secondary-foreground/65">
-                          {it.why}
+                        <p className="text-[11px] leading-relaxed text-secondary-foreground/70">
+                          {o.body}
                         </p>
                       </div>
-                      <div className="shrink-0 text-right">
-                        <div className="text-sm font-semibold text-primary">
-                          {it.price}
-                        </div>
-                      </div>
                     </li>
-                  ))}
-                </ul>
-              </motion.div>
-            </div>
+                  );
+                })}
+              </ul>
 
+              <p className="mt-5 text-[11px] italic text-secondary-foreground/50">
+                * Pré-visualização ilustrativa. Seu plano final será personalizado após
+                a reunião de alinhamento, com curadoria, orçamento e cronograma
+                específicos para o seu imóvel.
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </section>
+  );
+}
             {/* Observations */}
             <div className="border-t border-white/10 bg-white/[0.02] p-6 md:p-8">
               <div className="mb-5 flex items-center gap-2">
