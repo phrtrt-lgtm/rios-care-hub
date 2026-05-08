@@ -655,68 +655,129 @@ export function PlanoPerformanceSection({
                     </p>
 
                     <ul className="divide-y divide-white/5 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] shadow-lg">
-                      {cat.items.map((it) => (
-                        <li
-                          key={it.name}
-                          className="flex items-center gap-4 p-3.5 transition hover:bg-primary/5"
-                        >
-                          <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-secondary ring-1 ring-white/10">
-                            <img
-                              src={thumbFor(it, cat.title)}
-                              alt={it.name}
-                              loading="lazy"
-                              width={400}
-                              height={400}
-                              className="h-full w-full object-cover"
-                              onError={(e) => {
-                                const t = e.currentTarget;
-                                if (!t.dataset.fallback) {
-                                  t.dataset.fallback = "1";
-                                  t.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(`${it.name}, minimalist product photography, neutral background, soft light, no text`)}?width=400&height=400&nologo=true&model=flux`;
-                                }
-                              }}
-                            />
-                            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-secondary/60 via-transparent to-transparent" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="mb-1 flex flex-wrap items-center gap-1.5">
-                              {it.link ? (
-                                <a
-                                  href={it.link}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="group inline-flex items-center gap-1 text-sm font-semibold leading-tight text-white hover:text-primary"
+                      {cat.items.map((it, idx) => {
+                        const k = itemKey(cat.key, idx);
+                        const isSelected = !!selected[k];
+                        const altGroupItems = it.alternativeGroup
+                          ? cat.items
+                              .map((x, i) => ({ x, i }))
+                              .filter((p) => p.x.alternativeGroup === it.alternativeGroup)
+                          : null;
+                        const altIndex = altGroupItems
+                          ? altGroupItems.findIndex((p) => p.i === idx)
+                          : -1;
+                        const isOpcao1 = altIndex === 0;
+                        return (
+                          <li
+                            key={`${cat.key}-${idx}`}
+                            className={`flex items-center gap-3 p-3.5 transition ${isSelected ? "hover:bg-primary/5" : "opacity-55"}`}
+                          >
+                            <div className="flex w-8 shrink-0 items-center justify-center">
+                              {it.alternativeGroup ? (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    chooseAlternative(cat.key, it.alternativeGroup!, idx)
+                                  }
+                                  aria-label={`Escolher ${it.name}`}
+                                  className={`flex h-5 w-5 items-center justify-center rounded-full border-2 transition ${
+                                    isSelected
+                                      ? "border-emerald-500 bg-emerald-500"
+                                      : "border-white/30 bg-transparent hover:border-white/60"
+                                  }`}
                                 >
-                                  {it.name}
-                                  <ExternalLink className="h-3 w-3 opacity-60 transition group-hover:opacity-100" />
-                                </a>
+                                  {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+                                </button>
+                              ) : it.optional ? (
+                                <Checkbox
+                                  checked={isSelected}
+                                  onCheckedChange={() => toggleOptional(k)}
+                                  aria-label={`Incluir ${it.name}`}
+                                  className="h-5 w-5 border-white/30 data-[state=checked]:border-emerald-500 data-[state=checked]:bg-emerald-500 data-[state=checked]:text-white"
+                                />
                               ) : (
-                                <h5 className="text-sm font-semibold leading-tight text-white">
-                                  {it.name}
-                                </h5>
-                              )}
-                              {it.priority === "essencial" && (
-                                <span className="inline-flex items-center gap-0.5 rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-primary-foreground">
-                                  <Check className="h-2.5 w-2.5" /> Essencial
-                                </span>
-                              )}
-                              {it.priority === "recomendado" && (
-                                <span className="inline-flex items-center rounded-full border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-primary">
-                                  Recomendado
+                                <span
+                                  title="Item essencial — incluído automaticamente"
+                                  className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/25 text-primary"
+                                >
+                                  <Check className="h-3 w-3" />
                                 </span>
                               )}
                             </div>
-                            <p className="line-clamp-2 text-xs text-white/65">
-                              {it.why}
-                            </p>
-                          </div>
-                          <div className="shrink-0 text-right">
-                            <div className="text-sm font-semibold text-primary">
-                              {it.price}
+                            <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-secondary ring-1 ring-white/10">
+                              <img
+                                src={thumbFor(it, cat.title)}
+                                alt={it.name}
+                                loading="lazy"
+                                width={400}
+                                height={400}
+                                className="h-full w-full object-cover"
+                                onError={(e) => {
+                                  const t = e.currentTarget;
+                                  if (!t.dataset.fallback) {
+                                    t.dataset.fallback = "1";
+                                    t.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(`${it.name}, minimalist product photography, neutral background, soft light, no text`)}?width=400&height=400&nologo=true&model=flux`;
+                                  }
+                                }}
+                              />
+                              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-secondary/60 via-transparent to-transparent" />
                             </div>
-                          </div>
-                        </li>
-                      ))}
+                            <div className="min-w-0 flex-1">
+                              <div className="mb-1 flex flex-wrap items-center gap-1.5">
+                                {it.link ? (
+                                  <a
+                                    href={it.link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="group inline-flex items-center gap-1 text-sm font-semibold leading-tight text-white hover:text-primary"
+                                  >
+                                    {it.name}
+                                    <ExternalLink className="h-3 w-3 opacity-60 transition group-hover:opacity-100" />
+                                  </a>
+                                ) : (
+                                  <h5 className="text-sm font-semibold leading-tight text-white">
+                                    {it.name}
+                                  </h5>
+                                )}
+                                {it.alternativeGroup && (
+                                  <span
+                                    className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${
+                                      isOpcao1
+                                        ? "bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/40"
+                                        : "border border-white/15 bg-white/5 text-white/60"
+                                    }`}
+                                  >
+                                    {isOpcao1 ? "Opção 1 · melhor ROI" : `Opção ${altIndex + 1}`}
+                                  </span>
+                                )}
+                                {it.optional && (
+                                  <span className="inline-flex items-center rounded-full border border-white/15 bg-white/5 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white/60">
+                                    Opcional
+                                  </span>
+                                )}
+                                {it.priority === "essencial" && (
+                                  <span className="inline-flex items-center gap-0.5 rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-primary-foreground">
+                                    <Check className="h-2.5 w-2.5" /> Essencial
+                                  </span>
+                                )}
+                                {it.priority === "recomendado" && (
+                                  <span className="inline-flex items-center rounded-full border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-primary">
+                                    Recomendado
+                                  </span>
+                                )}
+                              </div>
+                              <p className="line-clamp-2 text-xs text-white/65">
+                                {it.why}
+                              </p>
+                            </div>
+                            <div className="shrink-0 text-right">
+                              <div className={`text-sm font-semibold ${isSelected ? "text-primary" : "text-white/40 line-through"}`}>
+                                {it.price}
+                              </div>
+                            </div>
+                          </li>
+                        );
+                      })}
                     </ul>
                   </div>
                 ))}
