@@ -328,6 +328,47 @@ export function PlanoPerformanceSection({
     : OBSERVATIONS;
   const [activeCat, setActiveCat] = useState<string>(categories[0].key);
 
+  // Chave única por item
+  const itemKey = (catKey: string, idx: number) => `${catKey}::${idx}`;
+
+  // Estado de seleção: opcionais começam marcados; alternativos => primeiro do grupo marcado
+  const [selected, setSelected] = useState<Record<string, boolean>>(() => {
+    const sel: Record<string, boolean> = {};
+    for (const cat of categories) {
+      const seenGroups = new Set<string>();
+      cat.items.forEach((it, idx) => {
+        const k = itemKey(cat.key, idx);
+        if (it.alternativeGroup) {
+          if (!seenGroups.has(it.alternativeGroup)) {
+            sel[k] = true; // Opção 1 (primeira do grupo) marcada por padrão
+            seenGroups.add(it.alternativeGroup);
+          } else {
+            sel[k] = false;
+          }
+        } else {
+          sel[k] = true; // obrigatórios e opcionais começam marcados
+        }
+      });
+    }
+    return sel;
+  });
+
+  function toggleOptional(k: string) {
+    setSelected((s) => ({ ...s, [k]: !s[k] }));
+  }
+  function chooseAlternative(catKey: string, group: string, chosenIdx: number) {
+    setSelected((s) => {
+      const next = { ...s };
+      const cat = categories.find((c) => c.key === catKey)!;
+      cat.items.forEach((it, idx) => {
+        if (it.alternativeGroup === group) {
+          next[itemKey(catKey, idx)] = idx === chosenIdx;
+        }
+      });
+      return next;
+    });
+  }
+
   const totalItems = categories.reduce((acc, c) => acc + c.items.length, 0);
   const totalEssenciais = categories.reduce(
     (acc, c) => acc + c.items.filter((i) => i.priority === "essencial").length,
@@ -336,10 +377,15 @@ export function PlanoPerformanceSection({
   const orcamentoCents = useMemo(
     () =>
       categories.reduce(
-        (acc, c) => acc + c.items.reduce((s, i) => s + priceToCents(i.price), 0),
+        (acc, c) =>
+          acc +
+          c.items.reduce(
+            (s, i, idx) => (selected[itemKey(c.key, idx)] ? s + priceToCents(i.price) : s),
+            0,
+          ),
         0,
       ),
-    [categories],
+    [categories, selected],
   );
   const orcamento = Math.round(orcamentoCents / 100);
 
