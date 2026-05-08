@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Sparkles,
@@ -11,7 +11,14 @@ import {
   X,
   Wallet,
   Wrench,
+  ExternalLink,
+  QrCode,
+  Copy,
+  Loader2,
+  CheckCircle2,
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 function thumbFor(item: { name: string; img?: string }, catTitle?: string) {
   if (item.img && item.img.trim()) return item.img;
@@ -54,6 +61,7 @@ type Item = {
   why: string;
   price: string;
   img: string;
+  link?: string;
   priority?: "essencial" | "recomendado";
 };
 
@@ -161,14 +169,149 @@ type Observation = { icon: any; tag: string; title: string; body: string };
 
 const ICON_MAP: Record<string, any> = { Wand2, Lightbulb, AlertTriangle, Sparkles };
 
+function priceToCents(price: string): number {
+  if (!price) return 0;
+  // "R$ 1.234,56" -> 123456
+  const cleaned = price.replace(/[^\d,]/g, "").replace(",", ".");
+  const n = parseFloat(cleaned);
+  if (isNaN(n)) return 0;
+  return Math.round(n * 100);
+}
+
+function ComoFuncionaBlock() {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent p-5">
+      <div className="mb-3 flex items-center gap-2">
+        <Wallet className="h-4 w-4 text-primary" />
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
+          Como funciona o pagamento e a instalação
+        </p>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="flex items-start gap-3">
+          <div className="shrink-0 rounded-lg bg-primary/20 p-2 text-primary">
+            <Wallet className="h-4 w-4" />
+          </div>
+          <div>
+            <h5 className="mb-1 text-sm font-semibold text-white">
+              Você paga a curadoria pra RIOS via PIX
+            </h5>
+            <p className="text-xs leading-relaxed text-white/70">
+              O orçamento total dos itens é enviado direto pra nós pelo botão verde — pagamento confirmado libera automaticamente seu acesso completo ao portal RIOS (etapa 04).
+            </p>
+          </div>
+        </div>
+        <div className="flex items-start gap-3">
+          <div className="shrink-0 rounded-lg bg-primary/20 p-2 text-primary">
+            <Wrench className="h-4 w-4" />
+          </div>
+          <div>
+            <h5 className="mb-1 text-sm font-semibold text-white">
+              Cuidamos de tudo: compras, frete, montagem e instalação
+            </h5>
+            <p className="text-xs leading-relaxed text-white/70">
+              Você não cota, não compra, não recebe em casa. Custos extras de execução são consolidados e cobrados de forma transparente na sua plataforma RIOS.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface PixDialogProps {
+  open: boolean;
+  onClose: () => void;
+  totalCents: number;
+  qrBase64?: string;
+  qrCode?: string;
+  loading?: boolean;
+  paid?: boolean;
+}
+
+function PixDialog({ open, onClose, totalCents, qrBase64, qrCode, loading, paid }: PixDialogProps) {
+  const totalBRL = (totalCents / 100).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+
+  function copyPix() {
+    if (!qrCode) return;
+    navigator.clipboard.writeText(qrCode);
+    toast.success("Código PIX copiado");
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md gap-0 overflow-hidden border-white/10 bg-secondary p-0 text-secondary-foreground">
+        <DialogTitle className="sr-only">Pagar curadoria via PIX</DialogTitle>
+        <div className="bg-gradient-to-br from-emerald-500/20 via-emerald-500/10 to-transparent p-6 text-center">
+          <div className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/20 text-emerald-400">
+            <QrCode className="h-6 w-6" />
+          </div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-400">
+            Pagamento da curadoria
+          </p>
+          <p className="mt-2 text-3xl font-bold text-white">{totalBRL}</p>
+        </div>
+        <div className="space-y-4 p-6">
+          {paid ? (
+            <div className="flex flex-col items-center gap-3 py-8 text-center">
+              <CheckCircle2 className="h-14 w-14 text-emerald-400" />
+              <div>
+                <p className="text-base font-semibold text-white">Pagamento confirmado</p>
+                <p className="mt-1 text-xs text-white/60">
+                  Seu acesso completo ao portal foi liberado.
+                </p>
+              </div>
+            </div>
+          ) : loading || !qrBase64 ? (
+            <div className="flex flex-col items-center gap-3 py-10 text-center">
+              <Loader2 className="h-8 w-8 animate-spin text-emerald-400" />
+              <p className="text-sm text-white/70">Gerando QR Code seguro…</p>
+            </div>
+          ) : (
+            <>
+              <div className="flex justify-center rounded-xl bg-white p-4">
+                <img src={qrBase64} alt="QR Code PIX" className="h-56 w-56" />
+              </div>
+              <Button
+                onClick={copyPix}
+                className="w-full bg-emerald-500 text-white hover:bg-emerald-600"
+                size="lg"
+              >
+                <Copy className="mr-2 h-4 w-4" />
+                Copiar PIX copia e cola
+              </Button>
+              <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-[11px] leading-relaxed text-white/65">
+                Escaneie o QR Code no app do seu banco ou cole o código no PIX copia e cola.
+                Assim que o pagamento for confirmado, seu acesso ao portal RIOS é liberado automaticamente.
+              </div>
+            </>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function PlanoPerformanceSection({
   customCategories,
   customObservations,
+  curationId,
+  initialPaid,
 }: {
   customCategories?: Category[];
   customObservations?: { icon: string; tag: string; title: string; body: string }[];
+  curationId?: string;
+  initialPaid?: boolean;
 } = {}) {
   const [open, setOpen] = useState(false);
+  const [pixOpen, setPixOpen] = useState(false);
+  const [pixLoading, setPixLoading] = useState(false);
+  const [pixData, setPixData] = useState<{ qr_code?: string; qr_code_base64?: string }>({});
+  const [paid, setPaid] = useState(!!initialPaid);
+
   const categories = customCategories?.length ? customCategories : CATEGORIES;
   const observations: Observation[] = customObservations?.length
     ? customObservations.map((o) => ({ ...o, icon: ICON_MAP[o.icon] || Sparkles }))
@@ -180,14 +323,82 @@ export function PlanoPerformanceSection({
     (acc, c) => acc + c.items.filter((i) => i.priority === "essencial").length,
     0,
   );
-  const orcamento = categories.reduce(
-    (acc, c) =>
-      acc +
-      c.items.reduce((s, i) => s + Number(i.price.replace(/[^\d]/g, "")), 0),
-    0,
+  const orcamentoCents = useMemo(
+    () =>
+      categories.reduce(
+        (acc, c) => acc + c.items.reduce((s, i) => s + priceToCents(i.price), 0),
+        0,
+      ),
+    [categories],
   );
+  const orcamento = Math.round(orcamentoCents / 100);
 
   const active = categories.find((c) => c.key === activeCat) || categories[0];
+
+  // Polling do status de pagamento depois que o PIX é gerado
+  useEffect(() => {
+    if (!curationId || paid || !pixData.qr_code) return;
+    const interval = setInterval(async () => {
+      const { data } = await supabase
+        .from("owner_curations")
+        .select("paid_at")
+        .eq("id", curationId)
+        .maybeSingle();
+      if (data?.paid_at) {
+        setPaid(true);
+        clearInterval(interval);
+        toast.success("Pagamento confirmado! Acesso liberado.");
+        setTimeout(() => window.location.reload(), 2500);
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [curationId, pixData.qr_code, paid]);
+
+  async function handleGeneratePix() {
+    if (!curationId) {
+      toast.error("Curadoria ainda não publicada");
+      return;
+    }
+    if (orcamentoCents < 100) {
+      toast.error("Valor inválido");
+      return;
+    }
+    setPixOpen(true);
+    setPixLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-curation-pix", {
+        body: { curation_id: curationId, total_amount_cents: orcamentoCents },
+      });
+      if (error) throw error;
+      setPixData({
+        qr_code: data.pix_qr_code,
+        qr_code_base64: data.pix_qr_code_base64,
+      });
+    } catch (e: any) {
+      toast.error(e.message || "Falha ao gerar PIX");
+      setPixOpen(false);
+    } finally {
+      setPixLoading(false);
+    }
+  }
+
+  // Botão PIX reutilizável (verde)
+  const PixCTA = ({ size = "default" as "default" | "lg" }) =>
+    paid ? (
+      <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-5 py-2.5 text-sm font-semibold text-emerald-400">
+        <CheckCircle2 className="h-4 w-4" />
+        Curadoria paga · acesso liberado
+      </div>
+    ) : (
+      <Button
+        onClick={handleGeneratePix}
+        size={size}
+        className="bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-600"
+      >
+        <QrCode className="mr-2 h-4 w-4" />
+        Pagar curadoria via PIX · R$ {orcamento.toLocaleString("pt-BR")}
+      </Button>
+    );
 
   return (
     <section className="mb-24 md:mb-32">
@@ -201,6 +412,30 @@ export function PlanoPerformanceSection({
           </h2>
         </div>
       </div>
+
+      {/* Hero PIX no topo (só se publicada) */}
+      {curationId && (
+        <div className="mb-6 overflow-hidden rounded-3xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent p-6 backdrop-blur-md md:p-7">
+          <div className="flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-400">
+                Pagamento direto · libera etapa 04
+              </p>
+              <h3 className="text-lg font-bold tracking-tight text-white md:text-xl">
+                {paid
+                  ? "Pagamento confirmado · acesso completo liberado"
+                  : `Pague a curadoria e destrave a operação completa RIOS`}
+              </h3>
+              <p className="mt-1 max-w-xl text-sm text-white/65">
+                {paid
+                  ? "Sua curadoria já está em execução pela equipe."
+                  : "PIX seguro pelo Mercado Pago. Acesso ao portal liberado automaticamente assim que o pagamento for confirmado."}
+              </p>
+            </div>
+            <PixCTA size="lg" />
+          </div>
+        </div>
+      )}
 
       {/* Trigger card */}
       <motion.button
@@ -240,7 +475,7 @@ export function PlanoPerformanceSection({
             Plano de Performance · Diagnóstico & Curadoria
           </DialogTitle>
 
-          {/* Background blobs (laranja em vez de azul) */}
+          {/* Background blobs */}
           <div className="pointer-events-none absolute inset-0 overflow-hidden">
             <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-primary/30 blur-[120px]" />
             <div className="absolute -right-20 bottom-0 h-80 w-80 rounded-full bg-primary/20 blur-[120px]" />
@@ -315,6 +550,26 @@ export function PlanoPerformanceSection({
 
           {/* Scrollable body */}
           <div className="relative min-h-0 flex-1 overflow-y-auto">
+            {/* Como funciona — agora no TOPO da curadoria */}
+            <div className="border-b border-white/10 px-5 pt-6 md:px-6 md:pt-7">
+              <ComoFuncionaBlock />
+
+              {/* CTA PIX dentro do dialog (topo) */}
+              {curationId && (
+                <div className="mt-5 flex flex-col items-start gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-400">
+                      Pagar agora · libera etapa 04
+                    </p>
+                    <p className="mt-1 text-sm text-white/80">
+                      {paid ? "Pagamento confirmado." : `Total da curadoria · R$ ${orcamento.toLocaleString("pt-BR")}`}
+                    </p>
+                  </div>
+                  <PixCTA />
+                </div>
+              )}
+            </div>
+
             <div className="px-5 py-6 md:px-6 md:py-7">
               <div className="mb-5 flex items-center gap-2">
                 <ShoppingBag className="h-4 w-4 text-primary" />
@@ -369,9 +624,21 @@ export function PlanoPerformanceSection({
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="mb-1 flex flex-wrap items-center gap-1.5">
-                              <h5 className="text-sm font-semibold leading-tight text-white">
-                                {it.name}
-                              </h5>
+                              {it.link ? (
+                                <a
+                                  href={it.link}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="group inline-flex items-center gap-1 text-sm font-semibold leading-tight text-white hover:text-primary"
+                                >
+                                  {it.name}
+                                  <ExternalLink className="h-3 w-3 opacity-60 transition group-hover:opacity-100" />
+                                </a>
+                              ) : (
+                                <h5 className="text-sm font-semibold leading-tight text-white">
+                                  {it.name}
+                                </h5>
+                              )}
                               {it.priority === "essencial" && (
                                 <span className="inline-flex items-center gap-0.5 rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-primary-foreground">
                                   <Check className="h-2.5 w-2.5" /> Essencial
@@ -433,43 +700,25 @@ export function PlanoPerformanceSection({
                 })}
               </ul>
 
-              {/* Como funciona pagamento + instalação */}
-              <div className="mt-6 overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent p-5">
-                <div className="mb-3 flex items-center gap-2">
-                  <Wallet className="h-4 w-4 text-primary" />
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
-                    Como funciona o pagamento e a instalação
+              {/* CTA PIX final (rodapé do dialog) */}
+              {curationId && (
+                <div className="mt-6 flex flex-col items-center gap-3 rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 to-transparent p-6 text-center">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-400">
+                    Pronta para começar?
                   </p>
+                  <h4 className="text-lg font-bold text-white">
+                    {paid
+                      ? "Pagamento confirmado · acesso liberado"
+                      : `Pagar curadoria · R$ ${orcamento.toLocaleString("pt-BR")}`}
+                  </h4>
+                  <p className="max-w-md text-xs text-white/65">
+                    {paid
+                      ? "Sua curadoria já está em execução."
+                      : "Assim que o PIX for confirmado, você ganha acesso ao portal RIOS completo (etapa 04)."}
+                  </p>
+                  <PixCTA size="lg" />
                 </div>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="flex items-start gap-3">
-                    <div className="shrink-0 rounded-lg bg-primary/20 p-2 text-primary">
-                      <Wallet className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <h5 className="mb-1 text-sm font-semibold text-white">
-                        Você transfere o valor da curadoria para a RIOS
-                      </h5>
-                      <p className="text-xs leading-relaxed text-white/70">
-                        O orçamento total dos itens é enviado direto para nós. A RIOS centraliza as compras com fornecedores parceiros — você não precisa cotar, comprar nem receber nada em casa.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="shrink-0 rounded-lg bg-primary/20 p-2 text-primary">
-                      <Wrench className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <h5 className="mb-1 text-sm font-semibold text-white">
-                        Cuidamos de tudo: instalação, montagem e ajustes
-                      </h5>
-                      <p className="text-xs leading-relaxed text-white/70">
-                        Frete, montagem, instalação e qualquer custo extra de execução ficam por nossa conta na operação. Esses valores são consolidados depois e cobrados de forma transparente na sua plataforma RIOS, junto das demais cobranças do imóvel.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              )}
 
               <p className="mt-5 text-[11px] italic text-white/50">
                 * Pré-visualização ilustrativa. Seu plano final será personalizado após
@@ -485,6 +734,16 @@ export function PlanoPerformanceSection({
           </div>
         </DialogContent>
       </Dialog>
+
+      <PixDialog
+        open={pixOpen}
+        onClose={() => setPixOpen(false)}
+        totalCents={orcamentoCents}
+        qrBase64={pixData.qr_code_base64}
+        qrCode={pixData.qr_code}
+        loading={pixLoading}
+        paid={paid}
+      />
     </section>
   );
 }
