@@ -64,6 +64,11 @@ type Item = {
   img: string;
   link?: string;
   priority?: "essencial" | "recomendado";
+  /** Item opcional: aparece com checkbox (default marcado). Pode ser desmarcado. */
+  optional?: boolean;
+  /** Itens com o mesmo alternativeGroup são alternativas mutuamente exclusivas.
+   *  O primeiro item da lista é a "Opção 1" (recomendada · melhor ROI). */
+  alternativeGroup?: string;
 };
 
 type Category = {
