@@ -78,7 +78,7 @@ export default function MinhaCuradoria() {
           <SectionSkeleton />
         ) : !curation ? (
           <EmptyState
-            icon={Sparkles}
+            icon={<Sparkles className="h-8 w-8" />}
             title="Nenhuma curadoria publicada ainda"
             description="Assim que sua curadoria estiver pronta, ela aparecerá aqui para acesso permanente."
           />
