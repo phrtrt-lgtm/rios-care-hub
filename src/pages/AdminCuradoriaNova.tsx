@@ -37,6 +37,8 @@ type Item = {
   img?: string;
   link?: string;
   priority?: "essencial" | "recomendado" | "";
+  optional?: boolean;
+  alternativeGroup?: string;
 };
 type Category = {
   key: string;
