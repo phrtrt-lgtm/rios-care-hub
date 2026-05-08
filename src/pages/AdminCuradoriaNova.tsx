@@ -208,6 +208,25 @@ export default function AdminCuradoriaNova() {
     }
   }
 
+  async function sendTestEmail() {
+    if (!testEmail.trim()) {
+      toast.error("Informe um e-mail de teste");
+      return;
+    }
+    setSendingTest(true);
+    try {
+      const { error } = await supabase.functions.invoke("notify-curation-ready", {
+        body: { test_email: testEmail.trim() },
+      });
+      if (error) throw error;
+      toast.success(`E-mail de teste enviado para ${testEmail}`);
+    } catch (e: any) {
+      toast.error(e.message || "Falha ao enviar e-mail teste");
+    } finally {
+      setSendingTest(false);
+    }
+  }
+
   return (
     <div className="container max-w-7xl py-6">
       <div className="mb-6 flex items-center gap-3">
