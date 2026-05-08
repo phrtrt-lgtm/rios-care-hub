@@ -361,7 +361,7 @@ export function PlanoPerformanceSection({
                                 const t = e.currentTarget;
                                 if (!t.dataset.fallback) {
                                   t.dataset.fallback = "1";
-                                  t.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(it.name)}?width=400&height=400&nologo=true`;
+                                  t.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(`${it.name}, minimalist product photography, neutral background, soft light, no text`)}?width=400&height=400&nologo=true&model=flux`;
                                 }
                               }}
                             />
