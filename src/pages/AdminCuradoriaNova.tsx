@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
   Sparkles,
@@ -22,8 +23,12 @@ import {
   Plus,
   Loader2,
   ArrowLeft,
+  Eye,
+  Mail,
+  X,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { PlanoPerformanceSection } from "@/components/bemvindo/PlanoPerformanceSection";
 
 type Item = {
   name: string;
@@ -55,6 +60,9 @@ export default function AdminCuradoriaNova() {
   const [chatInput, setChatInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [testEmail, setTestEmail] = useState("phrtrt@gmail.com");
+  const [sendingTest, setSendingTest] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -200,6 +208,25 @@ export default function AdminCuradoriaNova() {
     }
   }
 
+  async function sendTestEmail() {
+    if (!testEmail.trim()) {
+      toast.error("Informe um e-mail de teste");
+      return;
+    }
+    setSendingTest(true);
+    try {
+      const { error } = await supabase.functions.invoke("notify-curation-ready", {
+        body: { test_email: testEmail.trim() },
+      });
+      if (error) throw error;
+      toast.success(`E-mail de teste enviado para ${testEmail}`);
+    } catch (e: any) {
+      toast.error(e.message || "Falha ao enviar e-mail teste");
+    } finally {
+      setSendingTest(false);
+    }
+  }
+
   return (
     <div className="container max-w-7xl py-6">
       <div className="mb-6 flex items-center gap-3">
@@ -274,14 +301,32 @@ export default function AdminCuradoriaNova() {
 
           {categories.length > 0 && (
             <Card className="p-4">
-              <div className="mb-4 flex items-center justify-between">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <h2 className="font-semibold">
                   Preview editável <span className="text-sm text-muted-foreground">· {totalItems} itens</span>
                 </h2>
-                <Button onClick={publish} disabled={publishing || !ownerId}>
-                  {publishing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                  Publicar e notificar
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button variant="outline" onClick={() => setPreviewOpen(true)}>
+                    <Eye className="mr-2 h-4 w-4" />
+                    Visualizar como proprietário
+                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Input
+                      value={testEmail}
+                      onChange={(e) => setTestEmail(e.target.value)}
+                      placeholder="email@teste.com"
+                      className="h-9 w-52"
+                    />
+                    <Button variant="outline" onClick={sendTestEmail} disabled={sendingTest}>
+                      {sendingTest ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
+                      E-mail teste
+                    </Button>
+                  </div>
+                  <Button onClick={publish} disabled={publishing || !ownerId}>
+                    {publishing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                    Publicar e notificar
+                  </Button>
+                </div>
               </div>
 
               <div className="space-y-6">
@@ -424,6 +469,28 @@ export default function AdminCuradoriaNova() {
           </div>
         </Card>
       </div>
+
+      {/* Preview do que o proprietário verá */}
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="h-[95vh] max-w-[95vw] overflow-y-auto bg-secondary p-0 text-secondary-foreground">
+          <DialogTitle className="sr-only">Preview da curadoria</DialogTitle>
+          <div className="sticky top-0 z-50 flex items-center justify-between border-b border-white/10 bg-secondary/95 px-6 py-3 backdrop-blur">
+            <div className="flex items-center gap-2 text-sm">
+              <Eye className="h-4 w-4 text-primary" />
+              <span className="font-medium">Visualizando como o proprietário verá em /bem-vindo</span>
+            </div>
+            <Button variant="ghost" size="icon" onClick={() => setPreviewOpen(false)}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="px-4 py-6 md:px-8">
+            <PlanoPerformanceSection
+              customCategories={categories as any}
+              customObservations={observations as any}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
