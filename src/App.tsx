@@ -84,6 +84,7 @@ import AdminVistoriasArquivadas from "./pages/AdminVistoriasArquivadas";
 import BemVindo from "./pages/BemVindo";
 import AdminCuradoriaNova from "./pages/AdminCuradoriaNova";
 import DefinirSenha from "./pages/DefinirSenha";
+import MinhaCuradoria from "./pages/MinhaCuradoria";
 const queryClient = new QueryClient();
 
 const App = () => (
