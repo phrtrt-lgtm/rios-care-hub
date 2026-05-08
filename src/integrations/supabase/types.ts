@@ -1658,13 +1658,18 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          mercadopago_payment_id: string | null
           observations: Json
           owner_id: string
+          paid_at: string | null
+          pix_qr_code: string | null
+          pix_qr_code_base64: string | null
           property_id: string | null
           published_at: string | null
           source_filename: string | null
           status: string
           title: string
+          total_amount_cents: number | null
           updated_at: string
         }
         Insert: {
@@ -1673,13 +1678,18 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          mercadopago_payment_id?: string | null
           observations?: Json
           owner_id: string
+          paid_at?: string | null
+          pix_qr_code?: string | null
+          pix_qr_code_base64?: string | null
           property_id?: string | null
           published_at?: string | null
           source_filename?: string | null
           status?: string
           title?: string
+          total_amount_cents?: number | null
           updated_at?: string
         }
         Update: {
@@ -1688,13 +1698,18 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          mercadopago_payment_id?: string | null
           observations?: Json
           owner_id?: string
+          paid_at?: string | null
+          pix_qr_code?: string | null
+          pix_qr_code_base64?: string | null
           property_id?: string | null
           published_at?: string | null
           source_filename?: string | null
           status?: string
           title?: string
+          total_amount_cents?: number | null
           updated_at?: string
         }
         Relationships: []
