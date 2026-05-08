@@ -15,10 +15,12 @@ import {
 
 function thumbFor(item: { name: string; img?: string }, catTitle?: string) {
   if (item.img && item.img.trim()) return item.img;
+  // Estilo minimalista editorial RIOS — mesmo padrão dos assets estáticos em /assets/plano
   const q = encodeURIComponent(
-    `${item.name} ${catTitle || ""} produto decoração interior fotografia premium fundo neutro`.trim()
+    `${item.name}, single product centered, minimalist editorial product photography, soft natural light, neutral beige background, scandinavian aesthetic, muted earthy tones, high-end interior design, clean composition, no text, no logo, no people`
   );
-  return `https://image.pollinations.ai/prompt/${q}?width=400&height=400&nologo=true&seed=${item.name.length}`;
+  const seed = Array.from(item.name).reduce((a, c) => a + c.charCodeAt(0), 0);
+  return `https://image.pollinations.ai/prompt/${q}?width=400&height=400&nologo=true&model=flux&seed=${seed}`;
 }
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -359,7 +361,7 @@ export function PlanoPerformanceSection({
                                 const t = e.currentTarget;
                                 if (!t.dataset.fallback) {
                                   t.dataset.fallback = "1";
-                                  t.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(it.name)}?width=400&height=400&nologo=true`;
+                                  t.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(`${it.name}, minimalist product photography, neutral background, soft light, no text`)}?width=400&height=400&nologo=true&model=flux`;
                                 }
                               }}
                             />
