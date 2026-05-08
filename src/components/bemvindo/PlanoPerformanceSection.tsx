@@ -9,7 +9,17 @@ import {
   Check,
   ArrowRight,
   X,
+  Wallet,
+  Wrench,
 } from "lucide-react";
+
+function thumbFor(item: { name: string; img?: string }, catTitle?: string) {
+  if (item.img && item.img.trim()) return item.img;
+  const q = encodeURIComponent(
+    `${item.name} ${catTitle || ""} produto decoração interior fotografia premium fundo neutro`.trim()
+  );
+  return `https://image.pollinations.ai/prompt/${q}?width=400&height=400&nologo=true&seed=${item.name.length}`;
+}
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { CuradoriaChat } from "./CuradoriaChat";
@@ -339,12 +349,19 @@ export function PlanoPerformanceSection({
                         >
                           <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-secondary ring-1 ring-white/10">
                             <img
-                              src={it.img}
+                              src={thumbFor(it, cat.title)}
                               alt={it.name}
                               loading="lazy"
-                              width={512}
-                              height={512}
+                              width={400}
+                              height={400}
                               className="h-full w-full object-cover"
+                              onError={(e) => {
+                                const t = e.currentTarget;
+                                if (!t.dataset.fallback) {
+                                  t.dataset.fallback = "1";
+                                  t.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(it.name)}?width=400&height=400&nologo=true`;
+                                }
+                              }}
                             />
                             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-secondary/60 via-transparent to-transparent" />
                           </div>
@@ -413,6 +430,44 @@ export function PlanoPerformanceSection({
                   );
                 })}
               </ul>
+
+              {/* Como funciona pagamento + instalação */}
+              <div className="mt-6 overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent p-5">
+                <div className="mb-3 flex items-center gap-2">
+                  <Wallet className="h-4 w-4 text-primary" />
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
+                    Como funciona o pagamento e a instalação
+                  </p>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="flex items-start gap-3">
+                    <div className="shrink-0 rounded-lg bg-primary/20 p-2 text-primary">
+                      <Wallet className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <h5 className="mb-1 text-sm font-semibold text-white">
+                        Você transfere o valor da curadoria para a RIOS
+                      </h5>
+                      <p className="text-xs leading-relaxed text-white/70">
+                        O orçamento total dos itens é enviado direto para nós. A RIOS centraliza as compras com fornecedores parceiros — você não precisa cotar, comprar nem receber nada em casa.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="shrink-0 rounded-lg bg-primary/20 p-2 text-primary">
+                      <Wrench className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <h5 className="mb-1 text-sm font-semibold text-white">
+                        Cuidamos de tudo: instalação, montagem e ajustes
+                      </h5>
+                      <p className="text-xs leading-relaxed text-white/70">
+                        Frete, montagem, instalação e qualquer custo extra de execução ficam por nossa conta na operação. Esses valores são consolidados depois e cobrados de forma transparente na sua plataforma RIOS, junto das demais cobranças do imóvel.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               <p className="mt-5 text-[11px] italic text-white/50">
                 * Pré-visualização ilustrativa. Seu plano final será personalizado após
