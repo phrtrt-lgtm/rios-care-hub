@@ -60,6 +60,9 @@ export default function AdminCuradoriaNova() {
   const [chatInput, setChatInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [testEmail, setTestEmail] = useState("phrtrt@gmail.com");
+  const [sendingTest, setSendingTest] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
