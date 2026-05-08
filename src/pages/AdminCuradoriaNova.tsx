@@ -301,14 +301,32 @@ export default function AdminCuradoriaNova() {
 
           {categories.length > 0 && (
             <Card className="p-4">
-              <div className="mb-4 flex items-center justify-between">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <h2 className="font-semibold">
                   Preview editável <span className="text-sm text-muted-foreground">· {totalItems} itens</span>
                 </h2>
-                <Button onClick={publish} disabled={publishing || !ownerId}>
-                  {publishing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                  Publicar e notificar
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button variant="outline" onClick={() => setPreviewOpen(true)}>
+                    <Eye className="mr-2 h-4 w-4" />
+                    Visualizar como proprietário
+                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Input
+                      value={testEmail}
+                      onChange={(e) => setTestEmail(e.target.value)}
+                      placeholder="email@teste.com"
+                      className="h-9 w-52"
+                    />
+                    <Button variant="outline" onClick={sendTestEmail} disabled={sendingTest}>
+                      {sendingTest ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
+                      E-mail teste
+                    </Button>
+                  </div>
+                  <Button onClick={publish} disabled={publishing || !ownerId}>
+                    {publishing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                    Publicar e notificar
+                  </Button>
+                </div>
               </div>
 
               <div className="space-y-6">
