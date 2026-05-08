@@ -485,8 +485,8 @@ export default function AdminCuradoriaNova() {
           </div>
           <div className="px-4 py-6 md:px-8">
             <PlanoPerformanceSection
-              customCategories={categories}
-              customObservations={observations}
+              customCategories={categories as any}
+              customObservations={observations as any}
             />
           </div>
         </DialogContent>
