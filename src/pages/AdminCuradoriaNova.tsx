@@ -469,6 +469,28 @@ export default function AdminCuradoriaNova() {
           </div>
         </Card>
       </div>
+
+      {/* Preview do que o proprietário verá */}
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="h-[95vh] max-w-[95vw] overflow-y-auto bg-secondary p-0 text-secondary-foreground">
+          <DialogTitle className="sr-only">Preview da curadoria</DialogTitle>
+          <div className="sticky top-0 z-50 flex items-center justify-between border-b border-white/10 bg-secondary/95 px-6 py-3 backdrop-blur">
+            <div className="flex items-center gap-2 text-sm">
+              <Eye className="h-4 w-4 text-primary" />
+              <span className="font-medium">Visualizando como o proprietário verá em /bem-vindo</span>
+            </div>
+            <Button variant="ghost" size="icon" onClick={() => setPreviewOpen(false)}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="px-4 py-6 md:px-8">
+            <PlanoPerformanceSection
+              customCategories={categories}
+              customObservations={observations}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
