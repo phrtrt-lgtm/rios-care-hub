@@ -31,6 +31,7 @@ function thumbFor(item: { name: string; img?: string }, catTitle?: string) {
 }
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { CuradoriaChat } from "./CuradoriaChat";
 
 import almofadas from "@/assets/plano/decor-almofadas.jpg";
