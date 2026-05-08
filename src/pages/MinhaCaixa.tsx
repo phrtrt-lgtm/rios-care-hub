@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Plus, LogOut, DollarSign, ClipboardCheck, Ticket, BookOpen, Wrench, BarChart3, GraduationCap, MoreHorizontal } from "lucide-react";
+import { Plus, LogOut, DollarSign, ClipboardCheck, Ticket, BookOpen, Wrench, BarChart3, GraduationCap, MoreHorizontal, Sparkles } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
