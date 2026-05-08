@@ -9,7 +9,17 @@ import {
   Check,
   ArrowRight,
   X,
+  Wallet,
+  Wrench,
 } from "lucide-react";
+
+function thumbFor(item: { name: string; img?: string }, catTitle?: string) {
+  if (item.img && item.img.trim()) return item.img;
+  const q = encodeURIComponent(
+    `${item.name} ${catTitle || ""} produto decoração interior fotografia premium fundo neutro`.trim()
+  );
+  return `https://image.pollinations.ai/prompt/${q}?width=400&height=400&nologo=true&seed=${item.name.length}`;
+}
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { CuradoriaChat } from "./CuradoriaChat";
