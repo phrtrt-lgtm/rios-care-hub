@@ -31,6 +31,7 @@ function thumbFor(item: { name: string; img?: string }, catTitle?: string) {
 }
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { CuradoriaChat } from "./CuradoriaChat";
 
 import almofadas from "@/assets/plano/decor-almofadas.jpg";
@@ -63,6 +64,11 @@ type Item = {
   img: string;
   link?: string;
   priority?: "essencial" | "recomendado";
+  /** Item opcional: aparece com checkbox (default marcado). Pode ser desmarcado. */
+  optional?: boolean;
+  /** Itens com o mesmo alternativeGroup são alternativas mutuamente exclusivas.
+   *  O primeiro item da lista é a "Opção 1" (recomendada · melhor ROI). */
+  alternativeGroup?: string;
 };
 
 type Category = {
@@ -95,7 +101,9 @@ const CATEGORIES: Category[] = [
       { name: "Kit 4 almofadas linho", why: "Texturas em camadas — visual que fideliza no Airbnb.", price: "R$ 360", img: almofadas, priority: "essencial" },
       { name: "Vaso terracota + pampas", why: "Toque artesanal que combina com a paleta moderna brasileira.", price: "R$ 220", img: vaso },
       { name: "Luminária de chão minimalista", why: "Ilumina noturno e cria foto com vibe aconchegante.", price: "R$ 540", img: luminaria, priority: "recomendado" },
-      { name: "Quadro emoldurado (par)", why: "Parede vazia perde estrelas. Arte certa eleva instantaneamente.", price: "R$ 380", img: quadro },
+      // Alternativas: par de quadros (Opção 1 = curadoria nossa, Opção 2 = econômica)
+      { name: "Quadro emoldurado curadoria RIOS (par)", why: "Arte selecionada pela nossa estilista — eleva instantaneamente o nível visual e fotografa melhor.", price: "R$ 380", img: quadro, alternativeGroup: "decor-quadro", priority: "recomendado" },
+      { name: "Quadro emoldurado linha econômica (par)", why: "Versão mais simples — funciona, mas com menor impacto editorial nas fotos.", price: "R$ 190", img: quadro, alternativeGroup: "decor-quadro" },
     ],
   },
   {
@@ -107,7 +115,7 @@ const CATEGORIES: Category[] = [
       { name: "Jogo de cama percal 400 fios", why: "Conforto hoteleiro real. Hóspede sente na pele e comenta.", price: "R$ 520", img: roupaCama, priority: "essencial" },
       { name: "Kit toalhas brancas spa", why: "Branco impecável vira padrão visual. Compre 2x mais que precisa.", price: "R$ 480", img: toalhas, priority: "essencial" },
       { name: "Manta bouclé pé da cama", why: "Detalhe que aparece em toda foto principal de quartos premium.", price: "R$ 290", img: manta },
-      { name: "Organizador rattan", why: "Bandeja de cabeceira para controle, água, lembretes — útil + lindo.", price: "R$ 140", img: organizador },
+      { name: "Organizador rattan", why: "Bandeja de cabeceira para controle, água, lembretes — útil + lindo.", price: "R$ 140", img: organizador, optional: true },
     ],
   },
   {
@@ -116,7 +124,9 @@ const CATEGORIES: Category[] = [
     emoji: "🍳",
     desc: "Hóspede que cozinha avalia melhor. Equipar bem aumenta diária aceita e tempo de estadia.",
     items: [
-      { name: "Set panelas antiaderente", why: "Conjunto completo evita reclamação de 'faltava panela'.", price: "R$ 690", img: panelas, priority: "essencial" },
+      // Alternativas: panelas (Opção 1 = melhor ROI)
+      { name: "Set panelas antiaderente premium (kit completo)", why: "Conjunto completo evita reclamação de 'faltava panela'. Durabilidade 3x maior — melhor ROI no longo prazo.", price: "R$ 690", img: panelas, alternativeGroup: "cozinha-panelas", priority: "essencial" },
+      { name: "Set panelas básico (kit reduzido)", why: "Versão econômica — atende, mas reposição mais frequente e nota menor de hóspedes que cozinham.", price: "R$ 390", img: panelas, alternativeGroup: "cozinha-panelas" },
       { name: "Louças porcelana branca (6p)", why: "Branco fotografa bem e nunca sai de moda.", price: "R$ 340", img: loucas, priority: "essencial" },
       { name: "Talheres preto fosco", why: "Toque designer barato. Diferencia das diárias econômicas.", price: "R$ 220", img: talheres },
       { name: "Copos & taças mistos (12p)", why: "Cobre tudo: água, vinho, drinks. Padronização visual.", price: "R$ 180", img: copos },
@@ -131,8 +141,8 @@ const CATEGORIES: Category[] = [
       { name: "Smart TV 50\" 4K", why: "Filtro 'TV' no Booking elimina 60% dos imóveis. Você fica.", price: "R$ 2.490", img: tv, priority: "essencial" },
       { name: "Roteador Wi-Fi mesh", why: "Wi-Fi forte = nota 5 em estadias longas / nômades digitais.", price: "R$ 690", img: roteador, priority: "essencial" },
       { name: "Ar-condicionado split", why: "Filtro decisivo no verão carioca. Sem ar = invisível.", price: "R$ 2.890", img: ar, priority: "essencial" },
-      { name: "Air fryer 5L", why: "Item mais buscado em cozinhas equipadas em 2024-25.", price: "R$ 490", img: airfryer, priority: "recomendado" },
-      { name: "Cafeteira de cápsula", why: "Detalhe premium da chegada. Apareça nas fotos.", price: "R$ 590", img: cafeteira },
+      { name: "Air fryer 5L", why: "Item mais buscado em cozinhas equipadas em 2024-25.", price: "R$ 490", img: airfryer, priority: "recomendado", optional: true },
+      { name: "Cafeteira de cápsula", why: "Detalhe premium da chegada. Apareça nas fotos.", price: "R$ 590", img: cafeteira, optional: true },
       { name: "Fechadura digital", why: "Self check-in 24h. Mais reservas last-minute e menos atrito.", price: "R$ 890", img: fechadura, priority: "recomendado" },
     ],
   },
@@ -318,6 +328,47 @@ export function PlanoPerformanceSection({
     : OBSERVATIONS;
   const [activeCat, setActiveCat] = useState<string>(categories[0].key);
 
+  // Chave única por item
+  const itemKey = (catKey: string, idx: number) => `${catKey}::${idx}`;
+
+  // Estado de seleção: opcionais começam marcados; alternativos => primeiro do grupo marcado
+  const [selected, setSelected] = useState<Record<string, boolean>>(() => {
+    const sel: Record<string, boolean> = {};
+    for (const cat of categories) {
+      const seenGroups = new Set<string>();
+      cat.items.forEach((it, idx) => {
+        const k = itemKey(cat.key, idx);
+        if (it.alternativeGroup) {
+          if (!seenGroups.has(it.alternativeGroup)) {
+            sel[k] = true; // Opção 1 (primeira do grupo) marcada por padrão
+            seenGroups.add(it.alternativeGroup);
+          } else {
+            sel[k] = false;
+          }
+        } else {
+          sel[k] = true; // obrigatórios e opcionais começam marcados
+        }
+      });
+    }
+    return sel;
+  });
+
+  function toggleOptional(k: string) {
+    setSelected((s) => ({ ...s, [k]: !s[k] }));
+  }
+  function chooseAlternative(catKey: string, group: string, chosenIdx: number) {
+    setSelected((s) => {
+      const next = { ...s };
+      const cat = categories.find((c) => c.key === catKey)!;
+      cat.items.forEach((it, idx) => {
+        if (it.alternativeGroup === group) {
+          next[itemKey(catKey, idx)] = idx === chosenIdx;
+        }
+      });
+      return next;
+    });
+  }
+
   const totalItems = categories.reduce((acc, c) => acc + c.items.length, 0);
   const totalEssenciais = categories.reduce(
     (acc, c) => acc + c.items.filter((i) => i.priority === "essencial").length,
@@ -326,10 +377,15 @@ export function PlanoPerformanceSection({
   const orcamentoCents = useMemo(
     () =>
       categories.reduce(
-        (acc, c) => acc + c.items.reduce((s, i) => s + priceToCents(i.price), 0),
+        (acc, c) =>
+          acc +
+          c.items.reduce(
+            (s, i, idx) => (selected[itemKey(c.key, idx)] ? s + priceToCents(i.price) : s),
+            0,
+          ),
         0,
       ),
-    [categories],
+    [categories, selected],
   );
   const orcamento = Math.round(orcamentoCents / 100);
 
@@ -578,6 +634,41 @@ export function PlanoPerformanceSection({
                 </p>
               </div>
 
+              {/* Banner: importância dos itens + regra Opção 1 */}
+              <div className="mb-6 grid gap-3 md:grid-cols-2">
+                <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+                  <div className="mb-1.5 flex items-center gap-2">
+                    <span className="inline-flex h-5 items-center rounded-full bg-emerald-500/25 px-2 text-[9px] font-semibold uppercase tracking-wider text-emerald-300">
+                      Recomendação RIOS
+                    </span>
+                  </div>
+                  <p className="text-sm font-semibold text-white">
+                    Sempre que houver Opção 1 e Opção 2, escolha a Opção 1.
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-white/70">
+                    A Opção 1 é a curadoria recomendada pela nossa equipe — entrega o melhor ROI,
+                    durabilidade e impacto visual. A Opção 2 existe só para quem precisa
+                    reduzir investimento inicial, mas tende a custar mais caro no longo prazo.
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4">
+                  <div className="mb-1.5 flex items-center gap-2">
+                    <span className="inline-flex h-5 items-center rounded-full bg-primary/25 px-2 text-[9px] font-semibold uppercase tracking-wider text-primary">
+                      Importante
+                    </span>
+                  </div>
+                  <p className="text-sm font-semibold text-white">
+                    Cada item conta na otimização inicial.
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-white/70">
+                    Itens sem caixinha são essenciais e já entram no orçamento. Os marcados como{" "}
+                    <span className="font-semibold text-white">Opcional</span> podem ser desmarcados —
+                    mas recomendamos manter <span className="font-semibold text-white">todos marcados</span>{" "}
+                    para o melhor desempenho do seu imóvel desde o primeiro hóspede.
+                  </p>
+                </div>
+              </div>
+
               <div className="space-y-10">
                 {categories.map((cat) => (
                   <div
@@ -599,68 +690,129 @@ export function PlanoPerformanceSection({
                     </p>
 
                     <ul className="divide-y divide-white/5 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] shadow-lg">
-                      {cat.items.map((it) => (
-                        <li
-                          key={it.name}
-                          className="flex items-center gap-4 p-3.5 transition hover:bg-primary/5"
-                        >
-                          <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-secondary ring-1 ring-white/10">
-                            <img
-                              src={thumbFor(it, cat.title)}
-                              alt={it.name}
-                              loading="lazy"
-                              width={400}
-                              height={400}
-                              className="h-full w-full object-cover"
-                              onError={(e) => {
-                                const t = e.currentTarget;
-                                if (!t.dataset.fallback) {
-                                  t.dataset.fallback = "1";
-                                  t.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(`${it.name}, minimalist product photography, neutral background, soft light, no text`)}?width=400&height=400&nologo=true&model=flux`;
-                                }
-                              }}
-                            />
-                            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-secondary/60 via-transparent to-transparent" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="mb-1 flex flex-wrap items-center gap-1.5">
-                              {it.link ? (
-                                <a
-                                  href={it.link}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="group inline-flex items-center gap-1 text-sm font-semibold leading-tight text-white hover:text-primary"
+                      {cat.items.map((it, idx) => {
+                        const k = itemKey(cat.key, idx);
+                        const isSelected = !!selected[k];
+                        const altGroupItems = it.alternativeGroup
+                          ? cat.items
+                              .map((x, i) => ({ x, i }))
+                              .filter((p) => p.x.alternativeGroup === it.alternativeGroup)
+                          : null;
+                        const altIndex = altGroupItems
+                          ? altGroupItems.findIndex((p) => p.i === idx)
+                          : -1;
+                        const isOpcao1 = altIndex === 0;
+                        return (
+                          <li
+                            key={`${cat.key}-${idx}`}
+                            className={`flex items-center gap-3 p-3.5 transition ${isSelected ? "hover:bg-primary/5" : "opacity-55"}`}
+                          >
+                            <div className="flex w-8 shrink-0 items-center justify-center">
+                              {it.alternativeGroup ? (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    chooseAlternative(cat.key, it.alternativeGroup!, idx)
+                                  }
+                                  aria-label={`Escolher ${it.name}`}
+                                  className={`flex h-5 w-5 items-center justify-center rounded-full border-2 transition ${
+                                    isSelected
+                                      ? "border-emerald-500 bg-emerald-500"
+                                      : "border-white/30 bg-transparent hover:border-white/60"
+                                  }`}
                                 >
-                                  {it.name}
-                                  <ExternalLink className="h-3 w-3 opacity-60 transition group-hover:opacity-100" />
-                                </a>
+                                  {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+                                </button>
+                              ) : it.optional ? (
+                                <Checkbox
+                                  checked={isSelected}
+                                  onCheckedChange={() => toggleOptional(k)}
+                                  aria-label={`Incluir ${it.name}`}
+                                  className="h-5 w-5 border-white/30 data-[state=checked]:border-emerald-500 data-[state=checked]:bg-emerald-500 data-[state=checked]:text-white"
+                                />
                               ) : (
-                                <h5 className="text-sm font-semibold leading-tight text-white">
-                                  {it.name}
-                                </h5>
-                              )}
-                              {it.priority === "essencial" && (
-                                <span className="inline-flex items-center gap-0.5 rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-primary-foreground">
-                                  <Check className="h-2.5 w-2.5" /> Essencial
-                                </span>
-                              )}
-                              {it.priority === "recomendado" && (
-                                <span className="inline-flex items-center rounded-full border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-primary">
-                                  Recomendado
+                                <span
+                                  title="Item essencial — incluído automaticamente"
+                                  className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/25 text-primary"
+                                >
+                                  <Check className="h-3 w-3" />
                                 </span>
                               )}
                             </div>
-                            <p className="line-clamp-2 text-xs text-white/65">
-                              {it.why}
-                            </p>
-                          </div>
-                          <div className="shrink-0 text-right">
-                            <div className="text-sm font-semibold text-primary">
-                              {it.price}
+                            <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-secondary ring-1 ring-white/10">
+                              <img
+                                src={thumbFor(it, cat.title)}
+                                alt={it.name}
+                                loading="lazy"
+                                width={400}
+                                height={400}
+                                className="h-full w-full object-cover"
+                                onError={(e) => {
+                                  const t = e.currentTarget;
+                                  if (!t.dataset.fallback) {
+                                    t.dataset.fallback = "1";
+                                    t.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(`${it.name}, minimalist product photography, neutral background, soft light, no text`)}?width=400&height=400&nologo=true&model=flux`;
+                                  }
+                                }}
+                              />
+                              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-secondary/60 via-transparent to-transparent" />
                             </div>
-                          </div>
-                        </li>
-                      ))}
+                            <div className="min-w-0 flex-1">
+                              <div className="mb-1 flex flex-wrap items-center gap-1.5">
+                                {it.link ? (
+                                  <a
+                                    href={it.link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="group inline-flex items-center gap-1 text-sm font-semibold leading-tight text-white hover:text-primary"
+                                  >
+                                    {it.name}
+                                    <ExternalLink className="h-3 w-3 opacity-60 transition group-hover:opacity-100" />
+                                  </a>
+                                ) : (
+                                  <h5 className="text-sm font-semibold leading-tight text-white">
+                                    {it.name}
+                                  </h5>
+                                )}
+                                {it.alternativeGroup && (
+                                  <span
+                                    className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${
+                                      isOpcao1
+                                        ? "bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/40"
+                                        : "border border-white/15 bg-white/5 text-white/60"
+                                    }`}
+                                  >
+                                    {isOpcao1 ? "Opção 1 · melhor ROI" : `Opção ${altIndex + 1}`}
+                                  </span>
+                                )}
+                                {it.optional && (
+                                  <span className="inline-flex items-center rounded-full border border-white/15 bg-white/5 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white/60">
+                                    Opcional
+                                  </span>
+                                )}
+                                {it.priority === "essencial" && (
+                                  <span className="inline-flex items-center gap-0.5 rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-primary-foreground">
+                                    <Check className="h-2.5 w-2.5" /> Essencial
+                                  </span>
+                                )}
+                                {it.priority === "recomendado" && (
+                                  <span className="inline-flex items-center rounded-full border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-primary">
+                                    Recomendado
+                                  </span>
+                                )}
+                              </div>
+                              <p className="line-clamp-2 text-xs text-white/65">
+                                {it.why}
+                              </p>
+                            </div>
+                            <div className="shrink-0 text-right">
+                              <div className={`text-sm font-semibold ${isSelected ? "text-primary" : "text-white/40 line-through"}`}>
+                                {it.price}
+                              </div>
+                            </div>
+                          </li>
+                        );
+                      })}
                     </ul>
                   </div>
                 ))}
