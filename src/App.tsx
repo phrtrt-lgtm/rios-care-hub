@@ -83,6 +83,7 @@ import AtualizacaoAnuncio from "./pages/AtualizacaoAnuncio";
 import AdminVistoriasArquivadas from "./pages/AdminVistoriasArquivadas";
 import BemVindo from "./pages/BemVindo";
 import AdminCuradoriaNova from "./pages/AdminCuradoriaNova";
+import DefinirSenha from "./pages/DefinirSenha";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -108,6 +109,7 @@ const App = () => (
             />
             <Route path="/aguardando-aprovacao" element={<AguardandoAprovacao />} />
             <Route path="/bem-vindo" element={<BemVindo />} />
+            <Route path="/definir-senha" element={<DefinirSenha />} />
             <Route
               path="/minha-caixa"
               element={
