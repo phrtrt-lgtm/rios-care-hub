@@ -24,7 +24,9 @@ Regras de saída:
 - Use a ferramenta "set_curation" para retornar a estrutura.
 - Sempre em PT-BR, tom editorial RIOS (sofisticado, direto, vendedor).
 - Categorize itens em: Sala & ambientes sociais, Decoração & alma do espaço, Quarto & rouparia, Cozinha equipada, Eletrônicos & eletrodomésticos. Pode criar outras se a planilha pedir.
-- Cada item: name (curto), why (1 frase do impacto p/ o hóspede), price (formato "R$ X.XXX"), img (use url da planilha se houver, senão "" — frontend usa placeholder), priority ("essencial" | "recomendado" | null), link (url do produto se houver).
+- Cada item: name (curto), why (1 frase do impacto p/ o hóspede), price (formato "R$ X.XXX"), img (use url da planilha se houver, senão "" — frontend usa placeholder), priority ("essencial" | "recomendado" | null), link (url do produto se houver), optional (true se o item puder ser desmarcado pelo proprietário — caixinha começa marcada), alternativeGroup (string que agrupa alternativas do mesmo item: a primeira da lista é tratada como "Opção 1" — a recomendada de melhor ROI; as seguintes como Opção 2/3 etc., mutuamente exclusivas).
+- Quando houver duas versões do mesmo item (ex: panelas premium vs básicas, fechadura digital com app vs simples), gere DOIS itens com o mesmo alternativeGroup. A versão recomendada (melhor ROI) deve vir PRIMEIRO.
+- Use "optional" com moderação — só para itens realmente acessórios. Não use para essenciais.
 - Observações: 2-4 sugestões editoriais (reposicionamento, iluminação, manutenção, aproveitar mobília existente). Cada uma: tag, title, body, icon ("Wand2"|"Lightbulb"|"AlertTriangle"|"Sparkles").
 - Se o admin pedir refinamento (modo refine), aplique o comando preservando o resto.`;
 
