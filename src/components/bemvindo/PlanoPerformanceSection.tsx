@@ -101,7 +101,9 @@ const CATEGORIES: Category[] = [
       { name: "Kit 4 almofadas linho", why: "Texturas em camadas — visual que fideliza no Airbnb.", price: "R$ 360", img: almofadas, priority: "essencial" },
       { name: "Vaso terracota + pampas", why: "Toque artesanal que combina com a paleta moderna brasileira.", price: "R$ 220", img: vaso },
       { name: "Luminária de chão minimalista", why: "Ilumina noturno e cria foto com vibe aconchegante.", price: "R$ 540", img: luminaria, priority: "recomendado" },
-      { name: "Quadro emoldurado (par)", why: "Parede vazia perde estrelas. Arte certa eleva instantaneamente.", price: "R$ 380", img: quadro },
+      // Alternativas: par de quadros (Opção 1 = curadoria nossa, Opção 2 = econômica)
+      { name: "Quadro emoldurado curadoria RIOS (par)", why: "Arte selecionada pela nossa estilista — eleva instantaneamente o nível visual e fotografa melhor.", price: "R$ 380", img: quadro, alternativeGroup: "decor-quadro", priority: "recomendado" },
+      { name: "Quadro emoldurado linha econômica (par)", why: "Versão mais simples — funciona, mas com menor impacto editorial nas fotos.", price: "R$ 190", img: quadro, alternativeGroup: "decor-quadro" },
     ],
   },
   {
@@ -113,7 +115,7 @@ const CATEGORIES: Category[] = [
       { name: "Jogo de cama percal 400 fios", why: "Conforto hoteleiro real. Hóspede sente na pele e comenta.", price: "R$ 520", img: roupaCama, priority: "essencial" },
       { name: "Kit toalhas brancas spa", why: "Branco impecável vira padrão visual. Compre 2x mais que precisa.", price: "R$ 480", img: toalhas, priority: "essencial" },
       { name: "Manta bouclé pé da cama", why: "Detalhe que aparece em toda foto principal de quartos premium.", price: "R$ 290", img: manta },
-      { name: "Organizador rattan", why: "Bandeja de cabeceira para controle, água, lembretes — útil + lindo.", price: "R$ 140", img: organizador },
+      { name: "Organizador rattan", why: "Bandeja de cabeceira para controle, água, lembretes — útil + lindo.", price: "R$ 140", img: organizador, optional: true },
     ],
   },
   {
@@ -122,7 +124,9 @@ const CATEGORIES: Category[] = [
     emoji: "🍳",
     desc: "Hóspede que cozinha avalia melhor. Equipar bem aumenta diária aceita e tempo de estadia.",
     items: [
-      { name: "Set panelas antiaderente", why: "Conjunto completo evita reclamação de 'faltava panela'.", price: "R$ 690", img: panelas, priority: "essencial" },
+      // Alternativas: panelas (Opção 1 = melhor ROI)
+      { name: "Set panelas antiaderente premium (kit completo)", why: "Conjunto completo evita reclamação de 'faltava panela'. Durabilidade 3x maior — melhor ROI no longo prazo.", price: "R$ 690", img: panelas, alternativeGroup: "cozinha-panelas", priority: "essencial" },
+      { name: "Set panelas básico (kit reduzido)", why: "Versão econômica — atende, mas reposição mais frequente e nota menor de hóspedes que cozinham.", price: "R$ 390", img: panelas, alternativeGroup: "cozinha-panelas" },
       { name: "Louças porcelana branca (6p)", why: "Branco fotografa bem e nunca sai de moda.", price: "R$ 340", img: loucas, priority: "essencial" },
       { name: "Talheres preto fosco", why: "Toque designer barato. Diferencia das diárias econômicas.", price: "R$ 220", img: talheres },
       { name: "Copos & taças mistos (12p)", why: "Cobre tudo: água, vinho, drinks. Padronização visual.", price: "R$ 180", img: copos },
@@ -137,8 +141,8 @@ const CATEGORIES: Category[] = [
       { name: "Smart TV 50\" 4K", why: "Filtro 'TV' no Booking elimina 60% dos imóveis. Você fica.", price: "R$ 2.490", img: tv, priority: "essencial" },
       { name: "Roteador Wi-Fi mesh", why: "Wi-Fi forte = nota 5 em estadias longas / nômades digitais.", price: "R$ 690", img: roteador, priority: "essencial" },
       { name: "Ar-condicionado split", why: "Filtro decisivo no verão carioca. Sem ar = invisível.", price: "R$ 2.890", img: ar, priority: "essencial" },
-      { name: "Air fryer 5L", why: "Item mais buscado em cozinhas equipadas em 2024-25.", price: "R$ 490", img: airfryer, priority: "recomendado" },
-      { name: "Cafeteira de cápsula", why: "Detalhe premium da chegada. Apareça nas fotos.", price: "R$ 590", img: cafeteira },
+      { name: "Air fryer 5L", why: "Item mais buscado em cozinhas equipadas em 2024-25.", price: "R$ 490", img: airfryer, priority: "recomendado", optional: true },
+      { name: "Cafeteira de cápsula", why: "Detalhe premium da chegada. Apareça nas fotos.", price: "R$ 590", img: cafeteira, optional: true },
       { name: "Fechadura digital", why: "Self check-in 24h. Mais reservas last-minute e menos atrito.", price: "R$ 890", img: fechadura, priority: "recomendado" },
     ],
   },
