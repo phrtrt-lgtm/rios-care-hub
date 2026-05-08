@@ -38,7 +38,7 @@ serve(async (req) => {
       // Modo teste: envia para o e-mail informado, sem persistir notificação nem gerar magic link real
       recipientEmail = test_email;
       recipientName = "proprietário(a)";
-      magicLink = `${portalUrl}/bem-vindo`;
+      magicLink = `${portalUrl}/definir-senha`;
     } else {
       const { data: profile } = await admin
         .from("profiles")
@@ -56,7 +56,7 @@ serve(async (req) => {
       const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
         type: "magiclink",
         email: profile.email,
-        options: { redirectTo: `${portalUrl}/bem-vindo` },
+        options: { redirectTo: `${portalUrl}/definir-senha` },
       });
       if (linkErr) throw linkErr;
       magicLink = linkData.properties?.action_link!;
@@ -65,15 +65,17 @@ serve(async (req) => {
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; color: #111;">
         ${test_email ? `<div style="background:#fff3cd;border-left:4px solid #ffc107;padding:10px 14px;margin-bottom:16px;border-radius:6px;font-size:13px;color:#856404;"><strong>E-mail de teste</strong> — este é apenas um preview da notificação que o proprietário receberá.</div>` : ""}
-        <h2 style="color: #e85d3a;">Sua curadoria RIOS está pronta ✨</h2>
+        <h2 style="color: #e85d3a; margin-bottom: 8px;">Sua curadoria RIOS está pronta ✨</h2>
+        <p style="margin-top:0;color:#555;font-size:14px;">Curadoria gratuita personalizada para o seu imóvel</p>
         <p>Olá ${recipientName},</p>
-        <p>A equipe RIOS finalizou a curadoria personalizada do seu imóvel — lista de compras, observações e plano de performance.</p>
+        <p>A equipe RIOS finalizou a curadoria do seu imóvel — lista de compras curada, observações editoriais e plano de performance.</p>
+        <p>Pra liberar seu acesso permanente ao portal, clique no botão abaixo, <strong>crie sua senha</strong> e em seguida você verá toda a sua curadoria:</p>
         <p style="margin: 28px 0;">
           <a href="${magicLink}" style="background: #e85d3a; color: #fff; padding: 14px 24px; border-radius: 10px; text-decoration: none; font-weight: 600;">
-            Acessar minha curadoria
+            Criar minha senha e ver a curadoria
           </a>
         </p>
-        <p style="font-size: 13px; color: #666;">Este botão te leva direto pro portal sem precisar de senha (válido por 1 hora). Depois de entrar, você pode definir uma senha em "Conta".</p>
+        <p style="font-size: 13px; color: #666;">O link é pessoal e válido por 1 hora. Depois de definir sua senha, você acessa o portal a qualquer momento em <a href="${portalUrl}/login" style="color:#e85d3a;">${portalUrl.replace(/^https?:\/\//,'')}/login</a>.</p>
         <p style="font-size: 12px; color: #999; margin-top: 32px;">RIOS Hospedagens · sistema@rioshospedagens.com.br</p>
       </div>
     `;
