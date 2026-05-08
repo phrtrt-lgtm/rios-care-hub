@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
   Sparkles,
@@ -22,8 +23,12 @@ import {
   Plus,
   Loader2,
   ArrowLeft,
+  Eye,
+  Mail,
+  X,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { PlanoPerformanceSection } from "@/components/bemvindo/PlanoPerformanceSection";
 
 type Item = {
   name: string;
