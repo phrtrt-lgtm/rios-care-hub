@@ -59,6 +59,8 @@ const TOOL = {
                     img: { type: "string" },
                     link: { type: "string" },
                     priority: { type: "string", enum: ["essencial", "recomendado", ""] },
+                    optional: { type: "boolean", description: "Se true, item aparece com checkbox e pode ser desmarcado (default marcado)." },
+                    alternativeGroup: { type: "string", description: "Itens com o mesmo valor são alternativas mutuamente exclusivas. O primeiro da lista é a 'Opção 1' (recomendada — melhor ROI)." },
                   },
                   required: ["name", "why", "price"],
                 },
