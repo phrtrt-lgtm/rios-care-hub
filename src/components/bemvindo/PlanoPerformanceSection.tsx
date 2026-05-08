@@ -634,6 +634,41 @@ export function PlanoPerformanceSection({
                 </p>
               </div>
 
+              {/* Banner: importância dos itens + regra Opção 1 */}
+              <div className="mb-6 grid gap-3 md:grid-cols-2">
+                <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+                  <div className="mb-1.5 flex items-center gap-2">
+                    <span className="inline-flex h-5 items-center rounded-full bg-emerald-500/25 px-2 text-[9px] font-semibold uppercase tracking-wider text-emerald-300">
+                      Recomendação RIOS
+                    </span>
+                  </div>
+                  <p className="text-sm font-semibold text-white">
+                    Sempre que houver Opção 1 e Opção 2, escolha a Opção 1.
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-white/70">
+                    A Opção 1 é a curadoria recomendada pela nossa equipe — entrega o melhor ROI,
+                    durabilidade e impacto visual. A Opção 2 existe só para quem precisa
+                    reduzir investimento inicial, mas tende a custar mais caro no longo prazo.
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4">
+                  <div className="mb-1.5 flex items-center gap-2">
+                    <span className="inline-flex h-5 items-center rounded-full bg-primary/25 px-2 text-[9px] font-semibold uppercase tracking-wider text-primary">
+                      Importante
+                    </span>
+                  </div>
+                  <p className="text-sm font-semibold text-white">
+                    Cada item conta na otimização inicial.
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-white/70">
+                    Itens sem caixinha são essenciais e já entram no orçamento. Os marcados como{" "}
+                    <span className="font-semibold text-white">Opcional</span> podem ser desmarcados —
+                    mas recomendamos manter <span className="font-semibold text-white">todos marcados</span>{" "}
+                    para o melhor desempenho do seu imóvel desde o primeiro hóspede.
+                  </p>
+                </div>
+              </div>
+
               <div className="space-y-10">
                 {categories.map((cat) => (
                   <div
