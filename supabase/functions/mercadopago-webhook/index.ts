@@ -156,6 +156,82 @@ const handler = async (req: Request): Promise<Response> => {
         return new Response('OK', { status: 200 });
       }
 
+      // ============================================================
+      // CURATION PAYMENT — proprietária pagou a curadoria via PIX
+      // external_reference no formato: "curation:<owner_curation_id>"
+      // ============================================================
+      if (typeof externalRef === 'string' && externalRef.startsWith('curation:')) {
+        const curationId = externalRef.split(':')[1];
+        console.log('Processing CURATION payment:', curationId, 'Status:', status);
+
+        if (status !== 'approved') {
+          console.log('Curation payment not approved yet, skipping');
+          return new Response('OK', { status: 200 });
+        }
+
+        // Buscar curadoria
+        const { data: curation, error: curErr } = await supabase
+          .from('owner_curations')
+          .select('id, owner_id, paid_at, total_amount_cents')
+          .eq('id', curationId)
+          .single();
+
+        if (curErr || !curation) {
+          console.error('Curation not found:', curErr);
+          return new Response('OK', { status: 200 });
+        }
+
+        if (curation.paid_at) {
+          console.log('Curation already paid, idempotent skip');
+          return new Response('OK', { status: 200 });
+        }
+
+        const paidAtCur = new Date().toISOString();
+
+        // 1) Marca curadoria como paga
+        await supabase
+          .from('owner_curations')
+          .update({
+            status: 'paid',
+            paid_at: paidAtCur,
+            mercadopago_payment_id: String(paymentId),
+          })
+          .eq('id', curationId);
+
+        // 2) Promove proprietária pra etapa 04 (active)
+        await supabase
+          .from('profiles')
+          .update({ onboarding_stage: 'active' })
+          .eq('id', curation.owner_id);
+
+        // 3) Notificação no portal pra proprietária
+        await supabase.from('notifications').insert({
+          owner_id: curation.owner_id,
+          type: 'curation_paid',
+          title: 'Curadoria paga · acesso liberado',
+          message: 'Pagamento confirmado. Você já pode usar o portal RIOS completo.',
+          reference_url: '/minha-caixa',
+          reference_id: curationId,
+        });
+
+        // 4) Dispara emails (proprietária + equipe)
+        try {
+          await fetch(`${supabaseUrl}/functions/v1/notify-curation-paid`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${supabaseKey}`,
+            },
+            body: JSON.stringify({ curation_id: curationId, payment_id: paymentId }),
+          });
+        } catch (emailErr) {
+          console.error('Failed to dispatch notify-curation-paid:', emailErr);
+        }
+
+        console.log('Curation payment processed successfully');
+        return new Response('OK', { status: 200 });
+      }
+
       console.log('Processing payment:', paymentId, 'Status:', status);
       console.log('Is group payment:', isGroupPayment);
       console.log('Is group booking payment:', isGroupBookingPayment);

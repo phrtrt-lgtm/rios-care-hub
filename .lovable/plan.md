@@ -1,126 +1,100 @@
+## Visão geral
 
-## Objetivo
-
-Acabar com o chat de manutenção do lado do proprietário. Toda manutenção criada pela equipe (ticket_type = 'manutencao' OU charge sem ticket associado) abrirá uma **página de acompanhamento em popup** com dados, mídias e timeline de comentários da equipe — sem campo de envio para o proprietário. Ele apenas visualiza e é notificado.
-
-A equipe continua tendo seu chat operacional interno (em `MaintenanceChatDialog`) nas telas administrativas, mas o proprietário nunca mais será exposto a esse chat. Tickets que o **próprio proprietário criou** (dúvida, conversar com hóspedes, etc.) continuam usando chat normalmente.
+Transformar o fluxo de curadoria em um funil completo: e-mail bonito e moderno → proprietária paga PIX direto na curadoria → webhook libera acesso ao sistema automaticamente (etapa 04) → e-mails de confirmação saem pra ela e pra equipe. Além disso, planilha exportada com links e reordenação visual do "como funciona".
 
 ---
 
-## 1. Banco de dados
+## 1. Novo template de e-mail moderno (notify-curation-ready)
 
-### Nova tabela `maintenance_updates`
-Timeline de atualizações que a equipe publica para o proprietário acompanhar. Diferente de `ticket_messages` (chat operacional interno).
+Substituir o HTML atual (centralizado simples) por um layout editorial RIOS:
+- Header com gradiente laranja RIOS, logo simbólico e título "Sua curadoria está pronta"
+- Card branco arredondado com:
+  - Saudação personalizada
+  - Bloco "O que você vai encontrar" com 4 mini-cards (Lista curada · Plano de performance · Observações editoriais · Pagamento PIX direto)
+  - Resumo da etapa atual ("Etapa 03 de 04")
+- CTA principal grande em laranja "Criar minha senha e ver a curadoria"
+- Bloco secundário em fundo bege explicando como funciona (você paga, RIOS executa)
+- Footer com contato e disclaimer
+- Tipografia system-ui/Helvetica, paleta laranja `#e85d3a` + neutros, bordas 12px
+
+Mesmo template em modo teste e real (apenas com banner amarelo no topo quando teste).
+
+## 2. Planilha exportada com link dos itens
+
+Hoje a IA já extrai `link` do produto, mas a planilha gerada (botão "Baixar planilha" em AdminCuradoriaNova) não inclui essa coluna. Adicionar coluna **"Link do produto"** na exportação CSV/XLSX, posicionada após "Preço". Quando o item não tiver link, fica vazio.
+
+## 3. Pagamento PIX da curadoria (top + bottom)
+
+Dois botões verdes idênticos no `PlanoPerformanceSection`:
+- Um **acima de tudo** (antes do trigger card, novo bloco hero verde com valor total e CTA "Pagar curadoria com PIX")
+- Outro **dentro do dialog**, ao final das observações (após "Como funciona")
+
+Comportamento ao clicar:
+- Chama nova edge function `create-curation-pix` (espelhada em `create-booking-pix`, mas para curadoria)
+- Usa `MERCADOPAGO_ACCESS_TOKEN` já configurado
+- `transaction_amount` = soma de todos os itens da curadoria
+- `external_reference` = `curation:<owner_curation_id>`
+- `description` = `curadoriaRIOS<unitSlug>`
+- Abre dialog com QR Code + botão "Copiar PIX copia e cola" + valor total destacado
+
+Estado de pagamento exibido:
+- Pendente: botão verde "Pagar curadoria · R$ X.XXX"
+- Pago: badge verde "✓ Curadoria paga · acesso liberado"
+
+## 4. Webhook → libera etapa 04 + dispara e-mails
+
+Adicionar handler novo no `mercadopago-webhook/index.ts` que reconhece `external_reference` começando com `curation:`:
+
+Quando `status === 'approved'`:
+1. Marcar `owner_curations.status = 'paid'` e gravar `paid_at`, `mercadopago_payment_id`, `payment_amount_cents` (migration adiciona colunas)
+2. Atualizar `profiles.onboarding_stage = 'active'` do owner_id da curadoria → desbloqueia o sistema completo (etapa 04)
+3. Inserir `notifications` pra equipe admin ("Curadoria paga por X")
+4. Disparar duas chamadas:
+   - Nova edge function `notify-curation-paid` que envia 2 e-mails:
+     - **Pra equipe RIOS** (lista de `ADMIN_NOTIFY_EMAILS`): "💰 Curadoria paga · X · R$ Y" com detalhes da unidade, valor, link admin
+     - **Pra proprietária**: "🎉 Bem-vinda à RIOS · acesso liberado" com layout moderno explicando que a etapa 04 foi finalizada, login direto no portal, próximos passos da operação
+
+## 5. Migration de banco
 
 ```sql
-create table public.maintenance_updates (
-  id uuid primary key default gen_random_uuid(),
-  ticket_id uuid,        -- quando origem é ticket (manutenção criada pela equipe)
-  charge_id uuid,        -- quando origem é charge avulsa
-  author_id uuid not null,
-  body text not null,
-  attachments jsonb not null default '[]'::jsonb,
-  created_at timestamptz not null default now(),
-  edited_at timestamptz,
-  deleted_at timestamptz,
-  check (ticket_id is not null or charge_id is not null)
-);
-
-create index on public.maintenance_updates (ticket_id);
-create index on public.maintenance_updates (charge_id);
+ALTER TABLE owner_curations 
+  ADD COLUMN IF NOT EXISTS total_amount_cents integer,
+  ADD COLUMN IF NOT EXISTS paid_at timestamptz,
+  ADD COLUMN IF NOT EXISTS mercadopago_payment_id text,
+  ADD COLUMN IF NOT EXISTS pix_qr_code text,
+  ADD COLUMN IF NOT EXISTS pix_qr_code_base64 text;
 ```
 
-**RLS:**
-- **INSERT/UPDATE/DELETE**: apenas `is_team_member(auth.uid())`.
-- **SELECT (team)**: `is_team_member(auth.uid())`.
-- **SELECT (owner)**: owner pode ler se for dono do ticket OU charge referenciado.
+Status passa a aceitar `'paid'` além dos atuais.
 
-### Trigger de notificação
-Trigger `AFTER INSERT` em `maintenance_updates` cria registro em `notifications` para o proprietário do ticket/charge correspondente, com link `/manutencao/:id` (ou `/ticket/:id` quando aplicável). Reaproveita `trigger_send_push_notification` para disparar push automático.
+## 6. Reordenação visual do BemVindo
 
----
+Mover o bloco "Como funciona" (4 pilares + jornada de etapas) pra ficar **acima de tudo**, antes da seção de curadoria/`PlanoPerformanceSection`. Hoje os pilares ficam após o resumo; passam a ser a primeira coisa que ela vê depois do hero, dando contexto claro antes da curadoria.
 
-## 2. Unificar a página de acompanhamento `/manutencao/:id`
+## 7. Detalhes técnicos
 
-Hoje `ManutencaoDetalhes.tsx` e `useMaintenance` só leem da tabela `charges`, por isso aparece "Manutenção não encontrada" para tickets sem charge.
+- `create-curation-pix` segue exatamente o padrão de `create-booking-pix` (auth via JWT do owner, idempotency-key UUID, salva qr_code na tabela)
+- O webhook não quebra fluxo existente: novo `if (externalRef?.startsWith('curation:'))` antes dos paths atuais
+- `notify-curation-paid` reutiliza Resend já configurado, dois templates HTML inline (proprietária + equipe)
+- Botão PIX só aparece quando `total_amount_cents > 0` (calculado a partir das categorias da curadoria)
+- Após pagamento, polling de 5s no `PlanoPerformanceSection` checa status até aparecer "pago"
 
-### Refatorar `useMaintenance(id)` em `src/hooks/useMaintenances.ts`
-- Tentar buscar primeiro como `ticket` (tabela `tickets` + `ticket_attachments`).
-- Se não encontrar, buscar como `charge` (comportamento atual).
-- Retornar objeto normalizado: `{ source: 'ticket' | 'charge', id, title, description, status, property, owner, attachments[], payments[], amount_cents, management_contribution_cents, ... }`.
-- Para tickets, valores financeiros vêm como `0` (ou da charge vinculada via `charges.ticket_id`, se existir).
+## Arquivos afetados
 
-### Refatorar `ManutencaoDetalhes.tsx`
-- Renderiza dados da manutenção (foto, descrição, status, imóvel, valores quando aplicável, mídias com `MediaGallery`).
-- **Nova seção "Acompanhamento"** no lugar de qualquer botão de chat:
-  - Lista cronológica de `maintenance_updates` (avatar, nome, data, texto, anexos).
-  - Para a equipe: campo de input + upload + botão "Publicar atualização".
-  - Para o proprietário: somente leitura (sem textarea, sem botão).
-- Bloco de pagamento (`MaintenancePaymentForm`) só aparece se houver `charge` associada.
+**Edita:**
+- `supabase/functions/notify-curation-ready/index.ts` (template novo)
+- `supabase/functions/mercadopago-webhook/index.ts` (handler curation)
+- `src/pages/AdminCuradoriaNova.tsx` (planilha c/ links + persistir total_amount_cents)
+- `src/components/bemvindo/PlanoPerformanceSection.tsx` (botões PIX top/bottom + dialog QR)
+- `src/pages/BemVindo.tsx` (reordenação)
 
-### Novo componente `MaintenanceDetailsDialog`
-Wrapper Dialog (similar ao `EditMaintenanceDialog`) que abre `ManutencaoDetalhes` em popup no painel do proprietário. Aceita `id` e `onOpenChange`.
+**Cria:**
+- `supabase/functions/create-curation-pix/index.ts`
+- `supabase/functions/notify-curation-paid/index.ts`
+- Migration adicionando colunas em `owner_curations`
 
----
+## Fora do escopo (pra confirmar se quer agora)
 
-## 3. Remover o chat do proprietário
-
-**Substituir `MaintenanceChatDialog` por `MaintenanceDetailsDialog` nestes arquivos do lado owner:**
-- `src/components/OwnerMaintenanceProgress.tsx`
-- `src/components/OwnerTicketsPreview.tsx`
-- `src/components/MaintenanceKanbanPreview.tsx` (apenas no caminho do owner; admin continua com chat)
-- `src/pages/MeusChamados.tsx` (tickets do tipo `manutencao` abrem o popup; demais tipos seguem com chat)
-
-**Lógica de roteamento dentro de `MeusChamados.tsx`:**
-```ts
-if (ticket.ticket_type === 'manutencao' && ticket.created_by !== user.id) {
-  // manutenção criada pela equipe → popup de acompanhamento
-  openMaintenanceDetailsDialog(ticket.id);
-} else {
-  // ticket criado pelo próprio owner → chat normal
-  openChatDialog(ticket.id);
-}
-```
-
-A equipe (`AdminManutencoesLista`, `AdminManutencoesKanban`, `AdminChamadosKanban`, `TodosTickets`) **continua** usando `MaintenanceChatDialog` para conversa operacional interna.
-
----
-
-## 4. Edge Function `notify-maintenance-update` (opcional, se quisermos email)
-
-Se quiser e-mail além de push, criar função `supabase/functions/notify-maintenance-update/index.ts` que:
-- Recebe `update_id`.
-- Resolve owner via ticket/charge.
-- Envia e-mail usando o motor de templates unificado (`_shared/template-renderer.ts`) com link `https://portal.rioshospedagens.com.br/manutencao/:id`.
-
-Pode ser chamada pela própria UI após inserir o update, ou por trigger via `pg_net`. **Padrão sugerido:** chamar via `supabase.functions.invoke` no client logo após insert (mais simples e debugável).
-
----
-
-## 5. Resumo de arquivos
-
-**Novos:**
-- `supabase/migrations/<timestamp>_maintenance_updates.sql`
-- `src/components/MaintenanceDetailsDialog.tsx`
-- `src/components/MaintenanceUpdatesThread.tsx` (timeline + form para team)
-- `src/hooks/useMaintenanceUpdates.ts`
-- (opcional) `supabase/functions/notify-maintenance-update/index.ts`
-
-**Editados:**
-- `src/hooks/useMaintenances.ts` — `useMaintenance` aceita ticket OU charge
-- `src/pages/ManutencaoDetalhes.tsx` — nova seção de acompanhamento, sem chat
-- `src/components/OwnerMaintenanceProgress.tsx` — troca chat por popup
-- `src/components/OwnerTicketsPreview.tsx` — idem
-- `src/components/MaintenanceKanbanPreview.tsx` — idem (apenas owner)
-- `src/pages/MeusChamados.tsx` — roteamento condicional ticket próprio vs manutenção da equipe
-
-**Sem alteração:** páginas administrativas mantêm o chat operacional interno.
-
----
-
-## Resultado
-
-- Proprietário **nunca mais** vê chat de manutenção.
-- Ao clicar numa manutenção (no painel, lista de chamados ou notificação), abre popup de acompanhamento limpo: status, imóvel, valores, mídias e timeline somente-leitura.
-- Equipe publica atualizações que disparam notificação + push para o proprietário.
-- Tickets criados pelo próprio proprietário (dúvidas, hóspedes, etc.) continuam com chat normal.
+- Política de reembolso/cancelamento PIX
+- Tela admin pra reverter "paid" manualmente
+- Recibo MercadoPago anexado no e-mail (só link)

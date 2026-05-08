@@ -75,3 +75,12 @@ verify_jwt = false
 [functions.submit-property-intake]
 verify_jwt = false
 
+[functions.create-curation-pix]
+verify_jwt = true
+
+[functions.notify-curation-paid]
+verify_jwt = false
+
+[functions.notify-curation-ready]
+verify_jwt = true
+
