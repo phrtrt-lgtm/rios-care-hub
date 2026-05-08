@@ -27,34 +27,46 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { owner_id, curation_id } = await req.json();
-
-    const { data: profile } = await admin
-      .from("profiles")
-      .select("name, email")
-      .eq("id", owner_id)
-      .single();
-
-    if (!profile?.email) {
-      return new Response(JSON.stringify({ error: "owner sem email" }), { status: 400, headers: corsHeaders });
-    }
-
+    const { owner_id, curation_id, test_email } = await req.json();
     const portalUrl = Deno.env.get("PORTAL_URL") || "https://portal.rioshospedagens.com.br";
 
-    // Gera magic link
-    const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
-      type: "magiclink",
-      email: profile.email,
-      options: { redirectTo: `${portalUrl}/bem-vindo` },
-    });
+    let recipientEmail: string;
+    let recipientName: string;
+    let magicLink: string;
 
-    if (linkErr) throw linkErr;
-    const magicLink = linkData.properties?.action_link;
+    if (test_email) {
+      // Modo teste: envia para o e-mail informado, sem persistir notificação nem gerar magic link real
+      recipientEmail = test_email;
+      recipientName = "proprietário(a)";
+      magicLink = `${portalUrl}/bem-vindo`;
+    } else {
+      const { data: profile } = await admin
+        .from("profiles")
+        .select("name, email")
+        .eq("id", owner_id)
+        .single();
+
+      if (!profile?.email) {
+        return new Response(JSON.stringify({ error: "owner sem email" }), { status: 400, headers: corsHeaders });
+      }
+
+      recipientEmail = profile.email;
+      recipientName = profile.name?.split(" ")[0] || "proprietário(a)";
+
+      const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
+        type: "magiclink",
+        email: profile.email,
+        options: { redirectTo: `${portalUrl}/bem-vindo` },
+      });
+      if (linkErr) throw linkErr;
+      magicLink = linkData.properties?.action_link!;
+    }
 
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; color: #111;">
+        ${test_email ? `<div style="background:#fff3cd;border-left:4px solid #ffc107;padding:10px 14px;margin-bottom:16px;border-radius:6px;font-size:13px;color:#856404;"><strong>E-mail de teste</strong> — este é apenas um preview da notificação que o proprietário receberá.</div>` : ""}
         <h2 style="color: #e85d3a;">Sua curadoria RIOS está pronta ✨</h2>
-        <p>Olá ${profile.name?.split(" ")[0] || "proprietário(a)"},</p>
+        <p>Olá ${recipientName},</p>
         <p>A equipe RIOS finalizou a curadoria personalizada do seu imóvel — lista de compras, observações e plano de performance.</p>
         <p style="margin: 28px 0;">
           <a href="${magicLink}" style="background: #e85d3a; color: #fff; padding: 14px 24px; border-radius: 10px; text-decoration: none; font-weight: 600;">
@@ -69,23 +81,27 @@ serve(async (req) => {
     const { error: emailErr } = await resend.emails.send({
       from: "RIOS <sistema@rioshospedagens.com.br>",
       reply_to: "rioslagoon@gmail.com",
-      to: [profile.email],
-      subject: "Sua curadoria RIOS está pronta — acesse o portal",
+      to: [recipientEmail],
+      subject: test_email
+        ? "[TESTE] Sua curadoria RIOS está pronta — acesse o portal"
+        : "Sua curadoria RIOS está pronta — acesse o portal",
       html,
     });
     if (emailErr) throw emailErr;
 
-    // notificação no portal (caso já tenha logado antes)
-    await admin.from("notifications").insert({
-      owner_id,
-      title: "Curadoria pronta",
-      message: "Sua curadoria personalizada foi publicada. Acesse o portal para ver.",
-      type: "curation",
-      reference_url: "/bem-vindo",
-      reference_id: curation_id,
-    });
+    // Notificação no portal apenas em modo real
+    if (!test_email && owner_id) {
+      await admin.from("notifications").insert({
+        owner_id,
+        title: "Curadoria pronta",
+        message: "Sua curadoria personalizada foi publicada. Acesse o portal para ver.",
+        type: "curation",
+        reference_url: "/bem-vindo",
+        reference_id: curation_id,
+      });
+    }
 
-    return new Response(JSON.stringify({ success: true }), {
+    return new Response(JSON.stringify({ success: true, sent_to: recipientEmail }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e: any) {
