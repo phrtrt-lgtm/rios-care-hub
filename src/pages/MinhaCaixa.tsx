@@ -123,6 +123,10 @@ export default function MinhaCaixa() {
                     <Ticket className="h-4 w-4 mr-2" />
                     Meus chamados
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/minha-curadoria")}>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Minha curadoria
+                  </DropdownMenuItem>
                   {hasInspectionAccess && (
                     <DropdownMenuItem onClick={() => navigate("/vistorias")}>
                       <ClipboardCheck className="h-4 w-4 mr-2" />
