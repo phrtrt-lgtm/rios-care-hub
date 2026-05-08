@@ -349,12 +349,19 @@ export function PlanoPerformanceSection({
                         >
                           <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-secondary ring-1 ring-white/10">
                             <img
-                              src={it.img}
+                              src={thumbFor(it, cat.title)}
                               alt={it.name}
                               loading="lazy"
-                              width={512}
-                              height={512}
+                              width={400}
+                              height={400}
                               className="h-full w-full object-cover"
+                              onError={(e) => {
+                                const t = e.currentTarget;
+                                if (!t.dataset.fallback) {
+                                  t.dataset.fallback = "1";
+                                  t.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(it.name)}?width=400&height=400&nologo=true`;
+                                }
+                              }}
                             />
                             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-secondary/60 via-transparent to-transparent" />
                           </div>
