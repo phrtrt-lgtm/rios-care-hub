@@ -120,6 +120,14 @@ const App = () => (
               }
             />
             <Route
+              path="/minha-curadoria"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <MinhaCuradoria />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/minhas-cobrancas"
               element={
                 <ProtectedRoute allowedRoles={['owner']}>
