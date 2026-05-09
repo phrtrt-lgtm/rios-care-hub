@@ -309,6 +309,22 @@ export default function ConfiguracaoEmail() {
         due_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString("pt-BR"),
         commission_url: `${baseUrl}/minha-comissao-booking/exemplo`,
       },
+      curation_paid_owner: {
+        owner_first_name: "Maria",
+        owner_name: "Maria Silva",
+        amount: "R$ 1.250,00",
+        curation_title: "Curadoria · Apto 301 Vista Mar",
+        portal_url: `${baseUrl}/login`,
+      },
+      curation_paid_team: {
+        owner_name: "Maria Silva",
+        owner_email: "maria.silva@email.com",
+        amount: "R$ 1.250,00",
+        curation_title: "Curadoria · Apto 301 Vista Mar",
+        curation_id_short: "a1b2c3d4",
+        payment_id: "1234567890",
+        admin_url: `${baseUrl}/admin/cadastros-proprietarios`,
+      },
     };
 
     return examples[templateKey] || {};
