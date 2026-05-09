@@ -113,6 +113,7 @@ serve(async (req) => {
         pix_qr_code_base64: `data:image/png;base64,${pixQrCodeBase64}`,
         mercadopago_payment_id: String(pixData.id),
         total_amount_cents,
+        selected_items: items,
       })
       .eq("id", curation.id);
 
