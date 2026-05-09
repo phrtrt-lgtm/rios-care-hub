@@ -128,17 +128,40 @@ serve(async (req) => {
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) throw new Error("LOVABLE_API_KEY not set");
 
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages,
-        tools: [TOOL],
-        tool_choice: { type: "function", function: { name: "set_curation" } },
-      }),
-    });
+    async function callModel(model: string) {
+      return await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model,
+          messages,
+          tools: [TOOL],
+          tool_choice: { type: "function", function: { name: "set_curation" } },
+        }),
+      });
+    }
 
+    function extractArgs(data: any): any | null {
+      const msg = data?.choices?.[0]?.message;
+      const tc = msg?.tool_calls?.[0];
+      if (tc?.function?.arguments) {
+        try { return JSON.parse(tc.function.arguments); } catch { /* fallthrough */ }
+      }
+      // Fallback: parse JSON from content (model returned text instead of tool call)
+      const content = typeof msg?.content === "string" ? msg.content : "";
+      if (content) {
+        const fenced = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+        const raw = fenced ? fenced[1] : content;
+        const start = raw.indexOf("{");
+        const end = raw.lastIndexOf("}");
+        if (start >= 0 && end > start) {
+          try { return JSON.parse(raw.slice(start, end + 1)); } catch { /* ignore */ }
+        }
+      }
+      return null;
+    }
+
+    let resp = await callModel("google/gemini-2.5-flash");
     if (!resp.ok) {
       const t = await resp.text();
       console.error("AI gateway error", resp.status, t);
@@ -147,10 +170,22 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "ai_error" }), { status: 500, headers: corsHeaders });
     }
 
-    const data = await resp.json();
-    const tc = data.choices?.[0]?.message?.tool_calls?.[0];
-    if (!tc) throw new Error("no tool call");
-    const args = JSON.parse(tc.function.arguments);
+    let data = await resp.json();
+    let args = extractArgs(data);
+
+    // Retry with stronger model if flash didn't return a usable tool call/JSON
+    if (!args) {
+      console.warn("flash returned no tool call, retrying with gpt-5-mini");
+      resp = await callModel("openai/gpt-5-mini");
+      if (resp.ok) {
+        data = await resp.json();
+        args = extractArgs(data);
+      } else {
+        console.error("fallback model error", resp.status, await resp.text());
+      }
+    }
+
+    if (!args) throw new Error("no tool call");
 
     return new Response(JSON.stringify(args), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
