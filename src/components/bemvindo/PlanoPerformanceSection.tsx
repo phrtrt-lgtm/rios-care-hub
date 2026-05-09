@@ -819,22 +819,11 @@ export function PlanoPerformanceSection({
                                 </span>
                               )}
                             </div>
-                            <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-secondary ring-1 ring-white/10">
-                              <img
-                                src={thumbFor(it, cat.title)}
-                                alt={it.name}
-                                loading="lazy"
-                                width={400}
-                                height={400}
-                                className="h-full w-full object-cover"
-                                onError={(e) => {
-                                  const t = e.currentTarget;
-                                  if (t.src !== categoryFallbackAsset(cat.title)) {
-                                    t.src = categoryFallbackAsset(cat.title);
-                                  }
-                                }}
-                              />
-                              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-secondary/60 via-transparent to-transparent" />
+                            <div
+                              aria-hidden
+                              className={`relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-primary/25 via-primary/10 to-white/5 text-xl ring-1 ring-white/10 ${isSelected ? "" : "grayscale opacity-60"}`}
+                            >
+                              <span className="leading-none">{cat.emoji}</span>
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="mb-1 flex flex-wrap items-center gap-1.5">
