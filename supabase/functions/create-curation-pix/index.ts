@@ -16,24 +16,31 @@ serve(async (req) => {
     const mercadoPagoToken = Deno.env.get("MERCADOPAGO_ACCESS_TOKEN")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Auth (proprietária logada)
+    // Auth opcional — link público de curadoria também pode gerar PIX
     const authHeader = req.headers.get("Authorization") ?? "";
     const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !user) throw new Error("Não autorizado");
+    let userId: string | null = null;
+    if (token) {
+      const { data: { user } } = await supabase.auth.getUser(token);
+      if (user) userId = user.id;
+    }
 
     const { curation_id, total_amount_cents, selected_items } = await req.json();
     if (!curation_id) throw new Error("curation_id obrigatório");
     if (!total_amount_cents || total_amount_cents < 100) throw new Error("Valor total inválido");
     const items = Array.isArray(selected_items) ? selected_items : [];
 
-    // Buscar curadoria + valida ownership
-    const { data: curation, error: curErr } = await supabase
+    // Buscar curadoria. Se logado, valida ownership; se não, exige status published.
+    let query = supabase
       .from("owner_curations")
       .select("id, owner_id, title, status, paid_at, pix_qr_code, pix_qr_code_base64, total_amount_cents")
-      .eq("id", curation_id)
-      .eq("owner_id", user.id)
-      .single();
+      .eq("id", curation_id);
+    if (userId) {
+      query = query.eq("owner_id", userId);
+    } else {
+      query = query.eq("status", "published");
+    }
+    const { data: curation, error: curErr } = await query.single();
 
     if (curErr || !curation) throw new Error("Curadoria não encontrada");
     if (curation.paid_at) throw new Error("Curadoria já paga");
@@ -55,11 +62,11 @@ serve(async (req) => {
       );
     }
 
-    // Owner
+    // Owner (sempre o dono da curadoria)
     const { data: owner } = await supabase
       .from("profiles")
       .select("name, email")
-      .eq("id", user.id)
+      .eq("id", curation.owner_id)
       .single();
 
     const totalAmount = total_amount_cents / 100;
@@ -82,7 +89,7 @@ serve(async (req) => {
       metadata: {
         type: "curation_payment",
         curation_id: curation.id,
-        owner_id: user.id,
+        owner_id: curation.owner_id,
       },
     };
 
