@@ -165,7 +165,7 @@ serve(async (req) => {
       return null;
     }
 
-    let resp = await callModel("google/gemini-2.5-flash");
+    let resp = await callModel("google/gemini-2.5-pro");
     if (!resp.ok) {
       const t = await resp.text();
       console.error("AI gateway error", resp.status, t);
@@ -177,10 +177,10 @@ serve(async (req) => {
     let data = await resp.json();
     let args = extractArgs(data);
 
-    // Retry with stronger model if flash didn't return a usable tool call/JSON
+    // Retry with stronger model if primary didn't return a usable tool call/JSON
     if (!args) {
-      console.warn("flash returned no tool call, retrying with gpt-5-mini");
-      resp = await callModel("openai/gpt-5-mini");
+      console.warn("gemini-2.5-pro returned no tool call, retrying with gpt-5");
+      resp = await callModel("openai/gpt-5");
       if (resp.ok) {
         data = await resp.json();
         args = extractArgs(data);
