@@ -20,8 +20,48 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+// Mapeia item da IA para assets bundled (mesmo padrão visual do bem-vindo).
+// Importações dinâmicas dos assets já feitas no topo do arquivo.
+function matchBundledAsset(name: string, catTitle?: string): string | null {
+  const n = (name + " " + (catTitle || ""))
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  // ordem importa: do mais específico ao mais genérico
+  const rules: Array<[RegExp, string]> = [
+    [/almofad/, almofadas],
+    [/(vaso|pampa|planta|flor)/, vaso],
+    [/(luminari|abajur|arandela|pendente|lustre)/, luminaria],
+    [/(quadro|poster|moldur|arte|gravur)/, quadro],
+    [/(roupa de cama|jogo de cama|len[cç]ol|fronha|edredom|duvet|percal)/, roupaCama],
+    [/(toalh)/, toalhas],
+    [/(manta|xale|throw)/, manta],
+    [/(organizador|cesto|cesta|caixa organiz|bandeja)/, organizador],
+    [/(panela|frigideira|caçarola|wok|cooktop pan)/, panelas],
+    [/(lou[cç]a|prato|tigela|sopeira|porcelana)/, loucas],
+    [/(talher|garfo|faca|colher)/, talheres],
+    [/(copo|ta[cç]a|jarra|whisky|vinho)/, copos],
+    [/(air ?fryer|fritadeira)/, airfryer],
+    [/(cafeteira|c[aá]psula|nespresso|expresso|moka)/, cafeteira],
+    [/(tv|televis|smart tv|tela)/, tv],
+    [/(roteador|wi[- ]?fi|mesh|repetidor)/, roteador],
+    [/(ar[- ]condicionado|split|inverter|climatiza)/, ar],
+    [/(fechadura|smart lock|trava digital)/, fechadura],
+    [/(tapete|passadeira|carpete)/, tapete],
+    [/(cortina|persiana|blackout)/, cortinas],
+    [/(mesa lateral|mesa de canto|mesinha|side table)/, mesaLateral],
+    [/(livro|book)/, livros],
+  ];
+  for (const [rx, asset] of rules) {
+    if (rx.test(n)) return asset;
+  }
+  return null;
+}
+
 function thumbFor(item: { name: string; img?: string }, catTitle?: string) {
   if (item.img && item.img.trim()) return item.img;
+  const bundled = matchBundledAsset(item.name, catTitle);
+  if (bundled) return bundled;
   // Estilo minimalista editorial RIOS — mesmo padrão dos assets estáticos em /assets/plano
   const q = encodeURIComponent(
     `${item.name}, single product centered, minimalist editorial product photography, soft natural light, neutral beige background, scandinavian aesthetic, muted earthy tones, high-end interior design, clean composition, no text, no logo, no people`
