@@ -53,6 +53,15 @@ type Category = {
 type Observation = { icon: string; tag: string; title: string; body: string };
 type ChatMsg = { role: "user" | "assistant"; content: string };
 
+function compactSpreadsheetText(input: string) {
+  return input
+    .split(/\r?\n/)
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .slice(0, 350)
+    .join("\n");
+}
+
 export default function AdminCuradoriaNova() {
   const navigate = useNavigate();
   const [owners, setOwners] = useState<{ id: string; name: string; email: string; status: string }[]>([]);
@@ -115,8 +124,10 @@ export default function AdminCuradoriaNova() {
     }
     setLoading(true);
     try {
+      const compactedSpreadsheet = compactSpreadsheetText(spreadsheetText);
       const { data, error } = await supabase.functions.invoke("curadoria-ai", {
-        body: { mode: "from_spreadsheet", spreadsheet_text: spreadsheetText },
+        body: { mode: "from_spreadsheet", spreadsheet_text: compactedSpreadsheet },
+        timeout: 180000,
       });
       if (error) throw error;
       setCategories(data.categories || []);
@@ -144,6 +155,7 @@ export default function AdminCuradoriaNova() {
           instruction: cmd,
           history,
         },
+        timeout: 180000,
       });
       if (error) throw error;
       setCategories(data.categories || []);
