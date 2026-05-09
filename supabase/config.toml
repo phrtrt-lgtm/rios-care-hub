@@ -87,3 +87,6 @@ verify_jwt = true
 [functions.curation-access]
 verify_jwt = false
 
+[functions.save-curation-selection]
+verify_jwt = false
+
