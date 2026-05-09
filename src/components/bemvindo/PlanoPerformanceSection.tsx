@@ -181,9 +181,29 @@ const ICON_MAP: Record<string, any> = { Wand2, Lightbulb, AlertTriangle, Sparkle
 
 function priceToCents(price: string): number {
   if (!price) return 0;
-  // "R$ 1.234,56" -> 123456
-  const cleaned = price.replace(/[^\d,]/g, "").replace(",", ".");
-  const n = parseFloat(cleaned);
+  // Aceita "R$ 1.234,56" (BR), "R$ 1,234.56" (US) e "R$ 480.00".
+  // Mantém dígitos, vírgulas e pontos; decide qual é decimal pelo último separador.
+  let s = String(price).replace(/[^\d.,]/g, "");
+  if (!s) return 0;
+  const lastComma = s.lastIndexOf(",");
+  const lastDot = s.lastIndexOf(".");
+  let normalized: string;
+  if (lastComma === -1 && lastDot === -1) {
+    normalized = s;
+  } else if (lastComma > lastDot) {
+    // vírgula é decimal, pontos são milhar
+    normalized = s.replace(/\./g, "").replace(",", ".");
+  } else {
+    // ponto é decimal (ou único separador) — só trata como decimal se tiver 1-2 casas após
+    const after = s.length - lastDot - 1;
+    if (after === 1 || after === 2) {
+      normalized = s.replace(/,/g, "").replace(/\.(?=\d{3}(\D|$))/g, "");
+    } else {
+      // ponto é separador de milhar (ex: "2.490")
+      normalized = s.replace(/[.,]/g, "");
+    }
+  }
+  const n = parseFloat(normalized);
   if (isNaN(n)) return 0;
   return Math.round(n * 100);
 }
