@@ -123,7 +123,7 @@ export default function BemVindo() {
     if (!profile?.id) return;
     supabase
       .from("owner_curations")
-      .select("categories, observations")
+      .select("id, categories, observations, paid_at")
       .eq("owner_id", profile.id)
       .eq("status", "published")
       .order("published_at", { ascending: false })

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Plus, LogOut, DollarSign, ClipboardCheck, Ticket, BookOpen, Wrench, BarChart3, GraduationCap, MoreHorizontal } from "lucide-react";
+import { Plus, LogOut, DollarSign, ClipboardCheck, Ticket, BookOpen, Wrench, BarChart3, GraduationCap, MoreHorizontal, Sparkles } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -122,6 +122,10 @@ export default function MinhaCaixa() {
                   <DropdownMenuItem onClick={() => navigate("/meus-chamados")}>
                     <Ticket className="h-4 w-4 mr-2" />
                     Meus chamados
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/minha-curadoria")}>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Minha curadoria
                   </DropdownMenuItem>
                   {hasInspectionAccess && (
                     <DropdownMenuItem onClick={() => navigate("/vistorias")}>
