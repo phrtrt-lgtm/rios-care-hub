@@ -62,6 +62,48 @@ function compactSpreadsheetText(input: string) {
     .join("\n");
 }
 
+async function invokeCurationAI(body: Record<string, unknown>) {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData.session?.access_token;
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 180000);
+
+  try {
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/curadoria-ai`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      const message =
+        typeof payload?.error === "string"
+          ? payload.error
+          : controller.signal.aborted
+            ? "A geração demorou além do esperado. Tente novamente com uma planilha menor."
+            : "Falha ao gerar curadoria";
+      throw new Error(message);
+    }
+
+    return payload;
+  } catch (error: any) {
+    if (error?.name === "AbortError") {
+      throw new Error("A geração demorou além do esperado. Tente novamente com uma planilha menor.");
+    }
+
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
 export default function AdminCuradoriaNova() {
   const navigate = useNavigate();
   const [owners, setOwners] = useState<{ id: string; name: string; email: string; status: string }[]>([]);
@@ -125,11 +167,7 @@ export default function AdminCuradoriaNova() {
     setLoading(true);
     try {
       const compactedSpreadsheet = compactSpreadsheetText(spreadsheetText);
-      const { data, error } = await supabase.functions.invoke("curadoria-ai", {
-        body: { mode: "from_spreadsheet", spreadsheet_text: compactedSpreadsheet },
-        timeout: 180000,
-      });
-      if (error) throw error;
+      const data = await invokeCurationAI({ mode: "from_spreadsheet", spreadsheet_text: compactedSpreadsheet });
       setCategories(data.categories || []);
       setObservations(data.observations || []);
       setHistory([{ role: "assistant", content: data.ai_message || "Curadoria gerada." }]);
@@ -148,16 +186,12 @@ export default function AdminCuradoriaNova() {
     setHistory((h) => [...h, { role: "user", content: cmd }]);
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("curadoria-ai", {
-        body: {
-          mode: "refine",
-          current: { categories, observations },
-          instruction: cmd,
-          history,
-        },
-        timeout: 180000,
+      const data = await invokeCurationAI({
+        mode: "refine",
+        current: { categories, observations },
+        instruction: cmd,
+        history,
       });
-      if (error) throw error;
       setCategories(data.categories || []);
       setObservations(data.observations || []);
       setHistory((h) => [...h, { role: "assistant", content: data.ai_message || "Atualizado." }]);
