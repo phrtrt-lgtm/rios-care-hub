@@ -30,8 +30,12 @@ Regras de saída:
 - Use a ferramenta "set_curation" para retornar a estrutura.
 - Sempre em PT-BR, tom editorial RIOS (sofisticado, direto, vendedor).
 - Categorize itens em: Sala & ambientes sociais, Decoração & alma do espaço, Quarto & rouparia, Cozinha equipada, Eletrônicos & eletrodomésticos. Pode criar outras se a planilha pedir.
-- Cada item: name (curto), why (1 frase de IMPACTO p/ o hóspede ou de papel na ambientação — sem instruções ao proprietário), price (formato "R$ X.XXX"), img (use url da planilha se houver, senão "" — frontend usa placeholder), priority ("essencial" | "recomendado" | null), link (url do produto se houver), optional (true se o item puder ser desmarcado pelo proprietário — caixinha começa marcada), alternativeGroup (string que agrupa alternativas do mesmo item: a primeira da lista é tratada como "Opção 1" — a recomendada de melhor ROI; as seguintes como Opção 2/3 etc., mutuamente exclusivas).
-- Quando houver duas versões do mesmo item (ex: panelas premium vs básicas, fechadura digital com app vs simples), gere DOIS itens com o mesmo alternativeGroup. A versão recomendada (melhor ROI) deve vir PRIMEIRO.
+- Cada item: name (curto), why (1 frase de IMPACTO p/ o hóspede ou de papel na ambientação — sem instruções ao proprietário), price (formato "R$ X.XXX"), img (use url da planilha se houver, senão "" — frontend usa placeholder), priority ("essencial" | "recomendado" | null), link (url do produto se houver), optional (true se o item puder ser desmarcado pelo proprietário — caixinha começa marcada), alternativeGroup (string que agrupa alternativas do mesmo item: mutuamente exclusivas).
+
+REGRA CRÍTICA DE FIDELIDADE AOS DADOS:
+- NUNCA invente, troque, embaralhe ou reordene preços e links. Cada linha da planilha tem um par (preço, link) que pertence APENAS àquele item — preserve EXATAMENTE como está.
+- Se a planilha trouxer "opção 1" e "opção 2" do mesmo item (ex: "trio de quadros opção 1" R$262 / "trio de quadros opção 2" R$217), mantenha a numeração da planilha: opção 1 da planilha = primeiro item do alternativeGroup, opção 2 da planilha = segundo. NÃO reordene por preço, ROI ou qualquer outro critério. NÃO troque os preços/links entre eles.
+- Quando houver duas versões do mesmo item sem rótulo explícito de opção, mantenha a ordem em que aparecem na planilha.
 - Use "optional" com moderação — só para itens realmente acessórios. Não use para essenciais.
 - Observações: 2-4 notas editoriais sobre o que NÓS faremos no imóvel (reposicionamento de mobília, ajustes de iluminação, aproveitamento do que já existe, cuidados de manutenção que cuidaremos). Cada uma: tag, title, body, icon ("Wand2"|"Lightbulb"|"AlertTriangle"|"Sparkles"). Mesma regra de tom: nada de imperativo ao proprietário.
 - Se o admin pedir refinamento (modo refine), aplique o comando preservando o resto.`;
