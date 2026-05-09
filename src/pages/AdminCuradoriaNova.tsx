@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import {
   Sparkles,
@@ -26,6 +27,8 @@ import {
   Eye,
   Mail,
   X,
+  Copy,
+  ExternalLink,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { PlanoPerformanceSection } from "@/components/bemvindo/PlanoPerformanceSection";
