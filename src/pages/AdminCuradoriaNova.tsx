@@ -309,6 +309,58 @@ export default function AdminCuradoriaNova() {
             </Button>
           </Card>
 
+          {publicUrl && (
+            <Card className="border-success/40 bg-success/5 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-success">
+                    Curadoria publicada — link público gerado
+                  </p>
+                  <p className="mt-1 truncate text-xs text-muted-foreground">{publicUrl}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Use para revisar como o proprietário verá. Se houver erro, exclua e gere novamente.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(publicUrl);
+                      toast.success("Link copiado");
+                    }}
+                  >
+                    <Copy className="mr-2 h-3 w-3" />
+                    Copiar link
+                  </Button>
+                  <Button asChild variant="outline" size="sm">
+                    <a href={publicUrl} target="_blank" rel="noreferrer">
+                      <ExternalLink className="mr-2 h-3 w-3" />
+                      Abrir
+                    </a>
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={async () => {
+                      if (!confirm("Excluir esta curadoria publicada?")) return;
+                      const { error } = await supabase
+                        .from("owner_curations")
+                        .delete()
+                        .eq("id", publishedId!);
+                      if (error) return toast.error(error.message);
+                      toast.success("Curadoria excluída");
+                      setPublishedId(null);
+                    }}
+                  >
+                    <Trash2 className="mr-2 h-3 w-3" />
+                    Excluir
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          )}
+
           {categories.length > 0 && (
             <Card className="p-4">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
