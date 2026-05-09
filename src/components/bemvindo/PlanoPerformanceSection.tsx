@@ -741,10 +741,10 @@ export function PlanoPerformanceSection({
                     Cada item conta na otimização inicial.
                   </p>
                   <p className="mt-1 text-xs leading-relaxed text-white/70">
-                    Itens sem caixinha são essenciais e já entram no orçamento. Os marcados como{" "}
-                    <span className="font-semibold text-white">Opcional</span> podem ser desmarcados —
-                    mas recomendamos manter <span className="font-semibold text-white">todos marcados</span>{" "}
-                    para o melhor desempenho do seu imóvel desde o primeiro hóspede.
+                    Todos os itens podem ser desmarcados — basta clicar na caixinha ao lado para
+                    remover do carrinho. Recomendamos manter os marcados como{" "}
+                    <span className="font-semibold text-white">Essencial</span> para o melhor
+                    desempenho do seu imóvel desde o primeiro hóspede.
                   </p>
                 </div>
               </div>
