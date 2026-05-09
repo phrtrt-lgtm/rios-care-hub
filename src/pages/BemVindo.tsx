@@ -121,15 +121,31 @@ export default function BemVindo() {
 
   useEffect(() => {
     if (!profile?.id) return;
-    supabase
-      .from("owner_curations")
-      .select("id, categories, observations, paid_at")
-      .eq("owner_id", profile.id)
-      .eq("status", "published")
-      .order("published_at", { ascending: false })
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => data && setCuration(data as any));
+    (async () => {
+      // 1) Tenta carregar a curadoria do próprio proprietário
+      const own = await supabase
+        .from("owner_curations")
+        .select("id, categories, observations, paid_at")
+        .eq("owner_id", profile.id)
+        .eq("status", "published")
+        .order("published_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (own.data) {
+        setCuration(own.data as any);
+        return;
+      }
+      // 2) Fallback (admin/team em modo preview): pega a mais recente publicada,
+      // garantindo que o bloco do PIX sempre apareça.
+      const fallback = await supabase
+        .from("owner_curations")
+        .select("id, categories, observations, paid_at")
+        .eq("status", "published")
+        .order("published_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (fallback.data) setCuration(fallback.data as any);
+    })();
   }, [profile?.id]);
 
   const specialAmenities = Array.isArray(intake?.special_amenities)
