@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import {
   Sparkles,
@@ -26,6 +27,8 @@ import {
   Eye,
   Mail,
   X,
+  Copy,
+  ExternalLink,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { PlanoPerformanceSection } from "@/components/bemvindo/PlanoPerformanceSection";
@@ -65,7 +68,12 @@ export default function AdminCuradoriaNova() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [testEmail, setTestEmail] = useState("phrtrt@gmail.com");
   const [sendingTest, setSendingTest] = useState(false);
+  const [publishedId, setPublishedId] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+
+  const publicUrl = publishedId
+    ? `${window.location.origin}/curadoria/p/${publishedId}`
+    : null;
 
   useEffect(() => {
     supabase
@@ -201,8 +209,8 @@ export default function AdminCuradoriaNova() {
         body: { owner_id: ownerId, curation_id: cur.id },
       });
 
-      toast.success("Curadoria publicada e proprietário notificado");
-      navigate("/admin/cadastros-proprietarios");
+      setPublishedId(cur.id);
+      toast.success("Curadoria publicada — link público gerado abaixo");
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -301,6 +309,58 @@ export default function AdminCuradoriaNova() {
             </Button>
           </Card>
 
+          {publicUrl && (
+            <Card className="border-success/40 bg-success/5 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-success">
+                    Curadoria publicada — link público gerado
+                  </p>
+                  <p className="mt-1 truncate text-xs text-muted-foreground">{publicUrl}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Use para revisar como o proprietário verá. Se houver erro, exclua e gere novamente.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(publicUrl);
+                      toast.success("Link copiado");
+                    }}
+                  >
+                    <Copy className="mr-2 h-3 w-3" />
+                    Copiar link
+                  </Button>
+                  <Button asChild variant="outline" size="sm">
+                    <a href={publicUrl} target="_blank" rel="noreferrer">
+                      <ExternalLink className="mr-2 h-3 w-3" />
+                      Abrir
+                    </a>
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={async () => {
+                      if (!confirm("Excluir esta curadoria publicada?")) return;
+                      const { error } = await supabase
+                        .from("owner_curations")
+                        .delete()
+                        .eq("id", publishedId!);
+                      if (error) return toast.error(error.message);
+                      toast.success("Curadoria excluída");
+                      setPublishedId(null);
+                    }}
+                  >
+                    <Trash2 className="mr-2 h-3 w-3" />
+                    Excluir
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          )}
+
           {categories.length > 0 && (
             <Card className="p-4">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -349,41 +409,73 @@ export default function AdminCuradoriaNova() {
                     </div>
                     <ul className="divide-y rounded-lg border">
                       {cat.items.map((it, ii) => (
-                        <li key={ii} className="grid grid-cols-[1fr_2fr_100px_120px_auto] items-center gap-2 p-2">
-                          <Input
-                            value={it.name}
-                            onChange={(e) => updateItem(ci, ii, { name: e.target.value })}
-                            placeholder="Nome"
-                            className="h-8"
-                          />
-                          <Input
-                            value={it.why}
-                            onChange={(e) => updateItem(ci, ii, { why: e.target.value })}
-                            placeholder="Por quê"
-                            className="h-8"
-                          />
-                          <Input
-                            value={it.price}
-                            onChange={(e) => updateItem(ci, ii, { price: e.target.value })}
-                            placeholder="R$ 0"
-                            className="h-8"
-                          />
-                          <Select
-                            value={it.priority || "none"}
-                            onValueChange={(v) => updateItem(ci, ii, { priority: v === "none" ? "" : (v as any) })}
-                          >
-                            <SelectTrigger className="h-8">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">—</SelectItem>
-                              <SelectItem value="essencial">Essencial</SelectItem>
-                              <SelectItem value="recomendado">Recomendado</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Button size="icon" variant="ghost" onClick={() => removeItem(ci, ii)}>
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
+                        <li key={ii} className="space-y-2 p-2">
+                          <div className="grid grid-cols-[1fr_2fr_100px_120px_auto] items-center gap-2">
+                            <Input
+                              value={it.name}
+                              onChange={(e) => updateItem(ci, ii, { name: e.target.value })}
+                              placeholder="Nome"
+                              className="h-8"
+                            />
+                            <Input
+                              value={it.why}
+                              onChange={(e) => updateItem(ci, ii, { why: e.target.value })}
+                              placeholder="Por quê"
+                              className="h-8"
+                            />
+                            <Input
+                              value={it.price}
+                              onChange={(e) => updateItem(ci, ii, { price: e.target.value })}
+                              placeholder="R$ 0"
+                              className="h-8"
+                            />
+                            <Select
+                              value={it.priority || "none"}
+                              onValueChange={(v) => updateItem(ci, ii, { priority: v === "none" ? "" : (v as any) })}
+                            >
+                              <SelectTrigger className="h-8">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">—</SelectItem>
+                                <SelectItem value="essencial">Essencial</SelectItem>
+                                <SelectItem value="recomendado">Recomendado</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Button size="icon" variant="ghost" onClick={() => removeItem(ci, ii)}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-3 pl-1 text-xs text-muted-foreground">
+                            <label className="flex items-center gap-1.5">
+                              <Checkbox
+                                checked={!!it.optional}
+                                onCheckedChange={(v) => updateItem(ci, ii, { optional: !!v })}
+                              />
+                              Opcional (proprietário pode desmarcar)
+                            </label>
+                            <div className="flex items-center gap-1.5">
+                              <span>Grupo de alternativa:</span>
+                              <Input
+                                value={it.alternativeGroup || ""}
+                                onChange={(e) => updateItem(ci, ii, { alternativeGroup: e.target.value })}
+                                placeholder="ex: cama-premium"
+                                className="h-7 w-44 text-xs"
+                              />
+                              <span className="text-[10px] opacity-70">
+                                (mesmo grupo = escolha entre opções; 1ª = melhor ROI)
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span>Link:</span>
+                              <Input
+                                value={it.link || ""}
+                                onChange={(e) => updateItem(ci, ii, { link: e.target.value })}
+                                placeholder="https://..."
+                                className="h-7 w-56 text-xs"
+                              />
+                            </div>
+                          </div>
                         </li>
                       ))}
                     </ul>
