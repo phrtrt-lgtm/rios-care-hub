@@ -82,7 +82,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.notify-curation-ready]
-verify_jwt = false
+verify_jwt = true
 
 [functions.curation-access]
 verify_jwt = false
