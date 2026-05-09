@@ -357,41 +357,73 @@ export default function AdminCuradoriaNova() {
                     </div>
                     <ul className="divide-y rounded-lg border">
                       {cat.items.map((it, ii) => (
-                        <li key={ii} className="grid grid-cols-[1fr_2fr_100px_120px_auto] items-center gap-2 p-2">
-                          <Input
-                            value={it.name}
-                            onChange={(e) => updateItem(ci, ii, { name: e.target.value })}
-                            placeholder="Nome"
-                            className="h-8"
-                          />
-                          <Input
-                            value={it.why}
-                            onChange={(e) => updateItem(ci, ii, { why: e.target.value })}
-                            placeholder="Por quê"
-                            className="h-8"
-                          />
-                          <Input
-                            value={it.price}
-                            onChange={(e) => updateItem(ci, ii, { price: e.target.value })}
-                            placeholder="R$ 0"
-                            className="h-8"
-                          />
-                          <Select
-                            value={it.priority || "none"}
-                            onValueChange={(v) => updateItem(ci, ii, { priority: v === "none" ? "" : (v as any) })}
-                          >
-                            <SelectTrigger className="h-8">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">—</SelectItem>
-                              <SelectItem value="essencial">Essencial</SelectItem>
-                              <SelectItem value="recomendado">Recomendado</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Button size="icon" variant="ghost" onClick={() => removeItem(ci, ii)}>
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
+                        <li key={ii} className="space-y-2 p-2">
+                          <div className="grid grid-cols-[1fr_2fr_100px_120px_auto] items-center gap-2">
+                            <Input
+                              value={it.name}
+                              onChange={(e) => updateItem(ci, ii, { name: e.target.value })}
+                              placeholder="Nome"
+                              className="h-8"
+                            />
+                            <Input
+                              value={it.why}
+                              onChange={(e) => updateItem(ci, ii, { why: e.target.value })}
+                              placeholder="Por quê"
+                              className="h-8"
+                            />
+                            <Input
+                              value={it.price}
+                              onChange={(e) => updateItem(ci, ii, { price: e.target.value })}
+                              placeholder="R$ 0"
+                              className="h-8"
+                            />
+                            <Select
+                              value={it.priority || "none"}
+                              onValueChange={(v) => updateItem(ci, ii, { priority: v === "none" ? "" : (v as any) })}
+                            >
+                              <SelectTrigger className="h-8">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">—</SelectItem>
+                                <SelectItem value="essencial">Essencial</SelectItem>
+                                <SelectItem value="recomendado">Recomendado</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Button size="icon" variant="ghost" onClick={() => removeItem(ci, ii)}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-3 pl-1 text-xs text-muted-foreground">
+                            <label className="flex items-center gap-1.5">
+                              <Checkbox
+                                checked={!!it.optional}
+                                onCheckedChange={(v) => updateItem(ci, ii, { optional: !!v })}
+                              />
+                              Opcional (proprietário pode desmarcar)
+                            </label>
+                            <div className="flex items-center gap-1.5">
+                              <span>Grupo de alternativa:</span>
+                              <Input
+                                value={it.alternativeGroup || ""}
+                                onChange={(e) => updateItem(ci, ii, { alternativeGroup: e.target.value })}
+                                placeholder="ex: cama-premium"
+                                className="h-7 w-44 text-xs"
+                              />
+                              <span className="text-[10px] opacity-70">
+                                (mesmo grupo = escolha entre opções; 1ª = melhor ROI)
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span>Link:</span>
+                              <Input
+                                value={it.link || ""}
+                                onChange={(e) => updateItem(ci, ii, { link: e.target.value })}
+                                placeholder="https://..."
+                                className="h-7 w-56 text-xs"
+                              />
+                            </div>
+                          </div>
                         </li>
                       ))}
                     </ul>
