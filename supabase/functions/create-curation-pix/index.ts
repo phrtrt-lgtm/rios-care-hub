@@ -22,9 +22,10 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) throw new Error("Não autorizado");
 
-    const { curation_id, total_amount_cents } = await req.json();
+    const { curation_id, total_amount_cents, selected_items } = await req.json();
     if (!curation_id) throw new Error("curation_id obrigatório");
     if (!total_amount_cents || total_amount_cents < 100) throw new Error("Valor total inválido");
+    const items = Array.isArray(selected_items) ? selected_items : [];
 
     // Buscar curadoria + valida ownership
     const { data: curation, error: curErr } = await supabase
