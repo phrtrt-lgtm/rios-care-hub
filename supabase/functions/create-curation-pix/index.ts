@@ -33,22 +33,10 @@ serve(async (req) => {
     if (curErr || !curation) throw new Error("Curadoria não encontrada");
     if (curation.paid_at) throw new Error("Curadoria já paga");
 
-    // Se já tem PIX gerado e valor é o mesmo, devolve o existente (idempotência leve)
-    if (
-      curation.pix_qr_code &&
-      curation.pix_qr_code_base64 &&
-      curation.total_amount_cents === total_amount_cents
-    ) {
-      return new Response(
-        JSON.stringify({
-          pix_qr_code: curation.pix_qr_code,
-          pix_qr_code_base64: curation.pix_qr_code_base64,
-          total_amount_cents: curation.total_amount_cents,
-          reused: true,
-        }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    // IMPORTANTE: não reutilizamos PIX cacheado.
+    // O auto-save da seleção atualiza total_amount_cents no banco a cada mudança,
+    // então o cache ficaria sincronizado com o valor mas apontando pra um QR antigo
+    // gerado com outra seleção. Sempre regeramos um PIX novo com o valor atual.
 
     // Owner (sempre o dono da curadoria)
     const { data: owner } = await supabase
