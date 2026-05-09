@@ -1084,6 +1084,33 @@ export type Database = {
         }
         Relationships: []
       }
+      curation_access_tokens: {
+        Row: {
+          created_at: string
+          curation_id: string | null
+          id: string
+          owner_id: string
+          token: string
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          curation_id?: string | null
+          id?: string
+          owner_id: string
+          token: string
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          curation_id?: string | null
+          id?: string
+          owner_id?: string
+          token?: string
+          used_at?: string | null
+        }
+        Relationships: []
+      }
       date_block_requests: {
         Row: {
           cleaning_fee_proof_path: string | null
