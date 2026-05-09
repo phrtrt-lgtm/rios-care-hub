@@ -386,6 +386,8 @@ export default function BemVindo() {
           <PlanoPerformanceSection
             customCategories={curation?.categories}
             customObservations={curation?.observations}
+            curationId={curation?.id}
+            initialPaid={!!curation?.paid_at}
           />
         </div>
 
