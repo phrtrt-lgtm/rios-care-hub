@@ -34,12 +34,14 @@ serve(async (req) => {
     let resolvedPaymentId = String(payment_id || "test_payment_123");
     let resolvedCurationId = String(curation_id || "00000000-0000-0000-0000-000000000000");
 
+    let selectedItems: any[] = [];
+
     if (!test_email) {
       if (!curation_id) throw new Error("curation_id obrigatório");
 
       const { data: curation, error: curErr } = await admin
         .from("owner_curations")
-        .select("id, owner_id, title, total_amount_cents, mercadopago_payment_id")
+        .select("id, owner_id, title, total_amount_cents, mercadopago_payment_id, selected_items")
         .eq("id", curation_id)
         .single();
       if (curErr || !curation) throw new Error("Curadoria não encontrada");
@@ -58,6 +60,12 @@ serve(async (req) => {
       curationTitle = curation.title || "";
       resolvedPaymentId = String(payment_id || curation.mercadopago_payment_id || "—");
       resolvedCurationId = curation.id;
+      selectedItems = Array.isArray(curation.selected_items) ? curation.selected_items : [];
+    } else {
+      selectedItems = [
+        { category: "Sala", name: "Tapete neutro 2x2,5m", price: "R$ 480" },
+        { category: "Decoração", name: "Kit 4 almofadas linho", price: "R$ 360" },
+      ];
     }
 
     const ownerFirst = ownerName.split(" ")[0] || "proprietária";
@@ -111,7 +119,49 @@ serve(async (req) => {
         admin_url: `${PORTAL_URL}/admin/cadastros-proprietarios`,
       };
       const subject = renderTemplate(teamTpl.subject, teamVars);
-      const html = renderTemplate(teamTpl.body_html, teamVars);
+      let html = renderTemplate(teamTpl.body_html, teamVars);
+
+      // Injeta a lista de itens escolhidos pelo proprietário no fim do corpo
+      if (selectedItems.length > 0) {
+        const grouped: Record<string, any[]> = {};
+        for (const it of selectedItems) {
+          const cat = it.category || "Outros";
+          (grouped[cat] ||= []).push(it);
+        }
+        const rows = Object.entries(grouped)
+          .map(([cat, list]) => {
+            const itemsHtml = list
+              .map(
+                (it: any) => `
+                  <tr>
+                    <td style="padding:6px 10px;border-bottom:1px solid #eef0f3;font-size:13px;color:#1f2937;">${it.name}</td>
+                    <td style="padding:6px 10px;border-bottom:1px solid #eef0f3;font-size:13px;color:#0f3150;text-align:right;white-space:nowrap;">${it.price || ""}</td>
+                  </tr>`,
+              )
+              .join("");
+            return `
+              <tr><td colspan="2" style="padding:14px 10px 4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#5b6b80;">${cat}</td></tr>
+              ${itemsHtml}`;
+          })
+          .join("");
+
+        const itemsBlock = `
+          <div style="margin-top:24px;padding:18px;border:1px solid #e2e6ec;border-radius:12px;background:#f8fafc;">
+            <h3 style="margin:0 0 8px;font-size:15px;color:#0f3150;">🛒 Itens escolhidos pelo proprietário (${selectedItems.length})</h3>
+            <p style="margin:0 0 12px;font-size:12px;color:#5b6b80;">Total: <strong style="color:#0f3150;">${amountBRL}</strong></p>
+            <table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;">
+              ${rows}
+            </table>
+          </div>`;
+
+        // Insere antes do </body> se existir, caso contrário concatena no fim
+        if (/<\/body>/i.test(html)) {
+          html = html.replace(/<\/body>/i, `${itemsBlock}</body>`);
+        } else {
+          html = html + itemsBlock;
+        }
+      }
+
       const { error: teamEmailErr } = await resend.emails.send({
         from: "RIOS <sistema@rioshospedagens.com.br>",
         to: adminEmails,

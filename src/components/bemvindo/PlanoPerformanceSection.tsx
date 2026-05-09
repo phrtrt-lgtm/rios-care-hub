@@ -459,6 +459,39 @@ export function PlanoPerformanceSection({
   );
   const orcamento = Math.round(orcamentoCents / 100);
 
+  // Auto-save da seleção do proprietário (debounced) — assim a equipe sabe o que ele escolheu
+  // mesmo que ele não chegue a pagar via PIX.
+  useEffect(() => {
+    if (!curationId || paid) return;
+    const handle = setTimeout(() => {
+      const selectedItems = categories.flatMap((c) =>
+        c.items
+          .map((it, idx) => ({ it, idx }))
+          .filter(({ idx }) => selected[itemKey(c.key, idx)])
+          .map(({ it }) => ({
+            category: c.title,
+            name: it.name,
+            price: it.price,
+            price_cents: priceToCents(it.price),
+            why: it.why,
+            link: (it as any).link ?? null,
+            priority: it.priority ?? null,
+            alternativeGroup: it.alternativeGroup ?? null,
+          })),
+      );
+      supabase.functions
+        .invoke("save-curation-selection", {
+          body: {
+            curation_id: curationId,
+            selected_items: selectedItems,
+            total_amount_cents: orcamentoCents,
+          },
+        })
+        .catch((e) => console.warn("save-curation-selection failed", e));
+    }, 1200);
+    return () => clearTimeout(handle);
+  }, [curationId, paid, selected, categories, orcamentoCents]);
+
   const active = categories.find((c) => c.key === activeCat) || categories[0];
 
   // Polling do status de pagamento depois que o PIX é gerado
