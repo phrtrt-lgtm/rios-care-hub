@@ -155,13 +155,17 @@ serve(async (req) => {
       recipientEmail = profile.email;
       recipientName = profile.name?.split(" ")[0] || "proprietária";
 
-      const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
-        type: "magiclink",
-        email: profile.email,
-        options: { redirectTo: `${portalUrl}/definir-senha` },
+      // Cria token permanente; o link do e-mail nunca expira.
+      // No clique, a função pública `curation-access` gera um magic link fresco.
+      const token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
+      const { error: tokErr } = await admin.from("curation_access_tokens").insert({
+        token,
+        owner_id,
+        curation_id: curation_id ?? null,
       });
-      if (linkErr) throw linkErr;
-      magicLink = linkData.properties?.action_link!;
+      if (tokErr) throw tokErr;
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      magicLink = `${supabaseUrl}/functions/v1/curation-access?token=${token}`;
     }
 
     const html = buildHTML({
