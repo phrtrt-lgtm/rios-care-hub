@@ -68,7 +68,12 @@ export default function AdminCuradoriaNova() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [testEmail, setTestEmail] = useState("phrtrt@gmail.com");
   const [sendingTest, setSendingTest] = useState(false);
+  const [publishedId, setPublishedId] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+
+  const publicUrl = publishedId
+    ? `${window.location.origin}/curadoria/p/${publishedId}`
+    : null;
 
   useEffect(() => {
     supabase
