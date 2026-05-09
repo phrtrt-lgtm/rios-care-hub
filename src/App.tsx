@@ -85,6 +85,7 @@ import BemVindo from "./pages/BemVindo";
 import AdminCuradoriaNova from "./pages/AdminCuradoriaNova";
 import DefinirSenha from "./pages/DefinirSenha";
 import MinhaCuradoria from "./pages/MinhaCuradoria";
+import CuradoriaPublica from "./pages/CuradoriaPublica";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -110,6 +111,7 @@ const App = () => (
             />
             <Route path="/aguardando-aprovacao" element={<AguardandoAprovacao />} />
             <Route path="/bem-vindo" element={<BemVindo />} />
+            <Route path="/curadoria/p/:id" element={<CuradoriaPublica />} />
             <Route path="/definir-senha" element={<DefinirSenha />} />
             <Route
               path="/minha-caixa"
