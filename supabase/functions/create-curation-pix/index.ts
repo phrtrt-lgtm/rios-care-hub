@@ -62,11 +62,11 @@ serve(async (req) => {
       );
     }
 
-    // Owner
+    // Owner (sempre o dono da curadoria)
     const { data: owner } = await supabase
       .from("profiles")
       .select("name, email")
-      .eq("id", user.id)
+      .eq("id", curation.owner_id)
       .single();
 
     const totalAmount = total_amount_cents / 100;
@@ -89,7 +89,7 @@ serve(async (req) => {
       metadata: {
         type: "curation_payment",
         curation_id: curation.id,
-        owner_id: user.id,
+        owner_id: curation.owner_id,
       },
     };
 
