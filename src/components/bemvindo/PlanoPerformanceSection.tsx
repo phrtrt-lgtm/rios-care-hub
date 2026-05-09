@@ -422,8 +422,29 @@ export function PlanoPerformanceSection({
     setPixOpen(true);
     setPixLoading(true);
     try {
+      // Monta lista detalhada de tudo que o proprietário marcou
+      const selectedItems = categories.flatMap((c) =>
+        c.items
+          .map((it, idx) => ({ it, idx }))
+          .filter(({ idx }) => selected[itemKey(c.key, idx)])
+          .map(({ it }) => ({
+            category: c.title,
+            name: it.name,
+            price: it.price,
+            price_cents: priceToCents(it.price),
+            why: it.why,
+            link: (it as any).link ?? null,
+            priority: it.priority ?? null,
+            alternativeGroup: it.alternativeGroup ?? null,
+          })),
+      );
+
       const { data, error } = await supabase.functions.invoke("create-curation-pix", {
-        body: { curation_id: curationId, total_amount_cents: orcamentoCents },
+        body: {
+          curation_id: curationId,
+          total_amount_cents: orcamentoCents,
+          selected_items: selectedItems,
+        },
       });
       if (error) throw error;
       setPixData({

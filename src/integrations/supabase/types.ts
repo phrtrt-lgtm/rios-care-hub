@@ -1666,6 +1666,8 @@ export type Database = {
           pix_qr_code_base64: string | null
           property_id: string | null
           published_at: string | null
+          purchase_ticket_id: string | null
+          selected_items: Json
           source_filename: string | null
           status: string
           title: string
@@ -1686,6 +1688,8 @@ export type Database = {
           pix_qr_code_base64?: string | null
           property_id?: string | null
           published_at?: string | null
+          purchase_ticket_id?: string | null
+          selected_items?: Json
           source_filename?: string | null
           status?: string
           title?: string
@@ -1706,6 +1710,8 @@ export type Database = {
           pix_qr_code_base64?: string | null
           property_id?: string | null
           published_at?: string | null
+          purchase_ticket_id?: string | null
+          selected_items?: Json
           source_filename?: string | null
           status?: string
           title?: string
