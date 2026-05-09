@@ -16,31 +16,19 @@ serve(async (req) => {
     const mercadoPagoToken = Deno.env.get("MERCADOPAGO_ACCESS_TOKEN")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Auth opcional — link público de curadoria também pode gerar PIX
-    const authHeader = req.headers.get("Authorization") ?? "";
-    const token = authHeader.replace("Bearer ", "");
-    let userId: string | null = null;
-    if (token) {
-      const { data: { user } } = await supabase.auth.getUser(token);
-      if (user) userId = user.id;
-    }
-
     const { curation_id, total_amount_cents, selected_items } = await req.json();
     if (!curation_id) throw new Error("curation_id obrigatório");
     if (!total_amount_cents || total_amount_cents < 100) throw new Error("Valor total inválido");
     const items = Array.isArray(selected_items) ? selected_items : [];
 
-    // Buscar curadoria. Se logado, valida ownership; se não, exige status published.
-    let query = supabase
+    // Sem checagem de ownership — basta a curadoria existir e estar publicada.
+    // O PIX é nominal ao owner_id da curadoria, então não há risco de cobrar a pessoa errada.
+    const { data: curation, error: curErr } = await supabase
       .from("owner_curations")
       .select("id, owner_id, title, status, paid_at, pix_qr_code, pix_qr_code_base64, total_amount_cents")
-      .eq("id", curation_id);
-    if (userId) {
-      query = query.eq("owner_id", userId);
-    } else {
-      query = query.eq("status", "published");
-    }
-    const { data: curation, error: curErr } = await query.single();
+      .eq("id", curation_id)
+      .eq("status", "published")
+      .single();
 
     if (curErr || !curation) throw new Error("Curadoria não encontrada");
     if (curation.paid_at) throw new Error("Curadoria já paga");
