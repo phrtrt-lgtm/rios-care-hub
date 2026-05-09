@@ -32,7 +32,7 @@ function thumbFor(item: { name: string; img?: string }, catTitle?: string) {
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CuradoriaChat } from "./CuradoriaChat";
+
 
 import almofadas from "@/assets/plano/decor-almofadas.jpg";
 import vaso from "@/assets/plano/decor-vaso.jpg";
@@ -590,17 +590,6 @@ export function PlanoPerformanceSection({
                   </span>
                 </a>
               ))}
-              <a
-                href="#cat-chat"
-                onClick={(e) => {
-                  e.preventDefault();
-                  document.getElementById("cat-chat")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                }}
-                className="inline-flex items-center gap-1.5 rounded-full border border-primary/50 bg-primary/20 px-3 py-1.5 text-[11px] font-semibold text-white transition hover:bg-primary/30"
-              >
-                <span>💬</span>
-                <span>Conversa</span>
-              </a>
             </div>
           </div>
 
@@ -879,10 +868,6 @@ export function PlanoPerformanceSection({
               </p>
             </div>
 
-            {/* Chat de curadoria */}
-            <div id="cat-chat" className="border-t border-white/10 bg-secondary px-5 py-6 md:px-6 md:py-7">
-              <CuradoriaChat />
-            </div>
           </div>
         </DialogContent>
       </Dialog>
