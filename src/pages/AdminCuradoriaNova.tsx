@@ -209,8 +209,8 @@ export default function AdminCuradoriaNova() {
         body: { owner_id: ownerId, curation_id: cur.id },
       });
 
-      toast.success("Curadoria publicada e proprietário notificado");
-      navigate("/admin/cadastros-proprietarios");
+      setPublishedId(cur.id);
+      toast.success("Curadoria publicada — link público gerado abaixo");
     } catch (e: any) {
       toast.error(e.message);
     } finally {
