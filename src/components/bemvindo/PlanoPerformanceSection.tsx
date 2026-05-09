@@ -741,10 +741,10 @@ export function PlanoPerformanceSection({
                     Cada item conta na otimização inicial.
                   </p>
                   <p className="mt-1 text-xs leading-relaxed text-white/70">
-                    Itens sem caixinha são essenciais e já entram no orçamento. Os marcados como{" "}
-                    <span className="font-semibold text-white">Opcional</span> podem ser desmarcados —
-                    mas recomendamos manter <span className="font-semibold text-white">todos marcados</span>{" "}
-                    para o melhor desempenho do seu imóvel desde o primeiro hóspede.
+                    Todos os itens podem ser desmarcados — basta clicar na caixinha ao lado para
+                    remover do carrinho. Recomendamos manter os marcados como{" "}
+                    <span className="font-semibold text-white">Essencial</span> para o melhor
+                    desempenho do seu imóvel desde o primeiro hóspede.
                   </p>
                 </div>
               </div>
@@ -803,20 +803,13 @@ export function PlanoPerformanceSection({
                                 >
                                   {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
                                 </button>
-                              ) : it.optional ? (
+                              ) : (
                                 <Checkbox
                                   checked={isSelected}
                                   onCheckedChange={() => toggleOptional(k)}
                                   aria-label={`Incluir ${it.name}`}
                                   className="h-5 w-5 border-white/30 data-[state=checked]:border-emerald-500 data-[state=checked]:bg-emerald-500 data-[state=checked]:text-white"
                                 />
-                              ) : (
-                                <span
-                                  title="Item essencial — incluído automaticamente"
-                                  className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/25 text-primary"
-                                >
-                                  <Check className="h-3 w-3" />
-                                </span>
                               )}
                             </div>
                             <div
