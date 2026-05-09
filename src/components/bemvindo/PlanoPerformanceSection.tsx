@@ -58,16 +58,26 @@ function matchBundledAsset(name: string, catTitle?: string): string | null {
   return null;
 }
 
+function categoryFallbackAsset(catTitle?: string): string {
+  const c = (catTitle || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  if (/(decor|alma|estilo|ambiencia)/.test(c)) return almofadas;
+  if (/(quarto|suite|su[ií]te|rouparia|banheiro|banho)/.test(c)) return roupaCama;
+  if (/(cozinha|gourmet|refeic|jantar|cafe)/.test(c)) return panelas;
+  if (/(eletro|eletron|tecnologia|wifi|conectividade|climatiza)/.test(c)) return tv;
+  if (/(sala|estar|social|living|varanda|externa|area externa|ambiente)/.test(c)) return tapete;
+
+  return quadro;
+}
+
 function thumbFor(item: { name: string; img?: string }, catTitle?: string) {
   if (item.img && item.img.trim()) return item.img;
   const bundled = matchBundledAsset(item.name, catTitle);
   if (bundled) return bundled;
-  // Estilo minimalista editorial RIOS — mesmo padrão dos assets estáticos em /assets/plano
-  const q = encodeURIComponent(
-    `${item.name}, single product centered, minimalist editorial product photography, soft natural light, neutral beige background, scandinavian aesthetic, muted earthy tones, high-end interior design, clean composition, no text, no logo, no people`
-  );
-  const seed = Array.from(item.name).reduce((a, c) => a + c.charCodeAt(0), 0);
-  return `https://image.pollinations.ai/prompt/${q}?width=400&height=400&nologo=true&model=flux&seed=${seed}`;
+  return categoryFallbackAsset(catTitle);
 }
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -819,9 +829,8 @@ export function PlanoPerformanceSection({
                                 className="h-full w-full object-cover"
                                 onError={(e) => {
                                   const t = e.currentTarget;
-                                  if (!t.dataset.fallback) {
-                                    t.dataset.fallback = "1";
-                                    t.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(`${it.name}, minimalist product photography, neutral background, soft light, no text`)}?width=400&height=400&nologo=true&model=flux`;
+                                  if (t.src !== categoryFallbackAsset(cat.title)) {
+                                    t.src = categoryFallbackAsset(cat.title);
                                   }
                                 }}
                               />
