@@ -34,12 +34,14 @@ serve(async (req) => {
     let resolvedPaymentId = String(payment_id || "test_payment_123");
     let resolvedCurationId = String(curation_id || "00000000-0000-0000-0000-000000000000");
 
+    let selectedItems: any[] = [];
+
     if (!test_email) {
       if (!curation_id) throw new Error("curation_id obrigatório");
 
       const { data: curation, error: curErr } = await admin
         .from("owner_curations")
-        .select("id, owner_id, title, total_amount_cents, mercadopago_payment_id")
+        .select("id, owner_id, title, total_amount_cents, mercadopago_payment_id, selected_items")
         .eq("id", curation_id)
         .single();
       if (curErr || !curation) throw new Error("Curadoria não encontrada");
@@ -58,6 +60,12 @@ serve(async (req) => {
       curationTitle = curation.title || "";
       resolvedPaymentId = String(payment_id || curation.mercadopago_payment_id || "—");
       resolvedCurationId = curation.id;
+      selectedItems = Array.isArray(curation.selected_items) ? curation.selected_items : [];
+    } else {
+      selectedItems = [
+        { category: "Sala", name: "Tapete neutro 2x2,5m", price: "R$ 480" },
+        { category: "Decoração", name: "Kit 4 almofadas linho", price: "R$ 360" },
+      ];
     }
 
     const ownerFirst = ownerName.split(" ")[0] || "proprietária";
