@@ -116,18 +116,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const auth = req.headers.get("Authorization") ?? "";
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const isServiceCall = auth === `Bearer ${serviceKey}`;
-    if (!isServiceCall) {
-      const userClient = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_ANON_KEY")!,
-        { global: { headers: { Authorization: auth } } }
-      );
-      const { data: { user } } = await userClient.auth.getUser();
-      if (!user) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: corsHeaders });
-    }
+    // Authorization is enforced at the gateway via verify_jwt in config.toml.
+
 
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
