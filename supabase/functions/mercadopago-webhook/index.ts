@@ -172,7 +172,7 @@ const handler = async (req: Request): Promise<Response> => {
         // Buscar curadoria
         const { data: curation, error: curErr } = await supabase
           .from('owner_curations')
-          .select('id, owner_id, paid_at, total_amount_cents')
+          .select('id, owner_id, property_id, title, paid_at, total_amount_cents, selected_items, purchase_ticket_id')
           .eq('id', curationId)
           .single();
 
@@ -214,7 +214,75 @@ const handler = async (req: Request): Promise<Response> => {
           reference_id: curationId,
         });
 
-        // 4) Dispara emails (proprietária + equipe)
+        // 4) Cria ticket interno de compras pra equipe RIOS executar a aquisição
+        try {
+          if (!curation.purchase_ticket_id) {
+            const items: any[] = Array.isArray(curation.selected_items) ? curation.selected_items : [];
+            const totalBRL = ((curation.total_amount_cents ?? 0) / 100).toLocaleString('pt-BR', {
+              style: 'currency',
+              currency: 'BRL',
+            });
+
+            // Agrupa por categoria pra ficar legível
+            const byCat: Record<string, any[]> = {};
+            for (const it of items) {
+              const cat = it.category || 'Outros';
+              (byCat[cat] = byCat[cat] || []).push(it);
+            }
+
+            const lines: string[] = [];
+            lines.push(`## Lista de compras — Curadoria RIOS`);
+            lines.push('');
+            lines.push(`**Curadoria:** ${curation.title || 'Sem título'}`);
+            lines.push(`**Total pago:** ${totalBRL}`);
+            lines.push(`**Itens:** ${items.length}`);
+            lines.push('');
+
+            for (const cat of Object.keys(byCat)) {
+              lines.push(`### ${cat}`);
+              for (const it of byCat[cat]) {
+                const price = it.price || '';
+                const link = it.link ? ` — [link](${it.link})` : '';
+                lines.push(`- **${it.name}** — ${price}${link}`);
+                if (it.why) lines.push(`  - _${it.why}_`);
+              }
+              lines.push('');
+            }
+
+            const description = lines.join('\n');
+            const subject = `Curadoria paga — executar compra (${items.length} itens · ${totalBRL})`;
+
+            const { data: ticket, error: ticketErr } = await supabase
+              .from('tickets')
+              .insert({
+                owner_id: curation.owner_id,
+                property_id: curation.property_id,
+                ticket_type: 'melhorias_compras',
+                subject,
+                description,
+                priority: 'normal',
+                status: 'novo',
+                created_by: curation.owner_id,
+                kind: 'support',
+              })
+              .select('id')
+              .single();
+
+            if (ticketErr) {
+              console.error('Failed to create purchase ticket:', ticketErr);
+            } else if (ticket?.id) {
+              await supabase
+                .from('owner_curations')
+                .update({ purchase_ticket_id: ticket.id })
+                .eq('id', curationId);
+              console.log('Purchase ticket created:', ticket.id);
+            }
+          }
+        } catch (ticketCatch) {
+          console.error('Error creating purchase ticket:', ticketCatch);
+        }
+
+        // 5) Dispara emails (proprietária + equipe)
         try {
           await fetch(`${supabaseUrl}/functions/v1/notify-curation-paid`, {
             method: 'POST',
