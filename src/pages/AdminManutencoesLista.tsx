@@ -1454,14 +1454,14 @@ export default function AdminManutencoesLista() {
       // Fetch associated charges for value/contribution data
       const { data: charges } = await supabase
         .from("charges")
-        .select("ticket_id, amount_cents, management_contribution_cents, service_type, status, created_at")
+        .select("ticket_id, amount_cents, management_contribution_cents, service_type, status, created_at, archived_at, paid_at")
         .in("ticket_id", ticketIds);
 
       // Mapa com a cobrança mais recente (para exibir valores na linha)
       const chargeMap: Record<string, any> = {};
-      // Conjunto de tickets que têm AO MENOS UMA cobrança já enviada/pendente
-      const ticketsWithSentCharge = new Set<string>();
-      const CHARGE_SENT_STATUSES = ["sent", "pendente", "pending", "overdue", "contested"];
+      // Conjunto de tickets que já tiveram cobrança gerada (qualquer status real, não rascunho/arquivada)
+      // Inclui pagas, pendentes, vencidas, contestadas, debitadas — todas saem da lista de "concluídos"
+      const ticketsWithRealCharge = new Set<string>();
 
       (charges || [])
         .slice()
@@ -1469,16 +1469,17 @@ export default function AdminManutencoesLista() {
         .forEach((c: any) => {
           if (!c.ticket_id) return;
           if (!chargeMap[c.ticket_id]) chargeMap[c.ticket_id] = c;
-          if (CHARGE_SENT_STATUSES.includes(c.status)) {
-            ticketsWithSentCharge.add(c.ticket_id);
+          // Qualquer cobrança não-rascunho e não-arquivada já tira o ticket da aba "concluídas"
+          if (c.status !== "draft" && !c.archived_at) {
+            ticketsWithRealCharge.add(c.ticket_id);
           }
         });
 
       return (data || [])
         .filter(t => {
-          // Se o ticket está concluido E já existe QUALQUER cobrança enviada ao proprietário,
-          // não mostrar aqui (ela aparece na seção de cobranças pendentes)
-          if (t.status === "concluido" && ticketsWithSentCharge.has(t.id)) {
+          // Se o ticket está concluido E já existe QUALQUER cobrança real (paga, pendente, vencida, etc.),
+          // não mostrar aqui — ela aparece nas cobranças (pendentes ou no histórico financeiro)
+          if (t.status === "concluido" && ticketsWithRealCharge.has(t.id)) {
             return false;
           }
           return true;
