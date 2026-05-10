@@ -1454,22 +1454,31 @@ export default function AdminManutencoesLista() {
       // Fetch associated charges for value/contribution data
       const { data: charges } = await supabase
         .from("charges")
-        .select("ticket_id, amount_cents, management_contribution_cents, service_type, status")
+        .select("ticket_id, amount_cents, management_contribution_cents, service_type, status, created_at")
         .in("ticket_id", ticketIds);
 
+      // Mapa com a cobrança mais recente (para exibir valores na linha)
       const chargeMap: Record<string, any> = {};
-      (charges || []).forEach(c => {
-        if (c.ticket_id) chargeMap[c.ticket_id] = c;
-      });
-
-      // Tickets concluidos que já têm cobrança enviada/pendente não devem aparecer aqui
-      // (eles aparecem na seção de cobranças pendentes)
+      // Conjunto de tickets que têm AO MENOS UMA cobrança já enviada/pendente
+      const ticketsWithSentCharge = new Set<string>();
       const CHARGE_SENT_STATUSES = ["sent", "pendente", "pending", "overdue", "contested"];
+
+      (charges || [])
+        .slice()
+        .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .forEach((c: any) => {
+          if (!c.ticket_id) return;
+          if (!chargeMap[c.ticket_id]) chargeMap[c.ticket_id] = c;
+          if (CHARGE_SENT_STATUSES.includes(c.status)) {
+            ticketsWithSentCharge.add(c.ticket_id);
+          }
+        });
 
       return (data || [])
         .filter(t => {
-          // Se o ticket está concluido E tem uma cobrança já enviada ao proprietário, não mostrar aqui
-          if (t.status === "concluido" && chargeMap[t.id] && CHARGE_SENT_STATUSES.includes(chargeMap[t.id].status)) {
+          // Se o ticket está concluido E já existe QUALQUER cobrança enviada ao proprietário,
+          // não mostrar aqui (ela aparece na seção de cobranças pendentes)
+          if (t.status === "concluido" && ticketsWithSentCharge.has(t.id)) {
             return false;
           }
           return true;
