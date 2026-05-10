@@ -83,6 +83,7 @@ import AtualizacaoAnuncio from "./pages/AtualizacaoAnuncio";
 import AdminVistoriasArquivadas from "./pages/AdminVistoriasArquivadas";
 import BemVindo from "./pages/BemVindo";
 import AdminCuradoriaNova from "./pages/AdminCuradoriaNova";
+import AdminCuradoriasLista from "./pages/AdminCuradoriasLista";
 import DefinirSenha from "./pages/DefinirSenha";
 import MinhaCuradoria from "./pages/MinhaCuradoria";
 import CuradoriaPublica from "./pages/CuradoriaPublica";
