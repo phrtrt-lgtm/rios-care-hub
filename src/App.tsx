@@ -211,6 +211,14 @@ const App = () => (
               }
             />
             <Route
+              path="/admin/curadorias"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'agent']}>
+                  <AdminCuradoriasLista />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/ticket-detalhes/:id"
               element={
                 <ProtectedRoute allowedRoles={['owner', 'agent', 'admin', 'maintenance']}>
