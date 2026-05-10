@@ -127,7 +127,7 @@ export default function BemVindo() {
         .from("owner_curations")
         .select("id, categories, observations, paid_at")
         .eq("owner_id", profile.id)
-        .eq("status", "published")
+        .in("status", ["published", "paid"])
         .order("published_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -140,7 +140,7 @@ export default function BemVindo() {
       const fallback = await supabase
         .from("owner_curations")
         .select("id, categories, observations, paid_at")
-        .eq("status", "published")
+        .in("status", ["published", "paid"])
         .order("published_at", { ascending: false })
         .limit(1)
         .maybeSingle();
