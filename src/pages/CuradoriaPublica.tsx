@@ -89,6 +89,7 @@ export default function CuradoriaPublica() {
             customObservations={curation.observations as any}
             curationId={curation.id}
             initialPaid={!!curation.paid_at}
+            initialSelectedItems={curation.selected_items ?? undefined}
           />
         )}
       </div>
