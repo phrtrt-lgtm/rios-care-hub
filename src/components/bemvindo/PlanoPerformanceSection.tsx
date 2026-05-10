@@ -380,11 +380,13 @@ export function PlanoPerformanceSection({
   customObservations,
   curationId,
   initialPaid,
+  initialSelectedItems,
 }: {
   customCategories?: Category[];
   customObservations?: { icon: string; tag: string; title: string; body: string }[];
   curationId?: string;
   initialPaid?: boolean;
+  initialSelectedItems?: Array<{ category?: string; name?: string }>;
 } = {}) {
   const [open, setOpen] = useState(false);
   const [pixOpen, setPixOpen] = useState(false);
@@ -401,9 +403,34 @@ export function PlanoPerformanceSection({
   // Chave única por item
   const itemKey = (catKey: string, idx: number) => `${catKey}::${idx}`;
 
-  // Estado de seleção: opcionais começam marcados; alternativos => primeiro do grupo marcado
+  // Estado de seleção:
+  // - Se houver `initialSelectedItems` (curadoria já paga/salva), reproduz a escolha do proprietário.
+  // - Caso contrário: opcionais começam marcados; alternativos => primeira opção do grupo marcada.
   const [selected, setSelected] = useState<Record<string, boolean>>(() => {
     const sel: Record<string, boolean> = {};
+
+    // Normalizador para casar nomes (ignora acento, caixa e espaços extras)
+    const norm = (s?: string) =>
+      (s ?? "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    if (initialSelectedItems && initialSelectedItems.length > 0) {
+      const chosen = new Set(
+        initialSelectedItems.map((it) => `${norm(it.category)}|${norm(it.name)}`),
+      );
+      for (const cat of categories) {
+        cat.items.forEach((it, idx) => {
+          const key = `${norm((cat as any).title || cat.key)}|${norm(it.name)}`;
+          sel[itemKey(cat.key, idx)] = chosen.has(key);
+        });
+      }
+      return sel;
+    }
+
     for (const cat of categories) {
       const seenGroups = new Set<string>();
       cat.items.forEach((it, idx) => {
