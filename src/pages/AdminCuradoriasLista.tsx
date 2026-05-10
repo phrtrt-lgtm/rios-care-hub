@@ -231,7 +231,7 @@ export default function AdminCuradoriasLista() {
         {loading ? (
           <SectionSkeleton />
         ) : groups.length === 0 ? (
-          <EmptyState icon={Sparkles} title="Nenhuma curadoria encontrada" description="Crie a primeira em Admin → Curadoria nova." />
+          <EmptyState icon={<Sparkles className="h-5 w-5" />} title="Nenhuma curadoria encontrada" description="Crie a primeira em Admin → Curadoria nova." />
         ) : (
           <div className="space-y-6">
             {groups.map((g) => (
