@@ -1517,7 +1517,7 @@ export default function AdminManutencoesLista() {
           owner:profiles!charges_owner_id_fkey(id, name),
           ticket_id
         `)
-        .in("status", ["pendente", "pending", "sent", "contested"])
+        .in("status", ["pendente", "pending", "sent", "contested", "overdue", "debit_notice_sent", "under_review"])
         .is("paid_at", null)
         .is("archived_at", null)
         .order("due_date", { ascending: true });
