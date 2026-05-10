@@ -156,11 +156,14 @@ const GerenciarCobrancas = () => {
 
   const fetchDebitoCharges = async () => {
     try {
+      const todayStr = new Date().toISOString().split('T')[0];
       const { data: chargesData, error } = await supabase
         .from('charges')
         .select('*')
-        .eq('status', 'overdue')
+        .in('status', ['overdue', 'sent', 'pendente', 'under_review', 'debit_notice_sent'])
+        .lt('due_date', todayStr)
         .is('archived_at', null)
+        .is('paid_at', null)
         .or('cost_responsible.is.null,cost_responsible.neq.guest')
         .order('due_date', { ascending: true });
 
