@@ -16,6 +16,7 @@ type Curation = {
   paid_at: string | null;
   published_at: string | null;
   title: string | null;
+  status: string;
 };
 
 export default function MinhaCuradoria() {
@@ -28,9 +29,9 @@ export default function MinhaCuradoria() {
     if (!profile?.id) return;
     supabase
       .from("owner_curations")
-      .select("id, categories, observations, paid_at, published_at, title")
+      .select("id, categories, observations, paid_at, published_at, title, status")
       .eq("owner_id", profile.id)
-      .eq("status", "published")
+      .in("status", ["published", "paid"])
       .order("published_at", { ascending: false })
       .limit(1)
       .maybeSingle()
