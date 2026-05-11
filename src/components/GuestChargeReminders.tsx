@@ -24,7 +24,7 @@ interface GuestChargePending {
   id: string; // ticket id
   charge_id?: string | null;
   subject: string;
-  guest_checkout_date: string;
+  guest_checkout_date: string | null;
   property_id: string;
   property_name: string;
   days_since_checkout: number;
