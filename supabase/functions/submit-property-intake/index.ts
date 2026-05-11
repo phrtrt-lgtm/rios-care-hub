@@ -554,14 +554,10 @@ serve(async (req) => {
           .maybeSingle();
         userId = existing?.id ?? null;
         console.log("User already exists, linking to existing profile:", userId);
-
-        // Reseta a senha temporária para conseguirmos logar agora
-        if (userId) {
-          const { error: updErr } = await supabase.auth.admin.updateUserById(userId, {
-            password: tempPassword,
-          });
-          if (updErr) console.error("Error resetting temp password:", updErr);
-        }
+        // SEGURANÇA: NÃO sobrescrever a senha de um usuário já cadastrado.
+        // Qualquer pessoa poderia digitar um e-mail alheio nesse formulário público
+        // e resetar a senha do dono da conta. O usuário existente recebe apenas o
+        // link de recuperação por e-mail (gerado abaixo) e segue o fluxo normal de login.
       } else {
         console.error("Error creating user:", createErr);
       }
@@ -691,7 +687,7 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         submission_id: submission.id,
-        auto_login: userId ? { email, password: tempPassword } : null,
+        auto_login: userId && !isExistingUser ? { email, password: tempPassword } : null,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
