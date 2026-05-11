@@ -196,7 +196,9 @@ export function GuestChargeReminders() {
                     Cobrar agora
                   </Badge>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Check-out: {format(new Date(charge.guest_checkout_date), 'dd/MM', { locale: ptBR })}
+                    {charge.guest_checkout_date
+                      ? `Check-out: ${format(new Date(charge.guest_checkout_date), 'dd/MM', { locale: ptBR })}`
+                      : 'Sem data de check-out'}
                   </p>
                 </div>
                 <Button
