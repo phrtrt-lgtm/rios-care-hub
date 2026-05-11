@@ -24,7 +24,7 @@ interface GuestChargePending {
   id: string; // ticket id
   charge_id?: string | null;
   subject: string;
-  guest_checkout_date: string;
+  guest_checkout_date: string | null;
   property_id: string;
   property_name: string;
   days_since_checkout: number;
@@ -87,7 +87,6 @@ export function GuestChargeReminders() {
         `)
         .eq('ticket_type', 'manutencao')
         .eq('cost_responsible', 'guest')
-        .not('guest_checkout_date', 'is', null)
         .in('status', ['novo', 'em_analise', 'aguardando_info', 'em_execucao', 'concluido']);
 
       if (error) throw error;
@@ -114,27 +113,31 @@ export function GuestChargeReminders() {
           // Esconde se a charge já está paga/arquivada/cancelada/debitada
           if (existing && existing.status && PAID_STATUSES.has(existing.status)) return null;
 
-          const checkoutDate = new Date(ticket.guest_checkout_date!);
-          const daysSince = differenceInDays(today, checkoutDate);
-          const chargeDate = addDays(checkoutDate, 14);
-          const daysUntil = differenceInDays(chargeDate, today);
+          let daysSince = 999;
+          let daysUntil = 0;
+          let canCharge = true;
+          if (ticket.guest_checkout_date) {
+            const checkoutDate = new Date(ticket.guest_checkout_date);
+            daysSince = differenceInDays(today, checkoutDate);
+            const chargeDate = addDays(checkoutDate, 14);
+            daysUntil = differenceInDays(chargeDate, today);
+            canCharge = daysSince >= 14;
+          }
 
           return {
             id: ticket.id,
             charge_id: existing?.id ?? null,
             subject: ticket.subject,
-            guest_checkout_date: ticket.guest_checkout_date!,
+            guest_checkout_date: ticket.guest_checkout_date,
             property_id: ticket.property_id || '',
             property_name: (ticket.properties as any)?.name || 'Imóvel desconhecido',
             days_since_checkout: daysSince,
-            can_charge: daysSince >= 14,
+            can_charge: canCharge,
             days_until_charge: Math.max(0, daysUntil),
             charge_status: existing?.status ?? null,
           } as GuestChargePending;
         })
         .filter((c): c is GuestChargePending => c !== null)
-        // Auto-hide: cobranças prontas há mais de 24 dias somem (provavelmente já cobradas externamente)
-        .filter(c => c.days_since_checkout < 24)
         .sort((a, b) => {
           if (a.can_charge && !b.can_charge) return -1;
           if (!a.can_charge && b.can_charge) return 1;
@@ -193,7 +196,9 @@ export function GuestChargeReminders() {
                     Cobrar agora
                   </Badge>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Check-out: {format(new Date(charge.guest_checkout_date), 'dd/MM', { locale: ptBR })}
+                    {charge.guest_checkout_date
+                      ? `Check-out: ${format(new Date(charge.guest_checkout_date), 'dd/MM', { locale: ptBR })}`
+                      : 'Sem data de check-out'}
                   </p>
                 </div>
                 <Button
