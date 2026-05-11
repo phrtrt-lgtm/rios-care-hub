@@ -687,7 +687,7 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         submission_id: submission.id,
-        auto_login: userId ? { email, password: tempPassword } : null,
+        auto_login: userId && !isExistingUser ? { email, password: tempPassword } : null,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
