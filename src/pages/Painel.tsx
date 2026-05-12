@@ -426,6 +426,25 @@ export default function Painel() {
 
               <Card
                 className="cursor-pointer hover-lift group border-primary/20 hover:border-primary/40 transition-colors"
+                onClick={() => navigate("/admin/relatorios-manutencoes")}
+              >
+                <CardHeader className="py-3 px-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                      <Wrench className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-sm">Relatórios de Manutenções</CardTitle>
+                      <CardDescription className="text-xs">
+                        Consulte manutenções por proprietário
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+
+              <Card
+                className="cursor-pointer hover-lift group border-primary/20 hover:border-primary/40 transition-colors"
                 onClick={() => navigate("/admin/fichas-imoveis")}
               >
                 <CardHeader className="py-3 px-4">
