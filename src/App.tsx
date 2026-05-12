@@ -77,6 +77,8 @@ import RelatoriosPropriedade from "./pages/RelatoriosPropriedade";
 import AdminFichasImoveis from "./pages/AdminFichasImoveis";
 import AdminRelatoriosFinanceiros from "./pages/AdminRelatoriosFinanceiros";
 import AdminRelatoriosProprietario from "./pages/AdminRelatoriosProprietario";
+import AdminRelatoriosManutencoes from "./pages/AdminRelatoriosManutencoes";
+import AdminRelatorioManutencoesProprietario from "./pages/AdminRelatorioManutencoesProprietario";
 import CadastroImovel from "./pages/CadastroImovel";
 import AdminCadastrosProprietarios from "./pages/AdminCadastrosProprietarios";
 import AtualizacaoAnuncio from "./pages/AtualizacaoAnuncio";
