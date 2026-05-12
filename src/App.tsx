@@ -645,6 +645,22 @@ const App = () => (
               }
             />
             <Route
+              path="/admin/relatorios-manutencoes"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'agent', 'maintenance']}>
+                  <AdminRelatoriosManutencoes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/relatorios-manutencoes/:ownerId"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'agent', 'maintenance']}>
+                  <AdminRelatorioManutencoesProprietario />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/admin/cadastros-proprietarios"
               element={
                 <ProtectedRoute allowedRoles={['admin', 'agent']}>
