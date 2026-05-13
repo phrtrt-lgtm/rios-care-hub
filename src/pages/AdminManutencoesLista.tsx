@@ -1429,6 +1429,10 @@ export default function AdminManutencoesLista() {
           scheduled_at,
           created_at,
           cost_responsible,
+          charge_draft_amount_cents,
+          charge_draft_management_contribution_cents,
+          charge_draft_category,
+          charge_draft_title,
           property:properties(id, name),
           owner:profiles!tickets_owner_id_fkey(id, name)
         `)
