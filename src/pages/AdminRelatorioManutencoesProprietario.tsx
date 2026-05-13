@@ -23,6 +23,7 @@ import {
   Mail,
   Phone,
   Wrench,
+  ArrowUpDown,
 } from "lucide-react";
 import { formatBRL, formatDateTime } from "@/lib/format";
 
