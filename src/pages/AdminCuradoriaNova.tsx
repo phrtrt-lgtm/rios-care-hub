@@ -42,6 +42,9 @@ type Item = {
   priority?: "essencial" | "recomendado" | "";
   optional?: boolean;
   alternativeGroup?: string;
+  quantity?: number | null;
+  unit?: string | null;
+  dimensions?: string | null;
 };
 type Category = {
   key: string;
