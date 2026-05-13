@@ -482,7 +482,7 @@ const MinhasCobrancas = () => {
               ) : (
                 <div className="space-y-3">
                   {visibleCharges.map((charge) => {
-              const isOpen = charge.status === 'sent' || charge.status === 'overdue';
+              const isOpen = charge.status === 'sent' || charge.status === 'overdue' || charge.status === 'pendente';
               const isSelected = selectedCharges.includes(charge.id);
               const ownerDue = charge.amount_cents - charge.management_contribution_cents;
               
