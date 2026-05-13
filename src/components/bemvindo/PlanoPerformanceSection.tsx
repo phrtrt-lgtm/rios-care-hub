@@ -125,6 +125,8 @@ type Item = {
   unit?: string | null;
   /** Tamanho/medidas (ex: "King 193x203", "2x2,5m", "5L", "50\""). */
   dimensions?: string | null;
+  /** Cômodo do imóvel ao qual o item pertence (ex: "Sala", "Quarto 1", "Cozinha"). */
+  room?: string | null;
 };
 
 type Category = {
