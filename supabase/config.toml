@@ -90,3 +90,6 @@ verify_jwt = false
 [functions.save-curation-selection]
 verify_jwt = false
 
+
+[functions.admin-reset-password]
+verify_jwt = false
