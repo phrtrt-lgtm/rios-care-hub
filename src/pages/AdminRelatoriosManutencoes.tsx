@@ -202,14 +202,28 @@ export default function AdminRelatoriosManutencoes() {
           </Card>
         </div>
 
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome do proprietário ou email..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10"
-          />
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome do proprietário ou email..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Select value={sortOption} onValueChange={setSortOption}>
+            <SelectTrigger className="w-full sm:w-56">
+              <ArrowUpDown className="h-4 w-4 mr-2 text-muted-foreground" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="name_asc">Nome A-Z</SelectItem>
+              <SelectItem value="name_desc">Nome Z-A</SelectItem>
+              <SelectItem value="value_desc">Valor maior → menor</SelectItem>
+              <SelectItem value="value_asc">Valor menor → maior</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {loading ? (
