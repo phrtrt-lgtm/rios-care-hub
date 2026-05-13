@@ -73,6 +73,7 @@ const TOOL = {
                     quantity: { type: "number", description: "Quantidade de unidades (extraído da planilha — ex: 2, 4, 6). Não inventar." },
                     unit: { type: "string", description: "Unidade do quantity (ex: 'un', 'par', 'kit', 'jogo', 'm²')." },
                     dimensions: { type: "string", description: "Especificação COMPLETA do sub-item da planilha — cor, material, medidas, acabamento, tudo junto. Ex: 'nogueira 60x40 s/vidro', 'caramelo 80x50', 'King 193x203 400 fios'. NUNCA resumir nem omitir partes." },
+                    room: { type: "string", description: "Cômodo do imóvel ao qual o item pertence (ex: 'Sala', 'Cozinha', 'Quarto 1', 'Suíte', 'Banheiro', 'Varanda'). Extraia EXATAMENTE como na planilha. Vazio se não houver." },
                   },
                   required: ["name", "why", "price"],
                 },
