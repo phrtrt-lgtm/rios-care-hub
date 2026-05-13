@@ -253,6 +253,9 @@ const handler = async (req: Request): Promise<Response> => {
             console.error("Push error (non-critical):", pushError);
           }
 
+        } else if (skipOwnerForMaintenance) {
+          // Maintenance not owed by the owner — no notification needed.
+          console.log("Skipping notifications: maintenance with non-owner cost responsible");
         } else {
           // Ticket created by owner → Notify TEAM only
           if (teamTemplate) {
