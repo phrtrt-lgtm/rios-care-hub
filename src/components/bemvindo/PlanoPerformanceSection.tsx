@@ -605,6 +605,33 @@ export function PlanoPerformanceSection({
     }
   }
 
+  async function saveChoice(choice: "rios" | "self") {
+    if (!curationId) return;
+    setSavingChoice(true);
+    const prev = purchaseChoice;
+    setPurchaseChoice(choice);
+    try {
+      const { error } = await supabase
+        .from("owner_curations")
+        .update({
+          owner_purchase_choice: choice,
+          owner_purchase_chosen_at: new Date().toISOString(),
+        })
+        .eq("id", curationId);
+      if (error) throw error;
+      toast.success(
+        choice === "rios"
+          ? "Escolha registrada · RIOS cuidará das compras"
+          : "Escolha registrada · você comprará os itens",
+      );
+    } catch (e: any) {
+      setPurchaseChoice(prev);
+      toast.error(e.message || "Falha ao salvar escolha");
+    } finally {
+      setSavingChoice(false);
+    }
+  }
+
   // Botão PIX reutilizável (verde)
   const PixCTA = ({ size = "default" as "default" | "lg" }) =>
     paid ? (
@@ -622,6 +649,81 @@ export function PlanoPerformanceSection({
         Pagar curadoria via PIX · R$ {orcamento.toLocaleString("pt-BR")}
       </Button>
     );
+
+  // Bloco para o proprietário escolher quem compra os itens
+  const PurchaseChoiceBlock = () => {
+    if (!curationId || paid) return null;
+    return (
+      <div className="mb-6 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] p-5 md:p-6">
+        <div className="mb-3 flex items-center gap-2">
+          <ShoppingBag className="h-4 w-4 text-primary" />
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
+            Como você prefere comprar os itens?
+          </p>
+        </div>
+        <p className="mb-4 max-w-2xl text-xs text-white/65">
+          A RIOS pode comprar tudo pra você (PIX direto pra gente) ou, se preferir usar
+          seu cartão de crédito parcelado, você mesmo compra cada item pelos links da
+          lista. Em ambos os casos cuidamos de receber, montar e instalar.
+        </p>
+        <div className="grid gap-3 md:grid-cols-2">
+          <button
+            type="button"
+            disabled={savingChoice}
+            onClick={() => saveChoice("rios")}
+            className={`group rounded-2xl border p-4 text-left transition disabled:opacity-60 ${
+              purchaseChoice === "rios"
+                ? "border-emerald-500/60 bg-emerald-500/15 ring-2 ring-emerald-500/40"
+                : "border-white/10 bg-white/[0.03] hover:border-emerald-500/40 hover:bg-emerald-500/5"
+            }`}
+          >
+            <div className="mb-1 flex items-center gap-2">
+              <QrCode className="h-4 w-4 text-emerald-400" />
+              <span className="text-sm font-semibold text-white">
+                RIOS compra pra mim (PIX)
+              </span>
+              {purchaseChoice === "rios" && <Check className="ml-auto h-4 w-4 text-emerald-400" />}
+            </div>
+            <p className="text-xs leading-relaxed text-white/65">
+              Você paga o total via PIX direto pra RIOS e a gente cuida de tudo: cotação,
+              compra, frete, recebimento, montagem e instalação.
+            </p>
+          </button>
+          <button
+            type="button"
+            disabled={savingChoice}
+            onClick={() => saveChoice("self")}
+            className={`group rounded-2xl border p-4 text-left transition disabled:opacity-60 ${
+              purchaseChoice === "self"
+                ? "border-primary/60 bg-primary/15 ring-2 ring-primary/40"
+                : "border-white/10 bg-white/[0.03] hover:border-primary/40 hover:bg-primary/5"
+            }`}
+          >
+            <div className="mb-1 flex items-center gap-2">
+              <ExternalLink className="h-4 w-4 text-primary" />
+              <span className="text-sm font-semibold text-white">
+                Eu mesmo vou comprar (cartão / parcelado)
+              </span>
+              {purchaseChoice === "self" && <Check className="ml-auto h-4 w-4 text-primary" />}
+            </div>
+            <p className="text-xs leading-relaxed text-white/65">
+              Use seu cartão de crédito parcelado nos links de cada item. Compre nas
+              quantidades e tamanhos exatos da lista pra evitar trocas. RIOS recebe,
+              monta e instala tudo no imóvel.
+            </p>
+          </button>
+        </div>
+        {purchaseChoice === "self" && (
+          <div className="mt-4 rounded-xl border border-primary/30 bg-primary/10 p-3 text-xs leading-relaxed text-white/80">
+            <strong className="text-white">Atenção:</strong> compre exatamente nas
+            quantidades e tamanhos indicados em cada item da lista abaixo (chips
+            laranja = quantidade, azul = medidas). Itens errados geram retrabalho e
+            atraso na publicação do anúncio.
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <section className="mb-24 md:mb-32">
