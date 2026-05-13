@@ -1127,7 +1127,7 @@ export function PlanoPerformanceSection({
               </ul>
 
               {/* CTA PIX final (rodapé do dialog) */}
-              {curationId && (
+              {curationId && purchaseChoice !== "self" && (
                 <div className="mt-6 flex flex-col items-center gap-3 rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 to-transparent p-6 text-center">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-400">
                     Pronta para começar?
