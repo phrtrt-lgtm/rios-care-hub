@@ -1492,25 +1492,28 @@ export default function AdminManutencoesLista() {
           }
           return true;
         })
-        .map(t => ({
+        .map(t => {
           const displayCharge = latestNonDraftChargeMap[t.id] || chargeMap[t.id];
-          ...t,
-          attachments_count: attachmentCounts[t.id] || 0,
-          amount_cents:
-            displayCharge?.status === "draft"
-              ? ((t as any).charge_draft_amount_cents ?? displayCharge?.amount_cents ?? null)
-              : (displayCharge?.amount_cents ?? (t as any).charge_draft_amount_cents ?? null),
-          management_contribution_cents:
-            displayCharge?.status === "draft"
-              ? ((t as any).charge_draft_management_contribution_cents ?? displayCharge?.management_contribution_cents ?? null)
-              : (displayCharge?.management_contribution_cents ?? (t as any).charge_draft_management_contribution_cents ?? null),
-          service_type:
-            displayCharge?.status === "draft"
-              ? ((t as any).charge_draft_category || displayCharge?.service_type || null)
-              : (displayCharge?.service_type || (t as any).charge_draft_category || null),
-          list_status: t.status === "concluido" ? "feito" : "em_progresso",
-          cost_responsible: (t as any).cost_responsible ?? null,
-        })) as MaintenanceItem[];
+
+          return {
+            ...t,
+            attachments_count: attachmentCounts[t.id] || 0,
+            amount_cents:
+              displayCharge?.status === "draft"
+                ? ((t as any).charge_draft_amount_cents ?? displayCharge?.amount_cents ?? null)
+                : (displayCharge?.amount_cents ?? (t as any).charge_draft_amount_cents ?? null),
+            management_contribution_cents:
+              displayCharge?.status === "draft"
+                ? ((t as any).charge_draft_management_contribution_cents ?? displayCharge?.management_contribution_cents ?? null)
+                : (displayCharge?.management_contribution_cents ?? (t as any).charge_draft_management_contribution_cents ?? null),
+            service_type:
+              displayCharge?.status === "draft"
+                ? ((t as any).charge_draft_category || displayCharge?.service_type || null)
+                : (displayCharge?.service_type || (t as any).charge_draft_category || null),
+            list_status: t.status === "concluido" ? "feito" : "em_progresso",
+            cost_responsible: (t as any).cost_responsible ?? null,
+          };
+        }) as MaintenanceItem[];
     },
   });
 
