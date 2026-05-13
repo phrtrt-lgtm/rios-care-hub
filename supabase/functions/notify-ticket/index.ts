@@ -205,8 +205,14 @@ const handler = async (req: Request): Promise<Response> => {
           ticket_url: `${portalUrl}/ticket-detalhes/${ticket.id}`,
         };
 
+        // Skip owner notification when it's a maintenance ticket whose cost
+        // is NOT the owner's — they shouldn't worry about something they won't pay.
+        const skipOwnerForMaintenance =
+          ticket.ticket_type === "manutencao" &&
+          (ticket.cost_responsible ?? "owner") !== "owner";
+
         // Send notification based on who created the ticket
-        if (createdByTeam) {
+        if (createdByTeam && !skipOwnerForMaintenance) {
           // Ticket created by admin/agent → Notify OWNER only
           if (ownerTemplate) {
             await resend.emails.send({
@@ -247,6 +253,9 @@ const handler = async (req: Request): Promise<Response> => {
             console.error("Push error (non-critical):", pushError);
           }
 
+        } else if (skipOwnerForMaintenance) {
+          // Maintenance not owed by the owner — no notification needed.
+          console.log("Skipping notifications: maintenance with non-owner cost responsible");
         } else {
           // Ticket created by owner → Notify TEAM only
           if (teamTemplate) {
