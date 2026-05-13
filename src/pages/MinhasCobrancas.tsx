@@ -205,7 +205,7 @@ const MinhasCobrancas = () => {
     sum + (charge.amount_cents - (charge.management_contribution_cents || 0)), 0
   );
 
-  const openChargesCount = charges.filter(c => c.status === 'sent' || c.status === 'overdue').length;
+  const openChargesCount = charges.filter(c => c.status === 'sent' || c.status === 'overdue' || c.status === 'pendente').length;
 
   if (loading) {
     return (
