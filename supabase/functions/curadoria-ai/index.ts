@@ -30,14 +30,13 @@ Regras de saída:
 - Use a ferramenta "set_curation" para retornar a estrutura.
 - Sempre em PT-BR, tom editorial RIOS (sofisticado, direto, vendedor).
 - Categorize itens em: Sala & ambientes sociais, Decoração & alma do espaço, Quarto & rouparia, Cozinha equipada, Eletrônicos & eletrodomésticos. Pode criar outras se a planilha pedir.
-- Cada item: name (curto), why (1 frase de IMPACTO p/ o hóspede ou de papel na ambientação — sem instruções ao proprietário), price (formato "R$ X.XXX"), img (use url da planilha se houver, senão "" — frontend usa placeholder), priority ("essencial" | "recomendado" | null), link (url do produto se houver), optional (true se o item puder ser desmarcado pelo proprietário — caixinha começa marcada), alternativeGroup (string que agrupa alternativas do mesmo item: mutuamente exclusivas), quantity (número inteiro — quantas unidades, ex: 2, 4, 6), unit (unidade do quantity, ex: "un", "par", "kit", "jogo", "m²"), dimensions (tamanho/medidas EXATAS da planilha, ex: "2x2,5m", "King 193x203", "50x50cm", "Queen", "5L", "50\"", "400 fios").
+- Cada item: name (curto), why (1 frase de IMPACTO p/ o hóspede ou de papel na ambientação — sem instruções ao proprietário), price (formato "R$ X.XXX"), img (use url da planilha se houver, senão "" — frontend usa placeholder), priority ("essencial" | "recomendado" | null), link (url do produto se houver), quantity (número inteiro — quantas unidades, ex: 2, 4, 6), unit (unidade do quantity, ex: "un", "par", "kit", "jogo", "m²"), dimensions (especificação COMPLETA do sub-item da planilha — cor + material/acabamento + medidas + qualquer detalhe técnico, ex: "nogueira 60x40 s/vidro", "caramelo 80x50", "King 193x203 400 fios", "off-white tripé chão", "terracota/bege/verde").
 
 REGRA CRÍTICA DE FIDELIDADE AOS DADOS:
 - NUNCA invente, troque, embaralhe ou reordene preços, links, quantidades ou tamanhos. Cada linha da planilha tem um conjunto (preço, link, quantidade, tamanho) que pertence APENAS àquele item — preserve EXATAMENTE como está.
-- SEMPRE extraia quantity, unit e dimensions quando aparecerem na planilha (mesmo que o nome já mencione). Se não houver na planilha, deixe como null/"" — não invente. O proprietário PRECISA ver "2 un · King 193x203" pra não comprar errado.
-- Se a planilha trouxer "opção 1" e "opção 2" do mesmo item (ex: "trio de quadros opção 1" R$262 / "trio de quadros opção 2" R$217), mantenha a numeração da planilha: opção 1 da planilha = primeiro item do alternativeGroup, opção 2 da planilha = segundo. NÃO reordene por preço, ROI ou qualquer outro critério. NÃO troque os preços/links entre eles.
-- Quando houver duas versões do mesmo item sem rótulo explícito de opção, mantenha a ordem em que aparecem na planilha.
-- Use "optional" com moderação — só para itens realmente acessórios. Não use para essenciais.
+- SEMPRE extraia quantity, unit e dimensions quando aparecerem na planilha. O campo "dimensions" DEVE conter o sub-item COMPLETO da planilha (cor, material, medidas, acabamento — tudo junto). Ex: se a planilha diz "nogueira 60x40 s/vidro", dimensions = "nogueira 60x40 s/vidro" (NÃO apenas "60x40"). Se diz "caramelo", dimensions = "caramelo". Se diz "pintado 2 unidades", dimensions = "pintado" e quantity = 2. NUNCA resuma ou omita partes do sub-item — o proprietário precisa comprar EXATAMENTE como descrito.
+- Se não houver sub-item na planilha, deixe dimensions vazio — não invente.
+- NÃO crie alternativas/opções nem itens opcionais. Cada linha da planilha vira UM item fixo na curadoria. Não use os campos "optional" nem "alternativeGroup" — sempre omita-os.
 - Observações: 2-4 notas editoriais sobre o que NÓS faremos no imóvel (reposicionamento de mobília, ajustes de iluminação, aproveitamento do que já existe, cuidados de manutenção que cuidaremos). Cada uma: tag, title, body, icon ("Wand2"|"Lightbulb"|"AlertTriangle"|"Sparkles"). Mesma regra de tom: nada de imperativo ao proprietário.
 - Se o admin pedir refinamento (modo refine), aplique o comando preservando o resto.`;
 
@@ -70,11 +69,9 @@ const TOOL = {
                     img: { type: "string" },
                     link: { type: "string" },
                     priority: { type: "string", enum: ["essencial", "recomendado", ""] },
-                    optional: { type: "boolean", description: "Se true, item aparece com checkbox e pode ser desmarcado (default marcado)." },
-                    alternativeGroup: { type: "string", description: "Itens com o mesmo valor são alternativas mutuamente exclusivas. O primeiro da lista é a 'Opção 1' (recomendada — melhor ROI)." },
                     quantity: { type: "number", description: "Quantidade de unidades (extraído da planilha — ex: 2, 4, 6). Não inventar." },
                     unit: { type: "string", description: "Unidade do quantity (ex: 'un', 'par', 'kit', 'jogo', 'm²')." },
-                    dimensions: { type: "string", description: "Medidas/tamanho exato da planilha (ex: '2x2,5m', 'King 193x203', '50x50cm', '5L', '50\"', '400 fios'). Não inventar." },
+                    dimensions: { type: "string", description: "Especificação COMPLETA do sub-item da planilha — cor, material, medidas, acabamento, tudo junto. Ex: 'nogueira 60x40 s/vidro', 'caramelo 80x50', 'King 193x203 400 fios'. NUNCA resumir nem omitir partes." },
                   },
                   required: ["name", "why", "price"],
                 },
