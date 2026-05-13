@@ -1305,7 +1305,7 @@ export default function AdminManutencoesLista() {
         if (error) throw error;
       }
 
-      queryClient.invalidateQueries({ queryKey: ["maintenance-list-view"] });
+      queryClient.invalidateQueries({ queryKey: ["maintenance-list-view", "v2-draft-fallback"] });
       queryClient.invalidateQueries({ queryKey: ["pending-charges-list"] });
 
       setInlineAdd(null);
@@ -1776,21 +1776,21 @@ export default function AdminManutencoesLista() {
     },
     onMutate: async ({ id, field, value }) => {
       // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ["maintenance-list-view"] });
+      await queryClient.cancelQueries({ queryKey: ["maintenance-list-view", "v2-draft-fallback"] });
       await queryClient.cancelQueries({ queryKey: ["pending-charges-list"] });
 
       // Snapshot previous value
-      const previousTickets = queryClient.getQueryData(["maintenance-list-view"]);
+      const previousTickets = queryClient.getQueryData(["maintenance-list-view", "v2-draft-fallback"]);
       const previousCharges = queryClient.getQueryData(["pending-charges-list"]);
 
       if (field === "list_status" && value === "enviar_proprietario") {
         // Snapshot the ticket BEFORE removing it so we can mirror it
         // into the "Cobranças Pendentes" list optimistically.
-        const ticketsCache = queryClient.getQueryData<MaintenanceItem[]>(["maintenance-list-view"]);
+        const ticketsCache = queryClient.getQueryData<MaintenanceItem[]>(["maintenance-list-view", "v2-draft-fallback"]);
         const movingTicket = ticketsCache?.find(t => t.id === id);
 
         // Optimistically REMOVE the ticket from the maintenance list
-        queryClient.setQueryData(["maintenance-list-view"], (old: MaintenanceItem[] | undefined) => {
+        queryClient.setQueryData(["maintenance-list-view", "v2-draft-fallback"], (old: MaintenanceItem[] | undefined) => {
           if (!old) return old;
           return old.filter(t => t.id !== id);
         });
@@ -1829,7 +1829,7 @@ export default function AdminManutencoesLista() {
         // Optimistically reflect the move between "Em Progresso" and
         // "Concluídas" by also updating the underlying ticket.status.
         const newTicketStatus = value === "feito" ? "concluido" : "em_execucao";
-        queryClient.setQueryData(["maintenance-list-view"], (old: MaintenanceItem[] | undefined) => {
+        queryClient.setQueryData(["maintenance-list-view", "v2-draft-fallback"], (old: MaintenanceItem[] | undefined) => {
           if (!old) return old;
           return old.map(t =>
             t.id === id
@@ -1839,7 +1839,7 @@ export default function AdminManutencoesLista() {
         });
       } else {
         // Regular optimistic update
-        queryClient.setQueryData(["maintenance-list-view"], (old: MaintenanceItem[] | undefined) => {
+        queryClient.setQueryData(["maintenance-list-view", "v2-draft-fallback"], (old: MaintenanceItem[] | undefined) => {
           if (!old) return old;
           return old.map(t => t.id === id ? { ...t, [field]: value } : t);
         });
@@ -1848,12 +1848,12 @@ export default function AdminManutencoesLista() {
       return { previousTickets, previousCharges };
     },
     onError: (err, variables, context) => {
-      queryClient.setQueryData(["maintenance-list-view"], context?.previousTickets);
+      queryClient.setQueryData(["maintenance-list-view", "v2-draft-fallback"], context?.previousTickets);
       queryClient.setQueryData(["pending-charges-list"], context?.previousCharges);
       toast.error("Erro ao atualizar");
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["maintenance-list-view"] });
+      queryClient.invalidateQueries({ queryKey: ["maintenance-list-view", "v2-draft-fallback"] });
       queryClient.invalidateQueries({ queryKey: ["pending-charges-list"] });
     },
   });
