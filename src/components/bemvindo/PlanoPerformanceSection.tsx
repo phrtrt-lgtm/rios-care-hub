@@ -890,7 +890,7 @@ export function PlanoPerformanceSection({
               <ComoFuncionaBlock />
 
               {/* CTA PIX dentro do dialog (topo) */}
-              {curationId && (
+              {curationId && purchaseChoice !== "self" && (
                 <div className="mt-5 flex flex-col items-start gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 md:flex-row md:items-center md:justify-between">
                   <div>
                     <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-400">
