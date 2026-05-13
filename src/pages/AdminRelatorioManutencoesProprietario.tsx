@@ -313,6 +313,28 @@ export default function AdminRelatorioManutencoesProprietario() {
                   </Select>
                 </div>
               )}
+
+              <div className="space-y-2 w-64">
+                <label className="text-sm font-medium flex items-center gap-1">
+                  <ArrowUpDown className="h-3 w-3" /> Ordenar
+                </label>
+                <Select value={sortOption} onValueChange={setSortOption}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="date_desc">Data (mais recente)</SelectItem>
+                    <SelectItem value="date_asc">Data (mais antiga)</SelectItem>
+                    <SelectItem value="amount_desc">Valor (maior → menor)</SelectItem>
+                    <SelectItem value="amount_asc">Valor (menor → maior)</SelectItem>
+                    <SelectItem value="due_desc">Devido (maior → menor)</SelectItem>
+                    <SelectItem value="due_asc">Devido (menor → maior)</SelectItem>
+                    <SelectItem value="property_asc">Imóvel A-Z</SelectItem>
+                    <SelectItem value="title_asc">Título A-Z</SelectItem>
+                    <SelectItem value="status_asc">Status A-Z</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardContent>
         </Card>
