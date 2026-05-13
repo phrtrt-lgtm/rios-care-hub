@@ -510,6 +510,9 @@ export function PlanoPerformanceSection({
             link: (it as any).link ?? null,
             priority: it.priority ?? null,
             alternativeGroup: it.alternativeGroup ?? null,
+            quantity: it.quantity ?? null,
+            unit: it.unit ?? null,
+            dimensions: it.dimensions ?? null,
           })),
       );
       supabase.functions
