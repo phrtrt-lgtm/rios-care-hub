@@ -1688,6 +1688,8 @@ export type Database = {
           mercadopago_payment_id: string | null
           observations: Json
           owner_id: string
+          owner_purchase_choice: string | null
+          owner_purchase_chosen_at: string | null
           paid_at: string | null
           pix_qr_code: string | null
           pix_qr_code_base64: string | null
@@ -1710,6 +1712,8 @@ export type Database = {
           mercadopago_payment_id?: string | null
           observations?: Json
           owner_id: string
+          owner_purchase_choice?: string | null
+          owner_purchase_chosen_at?: string | null
           paid_at?: string | null
           pix_qr_code?: string | null
           pix_qr_code_base64?: string | null
@@ -1732,6 +1736,8 @@ export type Database = {
           mercadopago_payment_id?: string | null
           observations?: Json
           owner_id?: string
+          owner_purchase_choice?: string | null
+          owner_purchase_chosen_at?: string | null
           paid_at?: string | null
           pix_qr_code?: string | null
           pix_qr_code_base64?: string | null

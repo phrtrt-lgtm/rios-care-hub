@@ -119,6 +119,12 @@ type Item = {
   /** Itens com o mesmo alternativeGroup são alternativas mutuamente exclusivas.
    *  O primeiro item da lista é a "Opção 1" (recomendada · melhor ROI). */
   alternativeGroup?: string;
+  /** Quantidade extraída da planilha (ex: 2, 4) — proprietário precisa saber pra não comprar errado. */
+  quantity?: number | null;
+  /** Unidade do quantity (ex: "un", "par", "kit", "jogo"). */
+  unit?: string | null;
+  /** Tamanho/medidas (ex: "King 193x203", "2x2,5m", "5L", "50\""). */
+  dimensions?: string | null;
 };
 
 type Category = {
@@ -381,18 +387,22 @@ export function PlanoPerformanceSection({
   curationId,
   initialPaid,
   initialSelectedItems,
+  initialPurchaseChoice,
 }: {
   customCategories?: Category[];
   customObservations?: { icon: string; tag: string; title: string; body: string }[];
   curationId?: string;
   initialPaid?: boolean;
   initialSelectedItems?: Array<{ category?: string; name?: string }>;
+  initialPurchaseChoice?: "rios" | "self" | null;
 } = {}) {
   const [open, setOpen] = useState(false);
   const [pixOpen, setPixOpen] = useState(false);
   const [pixLoading, setPixLoading] = useState(false);
   const [pixData, setPixData] = useState<{ qr_code?: string; qr_code_base64?: string }>({});
   const [paid, setPaid] = useState(!!initialPaid);
+  const [purchaseChoice, setPurchaseChoice] = useState<"rios" | "self" | null>(initialPurchaseChoice ?? null);
+  const [savingChoice, setSavingChoice] = useState(false);
 
   const categories = customCategories?.length ? customCategories : CATEGORIES;
   const observations: Observation[] = customObservations?.length
@@ -504,6 +514,9 @@ export function PlanoPerformanceSection({
             link: (it as any).link ?? null,
             priority: it.priority ?? null,
             alternativeGroup: it.alternativeGroup ?? null,
+            quantity: it.quantity ?? null,
+            unit: it.unit ?? null,
+            dimensions: it.dimensions ?? null,
           })),
       );
       supabase.functions
@@ -566,6 +579,9 @@ export function PlanoPerformanceSection({
             link: (it as any).link ?? null,
             priority: it.priority ?? null,
             alternativeGroup: it.alternativeGroup ?? null,
+            quantity: it.quantity ?? null,
+            unit: it.unit ?? null,
+            dimensions: it.dimensions ?? null,
           })),
       );
 
@@ -589,6 +605,33 @@ export function PlanoPerformanceSection({
     }
   }
 
+  async function saveChoice(choice: "rios" | "self") {
+    if (!curationId) return;
+    setSavingChoice(true);
+    const prev = purchaseChoice;
+    setPurchaseChoice(choice);
+    try {
+      const { error } = await supabase
+        .from("owner_curations")
+        .update({
+          owner_purchase_choice: choice,
+          owner_purchase_chosen_at: new Date().toISOString(),
+        })
+        .eq("id", curationId);
+      if (error) throw error;
+      toast.success(
+        choice === "rios"
+          ? "Escolha registrada · RIOS cuidará das compras"
+          : "Escolha registrada · você comprará os itens",
+      );
+    } catch (e: any) {
+      setPurchaseChoice(prev);
+      toast.error(e.message || "Falha ao salvar escolha");
+    } finally {
+      setSavingChoice(false);
+    }
+  }
+
   // Botão PIX reutilizável (verde)
   const PixCTA = ({ size = "default" as "default" | "lg" }) =>
     paid ? (
@@ -607,6 +650,81 @@ export function PlanoPerformanceSection({
       </Button>
     );
 
+  // Bloco para o proprietário escolher quem compra os itens
+  const PurchaseChoiceBlock = () => {
+    if (!curationId || paid) return null;
+    return (
+      <div className="mb-6 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] p-5 md:p-6">
+        <div className="mb-3 flex items-center gap-2">
+          <ShoppingBag className="h-4 w-4 text-primary" />
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
+            Como você prefere comprar os itens?
+          </p>
+        </div>
+        <p className="mb-4 max-w-2xl text-xs text-white/65">
+          A RIOS pode comprar tudo pra você (PIX direto pra gente) ou, se preferir usar
+          seu cartão de crédito parcelado, você mesmo compra cada item pelos links da
+          lista. Em ambos os casos cuidamos de receber, montar e instalar.
+        </p>
+        <div className="grid gap-3 md:grid-cols-2">
+          <button
+            type="button"
+            disabled={savingChoice}
+            onClick={() => saveChoice("rios")}
+            className={`group rounded-2xl border p-4 text-left transition disabled:opacity-60 ${
+              purchaseChoice === "rios"
+                ? "border-emerald-500/60 bg-emerald-500/15 ring-2 ring-emerald-500/40"
+                : "border-white/10 bg-white/[0.03] hover:border-emerald-500/40 hover:bg-emerald-500/5"
+            }`}
+          >
+            <div className="mb-1 flex items-center gap-2">
+              <QrCode className="h-4 w-4 text-emerald-400" />
+              <span className="text-sm font-semibold text-white">
+                RIOS compra pra mim (PIX)
+              </span>
+              {purchaseChoice === "rios" && <Check className="ml-auto h-4 w-4 text-emerald-400" />}
+            </div>
+            <p className="text-xs leading-relaxed text-white/65">
+              Você paga o total via PIX direto pra RIOS e a gente cuida de tudo: cotação,
+              compra, frete, recebimento, montagem e instalação.
+            </p>
+          </button>
+          <button
+            type="button"
+            disabled={savingChoice}
+            onClick={() => saveChoice("self")}
+            className={`group rounded-2xl border p-4 text-left transition disabled:opacity-60 ${
+              purchaseChoice === "self"
+                ? "border-primary/60 bg-primary/15 ring-2 ring-primary/40"
+                : "border-white/10 bg-white/[0.03] hover:border-primary/40 hover:bg-primary/5"
+            }`}
+          >
+            <div className="mb-1 flex items-center gap-2">
+              <ExternalLink className="h-4 w-4 text-primary" />
+              <span className="text-sm font-semibold text-white">
+                Eu mesmo vou comprar (cartão / parcelado)
+              </span>
+              {purchaseChoice === "self" && <Check className="ml-auto h-4 w-4 text-primary" />}
+            </div>
+            <p className="text-xs leading-relaxed text-white/65">
+              Use seu cartão de crédito parcelado nos links de cada item. Compre nas
+              quantidades e tamanhos exatos da lista pra evitar trocas. RIOS recebe,
+              monta e instala tudo no imóvel.
+            </p>
+          </button>
+        </div>
+        {purchaseChoice === "self" && (
+          <div className="mt-4 rounded-xl border border-primary/30 bg-primary/10 p-3 text-xs leading-relaxed text-white/80">
+            <strong className="text-white">Atenção:</strong> compre exatamente nas
+            quantidades e tamanhos indicados em cada item da lista abaixo (chips
+            laranja = quantidade, azul = medidas). Itens errados geram retrabalho e
+            atraso na publicação do anúncio.
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <section className="mb-24 md:mb-32">
       <div className="mb-8 flex items-end justify-between gap-6">
@@ -620,8 +738,11 @@ export function PlanoPerformanceSection({
         </div>
       </div>
 
-      {/* Hero PIX no topo (só se publicada) */}
-      {curationId && (
+      {/* Escolha de quem compra os itens */}
+      <PurchaseChoiceBlock />
+
+      {/* Hero PIX no topo (só se publicada e proprietário escolheu RIOS comprando) */}
+      {curationId && purchaseChoice !== "self" && (
         <div className="mb-6 overflow-hidden rounded-3xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent p-6 backdrop-blur-md md:p-7">
           <div className="flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
             <div>
@@ -641,6 +762,24 @@ export function PlanoPerformanceSection({
             </div>
             <PixCTA size="lg" />
           </div>
+        </div>
+      )}
+
+      {/* Aviso quando proprietário optou por comprar */}
+      {curationId && purchaseChoice === "self" && !paid && (
+        <div className="mb-6 overflow-hidden rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent p-6 backdrop-blur-md md:p-7">
+          <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
+            Você escolheu comprar os itens
+          </p>
+          <h3 className="text-lg font-bold tracking-tight text-white md:text-xl">
+            Use os links de cada item abaixo · cartão / parcelado
+          </h3>
+          <p className="mt-1 max-w-2xl text-sm text-white/70">
+            Compre exatamente nas <strong className="text-white">quantidades</strong> e
+            <strong className="text-white"> tamanhos</strong> indicados. Quando finalizar
+            as compras, avise nossa equipe que iremos receber, montar e instalar tudo no
+            imóvel.
+          </p>
         </div>
       )}
 
@@ -751,7 +890,7 @@ export function PlanoPerformanceSection({
               <ComoFuncionaBlock />
 
               {/* CTA PIX dentro do dialog (topo) */}
-              {curationId && (
+              {curationId && purchaseChoice !== "self" && (
                 <div className="mt-5 flex flex-col items-start gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 md:flex-row md:items-center md:justify-between">
                   <div>
                     <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-400">
@@ -922,6 +1061,20 @@ export function PlanoPerformanceSection({
                                   </span>
                                 )}
                               </div>
+                              {(it.quantity || it.dimensions) && (
+                                <div className="mb-1 flex flex-wrap items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider">
+                                  {it.quantity ? (
+                                    <span className="inline-flex items-center rounded-md bg-amber-500/15 px-1.5 py-0.5 text-amber-300 ring-1 ring-amber-500/30">
+                                      {it.quantity}{it.unit ? ` ${it.unit}` : " un"}
+                                    </span>
+                                  ) : null}
+                                  {it.dimensions ? (
+                                    <span className="inline-flex items-center rounded-md bg-sky-500/15 px-1.5 py-0.5 text-sky-300 ring-1 ring-sky-500/30">
+                                      {it.dimensions}
+                                    </span>
+                                  ) : null}
+                                </div>
+                              )}
                               <p className="line-clamp-2 text-xs text-white/65">
                                 {it.why}
                               </p>
@@ -974,7 +1127,7 @@ export function PlanoPerformanceSection({
               </ul>
 
               {/* CTA PIX final (rodapé do dialog) */}
-              {curationId && (
+              {curationId && purchaseChoice !== "self" && (
                 <div className="mt-6 flex flex-col items-center gap-3 rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 to-transparent p-6 text-center">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-400">
                     Pronta para começar?
