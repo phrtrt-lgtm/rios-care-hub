@@ -160,9 +160,44 @@ export default function AdminRelatorioManutencoesProprietario() {
     );
   }
 
-  const filteredYearMaintenances = (maintenances || []).filter(
-    (m: any) => new Date(m.created_at).getFullYear() === year,
-  );
+  const filteredYearMaintenances = useMemo(() => {
+    let result = (maintenances || []).filter(
+      (m: any) => new Date(m.created_at).getFullYear() === year,
+    );
+
+    result.sort((a: any, b: any) => {
+      switch (sortOption) {
+        case "date_asc":
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        case "date_desc":
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case "amount_asc":
+          return (a.amount_cents || 0) - (b.amount_cents || 0);
+        case "amount_desc":
+          return (b.amount_cents || 0) - (a.amount_cents || 0);
+        case "due_asc": {
+          const da = (a.amount_cents || 0) - (a.management_contribution_cents || 0);
+          const db = (b.amount_cents || 0) - (b.management_contribution_cents || 0);
+          return da - db;
+        }
+        case "due_desc": {
+          const da = (a.amount_cents || 0) - (a.management_contribution_cents || 0);
+          const db = (b.amount_cents || 0) - (b.management_contribution_cents || 0);
+          return db - da;
+        }
+        case "property_asc":
+          return (a.property?.name || "").localeCompare(b.property?.name || "");
+        case "title_asc":
+          return (a.title || "").localeCompare(b.title || "");
+        case "status_asc":
+          return (a.status || "").localeCompare(b.status || "");
+        default:
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+    });
+
+    return result;
+  }, [maintenances, year, sortOption]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 pb-20 md:pb-0">
