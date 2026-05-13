@@ -45,6 +45,7 @@ type Item = {
   quantity?: number | null;
   unit?: string | null;
   dimensions?: string | null;
+  room?: string | null;
 };
 type Category = {
   key: string;
@@ -441,7 +442,15 @@ export default function AdminCuradoriaNova() {
               </div>
 
               <div className="space-y-6">
-                {categories.map((cat, ci) => (
+                {categories.map((cat, ci) => {
+                  // Agrupa itens por cômodo dentro da categoria, preservando o índice original
+                  const groups = new Map<string, { it: Item; ii: number }[]>();
+                  cat.items.forEach((it, ii) => {
+                    const room = (it.room || "").trim() || "Sem cômodo definido";
+                    if (!groups.has(room)) groups.set(room, []);
+                    groups.get(room)!.push({ it, ii });
+                  });
+                  return (
                   <div key={cat.key + ci}>
                     <div className="mb-2 flex items-center gap-2">
                       <span className="text-lg">{cat.emoji}</span>
@@ -456,110 +465,111 @@ export default function AdminCuradoriaNova() {
                         <Plus className="h-3 w-3" />
                       </Button>
                     </div>
-                    <ul className="divide-y rounded-lg border">
-                      {cat.items.map((it, ii) => (
-                        <li key={ii} className="space-y-2 p-2">
-                          <div className="grid grid-cols-[1fr_2fr_100px_120px_auto] items-center gap-2">
-                            <Input
-                              value={it.name}
-                              onChange={(e) => updateItem(ci, ii, { name: e.target.value })}
-                              placeholder="Nome"
-                              className="h-8"
-                            />
-                            <Input
-                              value={it.why}
-                              onChange={(e) => updateItem(ci, ii, { why: e.target.value })}
-                              placeholder="Por quê"
-                              className="h-8"
-                            />
-                            <Input
-                              value={it.price}
-                              onChange={(e) => updateItem(ci, ii, { price: e.target.value })}
-                              placeholder="R$ 0"
-                              className="h-8"
-                            />
-                            <Select
-                              value={it.priority || "none"}
-                              onValueChange={(v) => updateItem(ci, ii, { priority: v === "none" ? "" : (v as any) })}
-                            >
-                              <SelectTrigger className="h-8">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="none">—</SelectItem>
-                                <SelectItem value="essencial">Essencial</SelectItem>
-                                <SelectItem value="recomendado">Recomendado</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <Button size="icon" variant="ghost" onClick={() => removeItem(ci, ii)}>
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
+                    <div className="space-y-3">
+                      {Array.from(groups.entries()).map(([roomName, entries]) => (
+                        <div key={roomName} className="rounded-lg border">
+                          <div className="flex items-center gap-2 border-b bg-muted/40 px-3 py-1.5">
+                            <Badge variant="secondary" className="text-[11px]">Cômodo</Badge>
+                            <span className="text-sm font-semibold">{roomName}</span>
+                            <span className="text-xs text-muted-foreground">· {entries.length} {entries.length === 1 ? "item" : "itens"}</span>
                           </div>
-                          <div className="flex flex-wrap items-center gap-3 pl-1 text-xs text-muted-foreground">
-                            <label className="flex items-center gap-1.5">
-                              <Checkbox
-                                checked={!!it.optional}
-                                onCheckedChange={(v) => updateItem(ci, ii, { optional: !!v })}
-                              />
-                              Opcional (proprietário pode desmarcar)
-                            </label>
-                            <div className="flex items-center gap-1.5">
-                              <span>Grupo de alternativa:</span>
-                              <Input
-                                value={it.alternativeGroup || ""}
-                                onChange={(e) => updateItem(ci, ii, { alternativeGroup: e.target.value })}
-                                placeholder="ex: cama-premium"
-                                className="h-7 w-44 text-xs"
-                              />
-                              <span className="text-[10px] opacity-70">
-                                (mesmo grupo = escolha entre opções; 1ª = melhor ROI)
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <span>Link:</span>
-                              <Input
-                                value={it.link || ""}
-                                onChange={(e) => updateItem(ci, ii, { link: e.target.value })}
-                                placeholder="https://..."
-                                className="h-7 w-56 text-xs"
-                              />
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <span>Qtd:</span>
-                              <Input
-                                type="number"
-                                min={0}
-                                value={it.quantity ?? ""}
-                                onChange={(e) =>
-                                  updateItem(ci, ii, {
-                                    quantity: e.target.value === "" ? null : Number(e.target.value),
-                                  })
-                                }
-                                placeholder="2"
-                                className="h-7 w-16 text-xs"
-                              />
-                              <Input
-                                value={it.unit || ""}
-                                onChange={(e) => updateItem(ci, ii, { unit: e.target.value })}
-                                placeholder="un / par / kit"
-                                className="h-7 w-24 text-xs"
-                              />
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <span>Tamanho:</span>
-                              <Input
-                                value={it.dimensions || ""}
-                                onChange={(e) => updateItem(ci, ii, { dimensions: e.target.value })}
-                                placeholder='ex: King 193x203, 2x2,5m, 50"'
-                                className="h-7 w-52 text-xs"
-                              />
-                            </div>
-                          </div>
-                        </li>
+                          <ul className="divide-y">
+                            {entries.map(({ it, ii }) => (
+                              <li key={ii} className="space-y-2 p-2">
+                                <div className="grid grid-cols-[1fr_2fr_100px_120px_auto] items-center gap-2">
+                                  <Input
+                                    value={it.name}
+                                    onChange={(e) => updateItem(ci, ii, { name: e.target.value })}
+                                    placeholder="Nome"
+                                    className="h-8"
+                                  />
+                                  <Input
+                                    value={it.why}
+                                    onChange={(e) => updateItem(ci, ii, { why: e.target.value })}
+                                    placeholder="Por quê"
+                                    className="h-8"
+                                  />
+                                  <Input
+                                    value={it.price}
+                                    onChange={(e) => updateItem(ci, ii, { price: e.target.value })}
+                                    placeholder="R$ 0"
+                                    className="h-8"
+                                  />
+                                  <Select
+                                    value={it.priority || "none"}
+                                    onValueChange={(v) => updateItem(ci, ii, { priority: v === "none" ? "" : (v as any) })}
+                                  >
+                                    <SelectTrigger className="h-8">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="none">—</SelectItem>
+                                      <SelectItem value="essencial">Essencial</SelectItem>
+                                      <SelectItem value="recomendado">Recomendado</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <Button size="icon" variant="ghost" onClick={() => removeItem(ci, ii)}>
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-3 pl-1 text-xs text-muted-foreground">
+                                  <div className="flex items-center gap-1.5">
+                                    <span>Cômodo:</span>
+                                    <Input
+                                      value={it.room || ""}
+                                      onChange={(e) => updateItem(ci, ii, { room: e.target.value })}
+                                      placeholder="ex: Sala, Quarto 1, Cozinha"
+                                      className="h-7 w-44 text-xs"
+                                    />
+                                  </div>
+                                  <div className="flex items-center gap-1.5">
+                                    <span>Link:</span>
+                                    <Input
+                                      value={it.link || ""}
+                                      onChange={(e) => updateItem(ci, ii, { link: e.target.value })}
+                                      placeholder="https://..."
+                                      className="h-7 w-56 text-xs"
+                                    />
+                                  </div>
+                                  <div className="flex items-center gap-1.5">
+                                    <span>Qtd:</span>
+                                    <Input
+                                      type="number"
+                                      min={0}
+                                      value={it.quantity ?? ""}
+                                      onChange={(e) =>
+                                        updateItem(ci, ii, {
+                                          quantity: e.target.value === "" ? null : Number(e.target.value),
+                                        })
+                                      }
+                                      placeholder="2"
+                                      className="h-7 w-16 text-xs"
+                                    />
+                                    <Input
+                                      value={it.unit || ""}
+                                      onChange={(e) => updateItem(ci, ii, { unit: e.target.value })}
+                                      placeholder="un / par / kit"
+                                      className="h-7 w-24 text-xs"
+                                    />
+                                  </div>
+                                  <div className="flex items-center gap-1.5">
+                                    <span>Tamanho:</span>
+                                    <Input
+                                      value={it.dimensions || ""}
+                                      onChange={(e) => updateItem(ci, ii, { dimensions: e.target.value })}
+                                      placeholder='ex: King 193x203, 2x2,5m, 50"'
+                                      className="h-7 w-52 text-xs"
+                                    />
+                                  </div>
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   </div>
-                ))}
+                );})}
               </div>
 
               {observations.length > 0 && (
