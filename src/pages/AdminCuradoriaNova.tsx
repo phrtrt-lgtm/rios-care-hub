@@ -524,6 +524,36 @@ export default function AdminCuradoriaNova() {
                                 className="h-7 w-56 text-xs"
                               />
                             </div>
+                            <div className="flex items-center gap-1.5">
+                              <span>Qtd:</span>
+                              <Input
+                                type="number"
+                                min={0}
+                                value={it.quantity ?? ""}
+                                onChange={(e) =>
+                                  updateItem(ci, ii, {
+                                    quantity: e.target.value === "" ? null : Number(e.target.value),
+                                  })
+                                }
+                                placeholder="2"
+                                className="h-7 w-16 text-xs"
+                              />
+                              <Input
+                                value={it.unit || ""}
+                                onChange={(e) => updateItem(ci, ii, { unit: e.target.value })}
+                                placeholder="un / par / kit"
+                                className="h-7 w-24 text-xs"
+                              />
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span>Tamanho:</span>
+                              <Input
+                                value={it.dimensions || ""}
+                                onChange={(e) => updateItem(ci, ii, { dimensions: e.target.value })}
+                                placeholder='ex: King 193x203, 2x2,5m, 50"'
+                                className="h-7 w-52 text-xs"
+                              />
+                            </div>
                           </div>
                         </li>
                       ))}
