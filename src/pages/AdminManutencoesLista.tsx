@@ -1418,7 +1418,7 @@ export default function AdminManutencoesLista() {
 
   // Fetch maintenance tickets
   const { data: tickets, isLoading } = useQuery({
-    queryKey: ["maintenance-list-view"],
+    queryKey: ["maintenance-list-view", "v2-draft-fallback"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tickets")
