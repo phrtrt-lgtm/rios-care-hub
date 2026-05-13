@@ -738,6 +738,35 @@ export function PlanoPerformanceSection({
         </div>
       </div>
 
+      {/* Aviso forte sobre escolha correta dos itens */}
+      <div className="mb-6 overflow-hidden rounded-3xl border-2 border-destructive/60 bg-destructive/15 p-5 md:p-6 shadow-[0_0_40px_-10px_hsl(var(--destructive)/0.5)]">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/30 ring-2 ring-destructive/50">
+            <AlertTriangle className="h-5 w-5 text-destructive-foreground" />
+          </div>
+          <div className="flex-1">
+            <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.25em] text-destructive-foreground/90">
+              Atenção · Leitura obrigatória
+            </p>
+            <h3 className="mb-2 text-lg font-bold text-destructive-foreground md:text-xl">
+              Compre exatamente a cor, o tipo e o tamanho de cada item
+            </h3>
+            <p className="text-sm leading-relaxed text-destructive-foreground/95">
+              A decoração só funciona se <strong>todos os itens combinarem entre si</strong>.
+              Cada peça desta curadoria foi escolhida pensando na harmonia visual do conjunto.
+              Comprar uma cor, modelo ou medida diferente do indicado quebra a estética inteira do
+              ambiente, gera retrabalho, atrasa a publicação do anúncio e pode obrigar a troca do
+              item por sua conta.
+            </p>
+            <p className="mt-3 text-xs leading-relaxed text-destructive-foreground/85">
+              Confira sempre os <strong>chips laranja</strong> (quantidade) e os{" "}
+              <strong>chips azuis</strong> (cor / medida / tipo) de cada item antes de finalizar a
+              compra. Em dúvida, fale com a RIOS antes de comprar.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Escolha de quem compra os itens */}
       <PurchaseChoiceBlock />
 
