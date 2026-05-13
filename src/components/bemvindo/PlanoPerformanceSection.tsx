@@ -738,8 +738,11 @@ export function PlanoPerformanceSection({
         </div>
       </div>
 
-      {/* Hero PIX no topo (só se publicada) */}
-      {curationId && (
+      {/* Escolha de quem compra os itens */}
+      <PurchaseChoiceBlock />
+
+      {/* Hero PIX no topo (só se publicada e proprietário escolheu RIOS comprando) */}
+      {curationId && purchaseChoice !== "self" && (
         <div className="mb-6 overflow-hidden rounded-3xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent p-6 backdrop-blur-md md:p-7">
           <div className="flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
             <div>
@@ -759,6 +762,24 @@ export function PlanoPerformanceSection({
             </div>
             <PixCTA size="lg" />
           </div>
+        </div>
+      )}
+
+      {/* Aviso quando proprietário optou por comprar */}
+      {curationId && purchaseChoice === "self" && !paid && (
+        <div className="mb-6 overflow-hidden rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent p-6 backdrop-blur-md md:p-7">
+          <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
+            Você escolheu comprar os itens
+          </p>
+          <h3 className="text-lg font-bold tracking-tight text-white md:text-xl">
+            Use os links de cada item abaixo · cartão / parcelado
+          </h3>
+          <p className="mt-1 max-w-2xl text-sm text-white/70">
+            Compre exatamente nas <strong className="text-white">quantidades</strong> e
+            <strong className="text-white"> tamanhos</strong> indicados. Quando finalizar
+            as compras, avise nossa equipe que iremos receber, montar e instalar tudo no
+            imóvel.
+          </p>
         </div>
       )}
 
