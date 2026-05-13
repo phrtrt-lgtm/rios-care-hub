@@ -1305,7 +1305,7 @@ export default function AdminManutencoesLista() {
         if (error) throw error;
       }
 
-      queryClient.invalidateQueries({ queryKey: ["maintenance-list-view"] });
+      queryClient.invalidateQueries({ queryKey: ["maintenance-list-view", "v2-draft-fallback"] });
       queryClient.invalidateQueries({ queryKey: ["pending-charges-list"] });
 
       setInlineAdd(null);
@@ -1463,6 +1463,7 @@ export default function AdminManutencoesLista() {
 
       // Mapa com a cobrança mais recente (para exibir valores na linha)
       const chargeMap: Record<string, any> = {};
+      const latestNonDraftChargeMap: Record<string, any> = {};
       // Conjunto de tickets que já tiveram cobrança gerada (qualquer status real, não rascunho/arquivada)
       // Inclui pagas, pendentes, vencidas, contestadas, debitadas — todas saem da lista de "concluídos"
       const ticketsWithRealCharge = new Set<string>();
@@ -1473,6 +1474,9 @@ export default function AdminManutencoesLista() {
         .forEach((c: any) => {
           if (!c.ticket_id) return;
           if (!chargeMap[c.ticket_id]) chargeMap[c.ticket_id] = c;
+          if (c.status !== "draft" && !c.archived_at && !latestNonDraftChargeMap[c.ticket_id]) {
+            latestNonDraftChargeMap[c.ticket_id] = c;
+          }
           // Qualquer cobrança não-rascunho e não-arquivada já tira o ticket da aba "concluídas"
           if (c.status !== "draft" && !c.archived_at) {
             ticketsWithRealCharge.add(c.ticket_id);
@@ -1488,15 +1492,28 @@ export default function AdminManutencoesLista() {
           }
           return true;
         })
-        .map(t => ({
-          ...t,
-          attachments_count: attachmentCounts[t.id] || 0,
-          amount_cents: chargeMap[t.id]?.amount_cents ?? (t as any).charge_draft_amount_cents ?? null,
-          management_contribution_cents: chargeMap[t.id]?.management_contribution_cents ?? (t as any).charge_draft_management_contribution_cents ?? null,
-          service_type: chargeMap[t.id]?.service_type || (t as any).charge_draft_category || null,
-          list_status: t.status === "concluido" ? "feito" : "em_progresso",
-          cost_responsible: (t as any).cost_responsible ?? null,
-        })) as MaintenanceItem[];
+        .map(t => {
+          const displayCharge = latestNonDraftChargeMap[t.id] || chargeMap[t.id];
+
+          return {
+            ...t,
+            attachments_count: attachmentCounts[t.id] || 0,
+            amount_cents:
+              displayCharge?.status === "draft"
+                ? ((t as any).charge_draft_amount_cents ?? displayCharge?.amount_cents ?? null)
+                : (displayCharge?.amount_cents ?? (t as any).charge_draft_amount_cents ?? null),
+            management_contribution_cents:
+              displayCharge?.status === "draft"
+                ? ((t as any).charge_draft_management_contribution_cents ?? displayCharge?.management_contribution_cents ?? null)
+                : (displayCharge?.management_contribution_cents ?? (t as any).charge_draft_management_contribution_cents ?? null),
+            service_type:
+              displayCharge?.status === "draft"
+                ? ((t as any).charge_draft_category || displayCharge?.service_type || null)
+                : (displayCharge?.service_type || (t as any).charge_draft_category || null),
+            list_status: t.status === "concluido" ? "feito" : "em_progresso",
+            cost_responsible: (t as any).cost_responsible ?? null,
+          };
+        }) as MaintenanceItem[];
     },
   });
 
@@ -1759,21 +1776,21 @@ export default function AdminManutencoesLista() {
     },
     onMutate: async ({ id, field, value }) => {
       // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ["maintenance-list-view"] });
+      await queryClient.cancelQueries({ queryKey: ["maintenance-list-view", "v2-draft-fallback"] });
       await queryClient.cancelQueries({ queryKey: ["pending-charges-list"] });
 
       // Snapshot previous value
-      const previousTickets = queryClient.getQueryData(["maintenance-list-view"]);
+      const previousTickets = queryClient.getQueryData(["maintenance-list-view", "v2-draft-fallback"]);
       const previousCharges = queryClient.getQueryData(["pending-charges-list"]);
 
       if (field === "list_status" && value === "enviar_proprietario") {
         // Snapshot the ticket BEFORE removing it so we can mirror it
         // into the "Cobranças Pendentes" list optimistically.
-        const ticketsCache = queryClient.getQueryData<MaintenanceItem[]>(["maintenance-list-view"]);
+        const ticketsCache = queryClient.getQueryData<MaintenanceItem[]>(["maintenance-list-view", "v2-draft-fallback"]);
         const movingTicket = ticketsCache?.find(t => t.id === id);
 
         // Optimistically REMOVE the ticket from the maintenance list
-        queryClient.setQueryData(["maintenance-list-view"], (old: MaintenanceItem[] | undefined) => {
+        queryClient.setQueryData(["maintenance-list-view", "v2-draft-fallback"], (old: MaintenanceItem[] | undefined) => {
           if (!old) return old;
           return old.filter(t => t.id !== id);
         });
@@ -1812,7 +1829,7 @@ export default function AdminManutencoesLista() {
         // Optimistically reflect the move between "Em Progresso" and
         // "Concluídas" by also updating the underlying ticket.status.
         const newTicketStatus = value === "feito" ? "concluido" : "em_execucao";
-        queryClient.setQueryData(["maintenance-list-view"], (old: MaintenanceItem[] | undefined) => {
+        queryClient.setQueryData(["maintenance-list-view", "v2-draft-fallback"], (old: MaintenanceItem[] | undefined) => {
           if (!old) return old;
           return old.map(t =>
             t.id === id
@@ -1822,7 +1839,7 @@ export default function AdminManutencoesLista() {
         });
       } else {
         // Regular optimistic update
-        queryClient.setQueryData(["maintenance-list-view"], (old: MaintenanceItem[] | undefined) => {
+        queryClient.setQueryData(["maintenance-list-view", "v2-draft-fallback"], (old: MaintenanceItem[] | undefined) => {
           if (!old) return old;
           return old.map(t => t.id === id ? { ...t, [field]: value } : t);
         });
@@ -1831,12 +1848,12 @@ export default function AdminManutencoesLista() {
       return { previousTickets, previousCharges };
     },
     onError: (err, variables, context) => {
-      queryClient.setQueryData(["maintenance-list-view"], context?.previousTickets);
+      queryClient.setQueryData(["maintenance-list-view", "v2-draft-fallback"], context?.previousTickets);
       queryClient.setQueryData(["pending-charges-list"], context?.previousCharges);
       toast.error("Erro ao atualizar");
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["maintenance-list-view"] });
+      queryClient.invalidateQueries({ queryKey: ["maintenance-list-view", "v2-draft-fallback"] });
       queryClient.invalidateQueries({ queryKey: ["pending-charges-list"] });
     },
   });
