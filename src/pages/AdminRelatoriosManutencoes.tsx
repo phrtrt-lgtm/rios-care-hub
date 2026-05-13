@@ -42,6 +42,7 @@ export default function AdminRelatoriosManutencoes() {
   const [owners, setOwners] = useState<OwnerSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [sortOption, setSortOption] = useState<string>("value_desc");
 
   useEffect(() => {
     const fetchData = async () => {
