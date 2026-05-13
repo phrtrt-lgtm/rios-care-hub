@@ -136,30 +136,6 @@ export default function AdminRelatorioManutencoesProprietario() {
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
-  if (loadingOwner) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
-        <div className="container mx-auto px-4 py-6 space-y-4">
-          <Skeleton className="h-12 w-64" />
-          <Skeleton className="h-32 w-full" />
-          <Skeleton className="h-64 w-full" />
-        </div>
-      </div>
-    );
-  }
-
-  if (!owner) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-4">
-        <p className="text-muted-foreground">Proprietário não encontrado.</p>
-        <Button variant="outline" onClick={() => navigate("/admin/relatorios-manutencoes")}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Voltar
-        </Button>
-      </div>
-    );
-  }
-
   const filteredYearMaintenances = useMemo(() => {
     let result = (maintenances || []).filter(
       (m: any) => new Date(m.created_at).getFullYear() === year,
@@ -198,6 +174,30 @@ export default function AdminRelatorioManutencoesProprietario() {
 
     return result;
   }, [maintenances, year, sortOption]);
+
+  if (loadingOwner) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+        <div className="container mx-auto px-4 py-6 space-y-4">
+          <Skeleton className="h-12 w-64" />
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!owner) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-4">
+        <p className="text-muted-foreground">Proprietário não encontrado.</p>
+        <Button variant="outline" onClick={() => navigate("/admin/relatorios-manutencoes")}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Voltar
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 pb-20 md:pb-0">
