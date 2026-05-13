@@ -1710,6 +1710,35 @@ export default function AdminManutencoesLista() {
             .update({ scheduled_at: value })
             .eq("id", id);
           if (error) throw error;
+        } else if (field === "cost_responsible") {
+          // Persist on the ticket
+          const { error } = await supabase
+            .from("tickets")
+            .update({ cost_responsible: value })
+            .eq("id", id);
+          if (error) throw error;
+
+          // Mirror to the latest open linked charge, if any
+          const { data: linkedCharges } = await supabase
+            .from("charges")
+            .select("id")
+            .eq("ticket_id", id)
+            .is("archived_at", null)
+            .order("created_at", { ascending: false })
+            .limit(1);
+          const linked = linkedCharges?.[0];
+          if (linked) {
+            await supabase
+              .from("charges")
+              .update({ cost_responsible: value })
+              .eq("id", linked.id);
+          }
+        } else if (field === "scheduled_at") {
+          const { error } = await supabase
+            .from("tickets")
+            .update({ scheduled_at: value })
+            .eq("id", id);
+          if (error) throw error;
         } else if (field === "list_status") {
           // Persist the list-status change to the underlying ticket.
           // - "feito"        -> ticket.status = "concluido"
