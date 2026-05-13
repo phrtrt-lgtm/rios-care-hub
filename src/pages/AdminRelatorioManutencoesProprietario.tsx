@@ -44,6 +44,7 @@ export default function AdminRelatorioManutencoesProprietario() {
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [propertyId, setPropertyId] = useState<string>("");
   const [properties, setProperties] = useState<any[]>([]);
+  const [sortOption, setSortOption] = useState<string>("date_desc");
 
   useEffect(() => {
     if (!ownerId) return;
