@@ -119,6 +119,12 @@ type Item = {
   /** Itens com o mesmo alternativeGroup são alternativas mutuamente exclusivas.
    *  O primeiro item da lista é a "Opção 1" (recomendada · melhor ROI). */
   alternativeGroup?: string;
+  /** Quantidade extraída da planilha (ex: 2, 4) — proprietário precisa saber pra não comprar errado. */
+  quantity?: number | null;
+  /** Unidade do quantity (ex: "un", "par", "kit", "jogo"). */
+  unit?: string | null;
+  /** Tamanho/medidas (ex: "King 193x203", "2x2,5m", "5L", "50\""). */
+  dimensions?: string | null;
 };
 
 type Category = {
