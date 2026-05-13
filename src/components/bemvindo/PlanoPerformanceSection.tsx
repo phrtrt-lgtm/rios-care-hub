@@ -928,6 +928,20 @@ export function PlanoPerformanceSection({
                                   </span>
                                 )}
                               </div>
+                              {(it.quantity || it.dimensions) && (
+                                <div className="mb-1 flex flex-wrap items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider">
+                                  {it.quantity ? (
+                                    <span className="inline-flex items-center rounded-md bg-amber-500/15 px-1.5 py-0.5 text-amber-300 ring-1 ring-amber-500/30">
+                                      {it.quantity}{it.unit ? ` ${it.unit}` : " un"}
+                                    </span>
+                                  ) : null}
+                                  {it.dimensions ? (
+                                    <span className="inline-flex items-center rounded-md bg-sky-500/15 px-1.5 py-0.5 text-sky-300 ring-1 ring-sky-500/30">
+                                      {it.dimensions}
+                                    </span>
+                                  ) : null}
+                                </div>
+                              )}
                               <p className="line-clamp-2 text-xs text-white/65">
                                 {it.why}
                               </p>
