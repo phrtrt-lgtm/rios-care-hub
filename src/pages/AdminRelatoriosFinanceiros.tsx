@@ -49,6 +49,7 @@ export default function AdminRelatoriosFinanceiros() {
   const [owners, setOwners] = useState<OwnerSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [sortOption, setSortOption] = useState<string>("value_desc");
   const [propertyMatchOwners, setPropertyMatchOwners] = useState<Set<string>>(new Set());
 
   useEffect(() => {
