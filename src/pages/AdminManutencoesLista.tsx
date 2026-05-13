@@ -1463,6 +1463,7 @@ export default function AdminManutencoesLista() {
 
       // Mapa com a cobrança mais recente (para exibir valores na linha)
       const chargeMap: Record<string, any> = {};
+      const latestNonDraftChargeMap: Record<string, any> = {};
       // Conjunto de tickets que já tiveram cobrança gerada (qualquer status real, não rascunho/arquivada)
       // Inclui pagas, pendentes, vencidas, contestadas, debitadas — todas saem da lista de "concluídos"
       const ticketsWithRealCharge = new Set<string>();
@@ -1473,6 +1474,9 @@ export default function AdminManutencoesLista() {
         .forEach((c: any) => {
           if (!c.ticket_id) return;
           if (!chargeMap[c.ticket_id]) chargeMap[c.ticket_id] = c;
+          if (c.status !== "draft" && !c.archived_at && !latestNonDraftChargeMap[c.ticket_id]) {
+            latestNonDraftChargeMap[c.ticket_id] = c;
+          }
           // Qualquer cobrança não-rascunho e não-arquivada já tira o ticket da aba "concluídas"
           if (c.status !== "draft" && !c.archived_at) {
             ticketsWithRealCharge.add(c.ticket_id);
@@ -1489,11 +1493,21 @@ export default function AdminManutencoesLista() {
           return true;
         })
         .map(t => ({
+          const displayCharge = latestNonDraftChargeMap[t.id] || chargeMap[t.id];
           ...t,
           attachments_count: attachmentCounts[t.id] || 0,
-          amount_cents: chargeMap[t.id]?.amount_cents ?? (t as any).charge_draft_amount_cents ?? null,
-          management_contribution_cents: chargeMap[t.id]?.management_contribution_cents ?? (t as any).charge_draft_management_contribution_cents ?? null,
-          service_type: chargeMap[t.id]?.service_type || (t as any).charge_draft_category || null,
+          amount_cents:
+            displayCharge?.status === "draft"
+              ? ((t as any).charge_draft_amount_cents ?? displayCharge?.amount_cents ?? null)
+              : (displayCharge?.amount_cents ?? (t as any).charge_draft_amount_cents ?? null),
+          management_contribution_cents:
+            displayCharge?.status === "draft"
+              ? ((t as any).charge_draft_management_contribution_cents ?? displayCharge?.management_contribution_cents ?? null)
+              : (displayCharge?.management_contribution_cents ?? (t as any).charge_draft_management_contribution_cents ?? null),
+          service_type:
+            displayCharge?.status === "draft"
+              ? ((t as any).charge_draft_category || displayCharge?.service_type || null)
+              : (displayCharge?.service_type || (t as any).charge_draft_category || null),
           list_status: t.status === "concluido" ? "feito" : "em_progresso",
           cost_responsible: (t as any).cost_responsible ?? null,
         })) as MaintenanceItem[];
