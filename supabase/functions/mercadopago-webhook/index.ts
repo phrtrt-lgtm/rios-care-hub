@@ -252,11 +252,22 @@ const handler = async (req: Request): Promise<Response> => {
             const description = lines.join('\n');
             const subject = `Curadoria paga — executar compra (${items.length} itens · ${totalBRL})`;
 
+            // Fallback: se a curadoria não tem property_id, usa a primeira unidade da proprietária
+            let resolvedPropertyId = curation.property_id as string | null;
+            if (!resolvedPropertyId) {
+              const { data: ownerProps } = await supabase
+                .from('properties')
+                .select('id')
+                .eq('owner_id', curation.owner_id)
+                .limit(1);
+              resolvedPropertyId = ownerProps?.[0]?.id ?? null;
+            }
+
             const { data: ticket, error: ticketErr } = await supabase
               .from('tickets')
               .insert({
                 owner_id: curation.owner_id,
-                property_id: curation.property_id,
+                property_id: resolvedPropertyId,
                 ticket_type: 'melhorias_compras',
                 subject,
                 description,
