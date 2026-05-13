@@ -1429,6 +1429,10 @@ export default function AdminManutencoesLista() {
           scheduled_at,
           created_at,
           cost_responsible,
+          charge_draft_amount_cents,
+          charge_draft_management_contribution_cents,
+          charge_draft_category,
+          charge_draft_title,
           property:properties(id, name),
           owner:profiles!tickets_owner_id_fkey(id, name)
         `)
@@ -1487,9 +1491,9 @@ export default function AdminManutencoesLista() {
         .map(t => ({
           ...t,
           attachments_count: attachmentCounts[t.id] || 0,
-          amount_cents: chargeMap[t.id]?.amount_cents || null,
-          management_contribution_cents: chargeMap[t.id]?.management_contribution_cents || null,
-          service_type: chargeMap[t.id]?.service_type || null,
+          amount_cents: chargeMap[t.id]?.amount_cents ?? (t as any).charge_draft_amount_cents ?? null,
+          management_contribution_cents: chargeMap[t.id]?.management_contribution_cents ?? (t as any).charge_draft_management_contribution_cents ?? null,
+          service_type: chargeMap[t.id]?.service_type || (t as any).charge_draft_category || null,
           list_status: t.status === "concluido" ? "feito" : "em_progresso",
           cost_responsible: (t as any).cost_responsible ?? null,
         })) as MaintenanceItem[];
