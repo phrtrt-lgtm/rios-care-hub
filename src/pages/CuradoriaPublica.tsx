@@ -91,6 +91,7 @@ export default function CuradoriaPublica() {
             curationId={curation.id}
             initialPaid={!!curation.paid_at}
             initialSelectedItems={curation.selected_items ?? undefined}
+            initialPurchaseChoice={curation.owner_purchase_choice as any}
           />
         )}
       </div>
