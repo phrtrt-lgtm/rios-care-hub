@@ -173,14 +173,32 @@ export default function AdminRelatoriosFinanceiros() {
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    if (!term) return owners;
-    return owners.filter(
-      (o) =>
-        o.name.toLowerCase().includes(term) ||
-        o.email.toLowerCase().includes(term) ||
-        propertyMatchOwners.has(o.id)
-    );
-  }, [owners, search, propertyMatchOwners]);
+    let result = term
+      ? owners.filter(
+          (o) =>
+            o.name.toLowerCase().includes(term) ||
+            o.email.toLowerCase().includes(term) ||
+            propertyMatchOwners.has(o.id)
+        )
+      : [...owners];
+
+    result.sort((a, b) => {
+      switch (sortOption) {
+        case "name_asc":
+          return a.name.localeCompare(b.name);
+        case "name_desc":
+          return b.name.localeCompare(a.name);
+        case "value_asc":
+          return a.current_year_owner_net - b.current_year_owner_net;
+        case "value_desc":
+          return b.current_year_owner_net - a.current_year_owner_net;
+        default:
+          return b.current_year_owner_net - a.current_year_owner_net;
+      }
+    });
+
+    return result;
+  }, [owners, search, propertyMatchOwners, sortOption]);
 
   const totalReports = owners.reduce((sum, o) => sum + o.total_reports, 0);
   const ownersWithReports = owners.filter((o) => o.total_reports > 0).length;
