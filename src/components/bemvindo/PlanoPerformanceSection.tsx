@@ -387,18 +387,22 @@ export function PlanoPerformanceSection({
   curationId,
   initialPaid,
   initialSelectedItems,
+  initialPurchaseChoice,
 }: {
   customCategories?: Category[];
   customObservations?: { icon: string; tag: string; title: string; body: string }[];
   curationId?: string;
   initialPaid?: boolean;
   initialSelectedItems?: Array<{ category?: string; name?: string }>;
+  initialPurchaseChoice?: "rios" | "self" | null;
 } = {}) {
   const [open, setOpen] = useState(false);
   const [pixOpen, setPixOpen] = useState(false);
   const [pixLoading, setPixLoading] = useState(false);
   const [pixData, setPixData] = useState<{ qr_code?: string; qr_code_base64?: string }>({});
   const [paid, setPaid] = useState(!!initialPaid);
+  const [purchaseChoice, setPurchaseChoice] = useState<"rios" | "self" | null>(initialPurchaseChoice ?? null);
+  const [savingChoice, setSavingChoice] = useState(false);
 
   const categories = customCategories?.length ? customCategories : CATEGORIES;
   const observations: Observation[] = customObservations?.length
