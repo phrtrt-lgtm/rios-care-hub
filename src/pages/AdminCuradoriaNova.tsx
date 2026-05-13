@@ -45,6 +45,7 @@ type Item = {
   quantity?: number | null;
   unit?: string | null;
   dimensions?: string | null;
+  room?: string | null;
 };
 type Category = {
   key: string;
