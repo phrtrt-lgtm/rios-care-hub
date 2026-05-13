@@ -116,11 +116,31 @@ export default function AdminRelatoriosManutencoes() {
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    if (!term) return owners;
-    return owners.filter(
-      (o) => o.name.toLowerCase().includes(term) || o.email.toLowerCase().includes(term),
-    );
-  }, [owners, search]);
+    let result = term
+      ? owners.filter(
+          (o) =>
+            o.name.toLowerCase().includes(term) ||
+            o.email.toLowerCase().includes(term),
+        )
+      : [...owners];
+
+    result.sort((a, b) => {
+      switch (sortOption) {
+        case "name_asc":
+          return a.name.localeCompare(b.name);
+        case "name_desc":
+          return b.name.localeCompare(a.name);
+        case "value_asc":
+          return a.current_year_total_cents - b.current_year_total_cents;
+        case "value_desc":
+          return b.current_year_total_cents - a.current_year_total_cents;
+        default:
+          return b.current_year_total_cents - a.current_year_total_cents;
+      }
+    });
+
+    return result;
+  }, [owners, search, sortOption]);
 
   const totalMaint = owners.reduce((s, o) => s + o.total_maintenances, 0);
   const totalSpent = owners.reduce((s, o) => s + o.current_year_total_cents, 0);
