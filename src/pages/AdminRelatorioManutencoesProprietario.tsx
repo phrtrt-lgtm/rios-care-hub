@@ -23,6 +23,7 @@ import {
   Mail,
   Phone,
   Wrench,
+  ArrowUpDown,
 } from "lucide-react";
 import { formatBRL, formatDateTime } from "@/lib/format";
 
@@ -43,6 +44,7 @@ export default function AdminRelatorioManutencoesProprietario() {
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [propertyId, setPropertyId] = useState<string>("");
   const [properties, setProperties] = useState<any[]>([]);
+  const [sortOption, setSortOption] = useState<string>("date_desc");
 
   useEffect(() => {
     if (!ownerId) return;
@@ -158,9 +160,44 @@ export default function AdminRelatorioManutencoesProprietario() {
     );
   }
 
-  const filteredYearMaintenances = (maintenances || []).filter(
-    (m: any) => new Date(m.created_at).getFullYear() === year,
-  );
+  const filteredYearMaintenances = useMemo(() => {
+    let result = (maintenances || []).filter(
+      (m: any) => new Date(m.created_at).getFullYear() === year,
+    );
+
+    result.sort((a: any, b: any) => {
+      switch (sortOption) {
+        case "date_asc":
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        case "date_desc":
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case "amount_asc":
+          return (a.amount_cents || 0) - (b.amount_cents || 0);
+        case "amount_desc":
+          return (b.amount_cents || 0) - (a.amount_cents || 0);
+        case "due_asc": {
+          const da = (a.amount_cents || 0) - (a.management_contribution_cents || 0);
+          const db = (b.amount_cents || 0) - (b.management_contribution_cents || 0);
+          return da - db;
+        }
+        case "due_desc": {
+          const da = (a.amount_cents || 0) - (a.management_contribution_cents || 0);
+          const db = (b.amount_cents || 0) - (b.management_contribution_cents || 0);
+          return db - da;
+        }
+        case "property_asc":
+          return (a.property?.name || "").localeCompare(b.property?.name || "");
+        case "title_asc":
+          return (a.title || "").localeCompare(b.title || "");
+        case "status_asc":
+          return (a.status || "").localeCompare(b.status || "");
+        default:
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+    });
+
+    return result;
+  }, [maintenances, year, sortOption]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 pb-20 md:pb-0">
@@ -276,6 +313,28 @@ export default function AdminRelatorioManutencoesProprietario() {
                   </Select>
                 </div>
               )}
+
+              <div className="space-y-2 w-64">
+                <label className="text-sm font-medium flex items-center gap-1">
+                  <ArrowUpDown className="h-3 w-3" /> Ordenar
+                </label>
+                <Select value={sortOption} onValueChange={setSortOption}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="date_desc">Data (mais recente)</SelectItem>
+                    <SelectItem value="date_asc">Data (mais antiga)</SelectItem>
+                    <SelectItem value="amount_desc">Valor (maior → menor)</SelectItem>
+                    <SelectItem value="amount_asc">Valor (menor → maior)</SelectItem>
+                    <SelectItem value="due_desc">Devido (maior → menor)</SelectItem>
+                    <SelectItem value="due_asc">Devido (menor → maior)</SelectItem>
+                    <SelectItem value="property_asc">Imóvel A-Z</SelectItem>
+                    <SelectItem value="title_asc">Título A-Z</SelectItem>
+                    <SelectItem value="status_asc">Status A-Z</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardContent>
         </Card>

@@ -8,6 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   ArrowLeft,
   Search,
   Wrench,
@@ -15,6 +22,7 @@ import {
   Building2,
   Users,
   DollarSign,
+  ArrowUpDown,
 } from "lucide-react";
 import { formatBRL } from "@/lib/format";
 
@@ -34,6 +42,7 @@ export default function AdminRelatoriosManutencoes() {
   const [owners, setOwners] = useState<OwnerSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [sortOption, setSortOption] = useState<string>("value_desc");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -107,11 +116,31 @@ export default function AdminRelatoriosManutencoes() {
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    if (!term) return owners;
-    return owners.filter(
-      (o) => o.name.toLowerCase().includes(term) || o.email.toLowerCase().includes(term),
-    );
-  }, [owners, search]);
+    let result = term
+      ? owners.filter(
+          (o) =>
+            o.name.toLowerCase().includes(term) ||
+            o.email.toLowerCase().includes(term),
+        )
+      : [...owners];
+
+    result.sort((a, b) => {
+      switch (sortOption) {
+        case "name_asc":
+          return a.name.localeCompare(b.name);
+        case "name_desc":
+          return b.name.localeCompare(a.name);
+        case "value_asc":
+          return a.current_year_total_cents - b.current_year_total_cents;
+        case "value_desc":
+          return b.current_year_total_cents - a.current_year_total_cents;
+        default:
+          return b.current_year_total_cents - a.current_year_total_cents;
+      }
+    });
+
+    return result;
+  }, [owners, search, sortOption]);
 
   const totalMaint = owners.reduce((s, o) => s + o.total_maintenances, 0);
   const totalSpent = owners.reduce((s, o) => s + o.current_year_total_cents, 0);
@@ -173,14 +202,28 @@ export default function AdminRelatoriosManutencoes() {
           </Card>
         </div>
 
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome do proprietário ou email..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10"
-          />
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome do proprietário ou email..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Select value={sortOption} onValueChange={setSortOption}>
+            <SelectTrigger className="w-full sm:w-56">
+              <ArrowUpDown className="h-4 w-4 mr-2 text-muted-foreground" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="name_asc">Nome A-Z</SelectItem>
+              <SelectItem value="name_desc">Nome Z-A</SelectItem>
+              <SelectItem value="value_desc">Valor maior → menor</SelectItem>
+              <SelectItem value="value_asc">Valor menor → maior</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {loading ? (
