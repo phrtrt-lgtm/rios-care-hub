@@ -1500,15 +1500,15 @@ export default function AdminManutencoesLista() {
             attachments_count: attachmentCounts[t.id] || 0,
             amount_cents:
               displayCharge?.status === "draft"
-                ? ((t as any).charge_draft_amount_cents ?? displayCharge?.amount_cents ?? null)
+                ? (displayCharge?.amount_cents ?? (t as any).charge_draft_amount_cents ?? null)
                 : (displayCharge?.amount_cents ?? (t as any).charge_draft_amount_cents ?? null),
             management_contribution_cents:
               displayCharge?.status === "draft"
-                ? ((t as any).charge_draft_management_contribution_cents ?? displayCharge?.management_contribution_cents ?? null)
+                ? (displayCharge?.management_contribution_cents ?? (t as any).charge_draft_management_contribution_cents ?? null)
                 : (displayCharge?.management_contribution_cents ?? (t as any).charge_draft_management_contribution_cents ?? null),
             service_type:
               displayCharge?.status === "draft"
-                ? ((t as any).charge_draft_category || displayCharge?.service_type || null)
+                ? (displayCharge?.service_type || (t as any).charge_draft_category || null)
                 : (displayCharge?.service_type || (t as any).charge_draft_category || null),
             list_status: t.status === "concluido" ? "feito" : "em_progresso",
             cost_responsible: (t as any).cost_responsible ?? null,
@@ -1688,6 +1688,13 @@ export default function AdminManutencoesLista() {
 
         // Regular update - check if it's a charge field or ticket field
         if (["amount_cents", "management_contribution_cents", "service_type"].includes(field)) {
+          const ticketDraftFieldMap: Record<string, string> = {
+            amount_cents: "charge_draft_amount_cents",
+            management_contribution_cents: "charge_draft_management_contribution_cents",
+            service_type: "charge_draft_category",
+          };
+          const ticketDraftField = ticketDraftFieldMap[field];
+
           // Use limit to avoid maybeSingle error on multiple rows
           const { data: existingCharges } = await supabase
             .from("charges")
@@ -1705,6 +1712,14 @@ export default function AdminManutencoesLista() {
               .update({ [field]: value })
               .eq("id", existingCharge.id);
             if (error) throw error;
+
+            if (ticketDraftField) {
+              const { error: ticketDraftError } = await supabase
+                .from("tickets")
+                .update({ [ticketDraftField]: value })
+                .eq("id", id);
+              if (ticketDraftError) throw ticketDraftError;
+            }
           } else {
             // Create draft charge
             const ticket = tickets?.find(t => t.id === id);
@@ -1723,6 +1738,14 @@ export default function AdminManutencoesLista() {
                   status: "draft",
                 });
               if (error) throw error;
+
+              if (ticketDraftField) {
+                const { error: ticketDraftError } = await supabase
+                  .from("tickets")
+                  .update({ [ticketDraftField]: value })
+                  .eq("id", id);
+                if (ticketDraftError) throw ticketDraftError;
+              }
             }
           }
         } else if (field === "scheduled_at") {
