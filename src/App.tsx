@@ -25,6 +25,7 @@ import NovaCobranca from "./pages/NovaCobranca";
 import TodosTickets from "./pages/TodosTickets";
 import Propriedades from "./pages/Propriedades";
 import GerenciarCobrancas from "./pages/GerenciarCobrancas";
+import CobrancasHospedeArquivadas from "./pages/CobrancasHospedeArquivadas";
 import CobrancaDetalhes from "./pages/CobrancaDetalhes";
 import MigrarAnexos from "./pages/MigrarAnexos";
 import NovoAlerta from "./pages/NovoAlerta";
