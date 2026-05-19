@@ -306,9 +306,9 @@ export function GuestChargeReminders() {
       <AlertDialog open={!!confirmDismiss} onOpenChange={(open) => !open && setConfirmDismiss(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Descartar cobrança de hóspede?</AlertDialogTitle>
+            <AlertDialogTitle>Arquivar cobrança de hóspede?</AlertDialogTitle>
             <AlertDialogDescription>
-              Use esta opção quando a cobrança já foi feita diretamente pelo Airbnb e não precisa ser processada pelo portal. O aviso será removido do painel.
+              Use esta opção quando a cobrança já foi feita diretamente pelo Airbnb. O aviso sai do painel mas fica salvo em "Cobranças de hóspede arquivadas" — você pode restaurar depois se precisar.
               {confirmDismiss && (
                 <span className="block mt-2 font-medium text-foreground">
                   {confirmDismiss.subject} — {confirmDismiss.property_name}
@@ -320,9 +320,8 @@ export function GuestChargeReminders() {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => confirmDismiss && handleDismiss(confirmDismiss)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Descartar
+              Arquivar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
