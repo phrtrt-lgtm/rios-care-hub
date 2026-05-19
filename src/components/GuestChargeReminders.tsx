@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, DollarSign, Building2, AlertCircle, ChevronRight, X } from 'lucide-react';
+import { Calendar, DollarSign, Building2, AlertCircle, ChevronRight, X, Archive } from 'lucide-react';
 import { format, differenceInDays, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -57,16 +57,20 @@ export function GuestChargeReminders() {
   const handleDismiss = async (charge: GuestChargePending) => {
     setDismissingId(charge.id);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
       const { error } = await supabase
         .from('tickets')
-        .update({ guest_checkout_date: null })
+        .update({
+          guest_charge_dismissed_at: new Date().toISOString(),
+          guest_charge_dismissed_by: user?.id ?? null,
+        })
         .eq('id', charge.id);
       if (error) throw error;
       setPendingCharges(prev => prev.filter(c => c.id !== charge.id));
-      toast.success('Cobrança removida (será feita pelo Airbnb)');
+      toast.success('Cobrança arquivada (feita pelo Airbnb)');
     } catch (err) {
       console.error('Error dismissing guest charge:', err);
-      toast.error('Erro ao remover cobrança');
+      toast.error('Erro ao arquivar cobrança');
     } finally {
       setDismissingId(null);
       setConfirmDismiss(null);
@@ -87,6 +91,7 @@ export function GuestChargeReminders() {
         `)
         .eq('ticket_type', 'manutencao')
         .eq('cost_responsible', 'guest')
+        .is('guest_charge_dismissed_at', null)
         .in('status', ['novo', 'em_analise', 'aguardando_info', 'em_execucao', 'concluido']);
 
       if (error) throw error;
@@ -112,6 +117,8 @@ export function GuestChargeReminders() {
           const existing = chargeByTicket.get(ticket.id);
           // Esconde se a charge já está paga/arquivada/cancelada/debitada
           if (existing && existing.status && PAID_STATUSES.has(existing.status)) return null;
+          // Sem data de check-out não há como saber quando cobrar — ignora
+          if (!ticket.guest_checkout_date) return null;
 
           let daysSince = 999;
           let daysUntil = 0;
@@ -153,10 +160,25 @@ export function GuestChargeReminders() {
   };
 
   if (loading) return null;
-  if (pendingCharges.length === 0) return null;
 
   const canChargeNow = pendingCharges.filter(c => c.can_charge);
   const upcoming = pendingCharges.filter(c => !c.can_charge);
+
+  if (pendingCharges.length === 0) {
+    return (
+      <div className="flex justify-end">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate('/cobrancas-hospede-arquivadas')}
+          className="text-xs text-muted-foreground gap-1"
+        >
+          <Archive className="h-3.5 w-3.5" />
+          Cobranças de hóspede arquivadas
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <Card className="border-warning/30 bg-warning/10/50 dark:bg-orange-950/20">
@@ -164,11 +186,22 @@ export function GuestChargeReminders() {
         <CardTitle className="flex items-center gap-2 text-lg">
           <DollarSign className="h-5 w-5 text-warning" />
           Cobranças de Hóspede Pendentes
-          <Badge variant="secondary" className="ml-auto bg-warning/10 text-warning">
+          <Badge variant="secondary" className="ml-2 bg-warning/10 text-warning">
             {pendingCharges.length}
           </Badge>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/cobrancas-hospede-arquivadas')}
+            className="ml-auto h-7 text-xs gap-1"
+            title="Ver cobranças arquivadas (feitas pelo Airbnb)"
+          >
+            <Archive className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Arquivadas</span>
+          </Button>
         </CardTitle>
       </CardHeader>
+
       <CardContent className="space-y-3">
         {/* Can charge now */}
         {canChargeNow.length > 0 && (
@@ -273,9 +306,9 @@ export function GuestChargeReminders() {
       <AlertDialog open={!!confirmDismiss} onOpenChange={(open) => !open && setConfirmDismiss(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Descartar cobrança de hóspede?</AlertDialogTitle>
+            <AlertDialogTitle>Arquivar cobrança de hóspede?</AlertDialogTitle>
             <AlertDialogDescription>
-              Use esta opção quando a cobrança já foi feita diretamente pelo Airbnb e não precisa ser processada pelo portal. O aviso será removido do painel.
+              Use esta opção quando a cobrança já foi feita diretamente pelo Airbnb. O aviso sai do painel mas fica salvo em "Cobranças de hóspede arquivadas" — você pode restaurar depois se precisar.
               {confirmDismiss && (
                 <span className="block mt-2 font-medium text-foreground">
                   {confirmDismiss.subject} — {confirmDismiss.property_name}
@@ -287,9 +320,8 @@ export function GuestChargeReminders() {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => confirmDismiss && handleDismiss(confirmDismiss)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Descartar
+              Arquivar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
