@@ -469,7 +469,7 @@ export const useAddPayment = () => {
       // Verificar se já está totalmente pago
       const { data: charge } = await supabase
         .from("charges")
-        .select("amount_cents, status")
+        .select("amount_cents, management_contribution_cents, due_date, status")
         .eq("id", data.maintenance_id)
         .single();
 
@@ -480,10 +480,29 @@ export const useAddPayment = () => {
 
       const totalPaid = payments?.reduce((sum, p) => sum + p.amount_cents, 0) || 0;
 
-      if (charge && totalPaid >= charge.amount_cents && charge.status !== 'paid') {
+      const ownerAmountDue = Math.max(
+        (charge?.amount_cents || 0) - (charge?.management_contribution_cents || 0),
+        0,
+      );
+
+      let paidStatus = 'pago_no_vencimento';
+      const paymentDate = new Date(data.payment_date || new Date().toISOString());
+      if (charge?.due_date) {
+        const dueDate = new Date(charge.due_date);
+        const earlyThreshold = new Date(dueDate);
+        earlyThreshold.setDate(earlyThreshold.getDate() - 2);
+
+        if (paymentDate <= earlyThreshold) {
+          paidStatus = 'pago_antecipado';
+        } else if (paymentDate > dueDate) {
+          paidStatus = 'pago_com_atraso';
+        }
+      }
+
+      if (charge && totalPaid >= ownerAmountDue && !['pago_antecipado', 'pago_no_vencimento', 'pago_com_atraso'].includes(charge.status)) {
         await supabase
           .from("charges")
-          .update({ status: 'paid', paid_at: new Date().toISOString() })
+          .update({ status: paidStatus, paid_at: paymentDate.toISOString() })
           .eq("id", data.maintenance_id);
       }
 
