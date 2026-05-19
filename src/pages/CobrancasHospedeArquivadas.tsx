@@ -135,7 +135,7 @@ export default function CobrancasHospedeArquivadas() {
             <SectionSkeleton />
           ) : items.length === 0 ? (
             <EmptyState
-              icon={Archive}
+              icon={<Archive className="h-6 w-6" />}
               title="Nenhuma cobrança arquivada"
               description="Quando você arquivar uma cobrança de hóspede no painel, ela aparecerá aqui."
             />
