@@ -262,6 +262,14 @@ const App = () => (
               }
             />
             <Route
+              path="/cobrancas-hospede-arquivadas"
+              element={
+                <ProtectedRoute allowedRoles={['agent', 'admin', 'maintenance']}>
+                  <CobrancasHospedeArquivadas />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/cobranca/:id"
               element={
                 <ProtectedRoute allowedRoles={['owner', 'agent', 'admin', 'maintenance']}>
