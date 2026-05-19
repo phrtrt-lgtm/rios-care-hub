@@ -1,6 +1,56 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const PAID_STATUSES = new Set([
+  "paid",
+  "pago_antecipado",
+  "pago_no_vencimento",
+  "pago_com_atraso",
+  "debited",
+  "arquivado",
+  "cancelled",
+]);
+
+const getPaymentTotals = async (supabaseClient: ReturnType<typeof createClient>, chargeIds: string[]) => {
+  if (chargeIds.length === 0) return new Map<string, number>();
+
+  const { data, error } = await supabaseClient
+    .from("charge_payments")
+    .select("charge_id, amount_cents")
+    .in("charge_id", chargeIds);
+
+  if (error || !data) {
+    console.error("Error loading charge payment totals:", error);
+    return new Map<string, number>();
+  }
+
+  return data.reduce((totals, payment) => {
+    totals.set(payment.charge_id, (totals.get(payment.charge_id) ?? 0) + payment.amount_cents);
+    return totals;
+  }, new Map<string, number>());
+};
+
+const isChargeSettled = (
+  charge: {
+    status?: string | null;
+    paid_at?: string | null;
+    amount_cents?: number | null;
+    management_contribution_cents?: number | null;
+  },
+  totalPaidCents: number,
+) => {
+  const amountDueCents = Math.max(
+    (charge.amount_cents ?? 0) - (charge.management_contribution_cents ?? 0),
+    0,
+  );
+
+  return (
+    PAID_STATUSES.has(charge.status ?? "") ||
+    Boolean(charge.paid_at) ||
+    totalPaidCents >= amountDueCents
+  );
+};
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -61,14 +111,21 @@ const handler = async (req: Request): Promise<Response> => {
     // Lembretes 48h
     const { data: charges48h } = await supabaseClient
       .from("charges")
-      .select("id, title, due_date")
+      .select("id, title, due_date, status, paid_at, amount_cents, management_contribution_cents")
       .in("status", ["sent", "under_review"])
       .eq("reminder_48h_sent", false)
       .gte("due_date", in48h.toISOString().split("T")[0])
       .lt("due_date", new Date(in48h.getTime() + 86400000).toISOString().split("T")[0]);
 
     if (charges48h && charges48h.length > 0) {
+      const paymentTotals48h = await getPaymentTotals(supabaseClient, charges48h.map((charge) => charge.id));
+
       for (const charge of charges48h) {
+        if (isChargeSettled(charge, paymentTotals48h.get(charge.id) ?? 0)) {
+          console.log("Skipping 48h reminder for settled charge:", charge.id);
+          continue;
+        }
+
         await supabaseClient.functions.invoke("send-charge-email", {
           body: {
             type: "charge_reminder",
@@ -89,14 +146,21 @@ const handler = async (req: Request): Promise<Response> => {
     // Lembretes 24h
     const { data: charges24h } = await supabaseClient
       .from("charges")
-      .select("id, title, due_date")
+      .select("id, title, due_date, status, paid_at, amount_cents, management_contribution_cents")
       .in("status", ["sent", "under_review"])
       .eq("reminder_24h_sent", false)
       .gte("due_date", in24h.toISOString().split("T")[0])
       .lt("due_date", new Date(in24h.getTime() + 86400000).toISOString().split("T")[0]);
 
     if (charges24h && charges24h.length > 0) {
+      const paymentTotals24h = await getPaymentTotals(supabaseClient, charges24h.map((charge) => charge.id));
+
       for (const charge of charges24h) {
+        if (isChargeSettled(charge, paymentTotals24h.get(charge.id) ?? 0)) {
+          console.log("Skipping 24h reminder for settled charge:", charge.id);
+          continue;
+        }
+
         await supabaseClient.functions.invoke("send-charge-email", {
           body: {
             type: "charge_reminder",
@@ -117,13 +181,20 @@ const handler = async (req: Request): Promise<Response> => {
     // Lembretes do dia
     const { data: chargesToday } = await supabaseClient
       .from("charges")
-      .select("id, title, due_date")
+      .select("id, title, due_date, status, paid_at, amount_cents, management_contribution_cents")
       .in("status", ["sent", "under_review"])
       .eq("reminder_day_sent", false)
       .eq("due_date", today.toISOString().split("T")[0]);
 
     if (chargesToday && chargesToday.length > 0) {
+      const paymentTotalsToday = await getPaymentTotals(supabaseClient, chargesToday.map((charge) => charge.id));
+
       for (const charge of chargesToday) {
+        if (isChargeSettled(charge, paymentTotalsToday.get(charge.id) ?? 0)) {
+          console.log("Skipping same-day reminder for settled charge:", charge.id);
+          continue;
+        }
+
         await supabaseClient.functions.invoke("send-charge-email", {
           body: {
             type: "charge_reminder",
@@ -144,12 +215,19 @@ const handler = async (req: Request): Promise<Response> => {
     // Cobranças vencidas
     const { data: overdueCharges } = await supabaseClient
       .from("charges")
-      .select("id, title, owner_proof_path")
+      .select("id, title, owner_proof_path, status, paid_at, amount_cents, management_contribution_cents")
       .in("status", ["sent", "under_review"])
       .lt("due_date", today.toISOString().split("T")[0]);
 
     if (overdueCharges && overdueCharges.length > 0) {
+      const paymentTotalsOverdue = await getPaymentTotals(supabaseClient, overdueCharges.map((charge) => charge.id));
+
       for (const charge of overdueCharges) {
+        if (isChargeSettled(charge, paymentTotalsOverdue.get(charge.id) ?? 0)) {
+          console.log("Skipping overdue transition for settled charge:", charge.id);
+          continue;
+        }
+
         if (!charge.owner_proof_path) {
           await supabaseClient
             .from("charges")
@@ -174,13 +252,23 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { data: debitNoticeCharges } = await supabaseClient
       .from("charges")
-      .select("id, title")
+      .select("id, title, status, paid_at, amount_cents, management_contribution_cents")
       .eq("status", "overdue")
       .eq("due_date", oneDayAgo.toISOString().split("T")[0])
       .is("debit_notice_at", null);
 
     if (debitNoticeCharges && debitNoticeCharges.length > 0) {
+      const paymentTotalsDebitNotice = await getPaymentTotals(
+        supabaseClient,
+        debitNoticeCharges.map((charge) => charge.id),
+      );
+
       for (const charge of debitNoticeCharges) {
+        if (isChargeSettled(charge, paymentTotalsDebitNotice.get(charge.id) ?? 0)) {
+          console.log("Skipping debit notice for settled charge:", charge.id);
+          continue;
+        }
+
         await supabaseClient
           .from("charges")
           .update({
