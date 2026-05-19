@@ -2934,6 +2934,9 @@ export type Database = {
           description: string
           essential: boolean | null
           first_response_at: string | null
+          guest_charge_dismiss_reason: string | null
+          guest_charge_dismissed_at: string | null
+          guest_charge_dismissed_by: string | null
           guest_checkout_date: string | null
           id: string
           kind: string | null
@@ -2966,6 +2969,9 @@ export type Database = {
           description: string
           essential?: boolean | null
           first_response_at?: string | null
+          guest_charge_dismiss_reason?: string | null
+          guest_charge_dismissed_at?: string | null
+          guest_charge_dismissed_by?: string | null
           guest_checkout_date?: string | null
           id?: string
           kind?: string | null
@@ -2998,6 +3004,9 @@ export type Database = {
           description?: string
           essential?: boolean | null
           first_response_at?: string | null
+          guest_charge_dismiss_reason?: string | null
+          guest_charge_dismissed_at?: string | null
+          guest_charge_dismissed_by?: string | null
           guest_checkout_date?: string | null
           id?: string
           kind?: string | null
