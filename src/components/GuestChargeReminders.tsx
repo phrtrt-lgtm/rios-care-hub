@@ -91,6 +91,7 @@ export function GuestChargeReminders() {
         `)
         .eq('ticket_type', 'manutencao')
         .eq('cost_responsible', 'guest')
+        .is('guest_charge_dismissed_at', null)
         .in('status', ['novo', 'em_analise', 'aguardando_info', 'em_execucao', 'concluido']);
 
       if (error) throw error;
