@@ -160,10 +160,25 @@ export function GuestChargeReminders() {
   };
 
   if (loading) return null;
-  if (pendingCharges.length === 0) return null;
 
   const canChargeNow = pendingCharges.filter(c => c.can_charge);
   const upcoming = pendingCharges.filter(c => !c.can_charge);
+
+  if (pendingCharges.length === 0) {
+    return (
+      <div className="flex justify-end">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate('/cobrancas-hospede-arquivadas')}
+          className="text-xs text-muted-foreground gap-1"
+        >
+          <Archive className="h-3.5 w-3.5" />
+          Cobranças de hóspede arquivadas
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <Card className="border-warning/30 bg-warning/10/50 dark:bg-orange-950/20">
@@ -171,11 +186,22 @@ export function GuestChargeReminders() {
         <CardTitle className="flex items-center gap-2 text-lg">
           <DollarSign className="h-5 w-5 text-warning" />
           Cobranças de Hóspede Pendentes
-          <Badge variant="secondary" className="ml-auto bg-warning/10 text-warning">
+          <Badge variant="secondary" className="ml-2 bg-warning/10 text-warning">
             {pendingCharges.length}
           </Badge>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/cobrancas-hospede-arquivadas')}
+            className="ml-auto h-7 text-xs gap-1"
+            title="Ver cobranças arquivadas (feitas pelo Airbnb)"
+          >
+            <Archive className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Arquivadas</span>
+          </Button>
         </CardTitle>
       </CardHeader>
+
       <CardContent className="space-y-3">
         {/* Can charge now */}
         {canChargeNow.length > 0 && (
