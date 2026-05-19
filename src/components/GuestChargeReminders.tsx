@@ -117,6 +117,8 @@ export function GuestChargeReminders() {
           const existing = chargeByTicket.get(ticket.id);
           // Esconde se a charge já está paga/arquivada/cancelada/debitada
           if (existing && existing.status && PAID_STATUSES.has(existing.status)) return null;
+          // Sem data de check-out não há como saber quando cobrar — ignora
+          if (!ticket.guest_checkout_date) return null;
 
           let daysSince = 999;
           let daysUntil = 0;
