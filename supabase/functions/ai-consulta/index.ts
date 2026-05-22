@@ -268,8 +268,12 @@ serve(async (req) => {
           if (gapDays > 0) {
             ctx.push(`  ⬜ Janela livre: ${checkOut} → ${nextIn} (${gapDays} dias)`);
           }
-        }
       }
+      const lastCheckout = sorted.length > 0 ? sorted[sorted.length - 1].check_out : null;
+      if (lastCheckout) {
+        ctx.push(`  ⛔ FIM DAS RESERVAS conhecidas — a partir de ${lastCheckout} o imóvel está TOTALMENTE LIVRE (sem mais reservas nos próximos 90 dias).`);
+      }
+    }
     }
 
     // Properties with no reservations at all (only show those WITH iCal — sem iCal não temos dados)
