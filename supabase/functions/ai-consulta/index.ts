@@ -231,6 +231,56 @@ serve(async (req) => {
       return `${day}/${m}/${y}`;
     };
 
+    const normalizeText = (value: string) =>
+      value
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim();
+
+    const monthMap: Record<string, number> = {
+      janeiro: 1,
+      fevereiro: 2,
+      marco: 3,
+      abril: 4,
+      maio: 5,
+      junho: 6,
+      julho: 7,
+      agosto: 8,
+      setembro: 9,
+      outubro: 10,
+      novembro: 11,
+      dezembro: 12,
+    };
+
+    const parseDateFromQuestion = (value: string): string | null => {
+      const normalized = normalizeText(value);
+      const currentYear = new Date().getFullYear();
+
+      const slashMatch = normalized.match(/\b(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?\b/);
+      if (slashMatch) {
+        const day = Number(slashMatch[1]);
+        const month = Number(slashMatch[2]);
+        const yearRaw = slashMatch[3] ? Number(slashMatch[3]) : currentYear;
+        const year = yearRaw < 100 ? 2000 + yearRaw : yearRaw;
+        if (day >= 1 && day <= 31 && month >= 1 && month <= 12) {
+          return `${year.toString().padStart(4, "0")}-${month.toString().padStart(2, "0")}-${day.toString().padStart(2, "0")}`;
+        }
+      }
+
+      const textMatch = normalized.match(/\b(\d{1,2})\s+de\s+([a-zç]+)(?:\s+de\s+(\d{4}))?\b/);
+      if (textMatch) {
+        const day = Number(textMatch[1]);
+        const month = monthMap[textMatch[2].replace("ç", "c")];
+        const year = textMatch[3] ? Number(textMatch[3]) : currentYear;
+        if (day >= 1 && day <= 31 && month) {
+          return `${year.toString().padStart(4, "0")}-${month.toString().padStart(2, "0")}-${day.toString().padStart(2, "0")}`;
+        }
+      }
+
+      return null;
+    };
+
     ctx.push(`\n=== CALENDÁRIO DE RESERVAS – PRÓXIMOS 90 DIAS (hoje: ${toBR(today)}) ===`);
     ctx.push(`IMPORTANTE: Apenas imóveis com iCal configurado têm dados de reservas/disponibilidade. Imóveis sem iCal NÃO devem ser consultados sobre datas, ocupação ou janelas livres — responda que não há dados de calendário para esses imóveis.`);
     ctx.push(`REGRA CRÍTICA – NÃO ALUCINAR DATAS: Liste APENAS as reservas (📅) e janelas (⬜) explicitamente presentes abaixo. NUNCA invente reservas, janelas, períodos ou datas que não estejam literalmente listadas. Todas as datas estão no formato BR (DD/MM/AAAA) — use sempre esse formato nas respostas. Se após a última reserva listada (marcada como "FIM DAS RESERVAS") não houver mais nada, o imóvel está TOTALMENTE LIVRE a partir do checkout daquela última reserva — responda exatamente isso, sem fragmentar em sub-períodos fictícios.\n`);
@@ -321,6 +371,98 @@ serve(async (req) => {
           content.length > 3500 ? content.slice(0, 3500) + "\n...[ficha truncada — consulte o portal para ver completa]" : content;
         ctx.push(`\n--- FICHA: ${propName} (v${(f as any).version}) ---\n${truncated}\n--- FIM DA FICHA: ${propName} ---`);
       }
+    }
+
+    const lastUserMessage = [...messages].reverse().find((m: any) => m.role === "user" && typeof m.content === "string")?.content || "";
+    const normalizedQuestion = normalizeText(lastUserMessage);
+    const isAvailabilityQuestion = /(dispon|livre|reserva|ocupad|calend|janela|vaga|check\s?-?in|check\s?-?out|data)/.test(normalizedQuestion);
+    const mentionedProperty = properties
+      .map((p: any) => ({ ...p, normalizedName: normalizeText(p.name || "") }))
+      .sort((a, b) => b.normalizedName.length - a.normalizedName.length)
+      .find((p) => p.normalizedName && normalizedQuestion.includes(p.normalizedName));
+
+    if (isAvailabilityQuestion && mentionedProperty) {
+      const propertyName = mentionedProperty.name;
+      const hasIcal = propertiesWithIcal.has(mentionedProperty.id);
+
+      if (!hasIcal) {
+        return new Response(JSON.stringify({
+          reply: `O imóvel ${propertyName} não tem calendário sincronizado no sistema, então eu não consigo confirmar disponibilidade com segurança.`,
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const propertyReservations = [...(resByProp[propertyName] || [])].sort((a, b) => a.check_in.localeCompare(b.check_in));
+      const askedDate = parseDateFromQuestion(lastUserMessage);
+
+      if (askedDate) {
+        const activeReservation = propertyReservations.find((r) => r.check_in <= askedDate && r.check_out > askedDate);
+        const nextReservation = propertyReservations.find((r) => r.check_in > askedDate);
+
+        if (activeReservation) {
+          return new Response(JSON.stringify({
+            reply: `No dia ${toBR(askedDate)}, o imóvel ${propertyName} está ocupado pela reserva real de ${toBR(activeReservation.check_in)} até ${toBR(activeReservation.check_out)}.`,
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const nextText = nextReservation
+          ? ` A próxima reserva real começa em ${toBR(nextReservation.check_in)}.`
+          : ` Não há reservas futuras nos próximos 90 dias após essa data.`;
+
+        return new Response(JSON.stringify({
+          reply: `No dia ${toBR(askedDate)}, o imóvel ${propertyName} está livre.${nextText}`,
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const occupiedToday = isOccupied(propertyReservations, today);
+      const todayCheckout = currentCheckout(propertyReservations, today);
+      const futureReservations = propertyReservations.filter((r) => r.check_in > today);
+
+      if (!occupiedToday && futureReservations.length === 0) {
+        return new Response(JSON.stringify({
+          reply: `O imóvel ${propertyName} está totalmente livre. Hoje (${toBR(today)}) ele está disponível e não há nenhuma reserva real nos próximos 90 dias.`,
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (occupiedToday && futureReservations.length === 0) {
+        return new Response(JSON.stringify({
+          reply: `O imóvel ${propertyName} está ocupado hoje e o checkout atual é em ${toBR(todayCheckout)}. Depois disso, ele fica totalmente livre, sem outras reservas reais nos próximos 90 dias.`,
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (!occupiedToday && futureReservations.length > 0) {
+        const nextReservation = futureReservations[0];
+        const reservationsPreview = futureReservations
+          .slice(0, 3)
+          .map((r) => `• ${toBR(r.check_in)} → ${toBR(r.check_out)}`)
+          .join("\n");
+
+        return new Response(JSON.stringify({
+          reply: `O imóvel ${propertyName} está livre hoje (${toBR(today)}) e segue disponível até ${toBR(nextReservation.check_in)}. Reservas reais já registradas:\n${reservationsPreview}`,
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const reservationsPreview = futureReservations
+        .slice(0, 3)
+        .map((r) => `• ${toBR(r.check_in)} → ${toBR(r.check_out)}`)
+        .join("\n");
+
+      return new Response(JSON.stringify({
+        reply: `O imóvel ${propertyName} está ocupado hoje e o checkout atual é em ${toBR(todayCheckout)}. Próximas reservas reais já registradas:\n${reservationsPreview}`,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // ── System Prompt ─────────────────────────────────────────────────────
