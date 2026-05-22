@@ -225,7 +225,8 @@ serve(async (req) => {
       rList.find((r) => r.check_in <= date && r.check_out > date)?.check_out ?? null;
 
     ctx.push(`\n=== CALENDÁRIO DE RESERVAS – PRÓXIMOS 90 DIAS (hoje: ${today}) ===`);
-    ctx.push(`IMPORTANTE: Apenas imóveis com iCal configurado têm dados de reservas/disponibilidade. Imóveis sem iCal NÃO devem ser consultados sobre datas, ocupação ou janelas livres — responda que não há dados de calendário para esses imóveis.\n`);
+    ctx.push(`IMPORTANTE: Apenas imóveis com iCal configurado têm dados de reservas/disponibilidade. Imóveis sem iCal NÃO devem ser consultados sobre datas, ocupação ou janelas livres — responda que não há dados de calendário para esses imóveis.`);
+    ctx.push(`REGRA CRÍTICA – NÃO ALUCINAR DATAS: Liste APENAS as reservas (📅) e janelas (⬜) explicitamente presentes abaixo. NUNCA invente reservas, janelas, períodos ou datas que não estejam literalmente listadas. Se após a última reserva listada (marcada como "FIM DAS RESERVAS") não houver mais nada, o imóvel está TOTALMENTE LIVRE a partir do checkout daquela última reserva — responda exatamente isso, sem fragmentar em sub-períodos fictícios.\n`);
 
     for (const [propName, rList] of Object.entries(resByProp)) {
       // Skip properties without iCal — não temos dados confiáveis de disponibilidade
