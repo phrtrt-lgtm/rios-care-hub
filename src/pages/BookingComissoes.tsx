@@ -83,7 +83,7 @@ const BookingComissoes = () => {
         .from("booking_commissions")
         .select("*")
         .is("archived_at", null)
-        .order("check_in", { ascending: false });
+        .order("due_date", { ascending: true, nullsFirst: false });
 
       if (statusFilter === "open") {
         query = query.in("status", OPEN_STATUSES);
