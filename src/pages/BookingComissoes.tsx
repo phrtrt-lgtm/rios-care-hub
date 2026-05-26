@@ -83,7 +83,7 @@ const BookingComissoes = () => {
         .from("booking_commissions")
         .select("*")
         .is("archived_at", null)
-        .order("check_in", { ascending: false });
+        .order("due_date", { ascending: true, nullsFirst: false });
 
       if (statusFilter === "open") {
         query = query.in("status", OPEN_STATUSES);
@@ -121,10 +121,12 @@ const BookingComissoes = () => {
   const filtered = commissions.filter((c) => {
     if (!search) return true;
     const s = search.toLowerCase();
+    const dueBR = c.due_date ? format(new Date(c.due_date), "dd/MM/yyyy") : "";
     return (
       (c.guest_name || "").toLowerCase().includes(s) ||
       (c.owner?.name || "").toLowerCase().includes(s) ||
-      (c.property?.name || "").toLowerCase().includes(s)
+      (c.property?.name || "").toLowerCase().includes(s) ||
+      dueBR.includes(s)
     );
   });
 
@@ -325,6 +327,11 @@ const BookingComissoes = () => {
                       <div className="flex items-center gap-2 shrink-0">
                         <div className="text-right">
                           <p className="text-sm font-bold text-primary">{formatBRL(c.total_due_cents)}</p>
+                          {c.due_date && (
+                            <p className="text-[11px] text-muted-foreground">
+                              Vence {format(new Date(c.due_date), "dd/MM/yyyy")}
+                            </p>
+                          )}
                           {dueInfo.text && (
                             <p className={`text-xs ${dueInfo.color}`}>{dueInfo.text}</p>
                           )}
