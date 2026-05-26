@@ -121,10 +121,12 @@ const BookingComissoes = () => {
   const filtered = commissions.filter((c) => {
     if (!search) return true;
     const s = search.toLowerCase();
+    const dueBR = c.due_date ? format(new Date(c.due_date), "dd/MM/yyyy") : "";
     return (
       (c.guest_name || "").toLowerCase().includes(s) ||
       (c.owner?.name || "").toLowerCase().includes(s) ||
-      (c.property?.name || "").toLowerCase().includes(s)
+      (c.property?.name || "").toLowerCase().includes(s) ||
+      dueBR.includes(s)
     );
   });
 
