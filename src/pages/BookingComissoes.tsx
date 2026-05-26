@@ -72,9 +72,10 @@ const BookingComissoes = () => {
   const isTeam = ["admin", "agent", "maintenance"].includes(profile?.role || "");
 
   useEffect(() => {
+    if (!profile) return; // aguarda profile carregar
     if (!isTeam) { navigate("/"); return; }
     fetchCommissions();
-  }, [statusFilter]);
+  }, [statusFilter, profile?.id]);
 
   const fetchCommissions = async () => {
     setLoading(true);
