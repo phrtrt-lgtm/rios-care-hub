@@ -31,6 +31,7 @@ interface PropertyMapping {
   spreadsheetName: string;
   systemPropertyId: string | null; // null = skip
   commissionPercent: number;
+  cleaningFeeOverride: number | null; // R$ — quando preenchido, sobrescreve o valor da planilha
   autoMatched: boolean;
   selected: boolean;
 }
