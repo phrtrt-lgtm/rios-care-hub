@@ -457,10 +457,8 @@ export default function ImportarComissoesBooking() {
                       <Card
                         key={mapping.spreadsheetName}
                         className={`border ${
-                          isSkipped
-                            ? "bg-muted/20 border-muted"
-                            : !mapping.systemPropertyId
-                            ? "border-warning/50 bg-warning/5"
+                          isSkipped || !mapping.systemPropertyId
+                            ? "bg-muted/20 border-muted opacity-70"
                             : !mapping.selected
                             ? "border-border bg-muted/10"
                             : mapping.autoMatched
@@ -488,16 +486,16 @@ export default function ImportarComissoesBooking() {
                                       Vinculado automaticamente
                                     </Badge>
                                   )}
-                                  {!mapping.autoMatched && !isSkipped && (
+                                  {!mapping.autoMatched && !isSkipped && mapping.systemPropertyId && (
                                     <Badge variant="outline" className="text-xs">
                                       <AlertCircle className="h-3 w-3 mr-1" />
-                                      Vincular manualmente
+                                      Vinculado manualmente
                                     </Badge>
                                   )}
-                                  {isSkipped && (
+                                  {(isSkipped || !mapping.systemPropertyId) && (
                                     <Badge className="bg-muted text-muted-foreground text-xs">
                                       <SkipForward className="h-3 w-3 mr-1" />
-                                      Pulando
+                                      Será ignorada
                                     </Badge>
                                   )}
                                 </div>
