@@ -31,6 +31,7 @@ interface PropertyMapping {
   spreadsheetName: string;
   systemPropertyId: string | null; // null = skip
   commissionPercent: number;
+  cleaningFeeOverride: number | null; // R$ — quando preenchido, sobrescreve o valor da planilha
   autoMatched: boolean;
   selected: boolean;
 }
@@ -134,6 +135,7 @@ export default function ImportarComissoesBooking() {
           spreadsheetName: name,
           systemPropertyId: matched ? matched.id : null,
           commissionPercent: 22,
+          cleaningFeeOverride: null,
           autoMatched: !!matched,
           selected: !!matched, // pré-seleciona apenas vinculados
         };
@@ -163,9 +165,11 @@ export default function ImportarComissoesBooking() {
     const propReservations = filteredReservations.filter(r => r.property_name === spreadsheetName);
     const totalBruto = propReservations.reduce((acc, r) => acc + r.reservation_amount, 0);
     const commissionPercent = mapping?.commissionPercent || 0;
+    const override = mapping?.cleaningFeeOverride;
     const totalCommission = propReservations.reduce((acc, r) => {
       const netAmount = r.reservation_amount - r.channel_commission;
-      return acc + (netAmount * commissionPercent / 100) + r.cleaning_fee;
+      const fee = override != null ? override : r.cleaning_fee;
+      return acc + (netAmount * commissionPercent / 100) + fee;
     }, 0);
     return {
       count: propReservations.length,
@@ -233,6 +237,7 @@ export default function ImportarComissoesBooking() {
           // reservation_amount_cents deve ser o valor líquido (bruto - comissão canal)
           // para que o trigger calcule: commission = net * % + limpeza
           const netAmount = r.reservation_amount - r.channel_commission;
+          const fee = mapping.cleaningFeeOverride != null ? mapping.cleaningFeeOverride : r.cleaning_fee;
           inserts.push({
             property_id: sysProp.id,
             owner_id: sysProp.owner_id,
@@ -241,7 +246,7 @@ export default function ImportarComissoesBooking() {
             check_out: r.checkout_date,
             reservation_amount_cents: Math.round(netAmount * 100),
             commission_percent: mapping.commissionPercent,
-            cleaning_fee_cents: Math.round(r.cleaning_fee * 100),
+            cleaning_fee_cents: Math.round(fee * 100),
             status: "sent",
             created_by: profile.id,
             due_date: dueDate || null,
@@ -513,8 +518,8 @@ export default function ImportarComissoesBooking() {
                               </div>
                             </div>
 
-                            {/* Linha 2: Vincular imóvel */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {/* Linha 2: Vincular imóvel + % comissão + taxa limpeza */}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                               <div className="space-y-1">
                                 <Label className="text-xs">Imóvel no Sistema</Label>
                                 <Select
@@ -567,6 +572,33 @@ export default function ImportarComissoesBooking() {
                                     Comissão devida: {formatBRL(Math.round(stats.totalCommission * 100))}
                                   </p>
                                 )}
+                              </div>
+
+                              <div className="space-y-1">
+                                <Label className="text-xs">Taxa de limpeza (por reserva)</Label>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm text-muted-foreground shrink-0">R$</span>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    placeholder="da planilha"
+                                    value={mapping.cleaningFeeOverride ?? ""}
+                                    onChange={e => {
+                                      const v = e.target.value;
+                                      updateMapping(mapping.spreadsheetName, {
+                                        cleaningFeeOverride: v === "" ? null : (parseFloat(v) || 0),
+                                      });
+                                    }}
+                                    disabled={isSkipped}
+                                    className="text-sm"
+                                  />
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  {mapping.cleaningFeeOverride != null
+                                    ? `Sobrescreve a planilha · ${stats.count}× = ${formatBRL(Math.round(mapping.cleaningFeeOverride * stats.count * 100))}`
+                                    : "Vazio = usa o valor da planilha"}
+                                </p>
                               </div>
                             </div>
                           </div>
