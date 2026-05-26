@@ -1,0 +1,2 @@
+UPDATE public.booking_commissions SET cleaning_fee_cents = 35000 WHERE id = '7f987e5e-88b9-4cc7-b0e4-dda99c99a134';
+UPDATE public.booking_commissions SET cleaning_fee_cents = 25000 WHERE id = 'fc02b914-f040-4d2a-b61b-db81072a8272';
