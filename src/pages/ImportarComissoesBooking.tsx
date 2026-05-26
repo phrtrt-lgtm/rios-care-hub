@@ -135,6 +135,7 @@ export default function ImportarComissoesBooking() {
           spreadsheetName: name,
           systemPropertyId: matched ? matched.id : null,
           commissionPercent: 22,
+          cleaningFeeOverride: null,
           autoMatched: !!matched,
           selected: !!matched, // pré-seleciona apenas vinculados
         };
