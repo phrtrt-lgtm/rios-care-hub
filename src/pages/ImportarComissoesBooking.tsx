@@ -518,8 +518,8 @@ export default function ImportarComissoesBooking() {
                               </div>
                             </div>
 
-                            {/* Linha 2: Vincular imóvel */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {/* Linha 2: Vincular imóvel + % comissão + taxa limpeza */}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                               <div className="space-y-1">
                                 <Label className="text-xs">Imóvel no Sistema</Label>
                                 <Select
@@ -572,6 +572,33 @@ export default function ImportarComissoesBooking() {
                                     Comissão devida: {formatBRL(Math.round(stats.totalCommission * 100))}
                                   </p>
                                 )}
+                              </div>
+
+                              <div className="space-y-1">
+                                <Label className="text-xs">Taxa de limpeza (por reserva)</Label>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm text-muted-foreground shrink-0">R$</span>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    placeholder="da planilha"
+                                    value={mapping.cleaningFeeOverride ?? ""}
+                                    onChange={e => {
+                                      const v = e.target.value;
+                                      updateMapping(mapping.spreadsheetName, {
+                                        cleaningFeeOverride: v === "" ? null : (parseFloat(v) || 0),
+                                      });
+                                    }}
+                                    disabled={isSkipped}
+                                    className="text-sm"
+                                  />
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  {mapping.cleaningFeeOverride != null
+                                    ? `Sobrescreve a planilha · ${stats.count}× = ${formatBRL(Math.round(mapping.cleaningFeeOverride * stats.count * 100))}`
+                                    : "Vazio = usa o valor da planilha"}
+                                </p>
                               </div>
                             </div>
                           </div>
