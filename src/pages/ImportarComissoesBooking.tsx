@@ -165,9 +165,11 @@ export default function ImportarComissoesBooking() {
     const propReservations = filteredReservations.filter(r => r.property_name === spreadsheetName);
     const totalBruto = propReservations.reduce((acc, r) => acc + r.reservation_amount, 0);
     const commissionPercent = mapping?.commissionPercent || 0;
+    const override = mapping?.cleaningFeeOverride;
     const totalCommission = propReservations.reduce((acc, r) => {
       const netAmount = r.reservation_amount - r.channel_commission;
-      return acc + (netAmount * commissionPercent / 100) + r.cleaning_fee;
+      const fee = override != null ? override : r.cleaning_fee;
+      return acc + (netAmount * commissionPercent / 100) + fee;
     }, 0);
     return {
       count: propReservations.length,
