@@ -327,6 +327,11 @@ const BookingComissoes = () => {
                       <div className="flex items-center gap-2 shrink-0">
                         <div className="text-right">
                           <p className="text-sm font-bold text-primary">{formatBRL(c.total_due_cents)}</p>
+                          {c.due_date && (
+                            <p className="text-[11px] text-muted-foreground">
+                              Vence {format(new Date(c.due_date), "dd/MM/yyyy")}
+                            </p>
+                          )}
                           {dueInfo.text && (
                             <p className={`text-xs ${dueInfo.color}`}>{dueInfo.text}</p>
                           )}
