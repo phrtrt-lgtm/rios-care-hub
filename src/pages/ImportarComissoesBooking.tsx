@@ -457,10 +457,8 @@ export default function ImportarComissoesBooking() {
                       <Card
                         key={mapping.spreadsheetName}
                         className={`border ${
-                          isSkipped
-                            ? "bg-muted/20 border-muted"
-                            : !mapping.systemPropertyId
-                            ? "border-warning/50 bg-warning/5"
+                          isSkipped || !mapping.systemPropertyId
+                            ? "bg-muted/20 border-muted opacity-70"
                             : !mapping.selected
                             ? "border-border bg-muted/10"
                             : mapping.autoMatched
@@ -488,16 +486,16 @@ export default function ImportarComissoesBooking() {
                                       Vinculado automaticamente
                                     </Badge>
                                   )}
-                                  {!mapping.autoMatched && !isSkipped && (
+                                  {!mapping.autoMatched && !isSkipped && mapping.systemPropertyId && (
                                     <Badge variant="outline" className="text-xs">
                                       <AlertCircle className="h-3 w-3 mr-1" />
-                                      Vincular manualmente
+                                      Vinculado manualmente
                                     </Badge>
                                   )}
-                                  {isSkipped && (
+                                  {(isSkipped || !mapping.systemPropertyId) && (
                                     <Badge className="bg-muted text-muted-foreground text-xs">
                                       <SkipForward className="h-3 w-3 mr-1" />
-                                      Pulando
+                                      Será ignorada
                                     </Badge>
                                   )}
                                 </div>
@@ -584,7 +582,7 @@ export default function ImportarComissoesBooking() {
             <Card className="border-primary/20 bg-primary/5 sticky bottom-4">
               <CardContent className="py-3 px-4">
                 <div className="flex items-center justify-between flex-wrap gap-3">
-                  <div className="flex items-center gap-4 text-sm">
+                  <div className="flex items-center gap-4 text-sm flex-wrap">
                     <div>
                       <span className="text-muted-foreground">Cobranças a gerar: </span>
                       <span className="font-bold text-foreground">{totalToGenerate}</span>
@@ -593,6 +591,11 @@ export default function ImportarComissoesBooking() {
                       <span className="text-muted-foreground">Total comissões: </span>
                       <span className="font-bold text-primary">{formatBRL(Math.round(totalCommissionValue * 100))}</span>
                     </div>
+                    {mappings.some(m => !m.systemPropertyId || m.systemPropertyId === "skip") && (
+                      <span className="text-xs text-muted-foreground">
+                        · Imóveis não vinculados serão ignorados
+                      </span>
+                    )}
                   </div>
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" onClick={() => setStep(1)}>
