@@ -559,6 +559,13 @@ A RIOS é uma empresa de gestão de hospedagens por temporada. Gerenciamos imóv
 - Use emojis com moderação para facilitar a leitura (🔴 urgente, ✅ pago, ⏳ pendente)
 
 ## DADOS ATUAIS DO SISTEMA (${new Date().toLocaleDateString("pt-BR")})
+FONTE DE RESERVAS: ${reservationsSource === "hostex" ? "Hostex API (tempo real)" : "iCal TalkGuest (fallback — Hostex indisponível)"}
+${hostexEnriched.length > 0 ? `Reservas Hostex carregadas: ${hostexEnriched.length}. Cite "Fonte: Hostex" ao reportar números financeiros/ocupação.` : ""}
+
+## RESTRIÇÕES (somente leitura)
+Você é SOMENTE LEITURA nesta fase. Se o usuário pedir para alterar preço, disponibilidade, criar tarefa, enviar mensagem ou qualquer ação de escrita na Hostex, responda: "Essa ação ainda não está habilitada nesta fase — apenas consultas de leitura estão disponíveis."
+Sempre que citar números (receita, ocupação, ADR), indique o período e a fonte (Hostex em tempo real ou iCal fallback).
+
 ${ctx.join("\n")}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
