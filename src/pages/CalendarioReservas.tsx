@@ -186,6 +186,31 @@ export default function CalendarioReservas() {
   const getOccColor = (rate: number) => rate >= 70 ? "text-success" : rate >= 40 ? "text-warning" : "text-destructive";
   const getProgressBg = (rate: number) => rate >= 70 ? "bg-success" : rate >= 40 ? "bg-warning" : "bg-destructive";
 
+  // Lookup Hostex por property_id + check_in (enriquece reservas locais com canal/valor/hóspedes)
+  const hostexLookup = useMemo(() => {
+    const map = new Map<string, HostexReservation>();
+    for (const r of hostexReservations) {
+      map.set(`${r.property_id}|${r.check_in_date}`, r);
+    }
+    return map;
+  }, [hostexReservations]);
+
+  // Métricas Hostex para os cards do topo
+  const hostexMetrics = useMemo(() => {
+    if (!hostexReservations.length || !properties.length) return null;
+    const start = occStartDate;
+    const end = occEndDate;
+    const ids = properties.map((p) => String(p.id));
+    const occ = calcOccupancy(hostexReservations, ids, start, end);
+    return {
+      portfolioOccupancy: occ.portfolio.occupancy_rate,
+      forecastRevenue: forecastRevenue(hostexReservations, start, end),
+      leadTime: averageLeadTime(hostexReservations),
+      channels: channelMix(hostexReservations).slice(0, 4),
+      gaps: calendarGaps(hostexReservations, start, end).length,
+    };
+  }, [hostexReservations, properties, occStartDate, occEndDate]);
+
   // Portfolio health & price alerts data
   const [openTicketsCount, setOpenTicketsCount] = useState<Record<string, number>>({});
   const [pendingInspectionItems, setPendingInspectionItems] = useState<Record<string, number>>({});
