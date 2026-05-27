@@ -23,6 +23,8 @@ import { toast } from "sonner";
 import { format, parseISO, differenceInDays, addDays, addMonths, eachDayOfInterval, isSameDay, startOfDay, isWithinInterval, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Progress } from "@/components/ui/progress";
+import { hostex, formatChannelLabel, formatBRL, type HostexReservation, type HostexSource } from "@/lib/hostex";
+import { occupancyRate as calcOccupancy, forecastRevenue, averageLeadTime, channelMix, calendarGaps } from "@/lib/occupancyMetrics";
 
 interface IcalLink {
   id: string;
