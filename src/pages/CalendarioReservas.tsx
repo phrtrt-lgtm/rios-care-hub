@@ -110,6 +110,8 @@ export default function CalendarioReservas() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [dataSource, setDataSource] = useState<HostexSource>("ical_fallback");
+  const [hostexReservations, setHostexReservations] = useState<HostexReservation[]>([]);
 
   // Dialog state
   const [addDialogOpen, setAddDialogOpen] = useState(false);
