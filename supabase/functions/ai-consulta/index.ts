@@ -118,13 +118,69 @@ serve(async (req) => {
     const bookingCommissions = bookingCommissionsRes.data || [];
     const proposals = proposalsRes.data || [];
     const profiles = profilesRes.data || [];
-    const reservations = reservationsRes.data || [];
+    let reservations: any[] = reservationsRes.data || [];
     const propertyFiles = propertyFilesRes.data || [];
     const icalLinks = icalLinksRes.data || [];
     const propertiesWithIcal = new Set<string>(icalLinks.map((l: any) => l.property_id));
     const propertyNamesWithIcal = new Set<string>(
       properties.filter((p: any) => propertiesWithIcal.has(p.id)).map((p: any) => p.name)
     );
+
+    // ── Hostex (fonte primária) ────────────────────────────────────────────
+    // Tenta substituir as reservas do iCal por dados ricos da Hostex.
+    // Se falhar, mantém o que veio do DB (fallback iCal).
+    let reservationsSource: "hostex" | "ical_fallback" = "ical_fallback";
+    let hostexEnriched: any[] = [];
+    try {
+      const horizon = new Date(Date.now() + 120 * 86400000).toISOString().split("T")[0];
+      const past = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
+      const proxyResp = await fetch(`${supabaseUrl}/functions/v1/hostex-proxy`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${supabaseKey}`,
+          apikey: supabaseKey,
+        },
+        body: JSON.stringify({
+          action: "search_reservations",
+          params: { start_date: past, end_date: horizon },
+        }),
+      });
+      if (proxyResp.ok) {
+        const proxyJson = await proxyResp.json();
+        reservationsSource = proxyJson.source === "hostex" ? "hostex" : "ical_fallback";
+        const list: any[] = proxyJson.data?.reservations ?? proxyJson.data?.data?.reservations ?? [];
+        if (list.length > 0) {
+          hostexEnriched = list;
+          // Reescreve `reservations` no formato esperado pelos blocos abaixo
+          const propByName = new Map<string, any>(properties.map((p: any) => [p.name, p]));
+          const propById = new Map<string, any>(properties.map((p: any) => [String(p.id), p]));
+          reservations = list.map((r: any) => {
+            const prop = propById.get(String(r.property_id)) ?? propByName.get(r.property_name ?? "");
+            return {
+              id: r.reservation_code,
+              check_in: r.check_in_date,
+              check_out: r.check_out_date,
+              guest_name: r.guest_name,
+              summary: r.guest_name,
+              status: r.status ?? "confirmed",
+              properties: { name: prop?.name ?? r.property_name ?? "Imóvel" },
+              _hostex: r,
+            };
+          });
+        }
+      }
+    } catch (e) {
+      console.warn("ai-consulta: hostex unavailable, using iCal fallback", e);
+    }
+
+    // Se Hostex está ativa, todos os imóveis podem ser consultados sobre datas
+    if (reservationsSource === "hostex") {
+      for (const p of properties) {
+        propertiesWithIcal.add((p as any).id);
+        propertyNamesWithIcal.add((p as any).name);
+      }
+    }
 
     // ── Build structured context ──────────────────────────────────────────
     const owners = profiles.filter((p: any) => p.role === "owner");
@@ -503,6 +559,13 @@ A RIOS é uma empresa de gestão de hospedagens por temporada. Gerenciamos imóv
 - Use emojis com moderação para facilitar a leitura (🔴 urgente, ✅ pago, ⏳ pendente)
 
 ## DADOS ATUAIS DO SISTEMA (${new Date().toLocaleDateString("pt-BR")})
+FONTE DE RESERVAS: ${reservationsSource === "hostex" ? "Hostex API (tempo real)" : "iCal TalkGuest (fallback — Hostex indisponível)"}
+${hostexEnriched.length > 0 ? `Reservas Hostex carregadas: ${hostexEnriched.length}. Cite "Fonte: Hostex" ao reportar números financeiros/ocupação.` : ""}
+
+## RESTRIÇÕES (somente leitura)
+Você é SOMENTE LEITURA nesta fase. Se o usuário pedir para alterar preço, disponibilidade, criar tarefa, enviar mensagem ou qualquer ação de escrita na Hostex, responda: "Essa ação ainda não está habilitada nesta fase — apenas consultas de leitura estão disponíveis."
+Sempre que citar números (receita, ocupação, ADR), indique o período e a fonte (Hostex em tempo real ou iCal fallback).
+
 ${ctx.join("\n")}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

@@ -23,6 +23,8 @@ import { toast } from "sonner";
 import { format, parseISO, differenceInDays, addDays, addMonths, eachDayOfInterval, isSameDay, startOfDay, isWithinInterval, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Progress } from "@/components/ui/progress";
+import { hostex, formatChannelLabel, formatBRL, type HostexReservation, type HostexSource } from "@/lib/hostex";
+import { occupancyRate as calcOccupancy, forecastRevenue, averageLeadTime, channelMix, calendarGaps } from "@/lib/occupancyMetrics";
 
 interface IcalLink {
   id: string;
@@ -108,6 +110,8 @@ export default function CalendarioReservas() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [dataSource, setDataSource] = useState<HostexSource>("ical_fallback");
+  const [hostexReservations, setHostexReservations] = useState<HostexReservation[]>([]);
 
   // Dialog state
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -181,6 +185,31 @@ export default function CalendarioReservas() {
 
   const getOccColor = (rate: number) => rate >= 70 ? "text-success" : rate >= 40 ? "text-warning" : "text-destructive";
   const getProgressBg = (rate: number) => rate >= 70 ? "bg-success" : rate >= 40 ? "bg-warning" : "bg-destructive";
+
+  // Lookup Hostex por property_id + check_in (enriquece reservas locais com canal/valor/hóspedes)
+  const hostexLookup = useMemo(() => {
+    const map = new Map<string, HostexReservation>();
+    for (const r of hostexReservations) {
+      map.set(`${r.property_id}|${r.check_in_date}`, r);
+    }
+    return map;
+  }, [hostexReservations]);
+
+  // Métricas Hostex para os cards do topo
+  const hostexMetrics = useMemo(() => {
+    if (!hostexReservations.length || !properties.length) return null;
+    const start = occStartDate;
+    const end = occEndDate;
+    const ids = properties.map((p) => String(p.id));
+    const occ = calcOccupancy(hostexReservations, ids, start, end);
+    return {
+      portfolioOccupancy: occ.portfolio.occupancy_rate,
+      forecastRevenue: forecastRevenue(hostexReservations, start, end),
+      leadTime: averageLeadTime(hostexReservations),
+      channels: channelMix(hostexReservations).slice(0, 4),
+      gaps: calendarGaps(hostexReservations, start, end).length,
+    };
+  }, [hostexReservations, properties, occStartDate, occEndDate]);
 
   // Portfolio health & price alerts data
   const [openTicketsCount, setOpenTicketsCount] = useState<Record<string, number>>({});
@@ -374,6 +403,19 @@ export default function CalendarioReservas() {
       setIcalLinks(links);
       setReservations(res);
       setProperties(props);
+
+      // Hostex (fonte primária). Fallback para iCal já carregado acima.
+      try {
+        const today = new Date().toISOString().split("T")[0];
+        const horizon = new Date(Date.now() + 120 * 86400000).toISOString().split("T")[0];
+        const hx = await hostex.searchReservations({ start_date: today, end_date: horizon });
+        setDataSource(hx.source);
+        setHostexReservations(hx.reservations || []);
+      } catch (e) {
+        console.warn("Hostex unavailable, using iCal fallback:", e);
+        setDataSource("ical_fallback");
+        setHostexReservations([]);
+      }
 
       // Build services per property (only for properties with iCal links)
       const linkedPropertyIds = new Set(links.map((l: any) => l.property_id));
@@ -634,9 +676,18 @@ export default function CalendarioReservas() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1">
-            <h1 className="text-2xl md:text-3xl font-bold">Calendário de Reservas</h1>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-2xl md:text-3xl font-bold">Calendário de Reservas</h1>
+              <Badge
+                variant={dataSource === "hostex" ? "default" : "secondary"}
+                className="text-[10px]"
+                title={dataSource === "hostex" ? "Dados em tempo real da Hostex" : "Fallback iCal (Hostex indisponível)"}
+              >
+                Fonte: {dataSource === "hostex" ? "Hostex" : "iCal (fallback)"}
+              </Badge>
+            </div>
             <p className="text-sm text-muted-foreground">
-              Sincronize calendários iCal e gere relatórios inteligentes
+              Reservas via Hostex API · iCal como fallback automático
             </p>
           </div>
           <div className="flex flex-col gap-2 items-end">
@@ -659,6 +710,51 @@ export default function CalendarioReservas() {
             )}
           </div>
         </div>
+
+        {/* Indicadores Hostex */}
+        {hostexMetrics && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            <Card>
+              <CardContent className="p-3">
+                <p className="text-[10px] uppercase text-muted-foreground tracking-wide">Ocupação portfólio</p>
+                <p className="text-xl font-bold mt-1">{(hostexMetrics.portfolioOccupancy * 100).toFixed(1)}%</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-3">
+                <p className="text-[10px] uppercase text-muted-foreground tracking-wide">Receita prevista</p>
+                <p className="text-xl font-bold mt-1">{formatBRL(hostexMetrics.forecastRevenue)}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-3">
+                <p className="text-[10px] uppercase text-muted-foreground tracking-wide">Lead time médio</p>
+                <p className="text-xl font-bold mt-1">{hostexMetrics.leadTime.toFixed(1)} dias</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-3">
+                <p className="text-[10px] uppercase text-muted-foreground tracking-wide">Janelas livres</p>
+                <p className="text-xl font-bold mt-1">{hostexMetrics.gaps}</p>
+              </CardContent>
+            </Card>
+            {hostexMetrics.channels.length > 0 && (
+              <Card className="col-span-2 md:col-span-4">
+                <CardContent className="p-3">
+                  <p className="text-[10px] uppercase text-muted-foreground tracking-wide mb-2">Mix de canais</p>
+                  <div className="flex flex-wrap gap-2">
+                    {hostexMetrics.channels.map((c) => (
+                      <Badge key={c.channel} variant="outline" className="text-xs">
+                        {formatChannelLabel(c.channel)} · {c.count} reservas · {formatBRL(c.revenue)}
+                      </Badge>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
+
 
         <Tabs defaultValue="calendar" className="space-y-4">
           <TabsList className="w-full justify-start overflow-x-auto">
@@ -786,18 +882,26 @@ export default function CalendarioReservas() {
                           const daysUntil = differenceInDays(parseISO(res.check_in), new Date());
                           const isActive = daysUntil <= 0 && differenceInDays(parseISO(res.check_out), new Date()) > 0;
                           const prop = properties.find(p => p.id === res.property_id);
+                          const hx = hostexLookup.get(`${res.property_id}|${res.check_in}`);
+                          const channel = hx?.channel_type;
+                          const value = hx?.rates?.total_rate?.amount;
+                          const guests = hx?.number_of_guests;
                           return (
                             <div
                               key={res.id}
                               className={`flex items-center justify-between p-3 rounded-lg border ${
                                 isActive ? "bg-primary/5 border-primary/20" : daysUntil <= 3 && daysUntil >= 0 ? "bg-accent/50 border-accent" : "bg-muted/30"
                               }`}
+                              title={hx ? `${formatChannelLabel(channel)} · ${guests ?? "?"} hóspedes · ${formatBRL(value)} · ${hx.status ?? ""}` : undefined}
                             >
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 flex-wrap">
                                   <span className="font-medium text-sm truncate">
-                                    {formatReservationLabel(res.guest_name, res.summary)}
+                                    {hx?.guest_name || formatReservationLabel(res.guest_name, res.summary)}
                                   </span>
+                                  {channel && (
+                                    <Badge variant="outline" className="text-[10px]">{formatChannelLabel(channel)}</Badge>
+                                  )}
                                   {isActive && (
                                     <Badge variant="default" className="text-xs">Ativo</Badge>
                                   )}
@@ -810,10 +914,12 @@ export default function CalendarioReservas() {
                                     <span className="font-medium text-foreground mr-1">{prop.name} •</span>
                                   )}
                                   {format(parseISO(res.check_in), "dd MMM", { locale: ptBR })} → {format(parseISO(res.check_out), "dd MMM yyyy", { locale: ptBR })}
+                                  {guests != null && <span> · {guests} hóspedes</span>}
                                 </p>
                               </div>
                               <div className="text-right text-xs text-muted-foreground">
-                                {differenceInDays(parseISO(res.check_out), parseISO(res.check_in))} noites
+                                <div>{differenceInDays(parseISO(res.check_out), parseISO(res.check_in))} noites</div>
+                                {value != null && <div className="font-medium text-foreground">{formatBRL(value)}</div>}
                               </div>
                             </div>
                           );
