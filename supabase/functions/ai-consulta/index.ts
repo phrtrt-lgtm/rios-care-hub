@@ -174,6 +174,14 @@ serve(async (req) => {
       console.warn("ai-consulta: hostex unavailable, using iCal fallback", e);
     }
 
+    // Se Hostex está ativa, todos os imóveis podem ser consultados sobre datas
+    if (reservationsSource === "hostex") {
+      for (const p of properties) {
+        propertiesWithIcal.add((p as any).id);
+        propertyNamesWithIcal.add((p as any).name);
+      }
+    }
+
     // ── Build structured context ──────────────────────────────────────────
     const owners = profiles.filter((p: any) => p.role === "owner");
     const teamMembers = profiles.filter((p: any) => ["admin", "agent", "maintenance"].includes(p.role));
