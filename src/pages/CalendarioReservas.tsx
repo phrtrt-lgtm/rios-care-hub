@@ -379,6 +379,19 @@ export default function CalendarioReservas() {
       setReservations(res);
       setProperties(props);
 
+      // Hostex (fonte primária). Fallback para iCal já carregado acima.
+      try {
+        const today = new Date().toISOString().split("T")[0];
+        const horizon = new Date(Date.now() + 120 * 86400000).toISOString().split("T")[0];
+        const hx = await hostex.searchReservations({ start_date: today, end_date: horizon });
+        setDataSource(hx.source);
+        setHostexReservations(hx.reservations || []);
+      } catch (e) {
+        console.warn("Hostex unavailable, using iCal fallback:", e);
+        setDataSource("ical_fallback");
+        setHostexReservations([]);
+      }
+
       // Build services per property (only for properties with iCal links)
       const linkedPropertyIds = new Set(links.map((l: any) => l.property_id));
       
