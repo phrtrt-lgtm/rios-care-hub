@@ -676,9 +676,18 @@ export default function CalendarioReservas() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1">
-            <h1 className="text-2xl md:text-3xl font-bold">Calendário de Reservas</h1>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-2xl md:text-3xl font-bold">Calendário de Reservas</h1>
+              <Badge
+                variant={dataSource === "hostex" ? "default" : "secondary"}
+                className="text-[10px]"
+                title={dataSource === "hostex" ? "Dados em tempo real da Hostex" : "Fallback iCal (Hostex indisponível)"}
+              >
+                Fonte: {dataSource === "hostex" ? "Hostex" : "iCal (fallback)"}
+              </Badge>
+            </div>
             <p className="text-sm text-muted-foreground">
-              Sincronize calendários iCal e gere relatórios inteligentes
+              Reservas via Hostex API · iCal como fallback automático
             </p>
           </div>
           <div className="flex flex-col gap-2 items-end">
@@ -701,6 +710,51 @@ export default function CalendarioReservas() {
             )}
           </div>
         </div>
+
+        {/* Indicadores Hostex */}
+        {hostexMetrics && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            <Card>
+              <CardContent className="p-3">
+                <p className="text-[10px] uppercase text-muted-foreground tracking-wide">Ocupação portfólio</p>
+                <p className="text-xl font-bold mt-1">{(hostexMetrics.portfolioOccupancy * 100).toFixed(1)}%</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-3">
+                <p className="text-[10px] uppercase text-muted-foreground tracking-wide">Receita prevista</p>
+                <p className="text-xl font-bold mt-1">{formatBRL(hostexMetrics.forecastRevenue)}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-3">
+                <p className="text-[10px] uppercase text-muted-foreground tracking-wide">Lead time médio</p>
+                <p className="text-xl font-bold mt-1">{hostexMetrics.leadTime.toFixed(1)} dias</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-3">
+                <p className="text-[10px] uppercase text-muted-foreground tracking-wide">Janelas livres</p>
+                <p className="text-xl font-bold mt-1">{hostexMetrics.gaps}</p>
+              </CardContent>
+            </Card>
+            {hostexMetrics.channels.length > 0 && (
+              <Card className="col-span-2 md:col-span-4">
+                <CardContent className="p-3">
+                  <p className="text-[10px] uppercase text-muted-foreground tracking-wide mb-2">Mix de canais</p>
+                  <div className="flex flex-wrap gap-2">
+                    {hostexMetrics.channels.map((c) => (
+                      <Badge key={c.channel} variant="outline" className="text-xs">
+                        {formatChannelLabel(c.channel)} · {c.count} reservas · {formatBRL(c.revenue)}
+                      </Badge>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
+
 
         <Tabs defaultValue="calendar" className="space-y-4">
           <TabsList className="w-full justify-start overflow-x-auto">
