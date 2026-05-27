@@ -882,18 +882,26 @@ export default function CalendarioReservas() {
                           const daysUntil = differenceInDays(parseISO(res.check_in), new Date());
                           const isActive = daysUntil <= 0 && differenceInDays(parseISO(res.check_out), new Date()) > 0;
                           const prop = properties.find(p => p.id === res.property_id);
+                          const hx = hostexLookup.get(`${res.property_id}|${res.check_in}`);
+                          const channel = hx?.channel_type;
+                          const value = hx?.rates?.total_rate?.amount;
+                          const guests = hx?.number_of_guests;
                           return (
                             <div
                               key={res.id}
                               className={`flex items-center justify-between p-3 rounded-lg border ${
                                 isActive ? "bg-primary/5 border-primary/20" : daysUntil <= 3 && daysUntil >= 0 ? "bg-accent/50 border-accent" : "bg-muted/30"
                               }`}
+                              title={hx ? `${formatChannelLabel(channel)} · ${guests ?? "?"} hóspedes · ${formatBRL(value)} · ${hx.status ?? ""}` : undefined}
                             >
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 flex-wrap">
                                   <span className="font-medium text-sm truncate">
-                                    {formatReservationLabel(res.guest_name, res.summary)}
+                                    {hx?.guest_name || formatReservationLabel(res.guest_name, res.summary)}
                                   </span>
+                                  {channel && (
+                                    <Badge variant="outline" className="text-[10px]">{formatChannelLabel(channel)}</Badge>
+                                  )}
                                   {isActive && (
                                     <Badge variant="default" className="text-xs">Ativo</Badge>
                                   )}
@@ -906,10 +914,12 @@ export default function CalendarioReservas() {
                                     <span className="font-medium text-foreground mr-1">{prop.name} •</span>
                                   )}
                                   {format(parseISO(res.check_in), "dd MMM", { locale: ptBR })} → {format(parseISO(res.check_out), "dd MMM yyyy", { locale: ptBR })}
+                                  {guests != null && <span> · {guests} hóspedes</span>}
                                 </p>
                               </div>
                               <div className="text-right text-xs text-muted-foreground">
-                                {differenceInDays(parseISO(res.check_out), parseISO(res.check_in))} noites
+                                <div>{differenceInDays(parseISO(res.check_out), parseISO(res.check_in))} noites</div>
+                                {value != null && <div className="font-medium text-foreground">{formatBRL(value)}</div>}
                               </div>
                             </div>
                           );
