@@ -88,6 +88,96 @@ function parseNumber(value: unknown): number {
   return 0;
 }
 
+// ============== Hostex format detection & parsing ==============
+// Hostex exports CSV/XLSX with two header rows:
+//   Row 1: section labels ("Reservations", "Renda Total", "Despesa Total", "Lucro Líquido Total")
+//   Row 2: actual columns: Canal, Hóspede, Propriedade, Check-in, Check-out, Noites,
+//          Hora da Reserva, Tarifa do quarto, Taxa de limpeza, Taxa para animais de estimação,
+//          Taxa extra, Impostos, Comissão, Renda total, Despesa total, Lucro líquido
+function isHostexHeader(row: unknown[]): boolean {
+  if (!row) return false;
+  const joined = row.map(c => normalizeColumnName(String(c ?? ''))).join('|');
+  return joined.includes('tarifa do quarto') && joined.includes('comissao') && joined.includes('renda total');
+}
+
+function findIdx(headers: string[], ...needles: string[]): number {
+  const normHeaders = headers.map(normalizeColumnName);
+  for (const n of needles) {
+    const nn = normalizeColumnName(n);
+    const idx = normHeaders.findIndex(h => h === nn || h.includes(nn));
+    if (idx >= 0) return idx;
+  }
+  return -1;
+}
+
+function parseHostex(rawData: unknown[][], headerRowIdx: number): ParsedFile {
+  const headers = (rawData[headerRowIdx] as unknown[]).map(h => String(h ?? ''));
+  const idx = {
+    canal: findIdx(headers, 'canal'),
+    hospede: findIdx(headers, 'hóspede', 'hospede'),
+    propriedade: findIdx(headers, 'propriedade'),
+    checkin: findIdx(headers, 'check-in', 'checkin'),
+    checkout: findIdx(headers, 'check-out', 'checkout'),
+    tarifa: findIdx(headers, 'tarifa do quarto'),
+    limpeza: findIdx(headers, 'taxa de limpeza'),
+    pets: findIdx(headers, 'taxa para animais'),
+    extra: findIdx(headers, 'taxa extra'),
+    impostos: findIdx(headers, 'impostos'),
+    comissao: findIdx(headers, 'comissão', 'comissao'),
+  };
+
+  const reservations: Reservation[] = [];
+  const properties = new Set<string>();
+  let minDate: Date | null = null;
+  let maxDate: Date | null = null;
+
+  for (let i = headerRowIdx + 1; i < rawData.length; i++) {
+    const row = rawData[i] as unknown[];
+    if (!row || row.length === 0) continue;
+
+    const property_name = idx.propriedade >= 0 ? String(row[idx.propriedade] ?? '').trim() : '';
+    const checkin_date = idx.checkin >= 0 ? parseDate(row[idx.checkin]) : null;
+    if (!property_name || !checkin_date) continue;
+
+    const tarifa = idx.tarifa >= 0 ? parseNumber(row[idx.tarifa]) : 0;
+    const pets = idx.pets >= 0 ? parseNumber(row[idx.pets]) : 0;
+    const extra = idx.extra >= 0 ? parseNumber(row[idx.extra]) : 0;
+    const impostos = idx.impostos >= 0 ? parseNumber(row[idx.impostos]) : 0;
+    const comissao = idx.comissao >= 0 ? Math.abs(parseNumber(row[idx.comissao])) : 0;
+    const cleaning = idx.limpeza >= 0 ? parseNumber(row[idx.limpeza]) : 0;
+
+    const reservation_value = tarifa + pets + extra + impostos;
+    const checkout_date = idx.checkout >= 0 ? (parseDate(row[idx.checkout]) || checkin_date) : checkin_date;
+
+    const res: Reservation = {
+      id: `hostex-${i}`,
+      property_name,
+      status: 'Confirmado',
+      guest_name: idx.hospede >= 0 ? String(row[idx.hospede] ?? '') : '',
+      checkin_date,
+      checkout_date,
+      reservation_value,
+      channel_commission: comissao,
+      cleaning_fee: cleaning,
+      channel: idx.canal >= 0 ? String(row[idx.canal] ?? '') : undefined,
+      selected: true,
+    };
+
+    reservations.push(res);
+    properties.add(property_name);
+    if (!minDate || checkin_date < minDate) minDate = checkin_date;
+    if (!maxDate || checkin_date > maxDate) maxDate = checkin_date;
+  }
+
+  if (reservations.length === 0) throw new Error('Nenhuma reserva válida encontrada no arquivo Hostex');
+
+  return {
+    reservations,
+    properties: Array.from(properties).sort(),
+    dateRange: { min: minDate!, max: maxDate! },
+  };
+}
+
 export async function parseReportFile(file: File): Promise<ParsedFile> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -97,10 +187,18 @@ export async function parseReportFile(file: File): Promise<ParsedFile> {
         const workbook = XLSX.read(data, { type: 'array', cellDates: true });
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
-        const rawData = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as unknown[][];
+        const rawData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }) as unknown[][];
 
         if (rawData.length < 2) throw new Error('Arquivo vazio ou sem dados suficientes');
 
+        // Detect Hostex: scan first 5 rows for hostex header signature
+        const hostexHeaderIdx = rawData.slice(0, 5).findIndex(isHostexHeader);
+        if (hostexHeaderIdx >= 0) {
+          resolve(parseHostex(rawData, hostexHeaderIdx));
+          return;
+        }
+
+        // Fallback: legacy TalkGuest format (single header row at row 0)
         const headers = (rawData[0] as string[]).map(h => ({
           original: h,
           mapped: mapColumnName(String(h || '')),
