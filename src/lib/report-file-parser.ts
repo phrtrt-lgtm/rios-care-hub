@@ -178,6 +178,112 @@ function parseHostex(rawData: unknown[][], headerRowIdx: number): ParsedFile {
   };
 }
 
+// ============== Hostex UNIFIED export (all properties in one CSV/XLSX) ==============
+// Columns: Código, Código de reserva do canal, Hóspede, Telefone, Email, Canal,
+// Número de hóspedes, Propriedade, Quarto original, Check-in, Check-out, Status,
+// Tags, Observações, Tarifas, Detalhes, Comissão, Tarifa líquida, Atrasos,
+// Outras rendas, Despesa, Moeda, Hora da Reserva, Operador, ...
+// "Detalhes" is a multi-line cell with breakdown:
+//   "Receita de quarto:R$ 425\nComissão:R$ 113.83\nTaxa de limpeza:R$ 200\n..."
+function isHostexUnifiedHeader(row: unknown[]): boolean {
+  if (!row) return false;
+  const joined = row.map(c => normalizeColumnName(String(c ?? ''))).join('|');
+  return joined.includes('propriedade')
+    && joined.includes('tarifas')
+    && joined.includes('detalhes')
+    && joined.includes('tarifa liquida');
+}
+
+function parseDetalhes(s: string): Record<string, number> {
+  const out: Record<string, number> = {};
+  if (!s) return out;
+  const lines = String(s).split(/\r?\n/);
+  for (const line of lines) {
+    const m = line.match(/^\s*([^:]+):\s*R\$?\s*([-\d.,]+)/i);
+    if (m) {
+      const key = normalizeColumnName(m[1]);
+      out[key] = parseNumber(m[2]);
+    }
+  }
+  return out;
+}
+
+function parseHostexUnified(rawData: unknown[][], headerRowIdx: number): ParsedFile {
+  const headers = (rawData[headerRowIdx] as unknown[]).map(h => String(h ?? ''));
+  const idx = {
+    canal: findIdx(headers, 'canal'),
+    hospede: findIdx(headers, 'hóspede', 'hospede'),
+    propriedade: findIdx(headers, 'propriedade'),
+    checkin: findIdx(headers, 'check-in', 'checkin'),
+    checkout: findIdx(headers, 'check-out', 'checkout'),
+    status: findIdx(headers, 'status'),
+    tarifas: findIdx(headers, 'tarifas'),
+    detalhes: findIdx(headers, 'detalhes'),
+    comissao: findIdx(headers, 'comissão', 'comissao'),
+    liquida: findIdx(headers, 'tarifa líquida', 'tarifa liquida'),
+  };
+
+  const reservations: Reservation[] = [];
+  const properties = new Set<string>();
+  let minDate: Date | null = null;
+  let maxDate: Date | null = null;
+
+  for (let i = headerRowIdx + 1; i < rawData.length; i++) {
+    const row = rawData[i] as unknown[];
+    if (!row || row.length === 0) continue;
+    const property_name = idx.propriedade >= 0 ? String(row[idx.propriedade] ?? '').trim() : '';
+    const checkin_date = idx.checkin >= 0 ? parseDate(row[idx.checkin]) : null;
+    if (!property_name || !checkin_date) continue;
+
+    const det = idx.detalhes >= 0 ? parseDetalhes(String(row[idx.detalhes] ?? '')) : {};
+    const quarto = det['receita de quarto'] ?? 0;
+    const pets = det['taxa de animal de estimacao'] ?? det['taxa para animais de estimacao'] ?? 0;
+    const extra = det['taxa de hospede extra'] ?? det['taxa extra'] ?? 0;
+    const impostos = det['impostos'] ?? 0;
+    const limpezaDet = det['taxa de limpeza'] ?? 0;
+
+    // Channel commission: prefer the column (absolute) to keep parity with per-property Hostex parser
+    const comissao = idx.comissao >= 0
+      ? Math.abs(parseNumber(row[idx.comissao]))
+      : Math.abs(det['comissao'] ?? 0);
+
+    // If "Detalhes" is empty (some exports), fall back to "Tarifas" total minus cleaning estimate (best effort)
+    const reservation_value = (quarto + pets + extra + impostos) || (idx.tarifas >= 0 ? Math.max(0, parseNumber(row[idx.tarifas]) - limpezaDet) : 0);
+    const cleaning = limpezaDet;
+
+    const rawStatus = idx.status >= 0 ? String(row[idx.status] ?? '').trim() : '';
+    const normStatus = normalizeColumnName(rawStatus);
+    const status = normStatus.startsWith('cancel') ? 'Cancelado' : 'Confirmado';
+
+    const checkout_date = idx.checkout >= 0 ? (parseDate(row[idx.checkout]) || checkin_date) : checkin_date;
+
+    reservations.push({
+      id: `hostex-u-${i}`,
+      property_name,
+      status,
+      guest_name: idx.hospede >= 0 ? String(row[idx.hospede] ?? '').trim() : '',
+      checkin_date,
+      checkout_date,
+      reservation_value,
+      channel_commission: comissao,
+      cleaning_fee: cleaning,
+      channel: idx.canal >= 0 ? String(row[idx.canal] ?? '').trim() : undefined,
+      selected: true,
+    });
+    properties.add(property_name);
+    if (!minDate || checkin_date < minDate) minDate = checkin_date;
+    if (!maxDate || checkin_date > maxDate) maxDate = checkin_date;
+  }
+
+  if (reservations.length === 0) throw new Error('Nenhuma reserva válida encontrada no arquivo Hostex unificado');
+
+  return {
+    reservations,
+    properties: Array.from(properties).sort(),
+    dateRange: { min: minDate!, max: maxDate! },
+  };
+}
+
 export async function parseReportFile(file: File): Promise<ParsedFile> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -191,7 +297,14 @@ export async function parseReportFile(file: File): Promise<ParsedFile> {
 
         if (rawData.length < 2) throw new Error('Arquivo vazio ou sem dados suficientes');
 
-        // Detect Hostex: scan first 5 rows for hostex header signature
+        // Detect Hostex unified (all properties in one file)
+        const unifiedIdx = rawData.slice(0, 5).findIndex(isHostexUnifiedHeader);
+        if (unifiedIdx >= 0) {
+          resolve(parseHostexUnified(rawData, unifiedIdx));
+          return;
+        }
+
+        // Detect Hostex per-property (two-row header)
         const hostexHeaderIdx = rawData.slice(0, 5).findIndex(isHostexHeader);
         if (hostexHeaderIdx >= 0) {
           resolve(parseHostex(rawData, hostexHeaderIdx));
