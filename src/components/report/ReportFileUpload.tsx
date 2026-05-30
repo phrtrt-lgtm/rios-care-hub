@@ -73,7 +73,7 @@ export function ReportFileUpload({ onFilesSelect, selectedFiles, onRemoveFile, o
               {isDragActive ? 'Solte os arquivos aqui' : selectedFiles.length > 0 ? 'Adicionar mais arquivos' : 'Arraste arquivos ou clique para selecionar'}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              {selectedFiles.length > 0 ? 'Os dados serão combinados automaticamente' : 'Formatos: XLSX, XLS, CSV • Múltiplos arquivos permitidos'}
+              {selectedFiles.length > 0 ? `${selectedFiles.length} arquivo(s) carregado(s) • adicione quantos quiser` : 'Formatos: XLSX, XLS, CSV • Sem limite de arquivos (TalkGuest e Hostex)'}
             </p>
           </div>
         </div>
