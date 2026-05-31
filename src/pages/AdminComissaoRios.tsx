@@ -262,7 +262,7 @@ export default function AdminComissaoRios() {
         <SectionSkeleton />
       ) : reservations.length === 0 ? (
         <EmptyState
-          icon={FileSpreadsheet}
+          icon={<FileSpreadsheet className="h-6 w-6" />}
           title="Nenhuma planilha processada"
           description="Anexe um ou mais arquivos exportados do Hostex e clique em Calcular comissão."
         />
