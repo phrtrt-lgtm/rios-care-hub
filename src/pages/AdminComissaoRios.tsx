@@ -20,12 +20,16 @@ type PropertyMeta = {
   name: string;
   address: string | null;
   pct: number | null;
+  owner_name: string | null;
+  owner_email: string | null;
 };
 
 type Row = {
   unidade: string;
   matched_name: string | null;
   address: string | null;
+  owner_name: string | null;
+  owner_email: string | null;
   reservas: number;
   base: number;
   pct: number;
