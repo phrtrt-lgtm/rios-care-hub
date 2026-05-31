@@ -176,36 +176,23 @@ export default function AdminComissaoRios() {
   );
 
   const exportXlsx = () => {
-    const data = byName.map((r) => ({
+    const data: any[] = byName.map((r) => ({
       Unidade: r.unidade,
       Endereço: r.address || "—",
-      "% RIOS": r.pct / 100,
-      Reservas: r.reservas,
-      "Renda base (R$)": r.base,
       "Minha comissão (R$)": r.comissao,
-      "Origem %": r.pct_source === "imovel" ? "Cadastro do imóvel" : r.pct_source === "relatorio" ? "Último relatório" : "Padrão 22%",
     }));
     data.push({
       Unidade: "TOTAL",
       Endereço: "",
-      "% RIOS": 0,
-      Reservas: totalReservas,
-      "Renda base (R$)": rows.reduce((s, r) => s + r.base, 0),
       "Minha comissão (R$)": total,
-      "Origem %": "",
-    } as any);
+    });
     const ws = XLSX.utils.json_to_sheet(data);
-    // Format columns
     const range = XLSX.utils.decode_range(ws["!ref"] as string);
     for (let R = 1; R <= range.e.r; R++) {
-      const pctCell = ws[XLSX.utils.encode_cell({ r: R, c: 2 })];
-      if (pctCell) pctCell.z = "0.00%";
-      for (const col of [4, 5]) {
-        const c = ws[XLSX.utils.encode_cell({ r: R, c: col })];
-        if (c) c.z = '"R$" #,##0.00';
-      }
+      const c = ws[XLSX.utils.encode_cell({ r: R, c: 2 })];
+      if (c) c.z = '"R$" #,##0.00';
     }
-    ws["!cols"] = [{ wch: 22 }, { wch: 50 }, { wch: 10 }, { wch: 10 }, { wch: 16 }, { wch: 20 }, { wch: 20 }];
+    ws["!cols"] = [{ wch: 22 }, { wch: 50 }, { wch: 20 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Comissão RIOS");
     const today = new Date().toISOString().slice(0, 10);
