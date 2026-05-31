@@ -65,7 +65,7 @@ export default function AdminComissaoRios() {
       try {
         const { data: properties, error } = await supabase
           .from("properties")
-          .select("id,name,address,default_commission_percentage")
+          .select("id,name,address,default_commission_percentage,owner_id,profiles:owner_id(name,email)")
           .is("archived_at", null);
         if (error) throw error;
         const map = new Map<string, PropertyMeta>();
@@ -75,6 +75,8 @@ export default function AdminComissaoRios() {
             name: p.name,
             address: p.address,
             pct: p.default_commission_percentage != null ? Number(p.default_commission_percentage) : null,
+            owner_name: p.profiles?.name ?? null,
+            owner_email: p.profiles?.email ?? null,
           });
         });
         setPropsByKey(map);
