@@ -20,12 +20,16 @@ type PropertyMeta = {
   name: string;
   address: string | null;
   pct: number | null;
+  owner_name: string | null;
+  owner_email: string | null;
 };
 
 type Row = {
   unidade: string;
   matched_name: string | null;
   address: string | null;
+  owner_name: string | null;
+  owner_email: string | null;
   reservas: number;
   base: number;
   pct: number;
@@ -61,7 +65,7 @@ export default function AdminComissaoRios() {
       try {
         const { data: properties, error } = await supabase
           .from("properties")
-          .select("id,name,address,default_commission_percentage")
+          .select("id,name,address,default_commission_percentage,owner_id,profiles:owner_id(name,email)")
           .is("archived_at", null);
         if (error) throw error;
         const map = new Map<string, PropertyMeta>();
@@ -71,6 +75,8 @@ export default function AdminComissaoRios() {
             name: p.name,
             address: p.address,
             pct: p.default_commission_percentage != null ? Number(p.default_commission_percentage) : null,
+            owner_name: p.profiles?.name ?? null,
+            owner_email: p.profiles?.email ?? null,
           });
         });
         setPropsByKey(map);
@@ -156,6 +162,8 @@ export default function AdminComissaoRios() {
         unidade: meta?.name || v.csvName,
         matched_name: meta?.name || null,
         address: meta?.address || null,
+        owner_name: meta?.owner_name || null,
+        owner_email: meta?.owner_email || null,
         reservas: v.count,
         base,
         pct,
@@ -177,22 +185,26 @@ export default function AdminComissaoRios() {
 
   const exportXlsx = () => {
     const data: any[] = byName.map((r) => ({
-      Unidade: r.unidade,
+      Imóvel: r.unidade,
+      Proprietário: r.owner_name || "—",
       Endereço: r.address || "—",
-      "Minha comissão (R$)": r.comissao,
+      "Comissão (R$)": r.comissao,
+      "E-mail": r.owner_email || "—",
     }));
     data.push({
-      Unidade: "TOTAL",
+      Imóvel: "TOTAL",
+      Proprietário: "",
       Endereço: "",
-      "Minha comissão (R$)": total,
+      "Comissão (R$)": total,
+      "E-mail": "",
     });
     const ws = XLSX.utils.json_to_sheet(data);
     const range = XLSX.utils.decode_range(ws["!ref"] as string);
     for (let R = 1; R <= range.e.r; R++) {
-      const c = ws[XLSX.utils.encode_cell({ r: R, c: 2 })];
+      const c = ws[XLSX.utils.encode_cell({ r: R, c: 3 })];
       if (c) c.z = '"R$" #,##0.00';
     }
-    ws["!cols"] = [{ wch: 22 }, { wch: 50 }, { wch: 20 }];
+    ws["!cols"] = [{ wch: 22 }, { wch: 28 }, { wch: 50 }, { wch: 18 }, { wch: 32 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Comissão RIOS");
     const today = new Date().toISOString().slice(0, 10);
