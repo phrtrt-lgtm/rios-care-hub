@@ -162,6 +162,8 @@ export default function AdminComissaoRios() {
         unidade: meta?.name || v.csvName,
         matched_name: meta?.name || null,
         address: meta?.address || null,
+        owner_name: meta?.owner_name || null,
+        owner_email: meta?.owner_email || null,
         reservas: v.count,
         base,
         pct,
