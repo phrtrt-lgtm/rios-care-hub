@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionSkeleton } from "@/components/ui/section-skeleton";
 import { ReportFileUpload } from "@/components/report/ReportFileUpload";
@@ -28,6 +29,7 @@ type Row = {
   unidade: string;
   matched_name: string | null;
   address: string | null;
+  cep: string | null;
   owner_name: string | null;
   owner_email: string | null;
   reservas: number;
@@ -39,6 +41,12 @@ type Row = {
 
 const DEFAULT_PCT = 22;
 
+// Imóveis que não entram por padrão na exportação (podem ser reativados manualmente)
+const DEFAULT_EXCLUDED = [
+  "CONRADO","CRISTINA","FRANK","JOY","LUCI","LUCIA","MARA","MARIAH",
+  "NALDO BÚZIOS","ROGÉRIA","ROSANA","ROSE","VIVIANE","WESLEY",
+].map((n) => normalize(n));
+
 function normalize(s: string): string {
   return s
     .normalize("NFD")
@@ -46,6 +54,17 @@ function normalize(s: string): string {
     .replace(/\s+/g, "")
     .toUpperCase()
     .trim();
+}
+
+function extractCep(addr: string | null): string | null {
+  if (!addr) return null;
+  const m = addr.match(/\b(\d{5})-?(\d{3})\b/);
+  return m ? `${m[1]}-${m[2]}` : null;
+}
+
+function stripCep(addr: string | null): string | null {
+  if (!addr) return null;
+  return addr.replace(/,?\s*\b\d{5}-?\d{3}\b\s*,?/g, "").replace(/\s{2,}/g, " ").replace(/,\s*,/g, ",").replace(/^[,\s]+|[,\s]+$/g, "");
 }
 
 const fmtBRL = (n: number) =>
@@ -59,6 +78,7 @@ export default function AdminComissaoRios() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [propsByKey, setPropsByKey] = useState<Map<string, PropertyMeta>>(new Map());
   const [reportPctByKey, setReportPctByKey] = useState<Map<string, number>>(new Map());
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     (async () => {
@@ -81,7 +101,6 @@ export default function AdminComissaoRios() {
         });
         setPropsByKey(map);
 
-        // Fallback: latest financial_report commissionPercentage per property
         const { data: reports } = await supabase
           .from("financial_reports")
           .select("property_id, report_data, created_at")
@@ -111,6 +130,7 @@ export default function AdminComissaoRios() {
   const clearFiles = () => {
     setFiles([]);
     setReservations([]);
+    setSelected(new Set());
   };
 
   const processFiles = async () => {
@@ -158,10 +178,12 @@ export default function AdminComissaoRios() {
         source = "padrao";
       }
       const base = Math.round(v.base * 100) / 100;
+      const fullAddr = meta?.address || null;
       out.push({
         unidade: meta?.name || v.csvName,
         matched_name: meta?.name || null,
-        address: meta?.address || null,
+        address: stripCep(fullAddr),
+        cep: extractCep(fullAddr),
         owner_name: meta?.owner_name || null,
         owner_email: meta?.owner_email || null,
         reservas: v.count,
@@ -174,8 +196,29 @@ export default function AdminComissaoRios() {
     return out;
   }, [reservations, propsByKey, reportPctByKey]);
 
-  const total = useMemo(() => rows.reduce((s, r) => s + r.comissao, 0), [rows]);
-  const totalReservas = useMemo(() => rows.reduce((s, r) => s + r.reservas, 0), [rows]);
+  // Inicializa seleção: marca todas exceto as da lista de excluídas por padrão
+  useEffect(() => {
+    if (rows.length === 0) return;
+    const init = new Set<string>();
+    rows.forEach((r) => {
+      if (!DEFAULT_EXCLUDED.includes(normalize(r.unidade))) init.add(r.unidade);
+    });
+    setSelected(init);
+  }, [rows]);
+
+  const toggleRow = (name: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name); else next.add(name);
+      return next;
+    });
+
+  const toggleAll = (all: boolean) =>
+    setSelected(all ? new Set(rows.map((r) => r.unidade)) : new Set());
+
+  const selectedRows = useMemo(() => rows.filter((r) => selected.has(r.unidade)), [rows, selected]);
+  const total = useMemo(() => selectedRows.reduce((s, r) => s + r.comissao, 0), [selectedRows]);
+  const totalReservas = useMemo(() => selectedRows.reduce((s, r) => s + r.reservas, 0), [selectedRows]);
 
   const byName = useMemo(() => [...rows].sort((a, b) => a.unidade.localeCompare(b.unidade, "pt-BR")), [rows]);
   const byPct = useMemo(
@@ -184,10 +227,16 @@ export default function AdminComissaoRios() {
   );
 
   const exportXlsx = () => {
-    const data: any[] = byName.map((r) => ({
+    const exportRows = [...selectedRows].sort((a, b) => a.unidade.localeCompare(b.unidade, "pt-BR"));
+    if (exportRows.length === 0) {
+      toast.error("Selecione ao menos um imóvel para exportar");
+      return;
+    }
+    const data: any[] = exportRows.map((r) => ({
       Imóvel: r.unidade,
       Proprietário: r.owner_name || "—",
       Endereço: r.address || "—",
+      CEP: r.cep || "—",
       "Comissão (R$)": r.comissao,
       "E-mail": r.owner_email || "—",
     }));
@@ -195,16 +244,17 @@ export default function AdminComissaoRios() {
       Imóvel: "TOTAL",
       Proprietário: "",
       Endereço: "",
+      CEP: "",
       "Comissão (R$)": total,
       "E-mail": "",
     });
     const ws = XLSX.utils.json_to_sheet(data);
     const range = XLSX.utils.decode_range(ws["!ref"] as string);
     for (let R = 1; R <= range.e.r; R++) {
-      const c = ws[XLSX.utils.encode_cell({ r: R, c: 3 })];
+      const c = ws[XLSX.utils.encode_cell({ r: R, c: 4 })];
       if (c) c.z = '"R$" #,##0.00';
     }
-    ws["!cols"] = [{ wch: 22 }, { wch: 28 }, { wch: 50 }, { wch: 18 }, { wch: 32 }];
+    ws["!cols"] = [{ wch: 22 }, { wch: 28 }, { wch: 50 }, { wch: 12 }, { wch: 18 }, { wch: 32 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Comissão RIOS");
     const today = new Date().toISOString().slice(0, 10);
@@ -212,6 +262,7 @@ export default function AdminComissaoRios() {
   };
 
   const unmatched = rows.filter((r) => !r.matched_name);
+  const allSelected = rows.length > 0 && selected.size === rows.length;
 
   return (
     <div className="container mx-auto py-6 max-w-6xl space-y-6">
@@ -222,7 +273,7 @@ export default function AdminComissaoRios() {
         <div>
           <h1 className="text-2xl font-bold">Comissão RIOS</h1>
           <p className="text-sm text-muted-foreground">
-            Importe planilhas Hostex e gere a comissão da gestão por imóvel (com endereço para impostos).
+            Importe planilhas Hostex e gere a comissão da gestão por imóvel (com endereço e CEP para impostos).
           </p>
         </div>
       </div>
@@ -250,7 +301,7 @@ export default function AdminComissaoRios() {
             {reservations.length > 0 && (
               <Button variant="outline" onClick={exportXlsx}>
                 <Download className="h-4 w-4 mr-2" />
-                Exportar .xlsx
+                Exportar selecionados ({selectedRows.length})
               </Button>
             )}
           </div>
@@ -269,16 +320,16 @@ export default function AdminComissaoRios() {
         <>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
-              <CardHeader className="pb-2"><CardDescription>Total de comissão RIOS</CardDescription></CardHeader>
+              <CardHeader className="pb-2"><CardDescription>Total selecionado</CardDescription></CardHeader>
               <CardContent><p className="text-2xl font-bold text-primary">{fmtBRL(total)}</p></CardContent>
             </Card>
             <Card>
-              <CardHeader className="pb-2"><CardDescription>Reservas computadas</CardDescription></CardHeader>
+              <CardHeader className="pb-2"><CardDescription>Reservas (selecionadas)</CardDescription></CardHeader>
               <CardContent><p className="text-2xl font-bold">{totalReservas}</p></CardContent>
             </Card>
             <Card>
-              <CardHeader className="pb-2"><CardDescription>Imóveis</CardDescription></CardHeader>
-              <CardContent><p className="text-2xl font-bold">{rows.length}</p></CardContent>
+              <CardHeader className="pb-2"><CardDescription>Imóveis selecionados</CardDescription></CardHeader>
+              <CardContent><p className="text-2xl font-bold">{selectedRows.length} / {rows.length}</p></CardContent>
             </Card>
           </div>
 
@@ -293,19 +344,33 @@ export default function AdminComissaoRios() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">2. Comissão por imóvel</CardTitle>
+              <CardTitle className="text-base">2. Selecionar imóveis para exportar</CardTitle>
               <CardDescription>
-                Fórmula: base = (Receita quarto + Pets + Extras + Impostos) − |Comissão canal|; comissão = base × % RIOS.
+                Itens marcados serão incluídos na planilha. Por padrão, alguns imóveis vêm desmarcados — marque-os se precisar incluir.
               </CardDescription>
             </CardHeader>
             <CardContent>
+              <div className="flex items-center gap-2 mb-3">
+                <Checkbox
+                  id="select-all"
+                  checked={allSelected}
+                  onCheckedChange={(v) => toggleAll(!!v)}
+                />
+                <label htmlFor="select-all" className="text-sm cursor-pointer">
+                  {allSelected ? "Desmarcar todos" : "Selecionar todos"}
+                </label>
+              </div>
               <Tabs defaultValue="alpha">
                 <TabsList>
                   <TabsTrigger value="alpha">Por nome (A→Z)</TabsTrigger>
                   <TabsTrigger value="pct">Por % (maior→menor)</TabsTrigger>
                 </TabsList>
-                <TabsContent value="alpha"><RowsTable rows={byName} /></TabsContent>
-                <TabsContent value="pct"><RowsTable rows={byPct} /></TabsContent>
+                <TabsContent value="alpha">
+                  <RowsTable rows={byName} selected={selected} onToggle={toggleRow} />
+                </TabsContent>
+                <TabsContent value="pct">
+                  <RowsTable rows={byPct} selected={selected} onToggle={toggleRow} />
+                </TabsContent>
               </Tabs>
             </CardContent>
           </Card>
@@ -315,14 +380,24 @@ export default function AdminComissaoRios() {
   );
 }
 
-function RowsTable({ rows }: { rows: Row[] }) {
+function RowsTable({
+  rows,
+  selected,
+  onToggle,
+}: {
+  rows: Row[];
+  selected: Set<string>;
+  onToggle: (name: string) => void;
+}) {
   return (
     <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead className="w-10"></TableHead>
             <TableHead>Unidade</TableHead>
             <TableHead>Endereço</TableHead>
+            <TableHead>CEP</TableHead>
             <TableHead className="text-right">%</TableHead>
             <TableHead className="text-right">Reservas</TableHead>
             <TableHead className="text-right">Renda base</TableHead>
@@ -330,27 +405,34 @@ function RowsTable({ rows }: { rows: Row[] }) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map((r) => (
-            <TableRow key={r.unidade}>
-              <TableCell className="font-medium">{r.unidade}</TableCell>
-              <TableCell className="text-muted-foreground text-sm max-w-xs truncate" title={r.address || ""}>
-                {r.address || <span className="italic">—</span>}
-              </TableCell>
-              <TableCell className="text-right">
-                {r.pct.toFixed(0)}%
-                {r.pct_source !== "imovel" && (
-                  <span className="ml-1 text-[10px] text-muted-foreground">
-                    ({r.pct_source === "relatorio" ? "rel." : "pad."})
-                  </span>
-                )}
-              </TableCell>
-              <TableCell className="text-right">{r.reservas}</TableCell>
-              <TableCell className="text-right">{r.base.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-              <TableCell className="text-right font-semibold text-primary">
-                {r.comissao.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </TableCell>
-            </TableRow>
-          ))}
+          {rows.map((r) => {
+            const checked = selected.has(r.unidade);
+            return (
+              <TableRow key={r.unidade} className={!checked ? "opacity-50" : ""}>
+                <TableCell>
+                  <Checkbox checked={checked} onCheckedChange={() => onToggle(r.unidade)} />
+                </TableCell>
+                <TableCell className="font-medium">{r.unidade}</TableCell>
+                <TableCell className="text-muted-foreground text-sm max-w-xs truncate" title={r.address || ""}>
+                  {r.address || <span className="italic">—</span>}
+                </TableCell>
+                <TableCell className="text-muted-foreground text-sm">{r.cep || <span className="italic">—</span>}</TableCell>
+                <TableCell className="text-right">
+                  {r.pct.toFixed(0)}%
+                  {r.pct_source !== "imovel" && (
+                    <span className="ml-1 text-[10px] text-muted-foreground">
+                      ({r.pct_source === "relatorio" ? "rel." : "pad."})
+                    </span>
+                  )}
+                </TableCell>
+                <TableCell className="text-right">{r.reservas}</TableCell>
+                <TableCell className="text-right">{r.base.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                <TableCell className="text-right font-semibold text-primary">
+                  {r.comissao.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>
