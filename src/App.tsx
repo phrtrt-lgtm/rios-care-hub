@@ -77,6 +77,7 @@ import OwnerRelatorioFinanceiro from "./pages/OwnerRelatorioFinanceiro";
 import RelatoriosPropriedade from "./pages/RelatoriosPropriedade";
 import AdminFichasImoveis from "./pages/AdminFichasImoveis";
 import AdminRelatoriosFinanceiros from "./pages/AdminRelatoriosFinanceiros";
+import AdminComissaoRios from "./pages/AdminComissaoRios";
 import AdminRelatoriosProprietario from "./pages/AdminRelatoriosProprietario";
 import AdminRelatoriosManutencoes from "./pages/AdminRelatoriosManutencoes";
 import AdminRelatorioManutencoesProprietario from "./pages/AdminRelatorioManutencoesProprietario";
@@ -642,6 +643,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['admin', 'agent', 'maintenance']}>
                   <AdminRelatoriosFinanceiros />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/comissao-rios"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminComissaoRios />
                 </ProtectedRoute>
               }
             />
