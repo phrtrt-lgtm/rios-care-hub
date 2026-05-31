@@ -185,22 +185,26 @@ export default function AdminComissaoRios() {
 
   const exportXlsx = () => {
     const data: any[] = byName.map((r) => ({
-      Unidade: r.unidade,
+      Imóvel: r.unidade,
+      Proprietário: r.owner_name || "—",
       Endereço: r.address || "—",
-      "Minha comissão (R$)": r.comissao,
+      "Comissão (R$)": r.comissao,
+      "E-mail": r.owner_email || "—",
     }));
     data.push({
-      Unidade: "TOTAL",
+      Imóvel: "TOTAL",
+      Proprietário: "",
       Endereço: "",
-      "Minha comissão (R$)": total,
+      "Comissão (R$)": total,
+      "E-mail": "",
     });
     const ws = XLSX.utils.json_to_sheet(data);
     const range = XLSX.utils.decode_range(ws["!ref"] as string);
     for (let R = 1; R <= range.e.r; R++) {
-      const c = ws[XLSX.utils.encode_cell({ r: R, c: 2 })];
+      const c = ws[XLSX.utils.encode_cell({ r: R, c: 3 })];
       if (c) c.z = '"R$" #,##0.00';
     }
-    ws["!cols"] = [{ wch: 22 }, { wch: 50 }, { wch: 20 }];
+    ws["!cols"] = [{ wch: 22 }, { wch: 28 }, { wch: 50 }, { wch: 18 }, { wch: 32 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Comissão RIOS");
     const today = new Date().toISOString().slice(0, 10);
