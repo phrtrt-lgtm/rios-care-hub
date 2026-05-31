@@ -81,8 +81,30 @@ function parseDate(value: unknown): Date | null {
 function parseNumber(value: unknown): number {
   if (typeof value === 'number') return value;
   if (typeof value === 'string') {
-    const cleaned = value.replace(/[R$€£\s]/g, '').replace(/\./g, '').replace(',', '.');
-    const parsed = parseFloat(cleaned);
+    let s = value.replace(/[R$€£\s]/g, '');
+    if (!s) return 0;
+    const hasComma = s.includes(',');
+    const hasDot = s.includes('.');
+    if (hasComma && hasDot) {
+      // Decimal separator is the last occurring among '.' or ','
+      const lastComma = s.lastIndexOf(',');
+      const lastDot = s.lastIndexOf('.');
+      if (lastComma > lastDot) {
+        s = s.replace(/\./g, '').replace(',', '.');
+      } else {
+        s = s.replace(/,/g, '');
+      }
+    } else if (hasComma) {
+      // Could be decimal (BR "931,86") or thousands ("1,234"). If exactly 3 digits after comma and no other sep, treat as thousands.
+      const parts = s.split(',');
+      if (parts.length === 2 && parts[1].length === 3 && /^\d+$/.test(parts[0]) && /^\d+$/.test(parts[1])) {
+        s = parts.join('');
+      } else {
+        s = s.replace(',', '.');
+      }
+    }
+    // Only dots OR no separators -> already valid float
+    const parsed = parseFloat(s);
     return isNaN(parsed) ? 0 : parsed;
   }
   return 0;
