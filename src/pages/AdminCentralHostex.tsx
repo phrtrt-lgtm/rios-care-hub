@@ -264,8 +264,15 @@ export default function AdminCentralHostex() {
         </TabsList>
 
         <TabsContent value="insights" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <p className="text-sm text-muted-foreground">Recomendações automáticas por imóvel para os próximos 30 dias.</p>
+          <div className="flex justify-between items-center flex-wrap gap-2">
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">Recomendações automáticas por imóvel para os próximos 30 dias.</p>
+              {insights.length > 0 && insights[0].portfolio_avg_adr > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Preço médio do portfólio (ADR ponderado): <span className="font-semibold text-foreground">{formatBRL(insights[0].portfolio_avg_adr)}</span> · cada imóvel é comparado a essa base para sugerir o desconto.
+                </p>
+              )}
+            </div>
             <Button size="sm" variant="outline" onClick={exportInsightsCsv}>Exportar CSV</Button>
           </div>
           {insights.length === 0 ? (
