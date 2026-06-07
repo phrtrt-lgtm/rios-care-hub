@@ -67,6 +67,7 @@ export default function AdminCentralHostex() {
   const [syncing, setSyncing] = useState(false);
   const [reservations, setReservations] = useState<HostexReservation[]>([]);
   const [properties, setProperties] = useState<Array<{ id: string; name: string }>>([]);
+  const [listedAdrMap, setListedAdrMap] = useState<Map<string, number>>(new Map());
   const [syncLogs, setSyncLogs] = useState<SyncLog[]>([]);
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [source, setSource] = useState<string>("");
@@ -77,8 +78,10 @@ export default function AdminCentralHostex() {
       const today = new Date();
       const start = new Date(today.getTime() - 7 * 86400000).toISOString().slice(0, 10);
       const end = new Date(today.getTime() + 90 * 86400000).toISOString().slice(0, 10);
+      const priceStart = today.toISOString().slice(0, 10);
+      const priceEnd = new Date(today.getTime() + 30 * 86400000).toISOString().slice(0, 10);
 
-      const [resResp, propResp, logsResp] = await Promise.all([
+      const [resResp, propResp, logsResp, calResp, hxPropsResp] = await Promise.all([
         supabase.functions.invoke("hostex-proxy", {
           body: { action: "search_reservations", params: { start_date: start, end_date: end } },
         }),
@@ -90,6 +93,12 @@ export default function AdminCentralHostex() {
           .select("*")
           .order("started_at", { ascending: false })
           .limit(20),
+        (supabase as any)
+          .from("hostex_listing_calendar")
+          .select("property_id_hostex, property_id, price_cents, date")
+          .gte("date", priceStart)
+          .lt("date", priceEnd),
+        supabase.from("hostex_properties").select("id_hostex, property_id"),
       ]);
 
       const rData: any = resResp.data;
@@ -99,8 +108,26 @@ export default function AdminCentralHostex() {
       const props: any[] =
         pData?.data?.properties ?? pData?.data?.data?.properties ?? [];
 
+      // Calcula preço médio listado (BRL) por property_id_hostex e por property_id local.
+      const sums = new Map<string, { total: number; n: number }>();
+      for (const row of (calResp.data as any[]) || []) {
+        if (row.price_cents == null) continue;
+        const keys = [row.property_id_hostex, row.property_id].filter(Boolean) as string[];
+        for (const k of keys) {
+          const cur = sums.get(String(k)) ?? { total: 0, n: 0 };
+          cur.total += row.price_cents / 100;
+          cur.n += 1;
+          sums.set(String(k), cur);
+        }
+      }
+      const avgMap = new Map<string, number>();
+      for (const [k, v] of sums) {
+        if (v.n > 0) avgMap.set(k, v.total / v.n);
+      }
+
       setReservations(list);
       setProperties(props.map((p) => ({ id: String(p.id), name: p.name })));
+      setListedAdrMap(avgMap);
       setSyncLogs((logsResp.data as SyncLog[]) || []);
       setLastSync(rData?.synced_at ?? null);
       setSource(rData?.source ?? "");
@@ -124,7 +151,7 @@ export default function AdminCentralHostex() {
       if (error) throw error;
       toast({
         title: "Sincronização concluída",
-        description: `${(data as any)?.reservations_upserted ?? 0} reservas atualizadas.`,
+        description: `${(data as any)?.reservations_upserted ?? 0} reservas e ${(data as any)?.calendar_days_upserted ?? 0} dias de calendário atualizados.`,
       });
       await load();
     } catch (e: any) {
@@ -139,8 +166,8 @@ export default function AdminCentralHostex() {
   const end30 = new Date(today.getTime() + 30 * 86400000).toISOString().slice(0, 10);
 
   const insights = useMemo(
-    () => pricingInsights30d(reservations, properties, today),
-    [reservations, properties],
+    () => pricingInsights30d(reservations, properties, today, listedAdrMap),
+    [reservations, properties, listedAdrMap],
   );
   const pace = useMemo(() => revenuePace30d(reservations, today), [reservations]);
   const mix = useMemo(() => channelMix(reservations), [reservations]);
@@ -269,7 +296,7 @@ export default function AdminCentralHostex() {
               <p className="text-sm text-muted-foreground">Recomendações automáticas por imóvel para os próximos 30 dias.</p>
               {insights.length > 0 && insights[0].portfolio_avg_adr > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  Preço médio do portfólio (ADR ponderado): <span className="font-semibold text-foreground">{formatBRL(insights[0].portfolio_avg_adr)}</span> · cada imóvel é comparado a essa base para sugerir o desconto.
+                  Preço médio do portfólio (calendário atual dos próximos 30d): <span className="font-semibold text-foreground">{formatBRL(insights[0].portfolio_avg_adr)}</span> · cada imóvel é comparado a essa base para sugerir o desconto.
                 </p>
               )}
             </div>

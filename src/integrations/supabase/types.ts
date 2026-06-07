@@ -1325,6 +1325,59 @@ export type Database = {
           },
         ]
       }
+      hostex_listing_calendar: {
+        Row: {
+          channel_type: string
+          currency: string | null
+          date: string
+          id: string
+          inventory: number | null
+          listing_id: string
+          min_stay: number | null
+          price_cents: number | null
+          property_id: string | null
+          property_id_hostex: string | null
+          raw: Json | null
+          synced_at: string
+        }
+        Insert: {
+          channel_type: string
+          currency?: string | null
+          date: string
+          id?: string
+          inventory?: number | null
+          listing_id: string
+          min_stay?: number | null
+          price_cents?: number | null
+          property_id?: string | null
+          property_id_hostex?: string | null
+          raw?: Json | null
+          synced_at?: string
+        }
+        Update: {
+          channel_type?: string
+          currency?: string | null
+          date?: string
+          id?: string
+          inventory?: number | null
+          listing_id?: string
+          min_stay?: number | null
+          price_cents?: number | null
+          property_id?: string | null
+          property_id_hostex?: string | null
+          raw?: Json | null
+          synced_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hostex_listing_calendar_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hostex_properties: {
         Row: {
           address: string | null
