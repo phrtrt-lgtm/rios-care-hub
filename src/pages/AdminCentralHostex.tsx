@@ -296,7 +296,7 @@ export default function AdminCentralHostex() {
               <p className="text-sm text-muted-foreground">Recomendações automáticas por imóvel para os próximos 30 dias.</p>
               {insights.length > 0 && insights[0].portfolio_avg_adr > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  Preço médio do portfólio (ADR ponderado): <span className="font-semibold text-foreground">{formatBRL(insights[0].portfolio_avg_adr)}</span> · cada imóvel é comparado a essa base para sugerir o desconto.
+                  Preço médio do portfólio (calendário atual dos próximos 30d): <span className="font-semibold text-foreground">{formatBRL(insights[0].portfolio_avg_adr)}</span> · cada imóvel é comparado a essa base para sugerir o desconto.
                 </p>
               )}
             </div>
