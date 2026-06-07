@@ -127,55 +127,85 @@ serve(async (req) => {
     );
 
     // ── Hostex (fonte primária) ────────────────────────────────────────────
-    // Tenta substituir as reservas do iCal por dados ricos da Hostex.
-    // Se falhar, mantém o que veio do DB (fallback iCal).
-    let reservationsSource: "hostex" | "ical_fallback" = "ical_fallback";
+    // 1) Lê direto do cache local `hostex_reservations` (sincronizado a cada 6h).
+    // 2) Se cache vazio, chama o proxy ao vivo.
+    // 3) Se tudo falhar, usa o fallback iCal já carregado em `reservations`.
+    let reservationsSource: "hostex_cache" | "hostex_cache_stale" | "hostex_live" | "ical_fallback" = "ical_fallback";
     let hostexEnriched: any[] = [];
+    let hostexSyncedAt: string | null = null;
     try {
       const horizon = new Date(Date.now() + 120 * 86400000).toISOString().split("T")[0];
       const past = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
-      const proxyResp = await fetch(`${supabaseUrl}/functions/v1/hostex-proxy`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${supabaseKey}`,
-          apikey: supabaseKey,
-        },
-        body: JSON.stringify({
-          action: "search_reservations",
-          params: { start_date: past, end_date: horizon },
-        }),
-      });
-      if (proxyResp.ok) {
-        const proxyJson = await proxyResp.json();
-        reservationsSource = proxyJson.source === "hostex" ? "hostex" : "ical_fallback";
-        const list: any[] = proxyJson.data?.reservations ?? proxyJson.data?.data?.reservations ?? [];
-        if (list.length > 0) {
-          hostexEnriched = list;
-          // Reescreve `reservations` no formato esperado pelos blocos abaixo
-          const propByName = new Map<string, any>(properties.map((p: any) => [p.name, p]));
-          const propById = new Map<string, any>(properties.map((p: any) => [String(p.id), p]));
-          reservations = list.map((r: any) => {
-            const prop = propById.get(String(r.property_id)) ?? propByName.get(r.property_name ?? "");
-            return {
-              id: r.reservation_code,
-              check_in: r.check_in_date,
-              check_out: r.check_out_date,
-              guest_name: r.guest_name,
-              summary: r.guest_name,
-              status: r.status ?? "confirmed",
-              properties: { name: prop?.name ?? r.property_name ?? "Imóvel" },
-              _hostex: r,
-            };
-          });
+
+      // 1) cache local
+      const cacheRes = await supabase
+        .from("hostex_reservations")
+        .select("reservation_code, property_id, property_id_hostex, channel_type, check_in_date, check_out_date, guests, status, guest_name, total_rate_cents, total_commission_cents, synced_at")
+        .gte("check_out_date", past)
+        .lte("check_in_date", horizon)
+        .neq("status", "cancelled")
+        .order("check_in_date", { ascending: true })
+        .limit(5000);
+
+      let list: any[] = cacheRes.data ?? [];
+      if (list.length > 0) {
+        const latest = list.reduce((acc: string | null, r: any) =>
+          !acc || (r.synced_at && r.synced_at > acc) ? r.synced_at : acc, null as string | null);
+        hostexSyncedAt = latest;
+        const ageHours = latest ? (Date.now() - new Date(latest).getTime()) / 3600000 : 999;
+        reservationsSource = ageHours > 12 ? "hostex_cache_stale" : "hostex_cache";
+      } else {
+        // 2) proxy ao vivo
+        const proxyResp = await fetch(`${supabaseUrl}/functions/v1/hostex-proxy`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${supabaseKey}`,
+            apikey: supabaseKey,
+          },
+          body: JSON.stringify({
+            action: "search_reservations",
+            params: { start_date: past, end_date: horizon },
+          }),
+        });
+        if (proxyResp.ok) {
+          const proxyJson = await proxyResp.json();
+          const src = proxyJson.source as string | undefined;
+          if (src === "hostex_cache" || src === "hostex_cache_stale" || src === "hostex_live") {
+            reservationsSource = src as any;
+          }
+          hostexSyncedAt = proxyJson.synced_at ?? proxyJson.data?.synced_at ?? null;
+          list = proxyJson.data?.reservations ?? proxyJson.data?.data?.reservations ?? [];
         }
+      }
+
+      if (list.length > 0) {
+        hostexEnriched = list;
+        const propByName = new Map<string, any>(properties.map((p: any) => [p.name, p]));
+        const propById = new Map<string, any>(properties.map((p: any) => [String(p.id), p]));
+        reservations = list.map((r: any) => {
+          const propIdKey = String(r.property_id ?? r.property_id_hostex ?? "");
+          const prop = propById.get(propIdKey) ?? propByName.get(r.property_name ?? "");
+          return {
+            id: r.reservation_code,
+            check_in: r.check_in_date,
+            check_out: r.check_out_date,
+            guest_name: r.guest_name,
+            summary: r.guest_name,
+            status: r.status ?? "confirmed",
+            properties: { name: prop?.name ?? r.property_name ?? "Imóvel" },
+            _hostex: r,
+          };
+        });
       }
     } catch (e) {
       console.warn("ai-consulta: hostex unavailable, using iCal fallback", e);
     }
 
+    const isHostex = reservationsSource !== "ical_fallback";
+
     // Se Hostex está ativa, todos os imóveis podem ser consultados sobre datas
-    if (reservationsSource === "hostex") {
+    if (isHostex) {
       for (const p of properties) {
         propertiesWithIcal.add((p as any).id);
         propertyNamesWithIcal.add((p as any).name);
