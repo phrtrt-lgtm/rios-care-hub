@@ -93,3 +93,9 @@ verify_jwt = false
 
 [functions.admin-reset-password]
 verify_jwt = false
+
+[functions.hostex-sync]
+verify_jwt = false
+
+[functions.hostex-proxy]
+verify_jwt = true
