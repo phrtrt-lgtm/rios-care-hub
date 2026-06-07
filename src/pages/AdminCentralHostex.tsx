@@ -151,7 +151,7 @@ export default function AdminCentralHostex() {
       if (error) throw error;
       toast({
         title: "Sincronização concluída",
-        description: `${(data as any)?.reservations_upserted ?? 0} reservas atualizadas.`,
+        description: `${(data as any)?.reservations_upserted ?? 0} reservas e ${(data as any)?.calendar_days_upserted ?? 0} dias de calendário atualizados.`,
       });
       await load();
     } catch (e: any) {
