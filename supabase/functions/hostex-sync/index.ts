@@ -11,6 +11,8 @@ const corsHeaders = {
 const HOSTEX_BASE = "https://api.hostex.io/v3";
 const SYNC_WINDOW_PAST_DAYS = 30;
 const SYNC_WINDOW_FUTURE_DAYS = 180;
+const CALENDAR_WINDOW_DAYS = 60; // janela de preços futuros (atual)
+const CALENDAR_BATCH_SIZE = 20; // listings por chamada /listings/calendar
 const PAGE_SIZE = 100;
 
 function toMoneyCents(v: any): number | null {
