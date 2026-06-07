@@ -272,6 +272,57 @@ Deno.serve(async (req) => {
       }
     }
 
+    // 4) Calendário de preços listados (preço atual cobrado) — próximos CALENDAR_WINDOW_DAYS dias
+    const calStart = ymd(now);
+    const calEnd = ymd(new Date(now.getTime() + CALENDAR_WINDOW_DAYS * 86400000));
+    for (let i = 0; i < allListings.length; i += CALENDAR_BATCH_SIZE) {
+      const batch = allListings.slice(i, i + CALENDAR_BATCH_SIZE);
+      try {
+        const payload = await hostexPost(
+          "/listings/calendar",
+          {
+            start_date: calStart,
+            end_date: calEnd,
+            listings: batch.map((l) => ({ listing_id: l.listing_id, channel_type: l.channel_type })),
+          },
+          apiKey,
+        );
+        const listings = payload?.data?.listings ?? payload?.listings ?? [];
+        const rows: any[] = [];
+        for (const ld of listings) {
+          const ref = batch.find(
+            (b) => b.listing_id === String(ld.listing_id) && b.channel_type === String(ld.channel_type),
+          );
+          if (!ref) continue;
+          for (const c of ld.calendar ?? []) {
+            rows.push({
+              listing_id: ref.listing_id,
+              channel_type: ref.channel_type,
+              property_id_hostex: ref.property_id_hostex,
+              property_id: ref.property_id,
+              date: c.date,
+              price_cents: toMoneyCents(c.price),
+              currency: c.currency ?? "BRL",
+              inventory: c.inventory ?? null,
+              min_stay: c.restrictions?.min_stay_on_arrival ?? c.restrictions?.min_stay_through ?? null,
+              raw: c,
+              synced_at: new Date().toISOString(),
+            });
+          }
+        }
+        if (rows.length) {
+          const { error } = await supabase
+            .from("hostex_listing_calendar")
+            .upsert(rows, { onConflict: "listing_id,channel_type,date" });
+          if (error) throw new Error(`calendar_upsert_failed: ${error.message}`);
+          calendarUpserted += rows.length;
+        }
+      } catch (err) {
+        console.error("hostex calendar batch failed:", err instanceof Error ? err.message : err);
+        // continua para próximos batches
+      }
+    }
+
     await finishLog({
       status: "ok",
       reservations_upserted: resUpserted,
@@ -285,6 +336,7 @@ Deno.serve(async (req) => {
         reservations_upserted: resUpserted,
         properties_upserted: propsUpserted,
         reservations_cancelled: cancelled,
+        calendar_days_upserted: calendarUpserted,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
