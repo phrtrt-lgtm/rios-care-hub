@@ -23,15 +23,23 @@ export interface PropertyPricingInsight {
   vacant_weekend_nights_30d: number;
   total_nights_30d: number;
   occupancy_30d: number; // 0..1
-  adr_next_30d: number;
+  adr_next_30d: number; // preço médio atualmente cobrado (calendário) — fallback p/ booked se ausente
+  current_listed_adr: number; // preço médio listado no calendário p/ próximos 30d
+  booked_adr_next_30d: number; // preço médio das reservas confirmadas
   revenue_next_30d: number;
   longest_gap_nights: number;
   portfolio_avg_adr: number;
-  adr_vs_portfolio_pct: number; // ex: +12 => 12% acima da média do portfólio
-  suggested_discount_pct: number; // 0 = sem desconto; negativo = sugere aumento
-  suggested_price: number; // adr * (1 - suggested_discount_pct/100)
+  adr_vs_portfolio_pct: number;
+  suggested_discount_pct: number;
+  suggested_price: number;
   action: "subir_preco" | "manter" | "descontar_gap" | "preencher_curto";
   rationale: string;
+}
+
+export interface ListedPriceEntry {
+  property_id_hostex: string;
+  date: string;
+  price_cents: number | null;
 }
 
 export function pricingInsights30d(
