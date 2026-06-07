@@ -43,6 +43,8 @@ async function hostexGet(path: string, params: Record<string, any>, apiKey: stri
   if (!resp.ok) {
     const txt = await resp.text();
     throw new Error(`hostex_${resp.status}: ${txt.slice(0, 300)}`);
+  }
+  return await resp.json();
 }
 
 async function hostexPost(path: string, body: Record<string, any>, apiKey: string) {
@@ -59,8 +61,6 @@ async function hostexPost(path: string, body: Record<string, any>, apiKey: strin
     const txt = await resp.text();
     throw new Error(`hostex_${resp.status}: ${txt.slice(0, 300)}`);
   }
-  return await resp.json();
-}
   return await resp.json();
 }
 
