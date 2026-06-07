@@ -46,6 +46,8 @@ export function pricingInsights30d(
   reservations: HostexReservation[],
   properties: Array<{ id: string; name: string }>,
   today: Date = new Date(),
+  /** Mapa opcional: propertyId -> preço médio listado (R$) nos próximos 30d. Quando presente, vira a base do ADR. */
+  currentListedAdrByProperty: Map<string, number> = new Map(),
 ): PropertyPricingInsight[] {
   const start = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
   const end = new Date(start.getTime() + 30 * MS_DAY);
@@ -61,7 +63,9 @@ export function pricingInsights30d(
     booked: number;
     revenue: number;
     occupancy: number;
-    adr: number;
+    bookedAdr: number;
+    listedAdr: number;
+    adr: number; // preferido (listado se houver, senão booked)
   };
 
   const base: Base[] = properties.map((p) => {
@@ -109,7 +113,9 @@ export function pricingInsights30d(
     }
 
     const occupancy = booked / 30;
-    const adr = booked > 0 ? revenue / booked : 0;
+    const bookedAdr = booked > 0 ? revenue / booked : 0;
+    const listedAdr = currentListedAdrByProperty.get(String(p.id)) ?? 0;
+    const adr = listedAdr > 0 ? listedAdr : bookedAdr;
     return {
       property_id: String(p.id),
       property_name: p.name,
@@ -119,44 +125,51 @@ export function pricingInsights30d(
       booked,
       revenue,
       occupancy,
+      bookedAdr,
+      listedAdr,
       adr,
     };
   });
 
-  // Portfolio-wide ADR average (ponderada por noites reservadas; ignora imóveis sem reservas).
-  const totalBooked = base.reduce((s, b) => s + b.booked, 0);
-  const totalRevenue = base.reduce((s, b) => s + b.revenue, 0);
-  const portfolioAdr = totalBooked > 0 ? totalRevenue / totalBooked : 0;
+  // Portfolio-wide ADR average — usa preço atualmente listado quando disponível,
+  // caindo para média ponderada das reservas confirmadas.
+  const withListed = base.filter((b) => b.listedAdr > 0);
+  let portfolioAdr = 0;
+  if (withListed.length > 0) {
+    portfolioAdr =
+      withListed.reduce((s, b) => s + b.listedAdr, 0) / withListed.length;
+  } else {
+    const totalBooked = base.reduce((s, b) => s + b.booked, 0);
+    const totalRevenue = base.reduce((s, b) => s + b.revenue, 0);
+    portfolioAdr = totalBooked > 0 ? totalRevenue / totalBooked : 0;
+  }
 
   return base.map((b) => {
     const adrVsPortfolioPct =
       portfolioAdr > 0 && b.adr > 0 ? ((b.adr - portfolioAdr) / portfolioAdr) * 100 : 0;
 
-    // Sugestão de desconto baseada em ocupação, gap, fds vagos e desvio do ADR do portfólio.
-    // Positivo = desconto. Negativo = aumento.
     let discount = 0;
     let action: PropertyPricingInsight["action"];
     let rationale: string;
 
     if (b.occupancy >= 0.85) {
-      discount = -8; // aumentar ~8%
+      discount = -8;
       action = "subir_preco";
-      rationale = `Ocupação ${(b.occupancy * 100).toFixed(0)}% nos próximos 30d. ADR ${adrVsPortfolioPct >= 0 ? "+" : ""}${adrVsPortfolioPct.toFixed(0)}% vs portfólio. Sugerido aumentar diária ~8%.`;
+      rationale = `Ocupação ${(b.occupancy * 100).toFixed(0)}% nos próximos 30d. Preço atual ${adrVsPortfolioPct >= 0 ? "+" : ""}${adrVsPortfolioPct.toFixed(0)}% vs portfólio. Sugerido aumentar diária ~8%.`;
     } else if (b.longestGap >= 7) {
       discount = 15;
       action = "descontar_gap";
-      rationale = `Gap de ${b.longestGap} noites livres. ADR ${adrVsPortfolioPct >= 0 ? "+" : ""}${adrVsPortfolioPct.toFixed(0)}% vs portfólio. Aplicar 15% de desconto ou min-stay 2.`;
+      rationale = `Gap de ${b.longestGap} noites livres. Preço atual ${adrVsPortfolioPct >= 0 ? "+" : ""}${adrVsPortfolioPct.toFixed(0)}% vs portfólio. Aplicar 15% de desconto ou min-stay 2.`;
     } else if (b.longestGap >= 5) {
       discount = 10;
       action = "descontar_gap";
       rationale = `Gap de ${b.longestGap} noites livres. Aplicar 10% de desconto temporário para preencher janela.`;
     } else if (b.occupancy < 0.4 && b.adr > 0) {
-      // Baixa ocupação — alinhar ao portfólio se estiver caro, senão promo padrão.
       discount = adrVsPortfolioPct > 5 ? Math.min(20, Math.round(adrVsPortfolioPct)) : 12;
       action = "descontar_gap";
       rationale =
         adrVsPortfolioPct > 5
-          ? `Ocupação ${(b.occupancy * 100).toFixed(0)}% e ADR ${adrVsPortfolioPct.toFixed(0)}% acima da média do portfólio. Reduzir ${discount}% para se alinhar ao mercado interno.`
+          ? `Ocupação ${(b.occupancy * 100).toFixed(0)}% e preço ${adrVsPortfolioPct.toFixed(0)}% acima da média do portfólio. Reduzir ${discount}% para se alinhar ao mercado interno.`
           : `Ocupação baixa (${(b.occupancy * 100).toFixed(0)}%). Promo de 12% para destravar reservas.`;
     } else if (b.vacantWk >= 4) {
       discount = 10;
@@ -165,11 +178,11 @@ export function pricingInsights30d(
     } else if (b.occupancy < 0.65 && adrVsPortfolioPct > 10) {
       discount = Math.min(15, Math.round(adrVsPortfolioPct / 2));
       action = "descontar_gap";
-      rationale = `ADR ${adrVsPortfolioPct.toFixed(0)}% acima da média do portfólio com ocupação ${(b.occupancy * 100).toFixed(0)}%. Reduzir ${discount}% para acelerar reservas.`;
+      rationale = `Preço ${adrVsPortfolioPct.toFixed(0)}% acima da média do portfólio com ocupação ${(b.occupancy * 100).toFixed(0)}%. Reduzir ${discount}% para acelerar reservas.`;
     } else {
       discount = 0;
       action = "manter";
-      rationale = `Ocupação ${(b.occupancy * 100).toFixed(0)}%, ADR ${adrVsPortfolioPct >= 0 ? "+" : ""}${adrVsPortfolioPct.toFixed(0)}% vs portfólio. Manter preços.`;
+      rationale = `Ocupação ${(b.occupancy * 100).toFixed(0)}%, preço ${adrVsPortfolioPct >= 0 ? "+" : ""}${adrVsPortfolioPct.toFixed(0)}% vs portfólio. Manter preços.`;
     }
 
     const suggestedPrice = b.adr > 0 ? b.adr * (1 - discount / 100) : 0;
@@ -182,6 +195,8 @@ export function pricingInsights30d(
       total_nights_30d: 30,
       occupancy_30d: b.occupancy,
       adr_next_30d: b.adr,
+      current_listed_adr: b.listedAdr,
+      booked_adr_next_30d: b.bookedAdr,
       revenue_next_30d: b.revenue,
       longest_gap_nights: b.longestGap,
       portfolio_avg_adr: portfolioAdr,
