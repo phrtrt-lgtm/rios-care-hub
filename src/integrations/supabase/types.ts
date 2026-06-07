@@ -2166,47 +2166,6 @@ export type Database = {
           },
         ]
       }
-      property_ical_links: {
-        Row: {
-          created_at: string
-          ical_url: string
-          id: string
-          last_synced_at: string | null
-          property_id: string
-          source_label: string | null
-          sync_error: string | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          ical_url: string
-          id?: string
-          last_synced_at?: string | null
-          property_id: string
-          source_label?: string | null
-          sync_error?: string | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          ical_url?: string
-          id?: string
-          last_synced_at?: string | null
-          property_id?: string
-          source_label?: string | null
-          sync_error?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "property_ical_links_property_id_fkey"
-            columns: ["property_id"]
-            isOneToOne: false
-            referencedRelation: "properties"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       property_intake_submissions: {
         Row: {
           apartment_floor: number | null
@@ -2636,66 +2595,6 @@ export type Database = {
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      reservations: {
-        Row: {
-          check_in: string
-          check_out: string
-          created_at: string
-          guest_name: string | null
-          ical_link_id: string | null
-          ical_uid: string | null
-          id: string
-          property_id: string
-          raw_data: Json | null
-          status: string | null
-          summary: string | null
-          updated_at: string
-        }
-        Insert: {
-          check_in: string
-          check_out: string
-          created_at?: string
-          guest_name?: string | null
-          ical_link_id?: string | null
-          ical_uid?: string | null
-          id?: string
-          property_id: string
-          raw_data?: Json | null
-          status?: string | null
-          summary?: string | null
-          updated_at?: string
-        }
-        Update: {
-          check_in?: string
-          check_out?: string
-          created_at?: string
-          guest_name?: string | null
-          ical_link_id?: string | null
-          ical_uid?: string | null
-          id?: string
-          property_id?: string
-          raw_data?: Json | null
-          status?: string | null
-          summary?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "reservations_ical_link_id_fkey"
-            columns: ["ical_link_id"]
-            isOneToOne: false
-            referencedRelation: "property_ical_links"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "reservations_property_id_fkey"
-            columns: ["property_id"]
-            isOneToOne: false
-            referencedRelation: "properties"
             referencedColumns: ["id"]
           },
         ]
