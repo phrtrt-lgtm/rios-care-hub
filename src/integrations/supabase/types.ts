@@ -1325,6 +1325,163 @@ export type Database = {
           },
         ]
       }
+      hostex_properties: {
+        Row: {
+          address: string | null
+          created_at: string
+          id_hostex: string
+          name: string
+          property_id: string | null
+          raw: Json | null
+          synced_at: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          id_hostex: string
+          name: string
+          property_id?: string | null
+          raw?: Json | null
+          synced_at?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          id_hostex?: string
+          name?: string
+          property_id?: string | null
+          raw?: Json | null
+          synced_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hostex_properties_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hostex_reservations: {
+        Row: {
+          booked_at: string | null
+          channel_type: string | null
+          check_in_date: string
+          check_out_date: string
+          created_at: string
+          currency: string | null
+          guest_name: string | null
+          guests: number | null
+          nights: number | null
+          property_id: string | null
+          property_id_hostex: string | null
+          property_name: string | null
+          raw: Json | null
+          reservation_code: string
+          status: string | null
+          stay_status: string | null
+          synced_at: string
+          total_commission_cents: number | null
+          total_rate_cents: number | null
+          updated_at: string
+        }
+        Insert: {
+          booked_at?: string | null
+          channel_type?: string | null
+          check_in_date: string
+          check_out_date: string
+          created_at?: string
+          currency?: string | null
+          guest_name?: string | null
+          guests?: number | null
+          nights?: number | null
+          property_id?: string | null
+          property_id_hostex?: string | null
+          property_name?: string | null
+          raw?: Json | null
+          reservation_code: string
+          status?: string | null
+          stay_status?: string | null
+          synced_at?: string
+          total_commission_cents?: number | null
+          total_rate_cents?: number | null
+          updated_at?: string
+        }
+        Update: {
+          booked_at?: string | null
+          channel_type?: string | null
+          check_in_date?: string
+          check_out_date?: string
+          created_at?: string
+          currency?: string | null
+          guest_name?: string | null
+          guests?: number | null
+          nights?: number | null
+          property_id?: string | null
+          property_id_hostex?: string | null
+          property_name?: string | null
+          raw?: Json | null
+          reservation_code?: string
+          status?: string | null
+          stay_status?: string | null
+          synced_at?: string
+          total_commission_cents?: number | null
+          total_rate_cents?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hostex_reservations_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hostex_sync_log: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          properties_upserted: number | null
+          reservations_cancelled: number | null
+          reservations_upserted: number | null
+          started_at: string
+          status: string
+          triggered_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          properties_upserted?: number | null
+          reservations_cancelled?: number | null
+          reservations_upserted?: number | null
+          started_at?: string
+          status?: string
+          triggered_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          properties_upserted?: number | null
+          reservations_cancelled?: number | null
+          reservations_upserted?: number | null
+          started_at?: string
+          status?: string
+          triggered_by?: string | null
+        }
+        Relationships: []
+      }
       inspection_comments: {
         Row: {
           attachments: Json
