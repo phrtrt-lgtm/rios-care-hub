@@ -368,7 +368,7 @@ serve(async (req) => {
     };
 
     ctx.push(`\n=== CALENDÁRIO DE RESERVAS – PRÓXIMOS 90 DIAS (hoje: ${toBR(today)}) ===`);
-    ctx.push(`IMPORTANTE: Apenas imóveis com iCal configurado têm dados de reservas/disponibilidade. Imóveis sem iCal NÃO devem ser consultados sobre datas, ocupação ou janelas livres — responda que não há dados de calendário para esses imóveis.`);
+    ctx.push(`Fonte: ${isHostex ? `Hostex (${reservationsSource}${hostexSyncedAt ? `, sincronizado em ${new Date(hostexSyncedAt).toLocaleString("pt-BR")}` : ""})` : "iCal fallback"}. ${isHostex ? "Todos os imóveis têm dados de reservas via Hostex." : "Apenas imóveis com iCal configurado têm dados de reservas/disponibilidade. Imóveis sem iCal NÃO devem ser consultados sobre datas."}`);
     ctx.push(`REGRA CRÍTICA – NÃO ALUCINAR DATAS: Liste APENAS as reservas (📅) e janelas (⬜) explicitamente presentes abaixo. NUNCA invente reservas, janelas, períodos ou datas que não estejam literalmente listadas. Todas as datas estão no formato BR (DD/MM/AAAA) — use sempre esse formato nas respostas. Se após a última reserva listada (marcada como "FIM DAS RESERVAS") não houver mais nada, o imóvel está TOTALMENTE LIVRE a partir do checkout daquela última reserva — responda exatamente isso, sem fragmentar em sub-períodos fictícios.\n`);
 
     for (const [propName, rList] of Object.entries(resByProp)) {
