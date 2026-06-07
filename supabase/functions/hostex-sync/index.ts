@@ -43,7 +43,24 @@ async function hostexGet(path: string, params: Record<string, any>, apiKey: stri
   if (!resp.ok) {
     const txt = await resp.text();
     throw new Error(`hostex_${resp.status}: ${txt.slice(0, 300)}`);
+}
+
+async function hostexPost(path: string, body: Record<string, any>, apiKey: string) {
+  const resp = await fetch(`${HOSTEX_BASE}${path}`, {
+    method: "POST",
+    headers: {
+      "Hostex-Access-Token": apiKey,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  if (!resp.ok) {
+    const txt = await resp.text();
+    throw new Error(`hostex_${resp.status}: ${txt.slice(0, 300)}`);
   }
+  return await resp.json();
+}
   return await resp.json();
 }
 
