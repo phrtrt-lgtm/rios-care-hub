@@ -236,19 +236,11 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 3) Fallback iCal
-    try {
-      const data = await fallbackFromIcal(action, params, supabase);
-      const payload = { source: "ical_fallback", data };
-      return new Response(JSON.stringify(payload), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    } catch (e) {
-      return new Response(
-        JSON.stringify({ source: "error", error: e instanceof Error ? e.message : "fallback_failed" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
+    // 3) Sem dados disponíveis
+    return new Response(
+      JSON.stringify({ source: "unavailable", data: { reservations: [], properties: [], calendars: [] } }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   } catch (e) {
     return new Response(
       JSON.stringify({ source: "error", error: e instanceof Error ? e.message : "unknown" }),
