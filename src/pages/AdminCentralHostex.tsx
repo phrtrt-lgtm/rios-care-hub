@@ -279,26 +279,38 @@ export default function AdminCentralHostex() {
                       <TableHead>Imóvel</TableHead>
                       <TableHead className="text-right">Ocup. 30d</TableHead>
                       <TableHead className="text-right">Vagos</TableHead>
-                      <TableHead className="text-right">Fds vagos</TableHead>
                       <TableHead className="text-right">Maior gap</TableHead>
-                      <TableHead className="text-right">ADR</TableHead>
-                      <TableHead className="text-right">Receita 30d</TableHead>
+                      <TableHead className="text-right">Preço médio</TableHead>
+                      <TableHead className="text-right">vs portfólio</TableHead>
+                      <TableHead className="text-right">Desconto sug.</TableHead>
+                      <TableHead className="text-right">Preço sugerido</TableHead>
                       <TableHead>Ação</TableHead>
                       <TableHead>Justificativa</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {insights
-                      .sort((a, b) => b.longest_gap_nights - a.longest_gap_nights)
+                      .sort((a, b) => b.suggested_discount_pct - a.suggested_discount_pct)
                       .map((i) => (
                         <TableRow key={i.property_id}>
                           <TableCell className="font-medium">{i.property_name}</TableCell>
                           <TableCell className="text-right">{(i.occupancy_30d * 100).toFixed(0)}%</TableCell>
                           <TableCell className="text-right">{i.vacant_nights_30d}</TableCell>
-                          <TableCell className="text-right">{i.vacant_weekend_nights_30d}</TableCell>
                           <TableCell className="text-right">{i.longest_gap_nights}</TableCell>
                           <TableCell className="text-right">{formatBRL(i.adr_next_30d)}</TableCell>
-                          <TableCell className="text-right">{formatBRL(i.revenue_next_30d)}</TableCell>
+                          <TableCell className={`text-right ${i.adr_vs_portfolio_pct > 0 ? "text-warning" : i.adr_vs_portfolio_pct < 0 ? "text-success" : ""}`}>
+                            {i.adr_vs_portfolio_pct >= 0 ? "+" : ""}{i.adr_vs_portfolio_pct.toFixed(0)}%
+                          </TableCell>
+                          <TableCell className="text-right font-semibold">
+                            {i.suggested_discount_pct === 0 ? (
+                              <span className="text-muted-foreground">—</span>
+                            ) : i.suggested_discount_pct > 0 ? (
+                              <span className="text-destructive">−{i.suggested_discount_pct}%</span>
+                            ) : (
+                              <span className="text-success">+{Math.abs(i.suggested_discount_pct)}%</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">{formatBRL(i.suggested_price)}</TableCell>
                           <TableCell>
                             <Badge variant={actionLabels[i.action].variant}>{actionLabels[i.action].label}</Badge>
                           </TableCell>
