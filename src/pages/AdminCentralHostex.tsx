@@ -153,7 +153,7 @@ export default function AdminCentralHostex() {
   const wk = useMemo(() => weekendOccupancy30d(reservations, properties.length, today), [reservations, properties.length]);
 
   function exportInsightsCsv() {
-    const header = ["Imóvel", "Ocupação 30d %", "Vagos 30d", "Vagos fim de semana", "Maior gap", "ADR (R$)", "Receita 30d (R$)", "Ação", "Justificativa"];
+    const header = ["Imóvel", "Ocupação 30d %", "Vagos 30d", "Vagos fim de semana", "Maior gap", "Preço médio (R$)", "ADR vs portfólio %", "Desconto sugerido %", "Preço sugerido (R$)", "Receita 30d (R$)", "Ação", "Justificativa"];
     const rows = insights.map((i) => [
       i.property_name,
       (i.occupancy_30d * 100).toFixed(1),
@@ -161,6 +161,9 @@ export default function AdminCentralHostex() {
       i.vacant_weekend_nights_30d,
       i.longest_gap_nights,
       i.adr_next_30d.toFixed(2),
+      i.adr_vs_portfolio_pct.toFixed(1),
+      i.suggested_discount_pct,
+      i.suggested_price.toFixed(2),
       i.revenue_next_30d.toFixed(2),
       actionLabels[i.action].label,
       i.rationale,
