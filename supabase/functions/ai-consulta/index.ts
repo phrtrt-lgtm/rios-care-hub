@@ -340,7 +340,7 @@ serve(async (req) => {
     };
 
     ctx.push(`\n=== CALENDÁRIO DE RESERVAS – PRÓXIMOS 90 DIAS (hoje: ${toBR(today)}) ===`);
-    ctx.push(`Fonte: ${isHostex ? `Hostex (${reservationsSource}${hostexSyncedAt ? `, sincronizado em ${new Date(hostexSyncedAt).toLocaleString("pt-BR")}` : ""})` : "iCal fallback"}. ${isHostex ? "Todos os imóveis têm dados de reservas via Hostex." : "Apenas imóveis com iCal configurado têm dados de reservas/disponibilidade. Imóveis sem iCal NÃO devem ser consultados sobre datas."}`);
+    ctx.push(`Fonte: ${isHostex ? `Hostex (${reservationsSource}${hostexSyncedAt ? `, sincronizado em ${new Date(hostexSyncedAt).toLocaleString("pt-BR")}` : ""})` : "Hostex indisponível"}. Todos os imóveis têm dados de reservas via Hostex.`);
     ctx.push(`REGRA CRÍTICA – NÃO ALUCINAR DATAS: Liste APENAS as reservas (📅) e janelas (⬜) explicitamente presentes abaixo. NUNCA invente reservas, janelas, períodos ou datas que não estejam literalmente listadas. Todas as datas estão no formato BR (DD/MM/AAAA) — use sempre esse formato nas respostas. Se após a última reserva listada (marcada como "FIM DAS RESERVAS") não houver mais nada, o imóvel está TOTALMENTE LIVRE a partir do checkout daquela última reserva — responda exatamente isso, sem fragmentar em sub-períodos fictícios.\n`);
 
     for (const [propName, rList] of Object.entries(resByProp)) {
@@ -400,13 +400,8 @@ serve(async (req) => {
       }
     }
 
-    // List properties WITHOUT iCal so the AI knows it cannot answer date queries for them
-    const noIcalProps = properties.filter((p: any) => !propertiesWithIcal.has(p.id)).map((p: any) => p.name);
-    if (noIcalProps.length > 0) {
-      ctx.push(`\n=== IMÓVEIS SEM iCAL CONFIGURADO (${noIcalProps.length}) ===`);
-      ctx.push(`Para os imóveis abaixo NÃO há sincronização de calendário. NÃO responda perguntas sobre disponibilidade, ocupação, datas livres, próximas reservas ou janelas — informe que esses imóveis não possuem iCal configurado:`);
-      for (const n of noIcalProps) ctx.push(`  • ${n}`);
-    }
+
+
 
     // ── Fichas dos imóveis (markdown) ─────────────────────────────────────
     // Documentação técnica/operacional de cada unidade: wifi, chaves, comodidades,
@@ -441,15 +436,15 @@ serve(async (req) => {
 
     if (isAvailabilityQuestion && mentionedProperty) {
       const propertyName = mentionedProperty.name;
-      const hasIcal = propertiesWithIcal.has(mentionedProperty.id);
 
-      if (!hasIcal) {
+      if (!isHostex) {
         return new Response(JSON.stringify({
-          reply: `O imóvel ${propertyName} não tem calendário sincronizado no sistema, então eu não consigo confirmar disponibilidade com segurança.`,
+          reply: `No momento não consegui acessar os dados da Hostex para confirmar a disponibilidade de ${propertyName}. Tente novamente em instantes.`,
         }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+
 
       const propertyReservations = [...(resByProp[propertyName] || [])].sort((a, b) => a.check_in.localeCompare(b.check_in));
       const askedDate = parseDateFromQuestion(lastUserMessage);
@@ -561,7 +556,7 @@ A RIOS é uma empresa de gestão de hospedagens por temporada. Gerenciamos imóv
 - Use emojis com moderação para facilitar a leitura (🔴 urgente, ✅ pago, ⏳ pendente)
 
 ## DADOS ATUAIS DO SISTEMA (${new Date().toLocaleDateString("pt-BR")})
-FONTE DE RESERVAS: ${isHostex ? `Hostex (${reservationsSource})${hostexSyncedAt ? ` — última sincronização: ${new Date(hostexSyncedAt).toLocaleString("pt-BR")}` : ""}` : "iCal TalkGuest (fallback — Hostex indisponível)"}
+FONTE DE RESERVAS: ${isHostex ? `Hostex (${reservationsSource})${hostexSyncedAt ? ` — última sincronização: ${new Date(hostexSyncedAt).toLocaleString("pt-BR")}` : ""}` : "Hostex indisponível no momento"}
 ${hostexEnriched.length > 0 ? `Reservas Hostex carregadas: ${hostexEnriched.length}. Cite "Fonte: Hostex" ao reportar números financeiros/ocupação.` : ""}
 
 ## RESTRIÇÕES (somente leitura)
