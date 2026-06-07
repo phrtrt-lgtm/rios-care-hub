@@ -388,7 +388,7 @@ export default function Painel() {
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <Card 
                 className="cursor-pointer hover-lift group border-info/30 hover:border-info/30 dark:hover:border-info/30 transition-colors"
-                onClick={() => navigate("/calendario-reservas")}
+                onClick={() => navigate("/admin/central-hostex")}
               >
                 <CardHeader className="py-3 px-4">
                   <div className="flex items-center gap-3">

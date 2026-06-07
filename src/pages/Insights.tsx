@@ -74,13 +74,20 @@ export default function Insights() {
     queryKey: ["insights-reservations", startDate, endDate],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("reservations")
-        .select("id, property_id, check_in, check_out, guest_name")
-        .gte("check_out", startDate)
-        .lte("check_in", endDate)
-        .order("check_in");
+        .from("hostex_reservations")
+        .select("reservation_code, property_id, check_in_date, check_out_date, guest_name")
+        .neq("status", "cancelled")
+        .gte("check_out_date", startDate)
+        .lte("check_in_date", endDate)
+        .order("check_in_date");
       if (error) throw error;
-      return data as Reservation[];
+      return (data || []).map((r: any) => ({
+        id: r.reservation_code,
+        property_id: r.property_id,
+        check_in: r.check_in_date,
+        check_out: r.check_out_date,
+        guest_name: r.guest_name,
+      })) as Reservation[];
     },
   });
 
@@ -205,9 +212,9 @@ export default function Insights() {
               <BarChart3 className="h-4 w-4" />
               Ocupação
             </TabsTrigger>
-            <TabsTrigger value="calendar" className="flex-1 gap-1.5" onClick={() => navigate("/calendario-reservas")}>
+            <TabsTrigger value="calendar" className="flex-1 gap-1.5" onClick={() => navigate("/admin/central-hostex")}>
               <Calendar className="h-4 w-4" />
-              Calendário
+              Central Hostex
             </TabsTrigger>
           </TabsList>
 

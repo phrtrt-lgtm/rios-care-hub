@@ -60,7 +60,7 @@ import ResumoDiario from "./pages/ResumoDiario";
 import ProtocoloTrabalho from "./pages/ProtocoloTrabalho";
 import DebugApp from "./pages/DebugApp";
 import Tutoriais from "./pages/Tutoriais";
-import CalendarioReservas from "./pages/CalendarioReservas";
+
 import AdminRelatorioCobrancas from "./pages/AdminRelatorioCobrancas";
 import RotinaProfissional from "./pages/RotinaProfissional";
 import BookingComissoes from "./pages/BookingComissoes";
@@ -507,14 +507,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/calendario-reservas"
-              element={
-                <ProtectedRoute allowedRoles={['admin', 'maintenance', 'agent']}>
-                  <CalendarioReservas />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/calendario-reservas" element={<Navigate to="/admin/central-hostex" replace />} />
             
             <Route
               path="/admin/relatorio-cobrancas"
