@@ -129,6 +129,11 @@ Deno.serve(async (req) => {
   let propsUpserted = 0;
   let resUpserted = 0;
   let cancelled = 0;
+  let calendarUpserted = 0;
+
+  // Listings agregados de todas as propriedades para depois consultar /listings/calendar
+  type ListingRef = { listing_id: string; channel_type: string; property_id_hostex: string; property_id: string | null };
+  const allListings: ListingRef[] = [];
 
   try {
     // 1) Propriedades
@@ -165,6 +170,20 @@ Deno.serve(async (req) => {
         { onConflict: "id_hostex" },
       );
       propsUpserted++;
+
+      // Coleta listings (channel_type + listing_id) para o passo de calendário
+      const channels = Array.isArray(p.channels) ? p.channels : [];
+      for (const ch of channels) {
+        const lid = String(ch?.listing_id ?? "");
+        const ct = String(ch?.channel_type ?? "");
+        if (!lid || !ct) continue;
+        allListings.push({
+          listing_id: lid,
+          channel_type: ct,
+          property_id_hostex: id_hostex,
+          property_id: matchedLocal,
+        });
+      }
     }
 
     // 2) Reservas (janela passado 30d ... futuro 180d)
