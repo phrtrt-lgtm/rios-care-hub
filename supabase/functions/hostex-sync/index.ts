@@ -58,7 +58,11 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   const url = new URL(req.url);
-  const force = url.searchParams.get("force") === "1";
+  let body: any = {};
+  if (req.method === "POST") {
+    try { body = await req.json(); } catch { /* noop */ }
+  }
+  const force = url.searchParams.get("force") === "1" || body?.force === true;
   const tokenParam = url.searchParams.get("token") || req.headers.get("x-cron-token");
   const cronToken = Deno.env.get("CRON_SECRET_TOKEN");
   const triggeredBy = force ? "manual" : "cron";
