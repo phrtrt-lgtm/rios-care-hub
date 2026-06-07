@@ -26,6 +26,10 @@ export interface PropertyPricingInsight {
   adr_next_30d: number;
   revenue_next_30d: number;
   longest_gap_nights: number;
+  portfolio_avg_adr: number;
+  adr_vs_portfolio_pct: number; // ex: +12 => 12% acima da média do portfólio
+  suggested_discount_pct: number; // 0 = sem desconto; negativo = sugere aumento
+  suggested_price: number; // adr * (1 - suggested_discount_pct/100)
   action: "subir_preco" | "manter" | "descontar_gap" | "preencher_curto";
   rationale: string;
 }
@@ -40,7 +44,19 @@ export function pricingInsights30d(
   const startStr = ymd(start);
   const endStr = ymd(end);
 
-  return properties.map((p) => {
+  type Base = {
+    property_id: string;
+    property_name: string;
+    vacant: number;
+    vacantWk: number;
+    longestGap: number;
+    booked: number;
+    revenue: number;
+    occupancy: number;
+    adr: number;
+  };
+
+  const base: Base[] = properties.map((p) => {
     const res = reservations.filter(
       (r) =>
         String(r.property_id) === String(p.id) &&
@@ -49,7 +65,6 @@ export function pricingInsights30d(
         r.check_in_date < endStr,
     );
 
-    // ocupação dia a dia
     const occupiedDays = new Set<string>();
     let revenue = 0;
     let booked = 0;
@@ -75,8 +90,7 @@ export function pricingInsights30d(
     let curGap = 0;
     for (let t = start.getTime(); t < end.getTime(); t += MS_DAY) {
       const d = new Date(t);
-      const key = ymd(d);
-      if (!occupiedDays.has(key)) {
+      if (!occupiedDays.has(ymd(d))) {
         vacant++;
         if (isWeekend(d)) vacantWk++;
         curGap++;
@@ -86,36 +100,86 @@ export function pricingInsights30d(
       }
     }
 
-    const totalNights = 30;
-    const occupancy = booked / totalNights;
+    const occupancy = booked / 30;
     const adr = booked > 0 ? revenue / booked : 0;
-
-    let action: PropertyPricingInsight["action"];
-    let rationale: string;
-    if (occupancy >= 0.85) {
-      action = "subir_preco";
-      rationale = `Ocupação alta (${(occupancy * 100).toFixed(0)}%) nos próximos 30d. Considere reajustar diária para cima 5–10%.`;
-    } else if (longestGap >= 5) {
-      action = "descontar_gap";
-      rationale = `Janela de ${longestGap} noites livres consecutivas. Aplicar desconto temporário (10–15%) ou min-stay 2 para preencher.`;
-    } else if (vacantWk >= 4) {
-      action = "preencher_curto";
-      rationale = `${vacantWk} noites de fim de semana vagas. Ativar promoção last-minute ou bundle 2 noites.`;
-    } else {
-      action = "manter";
-      rationale = `Ocupação saudável (${(occupancy * 100).toFixed(0)}%), sem gaps críticos. Manter preços.`;
-    }
-
     return {
       property_id: String(p.id),
       property_name: p.name,
-      vacant_nights_30d: vacant,
-      vacant_weekend_nights_30d: vacantWk,
-      total_nights_30d: totalNights,
-      occupancy_30d: occupancy,
-      adr_next_30d: adr,
-      revenue_next_30d: revenue,
-      longest_gap_nights: longestGap,
+      vacant,
+      vacantWk,
+      longestGap,
+      booked,
+      revenue,
+      occupancy,
+      adr,
+    };
+  });
+
+  // Portfolio-wide ADR average (ponderada por noites reservadas; ignora imóveis sem reservas).
+  const totalBooked = base.reduce((s, b) => s + b.booked, 0);
+  const totalRevenue = base.reduce((s, b) => s + b.revenue, 0);
+  const portfolioAdr = totalBooked > 0 ? totalRevenue / totalBooked : 0;
+
+  return base.map((b) => {
+    const adrVsPortfolioPct =
+      portfolioAdr > 0 && b.adr > 0 ? ((b.adr - portfolioAdr) / portfolioAdr) * 100 : 0;
+
+    // Sugestão de desconto baseada em ocupação, gap, fds vagos e desvio do ADR do portfólio.
+    // Positivo = desconto. Negativo = aumento.
+    let discount = 0;
+    let action: PropertyPricingInsight["action"];
+    let rationale: string;
+
+    if (b.occupancy >= 0.85) {
+      discount = -8; // aumentar ~8%
+      action = "subir_preco";
+      rationale = `Ocupação ${(b.occupancy * 100).toFixed(0)}% nos próximos 30d. ADR ${adrVsPortfolioPct >= 0 ? "+" : ""}${adrVsPortfolioPct.toFixed(0)}% vs portfólio. Sugerido aumentar diária ~8%.`;
+    } else if (b.longestGap >= 7) {
+      discount = 15;
+      action = "descontar_gap";
+      rationale = `Gap de ${b.longestGap} noites livres. ADR ${adrVsPortfolioPct >= 0 ? "+" : ""}${adrVsPortfolioPct.toFixed(0)}% vs portfólio. Aplicar 15% de desconto ou min-stay 2.`;
+    } else if (b.longestGap >= 5) {
+      discount = 10;
+      action = "descontar_gap";
+      rationale = `Gap de ${b.longestGap} noites livres. Aplicar 10% de desconto temporário para preencher janela.`;
+    } else if (b.occupancy < 0.4 && b.adr > 0) {
+      // Baixa ocupação — alinhar ao portfólio se estiver caro, senão promo padrão.
+      discount = adrVsPortfolioPct > 5 ? Math.min(20, Math.round(adrVsPortfolioPct)) : 12;
+      action = "descontar_gap";
+      rationale =
+        adrVsPortfolioPct > 5
+          ? `Ocupação ${(b.occupancy * 100).toFixed(0)}% e ADR ${adrVsPortfolioPct.toFixed(0)}% acima da média do portfólio. Reduzir ${discount}% para se alinhar ao mercado interno.`
+          : `Ocupação baixa (${(b.occupancy * 100).toFixed(0)}%). Promo de 12% para destravar reservas.`;
+    } else if (b.vacantWk >= 4) {
+      discount = 10;
+      action = "preencher_curto";
+      rationale = `${b.vacantWk} noites de fim de semana vagas. Promo last-minute de 10% ou bundle 2 noites.`;
+    } else if (b.occupancy < 0.65 && adrVsPortfolioPct > 10) {
+      discount = Math.min(15, Math.round(adrVsPortfolioPct / 2));
+      action = "descontar_gap";
+      rationale = `ADR ${adrVsPortfolioPct.toFixed(0)}% acima da média do portfólio com ocupação ${(b.occupancy * 100).toFixed(0)}%. Reduzir ${discount}% para acelerar reservas.`;
+    } else {
+      discount = 0;
+      action = "manter";
+      rationale = `Ocupação ${(b.occupancy * 100).toFixed(0)}%, ADR ${adrVsPortfolioPct >= 0 ? "+" : ""}${adrVsPortfolioPct.toFixed(0)}% vs portfólio. Manter preços.`;
+    }
+
+    const suggestedPrice = b.adr > 0 ? b.adr * (1 - discount / 100) : 0;
+
+    return {
+      property_id: b.property_id,
+      property_name: b.property_name,
+      vacant_nights_30d: b.vacant,
+      vacant_weekend_nights_30d: b.vacantWk,
+      total_nights_30d: 30,
+      occupancy_30d: b.occupancy,
+      adr_next_30d: b.adr,
+      revenue_next_30d: b.revenue,
+      longest_gap_nights: b.longestGap,
+      portfolio_avg_adr: portfolioAdr,
+      adr_vs_portfolio_pct: adrVsPortfolioPct,
+      suggested_discount_pct: discount,
+      suggested_price: suggestedPrice,
       action,
       rationale,
     };
