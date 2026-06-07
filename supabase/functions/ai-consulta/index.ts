@@ -108,18 +108,16 @@ serve(async (req) => {
     const propertiesWithIcal = new Set<string>(properties.map((p: any) => p.id));
     const propertyNamesWithIcal = new Set<string>(properties.map((p: any) => p.name));
 
-    // ── Hostex (fonte primária) ────────────────────────────────────────────
-    // 1) Lê direto do cache local `hostex_reservations` (sincronizado a cada 6h).
-    // 2) Se cache vazio, chama o proxy ao vivo.
-    // 3) Se tudo falhar, usa o fallback iCal já carregado em `reservations`.
-    let reservationsSource: "hostex_cache" | "hostex_cache_stale" | "hostex_live" | "ical_fallback" = "ical_fallback";
+    // ── Hostex (única fonte de reservas) ──────────────────────────────────
+    // Lê o cache local `hostex_reservations` (sincronizado a cada 6h pelo cron hostex-sync).
+    // Se cache vazio, tenta o proxy ao vivo.
+    let reservationsSource: "hostex_cache" | "hostex_cache_stale" | "hostex_live" | "unavailable" = "unavailable";
     let hostexEnriched: any[] = [];
     let hostexSyncedAt: string | null = null;
     try {
       const horizon = new Date(Date.now() + 120 * 86400000).toISOString().split("T")[0];
       const past = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
 
-      // 1) cache local
       const cacheRes = await supabase
         .from("hostex_reservations")
         .select("reservation_code, property_id, property_id_hostex, channel_type, check_in_date, check_out_date, guests, status, guest_name, total_rate_cents, total_commission_cents, synced_at")
@@ -137,7 +135,6 @@ serve(async (req) => {
         const ageHours = latest ? (Date.now() - new Date(latest).getTime()) / 3600000 : 999;
         reservationsSource = ageHours > 12 ? "hostex_cache_stale" : "hostex_cache";
       } else {
-        // 2) proxy ao vivo
         const proxyResp = await fetch(`${supabaseUrl}/functions/v1/hostex-proxy`, {
           method: "POST",
           headers: {
@@ -181,18 +178,11 @@ serve(async (req) => {
         });
       }
     } catch (e) {
-      console.warn("ai-consulta: hostex unavailable, using iCal fallback", e);
+      console.warn("ai-consulta: hostex unavailable", e);
     }
 
-    const isHostex = reservationsSource !== "ical_fallback";
+    const isHostex = reservationsSource !== "unavailable";
 
-    // Se Hostex está ativa, todos os imóveis podem ser consultados sobre datas
-    if (isHostex) {
-      for (const p of properties) {
-        propertiesWithIcal.add((p as any).id);
-        propertyNamesWithIcal.add((p as any).name);
-      }
-    }
 
     // ── Build structured context ──────────────────────────────────────────
     const owners = profiles.filter((p: any) => p.role === "owner");
