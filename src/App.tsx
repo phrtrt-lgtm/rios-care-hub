@@ -656,6 +656,14 @@ const App = () => (
               }
             />
             <Route
+              path="/admin/central-hostex"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminCentralHostex />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/admin/relatorios-financeiros/:ownerId"
               element={
                 <ProtectedRoute allowedRoles={['admin', 'agent', 'maintenance']}>
