@@ -91,24 +91,10 @@ serve(async (req) => {
         .eq("status", "active")
         .order("name"),
 
-      // Reservations (next 90 days + recent past 30 days) for availability/gaps
-      supabase
-        .from("reservations")
-        .select("id, check_in, check_out, guest_name, summary, status, properties(name)")
-        .gte("check_out", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0])
-        .lte("check_in", in90days)
-        .order("check_in", { ascending: true })
-        .limit(2000),
-
       // Fichas (property_files) — documentação interna em markdown por imóvel
       supabase
         .from("property_files")
         .select("property_id, content_md, version, updated_at"),
-
-      // iCal links — só consultamos datas/disponibilidade de imóveis com iCal configurado
-      supabase
-        .from("property_ical_links")
-        .select("property_id"),
     ]);
 
     const tickets = ticketsRes.data || [];
