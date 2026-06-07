@@ -32,9 +32,7 @@ serve(async (req) => {
       bookingCommissionsRes,
       proposalsRes,
       profilesRes,
-      reservationsRes,
       propertyFilesRes,
-      icalLinksRes,
     ] = await Promise.all([
       // All non-closed tickets with property and owner info
       supabase
@@ -104,13 +102,11 @@ serve(async (req) => {
     const bookingCommissions = bookingCommissionsRes.data || [];
     const proposals = proposalsRes.data || [];
     const profiles = profilesRes.data || [];
-    let reservations: any[] = reservationsRes.data || [];
+    let reservations: any[] = [];
     const propertyFiles = propertyFilesRes.data || [];
-    const icalLinks = icalLinksRes.data || [];
-    const propertiesWithIcal = new Set<string>(icalLinks.map((l: any) => l.property_id));
-    const propertyNamesWithIcal = new Set<string>(
-      properties.filter((p: any) => propertiesWithIcal.has(p.id)).map((p: any) => p.name)
-    );
+    // Hostex é a única fonte: todos os imóveis podem ser consultados sobre datas.
+    const propertiesWithIcal = new Set<string>(properties.map((p: any) => p.id));
+    const propertyNamesWithIcal = new Set<string>(properties.map((p: any) => p.name));
 
     // ── Hostex (fonte primária) ────────────────────────────────────────────
     // 1) Lê direto do cache local `hostex_reservations` (sincronizado a cada 6h).
