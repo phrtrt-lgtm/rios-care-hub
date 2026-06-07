@@ -166,8 +166,8 @@ export default function AdminCentralHostex() {
   const end30 = new Date(today.getTime() + 30 * 86400000).toISOString().slice(0, 10);
 
   const insights = useMemo(
-    () => pricingInsights30d(reservations, properties, today),
-    [reservations, properties],
+    () => pricingInsights30d(reservations, properties, today, listedAdrMap),
+    [reservations, properties, listedAdrMap],
   );
   const pace = useMemo(() => revenuePace30d(reservations, today), [reservations]);
   const mix = useMemo(() => channelMix(reservations), [reservations]);
