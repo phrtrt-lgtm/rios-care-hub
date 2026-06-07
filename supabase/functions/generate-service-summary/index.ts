@@ -62,13 +62,20 @@ Deno.serve(async (req) => {
       .toISOString()
       .split("T")[0];
 
-    const { data: reservations } = await supabase
-      .from("reservations")
-      .select("property_id, check_in, check_out, guest_name")
+    const { data: reservationsRaw } = await supabase
+      .from("hostex_reservations")
+      .select("property_id, check_in_date, check_out_date, guest_name")
       .in("property_id", allPropertyIds)
-      .gte("check_out", today)
-      .lte("check_in", sixtyDays)
-      .order("check_in");
+      .neq("status", "cancelled")
+      .gte("check_out_date", today)
+      .lte("check_in_date", sixtyDays)
+      .order("check_in_date");
+    const reservations = (reservationsRaw || []).map((r: any) => ({
+      property_id: r.property_id,
+      check_in: r.check_in_date,
+      check_out: r.check_out_date,
+      guest_name: r.guest_name,
+    }));
 
     // 3. Get open maintenance tickets (pending services)
     let tickets: any[] = [];

@@ -32,9 +32,7 @@ serve(async (req) => {
       bookingCommissionsRes,
       proposalsRes,
       profilesRes,
-      reservationsRes,
       propertyFilesRes,
-      icalLinksRes,
     ] = await Promise.all([
       // All non-closed tickets with property and owner info
       supabase
@@ -91,24 +89,10 @@ serve(async (req) => {
         .eq("status", "active")
         .order("name"),
 
-      // Reservations (next 90 days + recent past 30 days) for availability/gaps
-      supabase
-        .from("reservations")
-        .select("id, check_in, check_out, guest_name, summary, status, properties(name)")
-        .gte("check_out", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0])
-        .lte("check_in", in90days)
-        .order("check_in", { ascending: true })
-        .limit(2000),
-
       // Fichas (property_files) — documentação interna em markdown por imóvel
       supabase
         .from("property_files")
         .select("property_id, content_md, version, updated_at"),
-
-      // iCal links — só consultamos datas/disponibilidade de imóveis com iCal configurado
-      supabase
-        .from("property_ical_links")
-        .select("property_id"),
     ]);
 
     const tickets = ticketsRes.data || [];
@@ -118,26 +102,22 @@ serve(async (req) => {
     const bookingCommissions = bookingCommissionsRes.data || [];
     const proposals = proposalsRes.data || [];
     const profiles = profilesRes.data || [];
-    let reservations: any[] = reservationsRes.data || [];
+    let reservations: any[] = [];
     const propertyFiles = propertyFilesRes.data || [];
-    const icalLinks = icalLinksRes.data || [];
-    const propertiesWithIcal = new Set<string>(icalLinks.map((l: any) => l.property_id));
-    const propertyNamesWithIcal = new Set<string>(
-      properties.filter((p: any) => propertiesWithIcal.has(p.id)).map((p: any) => p.name)
-    );
+    // Hostex é a única fonte: todos os imóveis podem ser consultados sobre datas.
+    const propertiesWithIcal = new Set<string>(properties.map((p: any) => p.id));
+    const propertyNamesWithIcal = new Set<string>(properties.map((p: any) => p.name));
 
-    // ── Hostex (fonte primária) ────────────────────────────────────────────
-    // 1) Lê direto do cache local `hostex_reservations` (sincronizado a cada 6h).
-    // 2) Se cache vazio, chama o proxy ao vivo.
-    // 3) Se tudo falhar, usa o fallback iCal já carregado em `reservations`.
-    let reservationsSource: "hostex_cache" | "hostex_cache_stale" | "hostex_live" | "ical_fallback" = "ical_fallback";
+    // ── Hostex (única fonte de reservas) ──────────────────────────────────
+    // Lê o cache local `hostex_reservations` (sincronizado a cada 6h pelo cron hostex-sync).
+    // Se cache vazio, tenta o proxy ao vivo.
+    let reservationsSource: "hostex_cache" | "hostex_cache_stale" | "hostex_live" | "unavailable" = "unavailable";
     let hostexEnriched: any[] = [];
     let hostexSyncedAt: string | null = null;
     try {
       const horizon = new Date(Date.now() + 120 * 86400000).toISOString().split("T")[0];
       const past = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
 
-      // 1) cache local
       const cacheRes = await supabase
         .from("hostex_reservations")
         .select("reservation_code, property_id, property_id_hostex, channel_type, check_in_date, check_out_date, guests, status, guest_name, total_rate_cents, total_commission_cents, synced_at")
@@ -155,7 +135,6 @@ serve(async (req) => {
         const ageHours = latest ? (Date.now() - new Date(latest).getTime()) / 3600000 : 999;
         reservationsSource = ageHours > 12 ? "hostex_cache_stale" : "hostex_cache";
       } else {
-        // 2) proxy ao vivo
         const proxyResp = await fetch(`${supabaseUrl}/functions/v1/hostex-proxy`, {
           method: "POST",
           headers: {
@@ -199,18 +178,11 @@ serve(async (req) => {
         });
       }
     } catch (e) {
-      console.warn("ai-consulta: hostex unavailable, using iCal fallback", e);
+      console.warn("ai-consulta: hostex unavailable", e);
     }
 
-    const isHostex = reservationsSource !== "ical_fallback";
+    const isHostex = reservationsSource !== "unavailable";
 
-    // Se Hostex está ativa, todos os imóveis podem ser consultados sobre datas
-    if (isHostex) {
-      for (const p of properties) {
-        propertiesWithIcal.add((p as any).id);
-        propertyNamesWithIcal.add((p as any).name);
-      }
-    }
 
     // ── Build structured context ──────────────────────────────────────────
     const owners = profiles.filter((p: any) => p.role === "owner");
@@ -368,7 +340,7 @@ serve(async (req) => {
     };
 
     ctx.push(`\n=== CALENDÁRIO DE RESERVAS – PRÓXIMOS 90 DIAS (hoje: ${toBR(today)}) ===`);
-    ctx.push(`Fonte: ${isHostex ? `Hostex (${reservationsSource}${hostexSyncedAt ? `, sincronizado em ${new Date(hostexSyncedAt).toLocaleString("pt-BR")}` : ""})` : "iCal fallback"}. ${isHostex ? "Todos os imóveis têm dados de reservas via Hostex." : "Apenas imóveis com iCal configurado têm dados de reservas/disponibilidade. Imóveis sem iCal NÃO devem ser consultados sobre datas."}`);
+    ctx.push(`Fonte: ${isHostex ? `Hostex (${reservationsSource}${hostexSyncedAt ? `, sincronizado em ${new Date(hostexSyncedAt).toLocaleString("pt-BR")}` : ""})` : "Hostex indisponível"}. Todos os imóveis têm dados de reservas via Hostex.`);
     ctx.push(`REGRA CRÍTICA – NÃO ALUCINAR DATAS: Liste APENAS as reservas (📅) e janelas (⬜) explicitamente presentes abaixo. NUNCA invente reservas, janelas, períodos ou datas que não estejam literalmente listadas. Todas as datas estão no formato BR (DD/MM/AAAA) — use sempre esse formato nas respostas. Se após a última reserva listada (marcada como "FIM DAS RESERVAS") não houver mais nada, o imóvel está TOTALMENTE LIVRE a partir do checkout daquela última reserva — responda exatamente isso, sem fragmentar em sub-períodos fictícios.\n`);
 
     for (const [propName, rList] of Object.entries(resByProp)) {
@@ -428,13 +400,8 @@ serve(async (req) => {
       }
     }
 
-    // List properties WITHOUT iCal so the AI knows it cannot answer date queries for them
-    const noIcalProps = properties.filter((p: any) => !propertiesWithIcal.has(p.id)).map((p: any) => p.name);
-    if (noIcalProps.length > 0) {
-      ctx.push(`\n=== IMÓVEIS SEM iCAL CONFIGURADO (${noIcalProps.length}) ===`);
-      ctx.push(`Para os imóveis abaixo NÃO há sincronização de calendário. NÃO responda perguntas sobre disponibilidade, ocupação, datas livres, próximas reservas ou janelas — informe que esses imóveis não possuem iCal configurado:`);
-      for (const n of noIcalProps) ctx.push(`  • ${n}`);
-    }
+
+
 
     // ── Fichas dos imóveis (markdown) ─────────────────────────────────────
     // Documentação técnica/operacional de cada unidade: wifi, chaves, comodidades,
@@ -469,15 +436,15 @@ serve(async (req) => {
 
     if (isAvailabilityQuestion && mentionedProperty) {
       const propertyName = mentionedProperty.name;
-      const hasIcal = propertiesWithIcal.has(mentionedProperty.id);
 
-      if (!hasIcal) {
+      if (!isHostex) {
         return new Response(JSON.stringify({
-          reply: `O imóvel ${propertyName} não tem calendário sincronizado no sistema, então eu não consigo confirmar disponibilidade com segurança.`,
+          reply: `No momento não consegui acessar os dados da Hostex para confirmar a disponibilidade de ${propertyName}. Tente novamente em instantes.`,
         }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+
 
       const propertyReservations = [...(resByProp[propertyName] || [])].sort((a, b) => a.check_in.localeCompare(b.check_in));
       const askedDate = parseDateFromQuestion(lastUserMessage);
@@ -589,7 +556,7 @@ A RIOS é uma empresa de gestão de hospedagens por temporada. Gerenciamos imóv
 - Use emojis com moderação para facilitar a leitura (🔴 urgente, ✅ pago, ⏳ pendente)
 
 ## DADOS ATUAIS DO SISTEMA (${new Date().toLocaleDateString("pt-BR")})
-FONTE DE RESERVAS: ${isHostex ? `Hostex (${reservationsSource})${hostexSyncedAt ? ` — última sincronização: ${new Date(hostexSyncedAt).toLocaleString("pt-BR")}` : ""}` : "iCal TalkGuest (fallback — Hostex indisponível)"}
+FONTE DE RESERVAS: ${isHostex ? `Hostex (${reservationsSource})${hostexSyncedAt ? ` — última sincronização: ${new Date(hostexSyncedAt).toLocaleString("pt-BR")}` : ""}` : "Hostex indisponível no momento"}
 ${hostexEnriched.length > 0 ? `Reservas Hostex carregadas: ${hostexEnriched.length}. Cite "Fonte: Hostex" ao reportar números financeiros/ocupação.` : ""}
 
 ## RESTRIÇÕES (somente leitura)

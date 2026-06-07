@@ -152,40 +152,8 @@ async function isCacheStale(supabase: any): Promise<boolean> {
   return ageH > STALE_THRESHOLD_HOURS;
 }
 
-// ─── Fallback iCal (último recurso) ──────────────────────────────────────
-async function fallbackFromIcal(action: Action, params: any, supabase: any): Promise<any> {
-  if (action === "search_reservations") {
-    let q = supabase
-      .from("reservations")
-      .select("id, property_id, check_in, check_out, guest_name, status, properties(name)")
-      .order("check_in", { ascending: true })
-      .limit(2000);
-    if (params?.start_date) q = q.gte("check_out", params.start_date);
-    if (params?.end_date) q = q.lte("check_in", params.end_date);
-    if (params?.property_id) q = q.eq("property_id", params.property_id);
-    const { data, error } = await q;
-    if (error) throw error;
-    return {
-      reservations: (data || []).map((r: any) => ({
-        reservation_code: r.id,
-        property_id: r.property_id,
-        property_name: r.properties?.name ?? null,
-        channel_type: "ical",
-        check_in_date: r.check_in,
-        check_out_date: r.check_out,
-        number_of_guests: null,
-        status: r.status ?? "confirmed",
-        guest_name: r.guest_name,
-        rates: null,
-      })),
-    };
-  }
-  if (action === "search_properties") {
-    const { data } = await supabase.from("properties").select("id, name, address").order("name");
-    return { properties: (data || []).map((p: any) => ({ id: p.id, name: p.name, address: p.address })) };
-  }
-  return { calendars: [], transactions: [] };
-}
+// (sem fallback iCal — Hostex é a única fonte de reservas)
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -268,19 +236,11 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 3) Fallback iCal
-    try {
-      const data = await fallbackFromIcal(action, params, supabase);
-      const payload = { source: "ical_fallback", data };
-      return new Response(JSON.stringify(payload), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    } catch (e) {
-      return new Response(
-        JSON.stringify({ source: "error", error: e instanceof Error ? e.message : "fallback_failed" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
+    // 3) Sem dados disponíveis
+    return new Response(
+      JSON.stringify({ source: "unavailable", data: { reservations: [], properties: [], calendars: [] } }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   } catch (e) {
     return new Response(
       JSON.stringify({ source: "error", error: e instanceof Error ? e.message : "unknown" }),
