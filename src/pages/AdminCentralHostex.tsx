@@ -266,7 +266,7 @@ export default function AdminCentralHostex() {
             <Button size="sm" variant="outline" onClick={exportInsightsCsv}>Exportar CSV</Button>
           </div>
           {insights.length === 0 ? (
-            <EmptyState icon={TrendingUp} title="Sem dados de insights" description="Sincronize a Hostex para gerar insights." />
+            <EmptyState icon={<TrendingUp className="h-8 w-8" />} title="Sem dados de insights" description="Sincronize a Hostex para gerar insights." />
           ) : (
             <Card>
               <CardContent className="p-0 overflow-x-auto">
@@ -348,7 +348,7 @@ export default function AdminCentralHostex() {
 
         <TabsContent value="reservations" className="space-y-4">
           {reservations.length === 0 ? (
-            <EmptyState icon={Calendar} title="Nenhuma reserva" description="Sincronize a Hostex." />
+            <EmptyState icon={<Calendar className="h-8 w-8" />} title="Nenhuma reserva" description="Sincronize a Hostex." />
           ) : (
             <Card>
               <CardContent className="p-0 overflow-x-auto">
@@ -389,7 +389,7 @@ export default function AdminCentralHostex() {
 
         <TabsContent value="logs" className="space-y-4">
           {syncLogs.length === 0 ? (
-            <EmptyState icon={AlertTriangle} title="Sem sincronizações registradas" description="Clique em 'Sincronizar agora' para começar." />
+            <EmptyState icon={<AlertTriangle className="h-8 w-8" />} title="Sem sincronizações registradas" description="Clique em 'Sincronizar agora' para começar." />
           ) : (
             <Card>
               <CardContent className="p-0 overflow-x-auto">
