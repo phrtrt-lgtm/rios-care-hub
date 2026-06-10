@@ -1,0 +1,2 @@
+ALTER TABLE public.charges ADD COLUMN IF NOT EXISTS reserve_reservations jsonb;
+COMMENT ON COLUMN public.charges.reserve_reservations IS 'Array of reservations used to cover the debt: [{date, owner_value_cents, owner_receives_cents}]';

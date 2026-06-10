@@ -7,15 +7,23 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+interface ReservationItem {
+  date: string;
+  owner_value_cents: number;
+  owner_receives_cents: number;
+  coverage_cents: number;
+}
+
 interface DebitReserveRequest {
   chargeIds: string[];
-  reserveDate: string; // Required now - check-in date
+  reserveDate: string;
   ownerValueCents: number;
   baseCommissionPercent: number;
   extraCommissionPercent: number;
   extraCommissionPercentExact?: number;
   totalCommissionPercent: number;
   ownerReceivesCents: number;
+  reservations?: ReservationItem[];
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -37,8 +45,18 @@ const handler = async (req: Request): Promise<Response> => {
       extraCommissionPercent,
       extraCommissionPercentExact,
       totalCommissionPercent, 
-      ownerReceivesCents 
+      ownerReceivesCents,
+      reservations,
     } = body;
+
+    const reservationList: ReservationItem[] = reservations && reservations.length > 0
+      ? reservations
+      : [{
+          date: reserveDate,
+          owner_value_cents: ownerValueCents,
+          owner_receives_cents: ownerReceivesCents,
+          coverage_cents: ownerValueCents - ownerReceivesCents,
+        }];
 
     if (!chargeIds || chargeIds.length === 0) {
       return new Response(
@@ -129,12 +147,13 @@ const handler = async (req: Request): Promise<Response> => {
       .update({ 
         status: 'aguardando_reserva',
         updated_at: debitedAt,
-        reserve_debit_date: reserveDate,
+        reserve_debit_date: reservationList[0].date,
         reserve_commission_percent: totalCommissionPercent,
         reserve_base_commission_percent: baseCommissionPercent,
         reserve_extra_commission_percent: extraCommissionPercent,
         reserve_owner_value_cents: ownerValueCents,
         reserve_owner_receives_cents: ownerReceivesCents,
+        reserve_reservations: reservationList,
       })
       .in('id', chargeIdsToProcess);
 
@@ -201,7 +220,43 @@ const handler = async (req: Request): Promise<Response> => {
     // Build charge titles for notification
     const chargeTitles = chargesToProcess.map(c => c.title).join(', ');
 
-    const formattedCheckIn = new Date(reserveDate).toLocaleDateString('pt-BR');
+    const formattedCheckIn = new Date(reservationList[0].date).toLocaleDateString('pt-BR');
+
+    // Build reservations HTML table for email
+    const reservationsTableHtml = `
+      <div style="margin:24px 0;padding:16px;background:#f8f9fa;border-radius:8px;border:1px solid #e5e7eb">
+        <h3 style="margin:0 0 12px;color:#1a1a1a;font-size:15px">Reservas utilizadas para cobrir o débito (${reservationList.length})</h3>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead>
+            <tr style="background:#eef2ff;color:#1a1a1a">
+              <th style="padding:8px;text-align:left;border-bottom:1px solid #d1d5db">Check-in</th>
+              <th style="padding:8px;text-align:right;border-bottom:1px solid #d1d5db">Valor original</th>
+              <th style="padding:8px;text-align:right;border-bottom:1px solid #d1d5db">Cobre da dívida</th>
+              <th style="padding:8px;text-align:right;border-bottom:1px solid #d1d5db">Receberá</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${reservationList.map(r => `
+              <tr>
+                <td style="padding:8px;border-bottom:1px solid #f1f5f9">${new Date(r.date).toLocaleDateString('pt-BR')}</td>
+                <td style="padding:8px;text-align:right;border-bottom:1px solid #f1f5f9">${formatCurrency(r.owner_value_cents)}</td>
+                <td style="padding:8px;text-align:right;border-bottom:1px solid #f1f5f9;color:#b91c1c">- ${formatCurrency(r.coverage_cents)}</td>
+                <td style="padding:8px;text-align:right;border-bottom:1px solid #f1f5f9"><strong>${formatCurrency(r.owner_receives_cents)}</strong></td>
+              </tr>
+            `).join('')}
+          </tbody>
+          <tfoot>
+            <tr style="font-weight:600;background:#f1f5f9">
+              <td style="padding:8px">Total</td>
+              <td style="padding:8px;text-align:right">${formatCurrency(ownerValueCents)}</td>
+              <td style="padding:8px;text-align:right;color:#b91c1c">- ${formatCurrency(ownerValueCents - ownerReceivesCents)}</td>
+              <td style="padding:8px;text-align:right">${formatCurrency(ownerReceivesCents)}</td>
+            </tr>
+          </tfoot>
+        </table>
+        <p style="margin:12px 0 0;font-size:12px;color:#6b7280">Comissão única configurada em todas as reservas: <strong>${totalCommissionPercent.toFixed(0)}%</strong> (base ${baseCommissionPercent.toFixed(0)}% + ${extraCommissionPercent}% extra)</p>
+      </div>
+    `;
     
     // Create notification in the system
     const { error: notifError } = await supabase
@@ -255,6 +310,15 @@ const handler = async (req: Request): Promise<Response> => {
           bodyHtml = bodyHtml
             .replace(/\{\{#if reserve_date\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1')
             .replace(/\{\{reserve_date\}\}/g, formattedCheckIn);
+
+          // Inject reservations table (replace placeholder if present, else append before </body>)
+          if (bodyHtml.includes('{{reservations_table}}')) {
+            bodyHtml = bodyHtml.replace(/\{\{reservations_table\}\}/g, reservationsTableHtml);
+          } else if (bodyHtml.includes('</body>')) {
+            bodyHtml = bodyHtml.replace('</body>', `${reservationsTableHtml}</body>`);
+          } else {
+            bodyHtml = `${bodyHtml}${reservationsTableHtml}`;
+          }
 
           const resend = new Resend(resendApiKey);
           await resend.emails.send({
