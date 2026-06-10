@@ -67,6 +67,7 @@ export default function AdminCentralHostex() {
   const [syncing, setSyncing] = useState(false);
   const [reservations, setReservations] = useState<HostexReservation[]>([]);
   const [properties, setProperties] = useState<Array<{ id: string; name: string }>>([]);
+  const [hostexNameMap, setHostexNameMap] = useState<Map<string, string>>(new Map());
   const [listedAdrMap, setListedAdrMap] = useState<Map<string, number>>(new Map());
   const [syncLogs, setSyncLogs] = useState<SyncLog[]>([]);
   const [lastSync, setLastSync] = useState<string | null>(null);
