@@ -82,7 +82,7 @@ export default function AdminCentralHostex() {
       const priceStart = today.toISOString().slice(0, 10);
       const priceEnd = new Date(today.getTime() + 30 * 86400000).toISOString().slice(0, 10);
 
-      const [resResp, propResp, logsResp, calResp, hxPropsResp] = await Promise.all([
+      const [resResp, propResp, logsResp, calResp, hxPropsResp, localPropsResp] = await Promise.all([
         supabase.functions.invoke("hostex-proxy", {
           body: { action: "search_reservations", params: { start_date: start, end_date: end } },
         }),
@@ -100,6 +100,7 @@ export default function AdminCentralHostex() {
           .gte("date", priceStart)
           .lt("date", priceEnd),
         supabase.from("hostex_properties").select("id_hostex, property_id"),
+        supabase.from("properties").select("id, name"),
       ]);
 
       const rData: any = resResp.data;
@@ -108,6 +109,24 @@ export default function AdminCentralHostex() {
         rData?.data?.reservations ?? rData?.data?.data?.reservations ?? [];
       const props: any[] =
         pData?.data?.properties ?? pData?.data?.data?.properties ?? [];
+
+      // Mapa de id_hostex -> nome local da propriedade
+      const localById = new Map<string, string>();
+      for (const lp of (localPropsResp.data as any[]) || []) {
+        localById.set(String(lp.id), lp.name);
+      }
+      const nameMap = new Map<string, string>();
+      for (const hp of (hxPropsResp.data as any[]) || []) {
+        const localName = localById.get(String(hp.property_id));
+        if (localName) nameMap.set(String(hp.id_hostex), localName);
+      }
+      // Fallback: nomes vindos do próprio Hostex
+      for (const p of props) {
+        if (!nameMap.has(String(p.id))) {
+          const fallback = p.name ?? p.title ?? p.property_name;
+          if (fallback) nameMap.set(String(p.id), fallback);
+        }
+      }
 
       // Calcula preço médio listado (BRL) por property_id_hostex e por property_id local.
       const sums = new Map<string, { total: number; n: number }>();
@@ -127,7 +146,8 @@ export default function AdminCentralHostex() {
       }
 
       setReservations(list);
-      setProperties(props.map((p) => ({ id: String(p.id), name: p.name })));
+      setProperties(props.map((p) => ({ id: String(p.id), name: nameMap.get(String(p.id)) ?? p.name ?? p.title ?? String(p.id) })));
+      setHostexNameMap(nameMap);
       setListedAdrMap(avgMap);
       setSyncLogs((logsResp.data as SyncLog[]) || []);
       setLastSync(rData?.synced_at ?? null);
