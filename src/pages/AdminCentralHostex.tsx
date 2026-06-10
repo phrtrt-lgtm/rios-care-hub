@@ -422,7 +422,7 @@ export default function AdminCentralHostex() {
                         <TableRow key={r.reservation_code}>
                           <TableCell>{r.check_in_date}</TableCell>
                           <TableCell>{r.check_out_date}</TableCell>
-                          <TableCell>{r.property_name ?? r.property_id}</TableCell>
+                          <TableCell>{r.property_name ?? properties.find((p) => p.id === String(r.property_id))?.name ?? r.property_id}</TableCell>
                           <TableCell><Badge variant="outline">{formatChannelLabel(r.channel_type)}</Badge></TableCell>
                           <TableCell>{r.guest_name ?? "—"}</TableCell>
                           <TableCell className="text-right">{formatBRL(r.rates?.total_rate?.amount)}</TableCell>
