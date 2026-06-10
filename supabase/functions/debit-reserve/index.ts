@@ -220,7 +220,43 @@ const handler = async (req: Request): Promise<Response> => {
     // Build charge titles for notification
     const chargeTitles = chargesToProcess.map(c => c.title).join(', ');
 
-    const formattedCheckIn = new Date(reserveDate).toLocaleDateString('pt-BR');
+    const formattedCheckIn = new Date(reservationList[0].date).toLocaleDateString('pt-BR');
+
+    // Build reservations HTML table for email
+    const reservationsTableHtml = `
+      <div style="margin:24px 0;padding:16px;background:#f8f9fa;border-radius:8px;border:1px solid #e5e7eb">
+        <h3 style="margin:0 0 12px;color:#1a1a1a;font-size:15px">Reservas utilizadas para cobrir o débito (${reservationList.length})</h3>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead>
+            <tr style="background:#eef2ff;color:#1a1a1a">
+              <th style="padding:8px;text-align:left;border-bottom:1px solid #d1d5db">Check-in</th>
+              <th style="padding:8px;text-align:right;border-bottom:1px solid #d1d5db">Valor original</th>
+              <th style="padding:8px;text-align:right;border-bottom:1px solid #d1d5db">Cobre da dívida</th>
+              <th style="padding:8px;text-align:right;border-bottom:1px solid #d1d5db">Receberá</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${reservationList.map(r => `
+              <tr>
+                <td style="padding:8px;border-bottom:1px solid #f1f5f9">${new Date(r.date).toLocaleDateString('pt-BR')}</td>
+                <td style="padding:8px;text-align:right;border-bottom:1px solid #f1f5f9">${formatCurrency(r.owner_value_cents)}</td>
+                <td style="padding:8px;text-align:right;border-bottom:1px solid #f1f5f9;color:#b91c1c">- ${formatCurrency(r.coverage_cents)}</td>
+                <td style="padding:8px;text-align:right;border-bottom:1px solid #f1f5f9"><strong>${formatCurrency(r.owner_receives_cents)}</strong></td>
+              </tr>
+            `).join('')}
+          </tbody>
+          <tfoot>
+            <tr style="font-weight:600;background:#f1f5f9">
+              <td style="padding:8px">Total</td>
+              <td style="padding:8px;text-align:right">${formatCurrency(ownerValueCents)}</td>
+              <td style="padding:8px;text-align:right;color:#b91c1c">- ${formatCurrency(ownerValueCents - ownerReceivesCents)}</td>
+              <td style="padding:8px;text-align:right">${formatCurrency(ownerReceivesCents)}</td>
+            </tr>
+          </tfoot>
+        </table>
+        <p style="margin:12px 0 0;font-size:12px;color:#6b7280">Comissão única configurada em todas as reservas: <strong>${totalCommissionPercent.toFixed(0)}%</strong> (base ${baseCommissionPercent.toFixed(0)}% + ${extraCommissionPercent}% extra)</p>
+      </div>
+    `;
     
     // Create notification in the system
     const { error: notifError } = await supabase
