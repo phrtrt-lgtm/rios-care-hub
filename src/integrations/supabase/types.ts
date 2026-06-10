@@ -841,6 +841,7 @@ export type Database = {
           reserve_extra_commission_percent: number | null
           reserve_owner_receives_cents: number | null
           reserve_owner_value_cents: number | null
+          reserve_reservations: Json | null
           service_type: string | null
           split_owner_percent: number | null
           status: string
@@ -883,6 +884,7 @@ export type Database = {
           reserve_extra_commission_percent?: number | null
           reserve_owner_receives_cents?: number | null
           reserve_owner_value_cents?: number | null
+          reserve_reservations?: Json | null
           service_type?: string | null
           split_owner_percent?: number | null
           status?: string
@@ -925,6 +927,7 @@ export type Database = {
           reserve_extra_commission_percent?: number | null
           reserve_owner_receives_cents?: number | null
           reserve_owner_value_cents?: number | null
+          reserve_reservations?: Json | null
           service_type?: string | null
           split_owner_percent?: number | null
           status?: string
