@@ -7,15 +7,23 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+interface ReservationItem {
+  date: string;
+  owner_value_cents: number;
+  owner_receives_cents: number;
+  coverage_cents: number;
+}
+
 interface DebitReserveRequest {
   chargeIds: string[];
-  reserveDate: string; // Required now - check-in date
+  reserveDate: string;
   ownerValueCents: number;
   baseCommissionPercent: number;
   extraCommissionPercent: number;
   extraCommissionPercentExact?: number;
   totalCommissionPercent: number;
   ownerReceivesCents: number;
+  reservations?: ReservationItem[];
 }
 
 const handler = async (req: Request): Promise<Response> => {
