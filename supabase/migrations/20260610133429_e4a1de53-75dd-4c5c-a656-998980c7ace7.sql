@@ -1,0 +1,1 @@
+ALTER TABLE public.charges ADD COLUMN IF NOT EXISTS reserve_revert_alert_sent_at TIMESTAMPTZ;
