@@ -147,12 +147,13 @@ const handler = async (req: Request): Promise<Response> => {
       .update({ 
         status: 'aguardando_reserva',
         updated_at: debitedAt,
-        reserve_debit_date: reserveDate,
+        reserve_debit_date: reservationList[0].date,
         reserve_commission_percent: totalCommissionPercent,
         reserve_base_commission_percent: baseCommissionPercent,
         reserve_extra_commission_percent: extraCommissionPercent,
         reserve_owner_value_cents: ownerValueCents,
         reserve_owner_receives_cents: ownerReceivesCents,
+        reserve_reservations: reservationList,
       })
       .in('id', chargeIdsToProcess);
 
