@@ -45,8 +45,18 @@ const handler = async (req: Request): Promise<Response> => {
       extraCommissionPercent,
       extraCommissionPercentExact,
       totalCommissionPercent, 
-      ownerReceivesCents 
+      ownerReceivesCents,
+      reservations,
     } = body;
+
+    const reservationList: ReservationItem[] = reservations && reservations.length > 0
+      ? reservations
+      : [{
+          date: reserveDate,
+          owner_value_cents: ownerValueCents,
+          owner_receives_cents: ownerReceivesCents,
+          coverage_cents: ownerValueCents - ownerReceivesCents,
+        }];
 
     if (!chargeIds || chargeIds.length === 0) {
       return new Response(
