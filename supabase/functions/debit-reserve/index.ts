@@ -311,6 +311,15 @@ const handler = async (req: Request): Promise<Response> => {
             .replace(/\{\{#if reserve_date\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1')
             .replace(/\{\{reserve_date\}\}/g, formattedCheckIn);
 
+          // Inject reservations table (replace placeholder if present, else append before </body>)
+          if (bodyHtml.includes('{{reservations_table}}')) {
+            bodyHtml = bodyHtml.replace(/\{\{reservations_table\}\}/g, reservationsTableHtml);
+          } else if (bodyHtml.includes('</body>')) {
+            bodyHtml = bodyHtml.replace('</body>', `${reservationsTableHtml}</body>`);
+          } else {
+            bodyHtml = `${bodyHtml}${reservationsTableHtml}`;
+          }
+
           const resend = new Resend(resendApiKey);
           await resend.emails.send({
             from: mailFrom,
