@@ -314,7 +314,7 @@ export default function AdminContratoTemplates() {
                   className="min-h-[300px] font-mono text-sm"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Use variáveis no formato {"{{owner.name}}"}, {"{{contract.commission_percent}}"%}, etc.
+                  Use variáveis no formato {"{{owner.name}}"}, {"{{contract.commission_percent}}"}%, etc.
                 </p>
               </div>
 
