@@ -263,6 +263,9 @@ export default function AdminContratoTemplates() {
                     </p>
                   </div>
                   <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="icon" title="Visualizar" onClick={() => openPreview(t)}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
                     {!t.is_default && !t.archived_at && (
                       <Button variant="ghost" size="icon" title="Definir como padrão" onClick={() => setDefault(t.id)}>
                         <Star className="h-4 w-4" />
