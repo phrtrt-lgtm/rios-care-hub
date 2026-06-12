@@ -28,6 +28,7 @@ import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { OwnerOnboardingTour } from "@/components/OwnerOnboardingTour";
 import { motion } from "framer-motion";
 import { OwnerBookingCommissionsPreview } from "@/components/OwnerBookingCommissionsPreview";
+import { OwnerContractInviteCard } from "@/components/contracts/OwnerContractInviteCard";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 
 
@@ -255,6 +256,9 @@ export default function MinhaCaixa() {
             <span className="text-xs text-success font-medium hidden sm:block">Ver →</span>
           </motion.div>
         </div>
+
+        <OwnerContractInviteCard />
+
 
         {/* Propostas Pendentes - Prioridade no topo - na íntegra para owners */}
         <motion.div
