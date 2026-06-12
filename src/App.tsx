@@ -95,6 +95,7 @@ import CuradoriaPublica from "./pages/CuradoriaPublica";
 import AdminContratos from "./pages/AdminContratos";
 import AdminContratoNovo from "./pages/AdminContratoNovo";
 import AdminContratoDetalhes from "./pages/AdminContratoDetalhes";
+import AdminContratoTemplates from "./pages/AdminContratoTemplates";
 import ContratoProprietario from "./pages/ContratoProprietario";
 const queryClient = new QueryClient();
 
@@ -695,6 +696,7 @@ const App = () => (
             <Route path="/admin/contratos" element={<ProtectedRoute allowedRoles={['admin']}><AdminContratos /></ProtectedRoute>} />
             <Route path="/admin/contratos/novo" element={<ProtectedRoute allowedRoles={['admin']}><AdminContratoNovo /></ProtectedRoute>} />
             <Route path="/admin/contratos/:id" element={<ProtectedRoute allowedRoles={['admin']}><AdminContratoDetalhes /></ProtectedRoute>} />
+            <Route path="/admin/contratos/modelos" element={<ProtectedRoute allowedRoles={['admin']}><AdminContratoTemplates /></ProtectedRoute>} />
             <Route path="/contrato/:id" element={<ProtectedRoute allowedRoles={['owner']}><ContratoProprietario /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
