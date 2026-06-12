@@ -18,7 +18,7 @@ export function OwnerContractInviteCard() {
         .from("contracts")
         .select("id, status, property_id, properties:property_id(name)")
         .eq("owner_id", user.id)
-        .in("status", ["awaiting_owner", "owner_filling", "correction_requested"])
+        .eq("status", "awaiting_owner")
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -28,8 +28,6 @@ export function OwnerContractInviteCard() {
 
   if (!contract) return null;
 
-  const isCorrection = contract.status === "correction_requested";
-
   return (
     <Card className="border-primary/30 bg-primary/5">
       <CardContent className="p-5 flex items-start gap-4">
@@ -37,16 +35,12 @@ export function OwnerContractInviteCard() {
           <FileSignature className="h-5 w-5 text-primary" />
         </div>
         <div className="flex-1">
-          <p className="font-semibold">
-            {isCorrection ? "Correção solicitada no contrato" : "Preencha seus dados para emissão do contrato"}
-          </p>
+          <p className="font-semibold">Contrato aguardando sua assinatura</p>
           <p className="text-sm text-muted-foreground mt-1">
-            {isCorrection
-              ? "A RIOS pediu ajustes nos dados que você informou. Revise e reenvie."
-              : `A RIOS criou o pré-contrato${contract.properties?.name ? ` do imóvel ${contract.properties.name}` : ""}. Complete seus dados para gerarmos a versão final.`}
+            A RIOS enviou seu contrato{contract.properties?.name ? ` do imóvel ${contract.properties.name}` : ""}. Baixe, assine no gov.br e envie de volta.
           </p>
           <Button className="mt-3" size="sm" onClick={() => navigate(`/contrato/${contract.id}`)}>
-            {isCorrection ? "Revisar dados" : "Preencher agora"} <ArrowRight className="ml-1 h-4 w-4" />
+            Ver contrato <ArrowRight className="ml-1 h-4 w-4" />
           </Button>
         </div>
       </CardContent>
