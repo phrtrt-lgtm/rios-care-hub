@@ -50,9 +50,14 @@ export default function AdminContratos() {
             </h1>
             <p className="text-sm text-muted-foreground">Gestão completa de contratos com proprietários.</p>
           </div>
-          <Button onClick={() => navigate("/admin/contratos/novo")}>
-            <Plus className="h-4 w-4 mr-1" /> Novo contrato
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate("/admin/contratos/modelos")}>
+              <FileText className="h-4 w-4 mr-1" /> Modelos
+            </Button>
+            <Button onClick={() => navigate("/admin/contratos/novo")}>
+              <Plus className="h-4 w-4 mr-1" /> Novo contrato
+            </Button>
+          </div>
         </div>
       </header>
 
