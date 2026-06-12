@@ -50,14 +50,9 @@ export default function AdminContratos() {
             </h1>
             <p className="text-sm text-muted-foreground">Gestão completa de contratos com proprietários.</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => navigate("/admin/contratos/modelos")}>
-              <FileText className="h-4 w-4 mr-1" /> Modelos
-            </Button>
-            <Button onClick={() => navigate("/admin/contratos/novo")}>
-              <Plus className="h-4 w-4 mr-1" /> Novo contrato
-            </Button>
-          </div>
+          <Button onClick={() => navigate("/admin/contratos/novo")}>
+            <Plus className="h-4 w-4 mr-1" /> Novo contrato
+          </Button>
         </div>
       </header>
 
@@ -82,7 +77,7 @@ export default function AdminContratos() {
                       <ContractStatusBadge status={r.status} />
                     </div>
                     <p className="text-xs text-muted-foreground truncate">
-                      {r.property?.name ?? "Sem imóvel"} · Comissão {r.commission_percent}% · {r.term_months} meses
+                      {r.property?.name ?? "Sem imóvel"} · {r.owner?.email ?? ""}
                     </p>
                   </div>
                   <p className="text-xs text-muted-foreground whitespace-nowrap">
