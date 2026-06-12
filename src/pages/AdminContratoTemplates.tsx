@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -66,6 +66,8 @@ export default function AdminContratoTemplates() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [q, setQ] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
   const [editing, setEditing] = useState<Template | null>(null);
   const [name, setName] = useState("");
   const [contentMd, setContentMd] = useState("");
@@ -110,6 +112,11 @@ export default function AdminContratoTemplates() {
     setContentMd(t.content_md);
     setVariablesSchema(JSON.stringify(t.variables_schema ?? {}, null, 2));
     setDialogOpen(true);
+  };
+
+  const openPreview = (t: Template) => {
+    setPreviewTemplate(t);
+    setPreviewOpen(true);
   };
 
   const handleSave = async () => {
@@ -256,6 +263,9 @@ export default function AdminContratoTemplates() {
                     </p>
                   </div>
                   <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="icon" title="Visualizar" onClick={() => openPreview(t)}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
                     {!t.is_default && !t.archived_at && (
                       <Button variant="ghost" size="icon" title="Definir como padrão" onClick={() => setDefault(t.id)}>
                         <Star className="h-4 w-4" />
@@ -342,6 +352,36 @@ export default function AdminContratoTemplates() {
             <Button onClick={handleSave} disabled={saving}>
               {saving ? "Salvando..." : editing ? "Salvar alterações" : "Criar modelo"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] flex flex-col p-0 overflow-hidden">
+          <DialogHeader className="px-6 py-4 border-b shrink-0">
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-4 w-4" />
+              {previewTemplate?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto bg-muted/30 p-6">
+            {previewTemplate && (
+              <ContractTemplatePreview
+                templateMd={previewTemplate.content_md}
+                contract={PLACEHOLDER_DATA.contract}
+                owner={PLACEHOLDER_DATA.owner}
+                property={PLACEHOLDER_DATA.property}
+              />
+            )}
+          </div>
+          <DialogFooter className="px-6 py-4 border-t shrink-0 gap-2">
+            <Button variant="outline" onClick={() => setPreviewOpen(false)}>
+              Fechar
+            </Button>
+            {previewTemplate && (
+              <Button onClick={() => { setPreviewOpen(false); openEdit(previewTemplate); }}>
+                <Pencil className="h-4 w-4 mr-1" /> Editar modelo
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
