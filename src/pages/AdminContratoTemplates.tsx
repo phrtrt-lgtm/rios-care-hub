@@ -114,6 +114,11 @@ export default function AdminContratoTemplates() {
     setDialogOpen(true);
   };
 
+  const openPreview = (t: Template) => {
+    setPreviewTemplate(t);
+    setPreviewOpen(true);
+  };
+
   const handleSave = async () => {
     if (!name.trim() || !contentMd.trim()) {
       toast({ title: "Preencha nome e conteúdo", variant: "destructive" });
