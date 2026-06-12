@@ -1282,12 +1282,14 @@ export type Database = {
           notes: string | null
           owner_id: string
           property_id: string | null
+          sent_to_owner_at: string | null
           signature_provider: string | null
           signed_at: string | null
+          signed_pdf_path: string | null
           specific_terms: string | null
           start_date: string | null
           status: Database["public"]["Enums"]["contract_status"]
-          template_id: string
+          template_id: string | null
           term_months: number
           updated_at: string
           version: number
@@ -1305,12 +1307,14 @@ export type Database = {
           notes?: string | null
           owner_id: string
           property_id?: string | null
+          sent_to_owner_at?: string | null
           signature_provider?: string | null
           signed_at?: string | null
+          signed_pdf_path?: string | null
           specific_terms?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["contract_status"]
-          template_id: string
+          template_id?: string | null
           term_months?: number
           updated_at?: string
           version?: number
@@ -1328,12 +1332,14 @@ export type Database = {
           notes?: string | null
           owner_id?: string
           property_id?: string | null
+          sent_to_owner_at?: string | null
           signature_provider?: string | null
           signed_at?: string | null
+          signed_pdf_path?: string | null
           specific_terms?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["contract_status"]
-          template_id?: string
+          template_id?: string | null
           term_months?: number
           updated_at?: string
           version?: number
