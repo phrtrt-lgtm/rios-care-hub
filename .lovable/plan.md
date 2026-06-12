@@ -1,98 +1,117 @@
-# Plano: Central Hostex (substituir TalkGuest no Calendário + IA)
 
-## Objetivo
-Ter um único local "vivo" puxando a API da Hostex, persistindo reservas/propriedades no banco a cada 6h, e usando esses dados como fonte primária para:
-1. Calendário de reservas
-2. Métricas de ocupação e receita
-3. Insights de pricing para os próximos 30 dias
-4. IA de consultas (`ai-consulta`)
+# Módulo de Contratos — Fluxo Completo
 
-iCal do TalkGuest deixa de ser consultado em tempo real — fica só como fallback de emergência se a Hostex cair.
+## Visão geral
+Hoje não existe módulo de contratos no portal. Será criado do zero, seguindo o fluxo:
 
----
+```text
+RIOS cria pré-contrato → Proprietário preenche dados → RIOS revisa →
+Aprovação → Geração HTML/PDF final → (futuro) Assinatura gov.br
+```
 
-## 1. Banco — cache local da Hostex
-
-Migration:
-
-- `hostex_reservations` — espelho das reservas:
-  `reservation_code (PK)`, `property_id_hostex`, `property_id` (FK opcional → `properties.id`, casado por nome), `channel_type`, `check_in_date`, `check_out_date`, `nights`, `guests`, `status`, `stay_status`, `guest_name`, `booked_at`, `total_rate_cents`, `total_commission_cents`, `currency`, `raw jsonb`, `synced_at`.
-- `hostex_properties` — espelho mínimo: `id_hostex (PK)`, `name`, `address`, `property_id` (FK → `properties.id`), `raw jsonb`, `synced_at`.
-- `hostex_sync_log` — `id`, `started_at`, `finished_at`, `status` (`ok`/`partial`/`error`), `reservations_upserted`, `properties_upserted`, `error_message`.
-
-RLS: SELECT para `authenticated`; ALL para `service_role`. Sem acesso a `anon`.
-
-## 2. Edge function `hostex-sync` (cron 6h)
-
-Nova função que:
-1. Chama `search_properties` → upsert em `hostex_properties` + tenta casar com `properties.name` (via `find_property_by_name_unaccent`).
-2. Para janela `[hoje−30d, hoje+180d]`, chama `search_reservations` paginado → upsert em `hostex_reservations`.
-3. Marca reservas sumidas no período como `status='cancelled'` localmente.
-4. Registra execução em `hostex_sync_log`.
-5. Endpoint também aceita `?force=1` para rodar on-demand.
-
-`verify_jwt = false` + checagem de `CRON_SECRET_TOKEN` no header/query.
-
-Cron pg_cron via `supabase--insert` (não migration): roda a cada 6 horas chamando a função.
-
-## 3. Refatorar `hostex-proxy`
-
-- `search_reservations`, `search_properties`, `search_listing_calendars` passam a ler **primeiro do cache local** (`hostex_reservations`/`hostex_properties`), retornando `source: "hostex_cache"` + `synced_at`.
-- Se cache vazio/stale (>12h) e Hostex disponível, faz fetch ao vivo e popula o cache.
-- Fallback `reservations` (iCal) só se cache vazio E Hostex falhar.
-- `search_transactions` segue ao vivo (não cacheamos transações ainda).
-
-## 4. Lib `src/lib/hostexInsights.ts`
-
-Funções puras sobre `HostexReservation[]`:
-- `pricingInsights30d(reservations, properties, today)` → por imóvel:
-  - dias vagos nos próximos 30
-  - ADR atual vs ADR mesma janela ano anterior (se houver)
-  - gaps críticos (>=3 noites livres em fim de semana)
-  - sugestão de ação: `subir_preco` / `manter` / `descontar_gap` / `min_stay_relax` com justificativa textual.
-- `revenuePace30d(reservations, today)` → receita confirmada vs meta projetada (média dos últimos 90d).
-- `channelMix30d`, `leadTimeTrend`, `weekendOccupancy30d`.
-
-## 5. Página `/admin/central-hostex` (nova)
-
-Rota nova em `App.tsx`, link no menu admin.
-
-Layout (tabs):
-- **Visão geral**: cards — ocupação 30d, ADR, receita confirmada 30d, lead time médio, badge `Fonte: Hostex (sincronizado há Xh)` + botão "Sincronizar agora" (chama `hostex-sync?force=1`).
-- **Calendário**: reaproveita `UnifiedCalendarWidget` já migrado para Hostex.
-- **Insights de pricing (30d)**: tabela por imóvel com colunas (vagos, ADR, gaps, ação sugerida, justificativa). Export CSV.
-- **Mix de canais e pacing**: gráficos (recharts) — receita por canal, pacing diário acumulado.
-- **Log de sync**: últimas 20 execuções de `hostex_sync_log`.
-
-## 6. IA `ai-consulta`
-
-- Adicionar tools de função:
-  - `get_pricing_insights_30d()`
-  - `get_occupancy_summary(start_date, end_date)`
-  - `get_channel_mix(start_date, end_date)`
-  - `get_calendar_gaps(start_date, end_date, min_nights?)`
-- System prompt: "Fonte primária = cache Hostex (sincronizado a cada 6h). Sempre cite período + `synced_at`. Apenas leitura."
-
-## 7. Migrar consumidores existentes
-
-- `UnifiedCalendarWidget` e `CalendarioReservas` continuam usando `hostex.searchReservations` (já existe) — ganham automaticamente o cache.
-- Mostrar selo de fonte: "Hostex • atualizado há Xh" / "Hostex (ao vivo)" / "iCal (fallback)".
-
-## 8. Fora de escopo
-- Escrita na Hostex.
-- Substituir o sync iCal do TalkGuest (fica como fallback frio).
-- Transações financeiras detalhadas (fase 2).
+O PDF usará como template padrão o modelo já criado pela Lovable (anexo), recriado em HTML/CSS no mesmo estilo (cabeçalho "RIOS GESTÃO...", numeração de cláusulas em blocos, marcações de destaque, rodapé com data e foro).
 
 ---
 
-## Ordem de execução
-1. Migration (`hostex_reservations`, `hostex_properties`, `hostex_sync_log`) + GRANTs + RLS.
-2. Edge function `hostex-sync` + agendar pg_cron 6h.
-3. Refatorar `hostex-proxy` para usar cache.
-4. `src/lib/hostexInsights.ts`.
-5. Página `/admin/central-hostex` + rota + link no menu.
-6. Atualizar `ai-consulta` com novas tools.
-7. QA: rodar sync manual, conferir cards e insights, simular Hostex offline.
+## 1. Banco de dados (Lovable Cloud)
 
-## Pergunta antes de começar
-Confirma que posso criar essas 3 tabelas novas (`hostex_*`) e o cron de 6h, e que o nome de menu pode ser **"Central Hostex"** em `/admin/central-hostex`? Ou prefere outro nome/rota (ex.: "Ocupação", `/admin/ocupacao`)?
+### Tabelas novas
+- **contract_templates**: `id, name, version, content_html, content_md, variables_schema_json, is_default, created_by, archived_at, timestamps`. Apenas admin gerencia. RLS: admin tudo; demais leitura quando `is_default`.
+- **contracts**: `id, owner_id, property_id, template_id, status (enum: draft_rios, awaiting_owner, owner_filling, submitted, correction_requested, approved, generated, signed, cancelled), commission_percent, term_months, start_date, maintenance_limit_cents, specific_terms, created_by, generated_pdf_path, generated_html_snapshot, frozen_data_json, current_submission_id, timestamps`.
+- **contract_owner_submissions**: conforme spec — `submitted_data_json (jsonb), status (draft|submitted|approved|correction_requested|rejected), correction_message, submitted_at, approved_at, approved_by, timestamps`. Um por contrato (current) + histórico.
+- **contract_submission_attachments**: anexos do formulário (`kind: documento_pessoal | comprovante_propriedade | comprovante_endereco | representante`), apontando para bucket privado.
+- **contract_events**: timeline (`contract_id, event_type, actor_id, actor_role, payload_json, created_at`) para auditoria.
+
+### Storage
+- Novo bucket privado `contract-attachments` (docs do proprietário) e `contracts` (PDFs gerados).
+
+### RLS
+- Proprietário acessa apenas contratos/submissões onde `owner_id = auth.uid()`.
+- Admin (via `has_role`) acessa tudo.
+- `frozen_data_json` é congelado na geração — alterações posteriores no profile não afetam.
+
+---
+
+## 2. Backend (Edge Functions)
+
+- **generate-contract-pdf**: monta HTML final a partir de `template.content_html` + `frozen_data_json` + dados comerciais, gera PDF (puppeteer/pdf-lib server-side ou render server-side via HTML→PDF lib disponível no Deno; uso de `npm:@react-pdf/renderer` ou `npm:html-pdf-node` alternativa). Grava no bucket `contracts`, atualiza `generated_pdf_path` e cria evento.
+- **send-contract-notification**: usa Resend (já configurado) para notificar proprietário em cada transição (convite, correção solicitada, aprovação, contrato pronto).
+- Trigger DB: ao mudar status para `awaiting_owner`, criar `notification` para owner + invocar email.
+
+---
+
+## 3. Frontend
+
+### Admin
+- Nova rota `/admin/contratos` — lista de contratos com filtros (status, proprietário, imóvel).
+- `/admin/contratos/novo` — wizard: seleciona proprietário, imóvel, template, define comissão, vigência, data início, limite manutenção, condições específicas → cria pré-contrato (`status=awaiting_owner`).
+- `/admin/contratos/:id` — abas: **Resumo**, **Dados recebidos** (visualiza submissão, botões Aprovar / Solicitar correção / Editar com justificativa), **Documentos anexos**, **Timeline**, **PDF gerado**.
+- Botão "Gerar contrato final" habilita após `approved`.
+
+### Proprietário
+- Card destacado no `/painel`: "Preencha seus dados para emissão do contrato" quando houver contrato em `awaiting_owner` ou `correction_requested`.
+- Rota `/contratos` — lista; `/contratos/:id` — formulário guiado.
+- Wizard mobile-first em 4 etapas com barra de progresso:
+  1. **Dados pessoais/empresariais** (PF/PJ condicional, validação CPF/CNPJ, e-mail, endereço com lookup CEP).
+  2. **Dados do imóvel** (pré-preenche com `properties`, permite editar).
+  3. **Dados bancários (opcional)** + **anexos**.
+  4. **Confirmações** (4 checkboxes obrigatórios) + **Revisão**.
+- Auto-save como rascunho (debounce 1.5s) gravando `contract_owner_submissions` com `status=draft`.
+- Aviso fixo: "Esses dados serão usados para emissão do contrato. Revise com atenção."
+- Após envio: tela bloqueada com status atual + botão "Baixar contrato" quando disponível.
+
+### Componentes reutilizados
+- `ReportStepIndicator` (já existe) para a barra de progresso.
+- shadcn `Form`, `Dialog`, `Card`, `Checkbox`, `Input`, `Textarea`, tokens semânticos (sem cores raw).
+- `EmptyState` e `SectionSkeleton` para estados vazios/loading.
+
+---
+
+## 4. Template do contrato (design)
+
+Template HTML/CSS recriando o anexo:
+- Cabeçalho: faixa com "RIOS GESTÃO DE IMÓVEIS POR TEMPORADA", linha fina divisória, metadados (📄 Documento de Função / 📅 data).
+- Título principal grande, serif sutil ou sans display.
+- Cláusulas numeradas em blocos `##` com badge circular do número.
+- Marcações `<mark>` para cláusulas destacadas (ex. 5.7).
+- Rodapé com paginação, foro Cabo Frio/RJ e bloco de assinaturas.
+- Texto integral do modelo anexo armazenado em `contract_templates` (versão 1, `is_default=true`) — variáveis com placeholders `{{owner.name}}`, `{{property.address}}`, `{{commission_percent}}`, etc.
+
+Preview do template renderizado tanto no admin (antes de gerar) quanto no proprietário (após geração).
+
+---
+
+## 5. Eventos auditados (contract_events)
+`owner_started_filling`, `owner_saved_draft`, `owner_submitted`, `rios_requested_correction`, `owner_resubmitted`, `rios_approved`, `contract_generated`, `contract_pdf_downloaded`, `contract_cancelled`.
+
+---
+
+## 6. Segurança
+- RLS estrita (proprietário só vê o seu); `has_role` para admin.
+- Validação Zod no frontend e na edge function.
+- `frozen_data_json` salvo na geração — imutável depois.
+- Nova versão a cada regeneração (incrementa `version` no `contracts` ou cria registro filho `contract_versions`).
+- Anexos em bucket privado com signed URLs.
+
+---
+
+## 7. Entregáveis desta iteração
+1. Migration com tabelas, enums, RLS, GRANTs, triggers, bucket.
+2. Seed do `contract_templates` v1 com texto integral do anexo.
+3. Edge functions `generate-contract-pdf` e `send-contract-notification`.
+4. Páginas admin: lista, novo, detalhe (com abas).
+5. Páginas proprietário: card no painel, wizard de preenchimento, tela de revisão.
+6. Componentes: `ContractStatusBadge`, `ContractTimeline`, `OwnerSubmissionForm`, `ContractTemplatePreview`.
+7. Atualização no menu lateral (admin + owner).
+
+### Fora do escopo desta iteração
+- Integração com gov.br (mockado: botão "Enviar para assinatura" prepara payload e marca status `awaiting_signature`).
+- Editor visual do template (apenas templates pré-cadastrados via SQL nesta fase).
+
+---
+
+## Perguntas rápidas antes de executar
+1. **Limite de manutenção**: prefere em R$ (centavos) único ou faixa (valor + critério)?
+2. **Vigência**: campo livre em meses ou apenas opções fixas (12, 24, 36)?
+3. **Assinatura gov.br**: posso mockar nesta entrega e deixar a integração real para próxima iteração?
+4. **Geração de PDF**: posso usar render server-side com HTML→PDF (Puppeteer não roda em Edge Function Deno; usaria `pdf-lib` montando o documento, ou serviço externo como `api2pdf`/`browserless`). Você prefere (a) usar `@react-pdf/renderer` no edge (b) integrar serviço externo (c) gerar client-side via `html2pdf.js` e fazer upload?
