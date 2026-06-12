@@ -61,34 +61,156 @@ export function ContractTemplatePreview({ templateMd, contract, owner, property,
   }, [templateMd, contract, owner, property, submission]);
 
   return (
-    <div className="contract-doc">
-      <style>{`
-        .contract-doc { background:hsl(var(--background)); color:hsl(var(--foreground)); padding: 48px; max-width: 820px; margin: 0 auto; font-family: 'Inter', system-ui, sans-serif; line-height: 1.6; font-size: 14px; }
-        .contract-doc .contract-h1 { font-size: 22px; font-weight: 700; margin: 24px 0 16px; letter-spacing: -0.01em; border-bottom: 2px solid hsl(var(--border)); padding-bottom: 12px; }
-        .contract-doc .contract-h2 { display:flex; align-items:center; gap: 12px; font-size: 16px; font-weight: 600; margin: 28px 0 12px; }
-        .contract-doc .contract-chip { display:inline-flex; align-items:center; justify-content:center; width: 32px; height: 32px; border-radius: 999px; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); font-size: 13px; font-weight: 700; }
-        .contract-doc p { margin: 8px 0; }
-        .contract-doc .contract-italic { font-style: italic; color: hsl(var(--muted-foreground)); }
-        .contract-doc .contract-list { padding-left: 20px; margin: 8px 0; }
-        .contract-doc .contract-quote { border-left: 3px solid hsl(var(--warning, var(--primary))); padding: 8px 12px; background: hsl(var(--muted)); margin: 12px 0; border-radius: 6px; }
-        .contract-doc strong { font-weight: 600; }
-        @media print {
-          .contract-doc { padding: 24mm 16mm; max-width: none; }
-        }
-      `}</style>
-      <header className="border-b pb-4 mb-6">
-        <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">RIOS Gestão de Imóveis por Temporada</p>
-        <p className="text-xs text-muted-foreground mt-1">Documento contratual · {new Date().toLocaleDateString("pt-BR")}</p>
-      </header>
-      <article dangerouslySetInnerHTML={{ __html: html }} />
-      <footer className="mt-12 pt-8 border-t grid grid-cols-2 gap-8">
-        <div>
-          <div className="border-t border-foreground/40 pt-2 text-xs text-muted-foreground">PROPRIETÁRIO/CONTRATANTE</div>
+    <div className="flex justify-center">
+      <div className="contract-doc">
+        <style>{`
+          .contract-doc {
+            background: hsl(var(--card));
+            color: hsl(var(--card-foreground));
+            padding: 64px 56px;
+            max-width: 794px;
+            width: 100%;
+            min-height: 1123px;
+            margin: 0 auto;
+            font-family: 'Georgia', 'Times New Roman', serif;
+            line-height: 1.7;
+            font-size: 13px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+            border-radius: 4px;
+            position: relative;
+          }
+          .contract-doc::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            background: hsl(var(--primary));
+            border-radius: 4px 4px 0 0;
+          }
+          .contract-doc .contract-header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid hsl(var(--border));
+          }
+          .contract-doc .contract-header h1 {
+            font-family: system-ui, -apple-system, sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: hsl(var(--primary));
+            margin-bottom: 8px;
+          }
+          .contract-doc .contract-header p {
+            font-size: 11px;
+            color: hsl(var(--muted-foreground));
+            margin: 0;
+          }
+          .contract-doc .contract-h1 {
+            font-family: system-ui, -apple-system, sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            margin: 32px 0 16px;
+            letter-spacing: -0.01em;
+            color: hsl(var(--foreground));
+            border-bottom: 2px solid hsl(var(--primary) / 0.3);
+            padding-bottom: 8px;
+          }
+          .contract-doc .contract-h2 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: system-ui, -apple-system, sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 24px 0 10px;
+            color: hsl(var(--foreground));
+          }
+          .contract-doc .contract-chip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px;
+            height: 26px;
+            border-radius: 999px;
+            background: hsl(var(--primary) / 0.12);
+            color: hsl(var(--primary));
+            font-size: 11px;
+            font-weight: 700;
+            flex-shrink: 0;
+          }
+          .contract-doc p {
+            margin: 10px 0;
+            text-align: justify;
+            text-align-last: left;
+          }
+          .contract-doc .contract-italic {
+            font-style: italic;
+            color: hsl(var(--muted-foreground));
+            text-align: center;
+            margin: 16px 0;
+          }
+          .contract-doc .contract-list {
+            padding-left: 24px;
+            margin: 10px 0;
+          }
+          .contract-doc .contract-list li {
+            margin: 6px 0;
+          }
+          .contract-doc .contract-quote {
+            border-left: 3px solid hsl(var(--primary) / 0.4);
+            padding: 10px 14px;
+            background: hsl(var(--muted) / 0.5);
+            margin: 14px 0;
+            border-radius: 0 6px 6px 0;
+            font-size: 12px;
+          }
+          .contract-doc strong {
+            font-weight: 600;
+            color: hsl(var(--foreground));
+          }
+          .contract-doc .contract-footer {
+            margin-top: 60px;
+            padding-top: 24px;
+            border-top: 1px solid hsl(var(--border));
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 48px;
+          }
+          .contract-doc .contract-footer .signature-line {
+            border-top: 1px solid hsl(var(--foreground) / 0.4);
+            padding-top: 8px;
+            margin-top: 48px;
+            font-size: 11px;
+            color: hsl(var(--muted-foreground));
+            text-align: center;
+          }
+          @media print {
+            .contract-doc {
+              box-shadow: none;
+              border-radius: 0;
+              padding: 20mm 16mm;
+              max-width: none;
+              min-height: auto;
+            }
+            .contract-doc::before { display: none; }
+          }
+        `}</style>
+        <div className="contract-header">
+          <h1>RIOS Gestão de Imóveis por Temporada</h1>
+          <p>Documento contratual &nbsp;·&nbsp; {new Date().toLocaleDateString("pt-BR")}</p>
         </div>
-        <div>
-          <div className="border-t border-foreground/40 pt-2 text-xs text-muted-foreground">RIOS/CONTRATADA</div>
+        <article dangerouslySetInnerHTML={{ __html: html }} />
+        <div className="contract-footer">
+          <div>
+            <div className="signature-line">PROPRIETÁRIO / CONTRATANTE</div>
+          </div>
+          <div>
+            <div className="signature-line">RIOS HOSPEDAGENS / CONTRATADA</div>
+          </div>
         </div>
-      </footer>
+      </div>
     </div>
   );
 }
