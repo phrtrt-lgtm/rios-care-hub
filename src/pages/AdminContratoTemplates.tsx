@@ -331,7 +331,7 @@ export default function AdminContratoTemplates() {
             </TabsContent>
 
             <TabsContent value="preview" className="flex-1 min-h-0 overflow-auto mt-2">
-              <ContractTemplatePreview templateMd={contentMd} data={PLACEHOLDER_DATA} />
+              <ContractTemplatePreview templateMd={contentMd} contract={PLACEHOLDER_DATA.contract} owner={PLACEHOLDER_DATA.owner} property={PLACEHOLDER_DATA.property} />
             </TabsContent>
           </Tabs>
 
