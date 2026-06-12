@@ -1066,6 +1066,302 @@ export type Database = {
           },
         ]
       }
+      contract_events: {
+        Row: {
+          actor_id: string | null
+          actor_role: string | null
+          contract_id: string
+          created_at: string
+          event_type: string
+          id: string
+          payload: Json | null
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_role?: string | null
+          contract_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          payload?: Json | null
+        }
+        Update: {
+          actor_id?: string | null
+          actor_role?: string | null
+          contract_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          payload?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_events_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_owner_submissions: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          contract_id: string
+          correction_message: string | null
+          created_at: string
+          id: string
+          owner_id: string
+          property_id: string | null
+          status: Database["public"]["Enums"]["contract_submission_status"]
+          submitted_at: string | null
+          submitted_data: Json
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          contract_id: string
+          correction_message?: string | null
+          created_at?: string
+          id?: string
+          owner_id: string
+          property_id?: string | null
+          status?: Database["public"]["Enums"]["contract_submission_status"]
+          submitted_at?: string | null
+          submitted_data?: Json
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          contract_id?: string
+          correction_message?: string | null
+          created_at?: string
+          id?: string
+          owner_id?: string
+          property_id?: string | null
+          status?: Database["public"]["Enums"]["contract_submission_status"]
+          submitted_at?: string | null
+          submitted_data?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_owner_submissions_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_owner_submissions_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_owner_submissions_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_submission_attachments: {
+        Row: {
+          contract_id: string
+          created_at: string
+          id: string
+          kind: string
+          mime_type: string | null
+          owner_id: string
+          size_bytes: number | null
+          storage_path: string
+          submission_id: string
+        }
+        Insert: {
+          contract_id: string
+          created_at?: string
+          id?: string
+          kind: string
+          mime_type?: string | null
+          owner_id: string
+          size_bytes?: number | null
+          storage_path: string
+          submission_id: string
+        }
+        Update: {
+          contract_id?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          mime_type?: string | null
+          owner_id?: string
+          size_bytes?: number | null
+          storage_path?: string
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_submission_attachments_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_submission_attachments_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_submission_attachments_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "contract_owner_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_templates: {
+        Row: {
+          archived_at: string | null
+          content_md: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_default: boolean
+          name: string
+          updated_at: string
+          variables_schema: Json | null
+          version: number
+        }
+        Insert: {
+          archived_at?: string | null
+          content_md: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_default?: boolean
+          name: string
+          updated_at?: string
+          variables_schema?: Json | null
+          version?: number
+        }
+        Update: {
+          archived_at?: string | null
+          content_md?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_default?: boolean
+          name?: string
+          updated_at?: string
+          variables_schema?: Json | null
+          version?: number
+        }
+        Relationships: []
+      }
+      contracts: {
+        Row: {
+          commission_percent: number
+          created_at: string
+          created_by: string | null
+          current_submission_id: string | null
+          frozen_data: Json | null
+          generated_html: string | null
+          generated_pdf_path: string | null
+          id: string
+          maintenance_limit_cents: number
+          notes: string | null
+          owner_id: string
+          property_id: string | null
+          signature_provider: string | null
+          signed_at: string | null
+          specific_terms: string | null
+          start_date: string | null
+          status: Database["public"]["Enums"]["contract_status"]
+          template_id: string
+          term_months: number
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          commission_percent?: number
+          created_at?: string
+          created_by?: string | null
+          current_submission_id?: string | null
+          frozen_data?: Json | null
+          generated_html?: string | null
+          generated_pdf_path?: string | null
+          id?: string
+          maintenance_limit_cents?: number
+          notes?: string | null
+          owner_id: string
+          property_id?: string | null
+          signature_provider?: string | null
+          signed_at?: string | null
+          specific_terms?: string | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["contract_status"]
+          template_id: string
+          term_months?: number
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          commission_percent?: number
+          created_at?: string
+          created_by?: string | null
+          current_submission_id?: string | null
+          frozen_data?: Json | null
+          generated_html?: string | null
+          generated_pdf_path?: string | null
+          id?: string
+          maintenance_limit_cents?: number
+          notes?: string | null
+          owner_id?: string
+          property_id?: string | null
+          signature_provider?: string | null
+          signed_at?: string | null
+          specific_terms?: string | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["contract_status"]
+          template_id?: string
+          term_months?: number
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "contract_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       curadoria_messages: {
         Row: {
           author_id: string
@@ -3255,6 +3551,22 @@ export type Database = {
         | "pending_owner"
         | "cleaner"
         | "maintenance"
+      contract_status:
+        | "draft_rios"
+        | "awaiting_owner"
+        | "owner_filling"
+        | "submitted"
+        | "correction_requested"
+        | "approved"
+        | "generated"
+        | "signed"
+        | "cancelled"
+      contract_submission_status:
+        | "draft"
+        | "submitted"
+        | "approved"
+        | "correction_requested"
+        | "rejected"
       ticket_priority: "normal" | "urgente"
       ticket_status:
         | "novo"
@@ -3407,6 +3719,24 @@ export const Constants = {
         "pending_owner",
         "cleaner",
         "maintenance",
+      ],
+      contract_status: [
+        "draft_rios",
+        "awaiting_owner",
+        "owner_filling",
+        "submitted",
+        "correction_requested",
+        "approved",
+        "generated",
+        "signed",
+        "cancelled",
+      ],
+      contract_submission_status: [
+        "draft",
+        "submitted",
+        "approved",
+        "correction_requested",
+        "rejected",
       ],
       ticket_priority: ["normal", "urgente"],
       ticket_status: [
