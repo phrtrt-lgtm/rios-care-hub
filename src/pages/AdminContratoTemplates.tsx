@@ -51,10 +51,10 @@ const PLACEHOLDER_DATA = {
     parking_spots: "2",
   },
   contract: {
-    commission_percent: "22",
-    term_months: "24",
-    start_date: "01/01/2026",
-    maintenance_limit_brl: "3.000,00",
+    commission_percent: 22,
+    term_months: 24,
+    start_date: "2026-01-01",
+    maintenance_limit_cents: 300000,
     specific_terms: "Condição comercial específica acordada entre as partes.",
   },
 };
