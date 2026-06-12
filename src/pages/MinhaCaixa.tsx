@@ -256,6 +256,9 @@ export default function MinhaCaixa() {
           </motion.div>
         </div>
 
+        <OwnerContractInviteCard />
+
+
         {/* Propostas Pendentes - Prioridade no topo - na íntegra para owners */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}

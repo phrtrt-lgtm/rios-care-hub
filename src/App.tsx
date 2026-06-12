@@ -92,6 +92,10 @@ import AdminCuradoriasLista from "./pages/AdminCuradoriasLista";
 import DefinirSenha from "./pages/DefinirSenha";
 import MinhaCuradoria from "./pages/MinhaCuradoria";
 import CuradoriaPublica from "./pages/CuradoriaPublica";
+import AdminContratos from "./pages/AdminContratos";
+import AdminContratoNovo from "./pages/AdminContratoNovo";
+import AdminContratoDetalhes from "./pages/AdminContratoDetalhes";
+import ContratoProprietario from "./pages/ContratoProprietario";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -688,6 +692,10 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route path="/admin/contratos" element={<ProtectedRoute allowedRoles={['admin']}><AdminContratos /></ProtectedRoute>} />
+            <Route path="/admin/contratos/novo" element={<ProtectedRoute allowedRoles={['admin']}><AdminContratoNovo /></ProtectedRoute>} />
+            <Route path="/admin/contratos/:id" element={<ProtectedRoute allowedRoles={['admin']}><AdminContratoDetalhes /></ProtectedRoute>} />
+            <Route path="/contrato/:id" element={<ProtectedRoute allowedRoles={['owner']}><ContratoProprietario /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           </SessionHandlerWrapper>
