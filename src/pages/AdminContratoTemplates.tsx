@@ -66,6 +66,8 @@ export default function AdminContratoTemplates() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [q, setQ] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
   const [editing, setEditing] = useState<Template | null>(null);
   const [name, setName] = useState("");
   const [contentMd, setContentMd] = useState("");
