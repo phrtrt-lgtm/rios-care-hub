@@ -28,6 +28,7 @@ import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { OwnerOnboardingTour } from "@/components/OwnerOnboardingTour";
 import { motion } from "framer-motion";
 import { OwnerBookingCommissionsPreview } from "@/components/OwnerBookingCommissionsPreview";
+import { OwnerContractInviteCard } from "@/components/contracts/OwnerContractInviteCard";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 
 

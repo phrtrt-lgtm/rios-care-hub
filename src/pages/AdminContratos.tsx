@@ -65,7 +65,7 @@ export default function AdminContratos() {
         {loading ? (
           <SectionSkeleton />
         ) : filtered.length === 0 ? (
-          <EmptyState icon={FileText} title="Nenhum contrato" description="Crie o primeiro pré-contrato para começar." actionLabel="Novo contrato" onAction={() => navigate("/admin/contratos/novo")} />
+          <EmptyState icon={<FileText className="h-6 w-6" />} title="Nenhum contrato" description="Crie o primeiro pré-contrato para começar." action={<Button onClick={() => navigate("/admin/contratos/novo")}>Novo contrato</Button>} />
         ) : (
           <div className="grid gap-3">
             {filtered.map((r) => (
