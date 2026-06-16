@@ -171,6 +171,17 @@ Deno.serve(async (req) => {
       );
       propsUpserted++;
 
+      // Preenche cover_photo_url da propriedade local se ainda não tiver
+      const coverUrl =
+        p?.cover?.large_url ?? p?.cover?.extra_large_url ?? p?.cover?.original_url ?? p?.cover?.small_url ?? null;
+      if (matchedLocal && coverUrl) {
+        await supabase
+          .from("properties")
+          .update({ cover_photo_url: coverUrl, updated_at: new Date().toISOString() })
+          .eq("id", matchedLocal)
+          .is("cover_photo_url", null);
+      }
+
       // Coleta listings (channel_type + listing_id) para o passo de calendário
       const channels = Array.isArray(p.channels) ? p.channels : [];
       for (const ch of channels) {
