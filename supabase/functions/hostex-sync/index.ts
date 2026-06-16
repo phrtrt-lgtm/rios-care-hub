@@ -136,9 +136,20 @@ Deno.serve(async (req) => {
   const allListings: ListingRef[] = [];
 
   try {
-    // 1) Propriedades
-    const propsPayload = await hostexGet("/properties", {}, apiKey);
-    const propsList = extractList(propsPayload, "properties");
+    // 1) Propriedades (paginadas)
+    const propsList: any[] = [];
+    {
+      let offsetP = 0;
+      let safetyP = 0;
+      while (safetyP++ < 50) {
+        const payload = await hostexGet("/properties", { offset: offsetP, limit: PAGE_SIZE }, apiKey);
+        const list = extractList(payload, "properties");
+        if (!list.length) break;
+        propsList.push(...list);
+        if (list.length < PAGE_SIZE) break;
+        offsetP += PAGE_SIZE;
+      }
+    }
 
     // Carrega map de properties locais para casar por nome
     const { data: localProps } = await supabase.from("properties").select("id, name");
