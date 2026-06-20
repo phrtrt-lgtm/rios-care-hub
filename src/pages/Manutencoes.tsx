@@ -15,6 +15,76 @@ import { goBack, saveScrollPosition } from "@/lib/navigation";
 import { supabase } from "@/integrations/supabase/client";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+
+function AttachmentThumbs({
+  attachments,
+  max = 4,
+}: {
+  attachments: Array<{ id: string; mime: string; poster: boolean }>;
+  max?: number;
+}) {
+  if (!attachments || attachments.length === 0) return null;
+  const shown = attachments.slice(0, max);
+  const extra = attachments.length - shown.length;
+  return (
+    <div className="flex items-center gap-1 shrink-0">
+      {shown.map((a) => {
+        const isImage = a.mime?.startsWith("image/");
+        const isVideo = a.mime?.startsWith("video/");
+        const isPdf = a.mime === "application/pdf";
+        if (isImage) {
+          return (
+            <img
+              key={a.id}
+              src={`${SUPABASE_URL}/functions/v1/serve-attachment/${a.id}/file`}
+              alt=""
+              className="h-8 w-8 rounded object-cover border"
+              loading="lazy"
+            />
+          );
+        }
+        if (isVideo) {
+          return (
+            <div
+              key={a.id}
+              className="h-8 w-8 rounded border bg-muted flex items-center justify-center relative overflow-hidden"
+            >
+              {a.poster ? (
+                <img
+                  src={`${SUPABASE_URL}/functions/v1/serve-attachment/${a.id}/poster`}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                <Film className="h-4 w-4 text-muted-foreground" />
+              )}
+            </div>
+          );
+        }
+        return (
+          <div
+            key={a.id}
+            className="h-8 w-8 rounded border bg-muted flex items-center justify-center"
+          >
+            {isPdf ? (
+              <FileText className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <Paperclip className="h-4 w-4 text-muted-foreground" />
+            )}
+          </div>
+        );
+      })}
+      {extra > 0 && (
+        <div className="h-8 min-w-8 px-1 rounded border bg-muted flex items-center justify-center text-[10px] font-medium text-muted-foreground">
+          +{extra}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Manutencoes() {
   useScrollRestoration();
   const { profile, user } = useAuth();
