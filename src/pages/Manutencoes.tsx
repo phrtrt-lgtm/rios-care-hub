@@ -60,6 +60,35 @@ export default function Manutencoes() {
     }
   }, [user, year, propertyId, serviceTypeFilter]);
 
+  // Fetch attachments for listed maintenances (lightweight: id + mime + poster flag)
+  useEffect(() => {
+    const ids = (maintenances || []).map((m: any) => m.id);
+    if (ids.length === 0) {
+      setAttachmentsByCharge({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("charge_attachments")
+        .select("id, charge_id, mime_type, mime_type_override, poster_path, created_at")
+        .in("charge_id", ids)
+        .order("created_at", { ascending: true });
+      if (cancelled) return;
+      const grouped: Record<string, Array<{ id: string; mime: string; poster: boolean }>> = {};
+      (data || []).forEach((a: any) => {
+        const mime = a.mime_type_override || a.mime_type || "";
+        if (!grouped[a.charge_id]) grouped[a.charge_id] = [];
+        grouped[a.charge_id].push({ id: a.id, mime, poster: !!a.poster_path });
+      });
+      setAttachmentsByCharge(grouped);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [maintenances]);
+
+
   const fetchServiceTypeData = async () => {
     try {
       let query = supabase
