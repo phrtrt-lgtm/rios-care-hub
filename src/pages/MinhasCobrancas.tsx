@@ -8,9 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowLeft, Calendar, FileText, Paperclip, QrCode, Building2, DollarSign, Tag, CreditCard, Zap, Film } from "lucide-react";
+import { ArrowLeft, Calendar, FileText, Paperclip, QrCode, Building2, DollarSign, Tag, CreditCard, Zap } from "lucide-react";
 import { AuthenticatedImage, AuthenticatedVideo } from "@/components/AuthenticatedMedia";
-import { ChargeAttachmentLightbox } from "@/components/ChargeAttachmentLightbox";
+import { MediaGallery } from "@/components/MediaGallery";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -69,7 +69,8 @@ const MinhasCobrancas = () => {
     total_amount: number;
   } | null>(null);
   const [visibleCount, setVisibleCount] = useState(100);
-  const [lightbox, setLightbox] = useState<{ atts: { id: string; mime: string }[]; index: number } | null>(null);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryItems, setGalleryItems] = useState<{ id: string; file_url: string; file_name: string; file_type: string }[]>([]);
   const filtersHook = useListFilters("filters:minhas-cobrancas");
   const { applyTo } = filtersHook;
   useEffect(() => {
@@ -487,11 +488,20 @@ const MinhasCobrancas = () => {
                     const isOpen = charge.status === 'sent' || charge.status === 'overdue' || charge.status === 'pendente';
                     const isSelected = selectedCharges.includes(charge.id);
                     const ownerDue = charge.amount_cents - charge.management_contribution_cents;
-                    const atts = (charge.attachments || []).map((a) => ({
-                      id: a.id,
-                      mime: a.mime_type || "",
-                      poster: !!a.poster_path,
-                    }));
+                    const atts = (charge.attachments || []).map((a) => {
+                      const path = a.file_path || "";
+                      let url = path;
+                      if (path && !path.startsWith("http://") && !path.startsWith("https://")) {
+                        const { data: pub } = supabase.storage.from("attachments").getPublicUrl(path);
+                        url = pub.publicUrl;
+                      }
+                      return {
+                        id: a.id,
+                        file_url: url,
+                        file_name: a.file_name || "",
+                        file_type: a.mime_type || "",
+                      };
+                    });
 
                     return (
                       <Card
@@ -571,44 +581,14 @@ const MinhasCobrancas = () => {
                                 )}
                               </div>
                               {atts.length > 0 && (
-                                <div className="flex items-center gap-1 shrink-0">
-                                  {atts.slice(0, 3).map((a, idx) => {
-                                    const isImage = a.mime?.startsWith("image/");
-                                    const isVideo = a.mime?.startsWith("video/");
-                                    const isPdf = a.mime === "application/pdf";
-                                    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/serve-attachment/${a.id}/file`;
-                                    const poster = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/serve-attachment/${a.id}/poster`;
-                                    return (
-                                      <button
-                                        key={a.id}
-                                        type="button"
-                                        onClick={(e) => { e.stopPropagation(); e.preventDefault(); setLightbox({ atts, index: idx }); }}
-                                        className="h-7 w-7 rounded border overflow-hidden bg-muted flex items-center justify-center"
-                                      >
-                                        {isImage ? (
-                                          <img src={url} alt="" className="h-full w-full object-cover" loading="lazy" />
-                                        ) : isVideo && a.poster ? (
-                                          <img src={poster} alt="" className="h-full w-full object-cover" loading="lazy" />
-                                        ) : isVideo ? (
-                                          <Film className="h-3.5 w-3.5 text-muted-foreground" />
-                                        ) : isPdf ? (
-                                          <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-                                        ) : (
-                                          <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
-                                        )}
-                                      </button>
-                                    );
-                                  })}
-                                  {atts.length > 3 && (
-                                    <button
-                                      type="button"
-                                      onClick={(e) => { e.stopPropagation(); e.preventDefault(); setLightbox({ atts, index: 0 }); }}
-                                      className="h-7 min-w-7 px-1 rounded border bg-muted text-[10px] font-medium text-muted-foreground"
-                                    >
-                                      +{atts.length - 3}
-                                    </button>
-                                  )}
-                                </div>
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); e.preventDefault(); setGalleryItems(atts); setGalleryOpen(true); }}
+                                  className="inline-flex items-center gap-1 px-2 py-1 rounded hover:bg-primary/10 text-primary transition-colors shrink-0"
+                                >
+                                  <Paperclip className="h-3.5 w-3.5" />
+                                  <span className="text-xs font-medium">{atts.length}</span>
+                                </button>
                               )}
                             </div>
                           </button>
@@ -631,11 +611,11 @@ const MinhasCobrancas = () => {
         })()}
       </main>
 
-      <ChargeAttachmentLightbox
-        attachments={lightbox?.atts || []}
-        initialIndex={lightbox?.index || 0}
-        open={!!lightbox}
-        onOpenChange={(o) => !o && setLightbox(null)}
+      <MediaGallery
+        items={galleryItems}
+        initialIndex={0}
+        open={galleryOpen}
+        onOpenChange={setGalleryOpen}
       />
     </div>
   );
