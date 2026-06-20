@@ -991,153 +991,150 @@ export default function CobrancaDetalhes() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
-      <header className="border-b bg-card/50 backdrop-blur-sm">
-        <div className="container mx-auto flex h-16 items-center px-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate(isTeamMember ? '/gerenciar-cobrancas' : '/minhas-cobrancas')}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
+    <div className="min-h-screen bg-background">
+      <header className="border-b bg-card sticky top-0 z-20">
+        <div className="container mx-auto flex h-12 items-center px-3">
+          <Button variant="ghost" size="sm" className="h-8 -ml-2" onClick={() => navigate(isTeamMember ? '/gerenciar-cobrancas' : '/minhas-cobrancas')}>
+            <ArrowLeft className="mr-1.5 h-4 w-4" />
             Voltar
           </Button>
         </div>
       </header>
 
       {isTeamMemberRaw && previewAsOwner && (
-        <div className="bg-warning text-white px-4 py-2 text-center text-sm font-medium flex items-center justify-center gap-3 flex-wrap">
-          <Eye className="h-4 w-4" />
-          <span>Você está vendo esta cobrança como o proprietário a enxerga</span>
+        <div className="bg-warning text-white px-3 py-1.5 text-center text-xs font-medium flex items-center justify-center gap-2 flex-wrap">
+          <Eye className="h-3.5 w-3.5" />
+          <span>Visão do proprietário</span>
           <Button
             variant="secondary"
             size="sm"
             onClick={() => setPreviewAsOwner(false)}
-            className="h-7 bg-white/95 text-warning hover:bg-white"
+            className="h-6 text-xs bg-white/95 text-warning hover:bg-white"
           >
-            Voltar à visão da equipe
+            Sair
           </Button>
         </div>
       )}
 
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
-        <Card className="mb-6 overflow-hidden">
-          <CardHeader className="space-y-6">
+      <main className="container mx-auto px-3 py-4 max-w-3xl">
+        <Card className="mb-4 overflow-hidden">
+          <CardHeader className="space-y-3 p-4">
             {/* Título e Status */}
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1">
-                <CardTitle className="text-2xl mb-2">{charge.title}</CardTitle>
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <CardTitle className="text-lg leading-tight break-words">{charge.title}</CardTitle>
                 {charge.description && (
-                  <p className="text-sm text-muted-foreground leading-relaxed mt-2">{charge.description}</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed mt-1">{charge.description}</p>
                 )}
               </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                {isTeamMember ? (
-                  <Select 
-                    value={charge.status} 
-                    onValueChange={handleStatusChange}
-                    disabled={updatingStatus}
-                  >
-                    <SelectTrigger className="w-[220px] h-9">
-                      {updatingStatus ? (
-                        <div className="flex items-center gap-2">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Atualizando...
-                        </div>
-                      ) : (
-                        <SelectValue />
-                      )}
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="draft">📝 Rascunho</SelectItem>
-                      <SelectItem value="sent">📤 Enviada</SelectItem>
-                      <SelectItem value="pago_antecipado">✅ Pago antecipado (+5 pts)</SelectItem>
-                      <SelectItem value="pago_no_vencimento">✅ Pago no vencimento (+1 pt)</SelectItem>
-                      <SelectItem value="pago_com_atraso">⚠️ Pago com atraso (-15 pts)</SelectItem>
-                      <SelectItem value="debited">🔻 Debitado em reserva (-30 pts)</SelectItem>
-                      <SelectItem value="cancelled">❌ Cancelada</SelectItem>
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  getStatusBadge(charge.status)
-                )}
-                {isTeamMember && (
-                  <>
-                    <Button 
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPreviewAsOwner(true)}
-                      title="Ver exatamente o que o proprietário enxerga (PIX, QR Code, link de pagamento)"
-                    >
-                      <Eye className="h-4 w-4 mr-2" />
-                      Ver como proprietário
-                    </Button>
-                    <Button 
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setEditDialogOpen(true)}
-                    >
-                      <Pencil className="h-4 w-4 mr-2" />
-                      Editar
-                    </Button>
-                    <Button 
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => setDeleteDialogOpen(true)}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Excluir
-                    </Button>
-                  </>
-                )}
+              {!isTeamMember && getStatusBadge(charge.status)}
+            </div>
+
+            {/* Ações da equipe */}
+            {isTeamMember && (
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <Select
+                  value={charge.status}
+                  onValueChange={handleStatusChange}
+                  disabled={updatingStatus}
+                >
+                  <SelectTrigger className="h-8 text-xs flex-1 min-w-[140px]">
+                    {updatingStatus ? (
+                      <div className="flex items-center gap-1.5">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ...
+                      </div>
+                    ) : (
+                      <SelectValue />
+                    )}
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="draft">📝 Rascunho</SelectItem>
+                    <SelectItem value="sent">📤 Enviada</SelectItem>
+                    <SelectItem value="pago_antecipado">✅ Pago antecipado (+5 pts)</SelectItem>
+                    <SelectItem value="pago_no_vencimento">✅ Pago no vencimento (+1 pt)</SelectItem>
+                    <SelectItem value="pago_com_atraso">⚠️ Pago com atraso (-15 pts)</SelectItem>
+                    <SelectItem value="debited">🔻 Debitado em reserva (-30 pts)</SelectItem>
+                    <SelectItem value="cancelled">❌ Cancelada</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setPreviewAsOwner(true)}
+                  title="Ver como proprietário"
+                >
+                  <Eye className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setEditDialogOpen(true)}
+                  title="Editar"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-destructive hover:text-destructive"
+                  onClick={() => setDeleteDialogOpen(true)}
+                  title="Excluir"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
                 {isTeamMemberRaw && previewAsOwner && (
-                  <Button 
+                  <Button
                     variant="default"
                     size="sm"
                     onClick={() => setPreviewAsOwner(false)}
-                    className="bg-warning hover:bg-warning text-white"
+                    className="h-8 bg-warning hover:bg-warning text-white text-xs"
                   >
-                    <X className="h-4 w-4 mr-2" />
-                    Sair da visão do proprietário
+                    <X className="h-3.5 w-3.5 mr-1" />
+                    Sair
                   </Button>
                 )}
               </div>
-            </div>
+            )}
 
             {/* Categorização */}
-            <div className="flex flex-wrap gap-2">
-              {charge.property && (
-                <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30 hover:bg-warning/10">
-                  📍 {charge.property.name}
-                </Badge>
-              )}
-              {charge.category && (
-                <Badge variant="outline" className="bg-info/10 text-info border-info/30 hover:bg-info/10">
-                  {CHARGE_CATEGORIES[charge.category as keyof typeof CHARGE_CATEGORIES]}
-                </Badge>
-              )}
-              {charge.service_type && (
-                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 hover:bg-primary/10">
-                  🏷️ {charge.service_type}
-                </Badge>
-              )}
-            </div>
+            {(charge.property || charge.category || charge.service_type) && (
+              <div className="flex flex-wrap gap-1.5">
+                {charge.property && (
+                  <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30 hover:bg-warning/10 text-xs font-normal">
+                    📍 {charge.property.name}
+                  </Badge>
+                )}
+                {charge.category && (
+                  <Badge variant="outline" className="bg-info/10 text-info border-info/30 hover:bg-info/10 text-xs font-normal">
+                    {CHARGE_CATEGORIES[charge.category as keyof typeof CHARGE_CATEGORIES]}
+                  </Badge>
+                )}
+                {charge.service_type && (
+                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 hover:bg-primary/10 text-xs font-normal">
+                    🏷️ {charge.service_type}
+                  </Badge>
+                )}
+              </div>
+            )}
 
-            {/* Valores - Grid responsivo */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-muted/30 rounded-lg border">
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground font-medium">Valor Total</p>
-                <p className="text-lg font-semibold text-foreground">
-                  {formatCurrency(charge.amount_cents, charge.currency)}
-                </p>
+            {/* Valores - linha compacta */}
+            <div className="rounded-lg border bg-muted/20 divide-y sm:divide-y-0 sm:divide-x sm:grid sm:grid-cols-3 overflow-hidden">
+              <div className="flex items-center justify-between sm:flex-col sm:items-start sm:justify-center px-3 py-2">
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Total</p>
+                <p className="text-sm font-semibold">{formatCurrency(charge.amount_cents, charge.currency)}</p>
               </div>
               {charge.management_contribution_cents > 0 && (
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground font-medium">Aporte Gestão</p>
-                  <p className="text-lg font-semibold text-success">
-                    - {formatCurrency(charge.management_contribution_cents, charge.currency)}
-                  </p>
+                <div className="flex items-center justify-between sm:flex-col sm:items-start sm:justify-center px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Aporte</p>
+                  <p className="text-sm font-semibold text-success">- {formatCurrency(charge.management_contribution_cents, charge.currency)}</p>
                 </div>
               )}
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground font-medium">Valor Devido</p>
-                <p className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+              <div className="flex items-center justify-between sm:flex-col sm:items-start sm:justify-center px-3 py-2 bg-primary/5">
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Devido</p>
+                <p className="text-base font-bold text-primary">
                   {formatCurrency(charge.amount_cents - (charge.management_contribution_cents || 0), charge.currency)}
                 </p>
               </div>
@@ -1145,91 +1142,81 @@ export default function CobrancaDetalhes() {
 
             {/* Datas */}
             {(charge.maintenance_date || charge.due_date) && (
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
                 {charge.maintenance_date && (
-                  <div className="flex items-center gap-2 px-3 py-2 bg-info/10 rounded-md border border-info/30">
-                    <Calendar className="h-4 w-4 text-info" />
-                    <div className="flex flex-col">
-                      <span className="text-xs text-info font-medium">Data do Serviço</span>
-                      <span className="text-sm font-semibold text-info">
-                        {format(new Date(charge.maintenance_date), "dd/MM/yyyy", { locale: ptBR })}
-                      </span>
-                    </div>
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <Calendar className="h-3.5 w-3.5" />
+                    <span>Serviço:</span>
+                    <span className="font-medium text-foreground">
+                      {format(new Date(charge.maintenance_date), "dd/MM/yyyy", { locale: ptBR })}
+                    </span>
                   </div>
                 )}
                 {charge.due_date && (
-                  <div className="flex items-center gap-2 px-3 py-2 bg-destructive/10 rounded-md border border-destructive/30">
-                    <Calendar className="h-4 w-4 text-destructive" />
-                    <div className="flex flex-col">
-                      <span className="text-xs text-destructive font-medium">Vencimento</span>
-                      <span className="text-sm font-semibold text-destructive">
-                        {format(new Date(charge.due_date), "dd/MM/yyyy", { locale: ptBR })}
-                      </span>
-                    </div>
+                  <div className="flex items-center gap-1.5 text-destructive">
+                    <Calendar className="h-3.5 w-3.5" />
+                    <span>Vencimento:</span>
+                    <span className="font-semibold">
+                      {format(new Date(charge.due_date), "dd/MM/yyyy", { locale: ptBR })}
+                    </span>
                   </div>
                 )}
               </div>
             )}
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 pt-0">
 
             {/* Link de Pagamento - Para Admin/Agent */}
             {isTeamMember && charge.status !== 'paid' && charge.status !== 'cancelled' && (
-              <div className="bg-gradient-to-r from-success/10 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border border-success/30 rounded-lg p-4 mb-6">
-                <div className="flex items-start gap-3">
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-success dark:text-green-100 mb-1">
-                      💳 Link de Pagamento Mercado Pago
-                    </h4>
-                    <p className="text-sm text-success dark:text-green-300 mb-3">
-                      {charge.payment_link 
-                        ? "Link gerado! O proprietário pode pagar com cartão de crédito, débito ou PIX através do Mercado Pago."
-                        : "Gere um link de pagamento para que o proprietário possa pagar online com cartão de crédito ou PIX."}
+              <div className="border border-success/30 bg-success/5 rounded-lg p-3 mb-4">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium text-sm text-success">💳 Link Mercado Pago</h4>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {charge.payment_link
+                        ? "Link gerado — cartão ou PIX."
+                        : "Gere link para pagamento online."}
                     </p>
-                    {charge.payment_link ? (
-                      <div className="flex flex-col sm:flex-row gap-2">
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={() => {
-                            window.open(charge.payment_link!, '_blank');
-                          }}
-                          className="bg-success hover:bg-success"
-                        >
-                          🔗 Abrir Link de Pagamento
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            navigator.clipboard.writeText(charge.payment_link!);
-                            toast({
-                              title: "Link copiado!",
-                              description: "O link foi copiado para a área de transferência",
-                            });
-                          }}
-                        >
-                          📋 Copiar Link
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        onClick={handleGeneratePaymentLink}
-                        disabled={generatingPaymentLink}
-                        className="bg-success hover:bg-success"
-                        size="sm"
-                      >
-                        {generatingPaymentLink ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Gerando link...
-                          </>
-                        ) : (
-                          '🔗 Gerar Link de Pagamento'
-                        )}
-                      </Button>
-                    )}
                   </div>
+                  {charge.payment_link ? (
+                    <div className="flex gap-1.5">
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="h-8 text-xs bg-success hover:bg-success"
+                        onClick={() => window.open(charge.payment_link!, '_blank')}
+                      >
+                        🔗 Abrir
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-xs"
+                        onClick={() => {
+                          navigator.clipboard.writeText(charge.payment_link!);
+                          toast({ title: "Link copiado!" });
+                        }}
+                      >
+                        📋
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      onClick={handleGeneratePaymentLink}
+                      disabled={generatingPaymentLink}
+                      className="h-8 text-xs bg-success hover:bg-success"
+                      size="sm"
+                    >
+                      {generatingPaymentLink ? (
+                        <>
+                          <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                          Gerando...
+                        </>
+                      ) : (
+                        '🔗 Gerar Link'
+                      )}
+                    </Button>
+                  )}
                 </div>
               </div>
             )}

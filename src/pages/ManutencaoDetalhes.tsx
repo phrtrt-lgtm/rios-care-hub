@@ -51,8 +51,8 @@ export default function ManutencaoDetalhes({ embedded = false, idOverride }: Man
   }, [maintenance]);
 
   const wrapperClass = embedded
-    ? "space-y-6"
-    : "container mx-auto p-6 space-y-6";
+    ? "space-y-3"
+    : "container mx-auto px-3 py-4 max-w-3xl space-y-3";
 
   if (isLoading) {
     return (
@@ -111,69 +111,68 @@ export default function ManutencaoDetalhes({ embedded = false, idOverride }: Man
 
   return (
     <div className={wrapperClass}>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2">
         {!embedded && (
-          <Button variant="ghost" size="icon" onClick={() => goBack(navigate, "/admin/manutencoes-lista")}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 -ml-1" onClick={() => goBack(navigate, "/admin/manutencoes-lista")}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
         )}
-        <div className="flex-1">
-          <h1 className={embedded ? "text-xl font-bold" : "text-3xl font-bold"}>{maintenance.title}</h1>
-          <p className="text-muted-foreground text-sm">
-            Criado em {formatDateTime(maintenance.created_at)}
+        <div className="flex-1 min-w-0">
+          <h1 className="text-lg font-semibold leading-tight truncate">{maintenance.title}</h1>
+          <p className="text-muted-foreground text-xs">
+            {formatDateTime(maintenance.created_at)}
           </p>
         </div>
         {isTeam && (
-          <Button variant="outline" size="sm" onClick={() => setEditOpen(true)} className="gap-2">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditOpen(true)} title="Editar">
             <Pencil className="h-4 w-4" />
-            Editar
           </Button>
         )}
         {getStatusBadge(maintenance.status)}
       </div>
 
       {/* Informações principais */}
-      <div className={hasFinancials ? "grid grid-cols-1 md:grid-cols-2 gap-6" : "grid grid-cols-1 gap-6"}>
+      <div className={hasFinancials ? "grid grid-cols-1 md:grid-cols-2 gap-3" : "grid grid-cols-1 gap-3"}>
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
+          <CardHeader className="p-4 pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
               <FileText className="h-4 w-4" />
               Detalhes
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div>
-              <div className="text-sm text-muted-foreground">Imóvel</div>
-              <div className="font-medium">{maintenance.property?.name || '-'}</div>
+          <CardContent className="p-4 pt-0 space-y-2 text-sm">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-xs text-muted-foreground">Imóvel</span>
+              <span className="font-medium text-right">{maintenance.property?.name || '-'}</span>
             </div>
 
             {maintenance.category && (
-              <div>
-                <div className="text-sm text-muted-foreground">Categoria</div>
-                <div className="font-medium">{maintenance.category}</div>
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-xs text-muted-foreground">Categoria</span>
+                <span className="font-medium text-right">{maintenance.category}</span>
               </div>
             )}
 
             {maintenance.description && (
-              <div>
-                <div className="text-sm text-muted-foreground">Descrição</div>
+              <div className="pt-1 border-t">
+                <div className="text-xs text-muted-foreground mb-1">Descrição</div>
                 <div className="text-sm whitespace-pre-wrap">{maintenance.description}</div>
               </div>
             )}
 
             {maintenance.due_date && (
-              <div>
-                <div className="text-sm text-muted-foreground">Vencimento</div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  <span className="font-medium">{formatDate(maintenance.due_date)}</span>
-                </div>
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-xs text-muted-foreground">Vencimento</span>
+                <span className="font-medium flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5" />
+                  {formatDate(maintenance.due_date)}
+                </span>
               </div>
             )}
 
             {isTeam && (
-              <div>
-                <div className="text-sm text-muted-foreground">Proprietário</div>
+              <div className="pt-1 border-t">
+                <div className="text-xs text-muted-foreground">Proprietário</div>
                 <div className="font-medium">{maintenance.owner?.name || '-'}</div>
                 <div className="text-xs text-muted-foreground">{maintenance.owner?.email}</div>
               </div>
@@ -183,54 +182,50 @@ export default function ManutencaoDetalhes({ embedded = false, idOverride }: Man
 
         {hasFinancials && (
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
+            <CardHeader className="p-4 pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
                 <DollarSign className="h-4 w-4" />
-                Informações Financeiras
+                Financeiro
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div>
-                <div className="text-sm text-muted-foreground">Valor Total</div>
-                <div className="text-2xl font-bold">{formatBRL(maintenance.amount_cents)}</div>
+            <CardContent className="p-4 pt-0 space-y-2 text-sm">
+              <div className="flex items-baseline justify-between">
+                <span className="text-xs text-muted-foreground">Valor Total</span>
+                <span className="font-semibold">{formatBRL(maintenance.amount_cents)}</span>
               </div>
 
               {managementContribution > 0 && (
-                <div>
-                  <div className="text-sm text-muted-foreground">Contribuição da Gestão</div>
-                  <div className="text-xl font-semibold text-success">- {formatBRL(managementContribution)}</div>
+                <div className="flex items-baseline justify-between">
+                  <span className="text-xs text-muted-foreground">Aporte Gestão</span>
+                  <span className="font-semibold text-success">- {formatBRL(managementContribution)}</span>
                 </div>
               )}
 
-              <div>
-                <div className="text-sm text-muted-foreground">Valor Devido (Proprietário)</div>
-                <div className="text-2xl font-bold text-primary">
-                  {formatBRL(ownerDue)}
-                </div>
+              <div className="flex items-baseline justify-between rounded-md bg-primary/5 px-2 py-1.5">
+                <span className="text-xs font-medium text-muted-foreground">Devido</span>
+                <span className="text-base font-bold text-primary">{formatBRL(ownerDue)}</span>
               </div>
 
-              <div>
-                <div className="text-sm text-muted-foreground">Responsável pelo Custo</div>
-                <div className="font-medium text-sm">
-                  {getResponsibleLabel()}
-                </div>
+              <div className="text-xs text-muted-foreground">
+                {getResponsibleLabel()}
               </div>
 
               <Separator />
 
-              <div>
-                <div className="text-sm text-muted-foreground">Total Pago</div>
-                <div className="text-xl font-semibold text-success">{formatBRL(totalPaid)}</div>
+              <div className="flex items-baseline justify-between">
+                <span className="text-xs text-muted-foreground">Pago</span>
+                <span className="font-semibold text-success">{formatBRL(totalPaid)}</span>
               </div>
 
-              <div>
-                <div className="text-sm text-muted-foreground">Restante</div>
-                <div className="text-xl font-semibold text-warning">{formatBRL(remaining)}</div>
+              <div className="flex items-baseline justify-between">
+                <span className="text-xs text-muted-foreground">Restante</span>
+                <span className="font-semibold text-warning">{formatBRL(remaining)}</span>
               </div>
             </CardContent>
           </Card>
         )}
       </div>
+
 
       {/* Pagamentos (apenas quando há cobrança) */}
       {hasFinancials && (
