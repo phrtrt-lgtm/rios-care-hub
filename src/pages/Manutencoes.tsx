@@ -629,6 +629,9 @@ export default function Manutencoes() {
           ))}
         </div>
       )}
+
+      {/* Gráficos no final */}
+      <MaintenanceCharts charts={charts} serviceTypeData={serviceTypeData} />
     </div>
   );
 }
