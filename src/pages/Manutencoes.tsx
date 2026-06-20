@@ -321,11 +321,12 @@ export default function Manutencoes() {
 
       {/* Lista de Manutenções */}
       <Card>
-        <CardHeader>
+        <CardHeader className="px-4 py-3 sm:px-6 sm:py-4">
           <CardTitle className="text-base">Lista de Manutenções</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-auto">
+          {/* Desktop / tablet table */}
+          <div className="hidden md:block overflow-auto">
             <table className="w-full text-sm">
               <thead className="bg-muted/50">
                 <tr>
@@ -337,13 +338,14 @@ export default function Manutencoes() {
                   <th className="text-right p-3">Valor Devido</th>
                   <th className="text-center p-3">Responsável</th>
                   <th className="text-right p-3">Pago</th>
+                  <th className="text-left p-3">Anexos</th>
                   <th className="text-center p-3">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={9} className="text-center p-8 text-muted-foreground">
+                    <td colSpan={10} className="text-center p-8 text-muted-foreground">
                       Carregando...
                     </td>
                   </tr>
@@ -384,12 +386,15 @@ export default function Manutencoes() {
                       <td className="p-3 text-right">
                         {formatBRL(m.paid_cents)}
                       </td>
+                      <td className="p-3">
+                        <AttachmentThumbs attachments={attachmentsByCharge[m.id] || []} max={4} />
+                      </td>
                       <td className="p-3 text-center">{getStatusBadge(m.status)}</td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={9} className="text-center p-8 text-muted-foreground">
+                    <td colSpan={10} className="text-center p-8 text-muted-foreground">
                       Nenhuma manutenção encontrada
                     </td>
                   </tr>
@@ -397,8 +402,81 @@ export default function Manutencoes() {
               </tbody>
             </table>
           </div>
+
+          {/* Mobile cards */}
+          <div className="md:hidden divide-y">
+            {isLoading ? (
+              <div className="p-6 text-center text-sm text-muted-foreground">Carregando...</div>
+            ) : maintenances && maintenances.length > 0 ? (
+              maintenances
+                .filter((m: any) => !activeFilters.serviceType || (m.service_type && String(m.service_type).split(",").map((s: string) => s.trim()).includes(activeFilters.serviceType)))
+                .map((m: any) => {
+                  const due = m.amount_cents - (m.management_contribution_cents || 0);
+                  const atts = attachmentsByCharge[m.id] || [];
+                  return (
+                    <button
+                      key={m.id}
+                      onClick={() => { saveScrollPosition(pathname); navigate(`/cobranca/${m.id}`); }}
+                      className="w-full text-left p-3 active:bg-accent transition-colors"
+                    >
+                      {/* Header: property + status */}
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs text-muted-foreground truncate">
+                            {m.property?.name || '-'} · {formatDateTime(m.created_at)}
+                          </div>
+                          <div className="font-medium text-sm leading-tight truncate">{m.title}</div>
+                          {(m.category || m.service_type) && (
+                            <div className="text-[11px] text-muted-foreground truncate">
+                              {[m.category, m.service_type && String(m.service_type).split(",").map((s: string) => s.trim()).filter(Boolean).join(", ")].filter(Boolean).join(" · ")}
+                            </div>
+                          )}
+                        </div>
+                        <div className="shrink-0">{getStatusBadge(m.status)}</div>
+                      </div>
+
+                      {/* Values grid */}
+                      <div className="grid grid-cols-3 gap-2 mt-2 text-[11px]">
+                        <div className="bg-muted/50 rounded px-2 py-1">
+                          <div className="text-muted-foreground">Total</div>
+                          <div className="font-medium text-xs">{formatBRL(m.amount_cents)}</div>
+                        </div>
+                        <div className="bg-muted/50 rounded px-2 py-1">
+                          <div className="text-muted-foreground">Aporte</div>
+                          <div className="font-medium text-success text-xs">
+                            {m.management_contribution_cents > 0 ? formatBRL(m.management_contribution_cents) : '-'}
+                          </div>
+                        </div>
+                        <div className="bg-muted/50 rounded px-2 py-1">
+                          <div className="text-muted-foreground">Devido</div>
+                          <div className="font-bold text-xs">{formatBRL(due)}</div>
+                        </div>
+                      </div>
+
+                      {/* Footer: paid + responsible + attachments */}
+                      <div className="flex items-center justify-between gap-2 mt-2 text-[11px] text-muted-foreground">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="truncate">
+                            {getResponsibleLabel(m.cost_responsible, m.split_owner_percent)}
+                          </span>
+                          {m.paid_cents > 0 && (
+                            <span className="text-success">· Pago {formatBRL(m.paid_cents)}</span>
+                          )}
+                        </div>
+                        {atts.length > 0 && (
+                          <AttachmentThumbs attachments={atts} max={3} />
+                        )}
+                      </div>
+                    </button>
+                  );
+                })
+            ) : (
+              <div className="p-6 text-center text-sm text-muted-foreground">Nenhuma manutenção encontrada</div>
+            )}
+          </div>
         </CardContent>
       </Card>
+
 
       {/* Por Unidade - Team only */}
       {isTeam && !selectedPropertyId && propertyReports.length > 0 && (
