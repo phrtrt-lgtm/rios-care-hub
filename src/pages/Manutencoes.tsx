@@ -512,11 +512,20 @@ export default function Manutencoes() {
                         {formatBRL(m.paid_cents)}
                       </td>
                       <td className="p-3">
-                        <AttachmentThumbs
-                          attachments={attachmentsByCharge[m.id] || []}
-                          max={4}
-                          onOpen={(idx) => setLightbox({ atts: attachmentsByCharge[m.id] || [], index: idx })}
-                        />
+                        {(() => {
+                          const atts = attachmentsByCharge[m.id] || [];
+                          if (atts.length === 0) return <span className="text-xs text-muted-foreground">-</span>;
+                          return (
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); setGalleryItems(atts); setGalleryOpen(true); }}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded text-sm hover:bg-primary/10 text-primary transition-colors"
+                            >
+                              <Paperclip className="h-3.5 w-3.5" />
+                              <span>{atts.length}</span>
+                            </button>
+                          );
+                        })()}
                       </td>
                       <td className="p-3 text-center">{getStatusBadge(m.status)}</td>
                     </tr>
