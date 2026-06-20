@@ -13,6 +13,7 @@ import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { goBack, saveScrollPosition } from "@/lib/navigation";
 import { supabase } from "@/integrations/supabase/client";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
+import { ChargeAttachmentLightbox } from "@/components/ChargeAttachmentLightbox";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
