@@ -8,105 +8,15 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatBRL, formatDateTime } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Filter, Building2, ArrowLeft, Paperclip, FileText, Film, Gift, ChevronDown, ChevronUp } from "lucide-react";
+import { Filter, Building2, ArrowLeft, Paperclip, Gift, ChevronDown, ChevronUp } from "lucide-react";
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { goBack, saveScrollPosition } from "@/lib/navigation";
 import { supabase } from "@/integrations/supabase/client";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
-import { ChargeAttachmentLightbox } from "@/components/ChargeAttachmentLightbox";
+import { MediaGallery } from "@/components/MediaGallery";
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
-function AttachmentThumbs({
-  attachments,
-  max = 4,
-  onOpen,
-}: {
-  attachments: Array<{ id: string; mime: string; poster: boolean }>;
-  max?: number;
-  onOpen?: (index: number) => void;
-}) {
-  if (!attachments || attachments.length === 0) return null;
-  const shown = attachments.slice(0, max);
-  const extra = attachments.length - shown.length;
-  const handleClick = (e: React.MouseEvent, index: number) => {
-    if (!onOpen) return;
-    e.stopPropagation();
-    e.preventDefault();
-    onOpen(index);
-  };
-  return (
-    <div className="flex items-center gap-1 shrink-0">
-      {shown.map((a, idx) => {
-        const isImage = a.mime?.startsWith("image/");
-        const isVideo = a.mime?.startsWith("video/");
-        const isPdf = a.mime === "application/pdf";
-        const common = "h-8 w-8 rounded border overflow-hidden";
-        if (isImage) {
-          return (
-            <button
-              key={a.id}
-              type="button"
-              onClick={(e) => handleClick(e, idx)}
-              className={common}
-            >
-              <img
-                src={`${SUPABASE_URL}/functions/v1/serve-attachment/${a.id}/file`}
-                alt=""
-                className="h-full w-full object-cover"
-                loading="lazy"
-              />
-            </button>
-          );
-        }
-        if (isVideo) {
-          return (
-            <button
-              key={a.id}
-              type="button"
-              onClick={(e) => handleClick(e, idx)}
-              className={`${common} bg-muted flex items-center justify-center relative`}
-            >
-              {a.poster ? (
-                <img
-                  src={`${SUPABASE_URL}/functions/v1/serve-attachment/${a.id}/poster`}
-                  alt=""
-                  className="h-full w-full object-cover"
-                  loading="lazy"
-                />
-              ) : (
-                <Film className="h-4 w-4 text-muted-foreground" />
-              )}
-            </button>
-          );
-        }
-        return (
-          <button
-            key={a.id}
-            type="button"
-            onClick={(e) => handleClick(e, idx)}
-            className={`${common} bg-muted flex items-center justify-center`}
-          >
-            {isPdf ? (
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            ) : (
-              <Paperclip className="h-4 w-4 text-muted-foreground" />
-            )}
-          </button>
-        );
-      })}
-      {extra > 0 && (
-        <button
-          type="button"
-          onClick={(e) => handleClick(e, 0)}
-          className="h-8 min-w-8 px-1 rounded border bg-muted flex items-center justify-center text-[10px] font-medium text-muted-foreground"
-        >
-          +{extra}
-        </button>
-      )}
-    </div>
-  );
-}
+
 
 export default function Manutencoes() {
   useScrollRestoration();
@@ -123,9 +33,10 @@ export default function Manutencoes() {
   const [serviceTypes, setServiceTypes] = useState<string[]>([]);
   const [properties, setProperties] = useState<any[]>([]);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>(searchParams.get('property') || "");
-  const [attachmentsByCharge, setAttachmentsByCharge] = useState<Record<string, Array<{ id: string; mime: string; poster: boolean }>>>({});
+  const [attachmentsByCharge, setAttachmentsByCharge] = useState<Record<string, Array<{ id: string; file_url: string; file_name: string; file_type: string }>>>({});
   const [showFilters, setShowFilters] = useState(false);
-  const [lightbox, setLightbox] = useState<{ atts: Array<{ id: string; mime: string }>; index: number } | null>(null);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryItems, setGalleryItems] = useState<Array<{ id: string; file_url: string; file_name: string; file_type: string }>>([]);
 
   const isOwner = profile?.role === 'owner';
   const isTeam = profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance';
@@ -155,7 +66,7 @@ export default function Manutencoes() {
     }
   }, [user, year, propertyId, serviceTypeFilter]);
 
-  // Fetch attachments for listed maintenances (lightweight: id + mime + poster flag)
+  // Fetch attachments for listed maintenances (full info for gallery)
   useEffect(() => {
     const ids = (maintenances || []).map((m: any) => m.id);
     if (ids.length === 0) {
@@ -166,15 +77,21 @@ export default function Manutencoes() {
     (async () => {
       const { data } = await supabase
         .from("charge_attachments")
-        .select("id, charge_id, mime_type, mime_type_override, poster_path, created_at")
+        .select("id, charge_id, file_path, file_name, mime_type, mime_type_override, created_at")
         .in("charge_id", ids)
         .order("created_at", { ascending: true });
       if (cancelled) return;
-      const grouped: Record<string, Array<{ id: string; mime: string; poster: boolean }>> = {};
+      const grouped: Record<string, Array<{ id: string; file_url: string; file_name: string; file_type: string }>> = {};
       (data || []).forEach((a: any) => {
+        const path = a.file_path || "";
+        let url = path;
+        if (path && !path.startsWith("http://") && !path.startsWith("https://")) {
+          const { data: pub } = supabase.storage.from("attachments").getPublicUrl(path);
+          url = pub.publicUrl;
+        }
         const mime = a.mime_type_override || a.mime_type || "";
         if (!grouped[a.charge_id]) grouped[a.charge_id] = [];
-        grouped[a.charge_id].push({ id: a.id, mime, poster: !!a.poster_path });
+        grouped[a.charge_id].push({ id: a.id, file_url: url, file_name: a.file_name || "", file_type: mime });
       });
       setAttachmentsByCharge(grouped);
     })();
@@ -299,19 +216,11 @@ export default function Manutencoes() {
 
   return (
     <div className="container mx-auto p-3 sm:p-6 space-y-4 sm:space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate(isOwner ? '/minha-caixa' : '/painel', { replace: true })}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-3xl font-bold">Manutenções</h1>
-        </div>
-        {isOwner && (
-          <Button onClick={() => navigate('/novo-manutencao')}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nova Manutenção
-          </Button>
-        )}
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="icon" onClick={() => navigate(isOwner ? '/minha-caixa' : '/painel', { replace: true })}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <h1 className="text-2xl sm:text-3xl font-bold">Manutenções</h1>
       </div>
 
       {/* Filtros (toggle) */}
@@ -513,11 +422,20 @@ export default function Manutencoes() {
                         {formatBRL(m.paid_cents)}
                       </td>
                       <td className="p-3">
-                        <AttachmentThumbs
-                          attachments={attachmentsByCharge[m.id] || []}
-                          max={4}
-                          onOpen={(idx) => setLightbox({ atts: attachmentsByCharge[m.id] || [], index: idx })}
-                        />
+                        {(() => {
+                          const atts = attachmentsByCharge[m.id] || [];
+                          if (atts.length === 0) return <span className="text-xs text-muted-foreground">-</span>;
+                          return (
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); setGalleryItems(atts); setGalleryOpen(true); }}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded text-sm hover:bg-primary/10 text-primary transition-colors"
+                            >
+                              <Paperclip className="h-3.5 w-3.5" />
+                              <span>{atts.length}</span>
+                            </button>
+                          );
+                        })()}
                       </td>
                       <td className="p-3 text-center">{getStatusBadge(m.status)}</td>
                     </tr>
@@ -594,11 +512,14 @@ export default function Manutencoes() {
                           )}
                         </div>
                         {atts.length > 0 && (
-                          <AttachmentThumbs
-                            attachments={atts}
-                            max={3}
-                            onOpen={(idx) => setLightbox({ atts, index: idx })}
-                          />
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); e.preventDefault(); setGalleryItems(atts); setGalleryOpen(true); }}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded hover:bg-primary/10 text-primary transition-colors shrink-0"
+                          >
+                            <Paperclip className="h-3.5 w-3.5" />
+                            <span className="text-xs font-medium">{atts.length}</span>
+                          </button>
                         )}
                       </div>
                     </button>
@@ -666,11 +587,11 @@ export default function Manutencoes() {
       {/* Gráficos no final */}
       <MaintenanceCharts charts={charts} serviceTypeData={serviceTypeData} />
 
-      <ChargeAttachmentLightbox
-        attachments={lightbox?.atts || []}
-        initialIndex={lightbox?.index || 0}
-        open={!!lightbox}
-        onOpenChange={(o) => !o && setLightbox(null)}
+      <MediaGallery
+        items={galleryItems}
+        initialIndex={0}
+        open={galleryOpen}
+        onOpenChange={setGalleryOpen}
       />
     </div>
   );
