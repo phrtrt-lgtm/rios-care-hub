@@ -602,11 +602,14 @@ export default function Manutencoes() {
                           )}
                         </div>
                         {atts.length > 0 && (
-                          <AttachmentThumbs
-                            attachments={atts}
-                            max={3}
-                            onOpen={(idx) => setLightbox({ atts, index: idx })}
-                          />
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); e.preventDefault(); setGalleryItems(atts); setGalleryOpen(true); }}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded hover:bg-primary/10 text-primary transition-colors shrink-0"
+                          >
+                            <Paperclip className="h-3.5 w-3.5" />
+                            <span className="text-xs font-medium">{atts.length}</span>
+                          </button>
                         )}
                       </div>
                     </button>
