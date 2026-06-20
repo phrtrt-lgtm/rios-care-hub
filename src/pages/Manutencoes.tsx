@@ -289,106 +289,136 @@ export default function Manutencoes() {
         )}
       </div>
 
-      {/* Filtros */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-wrap gap-3 items-end">
-            {isTeam && (
-              <div className="space-y-2 w-56">
-                <label className="text-sm font-medium flex items-center gap-1">
-                  <Building2 className="h-3 w-3" />
-                  Unidade
-                </label>
-                <Select value={selectedPropertyId || "all"} onValueChange={handlePropertyChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todas" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas as unidades</SelectItem>
-                    {properties.map((p: any) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.name} {p.owner?.name ? `(${p.owner.name})` : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+      {/* Filtros (toggle) */}
+      <div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowFilters((v) => !v)}
+          className="gap-2"
+        >
+          <Filter className="h-4 w-4" />
+          Filtros
+          {showFilters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </Button>
+        {showFilters && (
+          <Card className="mt-3">
+            <CardContent className="pt-6">
+              <div className="flex flex-wrap gap-3 items-end">
+                {isTeam && (
+                  <div className="space-y-2 w-full sm:w-56">
+                    <label className="text-sm font-medium flex items-center gap-1">
+                      <Building2 className="h-3 w-3" />
+                      Unidade
+                    </label>
+                    <Select value={selectedPropertyId || "all"} onValueChange={handlePropertyChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Todas" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas as unidades</SelectItem>
+                        {properties.map((p: any) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.name} {p.owner?.name ? `(${p.owner.name})` : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <div className="space-y-2 w-32">
+                  <label className="text-sm font-medium">Ano</label>
+                  <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[year, year - 1, year - 2].map((y) => (
+                        <SelectItem key={y} value={String(y)}>
+                          {y}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2 w-full sm:w-48">
+                  <label className="text-sm font-medium">Status</label>
+                  <Select value={status || "all"} onValueChange={(v) => setStatus(v === "all" ? "" : v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="draft">Rascunho</SelectItem>
+                      <SelectItem value="pending">Pendente</SelectItem>
+                      <SelectItem value="paid">Paga</SelectItem>
+                      <SelectItem value="contested">Contestada</SelectItem>
+                      <SelectItem value="debited">Debitada</SelectItem>
+                      <SelectItem value="cancelled">Cancelada</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {serviceTypes.length > 0 && (
+                  <div className="space-y-2 w-full sm:w-48">
+                    <label className="text-sm font-medium flex items-center gap-1">
+                      <Filter className="h-3 w-3" />
+                      Tipo de Serviço
+                    </label>
+                    <Select value={serviceTypeFilter || "all"} onValueChange={(v) => setServiceTypeFilter(v === "all" ? "" : v)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Todos" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os tipos</SelectItem>
+                        {serviceTypes.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <div className="space-y-2 flex-1 min-w-[200px]">
+                  <label className="text-sm font-medium">Buscar</label>
+                  <Input
+                    placeholder="Título ou descrição..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleFilter()}
+                  />
+                </div>
+
+                <Button onClick={handleFilter}>Filtrar</Button>
               </div>
-            )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
-            <div className="space-y-2 w-32">
-              <label className="text-sm font-medium">Ano</label>
-              <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {[year, year - 1, year - 2].map((y) => (
-                    <SelectItem key={y} value={String(y)}>
-                      {y}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2 w-48">
-              <label className="text-sm font-medium">Status</label>
-              <Select value={status || "all"} onValueChange={(v) => setStatus(v === "all" ? "" : v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="draft">Rascunho</SelectItem>
-                  <SelectItem value="pending">Pendente</SelectItem>
-                  <SelectItem value="paid">Paga</SelectItem>
-                  <SelectItem value="contested">Contestada</SelectItem>
-                  <SelectItem value="debited">Debitada</SelectItem>
-                  <SelectItem value="cancelled">Cancelada</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {serviceTypes.length > 0 && (
-              <div className="space-y-2 w-48">
-                <label className="text-sm font-medium flex items-center gap-1">
-                  <Filter className="h-3 w-3" />
-                  Tipo de Serviço
-                </label>
-                <Select value={serviceTypeFilter || "all"} onValueChange={(v) => setServiceTypeFilter(v === "all" ? "" : v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os tipos</SelectItem>
-                    {serviceTypes.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {type}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+      {/* Aporte RIOS */}
+      {summary && summary.aporteTotalCents > 0 && (
+        <Card className="overflow-hidden border-success/30">
+          <CardContent className="p-0">
+            <div className="rounded-xl bg-gradient-to-r from-success/15 to-success/5 px-4 py-4 text-center">
+              <div className="flex items-center justify-center gap-2 mb-1">
+                <Gift className="h-4 w-4 text-success" />
+                <p className="text-[11px] text-success font-medium tracking-wide uppercase">
+                  A RIOS já aportou {selectedPropertyId ? 'neste imóvel' : 'no seu imóvel'}
+                </p>
               </div>
-            )}
-
-            <div className="space-y-2 flex-1 min-w-[200px]">
-              <label className="text-sm font-medium">Buscar</label>
-              <Input
-                placeholder="Título ou descrição..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleFilter()}
-              />
+              <p className="text-2xl font-extrabold text-success">
+                {formatBRL(summary.aporteTotalCents)}
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-1">em {year}</p>
             </div>
-
-            <Button onClick={handleFilter}>Filtrar</Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Summary + Charts */}
-      <MaintenanceSummaryCards summary={summary} />
-      <MaintenanceCharts charts={charts} serviceTypeData={serviceTypeData} />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Lista de Manutenções */}
       <Card>
