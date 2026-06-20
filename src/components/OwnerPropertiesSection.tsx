@@ -71,7 +71,7 @@ export const OwnerPropertiesSection = () => {
     return (
       <div className="mb-8">
         <h3 className="text-2xl font-bold mb-4">Minhas Unidades</h3>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {[1, 2, 3].map((i) => (
             <Card key={i}>
               <CardHeader className="pb-3">
@@ -98,7 +98,7 @@ export const OwnerPropertiesSection = () => {
 
   return (
     <div className="mb-6 overflow-hidden">
-      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 min-w-0">
+      <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 min-w-0">
         {properties.map((property) => (
           <Card 
             key={property.id}
