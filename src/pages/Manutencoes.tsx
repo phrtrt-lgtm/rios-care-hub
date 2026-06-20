@@ -123,9 +123,10 @@ export default function Manutencoes() {
   const [serviceTypes, setServiceTypes] = useState<string[]>([]);
   const [properties, setProperties] = useState<any[]>([]);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>(searchParams.get('property') || "");
-  const [attachmentsByCharge, setAttachmentsByCharge] = useState<Record<string, Array<{ id: string; mime: string; poster: boolean }>>>({});
+  const [attachmentsByCharge, setAttachmentsByCharge] = useState<Record<string, Array<{ id: string; file_url: string; file_name: string; file_type: string }>>>({});
   const [showFilters, setShowFilters] = useState(false);
-  const [lightbox, setLightbox] = useState<{ atts: Array<{ id: string; mime: string }>; index: number } | null>(null);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryItems, setGalleryItems] = useState<Array<{ id: string; file_url: string; file_name: string; file_type: string }>>([]);
 
   const isOwner = profile?.role === 'owner';
   const isTeam = profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance';
