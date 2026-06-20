@@ -611,11 +611,11 @@ const MinhasCobrancas = () => {
         })()}
       </main>
 
-      <ChargeAttachmentLightbox
-        attachments={lightbox?.atts || []}
-        initialIndex={lightbox?.index || 0}
-        open={!!lightbox}
-        onOpenChange={(o) => !o && setLightbox(null)}
+      <MediaGallery
+        items={galleryItems}
+        initialIndex={0}
+        open={galleryOpen}
+        onOpenChange={setGalleryOpen}
       />
     </div>
   );
