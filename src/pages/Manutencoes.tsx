@@ -513,7 +513,11 @@ export default function Manutencoes() {
                         {formatBRL(m.paid_cents)}
                       </td>
                       <td className="p-3">
-                        <AttachmentThumbs attachments={attachmentsByCharge[m.id] || []} max={4} />
+                        <AttachmentThumbs
+                          attachments={attachmentsByCharge[m.id] || []}
+                          max={4}
+                          onOpen={(idx) => setLightbox({ atts: attachmentsByCharge[m.id] || [], index: idx })}
+                        />
                       </td>
                       <td className="p-3 text-center">{getStatusBadge(m.status)}</td>
                     </tr>
