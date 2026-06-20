@@ -69,6 +69,7 @@ const MinhasCobrancas = () => {
     total_amount: number;
   } | null>(null);
   const [visibleCount, setVisibleCount] = useState(100);
+  const [lightbox, setLightbox] = useState<{ atts: { id: string; mime: string }[]; index: number } | null>(null);
   const filtersHook = useListFilters("filters:minhas-cobrancas");
   const { applyTo } = filtersHook;
   useEffect(() => {
