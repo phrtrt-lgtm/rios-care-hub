@@ -8,8 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowLeft, Calendar, FileText, Paperclip, QrCode, Building2, DollarSign, Tag, CreditCard, Zap } from "lucide-react";
+import { ArrowLeft, Calendar, FileText, Paperclip, QrCode, Building2, DollarSign, Tag, CreditCard, Zap, Film } from "lucide-react";
 import { AuthenticatedImage, AuthenticatedVideo } from "@/components/AuthenticatedMedia";
+import { ChargeAttachmentLightbox } from "@/components/ChargeAttachmentLightbox";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -68,6 +69,7 @@ const MinhasCobrancas = () => {
     total_amount: number;
   } | null>(null);
   const [visibleCount, setVisibleCount] = useState(100);
+  const [lightbox, setLightbox] = useState<{ atts: { id: string; mime: string }[]; index: number } | null>(null);
   const filtersHook = useListFilters("filters:minhas-cobrancas");
   const { applyTo } = filtersHook;
   useEffect(() => {
@@ -226,7 +228,7 @@ const MinhasCobrancas = () => {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-6xl">
+      <main className="container mx-auto px-3 py-4 sm:px-4 sm:py-8 max-w-6xl">
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-foreground">Minhas Cobranças</h1>
           <p className="text-muted-foreground">Visualize todas as suas cobranças</p>
@@ -480,124 +482,139 @@ const MinhasCobrancas = () => {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {visibleCharges.map((charge) => {
-              const isOpen = charge.status === 'sent' || charge.status === 'overdue' || charge.status === 'pendente';
-              const isSelected = selectedCharges.includes(charge.id);
-              const ownerDue = charge.amount_cents - charge.management_contribution_cents;
-              
-              return (
-                <Card 
-                  key={charge.id}
-                  className={`transition-all hover:shadow-md hover:border-primary/20 overflow-hidden group ${isSelected ? 'ring-2 ring-primary' : ''}`}
-                >
-                  <div className="flex">
-                    {/* Checkbox lateral (se aplicável) */}
-                    {isOpen && (
-                      <div className="flex items-center justify-center w-12 bg-muted/30 border-r">
-                        <Checkbox 
-                          checked={isSelected}
-                          onCheckedChange={() => toggleChargeSelection(charge.id)}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      </div>
-                    )}
+                    const isOpen = charge.status === 'sent' || charge.status === 'overdue' || charge.status === 'pendente';
+                    const isSelected = selectedCharges.includes(charge.id);
+                    const ownerDue = charge.amount_cents - charge.management_contribution_cents;
+                    const atts = (charge.attachments || []).map((a) => ({
+                      id: a.id,
+                      mime: a.mime_type || "",
+                      poster: !!a.poster_path,
+                    }));
 
-                    {/* Conteúdo principal */}
-                    <div 
-                      className="flex-1 p-4 cursor-pointer"
-                      onClick={() => { saveScrollPosition(pathname); navigate(`/cobranca/${charge.id}`); }}
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 space-y-2">
-                          {/* Título e Status */}
-                          <div className="flex items-start justify-between gap-2">
-                            <h3 className="font-semibold text-base leading-tight group-hover:text-primary transition-colors flex-1">
-                              {charge.title}
-                            </h3>
-                            {getStatusBadge(charge.status)}
-                          </div>
-
-                          {/* Badges de informação */}
-                          <div className="flex flex-wrap gap-1.5">
-                            {charge.property && (
-                              <Badge variant="outline" className="text-xs bg-background">
-                                <Building2 className="h-3 w-3 mr-1" />
-                                {charge.property.name}
-                              </Badge>
-                            )}
-                            {charge.category && (
-                              <Badge variant="outline" className="text-xs bg-info/10 text-info border-info/30">
-                                {CHARGE_CATEGORIES[charge.category as keyof typeof CHARGE_CATEGORIES]}
-                              </Badge>
-                            )}
-                            {charge.service_type && (
-                              <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30">
-                                <Tag className="h-3 w-3 mr-1" />
-                                {charge.service_type}
-                              </Badge>
-                            )}
-                          </div>
-
-                          {/* Descrição */}
-                          {charge.description && (
-                            <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-                              {charge.description}
-                            </p>
+                    return (
+                      <Card
+                        key={charge.id}
+                        className={`transition-all hover:shadow-md hover:border-primary/20 overflow-hidden group ${isSelected ? 'ring-2 ring-primary' : ''}`}
+                      >
+                        <div className="flex">
+                          {isOpen && (
+                            <div className="flex items-center justify-center w-9 sm:w-12 bg-muted/30 border-r shrink-0">
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={() => toggleChargeSelection(charge.id)}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </div>
                           )}
 
-                          {/* Footer com valores e datas */}
-                          <div className="flex flex-wrap gap-4 pt-1">
-                            <div className="space-y-0.5">
-                              <div className="flex items-baseline gap-2">
-                                <span className="text-xs text-muted-foreground">Valor Total:</span>
-                                <span className="text-sm font-semibold text-foreground">
-                                  {formatCurrency(charge.amount_cents, charge.currency)}
+                          <button
+                            type="button"
+                            className="flex-1 p-3 sm:p-4 text-left min-w-0"
+                            onClick={() => { saveScrollPosition(pathname); navigate(`/cobranca/${charge.id}`); }}
+                          >
+                            {/* Título + status */}
+                            <div className="flex items-start justify-between gap-2 mb-1.5">
+                              <h3 className="font-semibold text-sm sm:text-base leading-tight group-hover:text-primary transition-colors line-clamp-2 flex-1 min-w-0">
+                                {charge.title}
+                              </h3>
+                              <div className="shrink-0">{getStatusBadge(charge.status)}</div>
+                            </div>
+
+                            {/* Imóvel + categoria (compacto) */}
+                            <div className="flex flex-wrap gap-1 mb-1.5">
+                              {charge.property && (
+                                <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                                  <Building2 className="h-3 w-3" />
+                                  <span className="truncate max-w-[140px]">{charge.property.name}</span>
                                 </span>
-                              </div>
-                              {charge.management_contribution_cents > 0 && (
-                                <div className="flex items-baseline gap-2">
-                                  <span className="text-xs text-muted-foreground">Aporte Gestão:</span>
-                                  <span className="text-sm font-semibold text-success">
-                                    - {formatCurrency(charge.management_contribution_cents, charge.currency)}
-                                  </span>
-                                </div>
                               )}
-                              <div className="flex items-baseline gap-2">
-                                <span className="text-xs text-muted-foreground">Valor Devido:</span>
-                                <span className="text-base font-bold text-primary">
-                                  {formatCurrency(ownerDue, charge.currency)}
-                                </span>
+                              {charge.category && (
+                                <Badge variant="outline" className="text-[10px] h-4 px-1.5 bg-info/10 text-info border-info/30">
+                                  {CHARGE_CATEGORIES[charge.category as keyof typeof CHARGE_CATEGORIES]}
+                                </Badge>
+                              )}
+                              {charge.service_type && (
+                                <Badge variant="outline" className="text-[10px] h-4 px-1.5 bg-primary/10 text-primary border-primary/30">
+                                  {charge.service_type}
+                                </Badge>
+                              )}
+                            </div>
+
+                            {/* Grid de valores */}
+                            <div className="grid grid-cols-3 gap-1.5 mb-2">
+                              <div className="bg-muted/50 rounded px-2 py-1">
+                                <div className="text-[10px] text-muted-foreground">Total</div>
+                                <div className="text-xs font-medium">{formatCurrency(charge.amount_cents, charge.currency)}</div>
+                              </div>
+                              <div className="bg-muted/50 rounded px-2 py-1">
+                                <div className="text-[10px] text-muted-foreground">Aporte</div>
+                                <div className="text-xs font-medium text-success">
+                                  {charge.management_contribution_cents > 0 ? `- ${formatCurrency(charge.management_contribution_cents, charge.currency)}` : '-'}
+                                </div>
+                              </div>
+                              <div className="bg-primary/10 rounded px-2 py-1">
+                                <div className="text-[10px] text-muted-foreground">Devido</div>
+                                <div className="text-xs font-bold text-primary">{formatCurrency(ownerDue, charge.currency)}</div>
                               </div>
                             </div>
 
-                            <div className="space-y-0.5 text-xs text-muted-foreground">
-                              {charge.due_date && (
-                                <div className="flex items-center gap-1">
-                                  <Calendar className="h-3 w-3" />
-                                  Venc: {format(new Date(charge.due_date), "dd/MM/yyyy", { locale: ptBR })}
-                                </div>
-                              )}
-                              {charge.maintenance_date && (
-                                <div className="flex items-center gap-1">
-                                  <Calendar className="h-3 w-3" />
-                                  Data: {format(new Date(charge.maintenance_date), "dd/MM/yyyy", { locale: ptBR })}
-                                </div>
-                              )}
-                              {charge.attachments && charge.attachments.length > 0 && (
-                                <div className="flex items-center gap-1 text-info">
-                                  <Paperclip className="h-3 w-3" />
-                                  +{charge.attachments.length} anexo{charge.attachments.length > 1 ? 's' : ''}
+                            {/* Footer: data + anexos */}
+                            <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+                              <div className="flex flex-wrap gap-x-3 gap-y-0.5 min-w-0">
+                                {charge.due_date && (
+                                  <span className="inline-flex items-center gap-1">
+                                    <Calendar className="h-3 w-3" />
+                                    Venc: {format(new Date(charge.due_date), "dd/MM/yyyy", { locale: ptBR })}
+                                  </span>
+                                )}
+                              </div>
+                              {atts.length > 0 && (
+                                <div className="flex items-center gap-1 shrink-0">
+                                  {atts.slice(0, 3).map((a, idx) => {
+                                    const isImage = a.mime?.startsWith("image/");
+                                    const isVideo = a.mime?.startsWith("video/");
+                                    const isPdf = a.mime === "application/pdf";
+                                    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/serve-attachment/${a.id}/file`;
+                                    const poster = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/serve-attachment/${a.id}/poster`;
+                                    return (
+                                      <button
+                                        key={a.id}
+                                        type="button"
+                                        onClick={(e) => { e.stopPropagation(); e.preventDefault(); setLightbox({ atts, index: idx }); }}
+                                        className="h-7 w-7 rounded border overflow-hidden bg-muted flex items-center justify-center"
+                                      >
+                                        {isImage ? (
+                                          <img src={url} alt="" className="h-full w-full object-cover" loading="lazy" />
+                                        ) : isVideo && a.poster ? (
+                                          <img src={poster} alt="" className="h-full w-full object-cover" loading="lazy" />
+                                        ) : isVideo ? (
+                                          <Film className="h-3.5 w-3.5 text-muted-foreground" />
+                                        ) : isPdf ? (
+                                          <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                                        ) : (
+                                          <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
+                                        )}
+                                      </button>
+                                    );
+                                  })}
+                                  {atts.length > 3 && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); e.preventDefault(); setLightbox({ atts, index: 0 }); }}
+                                      className="h-7 min-w-7 px-1 rounded border bg-muted text-[10px] font-medium text-muted-foreground"
+                                    >
+                                      +{atts.length - 3}
+                                    </button>
+                                  )}
                                 </div>
                               )}
                             </div>
-                          </div>
+                          </button>
                         </div>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              );
+                      </Card>
+                    );
                   })}
                 </div>
               )}
@@ -613,6 +630,13 @@ const MinhasCobrancas = () => {
           );
         })()}
       </main>
+
+      <ChargeAttachmentLightbox
+        attachments={lightbox?.atts || []}
+        initialIndex={lightbox?.index || 0}
+        open={!!lightbox}
+        onOpenChange={(o) => !o && setLightbox(null)}
+      />
     </div>
   );
 };

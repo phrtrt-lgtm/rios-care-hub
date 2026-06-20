@@ -13,41 +13,59 @@ import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { goBack, saveScrollPosition } from "@/lib/navigation";
 import { supabase } from "@/integrations/supabase/client";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
+import { ChargeAttachmentLightbox } from "@/components/ChargeAttachmentLightbox";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
 function AttachmentThumbs({
   attachments,
   max = 4,
+  onOpen,
 }: {
   attachments: Array<{ id: string; mime: string; poster: boolean }>;
   max?: number;
+  onOpen?: (index: number) => void;
 }) {
   if (!attachments || attachments.length === 0) return null;
   const shown = attachments.slice(0, max);
   const extra = attachments.length - shown.length;
+  const handleClick = (e: React.MouseEvent, index: number) => {
+    if (!onOpen) return;
+    e.stopPropagation();
+    e.preventDefault();
+    onOpen(index);
+  };
   return (
     <div className="flex items-center gap-1 shrink-0">
-      {shown.map((a) => {
+      {shown.map((a, idx) => {
         const isImage = a.mime?.startsWith("image/");
         const isVideo = a.mime?.startsWith("video/");
         const isPdf = a.mime === "application/pdf";
+        const common = "h-8 w-8 rounded border overflow-hidden";
         if (isImage) {
           return (
-            <img
+            <button
               key={a.id}
-              src={`${SUPABASE_URL}/functions/v1/serve-attachment/${a.id}/file`}
-              alt=""
-              className="h-8 w-8 rounded object-cover border"
-              loading="lazy"
-            />
+              type="button"
+              onClick={(e) => handleClick(e, idx)}
+              className={common}
+            >
+              <img
+                src={`${SUPABASE_URL}/functions/v1/serve-attachment/${a.id}/file`}
+                alt=""
+                className="h-full w-full object-cover"
+                loading="lazy"
+              />
+            </button>
           );
         }
         if (isVideo) {
           return (
-            <div
+            <button
               key={a.id}
-              className="h-8 w-8 rounded border bg-muted flex items-center justify-center relative overflow-hidden"
+              type="button"
+              onClick={(e) => handleClick(e, idx)}
+              className={`${common} bg-muted flex items-center justify-center relative`}
             >
               {a.poster ? (
                 <img
@@ -59,26 +77,32 @@ function AttachmentThumbs({
               ) : (
                 <Film className="h-4 w-4 text-muted-foreground" />
               )}
-            </div>
+            </button>
           );
         }
         return (
-          <div
+          <button
             key={a.id}
-            className="h-8 w-8 rounded border bg-muted flex items-center justify-center"
+            type="button"
+            onClick={(e) => handleClick(e, idx)}
+            className={`${common} bg-muted flex items-center justify-center`}
           >
             {isPdf ? (
               <FileText className="h-4 w-4 text-muted-foreground" />
             ) : (
               <Paperclip className="h-4 w-4 text-muted-foreground" />
             )}
-          </div>
+          </button>
         );
       })}
       {extra > 0 && (
-        <div className="h-8 min-w-8 px-1 rounded border bg-muted flex items-center justify-center text-[10px] font-medium text-muted-foreground">
+        <button
+          type="button"
+          onClick={(e) => handleClick(e, 0)}
+          className="h-8 min-w-8 px-1 rounded border bg-muted flex items-center justify-center text-[10px] font-medium text-muted-foreground"
+        >
           +{extra}
-        </div>
+        </button>
       )}
     </div>
   );
@@ -101,6 +125,7 @@ export default function Manutencoes() {
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>(searchParams.get('property') || "");
   const [attachmentsByCharge, setAttachmentsByCharge] = useState<Record<string, Array<{ id: string; mime: string; poster: boolean }>>>({});
   const [showFilters, setShowFilters] = useState(false);
+  const [lightbox, setLightbox] = useState<{ atts: Array<{ id: string; mime: string }>; index: number } | null>(null);
 
   const isOwner = profile?.role === 'owner';
   const isTeam = profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance';
@@ -488,7 +513,11 @@ export default function Manutencoes() {
                         {formatBRL(m.paid_cents)}
                       </td>
                       <td className="p-3">
-                        <AttachmentThumbs attachments={attachmentsByCharge[m.id] || []} max={4} />
+                        <AttachmentThumbs
+                          attachments={attachmentsByCharge[m.id] || []}
+                          max={4}
+                          onOpen={(idx) => setLightbox({ atts: attachmentsByCharge[m.id] || [], index: idx })}
+                        />
                       </td>
                       <td className="p-3 text-center">{getStatusBadge(m.status)}</td>
                     </tr>
@@ -565,7 +594,11 @@ export default function Manutencoes() {
                           )}
                         </div>
                         {atts.length > 0 && (
-                          <AttachmentThumbs attachments={atts} max={3} />
+                          <AttachmentThumbs
+                            attachments={atts}
+                            max={3}
+                            onOpen={(idx) => setLightbox({ atts, index: idx })}
+                          />
                         )}
                       </div>
                     </button>
@@ -632,6 +665,13 @@ export default function Manutencoes() {
 
       {/* Gráficos no final */}
       <MaintenanceCharts charts={charts} serviceTypeData={serviceTypeData} />
+
+      <ChargeAttachmentLightbox
+        attachments={lightbox?.atts || []}
+        initialIndex={lightbox?.index || 0}
+        open={!!lightbox}
+        onOpenChange={(o) => !o && setLightbox(null)}
+      />
     </div>
   );
 }
