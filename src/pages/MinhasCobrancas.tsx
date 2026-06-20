@@ -69,7 +69,8 @@ const MinhasCobrancas = () => {
     total_amount: number;
   } | null>(null);
   const [visibleCount, setVisibleCount] = useState(100);
-  const [lightbox, setLightbox] = useState<{ atts: { id: string; mime: string }[]; index: number } | null>(null);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryItems, setGalleryItems] = useState<{ id: string; file_url: string; file_name: string; file_type: string }[]>([]);
   const filtersHook = useListFilters("filters:minhas-cobrancas");
   const { applyTo } = filtersHook;
   useEffect(() => {
