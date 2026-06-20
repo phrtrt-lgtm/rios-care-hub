@@ -100,6 +100,7 @@ export default function Manutencoes() {
   const [properties, setProperties] = useState<any[]>([]);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>(searchParams.get('property') || "");
   const [attachmentsByCharge, setAttachmentsByCharge] = useState<Record<string, Array<{ id: string; mime: string; poster: boolean }>>>({});
+  const [showFilters, setShowFilters] = useState(false);
 
   const isOwner = profile?.role === 'owner';
   const isTeam = profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance';
