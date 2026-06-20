@@ -630,6 +630,13 @@ const MinhasCobrancas = () => {
           );
         })()}
       </main>
+
+      <ChargeAttachmentLightbox
+        attachments={lightbox?.atts || []}
+        initialIndex={lightbox?.index || 0}
+        open={!!lightbox}
+        onOpenChange={(o) => !o && setLightbox(null)}
+      />
     </div>
   );
 };
