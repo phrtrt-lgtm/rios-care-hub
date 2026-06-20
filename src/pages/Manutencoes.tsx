@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatBRL, formatDateTime } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Filter, Building2, ArrowLeft, Paperclip, Image as ImageIcon, FileText, Film } from "lucide-react";
+import { Plus, Filter, Building2, ArrowLeft, Paperclip, FileText, Film } from "lucide-react";
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { goBack, saveScrollPosition } from "@/lib/navigation";
 import { supabase } from "@/integrations/supabase/client";
