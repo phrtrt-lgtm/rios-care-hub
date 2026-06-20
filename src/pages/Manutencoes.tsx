@@ -594,7 +594,11 @@ export default function Manutencoes() {
                           )}
                         </div>
                         {atts.length > 0 && (
-                          <AttachmentThumbs attachments={atts} max={3} />
+                          <AttachmentThumbs
+                            attachments={atts}
+                            max={3}
+                            onOpen={(idx) => setLightbox({ atts, index: idx })}
+                          />
                         )}
                       </div>
                     </button>
