@@ -2381,7 +2381,7 @@ export default function AdminManutencoesLista() {
     const mobileGroups = [
       { id: "em_progresso", label: "Em Progresso", borderColor: "border-l-warning", dotColor: "bg-warning" },
       { id: "cobrancas_vencidas", label: "Cobranças Vencidas", borderColor: "border-l-destructive", dotColor: "bg-destructive" },
-      { id: "concluidas", label: "Manutenções Concluídas", borderColor: "border-l-success", dotColor: "bg-success" },
+      { id: "concluidas", label: "Aguardando Envio ao Proprietário", borderColor: "border-l-success", dotColor: "bg-success" },
       { id: "cobrancas", label: "Cobranças Pendentes", borderColor: "border-l-primary", dotColor: "bg-primary" },
     ];
 
