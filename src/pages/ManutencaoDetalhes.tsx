@@ -347,8 +347,7 @@ export default function ManutencaoDetalhes({ embedded = false, idOverride }: Man
                             src={attachment.file_url}
                             fileType={attachment.file_type}
                             fileName={attachment.file_name}
-                            size="sm"
-                            className="w-full h-full"
+                            size="md"
                           />
                           {attachment.from_inspection && (
                             <div className="absolute top-0.5 left-0.5 bg-info text-info-foreground rounded-full p-0.5 shadow-sm pointer-events-none">
