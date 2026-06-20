@@ -488,11 +488,20 @@ const MinhasCobrancas = () => {
                     const isOpen = charge.status === 'sent' || charge.status === 'overdue' || charge.status === 'pendente';
                     const isSelected = selectedCharges.includes(charge.id);
                     const ownerDue = charge.amount_cents - charge.management_contribution_cents;
-                    const atts = (charge.attachments || []).map((a) => ({
-                      id: a.id,
-                      mime: a.mime_type || "",
-                      poster: !!a.poster_path,
-                    }));
+                    const atts = (charge.attachments || []).map((a) => {
+                      const path = a.file_path || "";
+                      let url = path;
+                      if (path && !path.startsWith("http://") && !path.startsWith("https://")) {
+                        const { data: pub } = supabase.storage.from("attachments").getPublicUrl(path);
+                        url = pub.publicUrl;
+                      }
+                      return {
+                        id: a.id,
+                        file_url: url,
+                        file_name: a.file_name || "",
+                        file_type: a.mime_type || "",
+                      };
+                    });
 
                     return (
                       <Card
