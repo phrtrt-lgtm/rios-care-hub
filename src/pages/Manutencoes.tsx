@@ -665,6 +665,13 @@ export default function Manutencoes() {
 
       {/* Gráficos no final */}
       <MaintenanceCharts charts={charts} serviceTypeData={serviceTypeData} />
+
+      <ChargeAttachmentLightbox
+        attachments={lightbox?.atts || []}
+        initialIndex={lightbox?.index || 0}
+        open={!!lightbox}
+        onOpenChange={(o) => !o && setLightbox(null)}
+      />
     </div>
   );
 }
