@@ -15,7 +15,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import { MediaGallery } from "@/components/MediaGallery";
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+
+
 
 export default function Manutencoes() {
   useScrollRestoration();
