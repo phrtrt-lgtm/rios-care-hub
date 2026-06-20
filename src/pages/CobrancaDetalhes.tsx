@@ -1342,183 +1342,93 @@ export default function CobrancaDetalhes() {
             )}
 
             {attachments.length > 0 && (
-              <div className="border-t pt-6 mt-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-foreground">Anexos ({attachments.length})</h3>
+              <div className="pt-4 mt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-medium text-muted-foreground">Anexos ({attachments.length})</span>
                   {attachments.length > 1 && (
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="ghost"
                       size="sm"
+                      className="h-6 text-xs text-muted-foreground hover:text-foreground"
                       onClick={downloadAllAttachments}
                       disabled={downloadingAll}
                     >
-                      <Download className="h-4 w-4 mr-2" />
-                      Baixar Todos
+                      <Download className="h-3 w-3 mr-1" />
+                      Baixar todos
                     </Button>
                   )}
                 </div>
 
-                {/* Galeria de Imagens */}
-                {attachments.some(a => isImageFile(a)) && (
-                  <div className="mb-6">
-                    <h4 className="text-sm font-medium text-muted-foreground mb-3">Imagens</h4>
-                    <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                      {attachments
-                        .filter(a => isImageFile(a))
-                        .map((attachment, idx) => {
-                          const previewUrl = getAttachmentUrl(attachment);
-                          const mediaIndex = allMediaItems.findIndex(item => item.file_url === previewUrl);
-                          
-                          return (
-                             <div 
-                               key={attachment.id} 
-                               className="group relative aspect-square rounded-md overflow-hidden border bg-muted cursor-pointer"
-                               onClick={() => {
-                                 setGalleryStartIndex(mediaIndex);
-                                 setGalleryOpen(true);
-                               }}
-                             >
-                               <AuthenticatedImage 
-                                 src={previewUrl}
-                                 alt={attachment.file_name}
-                                 className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                               />
-                               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
-                                 <Button
-                                   size="sm"
-                                   variant="secondary"
-                                   onClick={(e) => {
-                                     e.stopPropagation();
-                                     setGalleryStartIndex(mediaIndex);
-                                     setGalleryOpen(true);
-                                   }}
-                                   className="h-7 w-7 p-0"
-                                 >
-                                   <ZoomIn className="h-3.5 w-3.5" />
-                                 </Button>
-                                 <Button
-                                   size="sm"
-                                   variant="secondary"
-                                   onClick={(e) => {
-                                     e.stopPropagation();
-                                     downloadAttachment(attachment.id, attachment.file_name);
-                                   }}
-                                   disabled={sending}
-                                   className="h-7 w-7 p-0"
-                                 >
-                                   <Download className="h-3.5 w-3.5" />
-                                 </Button>
-                               </div>
-                            </div>
-                          );
-                        })}
-                    </div>
+                {/* Mídia em linha horizontal compacta */}
+                {allMediaItems.length > 0 && (
+                  <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-none">
+                    {allMediaItems.map((item, idx) => {
+                      const isImg = item.file_type?.startsWith('image/');
+                      const attachment = attachments.find(a => a.id === item.id);
+                      const posterUrl = attachment?.poster_path ? getPosterUrl(attachment) : undefined;
+
+                      return (
+                        <button
+                          key={item.id}
+                          className="relative flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-muted focus:outline-none focus:ring-2 focus:ring-primary/40"
+                          onClick={() => {
+                            setGalleryStartIndex(idx);
+                            setGalleryOpen(true);
+                          }}
+                        >
+                          {isImg ? (
+                            <AuthenticatedImage
+                              src={item.file_url}
+                              alt={item.file_name || ''}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <VideoThumbnail
+                              src={item.file_url}
+                              posterSrc={posterUrl}
+                              className="w-full h-full"
+                            />
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
 
-                {/* Vídeos */}
-                {attachments.some(a => isVideoFile(a)) && (
-                  <div className="mb-6">
-                    <h4 className="text-sm font-medium text-muted-foreground mb-3">Vídeos</h4>
-                    <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
-                      {attachments
-                        .filter(a => isVideoFile(a))
-                        .map((attachment) => {
-                          const previewUrl = getAttachmentUrl(attachment);
-                          const posterUrl = attachment.poster_path ? getPosterUrl(attachment) : undefined;
-                          const mediaIndex = allMediaItems.findIndex(item => item.file_url === previewUrl);
-                          
-                          // Format file size
-                          const formatFileSize = (bytes: number | null | undefined) => {
-                            if (!bytes) return '0 MB';
-                            const mb = bytes / (1024 * 1024);
-                            if (mb < 1) {
-                              const kb = bytes / 1024;
-                              return `${kb.toFixed(0)} KB`;
-                            }
-                            return `${mb.toFixed(1)} MB`;
-                          };
-                          
-                          return (
-                            <div 
-                              key={attachment.id} 
-                              className="group relative rounded-lg overflow-hidden border bg-muted cursor-pointer hover:shadow-lg transition-shadow"
-                              onClick={() => {
-                                setGalleryStartIndex(mediaIndex);
-                                setGalleryOpen(true);
-                              }}
-                            >
-                              <VideoThumbnail
-                                src={previewUrl}
-                                posterSrc={posterUrl}
-                                className="aspect-video"
-                              />
-                              
-                              {/* Video info */}
-                              <div className="p-1.5 bg-card">
-                                <p className="text-xs font-medium truncate" title={attachment.file_name}>
-                                  {attachment.file_name}
-                                </p>
-                                <div className="flex items-center justify-between mt-0.5">
-                                  <span className="text-[10px] text-muted-foreground">
-                                    {formatFileSize(attachment.file_size)}
-                                  </span>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-6 w-6 p-0"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      downloadAttachment(attachment.id, attachment.file_name);
-                                    }}
-                                    disabled={sending}
-                                  >
-                                    <Download className="h-3 w-3" />
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Outros Arquivos */}
+                {/* Arquivos — lista minimalista */}
                 {attachments.some(a => !isImageFile(a) && !isVideoFile(a)) && (
-                  <div>
-                    <h4 className="text-sm font-medium text-muted-foreground mb-3">Outros Arquivos</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {attachments
-                        .filter(a => !isImageFile(a) && !isVideoFile(a))
-                        .map((attachment) => (
-                          <div
-                            key={attachment.id}
-                            className="flex items-center gap-2 p-2 rounded-md border bg-card hover:bg-accent transition-colors"
-                          >
+                  <div className="mt-3 space-y-0">
+                    {attachments
+                      .filter(a => !isImageFile(a) && !isVideoFile(a))
+                      .map((attachment) => (
+                        <div
+                          key={attachment.id}
+                          className="flex items-center gap-3 py-2 border-b last:border-b-0"
+                        >
+                          <div className="flex-shrink-0">
                             {getFileIcon(attachment.mime_type || '')}
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-medium text-foreground truncate">
-                                {attachment.file_name}
-                              </p>
-                              {attachment.file_size && (
-                                <p className="text-[10px] text-muted-foreground">
-                                  {(attachment.file_size / 1024).toFixed(1)} KB
-                                </p>
-                              )}
-                            </div>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => downloadAttachment(attachment.id, attachment.file_name)}
-                              disabled={sending}
-                              className="h-7 w-7 p-0"
-                            >
-                              <Download className="h-3.5 w-3.5" />
-                            </Button>
                           </div>
-                        ))}
-                    </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">
+                              {attachment.file_name}
+                            </p>
+                            {attachment.file_size && (
+                              <p className="text-xs text-muted-foreground">
+                                {(attachment.file_size / 1024).toFixed(1)} KB
+                              </p>
+                            )}
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => downloadAttachment(attachment.id, attachment.file_name)}
+                            disabled={sending}
+                            className="h-7 w-7 p-0 flex-shrink-0"
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      ))}
                   </div>
                 )}
               </div>

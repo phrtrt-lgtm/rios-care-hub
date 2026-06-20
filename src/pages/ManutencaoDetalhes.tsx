@@ -312,10 +312,12 @@ export default function ManutencaoDetalhes({ embedded = false, idOverride }: Man
       {/* Anexos */}
       {maintenance.attachments && maintenance.attachments.length > 0 && (
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Anexos</CardTitle>
+          <CardHeader className="p-4 pb-2">
+            <CardTitle className="text-xs font-medium text-muted-foreground">
+              Anexos ({maintenance.attachments.length})
+            </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 pt-2">
             {(() => {
               const mediaAttachments = maintenance.attachments.filter(
                 (a: any) => a.file_type?.startsWith('image/') || a.file_type?.startsWith('video/')
@@ -323,36 +325,38 @@ export default function ManutencaoDetalhes({ embedded = false, idOverride }: Man
               const otherAttachments = maintenance.attachments.filter(
                 (a: any) => !a.file_type?.startsWith('image/') && !a.file_type?.startsWith('video/')
               );
-              
+
               return (
-                <div className="space-y-4">
+                <div className="space-y-3">
+                  {/* Mídia em linha horizontal compacta */}
                   {mediaAttachments.length > 0 && (
-                    <>
-                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-                        {mediaAttachments.map((attachment: any, idx: number) => (
-                          <div
-                            key={attachment.id}
-                            className={`relative group ${
-                              attachment.from_inspection ? 'ring-1 ring-info/30 rounded-md' : ''
-                            }`}
-                            title={attachment.from_inspection ? 'Anexo vindo da vistoria' : attachment.file_name}
-                          >
-                            <MediaThumbnail
-                              src={attachment.file_url}
-                              fileType={attachment.file_type}
-                              fileName={attachment.file_name}
-                              size="lg"
-                              onClick={() => {
-                                setGalleryStartIndex(idx);
-                                setGalleryOpen(true);
-                              }}
-                            />
-                            {attachment.from_inspection && (
-                              <div className="absolute top-1 left-1 bg-info text-info-foreground rounded-full p-1 shadow-sm pointer-events-none z-10">
-                                <ClipboardCheck className="h-3 w-3" />
-                              </div>
-                            )}
-                            <div className="absolute top-1 right-1 z-20 opacity-90 group-hover:opacity-100 transition-opacity">
+                    <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
+                      {mediaAttachments.map((attachment: any, idx: number) => (
+                        <button
+                          key={attachment.id}
+                          className={`relative flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-muted focus:outline-none focus:ring-2 focus:ring-primary/40 ${
+                            attachment.from_inspection ? 'ring-1 ring-info/30' : ''
+                          }`}
+                          title={attachment.from_inspection ? 'Anexo vindo da vistoria' : attachment.file_name}
+                          onClick={() => {
+                            setGalleryStartIndex(idx);
+                            setGalleryOpen(true);
+                          }}
+                        >
+                          <MediaThumbnail
+                            src={attachment.file_url}
+                            fileType={attachment.file_type}
+                            fileName={attachment.file_name}
+                            size="sm"
+                            className="w-full h-full"
+                          />
+                          {attachment.from_inspection && (
+                            <div className="absolute top-0.5 left-0.5 bg-info text-info-foreground rounded-full p-0.5 shadow-sm pointer-events-none">
+                              <ClipboardCheck className="h-2.5 w-2.5" />
+                            </div>
+                          )}
+                          {isTeam && (
+                            <div className="absolute top-0.5 right-0.5 z-10 opacity-0 hover:opacity-100 transition-opacity">
                               <DeleteAttachmentButton
                                 table={maintenance.source === 'charge' ? 'charge_attachments' : 'ticket_attachments' as any}
                                 attachmentId={attachment.id}
@@ -360,45 +364,53 @@ export default function ManutencaoDetalhes({ embedded = false, idOverride }: Man
                                 onDeleted={() => queryClient.invalidateQueries({ queryKey: ['maintenance', id] })}
                               />
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                      {mediaAttachments.some((a: any) => a.from_inspection) && (
-                        <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                          <ClipboardCheck className="h-3.5 w-3.5 text-info" />
-                          Anexos com este ícone vieram da vistoria de origem desta manutenção
-                        </p>
-                      )}
-                    </>
+                          )}
+                        </button>
+                      ))}
+                    </div>
                   )}
+                  {mediaAttachments.some((a: any) => a.from_inspection) && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                      <ClipboardCheck className="h-3 w-3 text-info" />
+                      Anexos com ícone azul vieram da vistoria de origem
+                    </p>
+                  )}
+
+                  {/* Arquivos — lista minimalista */}
                   {otherAttachments.length > 0 && (
-                    <div className="space-y-2">
+                    <div className="space-y-0">
                       {otherAttachments.map((attachment: any) => (
-                        <div key={attachment.id} className="flex items-center justify-between border rounded-lg p-3">
-                          <div>
-                            <div className="font-medium">{attachment.file_name || 'Anexo'}</div>
+                        <div
+                          key={attachment.id}
+                          className="flex items-center gap-3 py-2 border-b last:border-b-0"
+                        >
+                          <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium truncate">{attachment.file_name || 'Anexo'}</div>
                             <div className="text-xs text-muted-foreground">
                               {attachment.size_bytes ? `${(attachment.size_bytes / 1024).toFixed(1)} KB` : ''}
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Button variant="outline" size="sm" asChild>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <Button variant="ghost" size="sm" className="h-7 text-xs" asChild>
                               <a href={attachment.file_url} target="_blank" rel="noopener noreferrer">
                                 Ver
                               </a>
                             </Button>
-                            <DeleteAttachmentButton
-                              table={maintenance.source === 'charge' ? 'charge_attachments' : 'ticket_attachments' as any}
-                              attachmentId={attachment.id}
-                              fileName={attachment.file_name}
-                              onDeleted={() => queryClient.invalidateQueries({ queryKey: ['maintenance', id] })}
-                            />
+                            {isTeam && (
+                              <DeleteAttachmentButton
+                                table={maintenance.source === 'charge' ? 'charge_attachments' : 'ticket_attachments' as any}
+                                attachmentId={attachment.id}
+                                fileName={attachment.file_name}
+                                onDeleted={() => queryClient.invalidateQueries({ queryKey: ['maintenance', id] })}
+                              />
+                            )}
                           </div>
                         </div>
                       ))}
                     </div>
                   )}
-                  
+
                   <MediaGallery
                     items={mediaAttachments.map((a: any) => ({
                       id: a.id,
@@ -411,7 +423,6 @@ export default function ManutencaoDetalhes({ embedded = false, idOverride }: Man
                     open={galleryOpen}
                     onOpenChange={setGalleryOpen}
                     onDelete={isTeam ? async (item) => {
-                      // detect ticket vs charge by table source isn't tracked here; try ticket then charge
                       const ok = await deleteAttachmentRow("ticket_attachments", item.id);
                       if (ok) window.location.reload();
                     } : undefined}
