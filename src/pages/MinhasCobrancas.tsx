@@ -228,7 +228,7 @@ const MinhasCobrancas = () => {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-6xl">
+      <main className="container mx-auto px-3 py-4 sm:px-4 sm:py-8 max-w-6xl">
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-foreground">Minhas Cobranças</h1>
           <p className="text-muted-foreground">Visualize todas as suas cobranças</p>
