@@ -51,8 +51,8 @@ export default function ManutencaoDetalhes({ embedded = false, idOverride }: Man
   }, [maintenance]);
 
   const wrapperClass = embedded
-    ? "space-y-6"
-    : "container mx-auto p-6 space-y-6";
+    ? "space-y-3"
+    : "container mx-auto px-3 py-4 max-w-3xl space-y-3";
 
   if (isLoading) {
     return (
