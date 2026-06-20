@@ -581,44 +581,14 @@ const MinhasCobrancas = () => {
                                 )}
                               </div>
                               {atts.length > 0 && (
-                                <div className="flex items-center gap-1 shrink-0">
-                                  {atts.slice(0, 3).map((a, idx) => {
-                                    const isImage = a.mime?.startsWith("image/");
-                                    const isVideo = a.mime?.startsWith("video/");
-                                    const isPdf = a.mime === "application/pdf";
-                                    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/serve-attachment/${a.id}/file`;
-                                    const poster = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/serve-attachment/${a.id}/poster`;
-                                    return (
-                                      <button
-                                        key={a.id}
-                                        type="button"
-                                        onClick={(e) => { e.stopPropagation(); e.preventDefault(); setLightbox({ atts, index: idx }); }}
-                                        className="h-7 w-7 rounded border overflow-hidden bg-muted flex items-center justify-center"
-                                      >
-                                        {isImage ? (
-                                          <img src={url} alt="" className="h-full w-full object-cover" loading="lazy" />
-                                        ) : isVideo && a.poster ? (
-                                          <img src={poster} alt="" className="h-full w-full object-cover" loading="lazy" />
-                                        ) : isVideo ? (
-                                          <Film className="h-3.5 w-3.5 text-muted-foreground" />
-                                        ) : isPdf ? (
-                                          <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-                                        ) : (
-                                          <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
-                                        )}
-                                      </button>
-                                    );
-                                  })}
-                                  {atts.length > 3 && (
-                                    <button
-                                      type="button"
-                                      onClick={(e) => { e.stopPropagation(); e.preventDefault(); setLightbox({ atts, index: 0 }); }}
-                                      className="h-7 min-w-7 px-1 rounded border bg-muted text-[10px] font-medium text-muted-foreground"
-                                    >
-                                      +{atts.length - 3}
-                                    </button>
-                                  )}
-                                </div>
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); e.preventDefault(); setGalleryItems(atts); setGalleryOpen(true); }}
+                                  className="inline-flex items-center gap-1 px-2 py-1 rounded hover:bg-primary/10 text-primary transition-colors shrink-0"
+                                >
+                                  <Paperclip className="h-3.5 w-3.5" />
+                                  <span className="text-xs font-medium">{atts.length}</span>
+                                </button>
                               )}
                             </div>
                           </button>
