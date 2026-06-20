@@ -210,7 +210,8 @@ export default function Manutencoes() {
     const paidCount = completedCount;
     const totalCents = yearData.reduce((sum: number, m: any) => sum + ((m.amount_cents || 0) - (m.management_contribution_cents || 0)), 0);
     const avgOrderCents = yearData.length > 0 ? totalCents / yearData.length : 0;
-    return { openCount, completedCount, paidCount, totalCents, avgOrderCents };
+    const aporteTotalCents = yearData.reduce((sum: number, m: any) => sum + (m.management_contribution_cents || 0), 0);
+    return { openCount, completedCount, paidCount, totalCents, avgOrderCents, aporteTotalCents };
   }, [maintenances, year]);
 
   // Per-property summaries for team overview
