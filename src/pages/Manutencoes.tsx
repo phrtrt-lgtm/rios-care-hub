@@ -9,11 +9,81 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatBRL, formatDateTime } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Filter, Building2, ArrowLeft } from "lucide-react";
+import { Plus, Filter, Building2, ArrowLeft, Paperclip, FileText, Film } from "lucide-react";
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { goBack, saveScrollPosition } from "@/lib/navigation";
 import { supabase } from "@/integrations/supabase/client";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+
+function AttachmentThumbs({
+  attachments,
+  max = 4,
+}: {
+  attachments: Array<{ id: string; mime: string; poster: boolean }>;
+  max?: number;
+}) {
+  if (!attachments || attachments.length === 0) return null;
+  const shown = attachments.slice(0, max);
+  const extra = attachments.length - shown.length;
+  return (
+    <div className="flex items-center gap-1 shrink-0">
+      {shown.map((a) => {
+        const isImage = a.mime?.startsWith("image/");
+        const isVideo = a.mime?.startsWith("video/");
+        const isPdf = a.mime === "application/pdf";
+        if (isImage) {
+          return (
+            <img
+              key={a.id}
+              src={`${SUPABASE_URL}/functions/v1/serve-attachment/${a.id}/file`}
+              alt=""
+              className="h-8 w-8 rounded object-cover border"
+              loading="lazy"
+            />
+          );
+        }
+        if (isVideo) {
+          return (
+            <div
+              key={a.id}
+              className="h-8 w-8 rounded border bg-muted flex items-center justify-center relative overflow-hidden"
+            >
+              {a.poster ? (
+                <img
+                  src={`${SUPABASE_URL}/functions/v1/serve-attachment/${a.id}/poster`}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                <Film className="h-4 w-4 text-muted-foreground" />
+              )}
+            </div>
+          );
+        }
+        return (
+          <div
+            key={a.id}
+            className="h-8 w-8 rounded border bg-muted flex items-center justify-center"
+          >
+            {isPdf ? (
+              <FileText className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <Paperclip className="h-4 w-4 text-muted-foreground" />
+            )}
+          </div>
+        );
+      })}
+      {extra > 0 && (
+        <div className="h-8 min-w-8 px-1 rounded border bg-muted flex items-center justify-center text-[10px] font-medium text-muted-foreground">
+          +{extra}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Manutencoes() {
   useScrollRestoration();
@@ -30,6 +100,7 @@ export default function Manutencoes() {
   const [serviceTypes, setServiceTypes] = useState<string[]>([]);
   const [properties, setProperties] = useState<any[]>([]);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>(searchParams.get('property') || "");
+  const [attachmentsByCharge, setAttachmentsByCharge] = useState<Record<string, Array<{ id: string; mime: string; poster: boolean }>>>({});
 
   const isOwner = profile?.role === 'owner';
   const isTeam = profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance';
@@ -58,6 +129,35 @@ export default function Manutencoes() {
       fetchServiceTypeData();
     }
   }, [user, year, propertyId, serviceTypeFilter]);
+
+  // Fetch attachments for listed maintenances (lightweight: id + mime + poster flag)
+  useEffect(() => {
+    const ids = (maintenances || []).map((m: any) => m.id);
+    if (ids.length === 0) {
+      setAttachmentsByCharge({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("charge_attachments")
+        .select("id, charge_id, mime_type, mime_type_override, poster_path, created_at")
+        .in("charge_id", ids)
+        .order("created_at", { ascending: true });
+      if (cancelled) return;
+      const grouped: Record<string, Array<{ id: string; mime: string; poster: boolean }>> = {};
+      (data || []).forEach((a: any) => {
+        const mime = a.mime_type_override || a.mime_type || "";
+        if (!grouped[a.charge_id]) grouped[a.charge_id] = [];
+        grouped[a.charge_id].push({ id: a.id, mime, poster: !!a.poster_path });
+      });
+      setAttachmentsByCharge(grouped);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [maintenances]);
+
 
   const fetchServiceTypeData = async () => {
     try {
@@ -172,7 +272,7 @@ export default function Manutencoes() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto p-3 sm:p-6 space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate('/painel')}>
@@ -291,11 +391,12 @@ export default function Manutencoes() {
 
       {/* Lista de Manutenções */}
       <Card>
-        <CardHeader>
+        <CardHeader className="px-4 py-3 sm:px-6 sm:py-4">
           <CardTitle className="text-base">Lista de Manutenções</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-auto">
+          {/* Desktop / tablet table */}
+          <div className="hidden md:block overflow-auto">
             <table className="w-full text-sm">
               <thead className="bg-muted/50">
                 <tr>
@@ -307,13 +408,14 @@ export default function Manutencoes() {
                   <th className="text-right p-3">Valor Devido</th>
                   <th className="text-center p-3">Responsável</th>
                   <th className="text-right p-3">Pago</th>
+                  <th className="text-left p-3">Anexos</th>
                   <th className="text-center p-3">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={9} className="text-center p-8 text-muted-foreground">
+                    <td colSpan={10} className="text-center p-8 text-muted-foreground">
                       Carregando...
                     </td>
                   </tr>
@@ -354,12 +456,15 @@ export default function Manutencoes() {
                       <td className="p-3 text-right">
                         {formatBRL(m.paid_cents)}
                       </td>
+                      <td className="p-3">
+                        <AttachmentThumbs attachments={attachmentsByCharge[m.id] || []} max={4} />
+                      </td>
                       <td className="p-3 text-center">{getStatusBadge(m.status)}</td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={9} className="text-center p-8 text-muted-foreground">
+                    <td colSpan={10} className="text-center p-8 text-muted-foreground">
                       Nenhuma manutenção encontrada
                     </td>
                   </tr>
@@ -367,8 +472,81 @@ export default function Manutencoes() {
               </tbody>
             </table>
           </div>
+
+          {/* Mobile cards */}
+          <div className="md:hidden divide-y">
+            {isLoading ? (
+              <div className="p-6 text-center text-sm text-muted-foreground">Carregando...</div>
+            ) : maintenances && maintenances.length > 0 ? (
+              maintenances
+                .filter((m: any) => !activeFilters.serviceType || (m.service_type && String(m.service_type).split(",").map((s: string) => s.trim()).includes(activeFilters.serviceType)))
+                .map((m: any) => {
+                  const due = m.amount_cents - (m.management_contribution_cents || 0);
+                  const atts = attachmentsByCharge[m.id] || [];
+                  return (
+                    <button
+                      key={m.id}
+                      onClick={() => { saveScrollPosition(pathname); navigate(`/cobranca/${m.id}`); }}
+                      className="w-full text-left p-3 active:bg-accent transition-colors"
+                    >
+                      {/* Header: property + status */}
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs text-muted-foreground truncate">
+                            {m.property?.name || '-'} · {formatDateTime(m.created_at)}
+                          </div>
+                          <div className="font-medium text-sm leading-tight truncate">{m.title}</div>
+                          {(m.category || m.service_type) && (
+                            <div className="text-[11px] text-muted-foreground truncate">
+                              {[m.category, m.service_type && String(m.service_type).split(",").map((s: string) => s.trim()).filter(Boolean).join(", ")].filter(Boolean).join(" · ")}
+                            </div>
+                          )}
+                        </div>
+                        <div className="shrink-0">{getStatusBadge(m.status)}</div>
+                      </div>
+
+                      {/* Values grid */}
+                      <div className="grid grid-cols-3 gap-2 mt-2 text-[11px]">
+                        <div className="bg-muted/50 rounded px-2 py-1">
+                          <div className="text-muted-foreground">Total</div>
+                          <div className="font-medium text-xs">{formatBRL(m.amount_cents)}</div>
+                        </div>
+                        <div className="bg-muted/50 rounded px-2 py-1">
+                          <div className="text-muted-foreground">Aporte</div>
+                          <div className="font-medium text-success text-xs">
+                            {m.management_contribution_cents > 0 ? formatBRL(m.management_contribution_cents) : '-'}
+                          </div>
+                        </div>
+                        <div className="bg-muted/50 rounded px-2 py-1">
+                          <div className="text-muted-foreground">Devido</div>
+                          <div className="font-bold text-xs">{formatBRL(due)}</div>
+                        </div>
+                      </div>
+
+                      {/* Footer: paid + responsible + attachments */}
+                      <div className="flex items-center justify-between gap-2 mt-2 text-[11px] text-muted-foreground">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="truncate">
+                            {getResponsibleLabel(m.cost_responsible, m.split_owner_percent)}
+                          </span>
+                          {m.paid_cents > 0 && (
+                            <span className="text-success">· Pago {formatBRL(m.paid_cents)}</span>
+                          )}
+                        </div>
+                        {atts.length > 0 && (
+                          <AttachmentThumbs attachments={atts} max={3} />
+                        )}
+                      </div>
+                    </button>
+                  );
+                })
+            ) : (
+              <div className="p-6 text-center text-sm text-muted-foreground">Nenhuma manutenção encontrada</div>
+            )}
+          </div>
         </CardContent>
       </Card>
+
 
       {/* Por Unidade - Team only */}
       {isTeam && !selectedPropertyId && propertyReports.length > 0 && (
