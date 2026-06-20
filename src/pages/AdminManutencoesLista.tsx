@@ -102,7 +102,7 @@ const COST_RESPONSIBLE_OPTIONS = [
 
 const GROUPS = [
   { id: "em_progresso", label: "Em Progresso", color: "border-l-amber-500" },
-  { id: "concluidas", label: "Manutenções Concluídas", color: "border-l-green-500" },
+  { id: "concluidas", label: "Aguardando Envio ao Proprietário", color: "border-l-green-500" },
   { id: "cobrancas_vencidas", label: "Cobranças Vencidas", color: "border-l-red-600" },
   { id: "cobrancas", label: "Cobranças Pendentes", color: "border-l-destructive" },
 ];
