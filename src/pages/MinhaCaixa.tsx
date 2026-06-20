@@ -284,7 +284,7 @@ export default function MinhaCaixa() {
 
         {/* Owner Tickets and Charges Preview - for owners */}
         {profile?.role === "owner" && (
-          <div className="grid grid-cols-2 gap-3 mb-6">
+          <div className="grid grid-cols-1 gap-4 mb-6">
             <OwnerBookingCommissionsPreview />
             <OwnerChargesPreview />
             <OwnerTicketsPreview />
