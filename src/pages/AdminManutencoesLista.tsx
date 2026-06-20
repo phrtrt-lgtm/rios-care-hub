@@ -102,7 +102,7 @@ const COST_RESPONSIBLE_OPTIONS = [
 
 const GROUPS = [
   { id: "em_progresso", label: "Em Progresso", color: "border-l-amber-500" },
-  { id: "concluidas", label: "Manutenções Concluídas", color: "border-l-green-500" },
+  { id: "concluidas", label: "Aguardando Envio ao Proprietário", color: "border-l-green-500" },
   { id: "cobrancas_vencidas", label: "Cobranças Vencidas", color: "border-l-red-600" },
   { id: "cobrancas", label: "Cobranças Pendentes", color: "border-l-destructive" },
 ];
@@ -2381,7 +2381,7 @@ export default function AdminManutencoesLista() {
     const mobileGroups = [
       { id: "em_progresso", label: "Em Progresso", borderColor: "border-l-warning", dotColor: "bg-warning" },
       { id: "cobrancas_vencidas", label: "Cobranças Vencidas", borderColor: "border-l-destructive", dotColor: "bg-destructive" },
-      { id: "concluidas", label: "Manutenções Concluídas", borderColor: "border-l-success", dotColor: "bg-success" },
+      { id: "concluidas", label: "Aguardando Envio ao Proprietário", borderColor: "border-l-success", dotColor: "bg-success" },
       { id: "cobrancas", label: "Cobranças Pendentes", borderColor: "border-l-primary", dotColor: "bg-primary" },
     ];
 
