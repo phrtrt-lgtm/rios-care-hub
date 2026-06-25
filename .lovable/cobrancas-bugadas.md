@@ -13,7 +13,11 @@ Essas são as cobranças que aparecem indevidamente em "Valor devido" no painel 
 
 ---
 
-## Total encontrado: **5 cobranças** — todas do mesmo proprietário
+## Total encontrado no sistema inteiro: **5 cobranças** — todas do mesmo proprietário
+
+> Varredura feita em **todos os imóveis e proprietários** do banco. Nenhum outro caso encontrado.
+>
+> Também rodei uma busca cruzada de "cobranças overdue há mais de 30 dias sem `debited_at`" (que seriam casos onde o débito em reserva nem chegou a rodar) → **zero ocorrências**. Ou seja, o sistema de débito em reserva está rodando; o bug é só na atualização do status final desse lote de 17/05.
 
 ### Nilson Maia — imóvel NILSON
 
