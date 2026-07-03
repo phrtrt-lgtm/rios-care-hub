@@ -4,17 +4,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionSkeleton } from "@/components/ui/section-skeleton";
-import { RefreshCw, TrendingUp, Calendar, BarChart3, AlertTriangle, Sparkles } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
+import { RefreshCw, TrendingUp, Calendar, BarChart3, AlertTriangle, Sparkles, Wallet, CalendarIcon } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import {
   pricingInsights30d,
   revenuePace30d,
   weekendOccupancy30d,
   type PropertyPricingInsight,
 } from "@/lib/hostexInsights";
+import { financialsByProperty } from "@/lib/hostexFinancials";
+
 import {
   channelMix,
   occupancyRate,
@@ -69,7 +76,9 @@ export default function AdminCentralHostex() {
   const [properties, setProperties] = useState<Array<{ id: string; name: string }>>([]);
   const [hostexNameMap, setHostexNameMap] = useState<Map<string, string>>(new Map());
   const [listedAdrMap, setListedAdrMap] = useState<Map<string, number>>(new Map());
+  const [commissionByProperty, setCommissionByProperty] = useState<Map<string, number>>(new Map());
   const [syncLogs, setSyncLogs] = useState<SyncLog[]>([]);
+
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [source, setSource] = useState<string>("");
 
@@ -82,7 +91,7 @@ export default function AdminCentralHostex() {
       const priceStart = today.toISOString().slice(0, 10);
       const priceEnd = new Date(today.getTime() + 30 * 86400000).toISOString().slice(0, 10);
 
-      const [resResp, propResp, logsResp, calResp, hxPropsResp, localPropsResp] = await Promise.all([
+      const [resResp, propResp, logsResp, calResp, hxPropsResp, localPropsResp, contractsResp] = await Promise.all([
         supabase.functions.invoke("hostex-proxy", {
           body: { action: "search_reservations", params: { start_date: start, end_date: end } },
         }),
@@ -100,8 +109,10 @@ export default function AdminCentralHostex() {
           .gte("date", priceStart)
           .lt("date", priceEnd),
         supabase.from("hostex_properties").select("id_hostex, property_id"),
-        supabase.from("properties").select("id, name"),
+        supabase.from("properties").select("id, name, default_commission_percentage"),
+        supabase.from("contracts").select("property_id, commission_percent, status, updated_at").order("updated_at", { ascending: false }),
       ]);
+
 
       const rData: any = resResp.data;
       const pData: any = propResp.data;
@@ -145,13 +156,35 @@ export default function AdminCentralHostex() {
         if (v.n > 0) avgMap.set(k, v.total / v.n);
       }
 
+      // Comissão RIOS por propriedade: contrato mais recente com % preenchido > fallback default_commission_percentage
+      const commissionMap = new Map<string, number>();
+      const localProps = (localPropsResp.data as any[]) || [];
+      for (const lp of localProps) {
+        if (lp.default_commission_percentage != null) {
+          commissionMap.set(String(lp.id), Number(lp.default_commission_percentage));
+        }
+      }
+      for (const ct of (contractsResp.data as any[]) || []) {
+        if (ct.property_id && ct.commission_percent != null && !commissionMap.has(String(ct.property_id))) {
+          commissionMap.set(String(ct.property_id), Number(ct.commission_percent));
+        }
+      }
+      // Mapa por id_hostex também, para lookup pelas reservas (property_id vem da Hostex)
+      for (const hp of (hxPropsResp.data as any[]) || []) {
+        if (hp.property_id && commissionMap.has(String(hp.property_id))) {
+          commissionMap.set(String(hp.id_hostex), commissionMap.get(String(hp.property_id))!);
+        }
+      }
+
       setReservations(list);
       setProperties(props.map((p) => ({ id: String(p.id), name: nameMap.get(String(p.id)) ?? p.name ?? p.title ?? String(p.id) })));
       setHostexNameMap(nameMap);
       setListedAdrMap(avgMap);
+      setCommissionByProperty(commissionMap);
       setSyncLogs((logsResp.data as SyncLog[]) || []);
       setLastSync(rData?.synced_at ?? null);
       setSource(rData?.source ?? "");
+
     } catch (e: any) {
       toast({ title: "Erro ao carregar dados Hostex", description: e.message, variant: "destructive" });
     } finally {
@@ -185,6 +218,41 @@ export default function AdminCentralHostex() {
   const today = new Date();
   const start30 = today.toISOString().slice(0, 10);
   const end30 = new Date(today.getTime() + 30 * 86400000).toISOString().slice(0, 10);
+
+  // Janela financeira configurável
+  const [finStart, setFinStart] = useState<Date>(today);
+  const [finEnd, setFinEnd] = useState<Date>(new Date(today.getTime() + 30 * 86400000));
+  const [finReservations, setFinReservations] = useState<HostexReservation[] | null>(null);
+  const [finLoading, setFinLoading] = useState(false);
+
+  async function loadFinancialReservations(startD: Date, endD: Date) {
+    setFinLoading(true);
+    try {
+      const s = startD.toISOString().slice(0, 10);
+      const e = endD.toISOString().slice(0, 10);
+      const { data } = await supabase.functions.invoke("hostex-proxy", {
+        body: { action: "search_reservations", params: { start_date: s, end_date: e } },
+      });
+      const rData: any = data;
+      const list: HostexReservation[] =
+        rData?.data?.reservations ?? rData?.data?.data?.reservations ?? [];
+      setFinReservations(list);
+    } catch (e: any) {
+      toast({ title: "Erro ao carregar reservas do período", description: e.message, variant: "destructive" });
+    } finally {
+      setFinLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!loading) loadFinancialReservations(finStart, finEnd);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finStart, finEnd, loading]);
+
+  const financials = useMemo(
+    () => financialsByProperty(finReservations ?? reservations, properties, finStart, finEnd, commissionByProperty),
+    [finReservations, reservations, properties, finStart, finEnd, commissionByProperty],
+  );
 
   const insights = useMemo(
     () => pricingInsights30d(reservations, properties, today, listedAdrMap),
@@ -303,13 +371,158 @@ export default function AdminCentralHostex() {
         </Card>
       </div>
 
-      <Tabs defaultValue="insights" className="space-y-4">
-        <TabsList>
+      <Tabs defaultValue="financeiro" className="space-y-4">
+        <TabsList className="flex-wrap h-auto">
+          <TabsTrigger value="financeiro"><Wallet className="h-4 w-4 mr-2" />Financeiro por imóvel</TabsTrigger>
           <TabsTrigger value="insights"><TrendingUp className="h-4 w-4 mr-2" />Insights 30d</TabsTrigger>
           <TabsTrigger value="pace"><BarChart3 className="h-4 w-4 mr-2" />Pacing & canais</TabsTrigger>
           <TabsTrigger value="reservations"><Calendar className="h-4 w-4 mr-2" />Reservas</TabsTrigger>
           <TabsTrigger value="logs"><AlertTriangle className="h-4 w-4 mr-2" />Log sync</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="financeiro" className="space-y-4">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">
+                Receita bruta, comissão de canal (Hostex), comissão RIOS (do contrato/propriedade) e líquido do proprietário por imóvel.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Comissão RIOS = % do contrato do imóvel · Fallback: % padrão da propriedade · <span className="text-warning">Sem %</span> indica imóveis sem contrato ativo.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className={cn("justify-start", !finStart && "text-muted-foreground")}>
+                    <CalendarIcon className="h-4 w-4 mr-2" />
+                    {format(finStart, "dd/MM/yyyy", { locale: ptBR })}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarPicker mode="single" selected={finStart} onSelect={(d) => d && setFinStart(d)} initialFocus className={cn("p-3 pointer-events-auto")} />
+                </PopoverContent>
+              </Popover>
+              <span className="text-xs text-muted-foreground">até</span>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className={cn("justify-start", !finEnd && "text-muted-foreground")}>
+                    <CalendarIcon className="h-4 w-4 mr-2" />
+                    {format(finEnd, "dd/MM/yyyy", { locale: ptBR })}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarPicker mode="single" selected={finEnd} onSelect={(d) => d && setFinEnd(d)} initialFocus className={cn("p-3 pointer-events-auto")} />
+                </PopoverContent>
+              </Popover>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  const t = new Date();
+                  setFinStart(t);
+                  setFinEnd(new Date(t.getTime() + 30 * 86400000));
+                }}
+              >
+                30d
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  const t = new Date();
+                  const first = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), 1));
+                  const last = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 1));
+                  setFinStart(first);
+                  setFinEnd(last);
+                }}
+              >
+                Mês atual
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
+            <Card>
+              <CardHeader className="pb-2"><CardDescription>Receita bruta</CardDescription><CardTitle className="text-xl">{formatBRL(financials.totals.gross_revenue)}</CardTitle></CardHeader>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2"><CardDescription>Comissão canal</CardDescription><CardTitle className="text-xl text-destructive">−{formatBRL(financials.totals.channel_commission)}</CardTitle></CardHeader>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2"><CardDescription>Comissão RIOS</CardDescription><CardTitle className="text-xl text-primary">{formatBRL(financials.totals.rios_commission)}</CardTitle></CardHeader>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2"><CardDescription>Líquido proprietários</CardDescription><CardTitle className="text-xl text-success">{formatBRL(financials.totals.owner_net)}</CardTitle></CardHeader>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2"><CardDescription>Ocupação · noites vagas</CardDescription><CardTitle className="text-xl">{(financials.totals.occupancy * 100).toFixed(0)}% · {financials.totals.vacant_nights}</CardTitle></CardHeader>
+            </Card>
+          </div>
+
+          {finLoading ? (
+            <SectionSkeleton />
+          ) : financials.rows.length === 0 ? (
+            <EmptyState icon={<Wallet className="h-8 w-8" />} title="Sem imóveis" description="Sincronize a Hostex para popular." />
+          ) : (
+            <Card>
+              <CardContent className="p-0 overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Imóvel</TableHead>
+                      <TableHead className="text-right">Reservas</TableHead>
+                      <TableHead className="text-right">Ocup.</TableHead>
+                      <TableHead className="text-right">Noites vagas</TableHead>
+                      <TableHead className="text-right">Receita bruta</TableHead>
+                      <TableHead className="text-right">Comissão canal</TableHead>
+                      <TableHead className="text-right">% RIOS</TableHead>
+                      <TableHead className="text-right">Comissão RIOS</TableHead>
+                      <TableHead className="text-right">Líquido dono</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {financials.rows
+                      .slice()
+                      .sort((a, b) => b.gross_revenue - a.gross_revenue)
+                      .map((r) => (
+                        <TableRow key={r.property_id}>
+                          <TableCell className="font-medium">{r.property_name}</TableCell>
+                          <TableCell className="text-right">{r.reservations_count}</TableCell>
+                          <TableCell className="text-right">{(r.occupancy * 100).toFixed(0)}%</TableCell>
+                          <TableCell className="text-right">{r.vacant_nights}</TableCell>
+                          <TableCell className="text-right">{formatBRL(r.gross_revenue)}</TableCell>
+                          <TableCell className="text-right text-destructive">−{formatBRL(r.channel_commission)}</TableCell>
+                          <TableCell className="text-right">
+                            {r.has_commission_config ? (
+                              <span className="font-medium">{r.rios_commission_pct}%</span>
+                            ) : (
+                              <Badge variant="outline" className="text-warning border-warning">Sem %</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right text-primary">{formatBRL(r.rios_commission)}</TableCell>
+                          <TableCell className="text-right text-success font-semibold">{formatBRL(r.owner_net)}</TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                  <TableFooter>
+                    <TableRow>
+                      <TableCell className="font-semibold">Total</TableCell>
+                      <TableCell className="text-right font-semibold">{financials.totals.reservations_count}</TableCell>
+                      <TableCell className="text-right font-semibold">{(financials.totals.occupancy * 100).toFixed(0)}%</TableCell>
+                      <TableCell className="text-right font-semibold">{financials.totals.vacant_nights}</TableCell>
+                      <TableCell className="text-right font-semibold">{formatBRL(financials.totals.gross_revenue)}</TableCell>
+                      <TableCell className="text-right font-semibold text-destructive">−{formatBRL(financials.totals.channel_commission)}</TableCell>
+                      <TableCell />
+                      <TableCell className="text-right font-semibold text-primary">{formatBRL(financials.totals.rios_commission)}</TableCell>
+                      <TableCell className="text-right font-semibold text-success">{formatBRL(financials.totals.owner_net)}</TableCell>
+                    </TableRow>
+                  </TableFooter>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
 
         <TabsContent value="insights" className="space-y-4">
           <div className="flex justify-between items-center flex-wrap gap-2">
