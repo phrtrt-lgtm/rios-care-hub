@@ -156,13 +156,35 @@ export default function AdminCentralHostex() {
         if (v.n > 0) avgMap.set(k, v.total / v.n);
       }
 
+      // Comissão RIOS por propriedade: contrato mais recente com % preenchido > fallback default_commission_percentage
+      const commissionMap = new Map<string, number>();
+      const localProps = (localPropsResp.data as any[]) || [];
+      for (const lp of localProps) {
+        if (lp.default_commission_percentage != null) {
+          commissionMap.set(String(lp.id), Number(lp.default_commission_percentage));
+        }
+      }
+      for (const ct of (contractsResp.data as any[]) || []) {
+        if (ct.property_id && ct.commission_percent != null && !commissionMap.has(String(ct.property_id))) {
+          commissionMap.set(String(ct.property_id), Number(ct.commission_percent));
+        }
+      }
+      // Mapa por id_hostex também, para lookup pelas reservas (property_id vem da Hostex)
+      for (const hp of (hxPropsResp.data as any[]) || []) {
+        if (hp.property_id && commissionMap.has(String(hp.property_id))) {
+          commissionMap.set(String(hp.id_hostex), commissionMap.get(String(hp.property_id))!);
+        }
+      }
+
       setReservations(list);
       setProperties(props.map((p) => ({ id: String(p.id), name: nameMap.get(String(p.id)) ?? p.name ?? p.title ?? String(p.id) })));
       setHostexNameMap(nameMap);
       setListedAdrMap(avgMap);
+      setCommissionByProperty(commissionMap);
       setSyncLogs((logsResp.data as SyncLog[]) || []);
       setLastSync(rData?.synced_at ?? null);
       setSource(rData?.source ?? "");
+
     } catch (e: any) {
       toast({ title: "Erro ao carregar dados Hostex", description: e.message, variant: "destructive" });
     } finally {
