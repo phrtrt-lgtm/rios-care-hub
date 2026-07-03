@@ -4,17 +4,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionSkeleton } from "@/components/ui/section-skeleton";
-import { RefreshCw, TrendingUp, Calendar, BarChart3, AlertTriangle, Sparkles } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
+import { RefreshCw, TrendingUp, Calendar, BarChart3, AlertTriangle, Sparkles, Wallet, CalendarIcon } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import {
   pricingInsights30d,
   revenuePace30d,
   weekendOccupancy30d,
   type PropertyPricingInsight,
 } from "@/lib/hostexInsights";
+import { financialsByProperty } from "@/lib/hostexFinancials";
+
 import {
   channelMix,
   occupancyRate,
