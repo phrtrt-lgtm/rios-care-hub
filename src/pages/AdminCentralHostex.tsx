@@ -371,13 +371,158 @@ export default function AdminCentralHostex() {
         </Card>
       </div>
 
-      <Tabs defaultValue="insights" className="space-y-4">
-        <TabsList>
+      <Tabs defaultValue="financeiro" className="space-y-4">
+        <TabsList className="flex-wrap h-auto">
+          <TabsTrigger value="financeiro"><Wallet className="h-4 w-4 mr-2" />Financeiro por imóvel</TabsTrigger>
           <TabsTrigger value="insights"><TrendingUp className="h-4 w-4 mr-2" />Insights 30d</TabsTrigger>
           <TabsTrigger value="pace"><BarChart3 className="h-4 w-4 mr-2" />Pacing & canais</TabsTrigger>
           <TabsTrigger value="reservations"><Calendar className="h-4 w-4 mr-2" />Reservas</TabsTrigger>
           <TabsTrigger value="logs"><AlertTriangle className="h-4 w-4 mr-2" />Log sync</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="financeiro" className="space-y-4">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">
+                Receita bruta, comissão de canal (Hostex), comissão RIOS (do contrato/propriedade) e líquido do proprietário por imóvel.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Comissão RIOS = % do contrato do imóvel · Fallback: % padrão da propriedade · <span className="text-warning">Sem %</span> indica imóveis sem contrato ativo.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className={cn("justify-start", !finStart && "text-muted-foreground")}>
+                    <CalendarIcon className="h-4 w-4 mr-2" />
+                    {format(finStart, "dd/MM/yyyy", { locale: ptBR })}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarPicker mode="single" selected={finStart} onSelect={(d) => d && setFinStart(d)} initialFocus className={cn("p-3 pointer-events-auto")} />
+                </PopoverContent>
+              </Popover>
+              <span className="text-xs text-muted-foreground">até</span>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className={cn("justify-start", !finEnd && "text-muted-foreground")}>
+                    <CalendarIcon className="h-4 w-4 mr-2" />
+                    {format(finEnd, "dd/MM/yyyy", { locale: ptBR })}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarPicker mode="single" selected={finEnd} onSelect={(d) => d && setFinEnd(d)} initialFocus className={cn("p-3 pointer-events-auto")} />
+                </PopoverContent>
+              </Popover>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  const t = new Date();
+                  setFinStart(t);
+                  setFinEnd(new Date(t.getTime() + 30 * 86400000));
+                }}
+              >
+                30d
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  const t = new Date();
+                  const first = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), 1));
+                  const last = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 1));
+                  setFinStart(first);
+                  setFinEnd(last);
+                }}
+              >
+                Mês atual
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
+            <Card>
+              <CardHeader className="pb-2"><CardDescription>Receita bruta</CardDescription><CardTitle className="text-xl">{formatBRL(financials.totals.gross_revenue)}</CardTitle></CardHeader>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2"><CardDescription>Comissão canal</CardDescription><CardTitle className="text-xl text-destructive">−{formatBRL(financials.totals.channel_commission)}</CardTitle></CardHeader>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2"><CardDescription>Comissão RIOS</CardDescription><CardTitle className="text-xl text-primary">{formatBRL(financials.totals.rios_commission)}</CardTitle></CardHeader>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2"><CardDescription>Líquido proprietários</CardDescription><CardTitle className="text-xl text-success">{formatBRL(financials.totals.owner_net)}</CardTitle></CardHeader>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2"><CardDescription>Ocupação · noites vagas</CardDescription><CardTitle className="text-xl">{(financials.totals.occupancy * 100).toFixed(0)}% · {financials.totals.vacant_nights}</CardTitle></CardHeader>
+            </Card>
+          </div>
+
+          {finLoading ? (
+            <SectionSkeleton />
+          ) : financials.rows.length === 0 ? (
+            <EmptyState icon={<Wallet className="h-8 w-8" />} title="Sem imóveis" description="Sincronize a Hostex para popular." />
+          ) : (
+            <Card>
+              <CardContent className="p-0 overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Imóvel</TableHead>
+                      <TableHead className="text-right">Reservas</TableHead>
+                      <TableHead className="text-right">Ocup.</TableHead>
+                      <TableHead className="text-right">Noites vagas</TableHead>
+                      <TableHead className="text-right">Receita bruta</TableHead>
+                      <TableHead className="text-right">Comissão canal</TableHead>
+                      <TableHead className="text-right">% RIOS</TableHead>
+                      <TableHead className="text-right">Comissão RIOS</TableHead>
+                      <TableHead className="text-right">Líquido dono</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {financials.rows
+                      .slice()
+                      .sort((a, b) => b.gross_revenue - a.gross_revenue)
+                      .map((r) => (
+                        <TableRow key={r.property_id}>
+                          <TableCell className="font-medium">{r.property_name}</TableCell>
+                          <TableCell className="text-right">{r.reservations_count}</TableCell>
+                          <TableCell className="text-right">{(r.occupancy * 100).toFixed(0)}%</TableCell>
+                          <TableCell className="text-right">{r.vacant_nights}</TableCell>
+                          <TableCell className="text-right">{formatBRL(r.gross_revenue)}</TableCell>
+                          <TableCell className="text-right text-destructive">−{formatBRL(r.channel_commission)}</TableCell>
+                          <TableCell className="text-right">
+                            {r.has_commission_config ? (
+                              <span className="font-medium">{r.rios_commission_pct}%</span>
+                            ) : (
+                              <Badge variant="outline" className="text-warning border-warning">Sem %</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right text-primary">{formatBRL(r.rios_commission)}</TableCell>
+                          <TableCell className="text-right text-success font-semibold">{formatBRL(r.owner_net)}</TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                  <TableFooter>
+                    <TableRow>
+                      <TableCell className="font-semibold">Total</TableCell>
+                      <TableCell className="text-right font-semibold">{financials.totals.reservations_count}</TableCell>
+                      <TableCell className="text-right font-semibold">{(financials.totals.occupancy * 100).toFixed(0)}%</TableCell>
+                      <TableCell className="text-right font-semibold">{financials.totals.vacant_nights}</TableCell>
+                      <TableCell className="text-right font-semibold">{formatBRL(financials.totals.gross_revenue)}</TableCell>
+                      <TableCell className="text-right font-semibold text-destructive">−{formatBRL(financials.totals.channel_commission)}</TableCell>
+                      <TableCell />
+                      <TableCell className="text-right font-semibold text-primary">{formatBRL(financials.totals.rios_commission)}</TableCell>
+                      <TableCell className="text-right font-semibold text-success">{formatBRL(financials.totals.owner_net)}</TableCell>
+                    </TableRow>
+                  </TableFooter>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
 
         <TabsContent value="insights" className="space-y-4">
           <div className="flex justify-between items-center flex-wrap gap-2">
