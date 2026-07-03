@@ -91,7 +91,7 @@ export default function AdminCentralHostex() {
       const priceStart = today.toISOString().slice(0, 10);
       const priceEnd = new Date(today.getTime() + 30 * 86400000).toISOString().slice(0, 10);
 
-      const [resResp, propResp, logsResp, calResp, hxPropsResp, localPropsResp] = await Promise.all([
+      const [resResp, propResp, logsResp, calResp, hxPropsResp, localPropsResp, contractsResp] = await Promise.all([
         supabase.functions.invoke("hostex-proxy", {
           body: { action: "search_reservations", params: { start_date: start, end_date: end } },
         }),
