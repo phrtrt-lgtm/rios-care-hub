@@ -219,6 +219,41 @@ export default function AdminCentralHostex() {
   const start30 = today.toISOString().slice(0, 10);
   const end30 = new Date(today.getTime() + 30 * 86400000).toISOString().slice(0, 10);
 
+  // Janela financeira configurável
+  const [finStart, setFinStart] = useState<Date>(today);
+  const [finEnd, setFinEnd] = useState<Date>(new Date(today.getTime() + 30 * 86400000));
+  const [finReservations, setFinReservations] = useState<HostexReservation[] | null>(null);
+  const [finLoading, setFinLoading] = useState(false);
+
+  async function loadFinancialReservations(startD: Date, endD: Date) {
+    setFinLoading(true);
+    try {
+      const s = startD.toISOString().slice(0, 10);
+      const e = endD.toISOString().slice(0, 10);
+      const { data } = await supabase.functions.invoke("hostex-proxy", {
+        body: { action: "search_reservations", params: { start_date: s, end_date: e } },
+      });
+      const rData: any = data;
+      const list: HostexReservation[] =
+        rData?.data?.reservations ?? rData?.data?.data?.reservations ?? [];
+      setFinReservations(list);
+    } catch (e: any) {
+      toast({ title: "Erro ao carregar reservas do período", description: e.message, variant: "destructive" });
+    } finally {
+      setFinLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!loading) loadFinancialReservations(finStart, finEnd);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finStart, finEnd, loading]);
+
+  const financials = useMemo(
+    () => financialsByProperty(finReservations ?? reservations, properties, finStart, finEnd, commissionByProperty),
+    [finReservations, reservations, properties, finStart, finEnd, commissionByProperty],
+  );
+
   const insights = useMemo(
     () => pricingInsights30d(reservations, properties, today, listedAdrMap),
     [reservations, properties, listedAdrMap],
