@@ -17,6 +17,10 @@ export default function OwnerMaintenanceDecision({ ticket, onUpdate }: { ticket:
   const [loading, setLoading] = useState(false);
 
   if (ticket.kind !== 'maintenance' || ticket.essential) return null;
+  // Só mostra os botões de "Assumir/Delegar" quando a gestão explicitamente
+  // solicitou uma decisão do proprietário (definiu um prazo) ou quando já
+  // existe uma decisão registrada — evita poluir manutenções pequenas.
+  if (!ticket.owner_action_due_at && !ticket.owner_decision) return null;
   
   const handleMarkCompleted = async () => {
     setLoading(true);
