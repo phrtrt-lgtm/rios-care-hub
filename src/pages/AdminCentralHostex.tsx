@@ -109,8 +109,10 @@ export default function AdminCentralHostex() {
           .gte("date", priceStart)
           .lt("date", priceEnd),
         supabase.from("hostex_properties").select("id_hostex, property_id"),
-        supabase.from("properties").select("id, name"),
+        supabase.from("properties").select("id, name, default_commission_percentage"),
+        supabase.from("contracts").select("property_id, commission_percent, status, updated_at").order("updated_at", { ascending: false }),
       ]);
+
 
       const rData: any = resResp.data;
       const pData: any = propResp.data;
