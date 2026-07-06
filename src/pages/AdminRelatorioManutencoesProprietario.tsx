@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMaintenances, useMaintenanceCharts } from "@/hooks/useMaintenances";
 import { MaintenanceCharts } from "@/components/MaintenanceCharts";
 import { MaintenanceSummaryCards } from "@/components/MaintenanceSummaryCards";
+import { MaintenanceDetailsDialog } from "@/components/MaintenanceDetailsDialog";
+import { MediaGallery } from "@/components/MediaGallery";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,6 +26,7 @@ import {
   Phone,
   Wrench,
   ArrowUpDown,
+  Paperclip,
 } from "lucide-react";
 import { formatBRL, formatDateTime } from "@/lib/format";
 
