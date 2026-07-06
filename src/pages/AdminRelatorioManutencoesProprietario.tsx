@@ -390,9 +390,9 @@ export default function AdminRelatorioManutencoesProprietario() {
         <MaintenanceSummaryCards summary={summary} />
         <MaintenanceCharts charts={charts} serviceTypeData={serviceTypeData} />
 
-        {/* List */}
+        {/* List - mesmo layout do proprietário */}
         <Card>
-          <CardHeader>
+          <CardHeader className="px-4 py-3 sm:px-6 sm:py-4">
             <CardTitle className="text-base flex items-center gap-2">
               <Wrench className="h-4 w-4 text-primary" />
               Manutenções de {year}
@@ -414,59 +414,164 @@ export default function AdminRelatorioManutencoesProprietario() {
                 />
               </div>
             ) : (
-              <div className="overflow-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/50">
-                    <tr>
-                      <th className="text-left p-3">Data</th>
-                      <th className="text-left p-3">Imóvel</th>
-                      <th className="text-left p-3">Título</th>
-                      <th className="text-right p-3">Valor</th>
-                      <th className="text-right p-3">Aporte</th>
-                      <th className="text-right p-3">Devido</th>
-                      <th className="text-right p-3">Pago</th>
-                      <th className="text-center p-3">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredYearMaintenances.map((m: any) => (
-                      <tr
-                        key={m.id}
-                        className="border-t hover:bg-accent cursor-pointer transition-colors"
-                        onClick={() => navigate(`/cobranca/${m.id}`)}
-                      >
-                        <td className="p-3 whitespace-nowrap">{formatDateTime(m.created_at)}</td>
-                        <td className="p-3">{m.property?.name || "-"}</td>
-                        <td className="p-3">
-                          <div className="font-medium">{m.title}</div>
-                          {m.category && (
-                            <div className="text-xs text-muted-foreground">{m.category}</div>
-                          )}
-                        </td>
-                        <td className="p-3 text-right font-medium">
-                          {formatBRL(m.amount_cents)}
-                        </td>
-                        <td className="p-3 text-right text-success">
-                          {m.management_contribution_cents > 0
-                            ? formatBRL(m.management_contribution_cents)
-                            : "-"}
-                        </td>
-                        <td className="p-3 text-right font-bold">
-                          {formatBRL(
-                            (m.amount_cents || 0) - (m.management_contribution_cents || 0),
-                          )}
-                        </td>
-                        <td className="p-3 text-right">{formatBRL(m.paid_cents || 0)}</td>
-                        <td className="p-3 text-center">{getStatusBadge(m.status)}</td>
+              <>
+                {/* Desktop / tablet table */}
+                <div className="hidden md:block overflow-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/50">
+                      <tr>
+                        <th className="text-left p-3">Data</th>
+                        <th className="text-left p-3">Imóvel</th>
+                        <th className="text-left p-3">Título / Categoria</th>
+                        <th className="text-right p-3">Valor Total</th>
+                        <th className="text-right p-3">Aporte Gestão</th>
+                        <th className="text-right p-3">Valor Devido</th>
+                        <th className="text-center p-3">Responsável</th>
+                        <th className="text-right p-3">Pago</th>
+                        <th className="text-left p-3">Anexos</th>
+                        <th className="text-center p-3">Status</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {filteredYearMaintenances.map((m: any) => {
+                        const atts = attachmentsByCharge[m.id] || [];
+                        return (
+                          <tr
+                            key={m.id}
+                            className="border-t hover:bg-accent cursor-pointer transition-colors"
+                            onClick={() => openDetail(m.id)}
+                          >
+                            <td className="p-3 whitespace-nowrap">{formatDateTime(m.created_at)}</td>
+                            <td className="p-3">{m.property?.name || "-"}</td>
+                            <td className="p-3">
+                              <div className="font-medium">{m.title}</div>
+                              {m.category && (
+                                <div className="text-xs text-muted-foreground">{m.category}</div>
+                              )}
+                              {m.service_type && (
+                                <div className="text-xs text-muted-foreground">
+                                  🏷️ {String(m.service_type).split(",").map((s: string) => s.trim()).filter(Boolean).join(", ")}
+                                </div>
+                              )}
+                            </td>
+                            <td className="p-3 text-right font-medium">{formatBRL(m.amount_cents)}</td>
+                            <td className="p-3 text-right font-medium text-success">
+                              {m.management_contribution_cents > 0 ? formatBRL(m.management_contribution_cents) : "-"}
+                            </td>
+                            <td className="p-3 text-right font-bold">
+                              {formatBRL((m.amount_cents || 0) - (m.management_contribution_cents || 0))}
+                            </td>
+                            <td className="p-3 text-center text-xs">
+                              {getResponsibleLabel(m.cost_responsible, m.split_owner_percent)}
+                            </td>
+                            <td className="p-3 text-right">{formatBRL(m.paid_cents || 0)}</td>
+                            <td className="p-3">
+                              {atts.length === 0 ? (
+                                <span className="text-xs text-muted-foreground">-</span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); setGalleryItems(atts); setGalleryOpen(true); }}
+                                  className="inline-flex items-center gap-1 px-2 py-1 rounded text-sm hover:bg-primary/10 text-primary transition-colors"
+                                >
+                                  <Paperclip className="h-3.5 w-3.5" />
+                                  <span>{atts.length}</span>
+                                </button>
+                              )}
+                            </td>
+                            <td className="p-3 text-center">{getStatusBadge(m.status)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile cards */}
+                <div className="md:hidden divide-y">
+                  {filteredYearMaintenances.map((m: any) => {
+                    const due = (m.amount_cents || 0) - (m.management_contribution_cents || 0);
+                    const atts = attachmentsByCharge[m.id] || [];
+                    return (
+                      <button
+                        key={m.id}
+                        onClick={() => openDetail(m.id)}
+                        className="w-full text-left p-3 active:bg-accent transition-colors"
+                      >
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs text-muted-foreground truncate">
+                              {m.property?.name || "-"} · {formatDateTime(m.created_at)}
+                            </div>
+                            <div className="font-medium text-sm leading-tight truncate">{m.title}</div>
+                            {(m.category || m.service_type) && (
+                              <div className="text-[11px] text-muted-foreground truncate">
+                                {[m.category, m.service_type && String(m.service_type).split(",").map((s: string) => s.trim()).filter(Boolean).join(", ")].filter(Boolean).join(" · ")}
+                              </div>
+                            )}
+                          </div>
+                          <div className="shrink-0">{getStatusBadge(m.status)}</div>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2 mt-2 text-[11px]">
+                          <div className="bg-muted/50 rounded px-2 py-1">
+                            <div className="text-muted-foreground">Total</div>
+                            <div className="font-medium text-xs">{formatBRL(m.amount_cents)}</div>
+                          </div>
+                          <div className="bg-muted/50 rounded px-2 py-1">
+                            <div className="text-muted-foreground">Aporte</div>
+                            <div className="font-medium text-success text-xs">
+                              {m.management_contribution_cents > 0 ? formatBRL(m.management_contribution_cents) : "-"}
+                            </div>
+                          </div>
+                          <div className="bg-muted/50 rounded px-2 py-1">
+                            <div className="text-muted-foreground">Devido</div>
+                            <div className="font-bold text-xs">{formatBRL(due)}</div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2 mt-2 text-[11px] text-muted-foreground">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="truncate">
+                              {getResponsibleLabel(m.cost_responsible, m.split_owner_percent)}
+                            </span>
+                            {m.paid_cents > 0 && (
+                              <span className="text-success">· Pago {formatBRL(m.paid_cents)}</span>
+                            )}
+                          </div>
+                          {atts.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); e.preventDefault(); setGalleryItems(atts); setGalleryOpen(true); }}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded hover:bg-primary/10 text-primary transition-colors shrink-0"
+                            >
+                              <Paperclip className="h-3.5 w-3.5" />
+                              <span className="text-xs font-medium">{atts.length}</span>
+                            </button>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
       </main>
+
+      <MediaGallery
+        items={galleryItems}
+        initialIndex={0}
+        open={galleryOpen}
+        onOpenChange={setGalleryOpen}
+      />
+
+      <MaintenanceDetailsDialog
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        maintenanceId={detailId}
+      />
     </div>
   );
 }
