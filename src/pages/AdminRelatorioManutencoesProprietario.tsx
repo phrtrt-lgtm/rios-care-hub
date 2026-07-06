@@ -48,6 +48,16 @@ export default function AdminRelatorioManutencoesProprietario() {
   const [propertyId, setPropertyId] = useState<string>("");
   const [properties, setProperties] = useState<any[]>([]);
   const [sortOption, setSortOption] = useState<string>("date_desc");
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryItems, setGalleryItems] = useState<Array<{ id: string; file_url: string; file_name: string; file_type: string }>>([]);
+  const [attachmentsByCharge, setAttachmentsByCharge] = useState<Record<string, Array<{ id: string; file_url: string; file_name: string; file_type: string }>>>({});
+
+  const openDetail = (id: string) => {
+    setDetailId(id);
+    setDetailOpen(true);
+  };
 
   useEffect(() => {
     if (!ownerId) return;
