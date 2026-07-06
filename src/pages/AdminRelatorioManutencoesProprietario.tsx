@@ -166,6 +166,13 @@ export default function AdminRelatorioManutencoesProprietario() {
     return Object.values(grouped);
   }, [maintenances, year]);
 
+  const getResponsibleLabel = (responsible: string, percent?: number | null) => {
+    if (responsible === "owner") return "Proprietário";
+    if (responsible === "management") return "Gestão";
+    if (responsible === "split") return `Dividido (${percent}% prop.)`;
+    return responsible || "-";
+  };
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, any> = {
       draft: { variant: "secondary", label: "Rascunho" },
