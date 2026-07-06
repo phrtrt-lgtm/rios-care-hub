@@ -160,18 +160,18 @@ export function AttachmentBubble({
         {DeleteOverlay}
         <div 
           onClick={() => onPreview?.(file_url, isVideo ? 'Vídeo' : 'Imagem')}
-          className="cursor-pointer relative overflow-hidden rounded-lg border border-border hover:border-primary transition-colors"
+          className="cursor-pointer relative overflow-hidden rounded-lg border border-border hover:border-primary transition-colors bg-muted"
         >
           {loading ? (
-            <Skeleton className="w-full h-32" />
+            <Skeleton className="w-full h-64" />
           ) : thumbnailUrl ? (
             <img 
               src={thumbnailUrl} 
               alt="Anexo" 
-              className="w-full h-32 object-cover"
+              className="w-full max-h-96 object-contain"
             />
           ) : (
-            <div className="w-full h-32 bg-muted flex items-center justify-center">
+            <div className="w-full h-64 bg-muted flex items-center justify-center">
               {isVideo ? (
                 <Play className="h-8 w-8 text-muted-foreground" />
               ) : (
@@ -179,11 +179,11 @@ export function AttachmentBubble({
               )}
             </div>
           )}
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center pointer-events-none">
             {isVideo ? (
-              <Play className="h-8 w-8 text-white opacity-70 group-hover:opacity-100 transition-opacity" fill="white" />
+              <Play className="h-12 w-12 text-white opacity-80 group-hover:opacity-100 transition-opacity drop-shadow-lg" fill="white" />
             ) : (
-              <Eye className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+              <Eye className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
             )}
           </div>
         </div>
@@ -196,6 +196,7 @@ export function AttachmentBubble({
       </div>
     );
   }
+
 
   if (isPDF) {
     return (
