@@ -432,21 +432,26 @@ export function MaintenanceChatDialog({
           )}
           
           {/* Attachments */}
-          {message.attachments && message.attachments.length > 0 && (
-            <div className={`grid gap-2 mt-2 ${message.attachments.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-              {message.attachments.map((att) => (
-                <AttachmentBubble
-                  key={att.id}
-                  id={att.id}
-                  file_url={att.file_url}
-                  file_name={att.file_name}
-                  file_type={att.file_type}
-                  size_bytes={att.size_bytes}
-                  onPreview={handlePreviewMedia}
-                />
-              ))}
-            </div>
-          )}
+          {message.attachments && message.attachments.length > 0 && (() => {
+            const isVisualMedia = (t?: string) => !!t && (t.startsWith('image/') || t.startsWith('video/'));
+            const hasVisual = message.attachments.some(a => isVisualMedia(a.file_type));
+            return (
+              <div className={`flex flex-col gap-2 mt-2 ${hasVisual ? 'max-w-md' : ''}`}>
+                {message.attachments.map((att) => (
+                  <AttachmentBubble
+                    key={att.id}
+                    id={att.id}
+                    file_url={att.file_url}
+                    file_name={att.file_name}
+                    file_type={att.file_type}
+                    size_bytes={att.size_bytes}
+                    onPreview={handlePreviewMedia}
+                  />
+                ))}
+              </div>
+            );
+          })()}
+
 
           {/* Read receipts */}
           <div className="mt-1">
