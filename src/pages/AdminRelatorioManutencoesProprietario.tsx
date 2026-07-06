@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMaintenances, useMaintenanceCharts } from "@/hooks/useMaintenances";
 import { MaintenanceCharts } from "@/components/MaintenanceCharts";
 import { MaintenanceSummaryCards } from "@/components/MaintenanceSummaryCards";
+import { MaintenanceDetailsDialog } from "@/components/MaintenanceDetailsDialog";
+import { MediaGallery } from "@/components/MediaGallery";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,6 +26,7 @@ import {
   Phone,
   Wrench,
   ArrowUpDown,
+  Paperclip,
 } from "lucide-react";
 import { formatBRL, formatDateTime } from "@/lib/format";
 
@@ -45,6 +48,16 @@ export default function AdminRelatorioManutencoesProprietario() {
   const [propertyId, setPropertyId] = useState<string>("");
   const [properties, setProperties] = useState<any[]>([]);
   const [sortOption, setSortOption] = useState<string>("date_desc");
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryItems, setGalleryItems] = useState<Array<{ id: string; file_url: string; file_name: string; file_type: string }>>([]);
+  const [attachmentsByCharge, setAttachmentsByCharge] = useState<Record<string, Array<{ id: string; file_url: string; file_name: string; file_type: string }>>>({});
+
+  const openDetail = (id: string) => {
+    setDetailId(id);
+    setDetailOpen(true);
+  };
 
   useEffect(() => {
     if (!ownerId) return;
@@ -78,6 +91,40 @@ export default function AdminRelatorioManutencoesProprietario() {
     propertyId: propertyId || undefined,
   });
   const { data: charts } = useMaintenanceCharts(ownerId, year, propertyId || undefined);
+
+  // Carrega anexos das manutenções listadas (para popup ao clicar no clipe)
+  useEffect(() => {
+    const ids = (maintenances || []).map((m: any) => m.id);
+    if (ids.length === 0) {
+      setAttachmentsByCharge({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("charge_attachments")
+        .select("id, charge_id, file_path, file_name, mime_type, mime_type_override, created_at")
+        .in("charge_id", ids)
+        .order("created_at", { ascending: true });
+      if (cancelled) return;
+      const grouped: Record<string, Array<{ id: string; file_url: string; file_name: string; file_type: string }>> = {};
+      (data || []).forEach((a: any) => {
+        const path = a.file_path || "";
+        let url = path;
+        if (path && !path.startsWith("http://") && !path.startsWith("https://")) {
+          const { data: pub } = supabase.storage.from("attachments").getPublicUrl(path);
+          url = pub.publicUrl;
+        }
+        const mime = a.mime_type_override || a.mime_type || "";
+        if (!grouped[a.charge_id]) grouped[a.charge_id] = [];
+        grouped[a.charge_id].push({ id: a.id, file_url: url, file_name: a.file_name || "", file_type: mime });
+      });
+      setAttachmentsByCharge(grouped);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [maintenances]);
 
   const summary = useMemo(() => {
     if (!maintenances) return null;
@@ -118,6 +165,13 @@ export default function AdminRelatorioManutencoesProprietario() {
       });
     return Object.values(grouped);
   }, [maintenances, year]);
+
+  const getResponsibleLabel = (responsible: string, percent?: number | null) => {
+    if (responsible === "owner") return "Proprietário";
+    if (responsible === "management") return "Gestão";
+    if (responsible === "split") return `Dividido (${percent}% prop.)`;
+    return responsible || "-";
+  };
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, any> = {
@@ -343,9 +397,9 @@ export default function AdminRelatorioManutencoesProprietario() {
         <MaintenanceSummaryCards summary={summary} />
         <MaintenanceCharts charts={charts} serviceTypeData={serviceTypeData} />
 
-        {/* List */}
+        {/* List - mesmo layout do proprietário */}
         <Card>
-          <CardHeader>
+          <CardHeader className="px-4 py-3 sm:px-6 sm:py-4">
             <CardTitle className="text-base flex items-center gap-2">
               <Wrench className="h-4 w-4 text-primary" />
               Manutenções de {year}
@@ -367,59 +421,164 @@ export default function AdminRelatorioManutencoesProprietario() {
                 />
               </div>
             ) : (
-              <div className="overflow-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/50">
-                    <tr>
-                      <th className="text-left p-3">Data</th>
-                      <th className="text-left p-3">Imóvel</th>
-                      <th className="text-left p-3">Título</th>
-                      <th className="text-right p-3">Valor</th>
-                      <th className="text-right p-3">Aporte</th>
-                      <th className="text-right p-3">Devido</th>
-                      <th className="text-right p-3">Pago</th>
-                      <th className="text-center p-3">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredYearMaintenances.map((m: any) => (
-                      <tr
-                        key={m.id}
-                        className="border-t hover:bg-accent cursor-pointer transition-colors"
-                        onClick={() => navigate(`/cobranca/${m.id}`)}
-                      >
-                        <td className="p-3 whitespace-nowrap">{formatDateTime(m.created_at)}</td>
-                        <td className="p-3">{m.property?.name || "-"}</td>
-                        <td className="p-3">
-                          <div className="font-medium">{m.title}</div>
-                          {m.category && (
-                            <div className="text-xs text-muted-foreground">{m.category}</div>
-                          )}
-                        </td>
-                        <td className="p-3 text-right font-medium">
-                          {formatBRL(m.amount_cents)}
-                        </td>
-                        <td className="p-3 text-right text-success">
-                          {m.management_contribution_cents > 0
-                            ? formatBRL(m.management_contribution_cents)
-                            : "-"}
-                        </td>
-                        <td className="p-3 text-right font-bold">
-                          {formatBRL(
-                            (m.amount_cents || 0) - (m.management_contribution_cents || 0),
-                          )}
-                        </td>
-                        <td className="p-3 text-right">{formatBRL(m.paid_cents || 0)}</td>
-                        <td className="p-3 text-center">{getStatusBadge(m.status)}</td>
+              <>
+                {/* Desktop / tablet table */}
+                <div className="hidden md:block overflow-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/50">
+                      <tr>
+                        <th className="text-left p-3">Data</th>
+                        <th className="text-left p-3">Imóvel</th>
+                        <th className="text-left p-3">Título / Categoria</th>
+                        <th className="text-right p-3">Valor Total</th>
+                        <th className="text-right p-3">Aporte Gestão</th>
+                        <th className="text-right p-3">Valor Devido</th>
+                        <th className="text-center p-3">Responsável</th>
+                        <th className="text-right p-3">Pago</th>
+                        <th className="text-left p-3">Anexos</th>
+                        <th className="text-center p-3">Status</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {filteredYearMaintenances.map((m: any) => {
+                        const atts = attachmentsByCharge[m.id] || [];
+                        return (
+                          <tr
+                            key={m.id}
+                            className="border-t hover:bg-accent cursor-pointer transition-colors"
+                            onClick={() => openDetail(m.id)}
+                          >
+                            <td className="p-3 whitespace-nowrap">{formatDateTime(m.created_at)}</td>
+                            <td className="p-3">{m.property?.name || "-"}</td>
+                            <td className="p-3">
+                              <div className="font-medium">{m.title}</div>
+                              {m.category && (
+                                <div className="text-xs text-muted-foreground">{m.category}</div>
+                              )}
+                              {m.service_type && (
+                                <div className="text-xs text-muted-foreground">
+                                  🏷️ {String(m.service_type).split(",").map((s: string) => s.trim()).filter(Boolean).join(", ")}
+                                </div>
+                              )}
+                            </td>
+                            <td className="p-3 text-right font-medium">{formatBRL(m.amount_cents)}</td>
+                            <td className="p-3 text-right font-medium text-success">
+                              {m.management_contribution_cents > 0 ? formatBRL(m.management_contribution_cents) : "-"}
+                            </td>
+                            <td className="p-3 text-right font-bold">
+                              {formatBRL((m.amount_cents || 0) - (m.management_contribution_cents || 0))}
+                            </td>
+                            <td className="p-3 text-center text-xs">
+                              {getResponsibleLabel(m.cost_responsible, m.split_owner_percent)}
+                            </td>
+                            <td className="p-3 text-right">{formatBRL(m.paid_cents || 0)}</td>
+                            <td className="p-3">
+                              {atts.length === 0 ? (
+                                <span className="text-xs text-muted-foreground">-</span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); setGalleryItems(atts); setGalleryOpen(true); }}
+                                  className="inline-flex items-center gap-1 px-2 py-1 rounded text-sm hover:bg-primary/10 text-primary transition-colors"
+                                >
+                                  <Paperclip className="h-3.5 w-3.5" />
+                                  <span>{atts.length}</span>
+                                </button>
+                              )}
+                            </td>
+                            <td className="p-3 text-center">{getStatusBadge(m.status)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile cards */}
+                <div className="md:hidden divide-y">
+                  {filteredYearMaintenances.map((m: any) => {
+                    const due = (m.amount_cents || 0) - (m.management_contribution_cents || 0);
+                    const atts = attachmentsByCharge[m.id] || [];
+                    return (
+                      <button
+                        key={m.id}
+                        onClick={() => openDetail(m.id)}
+                        className="w-full text-left p-3 active:bg-accent transition-colors"
+                      >
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs text-muted-foreground truncate">
+                              {m.property?.name || "-"} · {formatDateTime(m.created_at)}
+                            </div>
+                            <div className="font-medium text-sm leading-tight truncate">{m.title}</div>
+                            {(m.category || m.service_type) && (
+                              <div className="text-[11px] text-muted-foreground truncate">
+                                {[m.category, m.service_type && String(m.service_type).split(",").map((s: string) => s.trim()).filter(Boolean).join(", ")].filter(Boolean).join(" · ")}
+                              </div>
+                            )}
+                          </div>
+                          <div className="shrink-0">{getStatusBadge(m.status)}</div>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2 mt-2 text-[11px]">
+                          <div className="bg-muted/50 rounded px-2 py-1">
+                            <div className="text-muted-foreground">Total</div>
+                            <div className="font-medium text-xs">{formatBRL(m.amount_cents)}</div>
+                          </div>
+                          <div className="bg-muted/50 rounded px-2 py-1">
+                            <div className="text-muted-foreground">Aporte</div>
+                            <div className="font-medium text-success text-xs">
+                              {m.management_contribution_cents > 0 ? formatBRL(m.management_contribution_cents) : "-"}
+                            </div>
+                          </div>
+                          <div className="bg-muted/50 rounded px-2 py-1">
+                            <div className="text-muted-foreground">Devido</div>
+                            <div className="font-bold text-xs">{formatBRL(due)}</div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2 mt-2 text-[11px] text-muted-foreground">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="truncate">
+                              {getResponsibleLabel(m.cost_responsible, m.split_owner_percent)}
+                            </span>
+                            {m.paid_cents > 0 && (
+                              <span className="text-success">· Pago {formatBRL(m.paid_cents)}</span>
+                            )}
+                          </div>
+                          {atts.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); e.preventDefault(); setGalleryItems(atts); setGalleryOpen(true); }}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded hover:bg-primary/10 text-primary transition-colors shrink-0"
+                            >
+                              <Paperclip className="h-3.5 w-3.5" />
+                              <span className="text-xs font-medium">{atts.length}</span>
+                            </button>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
       </main>
+
+      <MediaGallery
+        items={galleryItems}
+        initialIndex={0}
+        open={galleryOpen}
+        onOpenChange={setGalleryOpen}
+      />
+
+      <MaintenanceDetailsDialog
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        maintenanceId={detailId}
+      />
     </div>
   );
 }
