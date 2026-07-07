@@ -97,7 +97,7 @@ export function MaintenanceChatDialog({
 
     const { data, error } = await supabase
       .from('tickets')
-      .select('id, kind, essential, owner_decision, owner_action_due_at, status')
+      .select('id, kind, essential, owner_decision, owner_action_due_at, status, cost_responsible')
       .eq('id', ticketId)
       .maybeSingle();
 
