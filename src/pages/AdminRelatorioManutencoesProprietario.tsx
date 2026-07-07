@@ -41,11 +41,12 @@ interface OwnerProfile {
 export default function AdminRelatorioManutencoesProprietario() {
   const { ownerId } = useParams<{ ownerId: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [owner, setOwner] = useState<OwnerProfile | null>(null);
   const [loadingOwner, setLoadingOwner] = useState(true);
   const [year, setYear] = useState<number>(new Date().getFullYear());
-  const [propertyId, setPropertyId] = useState<string>("");
+  const [propertyId, setPropertyId] = useState<string>(searchParams.get("propertyId") || "");
   const [properties, setProperties] = useState<any[]>([]);
   const [sortOption, setSortOption] = useState<string>("date_desc");
   const [detailId, setDetailId] = useState<string | null>(null);
