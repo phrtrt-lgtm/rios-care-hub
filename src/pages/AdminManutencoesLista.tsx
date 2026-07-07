@@ -387,6 +387,7 @@ function GroupRow({
   onEdit,
   onDelete
 }: GroupRowProps) {
+  const navigate = useNavigate();
   // Sort items within the group
   const sortedItems = useMemo(() => {
     if (!sortField || !sortDirection) return items;
