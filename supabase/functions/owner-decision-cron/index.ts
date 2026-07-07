@@ -28,6 +28,7 @@ const handler = async (req: Request): Promise<Response> => {
       .from("tickets")
       .select("id, subject, owner_action_due_at")
       .eq("kind", "maintenance")
+      .eq("cost_responsible", "owner")
       .eq("essential", false)
       .is("owner_decision", null)
       .not("owner_action_due_at", "is", null)
