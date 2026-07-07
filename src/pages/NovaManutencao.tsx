@@ -343,10 +343,12 @@ export default function NovaManutencao({ editId, onClose, onSaved }: NovaManuten
       const isEssential = ownerActionMode === 'essential';
       const ownerDecision = ownerActionMode === 'pm_immediate' ? 'pm_will_fix' : null;
 
-      // O fluxo antigo de "decisão em 72h" foi descontinuado. Uma manutenção
-      // "em espera" não deve pressionar o proprietário a decidir — a definição
-      // do responsável é feita pela equipe conforme a natureza do dano.
-      const ownerActionDueAt = null;
+      // Só define prazo de decisão quando a equipe marcou EXPLICITAMENTE
+      // "Aguardar decisão do proprietário" E o custo está atribuído ao proprietário.
+      const ownerActionDueAt =
+        ownerActionMode === 'pending_decision' && costResponsible === 'owner'
+          ? new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString()
+          : null;
 
       let ticketId: string;
 
