@@ -13,10 +13,13 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    // Fluxo de "decisão em 72h" descontinuado — o cron passa a ser no-op.
+    // Mantido apenas para preservar o schedule existente sem quebras.
+    console.log("owner-decision-cron: fluxo descontinuado, nenhum lembrete será enviado.");
+    return new Response(
+      JSON.stringify({ success: true, reminders_sent: 0, note: "flow deprecated" }),
+      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+    );
 
     console.log("Running owner decision reminder cron...");
 
