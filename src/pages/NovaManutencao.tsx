@@ -343,10 +343,10 @@ export default function NovaManutencao({ editId, onClose, onSaved }: NovaManuten
       const isEssential = ownerActionMode === 'essential';
       const ownerDecision = ownerActionMode === 'pm_immediate' ? 'pm_will_fix' : null;
 
-      // Set 72h deadline for owner decision if mode is pending_decision
-      const ownerActionDueAt = ownerActionMode === 'pending_decision'
-        ? new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString()
-        : null;
+      // O fluxo antigo de "decisão em 72h" foi descontinuado. Uma manutenção
+      // "em espera" não deve pressionar o proprietário a decidir — a definição
+      // do responsável é feita pela equipe conforme a natureza do dano.
+      const ownerActionDueAt = null;
 
       let ticketId: string;
 
@@ -425,22 +425,23 @@ export default function NovaManutencao({ editId, onClose, onSaved }: NovaManuten
         });
       }
 
-      // Send notification for owner decision only on creation (not edit)
-      if (!isEditMode && ownerActionMode === 'pending_decision' && costResponsible === 'owner') {
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
-        fetch(`${supabaseUrl}/functions/v1/notify-owner-decision`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': supabaseKey,
-          },
-          body: JSON.stringify({
-            type: 'decision_pending',
-            ticketId,
-          }),
-        }).catch(err => console.error('Failed to send decision notification:', err));
+      // Notificação leve/informativa ao proprietário na criação (sem cobrar decisão)
+      if (!isEditMode) {
+        try {
+          const property = selectedProperty;
+          await supabase.from('notifications').insert({
+            owner_id: property.owner_id,
+            type: 'maintenance',
+            title: 'Nova manutenção iniciada no seu imóvel',
+            message: `${property.name || 'Imóvel'}: ${subject}. O responsável pelo custo ainda será definido pela equipe conforme a natureza do serviço.`,
+            reference_id: ticketId,
+            reference_url: `/ticket-detalhes/${ticketId}`,
+            entity_type: 'ticket',
+            entity_id: ticketId,
+          });
+        } catch (err) {
+          console.error('Falha ao criar notificação informativa:', err);
+        }
       }
 
       toast.success(isEditMode ? "Manutenção atualizada!" : "Manutenção criada com sucesso!");
