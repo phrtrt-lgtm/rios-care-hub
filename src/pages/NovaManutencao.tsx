@@ -343,10 +343,12 @@ export default function NovaManutencao({ editId, onClose, onSaved }: NovaManuten
       const isEssential = ownerActionMode === 'essential';
       const ownerDecision = ownerActionMode === 'pm_immediate' ? 'pm_will_fix' : null;
 
-      // O fluxo antigo de "decisão em 72h" foi descontinuado. Uma manutenção
-      // "em espera" não deve pressionar o proprietário a decidir — a definição
-      // do responsável é feita pela equipe conforme a natureza do dano.
-      const ownerActionDueAt = null;
+      // Só define prazo de decisão quando a equipe marcou EXPLICITAMENTE
+      // "Aguardar decisão do proprietário" E o custo está atribuído ao proprietário.
+      const ownerActionDueAt =
+        ownerActionMode === 'pending_decision' && costResponsible === 'owner'
+          ? new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString()
+          : null;
 
       let ticketId: string;
 
@@ -425,22 +427,36 @@ export default function NovaManutencao({ editId, onClose, onSaved }: NovaManuten
         });
       }
 
-      // Notificação leve/informativa ao proprietário na criação (sem cobrar decisão)
       if (!isEditMode) {
-        try {
-          const property = selectedProperty;
-          await supabase.from('notifications').insert({
-            owner_id: property.owner_id,
-            type: 'maintenance',
-            title: 'Nova manutenção iniciada no seu imóvel',
-            message: `${property.name || 'Imóvel'}: ${subject}. O responsável pelo custo ainda será definido pela equipe conforme a natureza do serviço.`,
-            reference_id: ticketId,
-            reference_url: `/ticket-detalhes/${ticketId}`,
-            entity_type: 'ticket',
-            entity_id: ticketId,
-          });
-        } catch (err) {
-          console.error('Falha ao criar notificação informativa:', err);
+        const property = selectedProperty;
+        const askingDecision =
+          ownerActionMode === 'pending_decision' && costResponsible === 'owner';
+
+        if (askingDecision) {
+          // Equipe marcou explicitamente "Aguardar decisão" — dispara o fluxo completo.
+          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+          const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+          fetch(`${supabaseUrl}/functions/v1/notify-owner-decision`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'apikey': supabaseKey },
+            body: JSON.stringify({ type: 'decision_pending', ticketId }),
+          }).catch(err => console.error('Failed to send decision notification:', err));
+        } else {
+          // Notificação apenas informativa — sem pressionar decisão.
+          try {
+            await supabase.from('notifications').insert({
+              owner_id: property.owner_id,
+              type: 'maintenance',
+              title: 'Nova manutenção iniciada no seu imóvel',
+              message: `${property.name || 'Imóvel'}: ${subject}. O responsável pelo custo ainda será definido pela equipe conforme a natureza do serviço.`,
+              reference_id: ticketId,
+              reference_url: `/ticket-detalhes/${ticketId}`,
+              entity_type: 'ticket',
+              entity_id: ticketId,
+            });
+          } catch (err) {
+            console.error('Falha ao criar notificação informativa:', err);
+          }
         }
       }
 
