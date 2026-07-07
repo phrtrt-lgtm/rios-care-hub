@@ -387,6 +387,7 @@ function GroupRow({
   onEdit,
   onDelete
 }: GroupRowProps) {
+  const navigate = useNavigate();
   // Sort items within the group
   const sortedItems = useMemo(() => {
     if (!sortField || !sortDirection) return items;
@@ -513,13 +514,27 @@ function GroupRow({
             </td>
 
             {/* Imóvel */}
-            <td className="p-0 w-[140px] max-w-[140px]">
+            <td className="p-0 w-[140px] max-w-[140px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
               <TooltipProvider delayDuration={300}>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="px-1 py-2 text-sm text-muted-foreground truncate text-center">
-                      {item.property?.name || "—"}
-                    </div>
+                    {item.property && item.owner?.id ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/admin/relatorios-manutencoes/${item.owner!.id}?propertyId=${item.property!.id}`);
+                        }}
+                        className="w-full px-1 py-2 text-sm text-primary hover:underline truncate text-center"
+                        title="Abrir relatório deste imóvel"
+                      >
+                        {item.property.name}
+                      </button>
+                    ) : (
+                      <div className="px-1 py-2 text-sm text-muted-foreground truncate text-center">
+                        {item.property?.name || "—"}
+                      </div>
+                    )}
                   </TooltipTrigger>
                   <TooltipContent side="bottom">
                     <p>{item.property?.name || "—"}</p>
