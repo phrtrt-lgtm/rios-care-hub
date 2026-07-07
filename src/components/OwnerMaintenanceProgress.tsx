@@ -26,6 +26,7 @@ interface MaintenanceTicket {
   essential?: boolean | null;
   owner_decision?: string | null;
   owner_action_due_at?: string | null;
+  cost_responsible?: string | null;
   property: {
     id: string;
     name: string;
