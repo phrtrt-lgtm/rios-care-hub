@@ -46,6 +46,7 @@ type OwnerDecisionTicket = {
   owner_decision: string | null;
   owner_action_due_at: string | null;
   status: string;
+  cost_responsible: string | null;
 };
 
 export function MaintenanceChatDialog({
