@@ -46,6 +46,7 @@ type OwnerDecisionTicket = {
   owner_decision: string | null;
   owner_action_due_at: string | null;
   status: string;
+  cost_responsible: string | null;
 };
 
 export function MaintenanceChatDialog({
@@ -96,7 +97,7 @@ export function MaintenanceChatDialog({
 
     const { data, error } = await supabase
       .from('tickets')
-      .select('id, kind, essential, owner_decision, owner_action_due_at, status')
+      .select('id, kind, essential, owner_decision, owner_action_due_at, status, cost_responsible')
       .eq('id', ticketId)
       .maybeSingle();
 

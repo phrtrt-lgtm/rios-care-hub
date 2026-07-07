@@ -26,6 +26,7 @@ interface MaintenanceTicket {
   essential?: boolean | null;
   owner_decision?: string | null;
   owner_action_due_at?: string | null;
+  cost_responsible?: string | null;
   property: {
     id: string;
     name: string;
@@ -143,9 +144,14 @@ export function OwnerMaintenanceProgress() {
     }
   };
 
-  // Check if ticket needs owner decision
+  // Check if ticket needs owner decision (só quando a equipe marcou o proprietário como responsável)
   const needsDecision = (ticket: MaintenanceTicket) => {
-    return !ticket.essential && !ticket.owner_decision && ticket.owner_action_due_at;
+    return (
+      !ticket.essential &&
+      !ticket.owner_decision &&
+      !!ticket.owner_action_due_at &&
+      ticket.cost_responsible === 'owner'
+    );
   };
 
   if (isLoading) {

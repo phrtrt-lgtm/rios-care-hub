@@ -941,6 +941,7 @@ export default function TicketDetalhes() {
                   owner_decision: ticket.owner_decision || null,
                   owner_action_due_at: ticket.owner_action_due_at || null,
                   status: ticket.status,
+                  cost_responsible: (ticket as any).cost_responsible ?? null,
                 }}
                 onUpdate={fetchTicketData}
               />

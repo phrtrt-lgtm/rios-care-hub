@@ -11,15 +11,20 @@ interface Ticket {
   owner_decision: string | null;
   owner_action_due_at: string | null;
   status: string;
+  cost_responsible?: string | null;
 }
 
 export default function OwnerMaintenanceDecision({ ticket, onUpdate }: { ticket: Ticket; onUpdate?: () => void }) {
   const [loading, setLoading] = useState(false);
 
   if (ticket.kind !== 'maintenance' || ticket.essential) return null;
-  // Só mostra os botões de "Assumir/Delegar" quando a gestão explicitamente
-  // solicitou uma decisão do proprietário (definiu um prazo) ou quando já
-  // existe uma decisão registrada — evita poluir manutenções pequenas.
+
+  // Só mostra a UI de decisão quando a gestão explicitamente marcou o
+  // proprietário como responsável pelo custo. Sem isso, o proprietário
+  // apenas acompanha a manutenção — a definição do responsável é da equipe.
+  if (ticket.cost_responsible !== 'owner') return null;
+
+  // Além disso, exige que haja um prazo ou uma decisão já registrada.
   if (!ticket.owner_action_due_at && !ticket.owner_decision) return null;
   
   const handleMarkCompleted = async () => {
