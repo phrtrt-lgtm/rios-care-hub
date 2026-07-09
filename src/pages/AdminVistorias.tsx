@@ -21,6 +21,7 @@ import {
   Archive,
 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
+import StartInspectionButton from '@/components/StartInspectionButton';
 import { format, isSameDay, parseISO, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useScrollRestoration } from '@/hooks/useScrollRestoration';
