@@ -520,6 +520,11 @@ export default function Painel() {
                 </Button>
               )}
 
+              {(profile?.role === "admin" || profile?.role === "maintenance" || profile?.role === "agent") && (
+                <StartInspectionButton variant="panel" />
+              )}
+
+
               <Button 
                 size="lg" 
                 className="h-16 text-sm font-semibold justify-start px-4 bg-secondary hover:bg-secondary/90 text-secondary-foreground"
