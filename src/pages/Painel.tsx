@@ -31,6 +31,7 @@ import { GlobalSearch, useGlobalSearch } from "@/components/GlobalSearch";
 import { ResponseTemplatesPanel } from "@/components/ResponseTemplatesPanel";
 import { EnablePushNative } from "@/components/EnablePushNative";
 import { AIConsultaWidget } from "@/components/AIConsultaWidget";
+import StartInspectionButton from "@/components/StartInspectionButton";
 
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { StatsCard } from "@/components/StatsCard";
@@ -518,6 +519,11 @@ export default function Painel() {
                   Nova Manutenção
                 </Button>
               )}
+
+              {(profile?.role === "admin" || profile?.role === "maintenance" || profile?.role === "agent") && (
+                <StartInspectionButton variant="panel" />
+              )}
+
 
               <Button 
                 size="lg" 
