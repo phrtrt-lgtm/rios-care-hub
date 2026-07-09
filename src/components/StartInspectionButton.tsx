@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -8,8 +8,9 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Building2, Plus } from 'lucide-react';
+import { Building2, ClipboardCheck, Plus } from 'lucide-react';
 import TeamInspectionDialog from '@/components/TeamInspectionDialog';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PropertyOption {
   id: string;
@@ -17,9 +18,12 @@ interface PropertyOption {
 }
 
 interface StartInspectionButtonProps {
-  properties: PropertyOption[];
+  properties?: PropertyOption[];
   onCreated?: () => void;
   className?: string;
+  variant?: 'header' | 'panel';
+  label?: string;
+  icon?: ReactNode;
 }
 
 export default function StartInspectionButton({ properties, onCreated, className }: StartInspectionButtonProps) {
