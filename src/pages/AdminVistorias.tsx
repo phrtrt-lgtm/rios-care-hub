@@ -210,6 +210,7 @@ export default function AdminVistorias() {
               <Settings className="h-4 w-4" />
               Config
             </Button>
+            <StartInspectionButton properties={allProperties} onCreated={fetchData} />
           </div>
         </div>
       </header>
