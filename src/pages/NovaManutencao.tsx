@@ -56,6 +56,7 @@ export default function NovaManutencao({ editId, onClose, onSaved }: NovaManuten
   const [priority, setPriority] = useState<"normal" | "urgente">("normal");
   const [propertyId, setPropertyId] = useState<string>("");
   const [properties, setProperties] = useState<Property[]>([]);
+  const [loadingProperties, setLoadingProperties] = useState(true);
   const [uploadedFiles, setUploadedFiles] = useState<ReadyAttachment[]>([]);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
