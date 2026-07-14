@@ -857,6 +857,7 @@ export default function NovaManutencao({ editId, onClose, onSaved }: NovaManuten
               </Button>
             </CardContent>
           </form>
+          )}
         </Card>
       </main>
 
