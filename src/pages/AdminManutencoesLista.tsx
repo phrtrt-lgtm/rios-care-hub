@@ -72,6 +72,7 @@ const SERVICE_LABELS = [
   { value: "estrutural", label: "Estrutural", color: "bg-slate-600" },
   { value: "itens", label: "Itens", color: "bg-primary" },
   { value: "vidracaria", label: "Vidraçaria", color: "bg-info" },
+  { value: "dedetizacao", label: "Dedetização", color: "bg-success" },
   { value: "servico_misto", label: "Serviço Misto", color: "bg-primary" },
   // Support legacy values stored as labels
   { value: "Refrigeração", label: "Refrigeração", color: "bg-info" },
@@ -81,6 +82,7 @@ const SERVICE_LABELS = [
   { value: "Estrutural", label: "Estrutural", color: "bg-slate-600" },
   { value: "Itens", label: "Itens", color: "bg-primary" },
   { value: "Vidraçaria", label: "Vidraçaria", color: "bg-info" },
+  { value: "Dedetização", label: "Dedetização", color: "bg-success" },
   { value: "Serviço Misto", label: "Serviço Misto", color: "bg-primary" },
 ];
 

@@ -44,6 +44,7 @@ const SERVICE_LABELS = [
   { value: "marcenaria", label: "Marcenaria", color: "bg-warning" },
   { value: "estrutural", label: "Estrutural", color: "bg-slate-600" },
   { value: "itens", label: "Itens", color: "bg-primary" },
+  { value: "dedetizacao", label: "Dedetização", color: "bg-success" },
 ];
 
 // ===== SORTABLE HEADER COMPONENT =====

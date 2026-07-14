@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Phone, Pencil, Search, Wrench, Zap, Droplets, Hammer, Snowflake, Building } from "lucide-react";
+import { ArrowLeft, Plus, Phone, Pencil, Search, Wrench, Zap, Droplets, Hammer, Snowflake, Building, Bug } from "lucide-react";
 
 const SPECIALTIES = [
   { value: "hidraulica", label: "Hidráulica", icon: Droplets },
@@ -20,6 +20,7 @@ const SPECIALTIES = [
   { value: "marcenaria", label: "Marcenaria", icon: Hammer },
   { value: "refrigeracao", label: "Refrigeração", icon: Snowflake },
   { value: "estrutural", label: "Estrutural", icon: Building },
+  { value: "dedetizacao", label: "Dedetização", icon: Bug },
   { value: "geral", label: "Geral", icon: Wrench },
 ];
 
