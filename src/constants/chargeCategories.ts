@@ -6,6 +6,7 @@ export const CHARGE_CATEGORIES = {
   estrutural: 'Estrutural',
   refrigeracao: 'Refrigeração',
   vidracaria: 'Vidraçaria',
+  dedetizacao: 'Dedetização',
   servico_misto: 'Serviço Misto',
 } as const;
 
