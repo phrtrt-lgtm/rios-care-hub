@@ -56,6 +56,7 @@ export default function NovaManutencao({ editId, onClose, onSaved }: NovaManuten
   const [priority, setPriority] = useState<"normal" | "urgente">("normal");
   const [propertyId, setPropertyId] = useState<string>("");
   const [properties, setProperties] = useState<Property[]>([]);
+  const [loadingProperties, setLoadingProperties] = useState(true);
   const [uploadedFiles, setUploadedFiles] = useState<ReadyAttachment[]>([]);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -161,14 +162,16 @@ export default function NovaManutencao({ editId, onClose, onSaved }: NovaManuten
   }, [properties, searchParams]);
 
   const fetchProperties = async () => {
+    setLoadingProperties(true);
     const { data, error } = await supabase
       .from('properties')
       .select('id, name, address, owner_id, profiles!properties_owner_id_fkey(name)')
       .order('name');
-    
+
     if (!error && data) {
       setProperties(data as any);
     }
+    setLoadingProperties(false);
   };
 
   const uploadOne = async (file: File): Promise<ReadyAttachment> => {
@@ -514,6 +517,14 @@ export default function NovaManutencao({ editId, onClose, onSaved }: NovaManuten
               {isEditMode ? 'Atualize as informações deste chamado' : 'Registre um novo chamado de manutenção para uma unidade'}
             </CardDescription>
           </CardHeader>
+          {(isEditMode && (loadingTicket || loadingProperties)) ? (
+            <CardContent>
+              <div className="flex items-center justify-center py-10 gap-2 text-muted-foreground text-sm">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Carregando dados da manutenção...
+              </div>
+            </CardContent>
+          ) : (
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-6">
               <div className="space-y-2">
@@ -846,6 +857,7 @@ export default function NovaManutencao({ editId, onClose, onSaved }: NovaManuten
               </Button>
             </CardContent>
           </form>
+          )}
         </Card>
       </main>
 
