@@ -162,14 +162,16 @@ export default function NovaManutencao({ editId, onClose, onSaved }: NovaManuten
   }, [properties, searchParams]);
 
   const fetchProperties = async () => {
+    setLoadingProperties(true);
     const { data, error } = await supabase
       .from('properties')
       .select('id, name, address, owner_id, profiles!properties_owner_id_fkey(name)')
       .order('name');
-    
+
     if (!error && data) {
       setProperties(data as any);
     }
+    setLoadingProperties(false);
   };
 
   const uploadOne = async (file: File): Promise<ReadyAttachment> => {
