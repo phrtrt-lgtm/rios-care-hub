@@ -1570,19 +1570,28 @@ export default function AdminManutencoesLista() {
 
       if (error) throw error;
 
-      // Fetch attachment counts for charges
+      // Fetch attachment counts for charges (paginated to bypass 1000-row default limit)
       const chargeIds = (data || []).map(c => c.id);
-      const { data: attachments } = await supabase
-        .from("charge_attachments")
-        .select("charge_id")
-        .in("charge_id", chargeIds);
-
       const attachmentCounts: Record<string, number> = {};
-      (attachments || []).forEach(a => {
-        if (a.charge_id) {
-          attachmentCounts[a.charge_id] = (attachmentCounts[a.charge_id] || 0) + 1;
+      {
+        const CHUNK = 1000;
+        let from = 0;
+        while (chargeIds.length > 0) {
+          const { data: attRows, error: attErr } = await supabase
+            .from("charge_attachments")
+            .select("charge_id")
+            .in("charge_id", chargeIds)
+            .range(from, from + CHUNK - 1);
+          if (attErr) break;
+          (attRows || []).forEach(a => {
+            if (a.charge_id) {
+              attachmentCounts[a.charge_id] = (attachmentCounts[a.charge_id] || 0) + 1;
+            }
+          });
+          if (!attRows || attRows.length < CHUNK) break;
+          from += CHUNK;
         }
-      });
+      }
 
       return (data || []).map(c => ({
         ...c,
