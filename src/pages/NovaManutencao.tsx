@@ -517,6 +517,14 @@ export default function NovaManutencao({ editId, onClose, onSaved }: NovaManuten
               {isEditMode ? 'Atualize as informações deste chamado' : 'Registre um novo chamado de manutenção para uma unidade'}
             </CardDescription>
           </CardHeader>
+          {(isEditMode && (loadingTicket || loadingProperties)) ? (
+            <CardContent>
+              <div className="flex items-center justify-center py-10 gap-2 text-muted-foreground text-sm">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Carregando dados da manutenção...
+              </div>
+            </CardContent>
+          ) : (
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-6">
               <div className="space-y-2">
