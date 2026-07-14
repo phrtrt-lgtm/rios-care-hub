@@ -22,6 +22,7 @@ const SERVICE_TYPES = [
   'Itens',
   'Refrigeração',
   'Vidraçaria',
+  'Dedetização',
   'Serviço Misto',
 ];
 
