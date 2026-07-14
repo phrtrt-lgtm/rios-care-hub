@@ -182,6 +182,7 @@ serve(async (req) => {
       'Estrutural': 'estrutural',
       'Refrigeração': 'refrigeracao',
       'Vidraçaria': 'vidracaria',
+      'Dedetização': 'dedetizacao',
       'Serviço Misto': 'servico_misto',
     };
     
