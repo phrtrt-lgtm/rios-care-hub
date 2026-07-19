@@ -325,6 +325,16 @@ export default function ConfiguracaoEmail() {
         payment_id: "1234567890",
         admin_url: `${baseUrl}/admin/cadastros-proprietarios`,
       },
+      reserve_debit_retroactive: {
+        owner_name: "João Silva",
+        property_name: "Apto 301 - Edifício Vista Mar",
+        charge_title: "Reposição de toalha, Manutenção da pia",
+        debt_amount: "R$ 320,00",
+        debit_date: new Date().toLocaleDateString("pt-BR"),
+        portal_url: `${baseUrl}/minhas-cobrancas`,
+        reservations_table: `<div style="margin:16px 0;padding:12px;background:#f8f9fa;border:1px solid #e5e7eb;border-radius:8px;font-size:13px"><strong>Reservas utilizadas (2)</strong><br/>Check-in 10/07 · Retido R$ 180,00<br/>Check-in 18/07 · Retido R$ 140,00</div>`,
+        surplus_block: `<div style="margin:16px 0;padding:12px;background:#ecfdf5;border-left:4px solid #10b981;border-radius:4px;font-size:13px;color:#065f46"><strong>Saldo credor gerado: R$ 50,00</strong><br/>Poderá ser abatido em cobranças futuras ou devolvido.</div>`,
+      },
     };
 
     return examples[templateKey] || {};
