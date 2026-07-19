@@ -19,6 +19,7 @@ import { CHARGE_CATEGORIES } from "@/constants/chargeCategories";
 import { ListFilters } from "@/components/list/ListFilters";
 import { useListFilters } from "@/hooks/useListFilters";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
+import { OwnerCreditBanner } from "@/components/OwnerCreditBanner";
 
 interface Charge {
   id: string;
