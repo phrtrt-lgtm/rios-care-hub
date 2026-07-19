@@ -235,6 +235,9 @@ const MinhasCobrancas = () => {
           <p className="text-muted-foreground">Visualize todas as suas cobranças</p>
         </div>
 
+        <OwnerCreditBanner ownerId={user?.id} />
+
+
         {/* Painel de Pagamento Agrupado */}
         {openChargesCount > 0 && (
           <Card className="mb-6 border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-background shadow-lg animate-fade-in">
