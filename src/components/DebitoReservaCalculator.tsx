@@ -176,26 +176,93 @@ export const DebitoReservaCalculator = ({
     }
   };
 
+  // ----- Retro mode calculations -----
+  const retroRows = retroReservations.map((r) => {
+    const ownerNum = parseValue(r.ownerValue);
+    const retainedNum = parseValue(r.retained);
+    return { ...r, ownerNum, retainedNum };
+  });
+  const retroTotalRetained = retroRows.reduce((s, r) => s + r.retainedNum, 0);
+  const retroTotalOwner = retroRows.reduce((s, r) => s + r.ownerNum, 0);
+  const retroSurplus = retroTotalRetained - totalDebt;
+  const retroCanConfirm =
+    hasCharges &&
+    retroRows.length > 0 &&
+    retroRows.every((r) => r.retainedNum > 0 && r.date && r.ownerNum >= r.retainedNum);
+
+  const handleConfirmRetro = async () => {
+    if (!retroCanConfirm) {
+      toast({
+        title: "Preencha todas as reservas",
+        description: "Cada reserva precisa de data, valor bruto e valor retido (retido ≤ bruto).",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsConfirming(true);
+    try {
+      const payload = {
+        chargeIds: idsToProcess,
+        reservations: retroRows.map((r) => ({
+          date: format(r.date!, "yyyy-MM-dd"),
+          owner_value_cents: Math.round(r.ownerNum * 100),
+          retained_cents: Math.round(r.retainedNum * 100),
+        })),
+      };
+      const { error } = await supabase.functions.invoke("debit-reserve-now", { body: payload });
+      if (error) throw error;
+      toast({
+        title: "Débito retroativo registrado!",
+        description:
+          retroSurplus > 0.005
+            ? `Cobranças quitadas + saldo credor de ${formatCurrency(retroSurplus)} gerado.`
+            : `${idsToProcess.length} cobrança(s) quitada(s).`,
+      });
+      onDebitConfirmed?.();
+      onOpenChange(false);
+      setRetroReservations([{ id: crypto.randomUUID(), date: new Date(), ownerValue: "", retained: "" }]);
+    } catch (error: any) {
+      toast({
+        title: "Erro ao registrar débito",
+        description: error.message || "Tente novamente",
+        variant: "destructive",
+      });
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calculator className="h-5 w-5" />
-            Calculadora de Débito em Reserva
+            Débito em Reserva
           </DialogTitle>
           <DialogDescription>
             <span className="font-medium">{propertyName}</span>
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <Tabs value={mode} onValueChange={(v) => setMode(v as "schedule" | "retro")}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="schedule" className="gap-1">
+              <Clock className="h-3 w-3" /> Agendar
+            </TabsTrigger>
+            <TabsTrigger value="retro" className="gap-1">
+              <Zap className="h-3 w-3" /> Retroativo
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="schedule" className="space-y-4 mt-4">
           <Card className="bg-destructive/10 border-destructive/30">
             <CardContent className="pt-4 pb-4 text-center">
               <p className="text-sm text-muted-foreground">Dívida Total a Cobrir</p>
               <p className="text-2xl font-bold text-destructive">{formatCurrency(totalDebt)}</p>
             </CardContent>
           </Card>
+
 
           <div className="space-y-2">
             <Label htmlFor="base-commission">Comissão Base (%)</Label>
