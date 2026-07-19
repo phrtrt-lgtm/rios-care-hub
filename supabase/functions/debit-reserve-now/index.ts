@@ -275,36 +275,23 @@ const handler = async (req: Request): Promise<Response> => {
         const { data: template } = await supabase
           .from('email_templates')
           .select('subject, body_html')
-          .eq('key', 'reserve_debit_notification')
+          .eq('key', 'reserve_debit_retroactive')
           .single();
 
         if (template) {
-          const subject = template.subject.replace('{{property_name}}', propertyName);
-          let bodyHtml = template.body_html
-            .replace(/\{\{owner_name\}\}/g, ownerProfile.name)
-            .replace(/\{\{charge_title\}\}/g, chargeTitles)
+          const subject = template.subject
             .replace(/\{\{property_name\}\}/g, propertyName)
-            .replace(/\{\{owner_value\}\}/g, formatBRL(totalOwnerValueCents))
-            .replace(/\{\{debt_amount\}\}/g, formatBRL(totalDueCents))
-            .replace(/\{\{owner_receives\}\}/g, formatBRL(Math.max(0, totalOwnerValueCents - totalRetainedCents)))
-            .replace(/\{\{base_commission\}\}/g, String(baseCommissionPercent))
-            .replace(/\{\{extra_commission\}\}/g, String(extraCommissionPercent))
-            .replace(/\{\{extra_commission_exact\}\}/g, String(extraCommissionPercent))
-            .replace(/\{\{total_commission\}\}/g, String(totalCommissionPercent))
-            .replace(/\{\{checkin_date\}\}/g, formatDate(primaryDate))
-            .replace(/\{\{reserve_date\}\}/g, formatDate(primaryDate))
-            .replace(/\{\{#if reserve_date\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1')
-            .replace(/\{\{portal_url\}\}/g, '/minhas-cobrancas');
+            .replace(/\{\{owner_name\}\}/g, ownerProfile.name);
 
-          // Retro banner + surplus + reservations table
-          const injection = `${retroBanner}${surplusBlockHtml}${reservationsTableHtml}`;
-          if (bodyHtml.includes('{{reservations_table}}')) {
-            bodyHtml = bodyHtml.replace(/\{\{reservations_table\}\}/g, injection);
-          } else if (bodyHtml.includes('</body>')) {
-            bodyHtml = bodyHtml.replace('</body>', `${injection}</body>`);
-          } else {
-            bodyHtml += injection;
-          }
+          const bodyHtml = template.body_html
+            .replace(/\{\{owner_name\}\}/g, ownerProfile.name)
+            .replace(/\{\{property_name\}\}/g, propertyName)
+            .replace(/\{\{charge_title\}\}/g, chargeTitles)
+            .replace(/\{\{debt_amount\}\}/g, formatBRL(totalRetainedCents))
+            .replace(/\{\{debit_date\}\}/g, nowFmt)
+            .replace(/\{\{portal_url\}\}/g, '/minhas-cobrancas')
+            .replace(/\{\{reservations_table\}\}/g, reservationsTableHtml)
+            .replace(/\{\{surplus_block\}\}/g, surplusBlockHtml);
 
           const resend = new Resend(resendApiKey);
           await resend.emails.send({
