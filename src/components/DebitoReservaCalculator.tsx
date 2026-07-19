@@ -440,7 +440,187 @@ export const DebitoReservaCalculator = ({
             adicionadas, distribuindo a dívida proporcionalmente ao valor de cada uma. O
             proprietário recebe um e-mail listando todas as reservas envolvidas.
           </div>
-        </div>
+          </TabsContent>
+
+          <TabsContent value="retro" className="space-y-4 mt-4">
+            <Card className="bg-destructive/10 border-destructive/30">
+              <CardContent className="pt-4 pb-4 text-center">
+                <p className="text-sm text-muted-foreground">Dívida Total das Cobranças</p>
+                <p className="text-2xl font-bold text-destructive">{formatCurrency(totalDebt)}</p>
+              </CardContent>
+            </Card>
+
+            <div className="text-xs text-muted-foreground bg-info/10 border border-info/20 rounded p-3">
+              <strong>Débito retroativo:</strong> registre reservas em que você já reteve o valor.
+              As cobranças ficam quitadas na hora e o proprietário é notificado por e-mail.
+              Se a retenção passar do devido, o excedente vira <strong>saldo credor</strong>.
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-1">
+                  <DollarSign className="h-3 w-3" />
+                  Reservas com valor retido
+                </Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setRetroReservations((p) => [
+                      ...p,
+                      { id: crypto.randomUUID(), date: new Date(), ownerValue: "", retained: "" },
+                    ])
+                  }
+                >
+                  <Plus className="h-3 w-3 mr-1" /> Adicionar
+                </Button>
+              </div>
+
+              {retroRows.map((r, idx) => (
+                <Card key={r.id} className="border-muted">
+                  <CardContent className="p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted-foreground">
+                        Reserva {idx + 1}
+                      </span>
+                      {retroReservations.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() =>
+                            setRetroReservations((p) => p.filter((x) => x.id !== r.id))
+                          }
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "justify-start text-left font-normal w-full",
+                            !r.date && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {r.date
+                            ? format(r.date, "dd/MM/yyyy", { locale: ptBR })
+                            : "Check-in da reserva"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={r.date}
+                          onSelect={(d) =>
+                            setRetroReservations((p) =>
+                              p.map((x) => (x.id === r.id ? { ...x, date: d } : x))
+                            )
+                          }
+                          locale={ptBR}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Valor bruto (R$)</Label>
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="0,00"
+                          value={r.ownerValue}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            if (/^[0-9]*[,.]?[0-9]*$/.test(v) || v === "")
+                              setRetroReservations((p) =>
+                                p.map((x) => (x.id === r.id ? { ...x, ownerValue: v } : x))
+                              );
+                          }}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Retido (R$)</Label>
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="0,00"
+                          value={r.retained}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            if (/^[0-9]*[,.]?[0-9]*$/.test(v) || v === "")
+                              setRetroReservations((p) =>
+                                p.map((x) => (x.id === r.id ? { ...x, retained: v } : x))
+                              );
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            <Separator />
+
+            <Card className="bg-muted/50">
+              <CardContent className="p-3 space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total bruto das reservas:</span>
+                  <span className="font-medium">{formatCurrency(retroTotalOwner)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total retido:</span>
+                  <span className="font-medium text-destructive">
+                    - {formatCurrency(retroTotalRetained)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Dívida das cobranças:</span>
+                  <span className="font-medium">{formatCurrency(totalDebt)}</span>
+                </div>
+                <Separator />
+                {retroSurplus > 0.005 ? (
+                  <div className="flex justify-between text-success">
+                    <span className="font-medium">Saldo credor a gerar:</span>
+                    <span className="font-bold">+ {formatCurrency(retroSurplus)}</span>
+                  </div>
+                ) : retroSurplus < -0.005 ? (
+                  <div className="flex justify-between text-warning">
+                    <span className="font-medium">Ainda restará em dívida:</span>
+                    <span className="font-bold">{formatCurrency(-retroSurplus)}</span>
+                  </div>
+                ) : (
+                  <div className="text-center text-success">✓ Retenção cobre exatamente a dívida</div>
+                )}
+              </CardContent>
+            </Card>
+
+            {hasCharges && (
+              <Button
+                onClick={handleConfirmRetro}
+                disabled={!retroCanConfirm || isConfirming}
+                className="w-full"
+                size="lg"
+              >
+                {isConfirming ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Registrando...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="mr-2 h-4 w-4" /> Registrar débito e notificar
+                  </>
+                )}
+              </Button>
+            )}
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
