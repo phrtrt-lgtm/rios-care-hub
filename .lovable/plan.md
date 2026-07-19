@@ -1,117 +1,103 @@
 
-# Módulo de Contratos — Fluxo Completo
+# Débito imediato em reserva (retroativo) + múltiplas reservas + saldo credor
 
-## Visão geral
-Hoje não existe módulo de contratos no portal. Será criado do zero, seguindo o fluxo:
+Novo fluxo paralelo ao "agendar débito em reserva" atual. Serve para quando a retenção **já aconteceu** em uma ou mais reservas passadas: você registra tudo de uma vez, as cobranças quitam na hora, o proprietário recebe o e-mail (mesmo template atual) informando o débito já efetuado, e qualquer excedente vira **saldo credor** para abater em cobranças futuras ou devolver.
 
-```text
-RIOS cria pré-contrato → Proprietário preenche dados → RIOS revisa →
-Aprovação → Geração HTML/PDF final → (futuro) Assinatura gov.br
-```
+## Fluxo para o admin
 
-O PDF usará como template padrão o modelo já criado pela Lovable (anexo), recriado em HTML/CSS no mesmo estilo (cabeçalho "RIOS GESTÃO...", numeração de cláusulas em blocos, marcações de destaque, rodapé com data e foro).
+Na tela de débito em reserva, novo botão **"Débito imediato (retroativo)"** ao lado do fluxo atual.
 
----
+Passos:
+1. **Seleciona as cobranças** em aberto do proprietário (uma ou várias).
+2. **Adiciona uma lista de reservas** já usadas para cobrir o débito. Para cada reserva:
+   - Data do check-in (padrão: hoje)
+   - Valor bruto da reserva
+   - `%` de comissão aplicada (base + extra, como no fluxo atual)
+   - Valor retido calculado automaticamente
+   - Botão "+ Adicionar outra reserva" para empilhar quantas quiser
+3. **Preview** mostra:
+   - Total retido somando todas as reservas
+   - Total devido somando as cobranças
+   - Distribuição das retenções pelas cobranças em ordem
+   - Sobra destacada como saldo credor (se houver)
+4. **Confirmar** → tudo acontece de uma vez:
+   - Cobranças ficam `debited`, `debited_at = agora`
+   - `reserve_reservations` recebe a lista completa (já existe como jsonb)
+   - Excedente cria registro em `owner_credits`
+   - E-mail e notificação in-app disparados
 
-## 1. Banco de dados (Lovable Cloud)
+## Saldo credor do proprietário
 
-### Tabelas novas
-- **contract_templates**: `id, name, version, content_html, content_md, variables_schema_json, is_default, created_by, archived_at, timestamps`. Apenas admin gerencia. RLS: admin tudo; demais leitura quando `is_default`.
-- **contracts**: `id, owner_id, property_id, template_id, status (enum: draft_rios, awaiting_owner, owner_filling, submitted, correction_requested, approved, generated, signed, cancelled), commission_percent, term_months, start_date, maintenance_limit_cents, specific_terms, created_by, generated_pdf_path, generated_html_snapshot, frozen_data_json, current_submission_id, timestamps`.
-- **contract_owner_submissions**: conforme spec — `submitted_data_json (jsonb), status (draft|submitted|approved|correction_requested|rejected), correction_message, submitted_at, approved_at, approved_by, timestamps`. Um por contrato (current) + histórico.
-- **contract_submission_attachments**: anexos do formulário (`kind: documento_pessoal | comprovante_propriedade | comprovante_endereco | representante`), apontando para bucket privado.
-- **contract_events**: timeline (`contract_id, event_type, actor_id, actor_role, payload_json, created_at`) para auditoria.
+- Se soma das retenções > soma das cobranças, o excedente vira crédito aberto.
+- Card visível para admin (tela de débito) e proprietário (Minhas Cobranças).
+- Ao criar nova cobrança para o proprietário, admin pode marcar "Abater do saldo credor (R$ X disponível)".
+- Admin também pode marcar "Devolvido" (com data + observação), encerrando o saldo.
 
-### Storage
-- Novo bucket privado `contract-attachments` (docs do proprietário) e `contracts` (PDFs gerados).
+## Visão do proprietário
 
-### RLS
-- Proprietário acessa apenas contratos/submissões onde `owner_id = auth.uid()`.
-- Admin (via `has_role`) acessa tudo.
-- `frozen_data_json` é congelado na geração — alterações posteriores no profile não afetam.
+- Cobrança quitada por débito retroativo mostra bloco atual de reservas + selo "Débito efetuado em dd/mm".
+- Tabela lista todas as reservas usadas (mesmo formato que já usamos hoje em `reservationsTableHtml`).
+- Se gerou crédito: banner no topo de Minhas Cobranças com valor e histórico.
 
----
+## Escopo técnico
 
-## 2. Backend (Edge Functions)
+### 1. Banco (migração)
 
-- **generate-contract-pdf**: monta HTML final a partir de `template.content_html` + `frozen_data_json` + dados comerciais, gera PDF (puppeteer/pdf-lib server-side ou render server-side via HTML→PDF lib disponível no Deno; uso de `npm:@react-pdf/renderer` ou `npm:html-pdf-node` alternativa). Grava no bucket `contracts`, atualiza `generated_pdf_path` e cria evento.
-- **send-contract-notification**: usa Resend (já configurado) para notificar proprietário em cada transição (convite, correção solicitada, aprovação, contrato pronto).
-- Trigger DB: ao mudar status para `awaiting_owner`, criar `notification` para owner + invocar email.
+**Nova tabela `owner_credits`**
+- `owner_id`, `origin_type` ('reserve_retention'), `origin_note` (ex.: "Reservas de dd/mm, dd/mm"), `origin_reservations` jsonb (snapshot), `initial_amount_cents`, `remaining_amount_cents`, `status` ('open' | 'consumed' | 'refunded'), `refunded_at`, `refund_note`.
+- RLS: proprietário lê o próprio; admin lê/escreve tudo; service_role total.
 
----
+**Nova tabela `owner_credit_applications`**
+- `credit_id`, `charge_id`, `amount_applied_cents`, `applied_at`, `applied_by`.
+- Auditoria: "R$ 200 do crédito X foi abatido da cobrança Y".
 
-## 3. Frontend
+**Campos novos em `charges`**
+- `retroactive_debit` boolean — diferencia origem do débito na UI e no e-mail.
+- `credit_applied_cents` int — quanto de crédito foi consumido nesta cobrança.
 
-### Admin
-- Nova rota `/admin/contratos` — lista de contratos com filtros (status, proprietário, imóvel).
-- `/admin/contratos/novo` — wizard: seleciona proprietário, imóvel, template, define comissão, vigência, data início, limite manutenção, condições específicas → cria pré-contrato (`status=awaiting_owner`).
-- `/admin/contratos/:id` — abas: **Resumo**, **Dados recebidos** (visualiza submissão, botões Aprovar / Solicitar correção / Editar com justificativa), **Documentos anexos**, **Timeline**, **PDF gerado**.
-- Botão "Gerar contrato final" habilita após `approved`.
+Grants + RLS + `updated_at` triggers no padrão do projeto. Sem CHECK dependente de tempo.
 
-### Proprietário
-- Card destacado no `/painel`: "Preencha seus dados para emissão do contrato" quando houver contrato em `awaiting_owner` ou `correction_requested`.
-- Rota `/contratos` — lista; `/contratos/:id` — formulário guiado.
-- Wizard mobile-first em 4 etapas com barra de progresso:
-  1. **Dados pessoais/empresariais** (PF/PJ condicional, validação CPF/CNPJ, e-mail, endereço com lookup CEP).
-  2. **Dados do imóvel** (pré-preenche com `properties`, permite editar).
-  3. **Dados bancários (opcional)** + **anexos**.
-  4. **Confirmações** (4 checkboxes obrigatórios) + **Revisão**.
-- Auto-save como rascunho (debounce 1.5s) gravando `contract_owner_submissions` com `status=draft`.
-- Aviso fixo: "Esses dados serão usados para emissão do contrato. Revise com atenção."
-- Após envio: tela bloqueada com status atual + botão "Baixar contrato" quando disponível.
+### 2. Edge function `debit-reserve-now`
 
-### Componentes reutilizados
-- `ReportStepIndicator` (já existe) para a barra de progresso.
-- shadcn `Form`, `Dialog`, `Card`, `Checkbox`, `Input`, `Textarea`, tokens semânticos (sem cores raw).
-- `EmptyState` e `SectionSkeleton` para estados vazios/loading.
+Nova função espelhando `debit-reserve`, com estas diferenças:
+- Aceita array de reservas no payload (mesma estrutura de `ReservationItem`).
+- Marca cobranças como `debited` (não `aguardando_reserva`) com `debited_at = now()`.
+- Preenche `reserve_reservations` com a lista completa, `reserve_debit_date` = check-in da primeira reserva.
+- Distribui o total retido nas cobranças em ordem selecionada; excedente cria `owner_credits`.
+- Mantém `owner_payment_scores` com `reason='reserve_debit'` (-30), igual ao fluxo atual.
+- E-mail: reutiliza o template `reserve_debit_notification` com dois blocos condicionais novos:
+  - "Débito já efetuado" (quando retroativo) — troca o texto de agendamento pelo de já executado.
+  - "Saldo credor gerado: R$ X" — só aparece se sobrou.
+- A tabela de reservas do e-mail (`reservationsTableHtml`) já suporta múltiplas linhas — reutilizada como está.
+- Notificação in-app tipo `charge` apontando para `/minhas-cobrancas`.
 
----
+### 3. Frontend
 
-## 4. Template do contrato (design)
+**`DebitoReservaCalculator` (tela admin)**
+- Toggle no topo: "Agendar em reserva futura" (atual) | "Débito imediato retroativo" (novo).
+- Modo retroativo: lista dinâmica de reservas (add/remove), cálculo em tempo real, preview de distribuição e destaque de saldo credor.
+- Ação chama `debit-reserve-now`.
 
-Template HTML/CSS recriando o anexo:
-- Cabeçalho: faixa com "RIOS GESTÃO DE IMÓVEIS POR TEMPORADA", linha fina divisória, metadados (📄 Documento de Função / 📅 data).
-- Título principal grande, serif sutil ou sans display.
-- Cláusulas numeradas em blocos `##` com badge circular do número.
-- Marcações `<mark>` para cláusulas destacadas (ex. 5.7).
-- Rodapé com paginação, foro Cabo Frio/RJ e bloco de assinaturas.
-- Texto integral do modelo anexo armazenado em `contract_templates` (versão 1, `is_default=true`) — variáveis com placeholders `{{owner.name}}`, `{{property.address}}`, `{{commission_percent}}`, etc.
+**`OpenChargesTable` / `PendingReserveDebitsBoard`**
+- Card "Saldo credor do proprietário" com "Abater em nova cobrança" e "Registrar devolução".
 
-Preview do template renderizado tanto no admin (antes de gerar) quanto no proprietário (após geração).
+**`MinhasCobrancas` (proprietário)**
+- Banner de saldo credor quando `remaining_amount_cents > 0`.
+- Cobrança debitada retroativamente mostra selo + tabela de reservas.
 
----
+**`NovaCobranca` (admin)**
+- Se proprietário tem crédito aberto: checkbox "Abater R$ X do saldo credor". Ao salvar, cria `owner_credit_applications`, ajusta `credit_applied_cents` e, se cobrir tudo, marca a cobrança como paga.
 
-## 5. Eventos auditados (contract_events)
-`owner_started_filling`, `owner_saved_draft`, `owner_submitted`, `rios_requested_correction`, `owner_resubmitted`, `rios_approved`, `contract_generated`, `contract_pdf_downloaded`, `contract_cancelled`.
+### 4. E-mail
 
----
+Mantém o template atual `reserve_debit_notification` (mesmo layout gradiente roxo, mesmo header RIOS, mesma tabela de reservas). Adiciona apenas dois blocos condicionais:
+- `{{#if retroactive}}` — troca "agendado" por "já efetuado em dd/mm".
+- `{{#if credit_amount}}` — bloco verde com "Saldo credor gerado: R$ X" e explicação de que será abatido/devolvido.
 
-## 6. Segurança
-- RLS estrita (proprietário só vê o seu); `has_role` para admin.
-- Validação Zod no frontend e na edge function.
-- `frozen_data_json` salvo na geração — imutável depois.
-- Nova versão a cada regeneração (incrementa `version` no `contracts` ou cria registro filho `contract_versions`).
-- Anexos em bucket privado com signed URLs.
+Nenhum novo layout de e-mail, nenhuma estética nova — só variáveis a mais dentro do template existente.
 
----
+## Pontos a confirmar antes de implementar
 
-## 7. Entregáveis desta iteração
-1. Migration com tabelas, enums, RLS, GRANTs, triggers, bucket.
-2. Seed do `contract_templates` v1 com texto integral do anexo.
-3. Edge functions `generate-contract-pdf` e `send-contract-notification`.
-4. Páginas admin: lista, novo, detalhe (com abas).
-5. Páginas proprietário: card no painel, wizard de preenchimento, tela de revisão.
-6. Componentes: `ContractStatusBadge`, `ContractTimeline`, `OwnerSubmissionForm`, `ContractTemplatePreview`.
-7. Atualização no menu lateral (admin + owner).
-
-### Fora do escopo desta iteração
-- Integração com gov.br (mockado: botão "Enviar para assinatura" prepara payload e marca status `awaiting_signature`).
-- Editor visual do template (apenas templates pré-cadastrados via SQL nesta fase).
-
----
-
-## Perguntas rápidas antes de executar
-1. **Limite de manutenção**: prefere em R$ (centavos) único ou faixa (valor + critério)?
-2. **Vigência**: campo livre em meses ou apenas opções fixas (12, 24, 36)?
-3. **Assinatura gov.br**: posso mockar nesta entrega e deixar a integração real para próxima iteração?
-4. **Geração de PDF**: posso usar render server-side com HTML→PDF (Puppeteer não roda em Edge Function Deno; usaria `pdf-lib` montando o documento, ou serviço externo como `api2pdf`/`browserless`). Você prefere (a) usar `@react-pdf/renderer` no edge (b) integrar serviço externo (c) gerar client-side via `html2pdf.js` e fazer upload?
+1. **Score:** mantenho o -30 padrão também no débito retroativo? (fluxo atual aplica isso; me diga se retroativo deve pular a penalidade)
+2. **Ordem de distribuição:** distribuo pelas cobranças na ordem em que você selecionar (permitindo reordenar). OK?
+3. **Devolução do saldo credor:** apenas marcação manual "devolvido" com data + observação, sem integração de pagamento. OK?

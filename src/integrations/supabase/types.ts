@@ -813,6 +813,7 @@ export type Database = {
           contested_at: string | null
           cost_responsible: string | null
           created_at: string
+          credit_applied_cents: number
           currency: string
           debit_notice_at: string | null
           debited_at: string | null
@@ -843,6 +844,7 @@ export type Database = {
           reserve_owner_value_cents: number | null
           reserve_reservations: Json | null
           reserve_revert_alert_sent_at: string | null
+          retroactive_debit: boolean
           sent_at: string | null
           service_type: string | null
           split_owner_percent: number | null
@@ -858,6 +860,7 @@ export type Database = {
           contested_at?: string | null
           cost_responsible?: string | null
           created_at?: string
+          credit_applied_cents?: number
           currency?: string
           debit_notice_at?: string | null
           debited_at?: string | null
@@ -888,6 +891,7 @@ export type Database = {
           reserve_owner_value_cents?: number | null
           reserve_reservations?: Json | null
           reserve_revert_alert_sent_at?: string | null
+          retroactive_debit?: boolean
           sent_at?: string | null
           service_type?: string | null
           split_owner_percent?: number | null
@@ -903,6 +907,7 @@ export type Database = {
           contested_at?: string | null
           cost_responsible?: string | null
           created_at?: string
+          credit_applied_cents?: number
           currency?: string
           debit_notice_at?: string | null
           debited_at?: string | null
@@ -933,6 +938,7 @@ export type Database = {
           reserve_owner_value_cents?: number | null
           reserve_reservations?: Json | null
           reserve_revert_alert_sent_at?: string | null
+          retroactive_debit?: boolean
           sent_at?: string | null
           service_type?: string | null
           split_owner_percent?: number | null
@@ -2198,6 +2204,107 @@ export type Database = {
           type?: string
         }
         Relationships: []
+      }
+      owner_credit_applications: {
+        Row: {
+          amount_applied_cents: number
+          applied_at: string
+          applied_by: string | null
+          charge_id: string
+          created_at: string
+          credit_id: string
+          id: string
+        }
+        Insert: {
+          amount_applied_cents: number
+          applied_at?: string
+          applied_by?: string | null
+          charge_id: string
+          created_at?: string
+          credit_id: string
+          id?: string
+        }
+        Update: {
+          amount_applied_cents?: number
+          applied_at?: string
+          applied_by?: string | null
+          charge_id?: string
+          created_at?: string
+          credit_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_credit_applications_charge_id_fkey"
+            columns: ["charge_id"]
+            isOneToOne: false
+            referencedRelation: "charges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_credit_applications_credit_id_fkey"
+            columns: ["credit_id"]
+            isOneToOne: false
+            referencedRelation: "owner_credits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      owner_credits: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          initial_amount_cents: number
+          origin_note: string | null
+          origin_reservations: Json | null
+          origin_type: string
+          owner_id: string
+          refund_note: string | null
+          refunded_at: string | null
+          remaining_amount_cents: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          initial_amount_cents: number
+          origin_note?: string | null
+          origin_reservations?: Json | null
+          origin_type?: string
+          owner_id: string
+          refund_note?: string | null
+          refunded_at?: string | null
+          remaining_amount_cents: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          initial_amount_cents?: number
+          origin_note?: string | null
+          origin_reservations?: Json | null
+          origin_type?: string
+          owner_id?: string
+          refund_note?: string | null
+          refunded_at?: string | null
+          remaining_amount_cents?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_credits_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       owner_curations: {
         Row: {

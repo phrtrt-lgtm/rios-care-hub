@@ -19,6 +19,7 @@ import { CHARGE_CATEGORIES } from "@/constants/chargeCategories";
 import { ListFilters } from "@/components/list/ListFilters";
 import { useListFilters } from "@/hooks/useListFilters";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
+import { OwnerCreditBanner } from "@/components/OwnerCreditBanner";
 
 interface Charge {
   id: string;
@@ -234,6 +235,9 @@ const MinhasCobrancas = () => {
           <h1 className="text-3xl font-bold text-foreground">Minhas Cobranças</h1>
           <p className="text-muted-foreground">Visualize todas as suas cobranças</p>
         </div>
+
+        <OwnerCreditBanner ownerId={user?.id} />
+
 
         {/* Painel de Pagamento Agrupado */}
         {openChargesCount > 0 && (

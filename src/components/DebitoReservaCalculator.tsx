@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Calculator, DollarSign, Copy, Check, Send, CalendarIcon, Loader2, Plus, Trash2 } from "lucide-react";
+import { Calculator, DollarSign, Copy, Check, Send, CalendarIcon, Loader2, Plus, Trash2, Zap, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,6 +19,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 interface DebitoReservaCalculatorProps {
   open: boolean;
@@ -63,7 +64,11 @@ export const DebitoReservaCalculator = ({
   onDebitConfirmed,
 }: DebitoReservaCalculatorProps) => {
   const { toast } = useToast();
+  const [mode, setMode] = useState<"schedule" | "retro">("schedule");
   const [reservations, setReservations] = useState<ReservationInput[]>([newReservation()]);
+  const [retroReservations, setRetroReservations] = useState<Array<{ id: string; date: Date | undefined; ownerValue: string; retained: string }>>([
+    { id: crypto.randomUUID(), date: new Date(), ownerValue: "", retained: "" },
+  ]);
   const [baseCommission, setBaseCommission] = useState<string>(DEFAULT_BASE_COMMISSION);
   const [copied, setCopied] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
@@ -171,26 +176,93 @@ export const DebitoReservaCalculator = ({
     }
   };
 
+  // ----- Retro mode calculations -----
+  const retroRows = retroReservations.map((r) => {
+    const ownerNum = parseValue(r.ownerValue);
+    const retainedNum = parseValue(r.retained);
+    return { ...r, ownerNum, retainedNum };
+  });
+  const retroTotalRetained = retroRows.reduce((s, r) => s + r.retainedNum, 0);
+  const retroTotalOwner = retroRows.reduce((s, r) => s + r.ownerNum, 0);
+  const retroSurplus = retroTotalRetained - totalDebt;
+  const retroCanConfirm =
+    hasCharges &&
+    retroRows.length > 0 &&
+    retroRows.every((r) => r.retainedNum > 0 && r.date && r.ownerNum >= r.retainedNum);
+
+  const handleConfirmRetro = async () => {
+    if (!retroCanConfirm) {
+      toast({
+        title: "Preencha todas as reservas",
+        description: "Cada reserva precisa de data, valor bruto e valor retido (retido ≤ bruto).",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsConfirming(true);
+    try {
+      const payload = {
+        chargeIds: idsToProcess,
+        reservations: retroRows.map((r) => ({
+          date: format(r.date!, "yyyy-MM-dd"),
+          owner_value_cents: Math.round(r.ownerNum * 100),
+          retained_cents: Math.round(r.retainedNum * 100),
+        })),
+      };
+      const { error } = await supabase.functions.invoke("debit-reserve-now", { body: payload });
+      if (error) throw error;
+      toast({
+        title: "Débito retroativo registrado!",
+        description:
+          retroSurplus > 0.005
+            ? `Cobranças quitadas + saldo credor de ${formatCurrency(retroSurplus)} gerado.`
+            : `${idsToProcess.length} cobrança(s) quitada(s).`,
+      });
+      onDebitConfirmed?.();
+      onOpenChange(false);
+      setRetroReservations([{ id: crypto.randomUUID(), date: new Date(), ownerValue: "", retained: "" }]);
+    } catch (error: any) {
+      toast({
+        title: "Erro ao registrar débito",
+        description: error.message || "Tente novamente",
+        variant: "destructive",
+      });
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calculator className="h-5 w-5" />
-            Calculadora de Débito em Reserva
+            Débito em Reserva
           </DialogTitle>
           <DialogDescription>
             <span className="font-medium">{propertyName}</span>
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <Tabs value={mode} onValueChange={(v) => setMode(v as "schedule" | "retro")}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="schedule" className="gap-1">
+              <Clock className="h-3 w-3" /> Agendar
+            </TabsTrigger>
+            <TabsTrigger value="retro" className="gap-1">
+              <Zap className="h-3 w-3" /> Retroativo
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="schedule" className="space-y-4 mt-4">
           <Card className="bg-destructive/10 border-destructive/30">
             <CardContent className="pt-4 pb-4 text-center">
               <p className="text-sm text-muted-foreground">Dívida Total a Cobrir</p>
               <p className="text-2xl font-bold text-destructive">{formatCurrency(totalDebt)}</p>
             </CardContent>
           </Card>
+
 
           <div className="space-y-2">
             <Label htmlFor="base-commission">Comissão Base (%)</Label>
@@ -368,7 +440,187 @@ export const DebitoReservaCalculator = ({
             adicionadas, distribuindo a dívida proporcionalmente ao valor de cada uma. O
             proprietário recebe um e-mail listando todas as reservas envolvidas.
           </div>
-        </div>
+          </TabsContent>
+
+          <TabsContent value="retro" className="space-y-4 mt-4">
+            <Card className="bg-destructive/10 border-destructive/30">
+              <CardContent className="pt-4 pb-4 text-center">
+                <p className="text-sm text-muted-foreground">Dívida Total das Cobranças</p>
+                <p className="text-2xl font-bold text-destructive">{formatCurrency(totalDebt)}</p>
+              </CardContent>
+            </Card>
+
+            <div className="text-xs text-muted-foreground bg-info/10 border border-info/20 rounded p-3">
+              <strong>Débito retroativo:</strong> registre reservas em que você já reteve o valor.
+              As cobranças ficam quitadas na hora e o proprietário é notificado por e-mail.
+              Se a retenção passar do devido, o excedente vira <strong>saldo credor</strong>.
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-1">
+                  <DollarSign className="h-3 w-3" />
+                  Reservas com valor retido
+                </Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setRetroReservations((p) => [
+                      ...p,
+                      { id: crypto.randomUUID(), date: new Date(), ownerValue: "", retained: "" },
+                    ])
+                  }
+                >
+                  <Plus className="h-3 w-3 mr-1" /> Adicionar
+                </Button>
+              </div>
+
+              {retroRows.map((r, idx) => (
+                <Card key={r.id} className="border-muted">
+                  <CardContent className="p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted-foreground">
+                        Reserva {idx + 1}
+                      </span>
+                      {retroReservations.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() =>
+                            setRetroReservations((p) => p.filter((x) => x.id !== r.id))
+                          }
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "justify-start text-left font-normal w-full",
+                            !r.date && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {r.date
+                            ? format(r.date, "dd/MM/yyyy", { locale: ptBR })
+                            : "Check-in da reserva"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={r.date}
+                          onSelect={(d) =>
+                            setRetroReservations((p) =>
+                              p.map((x) => (x.id === r.id ? { ...x, date: d } : x))
+                            )
+                          }
+                          locale={ptBR}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Valor bruto (R$)</Label>
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="0,00"
+                          value={r.ownerValue}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            if (/^[0-9]*[,.]?[0-9]*$/.test(v) || v === "")
+                              setRetroReservations((p) =>
+                                p.map((x) => (x.id === r.id ? { ...x, ownerValue: v } : x))
+                              );
+                          }}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Retido (R$)</Label>
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="0,00"
+                          value={r.retained}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            if (/^[0-9]*[,.]?[0-9]*$/.test(v) || v === "")
+                              setRetroReservations((p) =>
+                                p.map((x) => (x.id === r.id ? { ...x, retained: v } : x))
+                              );
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            <Separator />
+
+            <Card className="bg-muted/50">
+              <CardContent className="p-3 space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total bruto das reservas:</span>
+                  <span className="font-medium">{formatCurrency(retroTotalOwner)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total retido:</span>
+                  <span className="font-medium text-destructive">
+                    - {formatCurrency(retroTotalRetained)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Dívida das cobranças:</span>
+                  <span className="font-medium">{formatCurrency(totalDebt)}</span>
+                </div>
+                <Separator />
+                {retroSurplus > 0.005 ? (
+                  <div className="flex justify-between text-success">
+                    <span className="font-medium">Saldo credor a gerar:</span>
+                    <span className="font-bold">+ {formatCurrency(retroSurplus)}</span>
+                  </div>
+                ) : retroSurplus < -0.005 ? (
+                  <div className="flex justify-between text-warning">
+                    <span className="font-medium">Ainda restará em dívida:</span>
+                    <span className="font-bold">{formatCurrency(-retroSurplus)}</span>
+                  </div>
+                ) : (
+                  <div className="text-center text-success">✓ Retenção cobre exatamente a dívida</div>
+                )}
+              </CardContent>
+            </Card>
+
+            {hasCharges && (
+              <Button
+                onClick={handleConfirmRetro}
+                disabled={!retroCanConfirm || isConfirming}
+                className="w-full"
+                size="lg"
+              >
+                {isConfirming ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Registrando...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="mr-2 h-4 w-4" /> Registrar débito e notificar
+                  </>
+                )}
+              </Button>
+            )}
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
