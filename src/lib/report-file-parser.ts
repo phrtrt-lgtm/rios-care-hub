@@ -240,10 +240,10 @@ function parseHostexUnified(rawData: unknown[][], headerRowIdx: number): ParsedF
     checkin: findIdx(headers, 'check-in', 'checkin'),
     checkout: findIdx(headers, 'check-out', 'checkout'),
     status: findIdx(headers, 'status'),
-    tarifas: findIdx(headers, 'tarifas'),
+    tarifas: findIdx(headers, 'tarifas', 'valor bruto da reserva'),
     detalhes: findIdx(headers, 'detalhes'),
     comissao: findIdx(headers, 'comissão', 'comissao'),
-    liquida: findIdx(headers, 'tarifa líquida', 'tarifa liquida'),
+    liquida: findIdx(headers, 'tarifa líquida', 'tarifa liquida', 'pagamento líquido', 'pagamento liquido'),
   };
 
   const reservations: Reservation[] = [];
