@@ -210,10 +210,11 @@ function parseHostex(rawData: unknown[][], headerRowIdx: number): ParsedFile {
 function isHostexUnifiedHeader(row: unknown[]): boolean {
   if (!row) return false;
   const joined = row.map(c => normalizeColumnName(String(c ?? ''))).join('|');
-  return joined.includes('propriedade')
-    && joined.includes('tarifas')
-    && joined.includes('detalhes')
-    && joined.includes('tarifa liquida');
+  const hasProp = joined.includes('propriedade');
+  const hasDetalhes = joined.includes('detalhes');
+  const hasGross = joined.includes('tarifas') || joined.includes('valor bruto da reserva');
+  const hasNet = joined.includes('tarifa liquida') || joined.includes('pagamento liquido');
+  return hasProp && hasDetalhes && hasGross && hasNet;
 }
 
 function parseDetalhes(s: string): Record<string, number> {
@@ -239,10 +240,10 @@ function parseHostexUnified(rawData: unknown[][], headerRowIdx: number): ParsedF
     checkin: findIdx(headers, 'check-in', 'checkin'),
     checkout: findIdx(headers, 'check-out', 'checkout'),
     status: findIdx(headers, 'status'),
-    tarifas: findIdx(headers, 'tarifas'),
+    tarifas: findIdx(headers, 'tarifas', 'valor bruto da reserva'),
     detalhes: findIdx(headers, 'detalhes'),
     comissao: findIdx(headers, 'comissão', 'comissao'),
-    liquida: findIdx(headers, 'tarifa líquida', 'tarifa liquida'),
+    liquida: findIdx(headers, 'tarifa líquida', 'tarifa liquida', 'pagamento líquido', 'pagamento liquido'),
   };
 
   const reservations: Reservation[] = [];
