@@ -437,7 +437,7 @@ export function OwnerChargesPreview() {
               const statusConfig = STATUS_CONFIG[charge.status] || STATUS_CONFIG.pendente;
               const unreadCount = unreadCounts[charge.id] || 0;
               const dueDateInfo = getDueDateInfo(charge.due_date);
-              const dueAmount = charge.amount_cents - (charge.management_contribution_cents || 0);
+              const dueAmount = Math.max(0, charge.amount_cents - (charge.management_contribution_cents || 0) - ((charge as any).credit_applied_cents || 0));
               const isSelected = selectedCharges.includes(charge.id);
 
               return (
