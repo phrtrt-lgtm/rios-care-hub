@@ -74,6 +74,7 @@ const GerenciarCobrancas = () => {
   const { toast } = useToast();
   const [charges, setCharges] = useState<Charge[]>([]);
   const [propertyGroups, setPropertyGroups] = useState<PropertyGroup[]>([]);
+  const [ownerCredits, setOwnerCredits] = useState<{ owner_id: string; owner_name: string; total_cents: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   
