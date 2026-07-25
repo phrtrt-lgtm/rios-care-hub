@@ -564,7 +564,7 @@ const GerenciarCobrancas = () => {
                           <div key={charge.id} className="flex justify-between text-sm">
                             <span className="text-muted-foreground truncate flex-1">{charge.title}</span>
                             <span className="font-medium ml-2">
-                              {formatCurrency(charge.amount_cents - (charge.management_contribution_cents || 0), charge.currency)}
+                              {formatCurrency(Math.max(0, charge.amount_cents - (charge.management_contribution_cents || 0) - ((charge as any).credit_applied_cents || 0)), charge.currency)}
                             </span>
                           </div>
                         ))}
