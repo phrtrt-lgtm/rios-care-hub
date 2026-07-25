@@ -20,6 +20,7 @@ type Charge = {
   title: string;
   amount_cents: number;
   management_contribution_cents: number;
+  credit_applied_cents: number;
   due_date: string | null;
   status: string;
   property: { name: string } | null;
@@ -48,7 +49,7 @@ export function ChargesKanbanPreview() {
       const { data, error } = await supabase
         .from("charges")
         .select(`
-          id, title, amount_cents, management_contribution_cents, due_date, status,
+          id, title, amount_cents, management_contribution_cents, credit_applied_cents, due_date, status,
           property:properties(name),
           owner:profiles!charges_owner_id_fkey(name)
         `)
@@ -84,7 +85,7 @@ export function ChargesKanbanPreview() {
     return { text: `${daysLeft}d`, color: "text-muted-foreground" };
   };
 
-  const getDueAmount = (charge: Charge) => charge.amount_cents - (charge.management_contribution_cents || 0);
+  const getDueAmount = (charge: Charge) => Math.max(0, charge.amount_cents - (charge.management_contribution_cents || 0) - (charge.credit_applied_cents || 0));
 
   const pendentes = charges.filter(c => {
     if (c.status !== "sent" && c.status !== "pendente") return false;

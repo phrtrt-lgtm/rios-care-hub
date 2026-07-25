@@ -1135,7 +1135,7 @@ export default function CobrancaDetalhes() {
               <div className="flex items-center justify-between sm:flex-col sm:items-start sm:justify-center px-3 py-2 bg-primary/5">
                 <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Devido</p>
                 <p className="text-base font-bold text-primary">
-                  {formatCurrency(charge.amount_cents - (charge.management_contribution_cents || 0), charge.currency)}
+                  {formatCurrency(Math.max(0, charge.amount_cents - (charge.management_contribution_cents || 0) - ((charge as any).credit_applied_cents || 0)), charge.currency)}
                 </p>
               </div>
             </div>
@@ -1306,7 +1306,7 @@ export default function CobrancaDetalhes() {
                         <div className="p-4 bg-white rounded-lg border-2 border-dashed border-info/30 space-y-2">
                           <div className="flex items-center justify-between text-sm">
                             <span className="text-muted-foreground">Valor devido:</span>
-                            <span className="font-bold text-lg">{formatCurrency(charge.amount_cents - (charge.management_contribution_cents || 0), charge.currency)}</span>
+                            <span className="font-bold text-lg">{formatCurrency(Math.max(0, charge.amount_cents - (charge.management_contribution_cents || 0) - ((charge as any).credit_applied_cents || 0)), charge.currency)}</span>
                           </div>
                           <div className="text-xs text-muted-foreground space-y-1">
                             <p>• Parcele em até 12x no cartão</p>

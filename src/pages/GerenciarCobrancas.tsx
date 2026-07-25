@@ -74,6 +74,7 @@ const GerenciarCobrancas = () => {
   const { toast } = useToast();
   const [charges, setCharges] = useState<Charge[]>([]);
   const [propertyGroups, setPropertyGroups] = useState<PropertyGroup[]>([]);
+  const [ownerCredits, setOwnerCredits] = useState<{ owner_id: string; owner_name: string; total_cents: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   
@@ -96,7 +97,24 @@ const GerenciarCobrancas = () => {
     }
     fetchCharges();
     fetchDebitoCharges();
+    fetchOwnerCredits();
   }, [user, profile, navigate]);
+
+  const fetchOwnerCredits = async () => {
+    const { data } = await supabase
+      .from('owner_credits')
+      .select('owner_id, remaining_amount_cents, owner:profiles!owner_credits_owner_id_fkey(name)')
+      .eq('status', 'open')
+      .gt('remaining_amount_cents', 0);
+    const grouped: Record<string, { owner_id: string; owner_name: string; total_cents: number }> = {};
+    (data ?? []).forEach((c: any) => {
+      if (!grouped[c.owner_id]) {
+        grouped[c.owner_id] = { owner_id: c.owner_id, owner_name: c.owner?.name || 'Proprietário', total_cents: 0 };
+      }
+      grouped[c.owner_id].total_cents += c.remaining_amount_cents || 0;
+    });
+    setOwnerCredits(Object.values(grouped).sort((a, b) => b.total_cents - a.total_cents));
+  };
 
   useEffect(() => {
     groupChargesByProperty();
@@ -217,7 +235,7 @@ const GerenciarCobrancas = () => {
       }
       
       groups[propertyId].charges.push(charge);
-      const amountDue = charge.amount_cents - (charge.management_contribution_cents || 0);
+      const amountDue = Math.max(0, charge.amount_cents - (charge.management_contribution_cents || 0) - ((charge as any).credit_applied_cents || 0));
       groups[propertyId].totalDueCents += amountDue;
       groups[propertyId].overdueCount++;
     });
@@ -275,7 +293,7 @@ const GerenciarCobrancas = () => {
       groups[propertyId].charges.push(charge);
       
       // Calculate amount due (total - management contribution)
-      const amountDue = charge.amount_cents - (charge.management_contribution_cents || 0);
+      const amountDue = Math.max(0, charge.amount_cents - (charge.management_contribution_cents || 0) - ((charge as any).credit_applied_cents || 0));
       groups[propertyId].totalDueCents += amountDue;
       
       if (['sent', 'draft'].includes(charge.status)) {
@@ -410,6 +428,25 @@ const GerenciarCobrancas = () => {
             Histórico Pago
           </Button>
         </div>
+
+        {/* Saldo Credor dos Proprietários */}
+        {ownerCredits.length > 0 && (
+          <div className="mb-6 rounded-lg border border-success/30 bg-success/5 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <CreditCard className="h-4 w-4 text-success" />
+              <h3 className="font-semibold text-sm">Saldo credor disponível para abater cobranças</h3>
+            </div>
+            <div className="space-y-1.5">
+              {ownerCredits.map((oc) => (
+                <div key={oc.owner_id} className="flex items-center justify-between text-sm">
+                  <span className="text-foreground">{oc.owner_name}</span>
+                  <span className="font-semibold text-success">{formatCurrency(oc.total_cents, 'BRL')}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
@@ -564,7 +601,7 @@ const GerenciarCobrancas = () => {
                           <div key={charge.id} className="flex justify-between text-sm">
                             <span className="text-muted-foreground truncate flex-1">{charge.title}</span>
                             <span className="font-medium ml-2">
-                              {formatCurrency(charge.amount_cents - (charge.management_contribution_cents || 0), charge.currency)}
+                              {formatCurrency(Math.max(0, charge.amount_cents - (charge.management_contribution_cents || 0) - ((charge as any).credit_applied_cents || 0)), charge.currency)}
                             </span>
                           </div>
                         ))}

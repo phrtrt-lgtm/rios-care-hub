@@ -91,6 +91,7 @@ export function OwnerChargesPreview() {
           title,
           amount_cents,
           management_contribution_cents,
+          credit_applied_cents,
           due_date,
           status,
           payment_link_url,
@@ -299,7 +300,7 @@ export function OwnerChargesPreview() {
 
   const selectedChargesData = charges?.filter(c => selectedCharges.includes(c.id)) || [];
   const totalDue = selectedChargesData.reduce((sum, charge) => 
-    sum + (charge.amount_cents - (charge.management_contribution_cents || 0)), 0
+    sum + Math.max(0, charge.amount_cents - (charge.management_contribution_cents || 0) - ((charge as any).credit_applied_cents || 0)), 0
   );
 
   if (isLoading) {
@@ -436,7 +437,7 @@ export function OwnerChargesPreview() {
               const statusConfig = STATUS_CONFIG[charge.status] || STATUS_CONFIG.pendente;
               const unreadCount = unreadCounts[charge.id] || 0;
               const dueDateInfo = getDueDateInfo(charge.due_date);
-              const dueAmount = charge.amount_cents - (charge.management_contribution_cents || 0);
+              const dueAmount = Math.max(0, charge.amount_cents - (charge.management_contribution_cents || 0) - ((charge as any).credit_applied_cents || 0));
               const isSelected = selectedCharges.includes(charge.id);
 
               return (
@@ -644,7 +645,7 @@ export function OwnerChargesPreview() {
               <div className="text-center">
                 <p className="text-sm text-muted-foreground mb-1">{pixCharge.title}</p>
                 <p className="text-2xl font-bold text-primary">
-                  {formatBRL(pixCharge.amount_cents - (pixCharge.management_contribution_cents || 0))}
+                  {formatBRL(Math.max(0, pixCharge.amount_cents - (pixCharge.management_contribution_cents || 0) - ((pixCharge as any).credit_applied_cents || 0)))}
                 </p>
               </div>
               

@@ -209,11 +209,13 @@ export const DebitoReservaCalculator = ({
           retained_cents: Math.round(r.retainedNum * 100),
         })),
       };
-      const { error } = await supabase.functions.invoke("debit-reserve-now", { body: payload });
+      const { data: result, error } = await supabase.functions.invoke("debit-reserve-now", { body: payload });
       if (error) throw error;
+      const applied = (result as any)?.totalAppliedCents ?? 0;
+      const surplus = (result as any)?.surplusCents ?? 0;
       toast({
-        title: "Retenção registrada como saldo credor",
-        description: `Saldo credor de ${formatCurrency(retroTotalRetained)} disponível para abater as cobranças em aberto do proprietário. As cobranças continuam na lista até serem quitadas.`,
+        title: "Retenção aplicada nas cobranças",
+        description: `${formatCurrency(applied / 100)} descontados das cobranças em aberto${surplus > 0 ? `. Sobra de ${formatCurrency(surplus / 100)} ficou como saldo credor.` : "."}`,
       });
       onDebitConfirmed?.();
       onOpenChange(false);
