@@ -14,7 +14,7 @@ interface ReservationItem {
 }
 
 interface DebitReserveNowRequest {
-  chargeIds: string[];       // used only to derive owner + context
+  chargeIds: string[];       // used to derive owner + context (charges are NOT closed automatically)
   reservations: ReservationItem[];
   baseCommissionPercent?: number;
   extraCommissionPercent?: number;
@@ -51,7 +51,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
     } catch (_) { /* ignore */ }
 
-    // Load charges to determine owner + property context (charges are NOT modified)
+    // Load context charges (used to identify owner + property; NOT necessarily consumed)
     const { data: charges, error: chargesError } = await supabase
       .from('charges')
       .select('id, owner_id, title, property_id, amount_cents, management_contribution_cents')
@@ -76,9 +76,7 @@ const handler = async (req: Request): Promise<Response> => {
       owner_receives_cents: Math.max(0, (r.owner_value_cents ?? 0) - (r.retained_cents ?? 0)),
     }));
 
-    const nowIso = new Date().toISOString();
-
-    // Create owner_credit for the full retained amount
+    // ---- 1) Create owner_credit (initial = total retained) -------------------
     const noteDates = reservations.map(r => {
       const d = new Date(r.date + 'T00:00:00');
       return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
@@ -99,15 +97,84 @@ const handler = async (req: Request): Promise<Response> => {
       .select('id')
       .single();
 
-    if (creditError) {
+    if (creditError || !credit) {
       console.error('Failed to create owner_credit', creditError);
       return new Response(
-        JSON.stringify({ error: 'Failed to create credit', details: creditError.message }),
+        JSON.stringify({ error: 'Failed to create credit', details: creditError?.message }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Owner profile + property for the email
+    // ---- 2) Apply credit to all owner's open charges (oldest first) ----------
+    // Fetch every open charge from this owner (não só os do dialog) — descontar em ordem crescente de vencimento.
+    const { data: openCharges } = await supabase
+      .from('charges')
+      .select('id, amount_cents, management_contribution_cents, credit_applied_cents, due_date, status, paid_at')
+      .eq('owner_id', ownerId)
+      .is('archived_at', null)
+      .is('paid_at', null)
+      .not('status', 'in', '(draft,paid,pago_no_vencimento,pago_antecipado,pago_com_atraso,debited,cancelled,arquivado)')
+      .order('due_date', { ascending: true, nullsFirst: false });
+
+    let remaining = totalRetainedCents;
+    const applications: { chargeId: string; applied: number; nowPaid: boolean }[] = [];
+
+    for (const c of (openCharges ?? [])) {
+      if (remaining <= 0) break;
+      const contrib = c.management_contribution_cents ?? 0;
+      const alreadyCredited = c.credit_applied_cents ?? 0;
+      const outstanding = Math.max(0, c.amount_cents - contrib - alreadyCredited);
+      if (outstanding <= 0) continue;
+
+      const applyNow = Math.min(remaining, outstanding);
+      const newCredited = alreadyCredited + applyNow;
+      const nowFullyPaid = newCredited >= (c.amount_cents - contrib);
+
+      const updatePayload: Record<string, unknown> = {
+        credit_applied_cents: newCredited,
+        updated_at: new Date().toISOString(),
+      };
+      if (nowFullyPaid) {
+        // Trigger auto_set_paid_status_on_paid_at will set the correct status.
+        updatePayload.paid_at = new Date().toISOString();
+      }
+
+      const { error: updErr } = await supabase
+        .from('charges')
+        .update(updatePayload)
+        .eq('id', c.id);
+
+      if (updErr) {
+        console.error('Failed to apply credit to charge', c.id, updErr);
+        continue;
+      }
+
+      await supabase.from('owner_credit_applications').insert({
+        credit_id: credit.id,
+        charge_id: c.id,
+        amount_applied_cents: applyNow,
+        applied_by: actorId,
+      });
+
+      remaining -= applyNow;
+      applications.push({ chargeId: c.id, applied: applyNow, nowPaid: nowFullyPaid });
+    }
+
+    // Update credit remaining balance (sobra fica como saldo credor positivo)
+    if (remaining !== totalRetainedCents) {
+      await supabase
+        .from('owner_credits')
+        .update({
+          remaining_amount_cents: remaining,
+          status: remaining <= 0 ? 'consumed' : 'open',
+        })
+        .eq('id', credit.id);
+    }
+
+    const totalAppliedCents = totalRetainedCents - remaining;
+    const surplusCents = remaining;
+
+    // ---- 3) Notify owner (in-app + email) ------------------------------------
     const { data: ownerProfile } = await supabase
       .from('profiles')
       .select('id, name, email')
@@ -165,20 +232,26 @@ const handler = async (req: Request): Promise<Response> => {
         </table>
       </div>`;
 
-    const surplusBlockHtml = `
+    const surplusBlockHtml = surplusCents > 0
+      ? `
       <div style="margin:16px 0;padding:14px;background:#ecfdf5;border-left:4px solid #10b981;border-radius:4px">
-        <p style="margin:0 0 6px;color:#065f46;font-weight:600">Saldo credor disponível: ${formatBRL(totalRetainedCents)}</p>
+        <p style="margin:0 0 6px;color:#065f46;font-weight:600">Saldo credor disponível: ${formatBRL(surplusCents)}</p>
         <p style="margin:0;color:#065f46;font-size:13px">
-          Esse valor foi retido diretamente das suas reservas e ficará como saldo credor na sua conta.
-          Ele será usado automaticamente para abater cobranças em aberto ou futuras, e qualquer sobra pode ser devolvida.
+          A retenção cobriu todas as cobranças em aberto e sobrou saldo, que ficará disponível para abater cobranças futuras.
+        </p>
+      </div>`
+      : `
+      <div style="margin:16px 0;padding:14px;background:#eff6ff;border-left:4px solid #3b82f6;border-radius:4px">
+        <p style="margin:0;color:#1e3a8a;font-size:13px">
+          Foram aplicados ${formatBRL(totalAppliedCents)} nas cobranças em aberto. As cobranças continuam visíveis no seu portal com o valor devido atualizado.
         </p>
       </div>`;
 
     // In-app notification
     await supabase.from('notifications').insert({
       owner_id: ownerId,
-      title: 'Retenção em Reserva Registrada',
-      message: `Retenção de ${formatBRL(totalRetainedCents)} registrada como saldo credor e ficará disponível para abater suas cobranças.`,
+      title: 'Retenção em Reserva Aplicada',
+      message: `Retenção de ${formatBRL(totalRetainedCents)} aplicada nas suas cobranças em aberto. ${surplusCents > 0 ? `Sobra de ${formatBRL(surplusCents)} como saldo credor.` : ''}`.trim(),
       type: 'charge',
       reference_id: charges[0].id,
       reference_url: `/minhas-cobrancas`,
@@ -228,8 +301,12 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(
       JSON.stringify({
         success: true,
-        creditId: credit?.id,
-        creditCents: totalRetainedCents,
+        creditId: credit.id,
+        totalRetainedCents,
+        totalAppliedCents,
+        surplusCents,
+        chargesAffected: applications.length,
+        chargesFullyPaid: applications.filter(a => a.nowPaid).length,
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
