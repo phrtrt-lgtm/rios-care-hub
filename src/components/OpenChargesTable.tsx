@@ -414,7 +414,7 @@ export function OpenChargesTable({
                       </td>
                       <td className="px-2 py-2 text-right">
                         <span className="text-sm font-medium">
-                          {formatBRL(charge.amount_cents - (charge.management_contribution_cents || 0))}
+                          {formatBRL(Math.max(0, charge.amount_cents - (charge.management_contribution_cents || 0) - ((charge as any).credit_applied_cents || 0)))}
                         </span>
                       </td>
                       <td className="px-2 py-2 text-center">
