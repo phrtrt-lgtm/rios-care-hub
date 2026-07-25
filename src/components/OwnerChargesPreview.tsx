@@ -645,7 +645,7 @@ export function OwnerChargesPreview() {
               <div className="text-center">
                 <p className="text-sm text-muted-foreground mb-1">{pixCharge.title}</p>
                 <p className="text-2xl font-bold text-primary">
-                  {formatBRL(pixCharge.amount_cents - (pixCharge.management_contribution_cents || 0))}
+                  {formatBRL(Math.max(0, pixCharge.amount_cents - (pixCharge.management_contribution_cents || 0) - ((pixCharge as any).credit_applied_cents || 0)))}
                 </p>
               </div>
               
