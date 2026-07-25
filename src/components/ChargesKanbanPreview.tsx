@@ -85,7 +85,7 @@ export function ChargesKanbanPreview() {
     return { text: `${daysLeft}d`, color: "text-muted-foreground" };
   };
 
-  const getDueAmount = (charge: Charge) => charge.amount_cents - (charge.management_contribution_cents || 0);
+  const getDueAmount = (charge: Charge) => Math.max(0, charge.amount_cents - (charge.management_contribution_cents || 0) - (charge.credit_applied_cents || 0));
 
   const pendentes = charges.filter(c => {
     if (c.status !== "sent" && c.status !== "pendente") return false;
