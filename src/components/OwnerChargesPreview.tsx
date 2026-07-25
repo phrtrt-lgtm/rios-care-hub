@@ -91,6 +91,7 @@ export function OwnerChargesPreview() {
           title,
           amount_cents,
           management_contribution_cents,
+          credit_applied_cents,
           due_date,
           status,
           payment_link_url,
