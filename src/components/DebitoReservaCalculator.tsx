@@ -448,9 +448,10 @@ export const DebitoReservaCalculator = ({
             </Card>
 
             <div className="text-xs text-muted-foreground bg-info/10 border border-info/20 rounded p-3">
-              <strong>Débito retroativo:</strong> registre reservas em que você já reteve o valor.
-              As cobranças ficam quitadas na hora e o proprietário é notificado por e-mail.
-              Se a retenção passar do devido, o excedente vira <strong>saldo credor</strong>.
+              <strong>Retenção retroativa:</strong> registre reservas em que o valor já foi retido.
+              O valor total retido vira <strong>saldo credor do proprietário</strong> e fica disponível para abater
+              cobranças em aberto ou futuras. As cobranças <strong>continuam na lista</strong> até serem quitadas.
+              O proprietário é notificado por e-mail e no app.
             </div>
 
             <div className="space-y-3">
