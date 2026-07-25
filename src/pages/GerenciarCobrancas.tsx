@@ -217,7 +217,7 @@ const GerenciarCobrancas = () => {
       }
       
       groups[propertyId].charges.push(charge);
-      const amountDue = charge.amount_cents - (charge.management_contribution_cents || 0);
+      const amountDue = Math.max(0, charge.amount_cents - (charge.management_contribution_cents || 0) - ((charge as any).credit_applied_cents || 0));
       groups[propertyId].totalDueCents += amountDue;
       groups[propertyId].overdueCount++;
     });
