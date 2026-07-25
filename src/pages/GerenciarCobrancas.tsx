@@ -429,6 +429,25 @@ const GerenciarCobrancas = () => {
           </Button>
         </div>
 
+        {/* Saldo Credor dos Proprietários */}
+        {ownerCredits.length > 0 && (
+          <div className="mb-6 rounded-lg border border-success/30 bg-success/5 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <CreditCard className="h-4 w-4 text-success" />
+              <h3 className="font-semibold text-sm">Saldo credor disponível para abater cobranças</h3>
+            </div>
+            <div className="space-y-1.5">
+              {ownerCredits.map((oc) => (
+                <div key={oc.owner_id} className="flex items-center justify-between text-sm">
+                  <span className="text-foreground">{oc.owner_name}</span>
+                  <span className="font-semibold text-success">{formatCurrency(oc.total_cents, 'BRL')}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className="grid w-full grid-cols-2">
