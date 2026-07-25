@@ -20,6 +20,7 @@ type Charge = {
   title: string;
   amount_cents: number;
   management_contribution_cents: number;
+  credit_applied_cents: number;
   due_date: string | null;
   status: string;
   property: { name: string } | null;
