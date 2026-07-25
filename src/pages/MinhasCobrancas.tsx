@@ -206,7 +206,7 @@ const MinhasCobrancas = () => {
 
   const selectedChargesData = charges.filter(c => selectedCharges.includes(c.id));
   const totalDue = selectedChargesData.reduce((sum, charge) => 
-    sum + (charge.amount_cents - (charge.management_contribution_cents || 0)), 0
+    sum + Math.max(0, charge.amount_cents - (charge.management_contribution_cents || 0) - ((charge as any).credit_applied_cents || 0)), 0
   );
 
   const openChargesCount = charges.filter(c => c.status === 'sent' || c.status === 'overdue' || c.status === 'pendente').length;
