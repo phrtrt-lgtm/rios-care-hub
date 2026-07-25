@@ -212,11 +212,8 @@ export const DebitoReservaCalculator = ({
       const { error } = await supabase.functions.invoke("debit-reserve-now", { body: payload });
       if (error) throw error;
       toast({
-        title: "Débito retroativo registrado!",
-        description:
-          retroSurplus > 0.005
-            ? `Cobranças quitadas + saldo credor de ${formatCurrency(retroSurplus)} gerado.`
-            : `${idsToProcess.length} cobrança(s) quitada(s).`,
+        title: "Retenção registrada como saldo credor",
+        description: `Saldo credor de ${formatCurrency(retroTotalRetained)} disponível para abater as cobranças em aberto do proprietário. As cobranças continuam na lista até serem quitadas.`,
       });
       onDebitConfirmed?.();
       onOpenChange(false);
@@ -451,9 +448,10 @@ export const DebitoReservaCalculator = ({
             </Card>
 
             <div className="text-xs text-muted-foreground bg-info/10 border border-info/20 rounded p-3">
-              <strong>Débito retroativo:</strong> registre reservas em que você já reteve o valor.
-              As cobranças ficam quitadas na hora e o proprietário é notificado por e-mail.
-              Se a retenção passar do devido, o excedente vira <strong>saldo credor</strong>.
+              <strong>Retenção retroativa:</strong> registre reservas em que o valor já foi retido.
+              O valor total retido vira <strong>saldo credor do proprietário</strong> e fica disponível para abater
+              cobranças em aberto ou futuras. As cobranças <strong>continuam na lista</strong> até serem quitadas.
+              O proprietário é notificado por e-mail e no app.
             </div>
 
             <div className="space-y-3">
@@ -585,18 +583,19 @@ export const DebitoReservaCalculator = ({
                   <span className="font-medium">{formatCurrency(totalDebt)}</span>
                 </div>
                 <Separator />
-                {retroSurplus > 0.005 ? (
-                  <div className="flex justify-between text-success">
-                    <span className="font-medium">Saldo credor a gerar:</span>
-                    <span className="font-bold">+ {formatCurrency(retroSurplus)}</span>
-                  </div>
-                ) : retroSurplus < -0.005 ? (
-                  <div className="flex justify-between text-warning">
-                    <span className="font-medium">Ainda restará em dívida:</span>
-                    <span className="font-bold">{formatCurrency(-retroSurplus)}</span>
-                  </div>
-                ) : (
-                  <div className="text-center text-success">✓ Retenção cobre exatamente a dívida</div>
+                <div className="flex justify-between text-success">
+                  <span className="font-medium">Saldo credor a gerar:</span>
+                  <span className="font-bold">+ {formatCurrency(retroTotalRetained)}</span>
+                </div>
+                {retroSurplus < -0.005 && (
+                  <p className="text-xs text-muted-foreground">
+                    O saldo credor não cobre toda a dívida — restarão {formatCurrency(-retroSurplus)} em aberto nas cobranças.
+                  </p>
+                )}
+                {retroSurplus > 0.005 && (
+                  <p className="text-xs text-muted-foreground">
+                    Sobra de {formatCurrency(retroSurplus)} permanece como crédito após quitar as cobranças selecionadas.
+                  </p>
                 )}
               </CardContent>
             </Card>
@@ -614,7 +613,7 @@ export const DebitoReservaCalculator = ({
                   </>
                 ) : (
                   <>
-                    <Zap className="mr-2 h-4 w-4" /> Registrar débito e notificar
+                    <Zap className="mr-2 h-4 w-4" /> Registrar retenção como saldo credor
                   </>
                 )}
               </Button>
