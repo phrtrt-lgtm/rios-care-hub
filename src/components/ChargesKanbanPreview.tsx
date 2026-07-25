@@ -49,7 +49,7 @@ export function ChargesKanbanPreview() {
       const { data, error } = await supabase
         .from("charges")
         .select(`
-          id, title, amount_cents, management_contribution_cents, due_date, status,
+          id, title, amount_cents, management_contribution_cents, credit_applied_cents, due_date, status,
           property:properties(name),
           owner:profiles!charges_owner_id_fkey(name)
         `)
