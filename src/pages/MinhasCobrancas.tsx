@@ -491,7 +491,7 @@ const MinhasCobrancas = () => {
                   {visibleCharges.map((charge) => {
                     const isOpen = charge.status === 'sent' || charge.status === 'overdue' || charge.status === 'pendente';
                     const isSelected = selectedCharges.includes(charge.id);
-                    const ownerDue = charge.amount_cents - charge.management_contribution_cents;
+                    const ownerDue = Math.max(0, charge.amount_cents - charge.management_contribution_cents - ((charge as any).credit_applied_cents || 0));
                     const atts = (charge.attachments || []).map((a) => {
                       const path = a.file_path || "";
                       let url = path;
