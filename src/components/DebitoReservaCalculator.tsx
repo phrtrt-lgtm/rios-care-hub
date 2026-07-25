@@ -212,11 +212,8 @@ export const DebitoReservaCalculator = ({
       const { error } = await supabase.functions.invoke("debit-reserve-now", { body: payload });
       if (error) throw error;
       toast({
-        title: "Débito retroativo registrado!",
-        description:
-          retroSurplus > 0.005
-            ? `Cobranças quitadas + saldo credor de ${formatCurrency(retroSurplus)} gerado.`
-            : `${idsToProcess.length} cobrança(s) quitada(s).`,
+        title: "Retenção registrada como saldo credor",
+        description: `Saldo credor de ${formatCurrency(retroTotalRetained)} disponível para abater as cobranças em aberto do proprietário. As cobranças continuam na lista até serem quitadas.`,
       });
       onDebitConfirmed?.();
       onOpenChange(false);
