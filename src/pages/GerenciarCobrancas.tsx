@@ -97,7 +97,24 @@ const GerenciarCobrancas = () => {
     }
     fetchCharges();
     fetchDebitoCharges();
+    fetchOwnerCredits();
   }, [user, profile, navigate]);
+
+  const fetchOwnerCredits = async () => {
+    const { data } = await supabase
+      .from('owner_credits')
+      .select('owner_id, remaining_amount_cents, owner:profiles!owner_credits_owner_id_fkey(name)')
+      .eq('status', 'open')
+      .gt('remaining_amount_cents', 0);
+    const grouped: Record<string, { owner_id: string; owner_name: string; total_cents: number }> = {};
+    (data ?? []).forEach((c: any) => {
+      if (!grouped[c.owner_id]) {
+        grouped[c.owner_id] = { owner_id: c.owner_id, owner_name: c.owner?.name || 'Proprietário', total_cents: 0 };
+      }
+      grouped[c.owner_id].total_cents += c.remaining_amount_cents || 0;
+    });
+    setOwnerCredits(Object.values(grouped).sort((a, b) => b.total_cents - a.total_cents));
+  };
 
   useEffect(() => {
     groupChargesByProperty();
