@@ -613,7 +613,7 @@ export const DebitoReservaCalculator = ({
                   </>
                 ) : (
                   <>
-                    <Zap className="mr-2 h-4 w-4" /> Registrar débito e notificar
+                    <Zap className="mr-2 h-4 w-4" /> Registrar retenção como saldo credor
                   </>
                 )}
               </Button>
