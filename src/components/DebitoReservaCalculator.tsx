@@ -583,18 +583,19 @@ export const DebitoReservaCalculator = ({
                   <span className="font-medium">{formatCurrency(totalDebt)}</span>
                 </div>
                 <Separator />
-                {retroSurplus > 0.005 ? (
-                  <div className="flex justify-between text-success">
-                    <span className="font-medium">Saldo credor a gerar:</span>
-                    <span className="font-bold">+ {formatCurrency(retroSurplus)}</span>
-                  </div>
-                ) : retroSurplus < -0.005 ? (
-                  <div className="flex justify-between text-warning">
-                    <span className="font-medium">Ainda restará em dívida:</span>
-                    <span className="font-bold">{formatCurrency(-retroSurplus)}</span>
-                  </div>
-                ) : (
-                  <div className="text-center text-success">✓ Retenção cobre exatamente a dívida</div>
+                <div className="flex justify-between text-success">
+                  <span className="font-medium">Saldo credor a gerar:</span>
+                  <span className="font-bold">+ {formatCurrency(retroTotalRetained)}</span>
+                </div>
+                {retroSurplus < -0.005 && (
+                  <p className="text-xs text-muted-foreground">
+                    O saldo credor não cobre toda a dívida — restarão {formatCurrency(-retroSurplus)} em aberto nas cobranças.
+                  </p>
+                )}
+                {retroSurplus > 0.005 && (
+                  <p className="text-xs text-muted-foreground">
+                    Sobra de {formatCurrency(retroSurplus)} permanece como crédito após quitar as cobranças selecionadas.
+                  </p>
                 )}
               </CardContent>
             </Card>
