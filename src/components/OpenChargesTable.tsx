@@ -380,6 +380,51 @@ export function OpenChargesTable({
                     <td className="px-2 py-2"></td>
                   </tr>
 
+                  {/* Débitos retroativos em reserva do proprietário deste imóvel */}
+                  {isExpanded && (retentionsByOwner?.[group.charges[0]?.owner_id ?? ""] ?? []).map((credit: any) => {
+                    const chargeIdsHere = new Set(group.charges.map((c) => c.id));
+                    const appliedHere = (credit.applications ?? [])
+                      .filter((a: any) => chargeIdsHere.has(a.charge_id))
+                      .reduce((s: number, a: any) => s + (a.amount_applied_cents || 0), 0);
+                    const dates = (credit.origin_reservations ?? [])
+                      .map((r: any) => r?.date ? format(new Date(r.date + "T12:00:00"), "dd/MM/yy", { locale: ptBR }) : null)
+                      .filter(Boolean)
+                      .join(", ");
+                    return (
+                      <tr key={`credit-${group.id}-${credit.id}`} className="border-b bg-success/5">
+                        <td className="px-2 py-2 text-center">
+                          <Wallet className="h-3.5 w-3.5 text-success mx-auto" />
+                        </td>
+                        <td className="px-2 py-2 pl-12" colSpan={3}>
+                          <span className="text-xs text-foreground font-medium">
+                            Débito retroativo em reserva
+                          </span>
+                          <span className="text-xs text-muted-foreground ml-2">
+                            {dates ? `Reserva(s): ${dates}` : credit.origin_note}
+                          </span>
+                        </td>
+                        <td className="px-2 py-2 text-right text-xs text-muted-foreground">
+                          {formatBRL(credit.initial_amount_cents)}
+                        </td>
+                        <td className="px-2 py-2 text-right text-xs text-success">
+                          {appliedHere > 0 ? `- ${formatBRL(appliedHere)}` : '—'}
+                        </td>
+                        <td className="px-2 py-2 text-right text-xs font-medium text-success">
+                          {credit.remaining_amount_cents > 0 ? formatBRL(credit.remaining_amount_cents) : formatBRL(0)}
+                        </td>
+                        <td className="px-2 py-2 text-center">
+                          <Badge variant="outline" className="text-xs border-success/40 text-success">
+                            {credit.remaining_amount_cents > 0 ? 'saldo credor' : 'abatido'}
+                          </Badge>
+                        </td>
+                        <td className="px-2 py-2"></td>
+                        <td className="px-2 py-2"></td>
+                      </tr>
+                    );
+                  })}
+
+
+
                   {/* Expanded Charges */}
                   {isExpanded && group.charges.map((charge) => (
                     <tr 
