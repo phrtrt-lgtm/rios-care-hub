@@ -92,6 +92,7 @@ const GerenciarCobrancas = () => {
   const [selectedChargeIdsForCalc, setSelectedChargeIdsForCalc] = useState<string[]>([]);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user || !['admin', 'agent', 'maintenance'].includes(profile?.role || '')) {
       navigate("/");
       return;
@@ -99,7 +100,7 @@ const GerenciarCobrancas = () => {
     fetchCharges();
     fetchDebitoCharges();
     fetchOwnerCredits();
-  }, [user, profile, navigate]);
+  }, [user, profile, authLoading, navigate]);
 
   const fetchOwnerCredits = async () => {
     const { data } = await supabase
