@@ -1,5 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { saveScrollPosition } from "@/lib/navigation";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -15,13 +17,15 @@ import {
   ArrowDown,
   Pencil,
   Building2,
-  Calculator
+  Calculator,
+  Wallet
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatBRL } from "@/lib/format";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CHARGE_CATEGORIES } from "@/constants/chargeCategories";
 import { DebitoReservaCalculator } from "@/components/DebitoReservaCalculator";
+
 
 interface Charge {
   id: string;
