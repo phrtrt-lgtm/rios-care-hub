@@ -617,6 +617,14 @@ const GerenciarCobrancas = () => {
                 ))}
               </div>
             )}
+
+            {/* Histórico de débitos retroativos em reserva */}
+            <div className="pt-4 border-t">
+              <ReserveRetentionsHistory
+                title="Débitos retroativos já efetuados"
+                emptyDescription="Nenhum débito retroativo em reserva foi registrado ainda."
+              />
+            </div>
           </TabsContent>
         </Tabs>
 
