@@ -42,15 +42,18 @@ interface CreditRow {
 interface Props {
   /** When set, only this owner's retentions are listed (owner view). Omit for team view. */
   ownerId?: string;
-  /** Hide the wrapper title (used when embedded under another heading) */
+  /** Section heading */
   title?: string;
   emptyDescription?: string;
+  /** Render nothing instead of an empty state when there are no retentions */
+  hideWhenEmpty?: boolean;
 }
 
 export function ReserveRetentionsHistory({
   ownerId,
   title = "Débitos retroativos em reserva",
   emptyDescription = "Nenhuma retenção em reserva registrada até o momento.",
+  hideWhenEmpty = false,
 }: Props) {
   const [openIds, setOpenIds] = useState<Set<string>>(new Set());
 
