@@ -467,6 +467,9 @@ const GerenciarCobrancas = () => {
             {/* Débitos Pendentes em Reserva - Inline Table */}
             <ReserveDebitsTable />
 
+            {/* Débitos retroativos já efetuados (retenções em reserva) */}
+            <ReserveRetentionsHistory title="Débitos retroativos em reserva (registrados)" />
+
             {/* Search and Selection Controls */}
             <div className="space-y-3">
               <div className="relative">
