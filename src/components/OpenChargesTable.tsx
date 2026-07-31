@@ -87,6 +87,28 @@ export function OpenChargesTable({
   const [calculatorOpen, setCalculatorOpen] = useState(false);
   const [calculatorCharge, setCalculatorCharge] = useState<Charge | null>(null);
 
+  // Retenções retroativas em reserva, agrupadas por proprietário (exibidas dentro do imóvel)
+  const { data: retentionsByOwner } = useQuery({
+    queryKey: ["reserve-retentions-by-owner"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("owner_credits")
+        .select(`id, owner_id, origin_note, origin_reservations, initial_amount_cents,
+                 remaining_amount_cents, created_at,
+                 applications:owner_credit_applications(id, amount_applied_cents, charge_id)`)
+        .eq("origin_type", "reserve_retention")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      const map: Record<string, any[]> = {};
+      for (const row of (data ?? []) as any[]) {
+        (map[row.owner_id] ||= []).push(row);
+      }
+      return map;
+    },
+  });
+
+
+
   const handleSort = useCallback((field: SortField) => {
     if (sortField === field) {
       if (sortDirection === "asc") {
