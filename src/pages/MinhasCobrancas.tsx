@@ -20,6 +20,7 @@ import { ListFilters } from "@/components/list/ListFilters";
 import { useListFilters } from "@/hooks/useListFilters";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import { OwnerCreditBanner } from "@/components/OwnerCreditBanner";
+import { ReserveRetentionsHistory } from "@/components/ReserveRetentionsHistory";
 
 interface Charge {
   id: string;
@@ -613,6 +614,15 @@ const MinhasCobrancas = () => {
             </>
           );
         })()}
+
+        {/* Débitos retroativos em reserva (retenções já efetuadas) */}
+        <div className="mt-8">
+          <ReserveRetentionsHistory
+            ownerId={user?.id}
+            title="Débitos efetuados em reserva"
+            hideWhenEmpty
+          />
+        </div>
       </main>
 
       <MediaGallery

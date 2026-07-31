@@ -19,6 +19,7 @@ import { EditChargeDialog } from "@/components/EditChargeDialog";
 import { DebitoReservaCalculator } from "@/components/DebitoReservaCalculator";
 import { ReserveDebitsTable } from "@/components/ReserveDebitsTable";
 import { OpenChargesTable } from "@/components/OpenChargesTable";
+import { ReserveRetentionsHistory } from "@/components/ReserveRetentionsHistory";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import {
   AlertDialog,
@@ -69,7 +70,7 @@ interface PropertyGroup {
 
 const GerenciarCobrancas = () => {
   useScrollRestoration();
-  const { user, profile } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [charges, setCharges] = useState<Charge[]>([]);
@@ -91,6 +92,7 @@ const GerenciarCobrancas = () => {
   const [selectedChargeIdsForCalc, setSelectedChargeIdsForCalc] = useState<string[]>([]);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user || !['admin', 'agent', 'maintenance'].includes(profile?.role || '')) {
       navigate("/");
       return;
@@ -98,7 +100,7 @@ const GerenciarCobrancas = () => {
     fetchCharges();
     fetchDebitoCharges();
     fetchOwnerCredits();
-  }, [user, profile, navigate]);
+  }, [user, profile, authLoading, navigate]);
 
   const fetchOwnerCredits = async () => {
     const { data } = await supabase
@@ -466,6 +468,9 @@ const GerenciarCobrancas = () => {
             {/* Débitos Pendentes em Reserva - Inline Table */}
             <ReserveDebitsTable />
 
+            {/* Débitos retroativos já efetuados (retenções em reserva) */}
+            <ReserveRetentionsHistory title="Débitos retroativos em reserva (registrados)" hideWhenEmpty />
+
             {/* Search and Selection Controls */}
             <div className="space-y-3">
               <div className="relative">
@@ -616,6 +621,14 @@ const GerenciarCobrancas = () => {
                 ))}
               </div>
             )}
+
+            {/* Histórico de débitos retroativos em reserva */}
+            <div className="pt-4 border-t">
+              <ReserveRetentionsHistory
+                title="Débitos retroativos já efetuados"
+                emptyDescription="Nenhum débito retroativo em reserva foi registrado ainda."
+              />
+            </div>
           </TabsContent>
         </Tabs>
 
