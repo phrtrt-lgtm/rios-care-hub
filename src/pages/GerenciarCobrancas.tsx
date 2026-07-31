@@ -19,6 +19,7 @@ import { EditChargeDialog } from "@/components/EditChargeDialog";
 import { DebitoReservaCalculator } from "@/components/DebitoReservaCalculator";
 import { ReserveDebitsTable } from "@/components/ReserveDebitsTable";
 import { OpenChargesTable } from "@/components/OpenChargesTable";
+import { ReserveRetentionsHistory } from "@/components/ReserveRetentionsHistory";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import {
   AlertDialog,
