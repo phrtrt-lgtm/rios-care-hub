@@ -70,7 +70,7 @@ interface PropertyGroup {
 
 const GerenciarCobrancas = () => {
   useScrollRestoration();
-  const { user, profile } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [charges, setCharges] = useState<Charge[]>([]);
