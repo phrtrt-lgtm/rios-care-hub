@@ -89,9 +89,10 @@ export function ReserveRetentionsHistory({
       return next;
     });
 
-  if (isLoading) return <SectionSkeleton />;
+  if (isLoading) return hideWhenEmpty ? null : <SectionSkeleton />;
 
   if (!credits || credits.length === 0) {
+    if (hideWhenEmpty) return null;
     return (
       <EmptyState
         icon={<Receipt className="h-6 w-6" />}
