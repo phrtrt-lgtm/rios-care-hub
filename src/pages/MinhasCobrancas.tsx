@@ -20,6 +20,7 @@ import { ListFilters } from "@/components/list/ListFilters";
 import { useListFilters } from "@/hooks/useListFilters";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import { OwnerCreditBanner } from "@/components/OwnerCreditBanner";
+import { ReserveRetentionsHistory } from "@/components/ReserveRetentionsHistory";
 
 interface Charge {
   id: string;
