@@ -613,6 +613,15 @@ const MinhasCobrancas = () => {
             </>
           );
         })()}
+
+        {/* Débitos retroativos em reserva (retenções já efetuadas) */}
+        <div className="mt-8">
+          <ReserveRetentionsHistory
+            ownerId={user?.id}
+            title="Débitos efetuados em reserva"
+            hideWhenEmpty
+          />
+        </div>
       </main>
 
       <MediaGallery
