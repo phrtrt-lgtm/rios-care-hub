@@ -65,6 +65,14 @@ export function SendToChargeButton({
     try {
       let chargeId: string | undefined;
 
+      // Preserva a descrição escrita na manutenção
+      const { data: ticketRow } = await supabase
+        .from("tickets")
+        .select("description")
+        .eq("id", ticket.id)
+        .maybeSingle();
+      const ticketDescription = ticketRow?.description || null;
+
       // Reactivate archived charge if any
       const { data: existingCharges } = await supabase
         .from("charges")
@@ -79,6 +87,7 @@ export function SendToChargeButton({
           .from("charges")
           .update({
             title: ticket.charge_draft_title || ticket.subject,
+            description: ticketDescription,
             amount_cents: amountCents,
             management_contribution_cents: mgmtCents,
             cost_responsible: ticket.cost_responsible,
@@ -97,6 +106,7 @@ export function SendToChargeButton({
             property_id: ticket.property_id,
             ticket_id: ticket.id,
             title: ticket.charge_draft_title || ticket.subject,
+            description: ticketDescription,
             amount_cents: amountCents,
             management_contribution_cents: mgmtCents,
             cost_responsible: ticket.cost_responsible,
@@ -105,6 +115,7 @@ export function SendToChargeButton({
           })
           .select("id")
           .single();
+
         if (chargeErr) throw chargeErr;
         chargeId = newCharge.id;
       }
