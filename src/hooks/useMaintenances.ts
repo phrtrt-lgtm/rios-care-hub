@@ -215,7 +215,7 @@ export const useMaintenance = (id?: string) => {
         };
       }
 
-      }
+
 
       // 2) Fallback to ticket (maintenance created by team without a charge yet)
       const { data: ticket, error: ticketError } = await supabase
