@@ -383,7 +383,11 @@ export const useMaintenance = (id?: string) => {
         attachments,
         payments,
         paid_cents,
+        ticket_description: ticket.description,
+        ticket_notes: (await fetchTicketContext(ticket.id)).notes,
+        scheduled_at: (ticket as any).scheduled_at ?? null,
       };
+
     },
     enabled: !!id,
   });
