@@ -196,6 +196,27 @@ export default function CobrancaDetalhes() {
       
       setCharge(enrichedCharge);
 
+      // Preserva o registro escrito pela equipe no ticket de origem
+      if ((chargeData as any).ticket_id) {
+        const { data: notes } = await supabase
+          .from('ticket_messages')
+          .select('id, body, created_at, is_internal, author:profiles!ticket_messages_author_id_fkey(name, photo_url, role)')
+          .eq('ticket_id', (chargeData as any).ticket_id)
+          .order('created_at', { ascending: true });
+        setServiceNotes(
+          ((notes as any[]) || []).map((m) => ({
+            id: m.id,
+            body: m.body,
+            created_at: m.created_at,
+            is_internal: !!m.is_internal,
+            author: m.author ?? null,
+          }))
+        );
+      } else {
+        setServiceNotes([]);
+      }
+
+
       await Promise.all([
         fetchMessages(),
         fetchAttachments()
