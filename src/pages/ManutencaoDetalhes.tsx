@@ -153,10 +153,29 @@ export default function ManutencaoDetalhes({ embedded = false, idOverride }: Man
               </div>
             )}
 
-            {maintenance.description && (
+            {(maintenance.description || maintenance.ticket_description) && (
               <div className="pt-1 border-t">
-                <div className="text-xs text-muted-foreground mb-1">Descrição</div>
-                <div className="text-sm whitespace-pre-wrap">{maintenance.description}</div>
+                <div className="text-xs text-muted-foreground mb-1">Descrição do serviço</div>
+                <div className="text-sm whitespace-pre-wrap">
+                  {maintenance.description || maintenance.ticket_description}
+                </div>
+              </div>
+            )}
+
+            {maintenance.service_provider?.name && (
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-xs text-muted-foreground">Profissional</span>
+                <span className="font-medium text-right">{maintenance.service_provider.name}</span>
+              </div>
+            )}
+
+            {maintenance.scheduled_at && (
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-xs text-muted-foreground">Execução</span>
+                <span className="font-medium flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5" />
+                  {formatDate(maintenance.scheduled_at)}
+                </span>
               </div>
             )}
 
@@ -169,6 +188,7 @@ export default function ManutencaoDetalhes({ embedded = false, idOverride }: Man
                 </span>
               </div>
             )}
+
 
             {isTeam && (
               <div className="pt-1 border-t">
