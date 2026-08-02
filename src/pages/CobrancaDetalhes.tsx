@@ -106,6 +106,7 @@ export default function CobrancaDetalhes() {
   const { user, profile } = useAuth();
   const { toast } = useToast();
   const [charge, setCharge] = useState<Charge | null>(null);
+  const [serviceNotes, setServiceNotes] = useState<MaintenanceNote[]>([]);
   const [messages, setMessages] = useState<ChargeMessage[]>([]);
   const [attachments, setAttachments] = useState<ChargeAttachment[]>([]);
   const [newMessage, setNewMessage] = useState("");
