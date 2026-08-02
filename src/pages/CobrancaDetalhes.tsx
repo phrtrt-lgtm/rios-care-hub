@@ -1472,6 +1472,12 @@ export default function CobrancaDetalhes() {
           </CardContent>
         </Card>
 
+        <div className="mb-4">
+          <MaintenanceServiceLog notes={serviceNotes} isTeam={isTeamMember} />
+        </div>
+
+
+
         <div className="space-y-4 mb-6">
           {messages.map((message) => {
             const isOwnMessage = message.author_id === user?.id;
