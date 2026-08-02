@@ -29,6 +29,8 @@ import JSZip from "jszip";
 import { CHARGE_CATEGORIES } from "@/constants/chargeCategories";
 import { EditChargeDialog } from "@/components/EditChargeDialog";
 import { processFileForUpload } from "@/lib/processVideoForUpload";
+import { MaintenanceServiceLog } from "@/components/MaintenanceServiceLog";
+import type { MaintenanceNote } from "@/hooks/useMaintenances";
 
 interface Charge {
   id: string;
@@ -106,6 +108,7 @@ export default function CobrancaDetalhes() {
   const { user, profile } = useAuth();
   const { toast } = useToast();
   const [charge, setCharge] = useState<Charge | null>(null);
+  const [serviceNotes, setServiceNotes] = useState<MaintenanceNote[]>([]);
   const [messages, setMessages] = useState<ChargeMessage[]>([]);
   const [attachments, setAttachments] = useState<ChargeAttachment[]>([]);
   const [newMessage, setNewMessage] = useState("");
@@ -192,6 +195,27 @@ export default function CobrancaDetalhes() {
       };
       
       setCharge(enrichedCharge);
+
+      // Preserva o registro escrito pela equipe no ticket de origem
+      if ((chargeData as any).ticket_id) {
+        const { data: notes } = await supabase
+          .from('ticket_messages')
+          .select('id, body, created_at, is_internal, author:profiles!ticket_messages_author_id_fkey(name, photo_url, role)')
+          .eq('ticket_id', (chargeData as any).ticket_id)
+          .order('created_at', { ascending: true });
+        setServiceNotes(
+          ((notes as any[]) || []).map((m) => ({
+            id: m.id,
+            body: m.body,
+            created_at: m.created_at,
+            is_internal: !!m.is_internal,
+            author: m.author ?? null,
+          }))
+        );
+      } else {
+        setServiceNotes([]);
+      }
+
 
       await Promise.all([
         fetchMessages(),
@@ -1447,6 +1471,12 @@ export default function CobrancaDetalhes() {
             )}
           </CardContent>
         </Card>
+
+        <div className="mb-4">
+          <MaintenanceServiceLog notes={serviceNotes} isTeam={isTeamMember} />
+        </div>
+
+
 
         <div className="space-y-4 mb-6">
           {messages.map((message) => {

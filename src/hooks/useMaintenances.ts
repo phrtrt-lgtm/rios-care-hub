@@ -145,6 +145,64 @@ async function fetchInspectionAttachmentsForTicket(ticketId: string) {
   }));
 }
 
+export interface MaintenanceNote {
+  id: string;
+  body: string;
+  created_at: string;
+  is_internal: boolean;
+  author?: { name?: string | null; photo_url?: string | null; role?: string | null } | null;
+}
+
+/**
+ * Recupera o conteúdo escrito pela equipe no ticket de origem
+ * (descrição + comentários), para que nada se perca ao virar cobrança.
+ */
+async function fetchTicketContext(ticketId: string): Promise<{
+  description: string | null;
+  subject: string | null;
+  scheduled_at: string | null;
+  service_provider: { name: string } | null;
+  notes: MaintenanceNote[];
+}> {
+  const empty = {
+    description: null,
+    subject: null,
+    scheduled_at: null,
+    service_provider: null,
+    notes: [] as MaintenanceNote[],
+  };
+  if (!ticketId) return empty;
+
+  const [{ data: ticket }, { data: messages }] = await Promise.all([
+    supabase
+      .from("tickets")
+      .select("subject, description, scheduled_at, service_provider:service_providers(name)")
+      .eq("id", ticketId)
+      .maybeSingle(),
+    supabase
+      .from("ticket_messages")
+      .select(
+        "id, body, created_at, is_internal, author:profiles!ticket_messages_author_id_fkey(name, photo_url, role)",
+      )
+      .eq("ticket_id", ticketId)
+      .order("created_at", { ascending: true }),
+  ]);
+
+  return {
+    description: (ticket as any)?.description ?? null,
+    subject: (ticket as any)?.subject ?? null,
+    scheduled_at: (ticket as any)?.scheduled_at ?? null,
+    service_provider: (ticket as any)?.service_provider ?? null,
+    notes: ((messages as any[]) || []).map((m) => ({
+      id: m.id,
+      body: m.body,
+      created_at: m.created_at,
+      is_internal: !!m.is_internal,
+      author: m.author ?? null,
+    })),
+  };
+}
+
 export const useMaintenance = (id?: string) => {
   return useQuery<any>({
     queryKey: ["maintenance", id],
@@ -196,8 +254,26 @@ export const useMaintenance = (id?: string) => {
 
         const allAttachments = [...attachments, ...inspectionAttachments];
 
-        return { ...charge, source: "charge" as const, payments, attachments: allAttachments, paid_cents };
+        // Preserva o que a equipe escreveu no ticket de origem (descrição + comentários)
+        const ticketContext = charge.ticket_id
+          ? await fetchTicketContext(charge.ticket_id)
+          : { description: null, notes: [], subject: null, scheduled_at: null, service_provider: null };
+
+        return {
+          ...charge,
+          source: "charge" as const,
+          payments,
+          attachments: allAttachments,
+          paid_cents,
+          description: charge.description || ticketContext.description,
+          ticket_description: ticketContext.description,
+          ticket_notes: ticketContext.notes,
+          scheduled_at: (charge as any).scheduled_at ?? ticketContext.scheduled_at,
+          service_provider: ticketContext.service_provider,
+        };
       }
+
+
 
       // 2) Fallback to ticket (maintenance created by team without a charge yet)
       const { data: ticket, error: ticketError } = await supabase
@@ -307,7 +383,11 @@ export const useMaintenance = (id?: string) => {
         attachments,
         payments,
         paid_cents,
+        ticket_description: ticket.description,
+        ticket_notes: (await fetchTicketContext(ticket.id)).notes,
+        scheduled_at: (ticket as any).scheduled_at ?? null,
       };
+
     },
     enabled: !!id,
   });
