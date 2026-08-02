@@ -29,6 +29,8 @@ import JSZip from "jszip";
 import { CHARGE_CATEGORIES } from "@/constants/chargeCategories";
 import { EditChargeDialog } from "@/components/EditChargeDialog";
 import { processFileForUpload } from "@/lib/processVideoForUpload";
+import { MaintenanceServiceLog } from "@/components/MaintenanceServiceLog";
+import type { MaintenanceNote } from "@/hooks/useMaintenances";
 
 interface Charge {
   id: string;
