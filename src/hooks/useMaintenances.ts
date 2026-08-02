@@ -196,7 +196,25 @@ export const useMaintenance = (id?: string) => {
 
         const allAttachments = [...attachments, ...inspectionAttachments];
 
-        return { ...charge, source: "charge" as const, payments, attachments: allAttachments, paid_cents };
+        // Preserva o que a equipe escreveu no ticket de origem (descrição + comentários)
+        const ticketContext = charge.ticket_id
+          ? await fetchTicketContext(charge.ticket_id)
+          : { description: null, notes: [], subject: null, scheduled_at: null, service_provider: null };
+
+        return {
+          ...charge,
+          source: "charge" as const,
+          payments,
+          attachments: allAttachments,
+          paid_cents,
+          description: charge.description || ticketContext.description,
+          ticket_description: ticketContext.description,
+          ticket_notes: ticketContext.notes,
+          scheduled_at: (charge as any).scheduled_at ?? ticketContext.scheduled_at,
+          service_provider: ticketContext.service_provider,
+        };
+      }
+
       }
 
       // 2) Fallback to ticket (maintenance created by team without a charge yet)
