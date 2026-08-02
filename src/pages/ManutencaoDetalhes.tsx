@@ -246,6 +246,11 @@ export default function ManutencaoDetalhes({ embedded = false, idOverride }: Man
         )}
       </div>
 
+      {/* Registro do serviço — descrições e comentários da equipe */}
+      <MaintenanceServiceLog notes={maintenance.ticket_notes} isTeam={isTeam} />
+
+
+
 
       {/* Pagamentos (apenas quando há cobrança) */}
       {hasFinancials && (
