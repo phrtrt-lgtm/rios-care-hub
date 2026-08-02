@@ -3,6 +3,7 @@ import { goBack } from "@/lib/navigation";
 import { useMaintenance } from "@/hooks/useMaintenances";
 import { MaintenancePaymentForm } from "@/components/MaintenancePaymentForm";
 import { MaintenanceUpdatesThread } from "@/components/MaintenanceUpdatesThread";
+import { MaintenanceServiceLog } from "@/components/MaintenanceServiceLog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
