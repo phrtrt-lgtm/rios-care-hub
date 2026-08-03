@@ -145,6 +145,12 @@ export default function Painel() {
                     </DropdownMenuItem>
                   )}
                   {(profile?.role === "admin" || profile?.role === "agent" || profile?.role === "maintenance") && (
+                    <DropdownMenuItem onClick={() => navigate("/admin/vistorias/rotina")}>
+                      <ClipboardList className="h-4 w-4 mr-2" />
+                      Vistorias de rotina
+                    </DropdownMenuItem>
+                  )}
+                  {(profile?.role === "admin" || profile?.role === "agent" || profile?.role === "maintenance") && (
                     <DropdownMenuItem onClick={() => navigate("/resumo-propriedades")}>
                       <Building2 className="h-4 w-4 mr-2" />
                       Resumo por propriedade
