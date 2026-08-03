@@ -40,6 +40,7 @@ import AdminVistorias from "./pages/AdminVistorias";
 import AdminVistoriasImovel from "./pages/AdminVistoriasImovel";
 import AdminVistoriaDetalhes from "./pages/AdminVistoriaDetalhes";
 import AdminVistoriasTodas from "./pages/AdminVistoriasTodas";
+import AdminVistoriasRotina from "./pages/AdminVistoriasRotina";
 import AdminVistoriasConfiguracoes from "./pages/AdminVistoriasConfiguracoes";
 import Vistorias from "./pages/Vistorias";
 import VistoriaDetalhes from "./pages/VistoriaDetalhes";
@@ -369,6 +370,15 @@ const App = () => (
               }
             />
             <Route
+              path="/admin/vistorias/rotina"
+              element={
+                <ProtectedRoute allowedRoles={['agent', 'admin', 'maintenance']}>
+                  <AdminVistoriasRotina />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+
               path="/admin/vistorias/configuracoes"
               element={
                 <ProtectedRoute allowedRoles={['admin']}>

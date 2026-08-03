@@ -16,6 +16,7 @@ import {
   Building2,
   AlertTriangle,
   ClipboardCheck,
+  ClipboardList,
   ChevronRight,
   Clock,
   Archive,
@@ -186,12 +187,23 @@ export default function AdminVistorias() {
             <Button
               variant="outline"
               size="sm"
+              onClick={() => navigate('/admin/vistorias/rotina')}
+              className="gap-2"
+              title="Controle das vistorias de rotina"
+            >
+              <ClipboardList className="h-4 w-4" />
+              Rotina
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => navigate('/admin/vistorias/todas')}
               className="gap-2"
             >
               <List className="h-4 w-4" />
               Ver Todas
             </Button>
+
             <Button
               variant="outline"
               size="sm"
