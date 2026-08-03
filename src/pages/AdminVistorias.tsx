@@ -16,6 +16,7 @@ import {
   Building2,
   AlertTriangle,
   ClipboardCheck,
+  ClipboardList,
   ChevronRight,
   Clock,
   Archive,
