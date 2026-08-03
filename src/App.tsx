@@ -370,6 +370,15 @@ const App = () => (
               }
             />
             <Route
+              path="/admin/vistorias/rotina"
+              element={
+                <ProtectedRoute allowedRoles={['agent', 'admin', 'maintenance']}>
+                  <AdminVistoriasRotina />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+
               path="/admin/vistorias/configuracoes"
               element={
                 <ProtectedRoute allowedRoles={['admin']}>
