@@ -2742,6 +2742,44 @@ export type Database = {
         }
         Relationships: []
       }
+      property_members: {
+        Row: {
+          created_at: string
+          id: string
+          invited_by: string | null
+          note: string | null
+          property_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invited_by?: string | null
+          note?: string | null
+          property_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invited_by?: string | null
+          note?: string | null
+          property_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_members_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposal_attachments: {
         Row: {
           created_at: string
@@ -3642,6 +3680,10 @@ export type Database = {
           photo_url: string
           role: string
         }[]
+      }
+      has_property_access: {
+        Args: { _property_id: string; _user_id: string }
+        Returns: boolean
       }
       has_role: {
         Args: {
