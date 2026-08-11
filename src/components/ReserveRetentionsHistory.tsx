@@ -63,7 +63,7 @@ export function ReserveRetentionsHistory({
       let query = supabase
         .from("owner_credits")
         .select(
-          `id, owner_id, origin_note, origin_reservations, initial_amount_cents,
+          `id, owner_id, origin_type, origin_note, origin_reservations, initial_amount_cents,
            remaining_amount_cents, status, created_at,
            owner:profiles!owner_credits_owner_id_fkey(name),
            applications:owner_credit_applications(
