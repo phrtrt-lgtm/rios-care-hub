@@ -13,6 +13,8 @@ import { ArrowLeft, Building2, Plus, Pencil, Archive, ArchiveRestore, X, Eye, Ey
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { PropertyPhotoUpload } from "@/components/PropertyPhotoUpload";
+import { PropertyAccessDialog } from "@/components/PropertyAccessDialog";
+
 
 interface Property {
   id: string;
