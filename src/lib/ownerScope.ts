@@ -23,11 +23,19 @@ export function clearSharedPropertyCache() {
 }
 
 /**
- * Aplica o escopo do proprietário a uma query que tenha owner_id e property_id:
+ * Filtro `.or()` para tabelas com owner_id + property_id:
  * registros do titular OU das unidades compartilhadas com ele.
  */
-export function applyOwnerScope<T>(query: T, userId: string, sharedIds: string[]): T {
-  const q = query as any;
-  if (!sharedIds.length) return q.eq("owner_id", userId);
-  return q.or(`owner_id.eq.${userId},property_id.in.(${sharedIds.join(",")})`);
+export async function ownerScopeFilter(userId: string): Promise<string> {
+  const ids = await getSharedPropertyIds(userId);
+  return ids.length
+    ? `owner_id.eq.${userId},property_id.in.(${ids.join(",")})`
+    : `owner_id.eq.${userId}`;
 }
+
+/** Mesmo escopo, para a tabela properties (coluna id). */
+export async function propertiesScopeFilter(userId: string): Promise<string> {
+  const ids = await getSharedPropertyIds(userId);
+  return ids.length ? `owner_id.eq.${userId},id.in.(${ids.join(",")})` : `owner_id.eq.${userId}`;
+}
+
