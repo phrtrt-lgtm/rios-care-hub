@@ -57,8 +57,8 @@ interface Props {
 
 export function ReserveRetentionsHistory({
   ownerId,
-  title = "Débitos retroativos em reserva",
-  emptyDescription = "Nenhuma retenção em reserva registrada até o momento.",
+  title = "Débitos e créditos registrados",
+  emptyDescription = "Nenhum débito retroativo ou registro avulso até o momento.",
   hideWhenEmpty = false,
 }: Props) {
   const [openIds, setOpenIds] = useState<Set<string>>(new Set());
@@ -102,7 +102,7 @@ export function ReserveRetentionsHistory({
     return (
       <EmptyState
         icon={<Receipt className="h-6 w-6" />}
-        title="Sem débitos retroativos"
+        title="Sem registros"
         description={emptyDescription}
       />
     );
