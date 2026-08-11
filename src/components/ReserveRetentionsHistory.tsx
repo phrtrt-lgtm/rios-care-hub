@@ -33,7 +33,9 @@ interface CreditApplication {
 interface CreditRow {
   id: string;
   owner_id: string;
+  origin_type?: string | null;
   origin_note: string | null;
+
   origin_reservations: ReservationSnapshot[] | null;
   initial_amount_cents: number;
   remaining_amount_cents: number;
