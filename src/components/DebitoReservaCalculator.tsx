@@ -64,14 +64,19 @@ export const DebitoReservaCalculator = ({
   onDebitConfirmed,
 }: DebitoReservaCalculatorProps) => {
   const { toast } = useToast();
-  const [mode, setMode] = useState<"schedule" | "retro">("schedule");
+  const [mode, setMode] = useState<"schedule" | "retro" | "manual">("schedule");
   const [reservations, setReservations] = useState<ReservationInput[]>([newReservation()]);
   const [retroReservations, setRetroReservations] = useState<Array<{ id: string; date: Date | undefined; ownerValue: string; retained: string }>>([
     { id: crypto.randomUUID(), date: new Date(), ownerValue: "", retained: "" },
   ]);
+  const [manualReason, setManualReason] = useState<string>("");
+  const [manualDescription, setManualDescription] = useState<string>("");
+  const [manualAmount, setManualAmount] = useState<string>("");
+  const [manualDate, setManualDate] = useState<Date | undefined>(new Date());
   const [baseCommission, setBaseCommission] = useState<string>(DEFAULT_BASE_COMMISSION);
   const [copied, setCopied] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
+
 
   const baseCommissionNum = parseValue(baseCommission);
   const totalDebt = totalDebtCents / 100;
