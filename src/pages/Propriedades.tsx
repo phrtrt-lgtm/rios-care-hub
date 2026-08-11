@@ -495,6 +495,8 @@ const Propriedades = () => {
                       <Pencil className="mr-2 h-3 w-3" />
                       Editar
                     </Button>
+                    <PropertyAccessDialog propertyId={property.id} propertyName={property.name} />
+
                     {profile?.role === 'admin' && (
                       <Button
                         size="sm"
