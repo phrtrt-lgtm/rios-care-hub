@@ -120,6 +120,9 @@ export function ReserveRetentionsHistory({
         const isOpen = openIds.has(credit.id);
         const reservations = credit.origin_reservations ?? [];
         const applied = credit.initial_amount_cents - (credit.remaining_amount_cents ?? 0);
+        const isManual = credit.origin_type === "manual_adjustment";
+        const manualEntry = isManual ? reservations[0] : undefined;
+
 
         return (
           <Card key={credit.id} className="overflow-hidden">
