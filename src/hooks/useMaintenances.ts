@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { ownerScopeFilter } from "@/lib/ownerScope";
 
 export interface MaintenanceFilters {
   ownerId?: string;
@@ -52,7 +53,7 @@ export const useMaintenances = (filters?: MaintenanceFilters) => {
         .order("created_at", { ascending: false });
 
       if (filters?.ownerId) {
-        query = query.eq("owner_id", filters.ownerId);
+        query = query.or(await ownerScopeFilter(filters.ownerId));
       }
       if (filters?.propertyId) {
         query = query.eq("property_id", filters.propertyId);
@@ -407,7 +408,7 @@ export const useMaintenanceSummary = (ownerId?: string, year?: number) => {
         .lte("created_at", `${currentYear}-12-31`);
 
       if (ownerId) {
-        query = query.eq("owner_id", ownerId);
+        query = query.or(await ownerScopeFilter(ownerId));
       }
 
       const { data, error } = await query;
@@ -621,7 +622,7 @@ export const useMaintenanceCharts = (ownerId?: string, year?: number, propertyId
         .gte("created_at", `${currentYear}-01-01`)
         .lte("created_at", `${currentYear}-12-31`);
 
-      if (ownerId) query = query.eq("owner_id", ownerId);
+      if (ownerId) query = query.or(await ownerScopeFilter(ownerId));
       if (propertyId) query = query.eq("property_id", propertyId);
       if (serviceType) query = query.eq("service_type", serviceType);
 

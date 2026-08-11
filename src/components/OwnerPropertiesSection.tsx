@@ -8,6 +8,7 @@ import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Building2, ClipboardCheck, Plus, MapPin, Wrench, CalendarX, FileText } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DateBlockRequestDialog } from "@/components/DateBlockRequestDialog";
+import { propertiesScopeFilter } from "@/lib/ownerScope";
 
 interface Property {
   id: string;
@@ -32,7 +33,7 @@ export const OwnerPropertiesSection = () => {
         const { data: propertiesData, error: propError } = await supabase
           .from('properties')
           .select('id, name, address, cover_photo_url')
-          .eq('owner_id', user.id)
+          .or(await propertiesScopeFilter(user.id))
           .is('archived_at', null)
           .order('name');
 

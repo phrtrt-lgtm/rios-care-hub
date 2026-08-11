@@ -15,6 +15,7 @@ import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useChatPreloader } from "@/hooks/useChatPreloader";
 import { MaintenanceDetailsDialog } from "@/components/MaintenanceDetailsDialog";
 import { toast } from "sonner";
+import { ownerScopeFilter } from "@/lib/ownerScope";
 
 interface MaintenanceTicket {
   id: string;
@@ -72,7 +73,7 @@ export function OwnerMaintenanceProgress() {
           owner_action_due_at,
           property:properties(id, name, cover_photo_url)
         `)
-        .eq("owner_id", user.id)
+        .or(await ownerScopeFilter(user.id))
         .eq("ticket_type", "manutencao")
         .or("cost_responsible.is.null,cost_responsible.neq.guest")
         .in("status", ["novo", "em_analise", "aguardando_info", "em_execucao"])

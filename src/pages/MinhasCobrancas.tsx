@@ -21,6 +21,7 @@ import { useListFilters } from "@/hooks/useListFilters";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import { OwnerCreditBanner } from "@/components/OwnerCreditBanner";
 import { ReserveRetentionsHistory } from "@/components/ReserveRetentionsHistory";
+import { ownerScopeFilter } from "@/lib/ownerScope";
 
 interface Charge {
   id: string;
@@ -90,7 +91,7 @@ const MinhasCobrancas = () => {
       const { data: chargesData, error: chargesError } = await supabase
         .from('charges')
         .select('*')
-        .eq('owner_id', user!.id)
+        .or(await ownerScopeFilter(user!.id))
         .order('created_at', { ascending: false });
 
       if (chargesError) throw chargesError;

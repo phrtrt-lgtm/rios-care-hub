@@ -13,6 +13,7 @@ import { format, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
+import { propertiesScopeFilter } from "@/lib/ownerScope";
 
 interface Inspection {
   id: string;
@@ -62,7 +63,7 @@ export default function Vistorias() {
       let propertiesQuery = supabase
         .from('properties')
         .select('id')
-        .eq('owner_id', user!.id);
+        .or(await propertiesScopeFilter(user!.id));
       
       // Se houver parâmetro de propriedade, filtrar apenas ela
       if (propertyParam) {
