@@ -679,6 +679,130 @@ export const DebitoReservaCalculator = ({
               </Button>
             )}
           </TabsContent>
+
+          <TabsContent value="manual" className="space-y-4 mt-4">
+            <Card className="bg-destructive/10 border-destructive/30">
+              <CardContent className="pt-4 pb-4 text-center">
+                <p className="text-sm text-muted-foreground">Dívida Total das Cobranças</p>
+                <p className="text-2xl font-bold text-destructive">{formatCurrency(totalDebt)}</p>
+              </CardContent>
+            </Card>
+
+            <div className="text-xs text-muted-foreground bg-info/10 border border-info/20 rounded p-3">
+              <strong>Registro avulso (sem reserva):</strong> use para compensações financeiras por danos,
+              acertos negociados por fora, reembolsos ou qualquer valor já quitado de outra forma.
+              O valor é aplicado nas cobranças em aberto (mais antigas primeiro) e a sobra fica como
+              <strong> saldo credor</strong>. O proprietário vê o registro e a explicação no portal e recebe e-mail.
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="manual-reason">Motivo (título curto)</Label>
+              <Input
+                id="manual-reason"
+                placeholder="Ex.: Compensação por danos / Acerto negociado por fora"
+                value={manualReason}
+                onChange={(e) => setManualReason(e.target.value)}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Valor (R$)</Label>
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0,00"
+                  value={manualAmount}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (/^[0-9]*[,.]?[0-9]*$/.test(v) || v === "") setManualAmount(v);
+                  }}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Data do ocorrido</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "justify-start text-left font-normal w-full",
+                        !manualDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {manualDate ? format(manualDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={manualDate}
+                      onSelect={setManualDate}
+                      locale={ptBR}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="manual-description">O que aconteceu?</Label>
+              <Textarea
+                id="manual-description"
+                rows={4}
+                placeholder="Descreva o acordo/ocorrência que gerou esse valor. Este texto fica registrado e visível para o proprietário."
+                value={manualDescription}
+                onChange={(e) => setManualDescription(e.target.value)}
+              />
+            </div>
+
+            <Separator />
+
+            <Card className="bg-muted/50">
+              <CardContent className="p-3 space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Valor a registrar:</span>
+                  <span className="font-medium">{formatCurrency(manualAmountNum)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Dívida das cobranças:</span>
+                  <span className="font-medium">{formatCurrency(totalDebt)}</span>
+                </div>
+                <Separator />
+                {manualAmountNum - totalDebt > 0.005 ? (
+                  <p className="text-xs text-success">
+                    Sobra de {formatCurrency(manualAmountNum - totalDebt)} ficará como saldo credor.
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Restarão {formatCurrency(Math.max(0, totalDebt - manualAmountNum))} em aberto nas cobranças.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {hasCharges && (
+              <Button
+                onClick={handleConfirmManual}
+                disabled={!manualCanConfirm || isConfirming}
+                className="w-full"
+                size="lg"
+              >
+                {isConfirming ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Registrando...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="mr-2 h-4 w-4" /> Registrar e notificar proprietário
+                  </>
+                )}
+              </Button>
+            )}
+          </TabsContent>
+
         </Tabs>
       </DialogContent>
     </Dialog>
