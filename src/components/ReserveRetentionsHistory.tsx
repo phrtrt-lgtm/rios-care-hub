@@ -17,7 +17,11 @@ interface ReservationSnapshot {
   owner_value_cents?: number;
   coverage_cents?: number;
   owner_receives_cents?: number;
+  kind?: string;
+  description?: string;
+  amount_cents?: number;
 }
+
 
 interface CreditApplication {
   id: string;
