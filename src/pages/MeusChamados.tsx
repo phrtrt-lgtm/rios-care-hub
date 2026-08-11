@@ -17,6 +17,7 @@ import { MaintenanceDetailsDialog } from "@/components/MaintenanceDetailsDialog"
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { ListFilters } from "@/components/list/ListFilters";
 import { useListFilters } from "@/hooks/useListFilters";
+import { ownerScopeFilter } from "@/lib/ownerScope";
 
 const statusLabels: Record<string, string> = {
   novo: "Novo",
@@ -85,7 +86,7 @@ export default function MeusChamados() {
     let query = supabase
       .from("tickets")
       .select("*, properties(name, cover_photo_url), kind, essential, owner_decision, owner_action_due_at, sla_due_at, cost_responsible, created_by")
-      .eq("owner_id", user?.id)
+      .or(await ownerScopeFilter(user!.id))
       .or("cost_responsible.is.null,cost_responsible.eq.owner,cost_responsible.eq.pm,cost_responsible.eq.split");
 
     if (activeTab === "abertos") {

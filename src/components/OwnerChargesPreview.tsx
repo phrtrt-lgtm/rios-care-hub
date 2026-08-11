@@ -32,6 +32,7 @@ import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { ChargeChatDialog } from "@/components/ChargeChatDialog";
 import { formatBRL } from "@/lib/format";
 import { toast } from "sonner";
+import { ownerScopeFilter } from "@/lib/ownerScope";
 
 interface OwnerCharge {
   id: string;
@@ -99,7 +100,7 @@ export function OwnerChargesPreview() {
           pix_qr_code_base64,
           property:properties(id, name, cover_photo_url)
         `)
-        .eq("owner_id", user.id)
+        .or(await ownerScopeFilter(user.id))
         .in("status", ["pendente", "sent", "overdue"])
         .is("archived_at", null)
         .order("due_date", { ascending: true })
@@ -134,7 +135,7 @@ export function OwnerChargesPreview() {
           category,
           property:properties(id, name, cover_photo_url)
         `)
-        .eq("owner_id", user.id)
+        .or(await ownerScopeFilter(user.id))
         .in("status", ["pago_no_vencimento", "paid"])
         .is("archived_at", null)
         .gte("created_at", sevenDaysAgo.toISOString())
@@ -159,7 +160,7 @@ export function OwnerChargesPreview() {
       const { data, error } = await supabase
         .from("charges")
         .select("amount_cents, management_contribution_cents")
-        .eq("owner_id", user.id)
+        .or(await ownerScopeFilter(user.id))
         .is("archived_at", null);
 
       if (error) throw error;

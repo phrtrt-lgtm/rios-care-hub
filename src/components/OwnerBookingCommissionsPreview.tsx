@@ -18,6 +18,7 @@ import { formatBRL } from "@/lib/format";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import { ownerScopeFilter } from "@/lib/ownerScope";
 
 interface BookingCommission {
   id: string;
@@ -72,7 +73,7 @@ export function OwnerBookingCommissionsPreview() {
       const { data, error } = await supabase
         .from("booking_commissions")
         .select("id, guest_name, check_in, check_out, total_due_cents, commission_percent, status, due_date, property:property_id(name)")
-        .eq("owner_id", user!.id)
+        .or(await ownerScopeFilter(user!.id))
         .not("status", "eq", "cancelled")
         .order("created_at", { ascending: false });
       if (error) throw error;

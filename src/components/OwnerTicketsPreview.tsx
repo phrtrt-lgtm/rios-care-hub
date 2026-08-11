@@ -14,6 +14,7 @@ import { MessageSquare, Building2, Ticket, ChevronRight, ExternalLink } from "lu
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useChatPreloader } from "@/hooks/useChatPreloader";
 import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
+import { ownerScopeFilter } from "@/lib/ownerScope";
 
 interface OwnerTicket {
   id: string;
@@ -71,7 +72,7 @@ export function OwnerTicketsPreview() {
           property:properties(id, name, cover_photo_url),
           ticket_messages(created_at)
         `)
-        .eq("owner_id", user.id)
+        .or(await ownerScopeFilter(user.id))
         .neq("ticket_type", "manutencao")
         .in("status", ["novo", "em_analise", "aguardando_info"])
         .order("created_at", { ascending: false })
