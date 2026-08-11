@@ -8,9 +8,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Calculator, DollarSign, Copy, Check, Send, CalendarIcon, Loader2, Plus, Trash2, Zap, Clock } from "lucide-react";
+import { Calculator, DollarSign, Copy, Check, Send, CalendarIcon, Loader2, Plus, Trash2, Zap, Clock, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -64,14 +66,19 @@ export const DebitoReservaCalculator = ({
   onDebitConfirmed,
 }: DebitoReservaCalculatorProps) => {
   const { toast } = useToast();
-  const [mode, setMode] = useState<"schedule" | "retro">("schedule");
+  const [mode, setMode] = useState<"schedule" | "retro" | "manual">("schedule");
   const [reservations, setReservations] = useState<ReservationInput[]>([newReservation()]);
   const [retroReservations, setRetroReservations] = useState<Array<{ id: string; date: Date | undefined; ownerValue: string; retained: string }>>([
     { id: crypto.randomUUID(), date: new Date(), ownerValue: "", retained: "" },
   ]);
+  const [manualReason, setManualReason] = useState<string>("");
+  const [manualDescription, setManualDescription] = useState<string>("");
+  const [manualAmount, setManualAmount] = useState<string>("");
+  const [manualDate, setManualDate] = useState<Date | undefined>(new Date());
   const [baseCommission, setBaseCommission] = useState<string>(DEFAULT_BASE_COMMISSION);
   const [copied, setCopied] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
+
 
   const baseCommissionNum = parseValue(baseCommission);
   const totalDebt = totalDebtCents / 100;
@@ -231,28 +238,81 @@ export const DebitoReservaCalculator = ({
     }
   };
 
+  // ----- Manual (não-reserva) -----
+  const manualAmountNum = parseValue(manualAmount);
+  const manualCanConfirm =
+    hasCharges && manualAmountNum > 0 && manualDescription.trim().length >= 5 && !!manualDate;
+
+  const handleConfirmManual = async () => {
+    if (!manualCanConfirm) {
+      toast({
+        title: "Preencha o registro",
+        description: "Informe valor, data e uma descrição do que aconteceu.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsConfirming(true);
+    try {
+      const { data: result, error } = await supabase.functions.invoke("credit-manual", {
+        body: {
+          chargeIds: idsToProcess,
+          amountCents: Math.round(manualAmountNum * 100),
+          description: manualDescription.trim(),
+          reason: manualReason.trim() || undefined,
+          occurredAt: format(manualDate!, "yyyy-MM-dd"),
+        },
+      });
+      if (error) throw error;
+      const applied = (result as any)?.totalAppliedCents ?? 0;
+      const surplus = (result as any)?.surplusCents ?? 0;
+      toast({
+        title: "Crédito registrado",
+        description: `${formatCurrency(applied / 100)} aplicados nas cobranças em aberto${surplus > 0 ? `. Sobra de ${formatCurrency(surplus / 100)} ficou como saldo credor.` : "."}`,
+      });
+      onDebitConfirmed?.();
+      onOpenChange(false);
+      setManualReason("");
+      setManualDescription("");
+      setManualAmount("");
+      setManualDate(new Date());
+    } catch (error: any) {
+      toast({
+        title: "Erro ao registrar crédito",
+        description: error.message || "Tente novamente",
+        variant: "destructive",
+      });
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calculator className="h-5 w-5" />
-            Débito em Reserva
+            Débito / Crédito do Proprietário
           </DialogTitle>
           <DialogDescription>
             <span className="font-medium">{propertyName}</span>
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs value={mode} onValueChange={(v) => setMode(v as "schedule" | "retro")}>
-          <TabsList className="grid w-full grid-cols-2">
+        <Tabs value={mode} onValueChange={(v) => setMode(v as "schedule" | "retro" | "manual")}>
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="schedule" className="gap-1">
               <Clock className="h-3 w-3" /> Agendar
             </TabsTrigger>
             <TabsTrigger value="retro" className="gap-1">
               <Zap className="h-3 w-3" /> Retroativo
             </TabsTrigger>
+            <TabsTrigger value="manual" className="gap-1">
+              <FileText className="h-3 w-3" /> Outro
+            </TabsTrigger>
           </TabsList>
+
 
           <TabsContent value="schedule" className="space-y-4 mt-4">
           <Card className="bg-destructive/10 border-destructive/30">
@@ -621,6 +681,130 @@ export const DebitoReservaCalculator = ({
               </Button>
             )}
           </TabsContent>
+
+          <TabsContent value="manual" className="space-y-4 mt-4">
+            <Card className="bg-destructive/10 border-destructive/30">
+              <CardContent className="pt-4 pb-4 text-center">
+                <p className="text-sm text-muted-foreground">Dívida Total das Cobranças</p>
+                <p className="text-2xl font-bold text-destructive">{formatCurrency(totalDebt)}</p>
+              </CardContent>
+            </Card>
+
+            <div className="text-xs text-muted-foreground bg-info/10 border border-info/20 rounded p-3">
+              <strong>Registro avulso (sem reserva):</strong> use para compensações financeiras por danos,
+              acertos negociados por fora, reembolsos ou qualquer valor já quitado de outra forma.
+              O valor é aplicado nas cobranças em aberto (mais antigas primeiro) e a sobra fica como
+              <strong> saldo credor</strong>. O proprietário vê o registro e a explicação no portal e recebe e-mail.
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="manual-reason">Motivo (título curto)</Label>
+              <Input
+                id="manual-reason"
+                placeholder="Ex.: Compensação por danos / Acerto negociado por fora"
+                value={manualReason}
+                onChange={(e) => setManualReason(e.target.value)}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Valor (R$)</Label>
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0,00"
+                  value={manualAmount}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (/^[0-9]*[,.]?[0-9]*$/.test(v) || v === "") setManualAmount(v);
+                  }}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Data do ocorrido</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "justify-start text-left font-normal w-full",
+                        !manualDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {manualDate ? format(manualDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={manualDate}
+                      onSelect={setManualDate}
+                      locale={ptBR}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="manual-description">O que aconteceu?</Label>
+              <Textarea
+                id="manual-description"
+                rows={4}
+                placeholder="Descreva o acordo/ocorrência que gerou esse valor. Este texto fica registrado e visível para o proprietário."
+                value={manualDescription}
+                onChange={(e) => setManualDescription(e.target.value)}
+              />
+            </div>
+
+            <Separator />
+
+            <Card className="bg-muted/50">
+              <CardContent className="p-3 space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Valor a registrar:</span>
+                  <span className="font-medium">{formatCurrency(manualAmountNum)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Dívida das cobranças:</span>
+                  <span className="font-medium">{formatCurrency(totalDebt)}</span>
+                </div>
+                <Separator />
+                {manualAmountNum - totalDebt > 0.005 ? (
+                  <p className="text-xs text-success">
+                    Sobra de {formatCurrency(manualAmountNum - totalDebt)} ficará como saldo credor.
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Restarão {formatCurrency(Math.max(0, totalDebt - manualAmountNum))} em aberto nas cobranças.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {hasCharges && (
+              <Button
+                onClick={handleConfirmManual}
+                disabled={!manualCanConfirm || isConfirming}
+                className="w-full"
+                size="lg"
+              >
+                {isConfirming ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Registrando...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="mr-2 h-4 w-4" /> Registrar e notificar proprietário
+                  </>
+                )}
+              </Button>
+            )}
+          </TabsContent>
+
         </Tabs>
       </DialogContent>
     </Dialog>

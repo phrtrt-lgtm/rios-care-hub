@@ -93,10 +93,10 @@ export function OpenChargesTable({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("owner_credits")
-        .select(`id, owner_id, origin_note, origin_reservations, initial_amount_cents,
+        .select(`id, owner_id, origin_type, origin_note, origin_reservations, initial_amount_cents,
                  remaining_amount_cents, created_at,
                  applications:owner_credit_applications(id, amount_applied_cents, charge_id)`)
-        .eq("origin_type", "reserve_retention")
+        .in("origin_type", ["reserve_retention", "manual_adjustment"])
         .order("created_at", { ascending: false });
       if (error) throw error;
       const map: Record<string, any[]> = {};
@@ -386,6 +386,8 @@ export function OpenChargesTable({
                     const appliedHere = (credit.applications ?? [])
                       .filter((a: any) => chargeIdsHere.has(a.charge_id))
                       .reduce((s: number, a: any) => s + (a.amount_applied_cents || 0), 0);
+                    const isManual = credit.origin_type === "manual_adjustment";
+                    const manualEntry = isManual ? (credit.origin_reservations ?? [])[0] : undefined;
                     const dates = (credit.origin_reservations ?? [])
                       .map((r: any) => r?.date ? format(new Date(r.date + "T12:00:00"), "dd/MM/yy", { locale: ptBR }) : null)
                       .filter(Boolean)
@@ -397,10 +399,14 @@ export function OpenChargesTable({
                         </td>
                         <td className="px-2 py-2 pl-12" colSpan={3}>
                           <span className="text-xs text-foreground font-medium">
-                            Débito retroativo em reserva
+                            {isManual
+                              ? (credit.origin_note || "Registro avulso")
+                              : "Débito retroativo em reserva"}
                           </span>
                           <span className="text-xs text-muted-foreground ml-2">
-                            {dates ? `Reserva(s): ${dates}` : credit.origin_note}
+                            {isManual
+                              ? (manualEntry?.description || "Crédito registrado manualmente")
+                              : (dates ? `Reserva(s): ${dates}` : credit.origin_note)}
                           </span>
                         </td>
                         <td className="px-2 py-2 text-right text-xs text-muted-foreground">

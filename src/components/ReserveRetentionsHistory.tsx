@@ -17,7 +17,11 @@ interface ReservationSnapshot {
   owner_value_cents?: number;
   coverage_cents?: number;
   owner_receives_cents?: number;
+  kind?: string;
+  description?: string;
+  amount_cents?: number;
 }
+
 
 interface CreditApplication {
   id: string;
@@ -29,7 +33,9 @@ interface CreditApplication {
 interface CreditRow {
   id: string;
   owner_id: string;
+  origin_type?: string | null;
   origin_note: string | null;
+
   origin_reservations: ReservationSnapshot[] | null;
   initial_amount_cents: number;
   remaining_amount_cents: number;
@@ -51,8 +57,8 @@ interface Props {
 
 export function ReserveRetentionsHistory({
   ownerId,
-  title = "Débitos retroativos em reserva",
-  emptyDescription = "Nenhuma retenção em reserva registrada até o momento.",
+  title = "Débitos e créditos registrados",
+  emptyDescription = "Nenhum débito retroativo ou registro avulso até o momento.",
   hideWhenEmpty = false,
 }: Props) {
   const [openIds, setOpenIds] = useState<Set<string>>(new Set());
@@ -63,7 +69,7 @@ export function ReserveRetentionsHistory({
       let query = supabase
         .from("owner_credits")
         .select(
-          `id, owner_id, origin_note, origin_reservations, initial_amount_cents,
+          `id, owner_id, origin_type, origin_note, origin_reservations, initial_amount_cents,
            remaining_amount_cents, status, created_at,
            owner:profiles!owner_credits_owner_id_fkey(name),
            applications:owner_credit_applications(
@@ -71,7 +77,7 @@ export function ReserveRetentionsHistory({
              charge:charges!owner_credit_applications_charge_id_fkey(id, title)
            )`
         )
-        .eq("origin_type", "reserve_retention")
+        .in("origin_type", ["reserve_retention", "manual_adjustment"])
         .order("created_at", { ascending: false });
 
       if (ownerId) query = query.eq("owner_id", ownerId);
@@ -96,7 +102,7 @@ export function ReserveRetentionsHistory({
     return (
       <EmptyState
         icon={<Receipt className="h-6 w-6" />}
-        title="Sem débitos retroativos"
+        title="Sem registros"
         description={emptyDescription}
       />
     );
@@ -114,6 +120,9 @@ export function ReserveRetentionsHistory({
         const isOpen = openIds.has(credit.id);
         const reservations = credit.origin_reservations ?? [];
         const applied = credit.initial_amount_cents - (credit.remaining_amount_cents ?? 0);
+        const isManual = credit.origin_type === "manual_adjustment";
+        const manualEntry = isManual ? reservations[0] : undefined;
+
 
         return (
           <Card key={credit.id} className="overflow-hidden">
@@ -147,54 +156,73 @@ export function ReserveRetentionsHistory({
                   </Badge>
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                  {credit.origin_note ?? "Retenção em reserva"} · registrado em{" "}
+                  {isManual ? "Registro avulso" : "Retenção em reserva"}
+                  {credit.origin_note ? ` · ${credit.origin_note}` : ""} · registrado em{" "}
                   {format(new Date(credit.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                 </p>
               </div>
               <div className="text-right shrink-0">
                 <p className="font-semibold">{formatBRL(credit.initial_amount_cents)}</p>
-                <p className="text-xs text-muted-foreground">retido</p>
+                <p className="text-xs text-muted-foreground">{isManual ? "registrado" : "retido"}</p>
               </div>
             </button>
 
             {isOpen && (
               <div className="border-t px-3 py-3 space-y-4 bg-muted/20">
-                {/* Reservas utilizadas */}
-                <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
-                    Reservas utilizadas ({reservations.length})
-                  </p>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead className="text-muted-foreground">
-                        <tr>
-                          <th className="text-left py-1">Check-in</th>
-                          <th className="text-right py-1">Valor da reserva</th>
-                          <th className="text-right py-1">Retido</th>
-                          <th className="text-right py-1">Repassado</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {reservations.map((r, i) => (
-                          <tr key={`${r.date}-${i}`} className="border-t">
-                            <td className="py-1">
-                              {r.date
-                                ? format(new Date(r.date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })
-                                : "—"}
-                            </td>
-                            <td className="py-1 text-right">{formatBRL(r.owner_value_cents ?? 0)}</td>
-                            <td className="py-1 text-right text-destructive">
-                              - {formatBRL(r.coverage_cents ?? 0)}
-                            </td>
-                            <td className="py-1 text-right font-medium">
-                              {formatBRL(r.owner_receives_cents ?? 0)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                {isManual ? (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                      O que aconteceu
+                    </p>
+                    <p className="text-xs text-foreground whitespace-pre-wrap">
+                      {manualEntry?.description ?? credit.origin_note ?? "—"}
+                    </p>
+                    {manualEntry?.date && (
+                      <p className="text-xs text-muted-foreground mt-1.5">
+                        Data do ocorrido:{" "}
+                        {format(new Date(manualEntry.date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })}
+                      </p>
+                    )}
                   </div>
-                </div>
+                ) : (
+                  /* Reservas utilizadas */
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                      Reservas utilizadas ({reservations.length})
+                    </p>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead className="text-muted-foreground">
+                          <tr>
+                            <th className="text-left py-1">Check-in</th>
+                            <th className="text-right py-1">Valor da reserva</th>
+                            <th className="text-right py-1">Retido</th>
+                            <th className="text-right py-1">Repassado</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {reservations.map((r, i) => (
+                            <tr key={`${r.date}-${i}`} className="border-t">
+                              <td className="py-1">
+                                {r.date
+                                  ? format(new Date(r.date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })
+                                  : "—"}
+                              </td>
+                              <td className="py-1 text-right">{formatBRL(r.owner_value_cents ?? 0)}</td>
+                              <td className="py-1 text-right text-destructive">
+                                - {formatBRL(r.coverage_cents ?? 0)}
+                              </td>
+                              <td className="py-1 text-right font-medium">
+                                {formatBRL(r.owner_receives_cents ?? 0)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
 
                 {/* Cobranças abatidas */}
                 <div>
