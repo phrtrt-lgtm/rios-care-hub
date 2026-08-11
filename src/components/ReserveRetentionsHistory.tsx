@@ -156,54 +156,73 @@ export function ReserveRetentionsHistory({
                   </Badge>
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                  {credit.origin_note ?? "Retenção em reserva"} · registrado em{" "}
+                  {isManual ? "Registro avulso" : "Retenção em reserva"}
+                  {credit.origin_note ? ` · ${credit.origin_note}` : ""} · registrado em{" "}
                   {format(new Date(credit.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                 </p>
               </div>
               <div className="text-right shrink-0">
                 <p className="font-semibold">{formatBRL(credit.initial_amount_cents)}</p>
-                <p className="text-xs text-muted-foreground">retido</p>
+                <p className="text-xs text-muted-foreground">{isManual ? "registrado" : "retido"}</p>
               </div>
             </button>
 
             {isOpen && (
               <div className="border-t px-3 py-3 space-y-4 bg-muted/20">
-                {/* Reservas utilizadas */}
-                <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
-                    Reservas utilizadas ({reservations.length})
-                  </p>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead className="text-muted-foreground">
-                        <tr>
-                          <th className="text-left py-1">Check-in</th>
-                          <th className="text-right py-1">Valor da reserva</th>
-                          <th className="text-right py-1">Retido</th>
-                          <th className="text-right py-1">Repassado</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {reservations.map((r, i) => (
-                          <tr key={`${r.date}-${i}`} className="border-t">
-                            <td className="py-1">
-                              {r.date
-                                ? format(new Date(r.date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })
-                                : "—"}
-                            </td>
-                            <td className="py-1 text-right">{formatBRL(r.owner_value_cents ?? 0)}</td>
-                            <td className="py-1 text-right text-destructive">
-                              - {formatBRL(r.coverage_cents ?? 0)}
-                            </td>
-                            <td className="py-1 text-right font-medium">
-                              {formatBRL(r.owner_receives_cents ?? 0)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                {isManual ? (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                      O que aconteceu
+                    </p>
+                    <p className="text-xs text-foreground whitespace-pre-wrap">
+                      {manualEntry?.description ?? credit.origin_note ?? "—"}
+                    </p>
+                    {manualEntry?.date && (
+                      <p className="text-xs text-muted-foreground mt-1.5">
+                        Data do ocorrido:{" "}
+                        {format(new Date(manualEntry.date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })}
+                      </p>
+                    )}
                   </div>
-                </div>
+                ) : (
+                  /* Reservas utilizadas */
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                      Reservas utilizadas ({reservations.length})
+                    </p>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead className="text-muted-foreground">
+                          <tr>
+                            <th className="text-left py-1">Check-in</th>
+                            <th className="text-right py-1">Valor da reserva</th>
+                            <th className="text-right py-1">Retido</th>
+                            <th className="text-right py-1">Repassado</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {reservations.map((r, i) => (
+                            <tr key={`${r.date}-${i}`} className="border-t">
+                              <td className="py-1">
+                                {r.date
+                                  ? format(new Date(r.date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })
+                                  : "—"}
+                              </td>
+                              <td className="py-1 text-right">{formatBRL(r.owner_value_cents ?? 0)}</td>
+                              <td className="py-1 text-right text-destructive">
+                                - {formatBRL(r.coverage_cents ?? 0)}
+                              </td>
+                              <td className="py-1 text-right font-medium">
+                                {formatBRL(r.owner_receives_cents ?? 0)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
 
                 {/* Cobranças abatidas */}
                 <div>
