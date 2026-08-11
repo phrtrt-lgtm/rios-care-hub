@@ -71,7 +71,7 @@ export function ReserveRetentionsHistory({
              charge:charges!owner_credit_applications_charge_id_fkey(id, title)
            )`
         )
-        .eq("origin_type", "reserve_retention")
+        .in("origin_type", ["reserve_retention", "manual_adjustment"])
         .order("created_at", { ascending: false });
 
       if (ownerId) query = query.eq("owner_id", ownerId);
