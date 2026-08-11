@@ -8,6 +8,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Calculator, DollarSign, Copy, Check, Send, CalendarIcon, Loader2, Plus, Trash2, Zap, Clock, FileText } from "lucide-react";
