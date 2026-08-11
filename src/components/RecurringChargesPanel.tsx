@@ -290,7 +290,7 @@ export function RecurringChargesPanel() {
 
       {items.length === 0 ? (
         <EmptyState
-          icon={Repeat}
+          icon={<Repeat className="h-6 w-6" />}
           title="Nenhuma conta recorrente"
           description="Cadastre as contas mensais que você repassa ao proprietário para cobrar automaticamente todo mês."
           action={
