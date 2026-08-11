@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, DollarSign, Search, Trash2, Calculator, CreditCard, Building2, BarChart3, Receipt } from "lucide-react";
+import { ArrowLeft, DollarSign, Search, Trash2, Calculator, CreditCard, Building2, BarChart3, Receipt, Repeat } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -20,6 +20,7 @@ import { DebitoReservaCalculator } from "@/components/DebitoReservaCalculator";
 import { ReserveDebitsTable } from "@/components/ReserveDebitsTable";
 import { OpenChargesTable } from "@/components/OpenChargesTable";
 import { ReserveRetentionsHistory } from "@/components/ReserveRetentionsHistory";
+import { RecurringChargesPanel } from "@/components/RecurringChargesPanel";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import {
   AlertDialog,
@@ -452,7 +453,7 @@ const GerenciarCobrancas = () => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="abertas" className="flex items-center gap-2">
               <DollarSign className="h-4 w-4" />
               Em Aberto ({charges.length})
@@ -460,6 +461,10 @@ const GerenciarCobrancas = () => {
             <TabsTrigger value="debito" className="flex items-center gap-2">
               <CreditCard className="h-4 w-4" />
               Débito Reserva ({debitoCharges.length})
+            </TabsTrigger>
+            <TabsTrigger value="recorrentes" className="flex items-center gap-2">
+              <Repeat className="h-4 w-4" />
+              Recorrentes
             </TabsTrigger>
           </TabsList>
 
@@ -630,7 +635,13 @@ const GerenciarCobrancas = () => {
               />
             </div>
           </TabsContent>
+
+          {/* Tab: Contas Recorrentes */}
+          <TabsContent value="recorrentes" className="space-y-4">
+            <RecurringChargesPanel />
+          </TabsContent>
         </Tabs>
+
 
         {/* Dialog de Edição */}
         <EditChargeDialog

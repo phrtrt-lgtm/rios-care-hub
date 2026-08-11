@@ -833,6 +833,7 @@ export type Database = {
           pix_qr_code: string | null
           pix_qr_code_base64: string | null
           property_id: string | null
+          recurring_charge_id: string | null
           reminder_24h_sent: boolean | null
           reminder_48h_sent: boolean | null
           reminder_day_sent: boolean | null
@@ -880,6 +881,7 @@ export type Database = {
           pix_qr_code?: string | null
           pix_qr_code_base64?: string | null
           property_id?: string | null
+          recurring_charge_id?: string | null
           reminder_24h_sent?: boolean | null
           reminder_48h_sent?: boolean | null
           reminder_day_sent?: boolean | null
@@ -927,6 +929,7 @@ export type Database = {
           pix_qr_code?: string | null
           pix_qr_code_base64?: string | null
           property_id?: string | null
+          recurring_charge_id?: string | null
           reminder_24h_sent?: boolean | null
           reminder_48h_sent?: boolean | null
           reminder_day_sent?: boolean | null
@@ -960,6 +963,13 @@ export type Database = {
             columns: ["property_id"]
             isOneToOne: false
             referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charges_recurring_charge_id_fkey"
+            columns: ["recurring_charge_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_charges"
             referencedColumns: ["id"]
           },
           {
@@ -3104,6 +3114,130 @@ export type Database = {
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recurring_charge_runs: {
+        Row: {
+          charge_id: string | null
+          created_at: string
+          id: string
+          period: string
+          recurring_charge_id: string
+        }
+        Insert: {
+          charge_id?: string | null
+          created_at?: string
+          id?: string
+          period: string
+          recurring_charge_id: string
+        }
+        Update: {
+          charge_id?: string | null
+          created_at?: string
+          id?: string
+          period?: string
+          recurring_charge_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_charge_runs_charge_id_fkey"
+            columns: ["charge_id"]
+            isOneToOne: false
+            referencedRelation: "charges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_charge_runs_recurring_charge_id_fkey"
+            columns: ["recurring_charge_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_charges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recurring_charges: {
+        Row: {
+          active: boolean
+          amount_cents: number
+          category: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          due_day: number
+          end_date: string | null
+          id: string
+          last_generated_period: string | null
+          management_contribution_cents: number
+          notes: string | null
+          owner_id: string
+          property_id: string | null
+          start_date: string
+          title: string
+          updated_at: string
+          vendor_name: string | null
+        }
+        Insert: {
+          active?: boolean
+          amount_cents?: number
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_day?: number
+          end_date?: string | null
+          id?: string
+          last_generated_period?: string | null
+          management_contribution_cents?: number
+          notes?: string | null
+          owner_id: string
+          property_id?: string | null
+          start_date?: string
+          title: string
+          updated_at?: string
+          vendor_name?: string | null
+        }
+        Update: {
+          active?: boolean
+          amount_cents?: number
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_day?: number
+          end_date?: string | null
+          id?: string
+          last_generated_period?: string | null
+          management_contribution_cents?: number
+          notes?: string | null
+          owner_id?: string
+          property_id?: string | null
+          start_date?: string
+          title?: string
+          updated_at?: string
+          vendor_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_charges_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_charges_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_charges_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
             referencedColumns: ["id"]
           },
         ]
