@@ -452,7 +452,7 @@ const GerenciarCobrancas = () => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="abertas" className="flex items-center gap-2">
               <DollarSign className="h-4 w-4" />
               Em Aberto ({charges.length})
@@ -460,6 +460,10 @@ const GerenciarCobrancas = () => {
             <TabsTrigger value="debito" className="flex items-center gap-2">
               <CreditCard className="h-4 w-4" />
               Débito Reserva ({debitoCharges.length})
+            </TabsTrigger>
+            <TabsTrigger value="recorrentes" className="flex items-center gap-2">
+              <Repeat className="h-4 w-4" />
+              Recorrentes
             </TabsTrigger>
           </TabsList>
 
