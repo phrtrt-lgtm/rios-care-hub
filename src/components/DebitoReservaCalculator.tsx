@@ -236,28 +236,81 @@ export const DebitoReservaCalculator = ({
     }
   };
 
+  // ----- Manual (não-reserva) -----
+  const manualAmountNum = parseValue(manualAmount);
+  const manualCanConfirm =
+    hasCharges && manualAmountNum > 0 && manualDescription.trim().length >= 5 && !!manualDate;
+
+  const handleConfirmManual = async () => {
+    if (!manualCanConfirm) {
+      toast({
+        title: "Preencha o registro",
+        description: "Informe valor, data e uma descrição do que aconteceu.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsConfirming(true);
+    try {
+      const { data: result, error } = await supabase.functions.invoke("credit-manual", {
+        body: {
+          chargeIds: idsToProcess,
+          amountCents: Math.round(manualAmountNum * 100),
+          description: manualDescription.trim(),
+          reason: manualReason.trim() || undefined,
+          occurredAt: format(manualDate!, "yyyy-MM-dd"),
+        },
+      });
+      if (error) throw error;
+      const applied = (result as any)?.totalAppliedCents ?? 0;
+      const surplus = (result as any)?.surplusCents ?? 0;
+      toast({
+        title: "Crédito registrado",
+        description: `${formatCurrency(applied / 100)} aplicados nas cobranças em aberto${surplus > 0 ? `. Sobra de ${formatCurrency(surplus / 100)} ficou como saldo credor.` : "."}`,
+      });
+      onDebitConfirmed?.();
+      onOpenChange(false);
+      setManualReason("");
+      setManualDescription("");
+      setManualAmount("");
+      setManualDate(new Date());
+    } catch (error: any) {
+      toast({
+        title: "Erro ao registrar crédito",
+        description: error.message || "Tente novamente",
+        variant: "destructive",
+      });
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calculator className="h-5 w-5" />
-            Débito em Reserva
+            Débito / Crédito do Proprietário
           </DialogTitle>
           <DialogDescription>
             <span className="font-medium">{propertyName}</span>
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs value={mode} onValueChange={(v) => setMode(v as "schedule" | "retro")}>
-          <TabsList className="grid w-full grid-cols-2">
+        <Tabs value={mode} onValueChange={(v) => setMode(v as "schedule" | "retro" | "manual")}>
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="schedule" className="gap-1">
               <Clock className="h-3 w-3" /> Agendar
             </TabsTrigger>
             <TabsTrigger value="retro" className="gap-1">
               <Zap className="h-3 w-3" /> Retroativo
             </TabsTrigger>
+            <TabsTrigger value="manual" className="gap-1">
+              <FileText className="h-3 w-3" /> Outro
+            </TabsTrigger>
           </TabsList>
+
 
           <TabsContent value="schedule" className="space-y-4 mt-4">
           <Card className="bg-destructive/10 border-destructive/30">
