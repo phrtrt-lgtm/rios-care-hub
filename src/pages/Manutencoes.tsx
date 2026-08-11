@@ -14,6 +14,7 @@ import { goBack, saveScrollPosition } from "@/lib/navigation";
 import { supabase } from "@/integrations/supabase/client";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import { MediaGallery } from "@/components/MediaGallery";
+import { ownerScopeFilter } from "@/lib/ownerScope";
 
 
 
@@ -110,7 +111,7 @@ export default function Manutencoes() {
         .not('service_type', 'is', null) as any;
 
       if (ownerId) {
-        query = query.eq('owner_id', ownerId);
+        query = query.or(await ownerScopeFilter(ownerId));
       }
 
       if (propertyId) {
