@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, DollarSign, Search, Trash2, Calculator, CreditCard, Building2, BarChart3, Receipt } from "lucide-react";
+import { ArrowLeft, DollarSign, Search, Trash2, Calculator, CreditCard, Building2, BarChart3, Receipt, Repeat } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
