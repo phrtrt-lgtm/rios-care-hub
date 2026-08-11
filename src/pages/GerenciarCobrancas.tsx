@@ -634,7 +634,13 @@ const GerenciarCobrancas = () => {
               />
             </div>
           </TabsContent>
+
+          {/* Tab: Contas Recorrentes */}
+          <TabsContent value="recorrentes" className="space-y-4">
+            <RecurringChargesPanel />
+          </TabsContent>
         </Tabs>
+
 
         {/* Dialog de Edição */}
         <EditChargeDialog
