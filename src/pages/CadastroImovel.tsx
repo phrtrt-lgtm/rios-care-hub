@@ -437,6 +437,7 @@ export default function CadastroImovel() {
         </div>
       </div>
     </div>
+    </>
   );
 }
 
