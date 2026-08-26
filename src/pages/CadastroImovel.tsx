@@ -299,14 +299,13 @@ export default function CadastroImovel() {
         });
         if (!signInErr) {
           toast.success("Cadastro recebido! Bem-vindo à RIOS.");
-          navigate("/bem-vindo", { replace: true });
+          navigate("/cadastro-imovel/obrigado", { replace: true });
           return;
         }
         console.error("Auto-login falhou:", signInErr);
       }
 
-      setSubmitted(true);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      navigate("/cadastro-imovel/obrigado", { replace: true });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro ao enviar";
       toast.error(msg);

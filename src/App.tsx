@@ -84,6 +84,7 @@ import AdminRelatoriosProprietario from "./pages/AdminRelatoriosProprietario";
 import AdminRelatoriosManutencoes from "./pages/AdminRelatoriosManutencoes";
 import AdminRelatorioManutencoesProprietario from "./pages/AdminRelatorioManutencoesProprietario";
 import CadastroImovel from "./pages/CadastroImovel";
+import CadastroObrigado from "./pages/CadastroObrigado";
 import AdminCadastrosProprietarios from "./pages/AdminCadastrosProprietarios";
 import AtualizacaoAnuncio from "./pages/AtualizacaoAnuncio";
 import AdminVistoriasArquivadas from "./pages/AdminVistoriasArquivadas";
@@ -113,6 +114,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/cadastro" element={<Cadastro />} />
             <Route path="/cadastro-imovel" element={<CadastroImovel />} />
+            <Route path="/cadastro-imovel/obrigado" element={<CadastroObrigado />} />
             <Route
               path="/atualizacao-anuncio"
               element={
