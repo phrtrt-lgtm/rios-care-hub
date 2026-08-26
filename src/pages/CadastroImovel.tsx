@@ -44,6 +44,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { MetaPixel } from "@/components/MetaPixel";
 import {
   BED_TYPES,
   KITCHEN_ITEMS,
@@ -319,7 +320,9 @@ export default function CadastroImovel() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[hsl(var(--rios-terra))]/8 via-background to-[hsl(var(--rios-terra))]/12 relative overflow-hidden">
+    <>
+      <MetaPixel />
+      <div className="min-h-screen bg-gradient-to-br from-[hsl(var(--rios-terra))]/8 via-background to-[hsl(var(--rios-terra))]/12 relative overflow-hidden">
       {/* Decorative background blobs */}
       <div aria-hidden className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full bg-[hsl(var(--rios-terra))]/20 blur-3xl" />
@@ -434,6 +437,7 @@ export default function CadastroImovel() {
         </div>
       </div>
     </div>
+    </>
   );
 }
 
