@@ -1,9 +1,24 @@
 import { useEffect } from "react";
 
+type FbqMethod = "init" | "track" | "trackCustom" | "callMethod" | string;
+
+interface FbqQueueItem {
+  method?: FbqMethod;
+  args?: any[];
+}
+
+interface FbqFunction extends Function {
+  (method: FbqMethod, ...args: any[]): void;
+  callMethod?: (...args: any[]) => void;
+  queue?: FbqQueueItem[];
+  push?: (item: FbqQueueItem) => void;
+  version?: string;
+}
+
 declare global {
   interface Window {
-    fbq?: (...args: any[]) => void;
-    _fbq?: (...args: any[]) => void;
+    fbq?: FbqFunction;
+    _fbq?: FbqFunction;
   }
 }
 
@@ -22,17 +37,26 @@ export function initMetaPixel() {
   const scriptId = "meta-pixel-script";
   if (document.getElementById(scriptId)) return;
 
-  const n = window.fbq = function (...args: any[]) {
-    if (window.fbq?.callMethod) {
-      window.fbq.callMethod(...args);
+  const queue: FbqQueueItem[] = [];
+  const fbq: FbqFunction = function (method: FbqMethod, ...args: any[]) {
+    if (fbq.callMethod) {
+      fbq.callMethod(method, ...args);
     } else {
-      (window.fbq?.queue || []).push(args);
+      queue.push({ method, args });
     }
+  } as FbqFunction;
+
+  fbq.callMethod = function (method: FbqMethod, ...args: any[]) {
+    queue.push({ method, args });
   };
-  if (!window._fbq) window._fbq = window.fbq;
-  window.fbq.push = window.fbq;
-  window.fbq.version = "2.0";
-  window.fbq.queue = [];
+  fbq.push = function (item: FbqQueueItem) {
+    queue.push(item);
+  };
+  fbq.version = "2.0";
+  fbq.queue = queue;
+
+  window.fbq = fbq;
+  if (!window._fbq) window._fbq = fbq;
 
   const t = document.createElement("script");
   t.async = true;
@@ -42,8 +66,8 @@ export function initMetaPixel() {
   const s = document.getElementsByTagName("script")[0];
   s.parentNode?.insertBefore(t, s);
 
-  window.fbq("init", PIXEL_ID);
-  window.fbq("track", "PageView");
+  fbq("init", PIXEL_ID);
+  fbq("track", "PageView");
 }
 
 export function trackMetaEvent(eventName: string, params?: Record<string, any>) {
