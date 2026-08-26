@@ -2,18 +2,14 @@ import { useEffect } from "react";
 
 type FbqMethod = "init" | "track" | "trackCustom" | "callMethod" | string;
 
-interface FbqQueueItem {
-  method?: FbqMethod;
-  args?: any[];
-}
-
 interface FbqFunction extends Function {
   (method: FbqMethod, ...args: any[]): void;
   callMethod?: (...args: any[]) => void;
-  queue?: FbqQueueItem[];
-  push?: (item: FbqQueueItem) => void;
+  queue?: any[];
+  push?: any;
   version?: string;
 }
+
 
 declare global {
   interface Window {
