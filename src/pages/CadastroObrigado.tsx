@@ -59,11 +59,10 @@ export default function CadastroObrigado() {
             />
 
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-3">
-              Pré-cadastro recebido!
+              Recebemos seu cadastro!
             </h1>
             <p className="text-muted-foreground mb-6 leading-relaxed">
-              Obrigado por confiar na RIOS. Nossa equipe já está analisando as
-              informações do seu imóvel e em breve entrará em contato.
+              Em breve entraremos em contato.
             </p>
 
             <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-8">
