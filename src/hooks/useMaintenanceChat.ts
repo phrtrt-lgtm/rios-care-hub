@@ -166,19 +166,23 @@ export function useMaintenanceChat(ticketId: string | null) {
       .on("presence", { event: "sync" }, () => {
         const state = presenceChannel.presenceState();
         const typing: TypingUser[] = [];
-        
+        const online: TypingUser[] = [];
+
         Object.entries(state).forEach(([key, presences]) => {
           if (key !== user.id && Array.isArray(presences)) {
             presences.forEach((presence: any) => {
+              online.push({ id: key, name: presence.name || "Alguém" });
               if (presence.isTyping) {
                 typing.push({ id: key, name: presence.name || "Alguém" });
               }
             });
           }
         });
-        
+
         setTypingUsers(typing);
+        setOnlineUsers(online);
       })
+
       .subscribe(async (status) => {
         if (status === "SUBSCRIBED") {
           await presenceChannel.track({
