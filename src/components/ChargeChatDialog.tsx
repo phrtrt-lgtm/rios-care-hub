@@ -20,6 +20,14 @@ import { saveScrollPosition } from "@/lib/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { processFileForUpload } from "@/lib/processVideoForUpload";
 import { sanitizeFilename } from "@/lib/storage";
+import { useChatPresence } from "@/hooks/useChatPresence";
+import { ChatDialogHeader } from "@/components/chat/ChatDialogHeader";
+import { ChatMessageBubble } from "@/components/chat/ChatMessageBubble";
+import { ChatDateDivider } from "@/components/chat/ChatDateDivider";
+import { ChatTypingIndicator } from "@/components/chat/ChatTypingIndicator";
+import { ChatFilePreviewRow } from "@/components/chat/ChatFilePreviewRow";
+import { ChatEmptyState } from "@/components/chat/ChatEmptyState";
+
 
 interface ChargeMessage {
   id: string;
