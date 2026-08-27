@@ -5,9 +5,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Send, Loader2, Sparkles } from "lucide-react";
+import { Send, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { formatDate } from "@/lib/format";
+import { useChatPresence } from "@/hooks/useChatPresence";
+import { ChatDialogHeader } from "@/components/chat/ChatDialogHeader";
+import { ChatMessageBubble } from "@/components/chat/ChatMessageBubble";
+import { ChatDateDivider } from "@/components/chat/ChatDateDivider";
+import { ChatTypingIndicator } from "@/components/chat/ChatTypingIndicator";
+import { ChatEmptyState } from "@/components/chat/ChatEmptyState";
+
 
 interface Message {
   id: string;
@@ -36,6 +42,12 @@ export function BookingCommissionChatDialog({ open, onOpenChange, commissionId, 
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const isTeam = ["admin", "agent", "maintenance"].includes(profile?.role || "");
+
+  const { typingUsers, onlineUsers, setTyping } = useChatPresence(
+    commissionId ? `booking-commission-${commissionId}` : null,
+    open,
+  );
+
 
   useEffect(() => {
     if (open && commissionId) {
@@ -118,55 +130,54 @@ export function BookingCommissionChatDialog({ open, onOpenChange, commissionId, 
 
   const isOwnMessage = (msg: Message) => msg.author_id === profile?.id;
 
+  const grouped = messages.reduce((groups, message) => {
+    const date = message.created_at.slice(0, 10);
+    if (!groups[date]) groups[date] = [];
+    groups[date].push(message);
+    return groups;
+  }, {} as Record<string, Message[]>);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg flex flex-col h-[80vh] p-0">
-        <DialogHeader className="px-4 pt-4 pb-2 border-b shrink-0">
-          <DialogTitle className="flex items-center gap-2 text-sm">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <span className="truncate">{title}</span>
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-lg flex flex-col h-[80vh] p-0 gap-0 overflow-hidden rounded-2xl">
+        <ChatDialogHeader title={title} live={onlineUsers.length > 0} />
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+        <div className="flex-1 overflow-y-auto bg-muted/20 px-3 py-1">
           {loading ? (
             <div className="flex justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : messages.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground text-sm">
-              Nenhuma mensagem ainda. Inicie a conversa.
-            </div>
+            <ChatEmptyState description="Inicie a conversa sobre esta comissão — as mensagens chegam em tempo real." />
           ) : (
-            messages.map((msg) => {
-              const own = isOwnMessage(msg);
-              return (
-                <div key={msg.id} className={`flex flex-col ${own ? "items-end" : "items-start"}`}>
-                  <div
-                    className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm ${
-                      msg.is_internal
-                        ? "bg-warning/10 text-warning dark:bg-yellow-900/40 dark:text-yellow-200 border border-warning/30"
-                        : own
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-foreground"
-                    }`}
-                  >
-                    {!own && (
-                      <p className="text-xs font-semibold mb-0.5 opacity-70">
-                        {msg.author?.name}
-                        {msg.is_internal && (
-                          <Badge variant="outline" className="ml-1 text-[10px] py-0 px-1">interno</Badge>
-                        )}
-                      </p>
-                    )}
-                    <p className="whitespace-pre-wrap">{msg.body}</p>
-                    <p className="text-[10px] opacity-60 mt-1 text-right">{formatDate(msg.created_at)}</p>
-                  </div>
-                </div>
-              );
-            })
+            Object.entries(grouped).map(([date, dayMessages]) => (
+              <div key={date}>
+                <ChatDateDivider date={date} />
+                {dayMessages.map((msg, i) => {
+                  const prev = dayMessages[i - 1];
+                  const isGrouped =
+                    !!prev &&
+                    prev.author_id === msg.author_id &&
+                    new Date(msg.created_at).getTime() - new Date(prev.created_at).getTime() <
+                      5 * 60 * 1000;
+                  return (
+                    <ChatMessageBubble
+                      key={msg.id}
+                      authorName={msg.author?.name}
+                      authorRole={msg.author?.role}
+                      createdAt={msg.created_at}
+                      isOwn={isOwnMessage(msg)}
+                      isInternal={msg.is_internal}
+                      grouped={isGrouped}
+                      body={msg.body}
+                    />
+                  );
+                })}
+              </div>
+            ))
           )}
+          <ChatTypingIndicator names={typingUsers.map((u) => u.name)} />
           <div ref={bottomRef} />
         </div>
 
@@ -190,10 +201,14 @@ export function BookingCommissionChatDialog({ open, onOpenChange, commissionId, 
           <div className="flex gap-2">
             <Textarea
               value={body}
-              onChange={(e) => setBody(e.target.value)}
+              onChange={(e) => {
+                setBody(e.target.value);
+                setTyping(e.target.value.length > 0);
+              }}
+              onBlur={() => setTyping(false)}
               placeholder="Digite uma mensagem..."
               rows={2}
-              className="resize-none flex-1"
+              className="resize-none flex-1 rounded-xl"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
@@ -205,12 +220,13 @@ export function BookingCommissionChatDialog({ open, onOpenChange, commissionId, 
               size="icon"
               onClick={handleSend}
               disabled={sending || !body.trim()}
-              className="self-end"
+              className="self-end rounded-xl"
             >
               {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             </Button>
           </div>
         </div>
+
       </DialogContent>
     </Dialog>
   );

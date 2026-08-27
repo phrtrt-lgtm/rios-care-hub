@@ -29,6 +29,13 @@ import { NativeMediaPicker } from "@/components/NativeMediaPicker";
 import { toast as sonnerToast } from "sonner";
 import { MentionInput, MentionableUser, extractMentionedIds } from "@/components/comments/MentionInput";
 import { MentionText } from "@/components/comments/MentionText";
+import { ChatDialogHeader } from "@/components/chat/ChatDialogHeader";
+import { ChatMessageBubble } from "@/components/chat/ChatMessageBubble";
+import { ChatDateDivider } from "@/components/chat/ChatDateDivider";
+import { ChatTypingIndicator } from "@/components/chat/ChatTypingIndicator";
+import { ChatFilePreviewRow } from "@/components/chat/ChatFilePreviewRow";
+import { ChatEmptyState } from "@/components/chat/ChatEmptyState";
+
 
 interface MaintenanceChatDialogProps {
   open: boolean;
@@ -62,7 +69,7 @@ export function MaintenanceChatDialog({
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user, profile } = useAuth();
-  const { messages, loading, sending, typingUsers, allMediaItems, sendMessage, setTyping, refetch } = useMaintenanceChat(
+  const { messages, loading, sending, typingUsers, onlineUsers, allMediaItems, sendMessage, setTyping, refetch } = useMaintenanceChat(
     open ? ticketId : null
   );
   const [newMessage, setNewMessage] = useState("");
@@ -384,84 +391,60 @@ export function MaintenanceChatDialog({
     return ["admin", "agent", "maintenance"].includes(role);
   };
 
-  const renderMessage = (message: ChatMessage) => {
+  const renderMessage = (message: ChatMessage, index: number, dayMessages: ChatMessage[]) => {
     const isOwnMessage = message.author?.id === user?.id;
-    const authorIsTeam = message.author?.role && isTeamMemberRole(message.author.role);
     const messageReceipts = receipts[message.id] || [];
+    const prev = dayMessages[index - 1];
+    const grouped =
+      !!prev &&
+      prev.author?.id === message.author?.id &&
+      new Date(message.created_at).getTime() - new Date(prev.created_at).getTime() < 5 * 60 * 1000;
 
     return (
-      <div
+      <ChatMessageBubble
         key={message.id}
-        className={`flex gap-2 ${isOwnMessage ? "flex-row-reverse" : ""}`}
-      >
-        <Avatar className="h-8 w-8 flex-shrink-0">
-          <AvatarImage src={message.author?.photo_url || undefined} />
-          <AvatarFallback className={authorIsTeam ? "bg-primary/20" : "bg-muted"}>
-            {message.author?.name ? getInitials(message.author.name) : "?"}
-          </AvatarFallback>
-        </Avatar>
-        <div
-          className={`flex flex-col max-w-[75%] ${isOwnMessage ? "items-end" : "items-start"}`}
-        >
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-medium">
-              {message.author?.name || "Desconhecido"}
-            </span>
-            {authorIsTeam && (
-              <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
-                Equipe
-              </Badge>
-            )}
-            <span className="text-[10px] text-muted-foreground">
-              {format(new Date(message.created_at), "HH:mm", { locale: ptBR })}
-            </span>
-          </div>
-          
-          {/* Message body */}
-          {message.body && (
+        authorName={message.author?.name}
+        authorPhoto={message.author?.photo_url}
+        authorRole={message.author?.role}
+        createdAt={message.created_at}
+        isOwn={isOwnMessage}
+        isInternal={message.is_internal}
+        pending={message.id.startsWith("optimistic-")}
+        receipts={messageReceipts}
+        grouped={grouped}
+        body={
+          message.body ? (
+            <MentionText
+              body={message.body}
+              className={isOwnMessage ? "text-primary-foreground" : ""}
+            />
+          ) : undefined
+        }
+        attachments={
+          message.attachments && message.attachments.length > 0 ? (
             <div
-              className={`rounded-lg px-3 py-2 text-sm ${
-                isOwnMessage
-                  ? "bg-primary text-primary-foreground"
-                  : authorIsTeam
-                  ? "bg-info/10 border border-info/30/20"
-                  : "bg-muted"
+              className={`grid gap-1.5 ${
+                message.attachments.length > 1 ? "grid-cols-2" : "grid-cols-1"
               }`}
             >
-              <MentionText body={message.body} className={isOwnMessage ? "text-primary-foreground" : ""} />
+              {message.attachments.map((att) => (
+                <AttachmentBubble
+                  key={att.id}
+                  id={att.id}
+                  file_url={att.file_url}
+                  file_name={att.file_name}
+                  file_type={att.file_type}
+                  size_bytes={att.size_bytes}
+                  onPreview={handlePreviewMedia}
+                />
+              ))}
             </div>
-          )}
-          
-          {/* Attachments */}
-          {message.attachments && message.attachments.length > 0 && (() => {
-            const isVisualMedia = (t?: string) => !!t && (t.startsWith('image/') || t.startsWith('video/'));
-            const hasVisual = message.attachments.some(a => isVisualMedia(a.file_type));
-            return (
-              <div className={`flex flex-col gap-2 mt-2 ${hasVisual ? 'max-w-md' : ''}`}>
-                {message.attachments.map((att) => (
-                  <AttachmentBubble
-                    key={att.id}
-                    id={att.id}
-                    file_url={att.file_url}
-                    file_name={att.file_name}
-                    file_type={att.file_type}
-                    size_bytes={att.size_bytes}
-                    onPreview={handlePreviewMedia}
-                  />
-                ))}
-              </div>
-            );
-          })()}
-
-
-          {/* Read receipts */}
-          <div className="mt-1">
-            <ReadReceiptDisplay receipts={messageReceipts} isOwnMessage={isOwnMessage} />
-          </div>
-        </div>
-      </div>
+          ) : undefined
+        }
+      />
     );
   };
+
 
   // Group messages by date
   const groupedMessages = messages.reduce((groups, message) => {
@@ -476,78 +459,72 @@ export function MaintenanceChatDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-[95vw] max-w-lg h-[85vh] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
-          {/* Header */}
-          <DialogHeader className="px-4 py-3 pr-12 border-b flex-shrink-0">
-            <div className="flex flex-col gap-1">
-              <DialogTitle className="text-base truncate">
-                {ticketSubject || "Mensagens"}
-              </DialogTitle>
-              <div className="flex items-center justify-between">
-                {propertyName && (
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Building className="h-3 w-3" />
-                    {propertyName}
+        <DialogContent className="w-[95vw] max-w-lg h-[85vh] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden rounded-2xl">
+          <ChatDialogHeader
+            title={ticketSubject || "Mensagens"}
+            propertyName={propertyName}
+            live={onlineUsers.length > 0}
+            actions={
+              <>
+                <ConversationSummaryButton
+                  ticketId={ticketId || ''}
+                  messageCount={messages.length}
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-[11px] text-primary"
+                  onClick={() => {
+                    onOpenChange(false);
+                    (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${ticketId}`));
+                  }}
+                >
+                  <ExternalLink className="h-3 w-3 mr-1" />
+                  Detalhes
+                </Button>
+              </>
+            }
+            extra={
+              <>
+                {isTeamMember && ticketDetails && ticketDetails.status !== 'concluido' && ticketDetails.status !== 'cancelado' && (
+                  <div className="flex items-center gap-1.5 mt-2">
+                    <Button
+                      variant="success"
+                      size="sm"
+                      className="h-7 text-xs px-2"
+                      onClick={handleCompleteTicket}
+                      disabled={completingTicket}
+                    >
+                      {completingTicket ? (
+                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                      )}
+                      Concluir
+                    </Button>
+                    <Button
+                      variant="warning"
+                      size="sm"
+                      className="h-7 text-xs px-2"
+                      onClick={handleCreateCharge}
+                    >
+                      <DollarSign className="h-3 w-3 mr-1" />
+                      Cobrar
+                    </Button>
                   </div>
                 )}
-                <div className="flex items-center gap-2">
-                  <ConversationSummaryButton 
-                    ticketId={ticketId || ''} 
-                    messageCount={messages.length}
-                  />
-                  <Button
-                    variant="link"
-                    size="sm"
-                    className="text-xs h-auto p-0 text-primary"
-                    onClick={() => {
-                      onOpenChange(false);
-                      (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${ticketId}`));
-                    }}
-                  >
-                    <ExternalLink className="h-3 w-3 mr-1" />
-                    Ver detalhes
-                  </Button>
-                </div>
-              </div>
-              {/* Team action buttons */}
-              {isTeamMember && ticketDetails && ticketDetails.status !== 'concluido' && ticketDetails.status !== 'cancelado' && (
-                <div className="flex items-center gap-1.5 mt-1.5">
-                  <Button
-                    variant="success"
-                    size="sm"
-                    className="h-7 text-xs px-2"
-                    onClick={handleCompleteTicket}
-                    disabled={completingTicket}
-                  >
-                    {completingTicket ? (
-                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                    ) : (
-                      <CheckCircle2 className="h-3 w-3 mr-1" />
-                    )}
-                    Concluir
-                  </Button>
-                  <Button
-                    variant="warning"
-                    size="sm"
-                    className="h-7 text-xs px-2"
-                    onClick={handleCreateCharge}
-                  >
-                    <DollarSign className="h-3 w-3 mr-1" />
-                    Cobrar
-                  </Button>
-                </div>
-              )}
-              {isTeamMember && ticketDetails?.status === 'concluido' && (
-                <Badge variant="secondary" className="mt-1.5 bg-success/20 text-success text-xs">
-                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                  Concluído
-                </Badge>
-              )}
-            </div>
-          </DialogHeader>
+                {isTeamMember && ticketDetails?.status === 'concluido' && (
+                  <Badge variant="secondary" className="mt-2 bg-success/20 text-success text-xs">
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    Concluído
+                  </Badge>
+                )}
+              </>
+            }
+          />
 
           {/* Messages area */}
-          <ScrollArea className="flex-1 px-4" ref={scrollRef}>
+          <ScrollArea className="flex-1 bg-muted/20 px-3" ref={scrollRef}>
             {/* Owner decision block (if applicable) */}
             {decisionTicket && (
               <div className="py-4">
@@ -560,72 +537,28 @@ export function MaintenanceChatDialog({
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-                <MessageSquare className="h-8 w-8 mb-2 opacity-50" />
-                <p className="text-sm">Nenhuma mensagem ainda</p>
-                <p className="text-xs">Envie uma mensagem para iniciar a conversa</p>
-              </div>
+              <ChatEmptyState />
             ) : (
-              <div className="py-4 space-y-4">
+              <div className="pb-3">
                 {Object.entries(groupedMessages).map(([date, dayMessages]) => (
                   <div key={date}>
-                    {/* Date separator */}
-                    <div className="flex items-center gap-2 my-4">
-                      <div className="flex-1 h-px bg-border" />
-                      <span className="text-[10px] text-muted-foreground px-2 bg-background">
-                        {format(new Date(date), "dd 'de' MMMM", { locale: ptBR })}
-                      </span>
-                      <div className="flex-1 h-px bg-border" />
-                    </div>
-                    {/* Messages */}
-                    <div className="space-y-3">
-                      {dayMessages.map(renderMessage)}
-                    </div>
+                    <ChatDateDivider date={date} />
+                    {dayMessages.map((m, i) => renderMessage(m, i, dayMessages))}
                   </div>
                 ))}
               </div>
             )}
 
-            {/* Typing indicator */}
-            {typingUsers.length > 0 && (
-              <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
-                <div className="flex gap-1">
-                  <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-                </div>
-                <span>
-                  {typingUsers.map((u) => u.name).join(", ")} está digitando...
-                </span>
-              </div>
-            )}
+            <ChatTypingIndicator names={typingUsers.map((u) => u.name)} />
           </ScrollArea>
 
           {/* Selected files preview */}
-          {selectedFiles.length > 0 && (
-            <div className="px-3 py-2 border-t flex flex-wrap gap-2">
-              {selectedFiles.map((file, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-1.5 bg-muted rounded-md px-2 py-1 text-xs"
-                >
-                  {uploadingFiles.has(file.name) ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <Paperclip className="h-3 w-3" />
-                  )}
-                  <span className="truncate max-w-[100px]">{file.name}</span>
-                  <button
-                    onClick={() => removeFile(index)}
-                    className="text-muted-foreground hover:text-foreground"
-                    disabled={uploadingFiles.has(file.name)}
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+          <ChatFilePreviewRow
+            files={selectedFiles}
+            uploading={uploadingFiles}
+            onRemove={removeFile}
+          />
+
 
           {/* Input area */}
           <div className="p-3 border-t flex-shrink-0 space-y-2">

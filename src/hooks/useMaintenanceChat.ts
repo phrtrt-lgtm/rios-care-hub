@@ -37,7 +37,9 @@ export function useMaintenanceChat(ticketId: string | null) {
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
+  const [onlineUsers, setOnlineUsers] = useState<TypingUser[]>([]);
   const [allMediaItems, setAllMediaItems] = useState<ChatAttachment[]>([]);
+
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -164,19 +166,23 @@ export function useMaintenanceChat(ticketId: string | null) {
       .on("presence", { event: "sync" }, () => {
         const state = presenceChannel.presenceState();
         const typing: TypingUser[] = [];
-        
+        const online: TypingUser[] = [];
+
         Object.entries(state).forEach(([key, presences]) => {
           if (key !== user.id && Array.isArray(presences)) {
             presences.forEach((presence: any) => {
+              online.push({ id: key, name: presence.name || "Alguém" });
               if (presence.isTyping) {
                 typing.push({ id: key, name: presence.name || "Alguém" });
               }
             });
           }
         });
-        
+
         setTypingUsers(typing);
+        setOnlineUsers(online);
       })
+
       .subscribe(async (status) => {
         if (status === "SUBSCRIBED") {
           await presenceChannel.track({
@@ -301,7 +307,9 @@ export function useMaintenanceChat(ticketId: string | null) {
     loading,
     sending,
     typingUsers,
+    onlineUsers,
     allMediaItems,
+
     sendMessage,
     setTyping,
     refetch: fetchMessages,

@@ -20,6 +20,14 @@ import { saveScrollPosition } from "@/lib/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { processFileForUpload } from "@/lib/processVideoForUpload";
 import { sanitizeFilename } from "@/lib/storage";
+import { useChatPresence } from "@/hooks/useChatPresence";
+import { ChatDialogHeader } from "@/components/chat/ChatDialogHeader";
+import { ChatMessageBubble } from "@/components/chat/ChatMessageBubble";
+import { ChatDateDivider } from "@/components/chat/ChatDateDivider";
+import { ChatTypingIndicator } from "@/components/chat/ChatTypingIndicator";
+import { ChatFilePreviewRow } from "@/components/chat/ChatFilePreviewRow";
+import { ChatEmptyState } from "@/components/chat/ChatEmptyState";
+
 
 interface ChargeMessage {
   id: string;
@@ -91,6 +99,13 @@ export function ChargeChatDialog({
   // Read receipts for messages
   const messageIds = useMemo(() => messages.map(m => m.id), [messages]);
   const { receipts, markAsRead } = useReadReceipts(messageIds, "charge");
+
+  // Realtime presence / typing indicator
+  const { typingUsers, onlineUsers, setTyping } = useChatPresence(
+    chargeId ? `charge-${chargeId}` : null,
+    open,
+  );
+
 
   // Mark messages as read when dialog opens or new messages arrive
   useEffect(() => {
@@ -411,55 +426,33 @@ export function ChargeChatDialog({
     return ["admin", "agent", "maintenance"].includes(role);
   };
 
-  const renderMessage = (message: ChargeMessage) => {
+  const renderMessage = (message: ChargeMessage, index: number, dayMessages: ChargeMessage[]) => {
     const isOwnMessage = message.author_id === user?.id;
-    const authorIsTeam = message.profiles?.role && isTeamMemberRole(message.profiles.role);
     const messageReceipts = receipts[message.id] || [];
+    const prev = dayMessages[index - 1];
+    const grouped =
+      !!prev &&
+      prev.author_id === message.author_id &&
+      new Date(message.created_at).getTime() - new Date(prev.created_at).getTime() < 5 * 60 * 1000;
 
     return (
-      <div
+      <ChatMessageBubble
         key={message.id}
-        className={`flex gap-2 ${isOwnMessage ? "flex-row-reverse" : ""}`}
-      >
-        <Avatar className="h-8 w-8 flex-shrink-0">
-          <AvatarImage src={message.profiles?.photo_url || undefined} />
-          <AvatarFallback className={authorIsTeam ? "bg-primary/20" : "bg-muted"}>
-            {message.profiles?.name ? getInitials(message.profiles.name) : "?"}
-          </AvatarFallback>
-        </Avatar>
-        <div
-          className={`flex flex-col max-w-[75%] ${isOwnMessage ? "items-end" : "items-start"}`}
-        >
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-medium">
-              {message.profiles?.name || "Desconhecido"}
-            </span>
-            {authorIsTeam && (
-              <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
-                Equipe
-              </Badge>
-            )}
-            <span className="text-[10px] text-muted-foreground">
-              {format(new Date(message.created_at), "HH:mm", { locale: ptBR })}
-            </span>
-          </div>
-          
-          {message.body && (
+        authorName={message.profiles?.name}
+        authorPhoto={message.profiles?.photo_url}
+        authorRole={message.profiles?.role}
+        createdAt={message.created_at}
+        isOwn={isOwnMessage}
+        receipts={messageReceipts}
+        grouped={grouped}
+        body={message.body || undefined}
+        attachments={
+          message.attachments && message.attachments.length > 0 ? (
             <div
-              className={`rounded-lg px-3 py-2 text-sm ${
-                isOwnMessage
-                  ? "bg-primary text-primary-foreground"
-                  : authorIsTeam
-                  ? "bg-info/10 border border-info/30/20"
-                  : "bg-muted"
+              className={`grid gap-1.5 ${
+                message.attachments.length > 1 ? "grid-cols-2" : "grid-cols-1"
               }`}
             >
-              <p className="whitespace-pre-wrap break-words">{message.body}</p>
-            </div>
-          )}
-          
-          {message.attachments && message.attachments.length > 0 && (
-            <div className={`grid gap-2 mt-2 ${message.attachments.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
               {message.attachments.map((att) => (
                 <AttachmentBubble
                   key={att.id}
@@ -472,14 +465,9 @@ export function ChargeChatDialog({
                 />
               ))}
             </div>
-          )}
-
-          {/* Read receipts */}
-          <div className="mt-1">
-            <ReadReceiptDisplay receipts={messageReceipts} isOwnMessage={isOwnMessage} />
-          </div>
-        </div>
-      </div>
+          ) : undefined
+        }
+      />
     );
   };
 
@@ -495,90 +483,54 @@ export function ChargeChatDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-[95vw] max-w-lg h-[85vh] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
-          <DialogHeader className="px-4 py-3 pr-12 border-b flex-shrink-0">
-            <div className="flex flex-col gap-1">
-              <DialogTitle className="text-base truncate">
-                {chargeTitle || "Mensagens da Cobrança"}
-              </DialogTitle>
-              <div className="flex items-center justify-between">
-                {propertyName && (
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Building className="h-3 w-3" />
-                    {propertyName}
-                  </div>
-                )}
-                <Button
-                  variant="link"
-                  size="sm"
-                  className="text-xs h-auto p-0 text-primary"
-                  onClick={() => {
-                    onOpenChange(false);
-                    (saveScrollPosition(pathname), navigate(`/cobranca/${chargeId}`));
-                  }}
-                >
-                  <ExternalLink className="h-3 w-3 mr-1" />
-                  Ver detalhes completos
-                </Button>
-              </div>
-            </div>
-          </DialogHeader>
+        <DialogContent className="w-[95vw] max-w-lg h-[85vh] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden rounded-2xl">
+          <ChatDialogHeader
+            title={chargeTitle || "Mensagens da Cobrança"}
+            propertyName={propertyName}
+            live={onlineUsers.length > 0}
+            actions={
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-[11px] text-primary"
+                onClick={() => {
+                  onOpenChange(false);
+                  (saveScrollPosition(pathname), navigate(`/cobranca/${chargeId}`));
+                }}
+              >
+                <ExternalLink className="h-3 w-3 mr-1" />
+                Detalhes
+              </Button>
+            }
+          />
 
-          <ScrollArea className="flex-1 px-4" ref={scrollRef}>
+          <ScrollArea className="flex-1 bg-muted/20 px-3" ref={scrollRef}>
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-                <MessageSquare className="h-8 w-8 mb-2 opacity-50" />
-                <p className="text-sm">Nenhuma mensagem ainda</p>
-                <p className="text-xs">Envie uma mensagem para iniciar a conversa</p>
-              </div>
+              <ChatEmptyState description="Envie uma mensagem sobre esta cobrança — a conversa é em tempo real." />
             ) : (
-              <div className="py-4 space-y-4">
+              <div className="pb-3">
                 {Object.entries(groupedMessages).map(([date, dayMessages]) => (
                   <div key={date}>
-                    <div className="flex items-center gap-2 my-4">
-                      <div className="flex-1 h-px bg-border" />
-                      <span className="text-[10px] text-muted-foreground px-2 bg-background">
-                        {format(new Date(date), "dd 'de' MMMM", { locale: ptBR })}
-                      </span>
-                      <div className="flex-1 h-px bg-border" />
-                    </div>
-                    <div className="space-y-3">
-                      {dayMessages.map(renderMessage)}
-                    </div>
+                    <ChatDateDivider date={date} />
+                    {dayMessages.map((m, i) => renderMessage(m, i, dayMessages))}
                   </div>
                 ))}
               </div>
             )}
+
+            <ChatTypingIndicator names={typingUsers.map((u) => u.name)} />
           </ScrollArea>
 
-          {selectedFiles.length > 0 && (
-            <div className="px-3 py-2 border-t flex flex-wrap gap-2">
-              {selectedFiles.map((file, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-1.5 bg-muted rounded-md px-2 py-1 text-xs"
-                >
-                  {uploadingFiles.has(file.name) ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <Paperclip className="h-3 w-3" />
-                  )}
-                  <span className="truncate max-w-[100px]">{file.name}</span>
-                  <button
-                    onClick={() => removeFile(index)}
-                    className="text-muted-foreground hover:text-foreground"
-                    disabled={uploadingFiles.has(file.name)}
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+          <ChatFilePreviewRow
+            files={selectedFiles}
+            uploading={uploadingFiles}
+            onRemove={removeFile}
+          />
+
 
           <div className="p-3 border-t flex-shrink-0 space-y-2">
             {/* Hidden file input */}
@@ -642,12 +594,17 @@ export function ChargeChatDialog({
               <Textarea
                 ref={textareaRef}
                 value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
+                onChange={(e) => {
+                  setNewMessage(e.target.value);
+                  setTyping(e.target.value.length > 0);
+                }}
+                onBlur={() => setTyping(false)}
                 onKeyDown={handleKeyDown}
                 placeholder="Mensagem para enviar..."
-                className="flex-1 min-h-[40px] max-h-[120px] resize-none"
+                className="flex-1 min-h-[40px] max-h-[120px] resize-none rounded-xl"
                 disabled={sending}
               />
+
               
               <Button
                 onClick={handleSend}
