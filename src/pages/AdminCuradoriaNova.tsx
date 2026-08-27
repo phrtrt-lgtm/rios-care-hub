@@ -475,6 +475,10 @@ export default function AdminCuradoriaNova() {
                       E-mail teste
                     </Button>
                   </div>
+                  <Button variant="outline" onClick={saveDraftPreview} disabled={savingDraft || !ownerId}>
+                    {savingDraft ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FilePenLine className="mr-2 h-4 w-4" />}
+                    Salvar rascunho de teste
+                  </Button>
                   <Button onClick={publish} disabled={publishing || !ownerId}>
                     {publishing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                     Publicar e notificar
