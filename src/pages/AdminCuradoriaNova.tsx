@@ -262,6 +262,7 @@ export default function AdminCuradoriaNova() {
       });
 
       setPublishedId(cur.id);
+      setPublishedStatus("published");
       toast.success("Curadoria publicada — link público gerado abaixo");
     } catch (e: any) {
       toast.error(e.message);
