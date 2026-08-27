@@ -297,6 +297,7 @@ export default function AdminCuradoriaNova() {
       if (error) throw error;
 
       setPublishedId(cur.id);
+      setPublishedStatus("draft");
       toast.success("Rascunho salvo — link de teste gerado sem notificar ninguém");
     } catch (e: any) {
       toast.error(e.message);
