@@ -37,7 +37,9 @@ export function useMaintenanceChat(ticketId: string | null) {
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
+  const [onlineUsers, setOnlineUsers] = useState<TypingUser[]>([]);
   const [allMediaItems, setAllMediaItems] = useState<ChatAttachment[]>([]);
+
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
