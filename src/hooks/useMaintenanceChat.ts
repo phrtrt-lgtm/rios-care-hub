@@ -307,7 +307,9 @@ export function useMaintenanceChat(ticketId: string | null) {
     loading,
     sending,
     typingUsers,
+    onlineUsers,
     allMediaItems,
+
     sendMessage,
     setTyping,
     refetch: fetchMessages,
