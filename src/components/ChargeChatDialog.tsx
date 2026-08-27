@@ -594,12 +594,17 @@ export function ChargeChatDialog({
               <Textarea
                 ref={textareaRef}
                 value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
+                onChange={(e) => {
+                  setNewMessage(e.target.value);
+                  setTyping(e.target.value.length > 0);
+                }}
+                onBlur={() => setTyping(false)}
                 onKeyDown={handleKeyDown}
                 placeholder="Mensagem para enviar..."
-                className="flex-1 min-h-[40px] max-h-[120px] resize-none"
+                className="flex-1 min-h-[40px] max-h-[120px] resize-none rounded-xl"
                 disabled={sending}
               />
+
               
               <Button
                 onClick={handleSend}
