@@ -269,6 +269,40 @@ export default function AdminCuradoriaNova() {
     }
   }
 
+  async function saveDraftPreview() {
+    if (!ownerId) {
+      toast.error("Selecione o proprietário");
+      return;
+    }
+    if (!categories.length) {
+      toast.error("Gere a curadoria primeiro");
+      return;
+    }
+    setSavingDraft(true);
+    try {
+      const { data: cur, error } = await supabase
+        .from("owner_curations")
+        .insert({
+          owner_id: ownerId,
+          status: "draft",
+          categories: categories as any,
+          observations: observations as any,
+          source_filename: filename,
+          ai_history: history as any,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+
+      setPublishedId(cur.id);
+      toast.success("Rascunho salvo — link de teste gerado sem notificar ninguém");
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setSavingDraft(false);
+    }
+  }
+
   async function sendTestEmail() {
     if (!testEmail.trim()) {
       toast.error("Informe um e-mail de teste");
