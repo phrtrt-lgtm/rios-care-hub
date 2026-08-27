@@ -5,9 +5,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Send, Loader2, Sparkles } from "lucide-react";
+import { Send, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { formatDate } from "@/lib/format";
+import { useChatPresence } from "@/hooks/useChatPresence";
+import { ChatDialogHeader } from "@/components/chat/ChatDialogHeader";
+import { ChatMessageBubble } from "@/components/chat/ChatMessageBubble";
+import { ChatDateDivider } from "@/components/chat/ChatDateDivider";
+import { ChatTypingIndicator } from "@/components/chat/ChatTypingIndicator";
+import { ChatEmptyState } from "@/components/chat/ChatEmptyState";
+
 
 interface Message {
   id: string;
