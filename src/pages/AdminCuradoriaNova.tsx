@@ -434,7 +434,7 @@ export default function AdminCuradoriaNova() {
                     variant="destructive"
                     size="sm"
                     onClick={async () => {
-                      if (!confirm("Excluir esta curadoria publicada?")) return;
+                      if (!confirm(publishedStatus === "draft" ? "Excluir este rascunho de teste?" : "Excluir esta curadoria publicada?")) return;
                       const { error } = await supabase
                         .from("owner_curations")
                         .delete()
