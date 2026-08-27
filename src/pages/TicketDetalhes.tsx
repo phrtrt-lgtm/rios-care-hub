@@ -26,6 +26,12 @@ import { deleteAttachmentRow } from "@/lib/deleteAttachment";
 import { MediaGallery } from "@/components/MediaGallery";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { ReadReceiptDisplay } from "@/components/ReadReceiptDisplay";
+import { ChatMessageBubble } from "@/components/chat/ChatMessageBubble";
+import { ChatDateDivider } from "@/components/chat/ChatDateDivider";
+import { ChatTypingIndicator } from "@/components/chat/ChatTypingIndicator";
+import { ChatFilePreviewRow } from "@/components/chat/ChatFilePreviewRow";
+import { ChatEmptyState } from "@/components/chat/ChatEmptyState";
+import { useChatPresence } from "@/hooks/useChatPresence";
 import { TicketBadges } from "@/components/TicketBadges";
 import OwnerMaintenanceDecision from "@/components/OwnerMaintenanceDecision";
 import { preloadMediaUrls } from "@/hooks/useMediaCache";
@@ -121,6 +127,7 @@ export default function TicketDetalhes() {
   // Read receipts for messages
   const messageIds = useMemo(() => messages.map(m => m.id), [messages]);
   const { receipts, markAsRead } = useReadReceipts(messageIds, "ticket");
+  const { typingUsers, setTyping } = useChatPresence(id ? `ticket-${id}` : null);
 
   // Mark messages as read when viewing the page
   useEffect(() => {
@@ -973,88 +980,113 @@ export default function TicketDetalhes() {
           )}
         </div>
 
-        <div className="space-y-4 mb-6">
-          {messages.map((message) => {
-            const isOwnMessage = message.author_id === user?.id;
-            const messageReceipts = receipts[message.id] || [];
-            
-            return (
-              <Card key={message.id}>
-                <CardContent className="pt-6">
-                  <div className="flex items-start gap-3 mb-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={message.profiles.photo_url || undefined} />
-                      <AvatarFallback>{getInitials(message.profiles.name)}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{message.profiles.name}</span>
-                        {message.profiles.role !== 'owner' && message.profiles.role !== 'pending_owner' && (
-                          <Badge variant="secondary" className="text-xs">Equipe</Badge>
-                        )}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {format(new Date(message.created_at), "d 'de' MMMM 'às' HH:mm", { locale: ptBR })}
-                      </div>
-                    </div>
-                  </div>
-                  {message.body && (
-                    <p className="text-rios-dark-blue whitespace-pre-wrap">{message.body}</p>
-                  )}
-                  {message.attachments && message.attachments.length > 0 && (
-                    <div className="mt-3 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="text-xs text-muted-foreground font-medium">
-                          Anexos ({message.attachments.length})
-                        </div>
-                        {message.attachments.length > 1 && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 text-xs"
-                            onClick={() => downloadMessageAttachments(
-                              message.attachments!,
-                              `anexos-${format(new Date(message.created_at), "dd-MM-yyyy-HH-mm")}`
+        <div className="mb-6 rounded-2xl border border-border/60 bg-muted/20 px-3 pb-4">
+          {messages.length === 0 ? (
+            <ChatEmptyState />
+          ) : (
+            Object.entries(
+              messages.reduce((groups, message) => {
+                const date = format(new Date(message.created_at), "yyyy-MM-dd");
+                (groups[date] ||= []).push(message);
+                return groups;
+              }, {} as Record<string, Message[]>),
+            ).map(([date, dayMessages]) => (
+              <div key={date}>
+                <ChatDateDivider date={date} />
+                {dayMessages.map((message, index) => {
+                  const isOwnMessage = message.author_id === user?.id;
+                  const messageReceipts = receipts[message.id] || [];
+                  const prev = dayMessages[index - 1];
+                  const grouped =
+                    !!prev &&
+                    prev.author_id === message.author_id &&
+                    new Date(message.created_at).getTime() - new Date(prev.created_at).getTime() <
+                      5 * 60 * 1000;
+
+                  return (
+                    <ChatMessageBubble
+                      key={message.id}
+                      authorName={message.profiles.name}
+                      authorPhoto={message.profiles.photo_url}
+                      authorRole={message.profiles.role}
+                      createdAt={message.created_at}
+                      isOwn={isOwnMessage}
+                      isInternal={message.is_internal}
+                      receipts={messageReceipts}
+                      grouped={grouped}
+                      body={message.body || undefined}
+                      attachments={
+                        message.attachments && message.attachments.length > 0 ? (
+                          <div className="space-y-1.5">
+                            {message.attachments.length > 1 && (
+                              <div className="flex justify-end">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 text-[11px]"
+                                  onClick={() =>
+                                    downloadMessageAttachments(
+                                      message.attachments!,
+                                      `anexos-${format(new Date(message.created_at), "dd-MM-yyyy-HH-mm")}`,
+                                    )
+                                  }
+                                >
+                                  <Download className="h-3 w-3 mr-1" />
+                                  Baixar todos
+                                </Button>
+                              </div>
                             )}
-                          >
-                            <Download className="h-3 w-3 mr-1" />
-                            Baixar todos
-                          </Button>
-                        )}
-                      </div>
-                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                        {message.attachments.map((attachment) => (
-                          <AttachmentBubble
-                            key={attachment.id}
-                            {...attachment}
-                            onDelete={isTeamMember ? async () => {
-                              const ok = await deleteAttachmentRow("ticket_attachments", attachment.id);
-                              if (ok) fetchMessages();
-                            } : undefined}
-                            onPreview={() => {
-                              if (attachment.file_type?.startsWith('image/') || attachment.file_type?.startsWith('video/') || attachment.file_type === 'application/pdf') {
-                                const index = allMediaItems.findIndex(item => item.id === attachment.id);
-                                if (index !== -1) {
-                                  setGalleryStartIndex(index);
-                                  setGalleryOpen(true);
-                                }
-                              }
-                            }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Read receipts */}
-                  <div className="mt-3 flex justify-end">
-                    <ReadReceiptDisplay receipts={messageReceipts} isOwnMessage={isOwnMessage} />
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                            <div
+                              className={`grid gap-1.5 ${
+                                message.attachments.length > 1 ? "grid-cols-2" : "grid-cols-1"
+                              }`}
+                            >
+                              {message.attachments.map((attachment) => (
+                                <AttachmentBubble
+                                  key={attachment.id}
+                                  {...attachment}
+                                  onDelete={
+                                    isTeamMember
+                                      ? async () => {
+                                          const ok = await deleteAttachmentRow(
+                                            "ticket_attachments",
+                                            attachment.id,
+                                          );
+                                          if (ok) fetchMessages();
+                                        }
+                                      : undefined
+                                  }
+                                  onPreview={() => {
+                                    if (
+                                      attachment.file_type?.startsWith("image/") ||
+                                      attachment.file_type?.startsWith("video/") ||
+                                      attachment.file_type === "application/pdf"
+                                    ) {
+                                      const idx = allMediaItems.findIndex(
+                                        (item) => item.id === attachment.id,
+                                      );
+                                      if (idx !== -1) {
+                                        setGalleryStartIndex(idx);
+                                        setGalleryOpen(true);
+                                      }
+                                    }
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        ) : undefined
+                      }
+                    />
+                  );
+                })}
+              </div>
+            ))
+          )}
+
+          <ChatTypingIndicator names={typingUsers.map((u) => u.name)} />
         </div>
+
 
         {canUpdate && (
           <Card>
@@ -1063,40 +1095,19 @@ export default function TicketDetalhes() {
                 <Textarea
                   placeholder="Digite sua mensagem..."
                   value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
+                  onChange={(e) => {
+                    setNewMessage(e.target.value);
+                    setTyping(e.target.value.length > 0);
+                  }}
                   className="min-h-[100px]"
                 />
-                
-                {selectedFiles.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium">
-                      Arquivos selecionados ({selectedFiles.length})
-                    </div>
-                    <div className="space-y-2">
-                      {selectedFiles.map((file, index) => (
-                        <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded-md">
-                          <Paperclip className="h-4 w-4 text-muted-foreground" />
-                          <span className="flex-1 text-sm truncate">{file.name}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {(file.size / 1024).toFixed(1)} KB
-                          </span>
-                          {uploadingFiles.has(file.name) ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeFile(index)}
-                              className="h-6 w-6 p-0"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+
+                <ChatFilePreviewRow
+                  files={selectedFiles}
+                  uploading={uploadingFiles}
+                  onRemove={removeFile}
+                />
+
                 
                 <div className="flex flex-col gap-4">
                   {isTeamMember && (
