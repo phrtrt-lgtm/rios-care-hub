@@ -100,6 +100,13 @@ export function ChargeChatDialog({
   const messageIds = useMemo(() => messages.map(m => m.id), [messages]);
   const { receipts, markAsRead } = useReadReceipts(messageIds, "charge");
 
+  // Realtime presence / typing indicator
+  const { typingUsers, onlineUsers, setTyping } = useChatPresence(
+    chargeId ? `charge-${chargeId}` : null,
+    open,
+  );
+
+
   // Mark messages as read when dialog opens or new messages arrive
   useEffect(() => {
     if (open && messages.length > 0 && user) {
