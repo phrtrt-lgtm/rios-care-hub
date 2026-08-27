@@ -1088,40 +1088,19 @@ export default function TicketDetalhes() {
                 <Textarea
                   placeholder="Digite sua mensagem..."
                   value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
+                  onChange={(e) => {
+                    setNewMessage(e.target.value);
+                    setTyping(e.target.value.length > 0);
+                  }}
                   className="min-h-[100px]"
                 />
-                
-                {selectedFiles.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium">
-                      Arquivos selecionados ({selectedFiles.length})
-                    </div>
-                    <div className="space-y-2">
-                      {selectedFiles.map((file, index) => (
-                        <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded-md">
-                          <Paperclip className="h-4 w-4 text-muted-foreground" />
-                          <span className="flex-1 text-sm truncate">{file.name}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {(file.size / 1024).toFixed(1)} KB
-                          </span>
-                          {uploadingFiles.has(file.name) ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeFile(index)}
-                              className="h-6 w-6 p-0"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+
+                <ChatFilePreviewRow
+                  files={selectedFiles}
+                  uploading={uploadingFiles}
+                  onRemove={removeFile}
+                />
+
                 
                 <div className="flex flex-col gap-4">
                   {isTeamMember && (
