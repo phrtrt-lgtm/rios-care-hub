@@ -29,6 +29,13 @@ import { NativeMediaPicker } from "@/components/NativeMediaPicker";
 import { toast as sonnerToast } from "sonner";
 import { MentionInput, MentionableUser, extractMentionedIds } from "@/components/comments/MentionInput";
 import { MentionText } from "@/components/comments/MentionText";
+import { ChatDialogHeader } from "@/components/chat/ChatDialogHeader";
+import { ChatMessageBubble } from "@/components/chat/ChatMessageBubble";
+import { ChatDateDivider } from "@/components/chat/ChatDateDivider";
+import { ChatTypingIndicator } from "@/components/chat/ChatTypingIndicator";
+import { ChatFilePreviewRow } from "@/components/chat/ChatFilePreviewRow";
+import { ChatEmptyState } from "@/components/chat/ChatEmptyState";
+
 
 interface MaintenanceChatDialogProps {
   open: boolean;
