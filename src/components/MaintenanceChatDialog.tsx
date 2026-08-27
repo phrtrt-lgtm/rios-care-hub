@@ -452,78 +452,72 @@ export function MaintenanceChatDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-[95vw] max-w-lg h-[85vh] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
-          {/* Header */}
-          <DialogHeader className="px-4 py-3 pr-12 border-b flex-shrink-0">
-            <div className="flex flex-col gap-1">
-              <DialogTitle className="text-base truncate">
-                {ticketSubject || "Mensagens"}
-              </DialogTitle>
-              <div className="flex items-center justify-between">
-                {propertyName && (
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Building className="h-3 w-3" />
-                    {propertyName}
+        <DialogContent className="w-[95vw] max-w-lg h-[85vh] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden rounded-2xl">
+          <ChatDialogHeader
+            title={ticketSubject || "Mensagens"}
+            propertyName={propertyName}
+            live={onlineUsers.length > 0}
+            actions={
+              <>
+                <ConversationSummaryButton
+                  ticketId={ticketId || ''}
+                  messageCount={messages.length}
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-[11px] text-primary"
+                  onClick={() => {
+                    onOpenChange(false);
+                    (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${ticketId}`));
+                  }}
+                >
+                  <ExternalLink className="h-3 w-3 mr-1" />
+                  Detalhes
+                </Button>
+              </>
+            }
+            extra={
+              <>
+                {isTeamMember && ticketDetails && ticketDetails.status !== 'concluido' && ticketDetails.status !== 'cancelado' && (
+                  <div className="flex items-center gap-1.5 mt-2">
+                    <Button
+                      variant="success"
+                      size="sm"
+                      className="h-7 text-xs px-2"
+                      onClick={handleCompleteTicket}
+                      disabled={completingTicket}
+                    >
+                      {completingTicket ? (
+                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                      )}
+                      Concluir
+                    </Button>
+                    <Button
+                      variant="warning"
+                      size="sm"
+                      className="h-7 text-xs px-2"
+                      onClick={handleCreateCharge}
+                    >
+                      <DollarSign className="h-3 w-3 mr-1" />
+                      Cobrar
+                    </Button>
                   </div>
                 )}
-                <div className="flex items-center gap-2">
-                  <ConversationSummaryButton 
-                    ticketId={ticketId || ''} 
-                    messageCount={messages.length}
-                  />
-                  <Button
-                    variant="link"
-                    size="sm"
-                    className="text-xs h-auto p-0 text-primary"
-                    onClick={() => {
-                      onOpenChange(false);
-                      (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${ticketId}`));
-                    }}
-                  >
-                    <ExternalLink className="h-3 w-3 mr-1" />
-                    Ver detalhes
-                  </Button>
-                </div>
-              </div>
-              {/* Team action buttons */}
-              {isTeamMember && ticketDetails && ticketDetails.status !== 'concluido' && ticketDetails.status !== 'cancelado' && (
-                <div className="flex items-center gap-1.5 mt-1.5">
-                  <Button
-                    variant="success"
-                    size="sm"
-                    className="h-7 text-xs px-2"
-                    onClick={handleCompleteTicket}
-                    disabled={completingTicket}
-                  >
-                    {completingTicket ? (
-                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                    ) : (
-                      <CheckCircle2 className="h-3 w-3 mr-1" />
-                    )}
-                    Concluir
-                  </Button>
-                  <Button
-                    variant="warning"
-                    size="sm"
-                    className="h-7 text-xs px-2"
-                    onClick={handleCreateCharge}
-                  >
-                    <DollarSign className="h-3 w-3 mr-1" />
-                    Cobrar
-                  </Button>
-                </div>
-              )}
-              {isTeamMember && ticketDetails?.status === 'concluido' && (
-                <Badge variant="secondary" className="mt-1.5 bg-success/20 text-success text-xs">
-                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                  Concluído
-                </Badge>
-              )}
-            </div>
-          </DialogHeader>
+                {isTeamMember && ticketDetails?.status === 'concluido' && (
+                  <Badge variant="secondary" className="mt-2 bg-success/20 text-success text-xs">
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    Concluído
+                  </Badge>
+                )}
+              </>
+            }
+          />
 
           {/* Messages area */}
-          <ScrollArea className="flex-1 px-4" ref={scrollRef}>
+          <ScrollArea className="flex-1 bg-muted/20 px-3" ref={scrollRef}>
             {/* Owner decision block (if applicable) */}
             {decisionTicket && (
               <div className="py-4">
@@ -536,72 +530,28 @@ export function MaintenanceChatDialog({
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-                <MessageSquare className="h-8 w-8 mb-2 opacity-50" />
-                <p className="text-sm">Nenhuma mensagem ainda</p>
-                <p className="text-xs">Envie uma mensagem para iniciar a conversa</p>
-              </div>
+              <ChatEmptyState />
             ) : (
-              <div className="py-4 space-y-4">
+              <div className="pb-3">
                 {Object.entries(groupedMessages).map(([date, dayMessages]) => (
                   <div key={date}>
-                    {/* Date separator */}
-                    <div className="flex items-center gap-2 my-4">
-                      <div className="flex-1 h-px bg-border" />
-                      <span className="text-[10px] text-muted-foreground px-2 bg-background">
-                        {format(new Date(date), "dd 'de' MMMM", { locale: ptBR })}
-                      </span>
-                      <div className="flex-1 h-px bg-border" />
-                    </div>
-                    {/* Messages */}
-                    <div className="space-y-3">
-                      {dayMessages.map(renderMessage)}
-                    </div>
+                    <ChatDateDivider date={date} />
+                    {dayMessages.map((m, i) => renderMessage(m, i, dayMessages))}
                   </div>
                 ))}
               </div>
             )}
 
-            {/* Typing indicator */}
-            {typingUsers.length > 0 && (
-              <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
-                <div className="flex gap-1">
-                  <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-                </div>
-                <span>
-                  {typingUsers.map((u) => u.name).join(", ")} está digitando...
-                </span>
-              </div>
-            )}
+            <ChatTypingIndicator names={typingUsers.map((u) => u.name)} />
           </ScrollArea>
 
           {/* Selected files preview */}
-          {selectedFiles.length > 0 && (
-            <div className="px-3 py-2 border-t flex flex-wrap gap-2">
-              {selectedFiles.map((file, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-1.5 bg-muted rounded-md px-2 py-1 text-xs"
-                >
-                  {uploadingFiles.has(file.name) ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <Paperclip className="h-3 w-3" />
-                  )}
-                  <span className="truncate max-w-[100px]">{file.name}</span>
-                  <button
-                    onClick={() => removeFile(index)}
-                    className="text-muted-foreground hover:text-foreground"
-                    disabled={uploadingFiles.has(file.name)}
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+          <ChatFilePreviewRow
+            files={selectedFiles}
+            uploading={uploadingFiles}
+            onRemove={removeFile}
+          />
+
 
           {/* Input area */}
           <div className="p-3 border-t flex-shrink-0 space-y-2">
