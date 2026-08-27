@@ -124,6 +124,7 @@ export default function AdminCuradoriaNova() {
   const [testEmail, setTestEmail] = useState("phrtrt@gmail.com");
   const [sendingTest, setSendingTest] = useState(false);
   const [publishedId, setPublishedId] = useState<string | null>(null);
+  const [publishedStatus, setPublishedStatus] = useState<"published" | "draft" | null>(null);
   const [savingDraft, setSavingDraft] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
