@@ -127,6 +127,7 @@ export default function TicketDetalhes() {
   // Read receipts for messages
   const messageIds = useMemo(() => messages.map(m => m.id), [messages]);
   const { receipts, markAsRead } = useReadReceipts(messageIds, "ticket");
+  const { typingUsers, setTyping } = useChatPresence(id ? `ticket-${id}` : null);
 
   // Mark messages as read when viewing the page
   useEffect(() => {
