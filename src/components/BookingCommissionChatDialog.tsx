@@ -43,6 +43,12 @@ export function BookingCommissionChatDialog({ open, onOpenChange, commissionId, 
 
   const isTeam = ["admin", "agent", "maintenance"].includes(profile?.role || "");
 
+  const { typingUsers, onlineUsers, setTyping } = useChatPresence(
+    commissionId ? `booking-commission-${commissionId}` : null,
+    open,
+  );
+
+
   useEffect(() => {
     if (open && commissionId) {
       fetchMessages();
