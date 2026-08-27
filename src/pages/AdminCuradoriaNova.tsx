@@ -29,6 +29,7 @@ import {
   X,
   Copy,
   ExternalLink,
+  FilePenLine,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { PlanoPerformanceSection } from "@/components/bemvindo/PlanoPerformanceSection";
