@@ -442,6 +442,7 @@ export default function AdminCuradoriaNova() {
                       if (error) return toast.error(error.message);
                       toast.success("Curadoria excluída");
                       setPublishedId(null);
+                      setPublishedStatus(null);
                     }}
                   >
                     <Trash2 className="mr-2 h-3 w-3" />
