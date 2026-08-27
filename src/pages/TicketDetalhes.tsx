@@ -973,88 +973,113 @@ export default function TicketDetalhes() {
           )}
         </div>
 
-        <div className="space-y-4 mb-6">
-          {messages.map((message) => {
-            const isOwnMessage = message.author_id === user?.id;
-            const messageReceipts = receipts[message.id] || [];
-            
-            return (
-              <Card key={message.id}>
-                <CardContent className="pt-6">
-                  <div className="flex items-start gap-3 mb-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={message.profiles.photo_url || undefined} />
-                      <AvatarFallback>{getInitials(message.profiles.name)}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{message.profiles.name}</span>
-                        {message.profiles.role !== 'owner' && message.profiles.role !== 'pending_owner' && (
-                          <Badge variant="secondary" className="text-xs">Equipe</Badge>
-                        )}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {format(new Date(message.created_at), "d 'de' MMMM 'às' HH:mm", { locale: ptBR })}
-                      </div>
-                    </div>
-                  </div>
-                  {message.body && (
-                    <p className="text-rios-dark-blue whitespace-pre-wrap">{message.body}</p>
-                  )}
-                  {message.attachments && message.attachments.length > 0 && (
-                    <div className="mt-3 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="text-xs text-muted-foreground font-medium">
-                          Anexos ({message.attachments.length})
-                        </div>
-                        {message.attachments.length > 1 && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 text-xs"
-                            onClick={() => downloadMessageAttachments(
-                              message.attachments!,
-                              `anexos-${format(new Date(message.created_at), "dd-MM-yyyy-HH-mm")}`
+        <div className="mb-6 rounded-2xl border border-border/60 bg-muted/20 px-3 pb-4">
+          {messages.length === 0 ? (
+            <ChatEmptyState />
+          ) : (
+            Object.entries(
+              messages.reduce((groups, message) => {
+                const date = format(new Date(message.created_at), "yyyy-MM-dd");
+                (groups[date] ||= []).push(message);
+                return groups;
+              }, {} as Record<string, Message[]>),
+            ).map(([date, dayMessages]) => (
+              <div key={date}>
+                <ChatDateDivider date={date} />
+                {dayMessages.map((message, index) => {
+                  const isOwnMessage = message.author_id === user?.id;
+                  const messageReceipts = receipts[message.id] || [];
+                  const prev = dayMessages[index - 1];
+                  const grouped =
+                    !!prev &&
+                    prev.author_id === message.author_id &&
+                    new Date(message.created_at).getTime() - new Date(prev.created_at).getTime() <
+                      5 * 60 * 1000;
+
+                  return (
+                    <ChatMessageBubble
+                      key={message.id}
+                      authorName={message.profiles.name}
+                      authorPhoto={message.profiles.photo_url}
+                      authorRole={message.profiles.role}
+                      createdAt={message.created_at}
+                      isOwn={isOwnMessage}
+                      isInternal={message.is_internal}
+                      receipts={messageReceipts}
+                      grouped={grouped}
+                      body={message.body || undefined}
+                      attachments={
+                        message.attachments && message.attachments.length > 0 ? (
+                          <div className="space-y-1.5">
+                            {message.attachments.length > 1 && (
+                              <div className="flex justify-end">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 text-[11px]"
+                                  onClick={() =>
+                                    downloadMessageAttachments(
+                                      message.attachments!,
+                                      `anexos-${format(new Date(message.created_at), "dd-MM-yyyy-HH-mm")}`,
+                                    )
+                                  }
+                                >
+                                  <Download className="h-3 w-3 mr-1" />
+                                  Baixar todos
+                                </Button>
+                              </div>
                             )}
-                          >
-                            <Download className="h-3 w-3 mr-1" />
-                            Baixar todos
-                          </Button>
-                        )}
-                      </div>
-                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                        {message.attachments.map((attachment) => (
-                          <AttachmentBubble
-                            key={attachment.id}
-                            {...attachment}
-                            onDelete={isTeamMember ? async () => {
-                              const ok = await deleteAttachmentRow("ticket_attachments", attachment.id);
-                              if (ok) fetchMessages();
-                            } : undefined}
-                            onPreview={() => {
-                              if (attachment.file_type?.startsWith('image/') || attachment.file_type?.startsWith('video/') || attachment.file_type === 'application/pdf') {
-                                const index = allMediaItems.findIndex(item => item.id === attachment.id);
-                                if (index !== -1) {
-                                  setGalleryStartIndex(index);
-                                  setGalleryOpen(true);
-                                }
-                              }
-                            }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Read receipts */}
-                  <div className="mt-3 flex justify-end">
-                    <ReadReceiptDisplay receipts={messageReceipts} isOwnMessage={isOwnMessage} />
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                            <div
+                              className={`grid gap-1.5 ${
+                                message.attachments.length > 1 ? "grid-cols-2" : "grid-cols-1"
+                              }`}
+                            >
+                              {message.attachments.map((attachment) => (
+                                <AttachmentBubble
+                                  key={attachment.id}
+                                  {...attachment}
+                                  onDelete={
+                                    isTeamMember
+                                      ? async () => {
+                                          const ok = await deleteAttachmentRow(
+                                            "ticket_attachments",
+                                            attachment.id,
+                                          );
+                                          if (ok) fetchMessages();
+                                        }
+                                      : undefined
+                                  }
+                                  onPreview={() => {
+                                    if (
+                                      attachment.file_type?.startsWith("image/") ||
+                                      attachment.file_type?.startsWith("video/") ||
+                                      attachment.file_type === "application/pdf"
+                                    ) {
+                                      const idx = allMediaItems.findIndex(
+                                        (item) => item.id === attachment.id,
+                                      );
+                                      if (idx !== -1) {
+                                        setGalleryStartIndex(idx);
+                                        setGalleryOpen(true);
+                                      }
+                                    }
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        ) : undefined
+                      }
+                    />
+                  );
+                })}
+              </div>
+            ))
+          )}
+
+          <ChatTypingIndicator names={typingUsers.map((u) => u.name)} />
         </div>
+
 
         {canUpdate && (
           <Card>
