@@ -384,84 +384,60 @@ export function MaintenanceChatDialog({
     return ["admin", "agent", "maintenance"].includes(role);
   };
 
-  const renderMessage = (message: ChatMessage) => {
+  const renderMessage = (message: ChatMessage, index: number, dayMessages: ChatMessage[]) => {
     const isOwnMessage = message.author?.id === user?.id;
-    const authorIsTeam = message.author?.role && isTeamMemberRole(message.author.role);
     const messageReceipts = receipts[message.id] || [];
+    const prev = dayMessages[index - 1];
+    const grouped =
+      !!prev &&
+      prev.author?.id === message.author?.id &&
+      new Date(message.created_at).getTime() - new Date(prev.created_at).getTime() < 5 * 60 * 1000;
 
     return (
-      <div
+      <ChatMessageBubble
         key={message.id}
-        className={`flex gap-2 ${isOwnMessage ? "flex-row-reverse" : ""}`}
-      >
-        <Avatar className="h-8 w-8 flex-shrink-0">
-          <AvatarImage src={message.author?.photo_url || undefined} />
-          <AvatarFallback className={authorIsTeam ? "bg-primary/20" : "bg-muted"}>
-            {message.author?.name ? getInitials(message.author.name) : "?"}
-          </AvatarFallback>
-        </Avatar>
-        <div
-          className={`flex flex-col max-w-[75%] ${isOwnMessage ? "items-end" : "items-start"}`}
-        >
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-medium">
-              {message.author?.name || "Desconhecido"}
-            </span>
-            {authorIsTeam && (
-              <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
-                Equipe
-              </Badge>
-            )}
-            <span className="text-[10px] text-muted-foreground">
-              {format(new Date(message.created_at), "HH:mm", { locale: ptBR })}
-            </span>
-          </div>
-          
-          {/* Message body */}
-          {message.body && (
+        authorName={message.author?.name}
+        authorPhoto={message.author?.photo_url}
+        authorRole={message.author?.role}
+        createdAt={message.created_at}
+        isOwn={isOwnMessage}
+        isInternal={message.is_internal}
+        pending={message.id.startsWith("optimistic-")}
+        receipts={messageReceipts}
+        grouped={grouped}
+        body={
+          message.body ? (
+            <MentionText
+              body={message.body}
+              className={isOwnMessage ? "text-primary-foreground" : ""}
+            />
+          ) : undefined
+        }
+        attachments={
+          message.attachments && message.attachments.length > 0 ? (
             <div
-              className={`rounded-lg px-3 py-2 text-sm ${
-                isOwnMessage
-                  ? "bg-primary text-primary-foreground"
-                  : authorIsTeam
-                  ? "bg-info/10 border border-info/30/20"
-                  : "bg-muted"
+              className={`grid gap-1.5 ${
+                message.attachments.length > 1 ? "grid-cols-2" : "grid-cols-1"
               }`}
             >
-              <MentionText body={message.body} className={isOwnMessage ? "text-primary-foreground" : ""} />
+              {message.attachments.map((att) => (
+                <AttachmentBubble
+                  key={att.id}
+                  id={att.id}
+                  file_url={att.file_url}
+                  file_name={att.file_name}
+                  file_type={att.file_type}
+                  size_bytes={att.size_bytes}
+                  onPreview={handlePreviewMedia}
+                />
+              ))}
             </div>
-          )}
-          
-          {/* Attachments */}
-          {message.attachments && message.attachments.length > 0 && (() => {
-            const isVisualMedia = (t?: string) => !!t && (t.startsWith('image/') || t.startsWith('video/'));
-            const hasVisual = message.attachments.some(a => isVisualMedia(a.file_type));
-            return (
-              <div className={`flex flex-col gap-2 mt-2 ${hasVisual ? 'max-w-md' : ''}`}>
-                {message.attachments.map((att) => (
-                  <AttachmentBubble
-                    key={att.id}
-                    id={att.id}
-                    file_url={att.file_url}
-                    file_name={att.file_name}
-                    file_type={att.file_type}
-                    size_bytes={att.size_bytes}
-                    onPreview={handlePreviewMedia}
-                  />
-                ))}
-              </div>
-            );
-          })()}
-
-
-          {/* Read receipts */}
-          <div className="mt-1">
-            <ReadReceiptDisplay receipts={messageReceipts} isOwnMessage={isOwnMessage} />
-          </div>
-        </div>
-      </div>
+          ) : undefined
+        }
+      />
     );
   };
+
 
   // Group messages by date
   const groupedMessages = messages.reduce((groups, message) => {
