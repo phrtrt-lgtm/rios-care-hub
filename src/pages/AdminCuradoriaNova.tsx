@@ -398,15 +398,17 @@ export default function AdminCuradoriaNova() {
           </Card>
 
           {publicUrl && (
-            <Card className="border-success/40 bg-success/5 p-4">
+            <Card className={publishedStatus === "draft" ? "border-info/40 bg-info/5 p-4" : "border-success/40 bg-success/5 p-4"}>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-success">
-                    Curadoria publicada — link público gerado
+                  <p className={publishedStatus === "draft" ? "text-sm font-semibold text-info" : "text-sm font-semibold text-success"}>
+                    {publishedStatus === "draft" ? "Link de teste (rascunho) — nenhum e-mail enviado" : "Curadoria publicada — link público gerado"}
                   </p>
                   <p className="mt-1 truncate text-xs text-muted-foreground">{publicUrl}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Use para revisar como o proprietário verá. Se houver erro, exclua e gere novamente.
+                    {publishedStatus === "draft"
+                      ? "Abra o link em outra aba para revisar como o proprietário verá. Depois é só publicar normalmente."
+                      : "Use para revisar como o proprietário verá. Se houver erro, exclua e gere novamente."}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
