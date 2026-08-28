@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import { MediaGallery } from "@/components/MediaGallery";
 import { ownerScopeFilter } from "@/lib/ownerScope";
+import { fetchChargeGalleryAttachments } from "@/lib/chargeAttachments";
 
 
 

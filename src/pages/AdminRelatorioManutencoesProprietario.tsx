@@ -6,6 +6,7 @@ import { MaintenanceCharts } from "@/components/MaintenanceCharts";
 import { MaintenanceSummaryCards } from "@/components/MaintenanceSummaryCards";
 import { MaintenanceDetailsDialog } from "@/components/MaintenanceDetailsDialog";
 import { MediaGallery } from "@/components/MediaGallery";
+import { fetchChargeGalleryAttachments } from "@/lib/chargeAttachments";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
