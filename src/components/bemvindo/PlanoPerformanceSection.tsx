@@ -893,25 +893,26 @@ export function PlanoPerformanceSection({
           {/* Shortcuts (sticky) */}
           <div className="relative shrink-0 border-b border-white/10 bg-secondary/90 p-3 backdrop-blur-md md:px-6">
             <div className="flex flex-wrap gap-1.5">
-              {categories.map((c) => (
+              {roomGroups.map((g) => (
                 <a
-                  key={c.key}
-                  href={`#cat-${c.key}`}
+                  key={g.slug}
+                  href={`#room-${g.slug}`}
                   onClick={(e) => {
                     e.preventDefault();
-                    const el = document.getElementById(`cat-${c.key}`);
+                    const el = document.getElementById(`room-${g.slug}`);
                     el?.scrollIntoView({ behavior: "smooth", block: "start" });
                   }}
                   className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-medium text-white/85 transition hover:border-primary/60 hover:bg-primary/15 hover:text-white"
                 >
-                  <span>{c.emoji}</span>
-                  <span>{c.title}</span>
+                  <span>🚪</span>
+                  <span>{g.room}</span>
                   <span className="rounded-full bg-white/10 px-1.5 text-[9px] text-white/70">
-                    {c.items.length}
+                    {g.entries.length}
                   </span>
                 </a>
               ))}
             </div>
+
           </div>
 
           {/* Scrollable body */}
