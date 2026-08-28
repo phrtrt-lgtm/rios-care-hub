@@ -113,7 +113,6 @@ type Item = {
   price: string;
   img: string;
   link?: string;
-  priority?: "essencial" | "recomendado";
   /** Item opcional: aparece com checkbox (default marcado). Pode ser desmarcado. */
   optional?: boolean;
   /** Itens com o mesmo alternativeGroup são alternativas mutuamente exclusivas.
@@ -144,8 +143,8 @@ const CATEGORIES: Category[] = [
     emoji: "🛋️",
     desc: "Onde o hóspede decide se vai recomendar você. Cada peça aqui multiplica a percepção de valor.",
     items: [
-      { name: "Tapete neutro 2x2,5m", why: "Aquece o ambiente nas fotos e absorve som — sala parece maior.", price: "R$ 480", img: tapete, priority: "essencial" },
-      { name: "Cortinas blackout linho", why: "Privacidade + estética. Bloqueia luz e melhora dormida no quarto.", price: "R$ 690", img: cortinas, priority: "essencial" },
+      { name: "Tapete neutro 2x2,5m", why: "Aquece o ambiente nas fotos e absorve som — sala parece maior.", price: "R$ 480", img: tapete },
+      { name: "Cortinas blackout linho", why: "Privacidade + estética. Bloqueia luz e melhora dormida no quarto.", price: "R$ 690", img: cortinas },
       { name: "Mesa lateral redonda", why: "Funcional para o sofá e ótima para foto do anúncio.", price: "R$ 320", img: mesaLateral },
       { name: "Livros decorativos (kit 3)", why: "Detalhe editorial barato que valoriza fotos e instagrama bem.", price: "R$ 180", img: livros },
     ],
@@ -156,11 +155,11 @@ const CATEGORIES: Category[] = [
     emoji: "🌿",
     desc: "Os 4% de investimento que viram 30% do impacto visual. Curadoria da nossa estilista.",
     items: [
-      { name: "Kit 4 almofadas linho", why: "Texturas em camadas — visual que fideliza no Airbnb.", price: "R$ 360", img: almofadas, priority: "essencial" },
+      { name: "Kit 4 almofadas linho", why: "Texturas em camadas — visual que fideliza no Airbnb.", price: "R$ 360", img: almofadas },
       { name: "Vaso terracota + pampas", why: "Toque artesanal que combina com a paleta moderna brasileira.", price: "R$ 220", img: vaso },
-      { name: "Luminária de chão minimalista", why: "Ilumina noturno e cria foto com vibe aconchegante.", price: "R$ 540", img: luminaria, priority: "recomendado" },
+      { name: "Luminária de chão minimalista", why: "Ilumina noturno e cria foto com vibe aconchegante.", price: "R$ 540", img: luminaria },
       // Alternativas: par de quadros (Opção 1 = curadoria nossa, Opção 2 = econômica)
-      { name: "Quadro emoldurado curadoria RIOS (par)", why: "Arte selecionada pela nossa estilista — eleva instantaneamente o nível visual e fotografa melhor.", price: "R$ 380", img: quadro, alternativeGroup: "decor-quadro", priority: "recomendado" },
+      { name: "Quadro emoldurado curadoria RIOS (par)", why: "Arte selecionada pela nossa estilista — eleva instantaneamente o nível visual e fotografa melhor.", price: "R$ 380", img: quadro, alternativeGroup: "decor-quadro" },
       { name: "Quadro emoldurado linha econômica (par)", why: "Versão mais simples — funciona, mas com menor impacto editorial nas fotos.", price: "R$ 190", img: quadro, alternativeGroup: "decor-quadro" },
     ],
   },
@@ -170,8 +169,8 @@ const CATEGORIES: Category[] = [
     emoji: "🛏️",
     desc: "A nota do quesito 'limpeza' nasce aqui. Roupa de cama é a coisa mais reclamada da plataforma.",
     items: [
-      { name: "Jogo de cama percal 400 fios", why: "Conforto hoteleiro real. Hóspede sente na pele e comenta.", price: "R$ 520", img: roupaCama, priority: "essencial" },
-      { name: "Kit toalhas brancas spa", why: "Branco impecável vira padrão visual. Compre 2x mais que precisa.", price: "R$ 480", img: toalhas, priority: "essencial" },
+      { name: "Jogo de cama percal 400 fios", why: "Conforto hoteleiro real. Hóspede sente na pele e comenta.", price: "R$ 520", img: roupaCama },
+      { name: "Kit toalhas brancas spa", why: "Branco impecável vira padrão visual. Compre 2x mais que precisa.", price: "R$ 480", img: toalhas },
       { name: "Manta bouclé pé da cama", why: "Detalhe que aparece em toda foto principal de quartos premium.", price: "R$ 290", img: manta },
       { name: "Organizador rattan", why: "Bandeja de cabeceira para controle, água, lembretes — útil + lindo.", price: "R$ 140", img: organizador, optional: true },
     ],
@@ -183,9 +182,9 @@ const CATEGORIES: Category[] = [
     desc: "Hóspede que cozinha avalia melhor. Equipar bem aumenta diária aceita e tempo de estadia.",
     items: [
       // Alternativas: panelas (Opção 1 = melhor ROI)
-      { name: "Set panelas antiaderente premium (kit completo)", why: "Conjunto completo evita reclamação de 'faltava panela'. Durabilidade 3x maior — melhor ROI no longo prazo.", price: "R$ 690", img: panelas, alternativeGroup: "cozinha-panelas", priority: "essencial" },
+      { name: "Set panelas antiaderente premium (kit completo)", why: "Conjunto completo evita reclamação de 'faltava panela'. Durabilidade 3x maior — melhor ROI no longo prazo.", price: "R$ 690", img: panelas, alternativeGroup: "cozinha-panelas" },
       { name: "Set panelas básico (kit reduzido)", why: "Versão econômica — atende, mas reposição mais frequente e nota menor de hóspedes que cozinham.", price: "R$ 390", img: panelas, alternativeGroup: "cozinha-panelas" },
-      { name: "Louças porcelana branca (6p)", why: "Branco fotografa bem e nunca sai de moda.", price: "R$ 340", img: loucas, priority: "essencial" },
+      { name: "Louças porcelana branca (6p)", why: "Branco fotografa bem e nunca sai de moda.", price: "R$ 340", img: loucas },
       { name: "Talheres preto fosco", why: "Toque designer barato. Diferencia das diárias econômicas.", price: "R$ 220", img: talheres },
       { name: "Copos & taças mistos (12p)", why: "Cobre tudo: água, vinho, drinks. Padronização visual.", price: "R$ 180", img: copos },
     ],
@@ -196,12 +195,12 @@ const CATEGORIES: Category[] = [
     emoji: "⚡",
     desc: "O que destrava filtros de busca no Airbnb e Booking. Cada item aqui = mais visualizações.",
     items: [
-      { name: "Smart TV 50\" 4K", why: "Filtro 'TV' no Booking elimina 60% dos imóveis. Você fica.", price: "R$ 2.490", img: tv, priority: "essencial" },
-      { name: "Roteador Wi-Fi mesh", why: "Wi-Fi forte = nota 5 em estadias longas / nômades digitais.", price: "R$ 690", img: roteador, priority: "essencial" },
-      { name: "Ar-condicionado split", why: "Filtro decisivo no verão carioca. Sem ar = invisível.", price: "R$ 2.890", img: ar, priority: "essencial" },
-      { name: "Air fryer 5L", why: "Item mais buscado em cozinhas equipadas em 2024-25.", price: "R$ 490", img: airfryer, priority: "recomendado", optional: true },
+      { name: "Smart TV 50\" 4K", why: "Filtro 'TV' no Booking elimina 60% dos imóveis. Você fica.", price: "R$ 2.490", img: tv },
+      { name: "Roteador Wi-Fi mesh", why: "Wi-Fi forte = nota 5 em estadias longas / nômades digitais.", price: "R$ 690", img: roteador },
+      { name: "Ar-condicionado split", why: "Filtro decisivo no verão carioca. Sem ar = invisível.", price: "R$ 2.890", img: ar },
+      { name: "Air fryer 5L", why: "Item mais buscado em cozinhas equipadas em 2024-25.", price: "R$ 490", img: airfryer, optional: true },
       { name: "Cafeteira de cápsula", why: "Detalhe premium da chegada. Apareça nas fotos.", price: "R$ 590", img: cafeteira, optional: true },
-      { name: "Fechadura digital", why: "Self check-in 24h. Mais reservas last-minute e menos atrito.", price: "R$ 890", img: fechadura, priority: "recomendado" },
+      { name: "Fechadura digital", why: "Self check-in 24h. Mais reservas last-minute e menos atrito.", price: "R$ 890", img: fechadura },
     ],
   },
 ];
@@ -514,10 +513,6 @@ export function PlanoPerformanceSection({
 
   const totalItems = categories.reduce((acc, c) => acc + c.items.length, 0);
 
-  const totalEssenciais = categories.reduce(
-    (acc, c) => acc + c.items.filter((i) => i.priority === "essencial").length,
-    0,
-  );
   const orcamentoCents = useMemo(
     () =>
       categories.reduce(
@@ -549,7 +544,6 @@ export function PlanoPerformanceSection({
             price_cents: priceToCents(it.price),
             why: it.why,
             link: (it as any).link ?? null,
-            priority: it.priority ?? null,
             alternativeGroup: it.alternativeGroup ?? null,
             quantity: it.quantity ?? null,
             unit: it.unit ?? null,
@@ -614,7 +608,6 @@ export function PlanoPerformanceSection({
             price_cents: priceToCents(it.price),
             why: it.why,
             link: (it as any).link ?? null,
-            priority: it.priority ?? null,
             alternativeGroup: it.alternativeGroup ?? null,
             quantity: it.quantity ?? null,
             unit: it.unit ?? null,
@@ -866,7 +859,7 @@ export function PlanoPerformanceSection({
                 Documento interativo · Diagnóstico & Curadoria
               </h3>
               <p className="text-sm text-secondary-foreground/70">
-                {totalItems} itens curados · {totalEssenciais} essenciais ·
+                {totalItems} itens curados ·
                 investimento estimado{" "}
                 <span className="text-secondary-foreground">
                   R$ {orcamento.toLocaleString("pt-BR")}
@@ -907,7 +900,7 @@ export function PlanoPerformanceSection({
                   Plano de Performance RIOS
                 </h3>
                 <p className="mt-0.5 text-xs text-white/60">
-                  {totalItems} itens · {totalEssenciais} essenciais · investimento
+                  {totalItems} itens · investimento
                   estimado{" "}
                   <span className="font-semibold text-white">
                     R$ {orcamento.toLocaleString("pt-BR")}
@@ -1008,9 +1001,8 @@ export function PlanoPerformanceSection({
                   </p>
                   <p className="mt-1 text-xs leading-relaxed text-white/70">
                     Todos os itens podem ser desmarcados — basta clicar na caixinha ao lado para
-                    remover do carrinho. Recomendamos manter os marcados como{" "}
-                    <span className="font-semibold text-white">Essencial</span> para o melhor
-                    desempenho do seu imóvel desde o primeiro hóspede.
+                    remover do carrinho. Itens marcados como opcionais podem ficar para uma
+                    segunda etapa.
                   </p>
                 </div>
               </div>
@@ -1128,16 +1120,6 @@ export function PlanoPerformanceSection({
                                 {it.optional && (
                                   <span className="inline-flex items-center rounded-full border border-white/15 bg-white/5 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white/60">
                                     Opcional
-                                  </span>
-                                )}
-                                {it.priority === "essencial" && (
-                                  <span className="inline-flex items-center gap-0.5 rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-primary-foreground">
-                                    <Check className="h-2.5 w-2.5" /> Essencial
-                                  </span>
-                                )}
-                                {it.priority === "recomendado" && (
-                                  <span className="inline-flex items-center rounded-full border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-primary">
-                                    Recomendado
                                   </span>
                                 )}
                               </div>

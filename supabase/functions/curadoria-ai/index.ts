@@ -30,7 +30,7 @@ Regras de saída:
 - Use a ferramenta "set_curation" para retornar a estrutura.
 - Sempre em PT-BR, tom editorial RIOS (sofisticado, direto, vendedor).
 - Categorize itens em: Sala & ambientes sociais, Decoração & alma do espaço, Quarto & rouparia, Cozinha equipada, Eletrônicos & eletrodomésticos. Pode criar outras se a planilha pedir.
-- Cada item: name (curto), why (1 frase de IMPACTO p/ o hóspede ou de papel na ambientação — sem instruções ao proprietário), price (formato "R$ X.XXX"), img (use url da planilha se houver, senão "" — frontend usa placeholder), priority ("essencial" | "recomendado" | null), link (url do produto se houver), quantity (número inteiro — quantas unidades, ex: 2, 4, 6), unit (unidade do quantity, ex: "un", "par", "kit", "jogo", "m²"), dimensions (especificação COMPLETA do sub-item da planilha — cor + material/acabamento + medidas + qualquer detalhe técnico, ex: "nogueira 60x40 s/vidro", "caramelo 80x50", "King 193x203 400 fios", "off-white tripé chão", "terracota/bege/verde"), room (cômodo do imóvel ao qual o item pertence — ex: "Sala", "Cozinha", "Quarto 1", "Quarto Suíte", "Banheiro Social", "Varanda", "Lavanderia"; extraia EXATAMENTE como aparece na planilha; se não houver indicação, deixe vazio).
+- Cada item: name (curto), why (1 frase de IMPACTO p/ o hóspede ou de papel na ambientação — sem instruções ao proprietário), price (formato "R$ X.XXX"), img (use url da planilha se houver, senão "" — frontend usa placeholder), link (url do produto se houver), quantity (número inteiro — quantas unidades, ex: 2, 4, 6), unit (unidade do quantity, ex: "un", "par", "kit", "jogo", "m²"), dimensions (especificação COMPLETA do sub-item da planilha — cor + material/acabamento + medidas + qualquer detalhe técnico, ex: "nogueira 60x40 s/vidro", "caramelo 80x50", "King 193x203 400 fios", "off-white tripé chão", "terracota/bege/verde"), room (cômodo do imóvel ao qual o item pertence — ex: "Sala", "Cozinha", "Quarto 1", "Quarto Suíte", "Banheiro Social", "Varanda", "Lavanderia"; extraia EXATAMENTE como aparece na planilha; se não houver indicação, deixe vazio).
 
 REGRA CRÍTICA DE FIDELIDADE AOS DADOS:
 - NUNCA invente, troque, embaralhe ou reordene preços, links, quantidades, tamanhos ou cômodos. Cada linha da planilha tem um conjunto (preço, link, quantidade, tamanho, cômodo) que pertence APENAS àquele item — preserve EXATAMENTE como está.
@@ -69,7 +69,6 @@ const TOOL = {
                     price: { type: "string" },
                     img: { type: "string" },
                     link: { type: "string" },
-                    priority: { type: "string", enum: ["essencial", "recomendado", ""] },
                     quantity: { type: "number", description: "Quantidade de unidades (extraído da planilha — ex: 2, 4, 6). Não inventar." },
                     unit: { type: "string", description: "Unidade do quantity (ex: 'un', 'par', 'kit', 'jogo', 'm²')." },
                     dimensions: { type: "string", description: "Especificação COMPLETA do sub-item da planilha — cor, material, medidas, acabamento, tudo junto. Ex: 'nogueira 60x40 s/vidro', 'caramelo 80x50', 'King 193x203 400 fios'. NUNCA resumir nem omitir partes." },
