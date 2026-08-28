@@ -478,7 +478,42 @@ export function PlanoPerformanceSection({
     });
   }
 
+  // Agrupamento por CÔMODO (a curadoria é apresentada por ambiente, não por tipo)
+  type RoomEntry = {
+    it: Item;
+    idx: number;
+    catKey: string;
+    catTitle: string;
+    catEmoji: string;
+  };
+  const roomGroups = useMemo(() => {
+    const map = new Map<string, { room: string; slug: string; entries: RoomEntry[] }>();
+    const slugify = (s: string) =>
+      s
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "") || "outros";
+    for (const cat of categories) {
+      cat.items.forEach((it, idx) => {
+        const room = (it.room || "").trim() || "Itens gerais do imóvel";
+        const slug = slugify(room);
+        if (!map.has(slug)) map.set(slug, { room, slug, entries: [] });
+        map.get(slug)!.entries.push({
+          it,
+          idx,
+          catKey: cat.key,
+          catTitle: cat.title,
+          catEmoji: cat.emoji,
+        });
+      });
+    }
+    return Array.from(map.values());
+  }, [categories]);
+
   const totalItems = categories.reduce((acc, c) => acc + c.items.length, 0);
+
   const totalEssenciais = categories.reduce(
     (acc, c) => acc + c.items.filter((i) => i.priority === "essencial").length,
     0,
