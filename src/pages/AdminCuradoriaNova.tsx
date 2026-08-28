@@ -40,7 +40,6 @@ type Item = {
   price: string;
   img?: string;
   link?: string;
-  priority?: "essencial" | "recomendado" | "";
   optional?: boolean;
   alternativeGroup?: string;
   quantity?: number | null;
@@ -522,7 +521,7 @@ export default function AdminCuradoriaNova() {
                           <ul className="divide-y">
                             {entries.map(({ it, ii }) => (
                               <li key={ii} className="space-y-2 p-2">
-                                <div className="grid grid-cols-[1fr_2fr_100px_120px_auto] items-center gap-2">
+                                <div className="grid grid-cols-[1fr_2fr_100px_auto] items-center gap-2">
                                   <Input
                                     value={it.name}
                                     onChange={(e) => updateItem(ci, ii, { name: e.target.value })}
@@ -541,19 +540,6 @@ export default function AdminCuradoriaNova() {
                                     placeholder="R$ 0"
                                     className="h-8"
                                   />
-                                  <Select
-                                    value={it.priority || "none"}
-                                    onValueChange={(v) => updateItem(ci, ii, { priority: v === "none" ? "" : (v as any) })}
-                                  >
-                                    <SelectTrigger className="h-8">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="none">—</SelectItem>
-                                      <SelectItem value="essencial">Essencial</SelectItem>
-                                      <SelectItem value="recomendado">Recomendado</SelectItem>
-                                    </SelectContent>
-                                  </Select>
                                   <Button size="icon" variant="ghost" onClick={() => removeItem(ci, ii)}>
                                     <Trash2 className="h-3 w-3" />
                                   </Button>
