@@ -980,28 +980,38 @@ export function PlanoPerformanceSection({
               </div>
 
               <div className="space-y-10">
-                {categories.map((cat) => (
+                {roomGroups.map((group) => {
+                  const groupTotalCents = group.entries.reduce(
+                    (s, e) =>
+                      selected[itemKey(e.catKey, e.idx)] ? s + priceToCents(e.it.price) : s,
+                    0,
+                  );
+                  return (
                   <div
-                    key={cat.key}
-                    id={`cat-${cat.key}`}
+                    key={group.slug}
+                    id={`room-${group.slug}`}
                     className="scroll-mt-4"
                   >
                     <div className="mb-3 flex items-baseline justify-between gap-3">
                       <h4 className="flex items-center gap-2 text-base font-semibold text-white">
-                        <span className="text-lg">{cat.emoji}</span>
-                        {cat.title}
+                        <span className="text-lg">🚪</span>
+                        {group.room}
                       </h4>
-                      <span className="text-[10px] uppercase tracking-wider text-white/50">
-                        {cat.items.length} itens
-                      </span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-[10px] uppercase tracking-wider text-white/50">
+                          {group.entries.length} itens
+                        </span>
+                        <span className="rounded-full bg-primary/15 px-2.5 py-1 text-[11px] font-semibold text-primary ring-1 ring-primary/30">
+                          {(groupTotalCents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                        </span>
+                      </div>
                     </div>
-                    <p className="mb-3 max-w-2xl text-xs text-white/65">
-                      {cat.desc}
-                    </p>
 
                     <ul className="divide-y divide-white/5 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] shadow-lg">
-                      {cat.items.map((it, idx) => {
-                        const k = itemKey(cat.key, idx);
+                      {group.entries.map((entry) => {
+                        const { it, idx, catKey, catEmoji, catTitle } = entry;
+                        const cat = categories.find((c) => c.key === catKey)!;
+                        const k = itemKey(catKey, idx);
                         const isSelected = !!selected[k];
                         const altGroupItems = it.alternativeGroup
                           ? cat.items
@@ -1014,7 +1024,7 @@ export function PlanoPerformanceSection({
                         const isOpcao1 = altIndex === 0;
                         return (
                           <li
-                            key={`${cat.key}-${idx}`}
+                            key={`${catKey}-${idx}`}
                             className={`flex items-center gap-3 p-3.5 transition ${isSelected ? "hover:bg-primary/5" : "opacity-55"}`}
                           >
                             <div className="flex w-8 shrink-0 items-center justify-center">
@@ -1022,7 +1032,7 @@ export function PlanoPerformanceSection({
                                 <button
                                   type="button"
                                   onClick={() =>
-                                    chooseAlternative(cat.key, it.alternativeGroup!, idx)
+                                    chooseAlternative(catKey, it.alternativeGroup!, idx)
                                   }
                                   aria-label={`Escolher ${it.name}`}
                                   className={`flex h-5 w-5 items-center justify-center rounded-full border-2 transition ${
@@ -1046,7 +1056,7 @@ export function PlanoPerformanceSection({
                               aria-hidden
                               className={`relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-primary/25 via-primary/10 to-white/5 text-xl ring-1 ring-white/10 ${isSelected ? "" : "grayscale opacity-60"}`}
                             >
-                              <span className="leading-none">{cat.emoji}</span>
+                              <span className="leading-none">{catEmoji}</span>
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="mb-1 flex flex-wrap items-center gap-1.5">
@@ -1065,6 +1075,9 @@ export function PlanoPerformanceSection({
                                     {it.name}
                                   </h5>
                                 )}
+                                <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider text-white/50">
+                                  {catTitle}
+                                </span>
                                 {it.alternativeGroup && (
                                   <span
                                     className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${
@@ -1120,8 +1133,10 @@ export function PlanoPerformanceSection({
                       })}
                     </ul>
                   </div>
-                ))}
+                  );
+                })}
               </div>
+
             </div>
 
             {/* Observations */}
