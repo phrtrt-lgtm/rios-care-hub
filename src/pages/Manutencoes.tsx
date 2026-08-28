@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import { MediaGallery } from "@/components/MediaGallery";
 import { ownerScopeFilter } from "@/lib/ownerScope";
+import { fetchChargeGalleryAttachments } from "@/lib/chargeAttachments";
 
 
 
@@ -67,39 +68,23 @@ export default function Manutencoes() {
     }
   }, [user, year, propertyId, serviceTypeFilter]);
 
-  // Fetch attachments for listed maintenances (full info for gallery)
   useEffect(() => {
-    const ids = (maintenances || []).map((m: any) => m.id);
-    if (ids.length === 0) {
+    const list = (maintenances || []).map((m: any) => ({ id: m.id, ticket_id: m.ticket_id }));
+    if (list.length === 0) {
       setAttachmentsByCharge({});
       return;
     }
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
-        .from("charge_attachments")
-        .select("id, charge_id, file_path, file_name, mime_type, mime_type_override, created_at")
-        .in("charge_id", ids)
-        .order("created_at", { ascending: true });
+      const grouped = await fetchChargeGalleryAttachments(list);
       if (cancelled) return;
-      const grouped: Record<string, Array<{ id: string; file_url: string; file_name: string; file_type: string }>> = {};
-      (data || []).forEach((a: any) => {
-        const path = a.file_path || "";
-        let url = path;
-        if (path && !path.startsWith("http://") && !path.startsWith("https://")) {
-          const { data: pub } = supabase.storage.from("attachments").getPublicUrl(path);
-          url = pub.publicUrl;
-        }
-        const mime = a.mime_type_override || a.mime_type || "";
-        if (!grouped[a.charge_id]) grouped[a.charge_id] = [];
-        grouped[a.charge_id].push({ id: a.id, file_url: url, file_name: a.file_name || "", file_type: mime });
-      });
       setAttachmentsByCharge(grouped);
     })();
     return () => {
       cancelled = true;
     };
   }, [maintenances]);
+
 
 
   const fetchServiceTypeData = async () => {
