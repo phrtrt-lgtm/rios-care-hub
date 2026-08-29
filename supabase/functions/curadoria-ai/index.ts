@@ -76,6 +76,8 @@ const TOOL = {
                     unit: { type: "string", description: "Unidade do quantity (ex: 'un', 'par', 'kit', 'jogo', 'm²')." },
                     dimensions: { type: "string", description: "Especificação COMPLETA do sub-item da planilha — cor, material, medidas, acabamento, tudo junto. Ex: 'nogueira 60x40 s/vidro', 'caramelo 80x50', 'King 193x203 400 fios'. NUNCA resumir nem omitir partes." },
                     room: { type: "string", description: "Cômodo do imóvel ao qual o item pertence (ex: 'Sala', 'Cozinha', 'Quarto 1', 'Suíte', 'Banheiro', 'Varanda'). Extraia EXATAMENTE como na planilha. Vazio se não houver." },
+                    optional: { type: "boolean", description: "true apenas se a planilha marcar o item como opcional/extra. Omita para itens fixos." },
+                    alternativeGroup: { type: "string", description: "Slug compartilhado entre variações mutuamente exclusivas do mesmo item (ex: 'sala-sofa'). Omita para itens fixos." },
                   },
                   required: ["name", "why", "price"],
                 },
