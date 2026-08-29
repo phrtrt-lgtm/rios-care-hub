@@ -37,7 +37,10 @@ REGRA CRÍTICA DE FIDELIDADE AOS DADOS:
 - SEMPRE extraia quantity, unit, dimensions e room quando aparecerem na planilha. O campo "dimensions" DEVE conter o sub-item COMPLETO da planilha (cor, material, medidas, acabamento — tudo junto). Ex: se a planilha diz "nogueira 60x40 s/vidro", dimensions = "nogueira 60x40 s/vidro" (NÃO apenas "60x40"). Se diz "caramelo", dimensions = "caramelo". Se diz "pintado 2 unidades", dimensions = "pintado" e quantity = 2. NUNCA resuma ou omita partes do sub-item — o proprietário precisa comprar EXATAMENTE como descrito.
 - O campo "room" deve refletir o cômodo do imóvel onde o item será usado (Sala, Cozinha, Quarto 1, Quarto 2, Suíte, Banheiro, Varanda, etc.). Se a planilha tiver uma coluna ou seção indicando o cômodo, use essa informação. Se um mesmo item aparece em vários cômodos, gere uma linha para cada cômodo.
 - Se não houver sub-item na planilha, deixe dimensions vazio — não invente. Mesmo para room.
-- NÃO crie alternativas/opções nem itens opcionais. Cada linha da planilha vira UM item fixo na curadoria. Não use os campos "optional" nem "alternativeGroup" — sempre omita-os.
+- FIDELIDADE TOTAL DE COBERTURA: TODA linha/sub-item da planilha DEVE virar um item na curadoria. NUNCA descarte, agrupe ou resuma linhas — nem as opcionais, nem as alternativas. Se a planilha tem 87 linhas, a curadoria tem 87 itens.
+- Se a planilha marcar um item como opcional (ex: "opcional", "se quiser", "extra"), defina optional: true — mas mantenha o item na curadoria.
+- Se a planilha oferecer variações mutuamente exclusivas do mesmo item (ex: "opção 1 / opção 2", dois modelos do mesmo produto), inclua TODAS e dê a elas o MESMO valor em alternativeGroup (um slug curto, ex: "sala-sofa"). A primeira listada é a recomendada.
+- Itens fixos (nem opcionais nem alternativas): omita optional e alternativeGroup.
 - Observações: 2-4 notas editoriais sobre o que NÓS faremos no imóvel (reposicionamento de mobília, ajustes de iluminação, aproveitamento do que já existe, cuidados de manutenção que cuidaremos). Cada uma: tag, title, body, icon ("Wand2"|"Lightbulb"|"AlertTriangle"|"Sparkles"). Mesma regra de tom: nada de imperativo ao proprietário.
 - Se o admin pedir refinamento (modo refine), aplique o comando preservando o resto.`;
 
