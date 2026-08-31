@@ -17,8 +17,15 @@ const Index = () => {
     
     if (!profile) return;
     
+    // Acesso restrito à curadoria
+    if (profile.curation_only) {
+      navigate("/minha-curadoria", { replace: true });
+      return;
+    }
+    
     // Redireciona apenas uma vez baseado na role
     if (profile.role === 'pending_owner' && profile.status === 'pending') {
+
       navigate("/bem-vindo", { replace: true });
     } else if (profile.role === 'pending_owner') {
       navigate("/bem-vindo", { replace: true });
