@@ -320,33 +320,50 @@ export default function CobrancaDetalhes() {
     }
   };
 
-  const fetchAttachments = async () => {
+  const fetchAttachments = async (ticketId?: string | null) => {
     const { data, error } = await supabase
       .from('charge_attachments')
       .select('id, file_name, file_path, file_size, mime_type, poster_path, width, height, duration_sec')
       .eq('charge_id', id);
 
-    if (!error && data) {
-      setAttachments(data);
-      
-      // Prepare media gallery items
-      const mediaItems: MediaItem[] = data
-        .filter(att => isImageFile(att) || isVideoFile(att))
-        .map(att => ({
-          id: att.id,
-          file_url: getAttachmentUrl(att),
-          file_name: att.file_name,
-          file_type: att.mime_type,
-          size_bytes: att.file_size
+    if (error) return;
+
+    const rows = data || [];
+    setAttachments(rows);
+
+    // Prepare media gallery items
+    let mediaItems: MediaItem[] = rows
+      .filter(att => isImageFile(att) || isVideoFile(att))
+      .map(att => ({
+        id: att.id,
+        file_url: getAttachmentUrl(att),
+        file_name: att.file_name,
+        file_type: att.mime_type,
+        size_bytes: att.file_size
+      }));
+
+    // Fallback: cobrança sem anexos próprios herda os anexos do ticket de origem
+    let inherited: GalleryAttachment[] = [];
+    if (rows.length === 0 && ticketId) {
+      const grouped = await fetchChargeGalleryAttachments([{ id: id as string, ticket_id: ticketId }]);
+      inherited = grouped[id as string] || [];
+      mediaItems = inherited
+        .filter(a => a.file_type?.startsWith('image/') || a.file_type?.startsWith('video/'))
+        .map(a => ({
+          id: a.id,
+          file_url: a.file_url,
+          file_name: a.file_name,
+          file_type: a.file_type,
         }));
-      
-      setAllMediaItems(mediaItems);
-      
-      // Preload all media URLs for faster gallery experience
-      const urlsToPreload = mediaItems.map(item => item.file_url);
-      preloadMediaUrls(urlsToPreload);
     }
+    setInheritedAttachments(inherited);
+
+    setAllMediaItems(mediaItems);
+
+    // Preload all media URLs for faster gallery experience
+    preloadMediaUrls(mediaItems.map(item => item.file_url));
   };
+
 
   const getAttachmentUrl = (attachment: ChargeAttachment) => {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
