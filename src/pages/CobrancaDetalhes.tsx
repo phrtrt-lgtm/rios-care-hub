@@ -377,6 +377,34 @@ export default function CobrancaDetalhes() {
     return `${supabaseUrl}/functions/v1/serve-attachment/${attachment.id}/poster`;
   };
 
+  /** Lista unificada (anexos próprios ou herdados do ticket) para download em lote e arquivos. */
+  const allAttachmentFiles = useMemo(() => {
+    const base = import.meta.env.VITE_SUPABASE_URL;
+    if (attachments.length > 0) {
+      return attachments.map((a) => ({
+        id: a.id,
+        file_name: a.file_name || 'anexo',
+        mime: a.mime_type || '',
+        size: a.file_size,
+        download_url: `${base}/functions/v1/serve-attachment/${a.id}`,
+      }));
+    }
+    return inheritedAttachments.map((a) => ({
+      id: a.id,
+      file_name: a.file_name || 'anexo',
+      mime: a.file_type || '',
+      size: null as number | null,
+      download_url: a.file_url,
+    }));
+  }, [attachments, inheritedAttachments]);
+
+  const docFiles = useMemo(
+    () => allAttachmentFiles.filter((f) => !f.mime.startsWith('image/') && !f.mime.startsWith('video/')),
+    [allAttachmentFiles],
+  );
+
+
+
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
     const validFiles = files.filter(file => {
