@@ -31,6 +31,7 @@ import { EditChargeDialog } from "@/components/EditChargeDialog";
 import { processFileForUpload } from "@/lib/processVideoForUpload";
 import { MaintenanceServiceLog } from "@/components/MaintenanceServiceLog";
 import type { MaintenanceNote } from "@/hooks/useMaintenances";
+import { fetchChargeGalleryAttachments, type GalleryAttachment } from "@/lib/chargeAttachments";
 
 interface Charge {
   id: string;
@@ -111,6 +112,7 @@ export default function CobrancaDetalhes() {
   const [serviceNotes, setServiceNotes] = useState<MaintenanceNote[]>([]);
   const [messages, setMessages] = useState<ChargeMessage[]>([]);
   const [attachments, setAttachments] = useState<ChargeAttachment[]>([]);
+  const [inheritedAttachments, setInheritedAttachments] = useState<GalleryAttachment[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -219,7 +221,7 @@ export default function CobrancaDetalhes() {
 
       await Promise.all([
         fetchMessages(),
-        fetchAttachments()
+        fetchAttachments((chargeData as any).ticket_id)
       ]);
 
       // Auto-regenerar link/PIX se a cobrança está vencida e ainda não foi paga
