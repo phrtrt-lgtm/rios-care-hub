@@ -1397,27 +1397,37 @@ export default function CobrancaDetalhes() {
               </Card>
             )}
 
-            {attachments.length > 0 && (
-              <div className="pt-4 mt-4">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-medium text-muted-foreground">Anexos ({attachments.length})</span>
-                  {attachments.length > 1 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 text-xs text-muted-foreground hover:text-foreground"
-                      onClick={downloadAllAttachments}
-                      disabled={downloadingAll}
-                    >
-                      <Download className="h-3 w-3 mr-1" />
-                      Baixar todos
-                    </Button>
-                  )}
+            {allAttachmentFiles.length > 0 && (
+              <div className="border-t pt-4 mt-4">
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Paperclip className="h-4 w-4 text-primary shrink-0" />
+                    <span className="text-sm font-medium">
+                      Anexos <span className="text-muted-foreground font-normal">({allAttachmentFiles.length})</span>
+                    </span>
+                    {attachments.length === 0 && inheritedAttachments.length > 0 && (
+                      <Badge variant="outline" className="text-[10px] h-5">Do atendimento</Badge>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs shrink-0"
+                    onClick={downloadAllAttachments}
+                    disabled={downloadingAll}
+                  >
+                    {downloadingAll ? (
+                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    ) : (
+                      <Download className="h-3.5 w-3.5 mr-1.5" />
+                    )}
+                    {downloadingAll ? "Compactando..." : "Baixar todos (.zip)"}
+                  </Button>
                 </div>
 
-                {/* Mídia em linha horizontal compacta */}
+                {/* Mídia em grade — visível sem precisar arrastar */}
                 {allMediaItems.length > 0 && (
-                  <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-none">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
                     {allMediaItems.map((item, idx) => {
                       const isImg = item.file_type?.startsWith('image/');
                       const attachment = attachments.find(a => a.id === item.id);
@@ -1426,7 +1436,7 @@ export default function CobrancaDetalhes() {
                       return (
                         <button
                           key={item.id}
-                          className="relative flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-muted focus:outline-none focus:ring-2 focus:ring-primary/40"
+                          className="group relative aspect-square rounded-xl overflow-hidden bg-muted border border-border hover:border-primary/50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40"
                           onClick={() => {
                             setGalleryStartIndex(idx);
                             setGalleryOpen(true);
@@ -1435,7 +1445,7 @@ export default function CobrancaDetalhes() {
                           {isImg ? (
                             <AuthenticatedImage
                               src={item.file_url}
-                              alt={item.file_name || ''}
+                              alt={`Anexo ${idx + 1}`}
                               className="w-full h-full object-cover"
                             />
                           ) : (
@@ -1445,50 +1455,52 @@ export default function CobrancaDetalhes() {
                               className="w-full h-full"
                             />
                           )}
+                          <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/20 transition-colors flex items-center justify-center">
+                            {isImg ? (
+                              <ZoomIn className="h-5 w-5 text-primary-foreground opacity-0 group-hover:opacity-100 transition-opacity drop-shadow" />
+                            ) : (
+                              <Play className="h-6 w-6 text-primary-foreground opacity-80 drop-shadow" />
+                            )}
+                          </div>
                         </button>
                       );
                     })}
                   </div>
                 )}
 
-                {/* Arquivos — lista minimalista */}
-                {attachments.some(a => !isImageFile(a) && !isVideoFile(a)) && (
-                  <div className="mt-3 space-y-0">
-                    {attachments
-                      .filter(a => !isImageFile(a) && !isVideoFile(a))
-                      .map((attachment) => (
-                        <div
-                          key={attachment.id}
-                          className="flex items-center gap-3 py-2 border-b last:border-b-0"
-                        >
-                          <div className="flex-shrink-0">
-                            {getFileIcon(attachment.mime_type || '')}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-foreground truncate">
-                              {attachment.file_name}
+                {/* Arquivos (PDF e outros) */}
+                {docFiles.length > 0 && (
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    {docFiles.map((file) => (
+                      <div
+                        key={file.id}
+                        className="flex items-center gap-2.5 rounded-lg border border-border bg-muted/40 px-3 py-2"
+                      >
+                        <div className="flex-shrink-0">{getFileIcon(file.mime)}</div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium truncate">{file.file_name}</p>
+                          {file.size && (
+                            <p className="text-[11px] text-muted-foreground">
+                              {(file.size / 1024).toFixed(1)} KB
                             </p>
-                            {attachment.file_size && (
-                              <p className="text-xs text-muted-foreground">
-                                {(attachment.file_size / 1024).toFixed(1)} KB
-                              </p>
-                            )}
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => downloadAttachment(attachment.id, attachment.file_name)}
-                            disabled={sending}
-                            className="h-7 w-7 p-0 flex-shrink-0"
-                          >
-                            <Download className="h-3.5 w-3.5" />
-                          </Button>
+                          )}
                         </div>
-                      ))}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => window.open(file.download_url, '_blank')}
+                          className="h-7 w-7 p-0 flex-shrink-0"
+                          aria-label="Baixar anexo"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
             )}
+
 
             {charge.payment_link_url && (
               <div className="border-t pt-4 mt-4">
