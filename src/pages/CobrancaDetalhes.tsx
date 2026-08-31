@@ -1755,7 +1755,7 @@ export default function CobrancaDetalhes() {
         onOpenChange={setGalleryOpen}
         onDelete={isTeamMemberRaw ? async (item) => {
           const ok = await deleteAttachmentRow("charge_attachments", item.id);
-          if (ok) fetchAttachments();
+          if (ok) fetchAttachments((charge as any)?.ticket_id);
         } : undefined}
       />
 
