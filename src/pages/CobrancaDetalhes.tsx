@@ -31,6 +31,7 @@ import { EditChargeDialog } from "@/components/EditChargeDialog";
 import { processFileForUpload } from "@/lib/processVideoForUpload";
 import { MaintenanceServiceLog } from "@/components/MaintenanceServiceLog";
 import type { MaintenanceNote } from "@/hooks/useMaintenances";
+import { fetchChargeGalleryAttachments, type GalleryAttachment } from "@/lib/chargeAttachments";
 
 interface Charge {
   id: string;
@@ -111,6 +112,7 @@ export default function CobrancaDetalhes() {
   const [serviceNotes, setServiceNotes] = useState<MaintenanceNote[]>([]);
   const [messages, setMessages] = useState<ChargeMessage[]>([]);
   const [attachments, setAttachments] = useState<ChargeAttachment[]>([]);
+  const [inheritedAttachments, setInheritedAttachments] = useState<GalleryAttachment[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -219,7 +221,7 @@ export default function CobrancaDetalhes() {
 
       await Promise.all([
         fetchMessages(),
-        fetchAttachments()
+        fetchAttachments((chargeData as any).ticket_id)
       ]);
 
       // Auto-regenerar link/PIX se a cobrança está vencida e ainda não foi paga
@@ -320,33 +322,50 @@ export default function CobrancaDetalhes() {
     }
   };
 
-  const fetchAttachments = async () => {
+  const fetchAttachments = async (ticketId?: string | null) => {
     const { data, error } = await supabase
       .from('charge_attachments')
       .select('id, file_name, file_path, file_size, mime_type, poster_path, width, height, duration_sec')
       .eq('charge_id', id);
 
-    if (!error && data) {
-      setAttachments(data);
-      
-      // Prepare media gallery items
-      const mediaItems: MediaItem[] = data
-        .filter(att => isImageFile(att) || isVideoFile(att))
-        .map(att => ({
-          id: att.id,
-          file_url: getAttachmentUrl(att),
-          file_name: att.file_name,
-          file_type: att.mime_type,
-          size_bytes: att.file_size
+    if (error) return;
+
+    const rows = data || [];
+    setAttachments(rows);
+
+    // Prepare media gallery items
+    let mediaItems: MediaItem[] = rows
+      .filter(att => isImageFile(att) || isVideoFile(att))
+      .map(att => ({
+        id: att.id,
+        file_url: getAttachmentUrl(att),
+        file_name: att.file_name,
+        file_type: att.mime_type,
+        size_bytes: att.file_size
+      }));
+
+    // Fallback: cobrança sem anexos próprios herda os anexos do ticket de origem
+    let inherited: GalleryAttachment[] = [];
+    if (rows.length === 0 && ticketId) {
+      const grouped = await fetchChargeGalleryAttachments([{ id: id as string, ticket_id: ticketId }]);
+      inherited = grouped[id as string] || [];
+      mediaItems = inherited
+        .filter(a => a.file_type?.startsWith('image/') || a.file_type?.startsWith('video/'))
+        .map(a => ({
+          id: a.id,
+          file_url: a.file_url,
+          file_name: a.file_name,
+          file_type: a.file_type,
         }));
-      
-      setAllMediaItems(mediaItems);
-      
-      // Preload all media URLs for faster gallery experience
-      const urlsToPreload = mediaItems.map(item => item.file_url);
-      preloadMediaUrls(urlsToPreload);
     }
+    setInheritedAttachments(inherited);
+
+    setAllMediaItems(mediaItems);
+
+    // Preload all media URLs for faster gallery experience
+    preloadMediaUrls(mediaItems.map(item => item.file_url));
   };
+
 
   const getAttachmentUrl = (attachment: ChargeAttachment) => {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -357,6 +376,34 @@ export default function CobrancaDetalhes() {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     return `${supabaseUrl}/functions/v1/serve-attachment/${attachment.id}/poster`;
   };
+
+  /** Lista unificada (anexos próprios ou herdados do ticket) para download em lote e arquivos. */
+  const allAttachmentFiles = useMemo(() => {
+    const base = import.meta.env.VITE_SUPABASE_URL;
+    if (attachments.length > 0) {
+      return attachments.map((a) => ({
+        id: a.id,
+        file_name: a.file_name || 'anexo',
+        mime: a.mime_type || '',
+        size: a.file_size,
+        download_url: `${base}/functions/v1/serve-attachment/${a.id}`,
+      }));
+    }
+    return inheritedAttachments.map((a) => ({
+      id: a.id,
+      file_name: a.file_name || 'anexo',
+      mime: a.file_type || '',
+      size: null as number | null,
+      download_url: a.file_url,
+    }));
+  }, [attachments, inheritedAttachments]);
+
+  const docFiles = useMemo(
+    () => allAttachmentFiles.filter((f) => !f.mime.startsWith('image/') && !f.mime.startsWith('video/')),
+    [allAttachmentFiles],
+  );
+
+
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
@@ -566,7 +613,8 @@ export default function CobrancaDetalhes() {
     try {
       setDownloadingAll(true);
       
-      if (attachments.length === 0) {
+      const files = allAttachmentFiles;
+      if (files.length === 0) {
         toast({
           title: "Nenhum anexo encontrado",
           variant: "destructive",
@@ -575,39 +623,23 @@ export default function CobrancaDetalhes() {
         return;
       }
 
-      console.log(`📦 Iniciando download de ${attachments.length} arquivos`);
-
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error("Sessão não encontrada");
-      }
-
-      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
       const zip = new JSZip();
       let successCount = 0;
-      
-      for (let i = 0; i < attachments.length; i++) {
-        const attachment = attachments[i];
-        
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
         try {
-          console.log(`📥 Processando ${i + 1}/${attachments.length}: ${attachment.file_name}`);
-          
-          const downloadUrl = `${SUPABASE_URL}/functions/v1/serve-attachment/${attachment.id}`;
-          
-          const response = await fetch(downloadUrl, {
-            headers: {
-              'Authorization': `Bearer ${session.access_token}`,
-            },
+          const response = await fetch(file.download_url, {
+            headers: session ? { Authorization: `Bearer ${session.access_token}` } : undefined,
           });
-          
           if (response.ok) {
             const blob = await response.blob();
-            zip.file(attachment.file_name, blob);
+            zip.file(`${String(i + 1).padStart(2, "0")}-${file.file_name}`, blob);
             successCount++;
-            console.log(`✅ ${attachment.file_name} adicionado`);
           }
         } catch (error) {
-          console.error(`❌ Erro ao processar arquivo ${i + 1}:`, error);
+          console.error(`Erro ao processar arquivo ${i + 1}:`, error);
         }
       }
 
@@ -1365,27 +1397,37 @@ export default function CobrancaDetalhes() {
               </Card>
             )}
 
-            {attachments.length > 0 && (
-              <div className="pt-4 mt-4">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-medium text-muted-foreground">Anexos ({attachments.length})</span>
-                  {attachments.length > 1 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 text-xs text-muted-foreground hover:text-foreground"
-                      onClick={downloadAllAttachments}
-                      disabled={downloadingAll}
-                    >
-                      <Download className="h-3 w-3 mr-1" />
-                      Baixar todos
-                    </Button>
-                  )}
+            {allAttachmentFiles.length > 0 && (
+              <div className="border-t pt-4 mt-4">
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Paperclip className="h-4 w-4 text-primary shrink-0" />
+                    <span className="text-sm font-medium">
+                      Anexos <span className="text-muted-foreground font-normal">({allAttachmentFiles.length})</span>
+                    </span>
+                    {attachments.length === 0 && inheritedAttachments.length > 0 && (
+                      <Badge variant="outline" className="text-[10px] h-5">Do atendimento</Badge>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs shrink-0"
+                    onClick={downloadAllAttachments}
+                    disabled={downloadingAll}
+                  >
+                    {downloadingAll ? (
+                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    ) : (
+                      <Download className="h-3.5 w-3.5 mr-1.5" />
+                    )}
+                    {downloadingAll ? "Compactando..." : "Baixar todos (.zip)"}
+                  </Button>
                 </div>
 
-                {/* Mídia em linha horizontal compacta */}
+                {/* Mídia em grade — visível sem precisar arrastar */}
                 {allMediaItems.length > 0 && (
-                  <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-none">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
                     {allMediaItems.map((item, idx) => {
                       const isImg = item.file_type?.startsWith('image/');
                       const attachment = attachments.find(a => a.id === item.id);
@@ -1394,7 +1436,7 @@ export default function CobrancaDetalhes() {
                       return (
                         <button
                           key={item.id}
-                          className="relative flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-muted focus:outline-none focus:ring-2 focus:ring-primary/40"
+                          className="group relative aspect-square rounded-xl overflow-hidden bg-muted border border-border hover:border-primary/50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40"
                           onClick={() => {
                             setGalleryStartIndex(idx);
                             setGalleryOpen(true);
@@ -1403,7 +1445,7 @@ export default function CobrancaDetalhes() {
                           {isImg ? (
                             <AuthenticatedImage
                               src={item.file_url}
-                              alt={item.file_name || ''}
+                              alt={`Anexo ${idx + 1}`}
                               className="w-full h-full object-cover"
                             />
                           ) : (
@@ -1413,50 +1455,52 @@ export default function CobrancaDetalhes() {
                               className="w-full h-full"
                             />
                           )}
+                          <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/20 transition-colors flex items-center justify-center">
+                            {isImg ? (
+                              <ZoomIn className="h-5 w-5 text-primary-foreground opacity-0 group-hover:opacity-100 transition-opacity drop-shadow" />
+                            ) : (
+                              <Play className="h-6 w-6 text-primary-foreground opacity-80 drop-shadow" />
+                            )}
+                          </div>
                         </button>
                       );
                     })}
                   </div>
                 )}
 
-                {/* Arquivos — lista minimalista */}
-                {attachments.some(a => !isImageFile(a) && !isVideoFile(a)) && (
-                  <div className="mt-3 space-y-0">
-                    {attachments
-                      .filter(a => !isImageFile(a) && !isVideoFile(a))
-                      .map((attachment) => (
-                        <div
-                          key={attachment.id}
-                          className="flex items-center gap-3 py-2 border-b last:border-b-0"
-                        >
-                          <div className="flex-shrink-0">
-                            {getFileIcon(attachment.mime_type || '')}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-foreground truncate">
-                              {attachment.file_name}
+                {/* Arquivos (PDF e outros) */}
+                {docFiles.length > 0 && (
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    {docFiles.map((file) => (
+                      <div
+                        key={file.id}
+                        className="flex items-center gap-2.5 rounded-lg border border-border bg-muted/40 px-3 py-2"
+                      >
+                        <div className="flex-shrink-0">{getFileIcon(file.mime)}</div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium truncate">{file.file_name}</p>
+                          {file.size && (
+                            <p className="text-[11px] text-muted-foreground">
+                              {(file.size / 1024).toFixed(1)} KB
                             </p>
-                            {attachment.file_size && (
-                              <p className="text-xs text-muted-foreground">
-                                {(attachment.file_size / 1024).toFixed(1)} KB
-                              </p>
-                            )}
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => downloadAttachment(attachment.id, attachment.file_name)}
-                            disabled={sending}
-                            className="h-7 w-7 p-0 flex-shrink-0"
-                          >
-                            <Download className="h-3.5 w-3.5" />
-                          </Button>
+                          )}
                         </div>
-                      ))}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => window.open(file.download_url, '_blank')}
+                          className="h-7 w-7 p-0 flex-shrink-0"
+                          aria-label="Baixar anexo"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
             )}
+
 
             {charge.payment_link_url && (
               <div className="border-t pt-4 mt-4">
@@ -1711,7 +1755,7 @@ export default function CobrancaDetalhes() {
         onOpenChange={setGalleryOpen}
         onDelete={isTeamMemberRaw ? async (item) => {
           const ok = await deleteAttachmentRow("charge_attachments", item.id);
-          if (ok) fetchAttachments();
+          if (ok) fetchAttachments((charge as any)?.ticket_id);
         } : undefined}
       />
 
