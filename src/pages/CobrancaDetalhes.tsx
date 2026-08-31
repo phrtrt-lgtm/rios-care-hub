@@ -585,7 +585,8 @@ export default function CobrancaDetalhes() {
     try {
       setDownloadingAll(true);
       
-      if (attachments.length === 0) {
+      const files = allAttachmentFiles;
+      if (files.length === 0) {
         toast({
           title: "Nenhum anexo encontrado",
           variant: "destructive",
@@ -594,39 +595,23 @@ export default function CobrancaDetalhes() {
         return;
       }
 
-      console.log(`📦 Iniciando download de ${attachments.length} arquivos`);
-
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error("Sessão não encontrada");
-      }
-
-      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
       const zip = new JSZip();
       let successCount = 0;
-      
-      for (let i = 0; i < attachments.length; i++) {
-        const attachment = attachments[i];
-        
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
         try {
-          console.log(`📥 Processando ${i + 1}/${attachments.length}: ${attachment.file_name}`);
-          
-          const downloadUrl = `${SUPABASE_URL}/functions/v1/serve-attachment/${attachment.id}`;
-          
-          const response = await fetch(downloadUrl, {
-            headers: {
-              'Authorization': `Bearer ${session.access_token}`,
-            },
+          const response = await fetch(file.download_url, {
+            headers: session ? { Authorization: `Bearer ${session.access_token}` } : undefined,
           });
-          
           if (response.ok) {
             const blob = await response.blob();
-            zip.file(attachment.file_name, blob);
+            zip.file(`${String(i + 1).padStart(2, "0")}-${file.file_name}`, blob);
             successCount++;
-            console.log(`✅ ${attachment.file_name} adicionado`);
           }
         } catch (error) {
-          console.error(`❌ Erro ao processar arquivo ${i + 1}:`, error);
+          console.error(`Erro ao processar arquivo ${i + 1}:`, error);
         }
       }
 
