@@ -26,6 +26,8 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import JSZip from "jszip";
+import { buildZipEntryName } from "@/lib/zipFileName";
+
 import { CHARGE_CATEGORIES } from "@/constants/chargeCategories";
 import { EditChargeDialog } from "@/components/EditChargeDialog";
 import { processFileForUpload } from "@/lib/processVideoForUpload";
@@ -635,13 +637,15 @@ export default function CobrancaDetalhes() {
           });
           if (response.ok) {
             const blob = await response.blob();
-            zip.file(`${String(i + 1).padStart(2, "0")}-${file.file_name}`, blob);
+            zip.file(buildZipEntryName(i, file.file_name, file.mime, file.download_url, blob.type), blob);
             successCount++;
           }
         } catch (error) {
           console.error(`Erro ao processar arquivo ${i + 1}:`, error);
         }
       }
+
+
 
       if (successCount === 0) {
         toast({
@@ -740,7 +744,7 @@ export default function CobrancaDetalhes() {
           
           if (response.ok) {
             const blob = await response.blob();
-            zip.file(attachment.file_name, blob);
+            zip.file(buildZipEntryName(i, attachment.file_name, (attachment as any).mime_type || (attachment as any).file_type, downloadUrl, blob.type), blob);
             successCount++;
           }
         } catch (error) {
