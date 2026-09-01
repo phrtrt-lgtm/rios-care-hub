@@ -38,7 +38,7 @@ import { preloadMediaUrls } from "@/hooks/useMediaCache";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import JSZip from "jszip";
-import { buildZipEntryName } from "@/lib/zipFileName";
+import { buildZipEntryNameFromBlob } from "@/lib/zipFileName";
 
 import { processFileForUpload } from "@/lib/processVideoForUpload";
 
@@ -470,7 +470,7 @@ export default function TicketDetalhes() {
             }
             
             if (data) {
-              const fileName = buildZipEntryName(i, attachment.file_name, (attachment as any).file_type || (attachment as any).mime_type, attachment.file_url, data.type);
+              const fileName = await buildZipEntryNameFromBlob(i, data, attachment.file_name, (attachment as any).file_type || (attachment as any).mime_type, attachment.file_url);
               zip.file(fileName, data);
               successCount++;
 
@@ -563,7 +563,7 @@ export default function TicketDetalhes() {
             }
             
             if (data) {
-              const fileName = buildZipEntryName(i, attachment.file_name, (attachment as any).file_type || (attachment as any).mime_type, attachment.file_url, data.type);
+              const fileName = await buildZipEntryNameFromBlob(i, data, attachment.file_name, (attachment as any).file_type || (attachment as any).mime_type, attachment.file_url);
               zip.file(fileName, data);
 
               successCount++;
