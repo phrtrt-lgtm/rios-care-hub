@@ -26,7 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import JSZip from "jszip";
-import { buildZipEntryName } from "@/lib/zipFileName";
+import { buildZipEntryNameFromBlob } from "@/lib/zipFileName";
 
 import { CHARGE_CATEGORIES } from "@/constants/chargeCategories";
 import { EditChargeDialog } from "@/components/EditChargeDialog";
@@ -637,7 +637,7 @@ export default function CobrancaDetalhes() {
           });
           if (response.ok) {
             const blob = await response.blob();
-            zip.file(buildZipEntryName(i, file.file_name, file.mime, file.download_url, blob.type), blob);
+            zip.file(await buildZipEntryNameFromBlob(i, blob, file.file_name, file.mime, file.download_url), blob);
             successCount++;
           }
         } catch (error) {
@@ -744,7 +744,7 @@ export default function CobrancaDetalhes() {
           
           if (response.ok) {
             const blob = await response.blob();
-            zip.file(buildZipEntryName(i, attachment.file_name, (attachment as any).mime_type || (attachment as any).file_type, downloadUrl, blob.type), blob);
+            zip.file(await buildZipEntryNameFromBlob(i, blob, attachment.file_name, (attachment as any).mime_type || (attachment as any).file_type, downloadUrl), blob);
             successCount++;
           }
         } catch (error) {
