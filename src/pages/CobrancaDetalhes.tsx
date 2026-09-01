@@ -627,6 +627,24 @@ export default function CobrancaDetalhes() {
       const zip = new JSZip();
       let successCount = 0;
 
+      const extFromMime: Record<string, string> = {
+        'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'image/gif': 'gif',
+        'image/webp': 'webp', 'image/heic': 'heic', 'image/heif': 'heif', 'image/bmp': 'bmp',
+        'video/mp4': 'mp4', 'video/quicktime': 'mov', 'video/webm': 'webm', 'video/3gpp': '3gp',
+        'video/x-matroska': 'mkv', 'video/x-msvideo': 'avi',
+        'audio/mpeg': 'mp3', 'audio/mp4': 'm4a', 'audio/wav': 'wav', 'audio/ogg': 'ogg',
+        'audio/webm': 'webm', 'application/pdf': 'pdf',
+      };
+
+      const buildName = (index: number, rawName: string, mime: string, url: string, blobType: string) => {
+        const base = (rawName || 'Anexo').replace(/\.[^.]+$/, '');
+        const currentExt = /\.([a-z0-9]{2,5})$/i.exec(rawName || '')?.[1]?.toLowerCase();
+        const urlExt = /\.([a-z0-9]{2,5})(?:$|\?)/i.exec(url || '')?.[1]?.toLowerCase();
+        const mimeKey = (blobType || mime || '').split(';')[0].toLowerCase();
+        const ext = currentExt || extFromMime[mimeKey] || urlExt || 'bin';
+        return `${String(index + 1).padStart(2, '0')}-${base}.${ext}`;
+      };
+
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         try {
@@ -635,13 +653,14 @@ export default function CobrancaDetalhes() {
           });
           if (response.ok) {
             const blob = await response.blob();
-            zip.file(`${String(i + 1).padStart(2, "0")}-${file.file_name}`, blob);
+            zip.file(buildName(i, file.file_name, file.mime, file.download_url, blob.type), blob);
             successCount++;
           }
         } catch (error) {
           console.error(`Erro ao processar arquivo ${i + 1}:`, error);
         }
       }
+
 
       if (successCount === 0) {
         toast({
