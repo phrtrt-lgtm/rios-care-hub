@@ -468,9 +468,10 @@ export default function TicketDetalhes() {
             }
             
             if (data) {
-              const fileName = attachment.file_name || `arquivo-${i + 1}`;
+              const fileName = buildZipEntryName(i, attachment.file_name, (attachment as any).file_type || (attachment as any).mime_type, attachment.file_url, data.type);
               zip.file(fileName, data);
               successCount++;
+
             }
           }
         } catch (error) {
