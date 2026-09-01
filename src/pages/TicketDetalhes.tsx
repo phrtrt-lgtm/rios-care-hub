@@ -38,6 +38,8 @@ import { preloadMediaUrls } from "@/hooks/useMediaCache";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import JSZip from "jszip";
+import { buildZipEntryName } from "@/lib/zipFileName";
+
 import { processFileForUpload } from "@/lib/processVideoForUpload";
 
 interface Ticket {
