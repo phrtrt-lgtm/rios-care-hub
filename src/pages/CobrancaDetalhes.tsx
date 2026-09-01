@@ -744,7 +744,7 @@ export default function CobrancaDetalhes() {
           
           if (response.ok) {
             const blob = await response.blob();
-            zip.file(attachment.file_name, blob);
+            zip.file(buildZipEntryName(i, attachment.file_name, (attachment as any).mime_type || (attachment as any).file_type, downloadUrl, blob.type), blob);
             successCount++;
           }
         } catch (error) {
