@@ -382,6 +382,8 @@ function PixDialog({ open, onClose, totalCents, qrBase64, qrCode, loading, paid 
   );
 }
 
+type PurchaseChoice = "rios" | "cart" | "self";
+
 export function PlanoPerformanceSection({
   customCategories,
   customObservations,
@@ -389,20 +391,24 @@ export function PlanoPerformanceSection({
   initialPaid,
   initialSelectedItems,
   initialPurchaseChoice,
+  cartUrl,
 }: {
   customCategories?: Category[];
   customObservations?: { icon: string; tag: string; title: string; body: string }[];
   curationId?: string;
   initialPaid?: boolean;
   initialSelectedItems?: Array<{ category?: string; name?: string }>;
-  initialPurchaseChoice?: "rios" | "self" | null;
+  initialPurchaseChoice?: PurchaseChoice | null;
+  cartUrl?: string | null;
 } = {}) {
   const [open, setOpen] = useState(false);
   const [pixOpen, setPixOpen] = useState(false);
   const [pixLoading, setPixLoading] = useState(false);
   const [pixData, setPixData] = useState<{ qr_code?: string; qr_code_base64?: string }>({});
   const [paid, setPaid] = useState(!!initialPaid);
-  const [purchaseChoice, setPurchaseChoice] = useState<"rios" | "self" | null>(initialPurchaseChoice ?? null);
+  const [purchaseChoice, setPurchaseChoice] = useState<PurchaseChoice | null>(
+    initialPurchaseChoice === "self" ? "cart" : initialPurchaseChoice ?? null,
+  );
   const [savingChoice, setSavingChoice] = useState(false);
 
   const categories = customCategories?.length ? customCategories : CATEGORIES;
