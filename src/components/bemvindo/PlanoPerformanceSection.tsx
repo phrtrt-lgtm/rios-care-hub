@@ -698,9 +698,9 @@ export function PlanoPerformanceSection({
           </p>
         </div>
         <p className="mb-4 max-w-2xl text-xs text-white/65">
-          A RIOS pode comprar tudo pra você (PIX direto pra gente) ou, se preferir usar
-          seu cartão de crédito parcelado, você mesmo compra cada item pelos links da
-          lista. Em ambos os casos cuidamos de receber, montar e instalar.
+          São duas formas: você paga o total via PIX e a RIOS compra tudo, ou a RIOS
+          monta o carrinho pronto com os itens exatos e você finaliza a compra no seu
+          cartão (parcelado). Nos dois casos cuidamos de receber, montar e instalar.
         </p>
         <div className="grid gap-3 md:grid-cols-2">
           <button
@@ -716,7 +716,7 @@ export function PlanoPerformanceSection({
             <div className="mb-1 flex items-center gap-2">
               <QrCode className="h-4 w-4 text-emerald-400" />
               <span className="text-sm font-semibold text-white">
-                RIOS compra pra mim (PIX)
+                Pagar via PIX · RIOS compra pra mim
               </span>
               {purchaseChoice === "rios" && <Check className="ml-auto h-4 w-4 text-emerald-400" />}
             </div>
@@ -728,33 +728,50 @@ export function PlanoPerformanceSection({
           <button
             type="button"
             disabled={savingChoice}
-            onClick={() => saveChoice("self")}
+            onClick={() => saveChoice("cart")}
             className={`group rounded-2xl border p-4 text-left transition disabled:opacity-60 ${
-              purchaseChoice === "self"
+              purchaseChoice === "cart"
                 ? "border-primary/60 bg-primary/15 ring-2 ring-primary/40"
                 : "border-white/10 bg-white/[0.03] hover:border-primary/40 hover:bg-primary/5"
             }`}
           >
             <div className="mb-1 flex items-center gap-2">
-              <ExternalLink className="h-4 w-4 text-primary" />
+              <ShoppingCart className="h-4 w-4 text-primary" />
               <span className="text-sm font-semibold text-white">
-                Eu mesmo vou comprar (cartão / parcelado)
+                RIOS monta o carrinho pra mim (cartão / parcelado)
               </span>
-              {purchaseChoice === "self" && <Check className="ml-auto h-4 w-4 text-primary" />}
+              {purchaseChoice === "cart" && <Check className="ml-auto h-4 w-4 text-primary" />}
             </div>
             <p className="text-xs leading-relaxed text-white/65">
-              Use seu cartão de crédito parcelado nos links de cada item. Compre nas
-              quantidades e tamanhos exatos da lista pra evitar trocas. RIOS recebe,
-              monta e instala tudo no imóvel.
+              Nossa equipe monta o carrinho com os itens exatos (cor, medida e
+              quantidade) e você só finaliza a compra no seu cartão. Assim garantimos que
+              nada venha errado — e a RIOS recebe, monta e instala tudo.
             </p>
           </button>
         </div>
-        {purchaseChoice === "self" && (
-          <div className="mt-4 rounded-xl border border-primary/30 bg-primary/10 p-3 text-xs leading-relaxed text-white/80">
-            <strong className="text-white">Atenção:</strong> compre exatamente nas
-            quantidades e tamanhos indicados em cada item da lista abaixo (chips
-            laranja = quantidade, azul = medidas). Itens errados geram retrabalho e
-            atraso na publicação do anúncio.
+        {purchaseChoice === "cart" && (
+          <div className="mt-4 rounded-xl border border-primary/30 bg-primary/10 p-4 text-xs leading-relaxed text-white/80">
+            {cartUrl ? (
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <span>
+                  <strong className="text-white">Seu carrinho está pronto.</strong> Confira
+                  os itens e finalize a compra sem alterar quantidades ou modelos.
+                </span>
+                <Button asChild className="shrink-0">
+                  <a href={cartUrl} target="_blank" rel="noreferrer">
+                    <ShoppingCart className="mr-2 h-4 w-4" />
+                    Abrir meu carrinho
+                  </a>
+                </Button>
+              </div>
+            ) : (
+              <span>
+                <strong className="text-white">Recebemos sua escolha.</strong> Nossa equipe
+                vai montar o carrinho com os itens exatos e o link aparecerá aqui nesta
+                página em breve. Se preferir adiantar, você também pode usar os links de
+                cada item da lista abaixo, sempre nas quantidades e medidas indicadas.
+              </span>
+            )}
           </div>
         )}
       </div>
