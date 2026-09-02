@@ -852,17 +852,26 @@ export function PlanoPerformanceSection({
       {curationId && purchaseChoice === "cart" && !paid && (
         <div className="mb-6 overflow-hidden rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent p-6 backdrop-blur-md md:p-7">
           <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
-            Você escolheu comprar os itens
+            Carrinho montado pela RIOS
           </p>
           <h3 className="text-lg font-bold tracking-tight text-white md:text-xl">
-            Use os links de cada item abaixo · cartão / parcelado
+            {cartUrl
+              ? "Seu carrinho está pronto · finalize no seu cartão"
+              : "Estamos montando seu carrinho com os itens exatos"}
           </h3>
           <p className="mt-1 max-w-2xl text-sm text-white/70">
-            Compre exatamente nas <strong className="text-white">quantidades</strong> e
-            <strong className="text-white"> tamanhos</strong> indicados. Quando finalizar
-            as compras, avise nossa equipe que iremos receber, montar e instalar tudo no
-            imóvel.
+            {cartUrl
+              ? "Não altere quantidades nem modelos: o carrinho já está com cor, medida e quantidade certas. Depois da compra, a RIOS recebe, monta e instala tudo no imóvel."
+              : "Nossa equipe está montando o carrinho pra garantir que nada venha errado. O link aparecerá aqui nesta página — você finaliza no seu cartão, parcelado se quiser."}
           </p>
+          {cartUrl && (
+            <Button asChild className="mt-4">
+              <a href={cartUrl} target="_blank" rel="noreferrer">
+                <ShoppingCart className="mr-2 h-4 w-4" />
+                Abrir meu carrinho
+              </a>
+            </Button>
+          )}
         </div>
       )}
 
