@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import {
   Sparkles,
   ShoppingBag,
+  ShoppingCart,
   Lightbulb,
   AlertTriangle,
   Wand2,
@@ -824,7 +825,7 @@ export function PlanoPerformanceSection({
       <PurchaseChoiceBlock />
 
       {/* Hero PIX no topo (só se publicada e proprietário escolheu RIOS comprando) */}
-      {curationId && purchaseChoice !== "self" && (
+      {curationId && purchaseChoice !== "cart" && (
         <div className="mb-6 overflow-hidden rounded-3xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent p-6 backdrop-blur-md md:p-7">
           <div className="flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
             <div>
@@ -848,7 +849,7 @@ export function PlanoPerformanceSection({
       )}
 
       {/* Aviso quando proprietário optou por comprar */}
-      {curationId && purchaseChoice === "self" && !paid && (
+      {curationId && purchaseChoice === "cart" && !paid && (
         <div className="mb-6 overflow-hidden rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent p-6 backdrop-blur-md md:p-7">
           <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
             Você escolheu comprar os itens
@@ -973,7 +974,7 @@ export function PlanoPerformanceSection({
               <ComoFuncionaBlock />
 
               {/* CTA PIX dentro do dialog (topo) */}
-              {curationId && purchaseChoice !== "self" && (
+              {curationId && purchaseChoice !== "cart" && (
                 <div className="mt-5 flex flex-col items-start gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 md:flex-row md:items-center md:justify-between">
                   <div>
                     <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-400">
@@ -1214,7 +1215,7 @@ export function PlanoPerformanceSection({
               </ul>
 
               {/* CTA PIX final (rodapé do dialog) */}
-              {curationId && purchaseChoice !== "self" && (
+              {curationId && purchaseChoice !== "cart" && (
                 <div className="mt-6 flex flex-col items-center gap-3 rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 to-transparent p-6 text-center">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-400">
                     Pronta para começar?
