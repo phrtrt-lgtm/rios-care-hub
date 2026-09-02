@@ -218,6 +218,9 @@ export default function MinhaCaixa() {
 
       {/* Content */}
       <main className="container mx-auto px-4 py-6 md:py-8 space-y-6">
+        {/* Curadoria RIOS — destaque no topo */}
+        <OwnerCuradoriaBanner />
+
         {/* Banners de Informação */}
         <div className="grid gap-3 sm:grid-cols-2">
           {/* Banner Protocolo de Manutenções */}
