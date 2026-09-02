@@ -13,10 +13,13 @@ type Curation = {
   id: string;
   categories: any[];
   observations: any[];
+  selected_items: any[] | null;
   paid_at: string | null;
   published_at: string | null;
   title: string | null;
   status: string;
+  owner_purchase_choice: string | null;
+  cart_url: string | null;
 };
 
 export default function MinhaCuradoria() {
