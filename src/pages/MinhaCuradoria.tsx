@@ -32,7 +32,9 @@ export default function MinhaCuradoria() {
     if (!profile?.id) return;
     supabase
       .from("owner_curations")
-      .select("id, categories, observations, paid_at, published_at, title, status")
+      .select(
+        "id, categories, observations, selected_items, paid_at, published_at, title, status, owner_purchase_choice, cart_url",
+      )
       .eq("owner_id", profile.id)
       .in("status", ["published", "paid"])
       .order("published_at", { ascending: false })
