@@ -641,7 +641,7 @@ export function PlanoPerformanceSection({
     }
   }
 
-  async function saveChoice(choice: "rios" | "self") {
+  async function saveChoice(choice: PurchaseChoice) {
     if (!curationId) return;
     setSavingChoice(true);
     const prev = purchaseChoice;
@@ -658,7 +658,7 @@ export function PlanoPerformanceSection({
       toast.success(
         choice === "rios"
           ? "Escolha registrada · RIOS cuidará das compras"
-          : "Escolha registrada · você comprará os itens",
+          : "Escolha registrada · vamos montar seu carrinho",
       );
     } catch (e: any) {
       setPurchaseChoice(prev);
