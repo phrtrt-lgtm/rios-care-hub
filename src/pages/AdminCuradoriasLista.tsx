@@ -11,6 +11,7 @@ import {
   Clock,
   FileText,
   Copy,
+  ShoppingCart,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,7 @@ type Curation = {
   paid_at: string | null;
   published_at: string | null;
   created_at: string;
+  cart_url: string | null;
   categories: CurationCategory[] | null;
   selected_items: CurationItem[] | null;
   owner: { name: string | null; email: string | null } | null;
@@ -102,7 +104,7 @@ export default function AdminCuradoriasLista() {
       const { data, error } = await supabase
         .from("owner_curations")
         .select(
-          "id, owner_id, title, status, total_amount_cents, paid_at, published_at, created_at, categories, selected_items, owner:profiles!owner_curations_owner_id_fkey(name, email)"
+          "id, owner_id, title, status, total_amount_cents, paid_at, published_at, created_at, cart_url, categories, selected_items, owner:profiles!owner_curations_owner_id_fkey(name, email)"
         )
         .order("created_at", { ascending: false });
 
@@ -110,7 +112,7 @@ export default function AdminCuradoriasLista() {
         // Fallback sem o alias da FK caso não exista
         const { data: data2 } = await supabase
           .from("owner_curations")
-          .select("id, owner_id, title, status, total_amount_cents, paid_at, published_at, created_at, categories, selected_items")
+          .select("id, owner_id, title, status, total_amount_cents, paid_at, published_at, created_at, cart_url, categories, selected_items")
           .order("created_at", { ascending: false });
         const ids = Array.from(new Set((data2 ?? []).map((c: any) => c.owner_id)));
         const { data: profs } = await supabase.from("profiles").select("id, name, email").in("id", ids);
@@ -152,6 +154,25 @@ export default function AdminCuradoriasLista() {
   }, [filtered]);
 
   const toggle = (id: string) => setExpanded((s) => ({ ...s, [id]: !s[id] }));
+
+  const saveCartUrl = async (c: Curation) => {
+    const url = window.prompt(
+      "Link do carrinho pronto para o proprietário finalizar a compra:",
+      c.cart_url ?? "",
+    );
+    if (url === null) return;
+    const value = url.trim() || null;
+    const { error } = await supabase
+      .from("owner_curations")
+      .update({ cart_url: value })
+      .eq("id", c.id);
+    if (error) {
+      toast.error("Falha ao salvar o carrinho");
+      return;
+    }
+    setCurations((prev) => prev.map((x) => (x.id === c.id ? { ...x, cart_url: value } : x)));
+    toast.success(value ? "Carrinho salvo" : "Carrinho removido");
+  };
 
   const copyLink = (id: string) => {
     const url = `${window.location.origin}/curadoria/p/${id}`;
