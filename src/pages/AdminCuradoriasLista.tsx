@@ -288,6 +288,19 @@ export default function AdminCuradoriasLista() {
                             <Button
                               size="sm"
                               variant="ghost"
+                              className={
+                                c.cart_url
+                                  ? "text-primary hover:bg-white/10"
+                                  : "text-secondary-foreground/80 hover:bg-white/10"
+                              }
+                              onClick={() => saveCartUrl(c)}
+                            >
+                              <ShoppingCart className="mr-1 h-3.5 w-3.5" />
+                              {c.cart_url ? "Carrinho ✓" : "Carrinho"}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
                               className="text-secondary-foreground/80 hover:bg-white/10"
                               onClick={() => navigate(`/curadoria/p/${c.id}`)}
                             >
