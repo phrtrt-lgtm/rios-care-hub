@@ -30,6 +30,7 @@ import { motion } from "framer-motion";
 import { OwnerBookingCommissionsPreview } from "@/components/OwnerBookingCommissionsPreview";
 import { OwnerContractInviteCard } from "@/components/contracts/OwnerContractInviteCard";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
+import { OwnerCuradoriaBanner } from "@/components/OwnerCuradoriaBanner";
 
 
 export default function MinhaCaixa() {
