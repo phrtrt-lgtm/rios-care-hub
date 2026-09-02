@@ -17,6 +17,7 @@ type Curation = {
   published_at: string | null;
   status: string;
   owner_purchase_choice: string | null;
+  cart_url: string | null;
 };
 
 export default function CuradoriaPublica() {
@@ -29,7 +30,7 @@ export default function CuradoriaPublica() {
     if (!id) return;
     supabase
       .from("owner_curations")
-      .select("id, categories, observations, selected_items, paid_at, published_at, status, owner_purchase_choice")
+      .select("id, categories, observations, selected_items, paid_at, published_at, status, owner_purchase_choice, cart_url")
       .eq("id", id)
       .maybeSingle()
       .then(({ data }) => {
@@ -92,6 +93,7 @@ export default function CuradoriaPublica() {
             initialPaid={!!curation.paid_at}
             initialSelectedItems={curation.selected_items ?? undefined}
             initialPurchaseChoice={curation.owner_purchase_choice as any}
+            cartUrl={curation.cart_url}
           />
         )}
       </div>

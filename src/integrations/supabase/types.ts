@@ -2319,6 +2319,7 @@ export type Database = {
       owner_curations: {
         Row: {
           ai_history: Json
+          cart_url: string | null
           categories: Json
           created_at: string
           created_by: string | null
@@ -2343,6 +2344,7 @@ export type Database = {
         }
         Insert: {
           ai_history?: Json
+          cart_url?: string | null
           categories?: Json
           created_at?: string
           created_by?: string | null
@@ -2367,6 +2369,7 @@ export type Database = {
         }
         Update: {
           ai_history?: Json
+          cart_url?: string | null
           categories?: Json
           created_at?: string
           created_by?: string | null

@@ -30,6 +30,7 @@ import { motion } from "framer-motion";
 import { OwnerBookingCommissionsPreview } from "@/components/OwnerBookingCommissionsPreview";
 import { OwnerContractInviteCard } from "@/components/contracts/OwnerContractInviteCard";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
+import { OwnerCuradoriaBanner } from "@/components/OwnerCuradoriaBanner";
 
 
 export default function MinhaCaixa() {
@@ -218,6 +219,9 @@ export default function MinhaCaixa() {
 
       {/* Content */}
       <main className="container mx-auto px-4 py-6 md:py-8 space-y-6">
+        {/* Curadoria RIOS — destaque no topo */}
+        <OwnerCuradoriaBanner />
+
         {/* Banners de Informação */}
         <div className="grid gap-3 sm:grid-cols-2">
           {/* Banner Protocolo de Manutenções */}

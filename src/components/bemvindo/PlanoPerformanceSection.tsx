@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import {
   Sparkles,
   ShoppingBag,
+  ShoppingCart,
   Lightbulb,
   AlertTriangle,
   Wand2,
@@ -382,6 +383,8 @@ function PixDialog({ open, onClose, totalCents, qrBase64, qrCode, loading, paid 
   );
 }
 
+type PurchaseChoice = "rios" | "cart" | "self";
+
 export function PlanoPerformanceSection({
   customCategories,
   customObservations,
@@ -389,20 +392,24 @@ export function PlanoPerformanceSection({
   initialPaid,
   initialSelectedItems,
   initialPurchaseChoice,
+  cartUrl,
 }: {
   customCategories?: Category[];
   customObservations?: { icon: string; tag: string; title: string; body: string }[];
   curationId?: string;
   initialPaid?: boolean;
   initialSelectedItems?: Array<{ category?: string; name?: string }>;
-  initialPurchaseChoice?: "rios" | "self" | null;
+  initialPurchaseChoice?: PurchaseChoice | null;
+  cartUrl?: string | null;
 } = {}) {
   const [open, setOpen] = useState(false);
   const [pixOpen, setPixOpen] = useState(false);
   const [pixLoading, setPixLoading] = useState(false);
   const [pixData, setPixData] = useState<{ qr_code?: string; qr_code_base64?: string }>({});
   const [paid, setPaid] = useState(!!initialPaid);
-  const [purchaseChoice, setPurchaseChoice] = useState<"rios" | "self" | null>(initialPurchaseChoice ?? null);
+  const [purchaseChoice, setPurchaseChoice] = useState<PurchaseChoice | null>(
+    initialPurchaseChoice === "self" ? "cart" : initialPurchaseChoice ?? null,
+  );
   const [savingChoice, setSavingChoice] = useState(false);
 
   const categories = customCategories?.length ? customCategories : CATEGORIES;
@@ -635,7 +642,7 @@ export function PlanoPerformanceSection({
     }
   }
 
-  async function saveChoice(choice: "rios" | "self") {
+  async function saveChoice(choice: PurchaseChoice) {
     if (!curationId) return;
     setSavingChoice(true);
     const prev = purchaseChoice;
@@ -652,7 +659,7 @@ export function PlanoPerformanceSection({
       toast.success(
         choice === "rios"
           ? "Escolha registrada · RIOS cuidará das compras"
-          : "Escolha registrada · você comprará os itens",
+          : "Escolha registrada · vamos montar seu carrinho",
       );
     } catch (e: any) {
       setPurchaseChoice(prev);
@@ -692,9 +699,9 @@ export function PlanoPerformanceSection({
           </p>
         </div>
         <p className="mb-4 max-w-2xl text-xs text-white/65">
-          A RIOS pode comprar tudo pra você (PIX direto pra gente) ou, se preferir usar
-          seu cartão de crédito parcelado, você mesmo compra cada item pelos links da
-          lista. Em ambos os casos cuidamos de receber, montar e instalar.
+          São duas formas: você paga o total via PIX e a RIOS compra tudo, ou a RIOS
+          monta o carrinho pronto com os itens exatos e você finaliza a compra no seu
+          cartão (parcelado). Nos dois casos cuidamos de receber, montar e instalar.
         </p>
         <div className="grid gap-3 md:grid-cols-2">
           <button
@@ -710,7 +717,7 @@ export function PlanoPerformanceSection({
             <div className="mb-1 flex items-center gap-2">
               <QrCode className="h-4 w-4 text-emerald-400" />
               <span className="text-sm font-semibold text-white">
-                RIOS compra pra mim (PIX)
+                Pagar via PIX · RIOS compra pra mim
               </span>
               {purchaseChoice === "rios" && <Check className="ml-auto h-4 w-4 text-emerald-400" />}
             </div>
@@ -722,33 +729,50 @@ export function PlanoPerformanceSection({
           <button
             type="button"
             disabled={savingChoice}
-            onClick={() => saveChoice("self")}
+            onClick={() => saveChoice("cart")}
             className={`group rounded-2xl border p-4 text-left transition disabled:opacity-60 ${
-              purchaseChoice === "self"
+              purchaseChoice === "cart"
                 ? "border-primary/60 bg-primary/15 ring-2 ring-primary/40"
                 : "border-white/10 bg-white/[0.03] hover:border-primary/40 hover:bg-primary/5"
             }`}
           >
             <div className="mb-1 flex items-center gap-2">
-              <ExternalLink className="h-4 w-4 text-primary" />
+              <ShoppingCart className="h-4 w-4 text-primary" />
               <span className="text-sm font-semibold text-white">
-                Eu mesmo vou comprar (cartão / parcelado)
+                RIOS monta o carrinho pra mim (cartão / parcelado)
               </span>
-              {purchaseChoice === "self" && <Check className="ml-auto h-4 w-4 text-primary" />}
+              {purchaseChoice === "cart" && <Check className="ml-auto h-4 w-4 text-primary" />}
             </div>
             <p className="text-xs leading-relaxed text-white/65">
-              Use seu cartão de crédito parcelado nos links de cada item. Compre nas
-              quantidades e tamanhos exatos da lista pra evitar trocas. RIOS recebe,
-              monta e instala tudo no imóvel.
+              Nossa equipe monta o carrinho com os itens exatos (cor, medida e
+              quantidade) e você só finaliza a compra no seu cartão. Assim garantimos que
+              nada venha errado — e a RIOS recebe, monta e instala tudo.
             </p>
           </button>
         </div>
-        {purchaseChoice === "self" && (
-          <div className="mt-4 rounded-xl border border-primary/30 bg-primary/10 p-3 text-xs leading-relaxed text-white/80">
-            <strong className="text-white">Atenção:</strong> compre exatamente nas
-            quantidades e tamanhos indicados em cada item da lista abaixo (chips
-            laranja = quantidade, azul = medidas). Itens errados geram retrabalho e
-            atraso na publicação do anúncio.
+        {purchaseChoice === "cart" && (
+          <div className="mt-4 rounded-xl border border-primary/30 bg-primary/10 p-4 text-xs leading-relaxed text-white/80">
+            {cartUrl ? (
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <span>
+                  <strong className="text-white">Seu carrinho está pronto.</strong> Confira
+                  os itens e finalize a compra sem alterar quantidades ou modelos.
+                </span>
+                <Button asChild className="shrink-0">
+                  <a href={cartUrl} target="_blank" rel="noreferrer">
+                    <ShoppingCart className="mr-2 h-4 w-4" />
+                    Abrir meu carrinho
+                  </a>
+                </Button>
+              </div>
+            ) : (
+              <span>
+                <strong className="text-white">Recebemos sua escolha.</strong> Nossa equipe
+                vai montar o carrinho com os itens exatos e o link aparecerá aqui nesta
+                página em breve. Se preferir adiantar, você também pode usar os links de
+                cada item da lista abaixo, sempre nas quantidades e medidas indicadas.
+              </span>
+            )}
           </div>
         )}
       </div>
@@ -801,7 +825,7 @@ export function PlanoPerformanceSection({
       <PurchaseChoiceBlock />
 
       {/* Hero PIX no topo (só se publicada e proprietário escolheu RIOS comprando) */}
-      {curationId && purchaseChoice !== "self" && (
+      {curationId && purchaseChoice !== "cart" && (
         <div className="mb-6 overflow-hidden rounded-3xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent p-6 backdrop-blur-md md:p-7">
           <div className="flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
             <div>
@@ -825,20 +849,29 @@ export function PlanoPerformanceSection({
       )}
 
       {/* Aviso quando proprietário optou por comprar */}
-      {curationId && purchaseChoice === "self" && !paid && (
+      {curationId && purchaseChoice === "cart" && !paid && (
         <div className="mb-6 overflow-hidden rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent p-6 backdrop-blur-md md:p-7">
           <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
-            Você escolheu comprar os itens
+            Carrinho montado pela RIOS
           </p>
           <h3 className="text-lg font-bold tracking-tight text-white md:text-xl">
-            Use os links de cada item abaixo · cartão / parcelado
+            {cartUrl
+              ? "Seu carrinho está pronto · finalize no seu cartão"
+              : "Estamos montando seu carrinho com os itens exatos"}
           </h3>
           <p className="mt-1 max-w-2xl text-sm text-white/70">
-            Compre exatamente nas <strong className="text-white">quantidades</strong> e
-            <strong className="text-white"> tamanhos</strong> indicados. Quando finalizar
-            as compras, avise nossa equipe que iremos receber, montar e instalar tudo no
-            imóvel.
+            {cartUrl
+              ? "Não altere quantidades nem modelos: o carrinho já está com cor, medida e quantidade certas. Depois da compra, a RIOS recebe, monta e instala tudo no imóvel."
+              : "Nossa equipe está montando o carrinho pra garantir que nada venha errado. O link aparecerá aqui nesta página — você finaliza no seu cartão, parcelado se quiser."}
           </p>
+          {cartUrl && (
+            <Button asChild className="mt-4">
+              <a href={cartUrl} target="_blank" rel="noreferrer">
+                <ShoppingCart className="mr-2 h-4 w-4" />
+                Abrir meu carrinho
+              </a>
+            </Button>
+          )}
         </div>
       )}
 
@@ -950,7 +983,7 @@ export function PlanoPerformanceSection({
               <ComoFuncionaBlock />
 
               {/* CTA PIX dentro do dialog (topo) */}
-              {curationId && purchaseChoice !== "self" && (
+              {curationId && purchaseChoice !== "cart" && (
                 <div className="mt-5 flex flex-col items-start gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 md:flex-row md:items-center md:justify-between">
                   <div>
                     <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-400">
@@ -1191,7 +1224,7 @@ export function PlanoPerformanceSection({
               </ul>
 
               {/* CTA PIX final (rodapé do dialog) */}
-              {curationId && purchaseChoice !== "self" && (
+              {curationId && purchaseChoice !== "cart" && (
                 <div className="mt-6 flex flex-col items-center gap-3 rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 to-transparent p-6 text-center">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-400">
                     Pronta para começar?
