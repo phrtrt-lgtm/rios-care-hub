@@ -17,6 +17,7 @@ type Curation = {
   published_at: string | null;
   status: string;
   owner_purchase_choice: string | null;
+  cart_url: string | null;
 };
 
 export default function CuradoriaPublica() {
