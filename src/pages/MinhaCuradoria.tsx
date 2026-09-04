@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { ArrowLeft, LogOut, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,7 @@ type Curation = {
 };
 
 export default function MinhaCuradoria() {
-  const { profile } = useAuth();
+  const { profile, signOut } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [curation, setCuration] = useState<Curation | null>(null);
@@ -64,7 +64,18 @@ export default function MinhaCuradoria() {
             <ArrowLeft className="mr-2 h-4 w-4" />
             Voltar
           </Button>
-          <img src={riosLogo} alt="RIOS" className="h-8 brightness-0 invert md:h-10" />
+          <div className="flex items-center gap-3">
+            <img src={riosLogo} alt="RIOS" className="h-8 brightness-0 invert md:h-10" />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => signOut()}
+              className="text-secondary-foreground/80 hover:bg-white/10"
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Sair
+            </Button>
+          </div>
         </div>
 
         <div className="mb-8">
