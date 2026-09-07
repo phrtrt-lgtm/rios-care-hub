@@ -175,7 +175,7 @@ export default function AdminCuradoriasLista() {
   };
 
   const copyLink = (id: string) => {
-    const url = `${window.location.origin}/curadoria/p/${id}`;
+    const url = portalLink(`/curadoria/p/${id}`);
     navigator.clipboard.writeText(url);
     toast.success("Link copiado");
   };

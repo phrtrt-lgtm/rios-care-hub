@@ -129,7 +129,7 @@ export default function AdminCuradoriaNova() {
   const fileInput = useRef<HTMLInputElement>(null);
 
   const publicUrl = publishedId
-    ? `${window.location.origin}/curadoria/p/${publishedId}`
+    ? portalLink(`/curadoria/p/${publishedId}`)
     : null;
 
   useEffect(() => {
