@@ -21,6 +21,7 @@ import { SectionSkeleton } from "@/components/ui/section-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { toast } from "sonner";
 import riosLogo from "@/assets/rios-logo.png";
+import { portalLink } from "@/lib/portalUrl";
 
 type CurationItem = {
   name?: string;

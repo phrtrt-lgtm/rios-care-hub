@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { PlanoPerformanceSection } from "@/components/bemvindo/PlanoPerformanceSection";
+import { portalLink } from "@/lib/portalUrl";
 
 type Item = {
   name: string;
