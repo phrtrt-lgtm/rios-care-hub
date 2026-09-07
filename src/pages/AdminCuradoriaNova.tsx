@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { PlanoPerformanceSection } from "@/components/bemvindo/PlanoPerformanceSection";
+import { portalLink } from "@/lib/portalUrl";
 
 type Item = {
   name: string;
@@ -129,7 +130,7 @@ export default function AdminCuradoriaNova() {
   const fileInput = useRef<HTMLInputElement>(null);
 
   const publicUrl = publishedId
-    ? `${window.location.origin}/curadoria/p/${publishedId}`
+    ? portalLink(`/curadoria/p/${publishedId}`)
     : null;
 
   useEffect(() => {

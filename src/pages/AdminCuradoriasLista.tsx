@@ -21,6 +21,7 @@ import { SectionSkeleton } from "@/components/ui/section-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { toast } from "sonner";
 import riosLogo from "@/assets/rios-logo.png";
+import { portalLink } from "@/lib/portalUrl";
 
 type CurationItem = {
   name?: string;
@@ -175,7 +176,7 @@ export default function AdminCuradoriasLista() {
   };
 
   const copyLink = (id: string) => {
-    const url = `${window.location.origin}/curadoria/p/${id}`;
+    const url = portalLink(`/curadoria/p/${id}`);
     navigator.clipboard.writeText(url);
     toast.success("Link copiado");
   };
