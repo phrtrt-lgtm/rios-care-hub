@@ -184,6 +184,12 @@ Tabelas existem no banco sem migration correspondente e vice-versa. **Nenhuma co
 
 A URL do projeto Supabase é pública por construção — está no bundle que todo visitante baixa. "Ninguém sabe o endereço" não é proteção.
 
+### ⚠️ `verify_jwt = true` é uma barreira fraca
+
+Ele exige apenas **um JWT válido** — e a chave publicável (`VITE_SUPABASE_PUBLISHABLE_KEY`) é um JWT válido, presente no bundle de todo visitante. Ou seja, `verify_jwt = true` filtra quem não manda header nenhum, mas **não distingue um proprietário de um admin, nem um usuário de um anônimo com a chave pública**.
+
+Toda function que faz operação privilegiada precisa de checagem **no código**, lendo o usuário do token e conferindo o papel. Use o helper `supabase/functions/_shared/auth-guard.ts` (`exigirPapel`), aplicado hoje em `debit-reserve`, `debit-reserve-now`, `credit-manual` e `hostex-sync`. Funções chamadas só de servidor para servidor precisam de segredo compartilhado, não de JWT.
+
 ### ⚠️ O repositório não mostra todas as functions publicadas
 
 O painel do Lovable Cloud lista **74 functions publicadas**; `supabase/functions/` tem **70**. Quatro rodam em produção sem código no Git: **`create-user`**, **`process-all-videos`**, **`process-video`**, **`seed-test-lead`**. Elas não aparecem em nenhuma revisão de código. Ver `ROADMAP.md` item 1.9.

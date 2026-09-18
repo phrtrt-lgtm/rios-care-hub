@@ -1,6 +1,7 @@
 // hostex-sync — sincroniza propriedades e reservas da Hostex para o cache local
 // Rodado por pg_cron a cada 6h ou on-demand via ?force=1
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { exigirPapel } from "../_shared/auth-guard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -86,14 +87,19 @@ Deno.serve(async (req) => {
   const cronToken = Deno.env.get("CRON_SECRET_TOKEN");
   const triggeredBy = force ? "manual" : "cron";
 
-  // Em modo cron exige token; em modo manual exige JWT do supabase (verify_jwt=true)
-  if (!force) {
-    if (!cronToken || tokenParam !== cronToken) {
-      return new Response(JSON.stringify({ error: "unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+  // Antes, o token só era exigido quando `force` era falso — e `force` vem da
+  // query string. Bastava `?force=1` para disparar a sincronização inteira sem
+  // credencial nenhuma, porque o config.toml traz verify_jwt = false aqui.
+  //
+  // Agora: ou vem com o token do cron, ou com JWT de alguém da equipe. Nunca sem nada.
+  const temTokenDeCron = !!cronToken && tokenParam === cronToken;
+  if (!temTokenDeCron) {
+    const { resposta } = await exigirPapel(
+      req,
+      ["admin", "agent", "maintenance"],
+      corsHeaders,
+    );
+    if (resposta) return resposta;
   }
 
   const apiKey = Deno.env.get("HOSTEX_API_KEY");

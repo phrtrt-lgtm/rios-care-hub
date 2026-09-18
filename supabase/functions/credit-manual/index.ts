@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.1";
+import { exigirPapel } from "../_shared/auth-guard.ts";
 import { Resend } from "npm:resend@2.0.0";
 
 const corsHeaders = {
@@ -27,6 +28,14 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
+    // Crédito manual altera saldo do proprietário: exige papel, não só JWT.
+    const { autor, resposta } = await exigirPapel(
+      req,
+      ["admin", "agent", "maintenance"],
+      corsHeaders,
+    );
+    if (resposta) return resposta;
+
     const body: ManualCreditRequest = await req.json();
     const { chargeIds, amountCents, description, reason, occurredAt } = body;
 
@@ -37,14 +46,8 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    let actorId: string | null = null;
-    try {
-      const token = (req.headers.get('Authorization') ?? '').replace('Bearer ', '');
-      if (token) {
-        const { data } = await supabase.auth.getUser(token);
-        actorId = data.user?.id ?? null;
-      }
-    } catch (_) { /* ignore */ }
+    // Autoria vem do guard acima — sempre presente, nunca nula.
+    const actorId: string = autor!.id;
 
     // Derive owner from context charges (or explicit ownerId)
     let ownerId = body.ownerId ?? null;

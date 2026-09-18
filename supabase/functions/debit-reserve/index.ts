@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.1";
+import { exigirPapel } from "../_shared/auth-guard.ts";
 import { Resend } from "npm:resend@2.0.0";
 
 const corsHeaders = {
@@ -35,6 +36,16 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Débito em reserva move dinheiro. verify_jwt garante só que existe um JWT
+    // válido — sem esta checagem, qualquer proprietário logado dispara a operação.
+    const { autor, resposta } = await exigirPapel(
+      req,
+      ["admin", "agent", "maintenance"],
+      corsHeaders,
+    );
+    if (resposta) return resposta;
+    console.log("[debit-reserve] autorizado por:", autor!.id, autor!.role);
 
     const body: DebitReserveRequest = await req.json();
     const { 

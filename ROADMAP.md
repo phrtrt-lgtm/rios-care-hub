@@ -151,7 +151,11 @@ Agravante: o token trafega na query string (`?token=`), que costuma acabar em lo
 
 **Evidência.** `supabase/config.toml`; `send-push/index.ts:76`; `owner-decision-cron/index.ts` (nenhuma verificação de token).
 
-**Proposta.** Segredo compartilhado (`X-Internal-Token`) para as chamadas servidor-a-servidor; `verify_jwt = true` + validação de `ownerId === auth.uid()` para a única chamada do cliente (`EnablePushNative.tsx`); `verify_jwt = true` + `has_role(admin)` em `migrate-attachments`; token de cron em `owner-decision-cron` (copiar o padrão de `charge-cron`, que já faz certo).
+> ⚠️ **Descoberta de 2026-09-18 que muda a correção:** ligar `verify_jwt = true` **não resolve**. Ele exige apenas um JWT válido — e a chave publicável do projeto é um JWT válido, presente no bundle que todo visitante baixa. Passaria a barrar só quem não manda header nenhum. Vários chamadores internos, aliás, já mandam a chave anônima (`owner-decision-cron/index.ts:53`).
+>
+> A correção real precisa de **segredo compartilhado** guardado em Secrets do Lovable Cloud — algo que só você pode criar no painel (Mais → Cloud → Secrets). Por isso este item ficou parado: mexer no código antes de o segredo existir derrubaria e-mail e push em produção.
+
+**Proposta.** Criar o secret `INTERNAL_FUNCTION_TOKEN` no painel; então exigir esse header nas chamadas servidor-a-servidor (`notify-*`, `send-push`, `generate-service-summary`) e atualizar os chamadores no mesmo commit; `exigirPapel(["admin"])` em `migrate-attachments`; token de cron em `owner-decision-cron` (copiar o padrão de `charge-cron`, que já faz certo). Para a única chamada de cliente (`EnablePushNative.tsx`), validar `ownerId === auth.uid()` dentro da function.
 
 **Arquivos.** `supabase/config.toml`, as 9 funções e seus chamadores.
 
@@ -161,7 +165,9 @@ Agravante: o token trafega na query string (`?token=`), que costuma acabar em lo
 
 ---
 
-### 1.6 — `hostex-sync`: o token é pulado com `?force=1` `[P]` 🟠
+### 1.6 — `hostex-sync`: o token é pulado com `?force=1` `[P]` ✅ **CORRIGIDO no código em 2026-09-18** (aguardando deploy)
+
+> Agora exige **ou** o token de cron **ou** JWT de alguém da equipe, via `exigirPapel`. Nunca nenhum dos dois. O caminho do cron (`?token=` ou `x-cron-token`) segue idêntico; o disparo manual em `/admin/central-hostex` usa o JWT do usuário, que já é rota de equipe.
 
 **Problema.** `if (!force) { checa token }` — e `force` vem da query string ou do corpo. O comentário diz que o modo manual é protegido por JWT, mas `config.toml` põe `verify_jwt = false`. Então `?force=1` dispara sincronização completa sem credencial: custo na API Hostex e reescrita de reservas.
 
@@ -252,7 +258,7 @@ O RLS ainda limita a *leitura* de dados (as policies passam por `has_role()`, qu
 
 1. ✅ **Conta `teste@rios.com` bloqueada em 2026-09-18.** `update auth.users set banned_until = '2099-12-31' where id = 'ab402c87-...'`. Verificado: login com as credenciais devolve `{"code":400,"error_code":"user_banned"}`. Verificado também que o bloqueio **sobrevive a uma nova chamada da função** — ela continua respondendo 200 e devolvendo a senha, mas o login não passa. A cadeia está cortada.
 2. ⬜ **Apagar `seed-test-lead`** do backend (depende do agente do Lovable). Enquanto ela viver, qualquer um continua recebendo credenciais — inúteis por ora, mas o endpoint segue publicado e repondo senha.
-3. ⬜ Adicionar checagem de papel em `debit-reserve` (`index.ts:29-50`, hoje sem nenhuma) e `credit-manual` — restringir a admin/maintenance. **Vale para qualquer conta autenticada, não só a de teste:** hoje um `owner` logado consegue invocar débito em reserva.
+3. ✅ **Checagem de papel adicionada em 2026-09-18** (aguardando deploy) — `debit-reserve`, `debit-reserve-now` e `credit-manual` agora exigem `admin`, `agent` ou `maintenance`, via o helper novo `supabase/functions/_shared/auth-guard.ts`. Era o ponto mais grave desta cadeia e **valia para qualquer conta autenticada, não só a de teste**: um `owner` logado disparava débito em reserva. De quebra, a autoria (`actorId`), que vinha de um `try/catch` que engolia erro e podia ficar nula, agora é garantida pelo guard.
 4. ⬜ Corrigir o item 1.7 (`ProtectedRoute`), que é o que transforma "conta sem perfil" em "acesso a todas as telas".
 
 > Os passos 3 e 4 são os que realmente importam a longo prazo — o passo 1 fecha esta conta específica, mas a falha de fundo (função financeira sem checagem de papel) continua aberta para qualquer usuário logado.

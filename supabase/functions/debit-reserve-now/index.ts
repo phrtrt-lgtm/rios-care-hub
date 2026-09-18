@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.1";
+import { exigirPapel } from "../_shared/auth-guard.ts";
 import { Resend } from "npm:resend@2.0.0";
 
 const corsHeaders = {
@@ -31,6 +32,15 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Operação financeira: exige papel, não só JWT válido.
+    const { autor, resposta } = await exigirPapel(
+      req,
+      ["admin", "agent", "maintenance"],
+      corsHeaders,
+    );
+    if (resposta) return resposta;
+    console.log("[debit-reserve-now] autorizado por:", autor!.id, autor!.role);
+
     const body: DebitReserveNowRequest = await req.json();
     const { chargeIds, reservations } = body;
 
@@ -41,15 +51,8 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    let actorId: string | null = null;
-    try {
-      const authHeader = req.headers.get('Authorization') ?? '';
-      const token = authHeader.replace('Bearer ', '');
-      if (token) {
-        const { data } = await supabase.auth.getUser(token);
-        actorId = data.user?.id ?? null;
-      }
-    } catch (_) { /* ignore */ }
+    // Autoria vem do guard acima — sempre presente, nunca nula.
+    const actorId: string = autor!.id;
 
     // Load context charges (used to identify owner + property; NOT necessarily consumed)
     const { data: charges, error: chargesError } = await supabase
