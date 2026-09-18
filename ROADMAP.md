@@ -1,11 +1,22 @@
 # ROADMAP — Portal RIOS Hospedagens
 
-Auditoria de **2026-09-18** sobre o commit `4c49831`. Nada foi implementado.
-Contexto de arquitetura: `CLAUDE.md`.
+Auditoria de **2026-09-18** sobre o commit `4c49831`. Contexto de arquitetura: `CLAUDE.md`.
 
 **Foco:** segurança primeiro, depois velocidade, design e a experiência do proprietário no celular.
 
 **Esforço:** P = até meio dia · M = 1–2 dias · G = 3+ dias
+
+## Estado em 2026-09-18, fim do dia
+
+| | Itens |
+|---|---|
+| ✅ **No ar e verificado** | 1.1 · 1.4 (contenção) · 1.6 · 1.10 · 4.2 |
+| ✅ **No código, aguardando build do front** | 1.7 · 2.1 |
+| ⏸️ **Despriorizado pelo gestor** | 1.2 e 1.3 (a equipe confere o valor pago; erro seria pego na conciliação) |
+| ⛔ **Travado** | 1.5 — precisa do secret `INTERNAL_FUNCTION_TOKEN` criado em Lovable → Mais → Cloud → Secrets |
+| ⬜ **Abertos** | 1.8 · 1.9 · 1.11 · Ondas 2 (restante), 3, 4 e 5 |
+
+> **Toda verificação foi feita por requisição direta ao endpoint**, não pelo relatório de quem aplicou. O padrão que uso: chamar sem credencial, chamar com a chave anônima (que é um JWT válido e passa pelo `verify_jwt`), e um controle numa função que deve continuar viva, para distinguir "bloqueado" de "tudo fora do ar".
 
 ---
 
@@ -116,7 +127,7 @@ Agravante: o token trafega na query string (`?token=`), que costuma acabar em lo
 
 ---
 
-### 1.4 — Escalação de privilégio via `profiles` `[G]` 🔴
+### 1.4 — Escalação de privilégio via `profiles` `[G]` ✅ **CONTIDO em 2026-09-18** (etapa 2 pendente)
 
 **Problema.** A policy de UPDATE em `profiles` autoriza o usuário a alterar a própria linha inteira, sem `WITH CHECK` e sem restrição de coluna. `role`, `payment_score` e `curation_only` são colunas dessa linha. Como toda policy de admin passa por `has_role()`, que lê `profiles.role`, um proprietário logado pode se promover a admin e ler o financeiro de todos.
 
@@ -165,7 +176,7 @@ Agravante: o token trafega na query string (`?token=`), que costuma acabar em lo
 
 ---
 
-### 1.6 — `hostex-sync`: o token é pulado com `?force=1` `[P]` ✅ **CORRIGIDO no código em 2026-09-18** (aguardando deploy)
+### 1.6 — `hostex-sync`: o token é pulado com `?force=1` `[P]` ✅ **RESOLVIDO e NO AR em 2026-09-18**
 
 > Agora exige **ou** o token de cron **ou** JWT de alguém da equipe, via `exigirPapel`. Nunca nenhum dos dois. O caminho do cron (`?token=` ou `x-cron-token`) segue idêntico; o disparo manual em `/admin/central-hostex` usa o JWT do usuário, que já é rota de equipe.
 
@@ -257,9 +268,9 @@ O RLS ainda limita a *leitura* de dados (as policies passam por `has_role()`, qu
 **Proposta, em ordem:**
 
 1. ✅ **Conta `teste@rios.com` bloqueada em 2026-09-18.** `update auth.users set banned_until = '2099-12-31' where id = 'ab402c87-...'`. Verificado: login com as credenciais devolve `{"code":400,"error_code":"user_banned"}`. Verificado também que o bloqueio **sobrevive a uma nova chamada da função** — ela continua respondendo 200 e devolvendo a senha, mas o login não passa. A cadeia está cortada.
-2. ⬜ **Apagar `seed-test-lead`** do backend (depende do agente do Lovable). Enquanto ela viver, qualquer um continua recebendo credenciais — inúteis por ora, mas o endpoint segue publicado e repondo senha.
-3. ✅ **Checagem de papel adicionada em 2026-09-18** (aguardando deploy) — `debit-reserve`, `debit-reserve-now` e `credit-manual` agora exigem `admin`, `agent` ou `maintenance`, via o helper novo `supabase/functions/_shared/auth-guard.ts`. Era o ponto mais grave desta cadeia e **valia para qualquer conta autenticada, não só a de teste**: um `owner` logado disparava débito em reserva. De quebra, a autoria (`actorId`), que vinha de um `try/catch` que engolia erro e podia ficar nula, agora é garantida pelo guard.
-4. ⬜ Corrigir o item 1.7 (`ProtectedRoute`), que é o que transforma "conta sem perfil" em "acesso a todas as telas".
+2. ✅ **`seed-test-lead` apagada em 2026-09-18.** Verificado por requisição direta: responde `{"code":"NOT_FOUND"}`.
+3. ✅ **Checagem de papel adicionada e NO AR em 2026-09-18** — verificada por requisição direta, inclusive com a chave anônima (que é JWT válido): responde `401 Não autenticado`, provando que a barreira é do código e não do `verify_jwt`. — `debit-reserve`, `debit-reserve-now` e `credit-manual` agora exigem `admin`, `agent` ou `maintenance`, via o helper novo `supabase/functions/_shared/auth-guard.ts`. Era o ponto mais grave desta cadeia e **valia para qualquer conta autenticada, não só a de teste**: um `owner` logado disparava débito em reserva. De quebra, a autoria (`actorId`), que vinha de um `try/catch` que engolia erro e podia ficar nula, agora é garantida pelo guard.
+4. ✅ Item 1.7 (`ProtectedRoute`) corrigido no código; entra no ar no próximo build do front.
 
 > Os passos 3 e 4 são os que realmente importam a longo prazo — o passo 1 fecha esta conta específica, mas a falha de fundo (função financeira sem checagem de papel) continua aberta para qualquer usuário logado.
 

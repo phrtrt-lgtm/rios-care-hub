@@ -178,8 +178,8 @@ Tabelas existem no banco sem migration correspondente e vice-versa. **Nenhuma co
 | Situação | Funções |
 |---|---|
 | ✅ Com guarda adequada | `charge-cron`, `daily-summary-cron`, `recurring-charges-cron` (token), `monday-webhook`, `submit-property-intake` (não sobrescreve senha de conta existente; link de recuperação só por e-mail) |
-| ⚠️ Guarda contornável | `hostex-sync` (o token só é checado quando `force` é falso, e `force` vem da query string — `index.ts:89-97`) |
-| ❌ Sem guarda nenhuma | `create-curation-pix`, `save-curation-selection`, `curation-access`, `send-push`, `notify-ticket`, `notify-owner-decision`, `notify-curation-paid`, `notify-booking-commission`, `notify-booking-commission-paid`, `migrate-attachments`, `owner-decision-cron`, `generate-service-summary` |
+| ✅ Corrigidas em 2026-09-18 | `hostex-sync` (exige token de cron ou JWT de equipe), `debit-reserve`, `debit-reserve-now`, `credit-manual` (exigem papel via `exigirPapel`) |
+| ❌ Sem guarda nenhuma | `create-curation-pix`, `save-curation-selection`, `curation-access`, `send-push`, `notify-ticket`, `notify-owner-decision`, `notify-curation-paid`, `notify-booking-commission`, `notify-booking-commission-paid`, `migrate-attachments`, `owner-decision-cron`, `generate-service-summary` — ver ROADMAP 1.5, travado à espera de um secret |
 | Webhook externo (ok não ter JWT, mas ver §8.9) | `mercadopago-webhook` |
 
 A URL do projeto Supabase é pública por construção — está no bundle que todo visitante baixa. "Ninguém sabe o endereço" não é proteção.
@@ -192,7 +192,9 @@ Toda function que faz operação privilegiada precisa de checagem **no código**
 
 ### ⚠️ O repositório não mostra todas as functions publicadas
 
-O painel do Lovable Cloud lista **74 functions publicadas**; `supabase/functions/` tem **70**. Quatro rodam em produção sem código no Git: **`create-user`**, **`process-all-videos`**, **`process-video`**, **`seed-test-lead`**. Elas não aparecem em nenhuma revisão de código. Ver `ROADMAP.md` item 1.9.
+O painel do Lovable Cloud lista mais functions publicadas do que existem em `supabase/functions/`. Depois de apagar `admin-reset-password` e `seed-test-lead` (2026-09-18), sobram **três órfãs**: **`create-user`**, **`process-all-videos`**, **`process-video`** — todas exigem JWT (sondadas em 2026-09-18), mas o código não está no Git e não aparece em revisão nenhuma. Ver `ROADMAP.md` item 1.9.
+
+O "View code" do painel **não serve** para órfã: ele aponta para o caminho no repositório, que não existe.
 
 ### Deploy de edge function
 
