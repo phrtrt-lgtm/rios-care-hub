@@ -287,9 +287,19 @@ O "View code" do painel **não serve** para funções órfãs: ele aponta para o
 
 ### 1.11 — Conciliação financeira: 378 cobranças pagas sem registro de pagamento `[M]` 🟠 **descoberto em 2026-09-18**
 
-**Problema.** Das 620 cobranças com status de paga, **378 não têm nenhuma linha em `charge_payments`** — R$ 108.713,40. Dessas, **377 também não têm `mercadopago_payment_id`**, ou seja: foram recebidas fora do Mercado Pago (PIX direto, transferência, acerto) e alguém marcou o status como paga sem registrar o pagamento.
+**Problema.** Das 620 cobranças com status de paga, 378 não têm nenhuma linha em `charge_payments`. Mas **a maior parte disso é comportamento correto**, não lacuna:
 
-Não é fraude — é lacuna de processo. Mas significa que, para 62% do valor marcado como recebido, **o sistema não sabe quando, como nem por quem foi pago**. Relatório financeiro não fecha e não há trilha de auditoria.
+| Situação | Cobranças sem registro | Valor da cobrança | Devido pelo proprietário |
+|---|---|---|---|
+| **Aporte da gestão cobre 100%** — proprietário não paga nada | 190 | R$ 52.870,02 | **R$ 0** (correto não haver pagamento) |
+| Aporte parcial | 159 | R$ 42.878,05 | R$ 29.148,15 |
+| Sem aporte | 29 | R$ 12.965,33 | R$ 12.965,33 |
+
+Quando o aporte cobre o valor inteiro, a cobrança sai gratuita para o proprietário e **não existe pagamento a registrar** — está certo. Isso elimina 190 das 378.
+
+**A lacuna real são 188 cobranças, R$ 42.113,48** que o proprietário efetivamente devia e onde não há registro de como foi recebido. Praticamente nenhuma tem `mercadopago_payment_id`, então foram acertadas por fora (PIX direto, transferência) e marcadas como pagas na mão — o admin pode alterar o status livremente.
+
+Não é fraude. Mas para esses R$ 42 mil **o sistema não sabe quando, como nem por quem foi pago**, e o relatório financeiro não fecha.
 
 **Evidência.** Distribuição por mês, mostrando que é um padrão persistente e que está piorando, não resíduo de migração:
 
