@@ -190,7 +190,18 @@ Agravante: o token trafega na query string (`?token=`), que costuma acabar em lo
 
 **Evidência.** `supabase/functions/mercadopago-webhook/index.ts:579-600` e `:707-728`.
 
-**Proposta.** Coluna `mercadopago_payment_id` em `charge_payments` + índice único + `upsert onConflict`. Conferir valor. Devolver 200 em erro tratado. Validar `x-signature`.
+**Evidência real encontrada em 2026-09-18.** Duas cobranças do mesmo proprietário (Marcelo Rodrigues) têm 2 registros de pagamento cada, no mesmo minuto (12/07/26 13:18), com **dois ids distintos do Mercado Pago** (`167585015075` e `167585178653`):
+
+| Cobrança | Valor | Registrado | Excedente |
+|---|---|---|---|
+| `b5d7d8e4…` "Itens" | R$ 106,86 | R$ 173,72 | **R$ 66,86** |
+| `eff8a63c…` "Reparos" | R$ 245,95 | R$ 360,00 | **R$ 114,05** |
+
+Como os ids são diferentes, **não é reentrega do webhook** — são dois pagamentos distintos aplicados às mesmas cobranças, provavelmente um pagamento em grupo cobrado duas vezes. **Se os dois estiverem aprovados no painel do Mercado Pago, o proprietário pagou R$ 180,91 a mais e tem reembolso a receber.** Conferir os dois ids antes de concluir.
+
+> ⚠️ **A guarda atual não resolve e ainda cria um problema novo.** O check-then-insert usa a chave `(charge_id, method='mercadopago')`, ou seja: impede **qualquer** segundo registro naquela cobrança, mesmo quando é um pagamento legítimo e distinto. Ela teria bloqueado o segundo pagamento real deste caso em vez de detectá-lo. A chave correta é o **id do pagamento**, não o par cobrança+método.
+
+**Proposta.** Coluna `mercadopago_payment_id` em `charge_payments` + índice único **sobre ela** + `upsert onConflict`. Assim, reentrega do mesmo pagamento é ignorada e pagamento distinto é registrado (e passa a ser detectável como excedente). Conferir valor. Devolver 200 em erro tratado. Validar `x-signature`.
 
 **Risco.** Médio-alto. Limpar duplicatas antes da constraint:
 
@@ -271,6 +282,36 @@ O "View code" do painel **não serve** para funções órfãs: ele aponta para o
 **Risco.** Apagar exige confirmar antes que nada as chama. Como o código não é legível, confirmar pelo painel: métricas de invocação em janela longa.
 
 **Como validar.** Contagem do painel == contagem do repositório.
+
+---
+
+### 1.11 — Conciliação financeira: 378 cobranças pagas sem registro de pagamento `[M]` 🟠 **descoberto em 2026-09-18**
+
+**Problema.** Das 620 cobranças com status de paga, **378 não têm nenhuma linha em `charge_payments`** — R$ 108.713,40. Dessas, **377 também não têm `mercadopago_payment_id`**, ou seja: foram recebidas fora do Mercado Pago (PIX direto, transferência, acerto) e alguém marcou o status como paga sem registrar o pagamento.
+
+Não é fraude — é lacuna de processo. Mas significa que, para 62% do valor marcado como recebido, **o sistema não sabe quando, como nem por quem foi pago**. Relatório financeiro não fecha e não há trilha de auditoria.
+
+**Evidência.** Distribuição por mês, mostrando que é um padrão persistente e que está piorando, não resíduo de migração:
+
+| Mês | Pagas | Sem registro | % | Valor sem registro |
+|---|---|---|---|---|
+| 2026-03 | 50 | 34 | 68% | R$ 10.429 |
+| 2026-05 | 127 | 64 | 50% | R$ 15.117 |
+| 2026-06 | 97 | 31 | 32% | R$ 8.115 |
+| 2026-07 | 43 | 28 | 65% | R$ 3.816 |
+| 2026-08 | 152 | 119 | **78%** | R$ 38.049 |
+| 2026-09 | 91 | 76 | **84%** | R$ 27.319 |
+
+O inverso também acontece: das 242 cobranças **com** registro, 226 não têm id do Mercado Pago — então às vezes a equipe registra o pagamento manual, às vezes não. O processo é inconsistente, não ausente.
+
+**Proposta.**
+1. Na UI, **não permitir marcar cobrança como paga sem criar o registro** — exigir método (PIX, transferência, dinheiro, offset), data e valor. Um único caminho para "pagar".
+2. Tornar o status de pagamento derivado de `charge_payments`, em vez de campo editável solto.
+3. Decidir o que fazer com o passivo: as 378 antigas ficam como estão (com uma marcação de "sem conciliação") ou passam por um mutirão de registro retroativo.
+
+**Risco de regressão.** Médio — muda o fluxo diário da equipe. Vale conversar com quem opera antes.
+
+**Como validar.** Repetir a consulta de conciliação e ver a coluna "sem registro" parar de crescer nos meses novos.
 
 ---
 
