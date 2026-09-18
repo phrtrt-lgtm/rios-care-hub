@@ -203,6 +203,40 @@ where method='mercadopago' group by charge_id having count(*) > 1;
 
 ---
 
+### 1.10 — `seed-test-lead` entrega credenciais válidas a qualquer um `[P]` 🔴🔴 **AGORA**
+
+**Problema.** `seed-test-lead` é uma das funções órfãs (item 1.9). Um POST **anônimo, com corpo vazio**, responde HTTP 200 com:
+
+```json
+{"ok":true,"userId":"ab402c87-7961-4f09-8e28-3b1d9ecbf220","email":"teste@rios.com","password":"teste123"}
+```
+
+Ela repõe a senha da conta `teste@rios.com` para `teste123` **e devolve a senha na resposta**. Qualquer pessoa na internet obtém um login funcional no portal, quantas vezes quiser.
+
+**Evidência.** Sondagem direta ao endpoint em 2026-09-18. A conta existe em `auth.users` desde 2026-04-30; `updated_at` muda a cada chamada, confirmando que a senha é reposta. Último login legítimo: 2026-04-30.
+
+**Por que é pior do que parece — a cadeia:**
+
+1. Qualquer um pega credenciais válidas em `seed-test-lead`.
+2. A conta **não tem linha em `profiles`**. Pelo item 1.7, `ProtectedRoute.tsx:33` pula a checagem de papel quando o perfil é nulo — então ela **alcança qualquer tela do portal**, inclusive as de admin.
+3. Com um JWT válido em mãos, as funções `verify_jwt = true` passam a aceitá-la. E **`debit-reserve` não checa papel nenhum** (`supabase/functions/debit-reserve/index.ts:29-50`: lê `chargeIds` e valores financeiros do corpo e executa com service role). `credit-manual` idem.
+
+O RLS ainda limita a *leitura* de dados (as policies passam por `has_role()`, que retorna falso sem perfil), mas a combinação "login público + função financeira sem checagem de papel" é suficiente para dano.
+
+**Proposta, em ordem:**
+1. **Apagar `seed-test-lead`** do backend (agente do Lovable).
+2. **Remover ou bloquear a conta `teste@rios.com`** — ela não tem perfil e não é usada desde abril.
+3. Adicionar checagem de papel em `debit-reserve` e `credit-manual` (admin/maintenance).
+4. Corrigir o item 1.7 (`ProtectedRoute`), que é o que transforma "conta sem perfil" em "acesso a tudo".
+
+**Risco de regressão.** Nenhum nos passos 1 e 2 (função de teste, conta de teste). Passos 3 e 4 exigem testar os fluxos de débito em reserva e login dos 6 papéis.
+
+**Como validar.** POST anônimo em `seed-test-lead` → 404. Login com `teste@rios.com` → falha.
+
+> **Nota de procedimento.** Este achado veio de uma sondagem com corpo vazio, feita esperando um erro de validação. A função executou e repôs a senha da conta. Ou seja: a senha `teste123` está ativa **agora** por causa dessa verificação. A conta já existia e já era obtenível por qualquer um antes disso — a falha não foi criada, só ficou com credencial fresca.
+
+---
+
 ### 1.9 — Funções publicadas sem código no repositório `[M]` 🔴 **descoberto em 2026-09-18**
 
 **Problema.** O painel do Lovable Cloud lista **74 edge functions publicadas**; o repositório tem **70**. Quatro rodam na internet sem código nenhum no Git:
@@ -215,12 +249,23 @@ São endpoints HTTP vivos, com service role, que **não aparecem em nenhuma revi
 
 **Por que é grave.** Enquanto existir código publicado fora do Git, **nenhuma auditoria de repositório é completa** — inclusive esta. É a mesma classe de problema do item 4.1 (migrations não refletem o banco): a fonte da verdade está fora do controle de versão.
 
+**Sondagem feita em 2026-09-18** (POST anônimo, corpo vazio):
+
+| Função | Resposta | Situação |
+|---|---|---|
+| `create-user` | 401 `UNAUTHORIZED_NO_AUTH_HEADER` | exige JWT — ok |
+| `process-video` | 401 | exige JWT — ok |
+| `process-all-videos` | 401 | exige JWT — ok |
+| **`seed-test-lead`** | **200 + credenciais** | 🔴 ver item 1.10 |
+
+O "View code" do painel **não serve** para funções órfãs: ele aponta para o caminho no repositório, que não existe. Ler o código delas exigiria a API de gestão do Supabase, indisponível no Lovable Cloud.
+
 **Proposta.**
-1. Ler o código das quatro pelo "View code" do painel, uma a uma, procurando o mesmo padrão do `admin-reset-password` (service role + sem checagem).
-2. Apagar as que forem lixo (`seed-test-lead`, `process-*` provavelmente são). Trazer para o repositório as que ainda forem usadas.
+1. Apagar `seed-test-lead` (item 1.10) e as `process-*`, se o processamento de vídeo não for mais usado.
+2. Decidir sobre `create-user`: está protegida por JWT, mas o código não é auditável. Ou trazer para o repositório, ou apagar se `create-owner`/`create-team-member`/`create-cleaner` já a substituíram.
 3. Estabelecer a regra: toda function publicada tem código no Git. Conferir periodicamente a contagem do painel contra `ls supabase/functions`.
 
-**Risco.** Ler é risco zero. Apagar exige confirmar antes que nada as chama — o `create-user` pode estar sendo usado por algum fluxo antigo.
+**Risco.** Apagar exige confirmar antes que nada as chama. Como o código não é legível, confirmar pelo painel: métricas de invocação em janela longa.
 
 **Como validar.** Contagem do painel == contagem do repositório.
 
