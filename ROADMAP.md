@@ -224,10 +224,13 @@ Ela repõe a senha da conta `teste@rios.com` para `teste123` **e devolve a senha
 O RLS ainda limita a *leitura* de dados (as policies passam por `has_role()`, que retorna falso sem perfil), mas a combinação "login público + função financeira sem checagem de papel" é suficiente para dano.
 
 **Proposta, em ordem:**
-1. **Apagar `seed-test-lead`** do backend (agente do Lovable).
-2. **Remover ou bloquear a conta `teste@rios.com`** — ela não tem perfil e não é usada desde abril.
-3. Adicionar checagem de papel em `debit-reserve` e `credit-manual` (admin/maintenance).
-4. Corrigir o item 1.7 (`ProtectedRoute`), que é o que transforma "conta sem perfil" em "acesso a tudo".
+
+1. ✅ **Conta `teste@rios.com` bloqueada em 2026-09-18.** `update auth.users set banned_until = '2099-12-31' where id = 'ab402c87-...'`. Verificado: login com as credenciais devolve `{"code":400,"error_code":"user_banned"}`. Verificado também que o bloqueio **sobrevive a uma nova chamada da função** — ela continua respondendo 200 e devolvendo a senha, mas o login não passa. A cadeia está cortada.
+2. ⬜ **Apagar `seed-test-lead`** do backend (depende do agente do Lovable). Enquanto ela viver, qualquer um continua recebendo credenciais — inúteis por ora, mas o endpoint segue publicado e repondo senha.
+3. ⬜ Adicionar checagem de papel em `debit-reserve` (`index.ts:29-50`, hoje sem nenhuma) e `credit-manual` — restringir a admin/maintenance. **Vale para qualquer conta autenticada, não só a de teste:** hoje um `owner` logado consegue invocar débito em reserva.
+4. ⬜ Corrigir o item 1.7 (`ProtectedRoute`), que é o que transforma "conta sem perfil" em "acesso a todas as telas".
+
+> Os passos 3 e 4 são os que realmente importam a longo prazo — o passo 1 fecha esta conta específica, mas a falha de fundo (função financeira sem checagem de papel) continua aberta para qualquer usuário logado.
 
 **Risco de regressão.** Nenhum nos passos 1 e 2 (função de teste, conta de teste). Passos 3 e 4 exigem testar os fluxos de débito em reserva e login dos 6 papéis.
 
