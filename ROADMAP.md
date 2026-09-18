@@ -347,7 +347,24 @@ O inverso também acontece: das 242 cobranças **com** registro, 226 não têm i
 
 # Onda 2 — Velocidade
 
-### 2.1 — Code-splitting por rota `[M]` 🔴 **maior ganho isolado**
+### 2.1 — Code-splitting por rota `[M]` ✅ **FEITO em 2026-09-18** (aguardando deploy)
+
+> **Resultado medido com build real:**
+>
+> | | Antes | Depois |
+> |---|---|---|
+> | Chunk inicial | 4.555 kB · **1.253 kB gzip** | 936 kB · **264 kB gzip** |
+> | Tempo de build | 49s | 26s |
+>
+> **−79% no que o proprietário baixa para abrir o portal.** O peso saiu para chunks sob demanda: `charts` (156 kB gzip), `xlsx` (143 kB), `FinancialReportView` (193 kB), `motion` (38 kB), `zip` (30 kB) e uma fatia por página.
+>
+> **Como ficou.** 87 das 91 páginas viraram `lazyPage(() => import(...))`; `Index`, `Login`, `MinhaCaixa` e `NotFound` continuam no chunk inicial, que é o caminho de entrada do proprietário. `<Routes>` envolto em `<Suspense>`. No `vite.config.ts`, `manualChunks` separa `recharts`, `framer-motion` e `jszip`.
+>
+> **Risco novo, já tratado.** Code-splitting introduz a falha de chunk obsoleto: uma aba aberta desde antes do deploy busca um hash que não existe mais, o import dinâmico falha e a tela fica branca. `src/lib/lazyPage.ts` recarrega a página uma vez nessa situação, com marca em `sessionStorage` para não entrar em laço. A marca é limpa **quando um chunk carrega com sucesso** — limpar na montagem do `App` causaria laço infinito, porque o `App` monta antes de a rota resolver.
+>
+> **Ainda dá para melhorar:** 264 kB gzip continua acima do alvo de 250 kB. O que sobra no chunk inicial é sobretudo Radix UI e os componentes compartilhados. Próximo passo seria olhar o que as quatro páginas eager arrastam.
+>
+> **Validar depois do deploy:** navegar entre telas do proprietário e conferir que cada rota carrega sem travar; Lighthouse mobile em `/minha-caixa` antes/depois.
 
 **Problema.** 91 páginas importadas estaticamente, zero `lazy()`. Build de produção: **4,4 MB num único chunk JS (1,22 MB gzip)** + 143 KB de CSS. O próprio Vite avisa. Um proprietário no 4G baixa o admin inteiro, os Kanbans, a central Hostex e os relatórios para ver a caixa de entrada. Cresceu 2,4× desde dezembro (era 1,9 MB / 516 KB) e piora a cada tela nova.
 

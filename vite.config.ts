@@ -15,4 +15,18 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Bibliotecas pesadas e autocontidas em chunks próprios: quem só abre a
+        // caixa de entrada não baixa gráficos nem geração de zip, e o cache
+        // sobrevive a deploys que mexem só no código da aplicação.
+        manualChunks: {
+          charts: ["recharts"],
+          motion: ["framer-motion"],
+          zip: ["jszip"],
+        },
+      },
+    },
+  },
 }));

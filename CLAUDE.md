@@ -27,7 +27,7 @@ Públicos: **administração/equipe RIOS**, **prestadores** (faxina/manutenção
 | Edge functions | **72** |
 | Migrations | **171** |
 | Tabelas no schema vivo | ~80 (`src/integrations/supabase/types.ts`) |
-| Bundle de produção | **4,4 MB / 1,22 MB gzip** em **um único chunk** |
+| Bundle de produção | chunk inicial **936 kB / 264 kB gzip** + chunks por rota (era 4,4 MB / 1,22 MB num único chunk até 2026-09-18) |
 
 ### Stack
 
@@ -211,7 +211,7 @@ Correção, evidência e plano: `ROADMAP.md`.
 5. **`ProtectedRoute` libera quem não tem perfil** 🟠 — `src/components/ProtectedRoute.tsx:33`: `profile &&` faz a checagem de papel ser pulada quando o perfil é nulo. O gate de `curation_only` (`:27`) tem o mesmo problema.
 6. **`send-push` sem autenticação** 🟠 — aceita `ownerId` + `title`/`body`/`url` arbitrários. Push de phishing para qualquer usuário, com a marca RIOS.
 7. **N+1 em manutenções** 🟠 — `src/hooks/useMaintenances.ts:84-94`: busca todas as charges (sem `limit`, `select('*')`) e faz uma query de `charge_payments` por charge.
-8. **Bundle de 4,4 MB num chunk só** 🟠 — 91 imports estáticos de página em `src/App.tsx`, zero `lazy()`. O próprio Vite avisa no build.
+8. ~~**Bundle de 4,4 MB num chunk só**~~ ✅ **resolvido em 2026-09-18** — 87 das 91 páginas viraram `lazyPage()` (`src/lib/lazyPage.ts`, um `lazy()` com recuperação de chunk obsoleto), `<Routes>` dentro de `<Suspense>`, e `manualChunks` separando `recharts`, `framer-motion` e `jszip`. Chunk inicial caiu de 1.253 kB para **264 kB gzip**. Ao criar página nova, **use `lazyPage`, não `import` estático** — senão o peso volta para o chunk inicial.
 9. **Webhook do MP: idempotência frágil e sem conferência de valor** 🟠 — o check-then-insert (`mercadopago-webhook/index.ts:579-600`) foi adicionado, mas sem constraint única duplica sob corrida, e `maybeSingle()` falha se já houver duplicatas. `transaction_amount` nunca é comparado com o valor da cobrança. Erro devolve 500, o que provoca reentrega.
 10. **`npm install` quebra numa instalação limpa** 🟠 **(parcialmente corrigido)** — `@capacitor/camera` e `@capacitor/filesystem` voltaram para a 7.x em 2026-09-18, mas **`@capawesome/capacitor-file-picker` segue em `^8.0.0`** e também exige `@capacitor/core >=8.0.0` (o projeto está em `^7.4.4`). `npm install` ainda falha com ERESOLVE. O build do Lovable passa porque usa **bun**, permissivo com peer dependency — o problema só aparece para quem clona e roda `npm install`, que é o que o README documenta.
 11. **`owner-decision-cron` e as `notify-*` sem guarda** 🟡 — qualquer um dispara e-mail/push em massa para proprietários. Custo, reputação de domínio e incômodo.
