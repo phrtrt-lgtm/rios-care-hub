@@ -124,8 +124,17 @@ Agravante: o token trafega na query string (`?token=`), que costuma acabar em lo
 
 **Proposta.** Duas etapas:
 
-1. **Contenção (P).** Trigger `BEFORE UPDATE` em `profiles` rejeitando alteração de `role`, `status`, `payment_score` e `curation_only` quando o autor é o próprio dono da linha e não é admin. Recriar a policy com `WITH CHECK` explícito.
-2. **Estrutural (G).** Migrar para `user_roles (user_id, role)` com RLS de escrita só para admin, reescrever `has_role()`/`is_team_member()` sobre ela, manter `profiles.role` como espelho somente-leitura até o front migrar. Passa a cumprir a regra nº 7.
+1. ✅ **Contenção — feita em 2026-09-18.** Trigger `trg_prevent_self_privilege_escalation` em `public.profiles`, `BEFORE UPDATE FOR EACH ROW`, rejeitando alteração de `role`, `status`, `payment_score` e `curation_only` quando `auth.uid() = old.id` e o autor não é admin. Service role (`auth.uid()` nulo) e admin passam direto.
+
+   **Testado em produção** com simulação de `owner` via `set_config('request.jwt.claims', …)` dentro de transação abortada: `role := 'admin'` bloqueado, `payment_score := 100` bloqueado, alteração de telefone permitida (controle). Sem resíduo.
+
+   **Caminhos legítimos conferidos, todos passam:** aprovar/recusar em `/admin/gerenciar-usuarios` e `/aprovacoes` (mexem na linha de outra pessoa), score em `CobrancaDetalhes` (alvo é `charge.owner_id`, tela gated por `isTeamMember`), webhook do Mercado Pago e crons (service role). Conferido também que **não existe cobrança pertencente a membro da equipe** — se um dia existir, um `agent`/`maintenance` dono de cobrança esbarraria no trigger ao mudar o próprio score; é o ponto a revisitar.
+
+   Desfazer, se precisar: `drop trigger trg_prevent_self_privilege_escalation on public.profiles;`
+
+   **Falta ainda** recriar a policy de UPDATE com `WITH CHECK` explícito — o trigger cobre o caso, mas a policy segue permissiva.
+
+2. ⬜ **Estrutural (G).** Migrar para `user_roles (user_id, role)` com RLS de escrita só para admin, reescrever `has_role()`/`is_team_member()` sobre ela, manter `profiles.role` como espelho somente-leitura até o front migrar. Passa a cumprir a regra nº 7.
 
 **Arquivos.** Migration nova; depois `ProtectedRoute.tsx`, `useAuth.tsx`, `Index.tsx` e as referências a `profile.role`.
 
@@ -164,18 +173,23 @@ Agravante: o token trafega na query string (`?token=`), que costuma acabar em lo
 
 ---
 
-### 1.7 — `ProtectedRoute` libera quem não tem perfil `[P]` 🟠
+### 1.7 — `ProtectedRoute` libera quem não tem perfil `[P]` ✅ **RESOLVIDO em 2026-09-18**
 
-**Problema.** `profile &&` faz a checagem de papel ser pulada quando o perfil é nulo (rede caiu, RLS negou, timeout) — e a rota renderiza. O gate de `curation_only` tem o mesmo defeito: `profile?.curation_only` também é falso com perfil nulo, então um usuário restrito sem perfil carregado alcança qualquer tela.
+**Problema.** `profile &&` fazia a checagem de papel ser pulada quando o perfil era nulo (rede caiu, RLS negou, timeout) — e a rota renderizava. O gate de `curation_only` tinha o mesmo defeito: `profile?.curation_only` também é falso com perfil nulo, então um usuário restrito sem perfil alcançava qualquer tela. Era a peça que transformava "conta sem perfil" (item 1.10) em "acesso a tudo".
 
-**Evidência.** `src/components/ProtectedRoute.tsx:26-31` e `:33`.
+**O que mudou.**
 
-**Proposta.** Negar por padrão: sem `profile`, renderizar erro com "Tentar novamente" e "Sair", nunca o `children`. Expor `profileError` no `useAuth` para distinguir "carregando" de "falhou".
+- **`src/hooks/useAuth.tsx`** — passou a expor `profileError` e `refreshProfile()`, distinguindo "carregando" de "falhou ao carregar". A busca do perfil, antes duplicada em dois trechos idênticos (`onAuthStateChange` e `initSession`), virou uma função só (`buscarPerfil`), agora com `maybeSingle()`: "não existe perfil" deixou de ser exceção silenciosa e virou estado tratado.
+- **`src/components/ProtectedRoute.tsx`** — nega por padrão. Sem perfil, renderiza `ProfileUnavailable` em vez de `children`. As checagens de `curation_only` e de papel agora rodam com perfil garantido, sem `?.` e sem `profile &&`.
+- **`src/components/ProfileUnavailable.tsx`** (novo) — tela de erro em pt-BR com "Tentar novamente" e "Sair", só tokens semânticos, sem emoji, no padrão visual do `LoadingScreen`.
+- **`src/pages/Index.tsx`** — mesma raiz, mesmo tratamento: antes ficava em `LoadingScreen` infinito quando o perfil não carregava (no app Capacitor isso aparecia como "o app não abre"); agora mostra a mesma tela com saída.
 
-**Risco.** Baixo. Conferir antes se existe usuário legítimo sem linha em `profiles`:
-`select count(*) from auth.users u left join profiles p on p.id=u.id where p.id is null;`
+**Verificações feitas antes de aplicar.**
 
-**Validar.** Bloquear a request de `profiles` no DevTools → erro com saída, não a tela protegida.
+- Usuários sem linha em `profiles`: **apenas 1 em 91**, a `teste@rios.com`, já banida no item 1.10. Nenhum usuário legítimo é trancado fora.
+- Varredura nos outros 59 arquivos que leem `profile?.role`: todos já falham para o lado **fechado** (`profile?.role === 'admin'` dá falso com perfil nulo, escondendo o recurso). O `ProtectedRoute` era o único que falhava abrindo.
+
+**Validar em produção, depois do deploy.** Bloquear a request de `profiles` no DevTools → deve aparecer a tela de erro com saída, não a tela protegida. E conferir que o login dos 6 papéis continua indo para a tela certa.
 
 ---
 

@@ -2,27 +2,28 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { ProfileUnavailable } from "@/components/ProfileUnavailable";
 
 const Index = () => {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, profileError } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (loading) return;
-    
+
     if (!user) {
       navigate("/login", { replace: true });
       return;
     }
-    
+
     if (!profile) return;
-    
+
     // Acesso restrito à curadoria
     if (profile.curation_only) {
       navigate("/minha-curadoria", { replace: true });
       return;
     }
-    
+
     // Redireciona apenas uma vez baseado na role
     if (profile.role === 'pending_owner' && profile.status === 'pending') {
 
@@ -40,6 +41,12 @@ const Index = () => {
 
   if (loading) {
     return <LoadingScreen />;
+  }
+
+  // Sessão ativa e perfil não carregou: antes ficava em carregamento infinito,
+  // sem mensagem e sem saída — no app Capacitor isso aparecia como "não abre".
+  if (user && !profile) {
+    return <ProfileUnavailable error={profileError} />;
   }
 
   return <LoadingScreen />;

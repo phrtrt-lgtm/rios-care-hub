@@ -8,6 +8,10 @@ interface AuthContextType {
   session: Session | null;
   profile: any | null;
   loading: boolean;
+  /** Preenchido quando há sessão mas o perfil não pôde ser carregado. */
+  profileError: string | null;
+  /** Nova tentativa de carregar o perfil, para a tela de erro. */
+  refreshProfile: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, name: string, phone?: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
@@ -18,10 +22,23 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   profile: null,
   loading: true,
+  profileError: null,
+  refreshProfile: async () => {},
   signIn: async () => ({ error: null }),
   signUp: async () => ({ error: null }),
   signOut: async () => {},
 });
+
+const SEM_PERFIL = "Nenhum perfil encontrado para esta conta.";
+
+/** Busca única do perfil — usada no boot, na troca de sessão e no retry. */
+const buscarPerfil = async (userId: string) => {
+  return await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", userId)
+    .maybeSingle();
+};
 
 export const useAuth = () => useContext(AuthContext);
 
@@ -30,6 +47,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileError, setProfileError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -90,24 +108,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           // Usar setTimeout para evitar deadlock
           setTimeout(async () => {
             try {
-              const { data, error } = await supabase
-                .from("profiles")
-                .select("*")
-                .eq("id", session.user.id)
-                .single();
-              
+              const { data, error } = await buscarPerfil(session.user.id);
+
+              if (!isMounted) return;
+
               if (error) {
                 console.error('[useAuth] Error fetching profile:', error);
-              }
-              
-              console.log('[useAuth] Profile data:', data);
-              if (isMounted) {
+                setProfile(null);
+                setProfileError(error.message);
+              } else {
                 setProfile(data);
-                setLoading(false);
+                setProfileError(data ? null : SEM_PERFIL);
               }
-            } catch (error) {
+              setLoading(false);
+            } catch (error: any) {
               console.error('[useAuth] Exception fetching profile:', error);
               if (isMounted) {
+                setProfile(null);
+                setProfileError(error?.message ?? "Falha ao carregar o perfil.");
                 setLoading(false);
               }
             }
@@ -115,6 +133,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         } else {
           if (isMounted) {
             setProfile(null);
+            setProfileError(null);
             setLoading(false);
           }
         }
@@ -145,23 +164,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (session?.user) {
           console.log('[useAuth] Fetching initial profile');
           try {
-            const { data, error } = await supabase
-              .from("profiles")
-              .select("*")
-              .eq("id", session.user.id)
-              .single();
-            
+            const { data, error } = await buscarPerfil(session.user.id);
+
+            if (!isMounted) return;
+
             if (error) {
               console.error('[useAuth] Error fetching initial profile:', error);
-            }
-            
-            if (isMounted) {
+              setProfile(null);
+              setProfileError(error.message);
+            } else {
               setProfile(data);
-              setLoading(false);
+              setProfileError(data ? null : SEM_PERFIL);
             }
-          } catch (error) {
+            setLoading(false);
+          } catch (error: any) {
             console.error('[useAuth] Error fetching initial profile:', error);
             if (isMounted) {
+              setProfile(null);
+              setProfileError(error?.message ?? "Falha ao carregar o perfil.");
               setLoading(false);
             }
           }
@@ -186,6 +206,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       subscription.unsubscribe();
     };
   }, []);
+
+  const refreshProfile = async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const { data, error } = await buscarPerfil(user.id);
+      if (error) {
+        setProfile(null);
+        setProfileError(error.message);
+      } else {
+        setProfile(data);
+        setProfileError(data ? null : SEM_PERFIL);
+      }
+    } catch (error: any) {
+      setProfile(null);
+      setProfileError(error?.message ?? "Falha ao carregar o perfil.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
@@ -233,7 +273,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSession(null);
       setUser(null);
       setProfile(null);
-      
+      setProfileError(null);
+
       // Tenta fazer logout no Supabase (mesmo que a sessão não exista)
       const { error } = await supabase.auth.signOut();
       
@@ -256,6 +297,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         session,
         profile,
         loading,
+        profileError,
+        refreshProfile,
         signIn,
         signUp,
         signOut,
