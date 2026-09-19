@@ -92,7 +92,35 @@ Deno.serve(async (req) => {
   // credencial nenhuma, porque o config.toml traz verify_jwt = false aqui.
   //
   // Agora: ou vem com o token do cron, ou com JWT de alguém da equipe. Nunca sem nada.
-  const temTokenDeCron = !!cronToken && tokenParam === cronToken;
+  //
+  // O token do cron é aceito de duas fontes porque o projeto tem as duas em uso:
+  // a env CRON_SECRET_TOKEN e a chave `charge_cron_token` em system_config (é o
+  // que `daily-summary-cron` usa). O job `hostex-sync-6h` manda o valor que está
+  // no system_config, e a env guarda outro — por isso o cron vinha respondendo
+  // 401 desde sempre e a sincronização nunca rodou automaticamente. Aceitar as
+  // duas conserta sem depender de saber o valor do secret.
+  let temTokenDeCron = !!cronToken && tokenParam === cronToken;
+
+  if (!temTokenDeCron && tokenParam) {
+    try {
+      const anon = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      );
+      const { data: cfg } = await anon
+        .from("system_config")
+        .select("value")
+        .eq("key", "charge_cron_token")
+        .maybeSingle();
+      const tokenDoConfig = typeof cfg?.value === "string"
+        ? cfg.value.replace(/^"|"$/g, "")
+        : null;
+      temTokenDeCron = !!tokenDoConfig && tokenParam === tokenDoConfig;
+    } catch (e) {
+      console.error("[hostex-sync] falha ao ler charge_cron_token do system_config", e);
+    }
+  }
+
   if (!temTokenDeCron) {
     const { resposta } = await exigirPapel(
       req,

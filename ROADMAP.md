@@ -6,15 +6,15 @@ Auditoria de **2026-09-18** sobre o commit `4c49831`. Contexto de arquitetura: `
 
 **Esforço:** P = até meio dia · M = 1–2 dias · G = 3+ dias
 
-## Estado em 2026-09-18, fim do dia
+## Estado em 2026-09-19
 
 | | Itens |
 |---|---|
 | ✅ **No ar e verificado** | 1.1 · 1.4 (contenção) · 1.6 · 1.10 · 4.2 |
-| ✅ **No código, aguardando build do front** | 1.7 · 2.1 |
+| ✅ **No código, aguardando deploy** | 1.7 · 2.1 (front) · 1.12 (function) |
 | ⏸️ **Despriorizado pelo gestor** | 1.2 e 1.3 (a equipe confere o valor pago; erro seria pego na conciliação) |
-| ⛔ **Travado** | 1.5 — precisa do secret `INTERNAL_FUNCTION_TOKEN` criado em Lovable → Mais → Cloud → Secrets |
-| ⬜ **Abertos** | 1.8 · 1.9 · 1.11 · Ondas 2 (restante), 3, 4 e 5 |
+| ⚠️ **Precisa de decisão sua** | 1.12 — o cron `sync-ical` chama função que não existe: remover o job ou recriar a função? |
+| ⬜ **Abertos** | 1.5 · 1.8 · 1.9 · 1.11 · 1.13 · Ondas 2 (restante), 3, 4 e 5 |
 
 > **Toda verificação foi feita por requisição direta ao endpoint**, não pelo relatório de quem aplicou. O padrão que uso: chamar sem credencial, chamar com a chave anônima (que é um JWT válido e passa pelo `verify_jwt`), e um controle numa função que deve continuar viva, para distinguir "bloqueado" de "tudo fora do ar".
 
@@ -355,6 +355,36 @@ O inverso também acontece: das 242 cobranças **com** registro, 226 não têm i
 **Como validar.** Repetir a consulta de conciliação e ver a coluna "sem registro" parar de crescer nos meses novos.
 
 ---
+
+### 1.12 — Dois crons mortos em silêncio `[P]` 🟠 **descoberto em 2026-09-19**
+
+Não é falha de segurança — é operação parada há meses, invisível no código.
+
+**`hostex-sync-6h`: nunca rodou.** O job dispara a cada 6h e já acumulou 417 execuções, mas o `hostex_sync_log` **não tem uma única linha `triggered_by='cron'`** — só 13 manuais, a última em **03/07/2026**. O log é escrito depois da checagem de token, então zero linhas significa zero autenticações bem-sucedidas.
+
+Causa: o job manda `?token=charge_internal_cron_2024`, que é o valor guardado em `system_config.charge_cron_token`; a função valida contra a env `CRON_SECRET_TOKEN`, que guarda outro valor (`recurring_internal_cron_2026` — o `recurring-charges-cron`, que manda esse, responde 200). Confirmado em `net._http_response`: às 18:00, horário em que só `hostex-sync` e `sync-ical` disparam, as duas únicas respostas ruins do dia foram **401** e **404**.
+
+**Consequência nos dados** (medida em 19/09/2026):
+
+| | |
+|---|---|
+| Último sync | 03/07/2026, há 78 dias |
+| Calendário de preços/disponibilidade | termina em **01/09** — sem nenhum dado futuro |
+| Reservas futuras em cache | 35 |
+
+✅ **Corrigido no código** (aguardando deploy): `hostex-sync` passou a aceitar o token vindo **das duas fontes** — a env e o `system_config`. É aditivo, não quebra nada que já funcione, e não depende de descobrir o valor do secret.
+
+**`sync-ical-every-6h`: chama função que não existe.** 864 execuções, todas recebendo `{"code":"NOT_FOUND"}`. Não há pasta `sync-ical` em `supabase/functions/`. Ou a função foi apagada sem remover o job, ou nunca foi criada. **Decisão sua:** remover o job ou recriar a função. Enquanto isso, é ruído de 4 requisições por dia.
+
+> **Lição para a auditoria:** nenhum dos dois aparece lendo o repositório. `cron.job_run_details` diz "succeeded" mesmo quando a função devolve 401 ou 404, porque o `net.http_post` é assíncrono e o "sucesso" é só o disparo. Para saber se um cron funciona de verdade, olhe a tabela de log da própria função ou `net._http_response` (que retém ~3 dias).
+
+---
+
+### 1.13 — Tokens de cron fracos e espalhados `[P]` 🟡 **descoberto em 2026-09-19**
+
+Há **três** fontes de token de cron em uso: a env `CRON_SECRET_TOKEN`, a chave `charge_cron_token` e a `daily_summary_cron_token`, ambas em `system_config`. Os valores são adivinháveis (`charge_internal_cron_2024`, `recurring_internal_cron_2026`) e viajam **na query string**, então acabam em log de servidor e header `Referer`.
+
+**Proposta.** Uma fonte só, valor aleatório (`openssl rand -hex 32`), passado em header (`x-cron-token`) e não na URL. Atualizar os jobs em `cron.job` no mesmo movimento. Fazer junto com o 1.12, que já mexe nisso.
 
 # Onda 2 — Velocidade
 
