@@ -11,7 +11,8 @@ const PAID_STATUSES = new Set([
   "cancelled",
 ]);
 
-const getPaymentTotals = async (supabaseClient: ReturnType<typeof createClient>, chargeIds: string[]) => {
+// deno-lint-ignore no-explicit-any
+const getPaymentTotals = async (supabaseClient: any, chargeIds: string[]) => {
   if (chargeIds.length === 0) return new Map<string, number>();
 
   const { data, error } = await supabaseClient
@@ -24,10 +25,13 @@ const getPaymentTotals = async (supabaseClient: ReturnType<typeof createClient>,
     return new Map<string, number>();
   }
 
-  return data.reduce((totals, payment) => {
-    totals.set(payment.charge_id, (totals.get(payment.charge_id) ?? 0) + payment.amount_cents);
-    return totals;
-  }, new Map<string, number>());
+  return (data as { charge_id: string; amount_cents: number | null }[]).reduce(
+    (totals, payment) => {
+      totals.set(payment.charge_id, (totals.get(payment.charge_id) ?? 0) + (payment.amount_cents ?? 0));
+      return totals;
+    },
+    new Map<string, number>(),
+  );
 };
 
 const isChargeSettled = (
