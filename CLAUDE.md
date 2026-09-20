@@ -92,6 +92,15 @@ Fluxo essencial vs estrutural: item `essential` pode ser executado de imediato; 
 
 **Score do proprietário** (0–100, default 50): antecipado **+5**, em dia **+1**, atraso **−15**, débito em reserva **−30** (`mercadopago-webhook/index.ts` e `src/hooks/useOwnerScore.ts`). Estrelas: ≥90 / ≥75 / ≥60 / ≥40. Histórico em `owner_payment_scores`.
 
+> ⚠️ **Regra de negócio que não está no código — confirmada pelo gestor em 2026-09-20.**
+> Nem toda cobrança com status de paga foi recebida em dinheiro. O admin marca como paga manualmente em dois casos legítimos:
+> 1. **Acerto por fora do Mercado Pago** — PIX direto, transferência.
+> 2. **Perdão da cobrança** pela gestão, com ou sem aporte registrado em `management_contribution_cents`.
+>
+> Quando o aporte cobre 100% do valor, o proprietário não deve nada e **é correto não haver registro em `charge_payments`**.
+>
+> Consequência prática: **ausência de pagamento no Mercado Pago não significa inadimplência**, e o status de paga não distingue "recebemos" de "perdoamos". Nenhum relatório ou automação deve tratar as duas coisas como iguais. Ver `ROADMAP.md` item 1.11.
+
 ### 3.3 Vistorias
 `cleaning_inspections`, `inspection_items`, `inspection_settings`, `inspection_comments`, `inspection_drafts`, `routine_inspection_checklists`. Vistoria de faxina, rotina e interna. Resumo por IA: `generate-inspection-summary`, `summarize-inspection`.
 Proprietário só vê se `inspection_settings.owner_portal_enabled = true`.

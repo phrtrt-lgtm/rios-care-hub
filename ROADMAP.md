@@ -316,7 +316,7 @@ O "View code" do painel **não serve** para funções órfãs: ele aponta para o
 
 ---
 
-### 1.11 — Conciliação financeira: 378 cobranças pagas sem registro de pagamento `[M]` 🟠 **descoberto em 2026-09-18**
+### 1.11 — Relatório não separa o que foi recebido do que foi perdoado `[M]` 🟠 **descoberto em 2026-09-18, reformulado em 2026-09-20**
 
 **Problema.** Das 620 cobranças com status de paga, 378 não têm nenhuma linha em `charge_payments`. Mas **a maior parte disso é comportamento correto**, não lacuna:
 
@@ -345,12 +345,18 @@ Não é fraude. Mas para esses R$ 42 mil **o sistema não sabe quando, como nem 
 
 O inverso também acontece: das 242 cobranças **com** registro, 226 não têm id do Mercado Pago — então às vezes a equipe registra o pagamento manual, às vezes não. O processo é inconsistente, não ausente.
 
-**Proposta.**
-1. Na UI, **não permitir marcar cobrança como paga sem criar o registro** — exigir método (PIX, transferência, dinheiro, offset), data e valor. Um único caminho para "pagar".
-2. Tornar o status de pagamento derivado de `charge_payments`, em vez de campo editável solto.
-3. Decidir o que fazer com o passivo: as 378 antigas ficam como estão (com uma marcação de "sem conciliação") ou passam por um mutirão de registro retroativo.
+> ⚠️ **Correção de premissa (2026-09-20, do gestor).** A equipe marca cobrança como paga manualmente **de propósito**, em dois casos legítimos: quando o acerto veio por fora do Mercado Pago (PIX direto, transferência) e quando a gestão **perdoa** a cobrança, com ou sem aporte registrado. Então ausência de pagamento no MP **não** significa inadimplência, e exigir registro de pagamento para toda cobrança paga quebraria o fluxo real.
+>
+> O problema, portanto, não é "falta registro". É que **o sistema não distingue "recebemos por fora" de "perdoamos"**. Hoje os dois casos ficam idênticos: status de paga, sem nada que diga qual foi. Isso impede separar receita de renúncia no relatório, e some com a informação de quanto dinheiro de fato entrou.
 
-**Risco de regressão.** Médio — muda o fluxo diário da equipe. Vale conversar com quem opera antes.
+**Proposta revista.**
+1. Ao marcar como paga fora do fluxo do Mercado Pago, pedir **como foi liquidada**: `pix_direto`, `transferencia`, `dinheiro`, `perdoado`, `aporte_integral`, `offset_reserva`. Um campo só, obrigatório, com valor e data quando houver dinheiro envolvido.
+2. Relatório financeiro passa a separar **recebido** de **renunciado**. Hoje os dois entram no mesmo balde.
+3. Para o passivo de 188 cobranças (R$ 42.113), não vale mutirão de registro retroativo — vale marcar como `origem_desconhecida` e seguir em frente, deixando claro no relatório que aquele período não distingue os dois casos.
+
+> **Pergunta em aberto, com efeito no proprietário.** Hoje o score muda conforme o status escolhido na tela (`pago_no_vencimento` dá +1, `pago_com_atraso` dá −15). Numa cobrança **perdoada**, o proprietário pode estar levando −15 por algo que a gestão decidiu não cobrar. Vale decidir: perdão deve ser neutro no score?
+
+**Risco de regressão.** Médio — acrescenta um campo ao fluxo diário da equipe. Como é escolha numa tela que já existe, o custo é de hábito, não de retrabalho.
 
 **Como validar.** Repetir a consulta de conciliação e ver a coluna "sem registro" parar de crescer nos meses novos.
 
