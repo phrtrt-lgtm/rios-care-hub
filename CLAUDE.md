@@ -85,7 +85,7 @@ Fluxo essencial vs estrutural: item `essential` pode ser executado de imediato; 
 
 > ⚠️ `tickets` tem `sla_due_at` e `first_response_at` — resíduo. A regra nº 3 proíbe SLA; não construa UI sobre essas colunas.
 
-**Quadros da lista da equipe** (`/admin/manutencoes-lista`, desde 2026-09-22): Em Progresso · **Infiltração** · **Stand-by** · Aguardando Envio · Cobranças Vencidas · Cobranças Pendentes. "Quadro" não é coluna — é derivado de dois campos, porque um item pode ser as duas coisas: **Infiltração** = label de serviço contém `infiltracao`; **Stand-by** = `tickets.on_hold` (coluna criada em 2026-09-22, invisível ao proprietário, **ainda não está no `types.ts` gerado** — o código usa `as any`). Infiltração vence Stand-by. Regra e seletor em `src/lib/maintenanceBoard.ts`; o campo virtual `board` é traduzido em `handleUpdateItem` para `on_hold` + `service_type`.
+**Quadros da lista da equipe** (`/admin/manutencoes-lista`, desde 2026-09-22): Em Progresso · **Infiltração** · **Stand-by** · Aguardando Envio · Cobranças Vencidas · Cobranças Pendentes. "Quadro" não é coluna — é derivado de dois campos, porque um item pode ser as duas coisas: **Infiltração** = label de serviço contém `infiltracao`; **Stand-by** = `tickets.on_hold` (coluna criada em 2026-09-22, invisível ao proprietário; já no `types.ts`). Infiltração vence Stand-by. Regra e seletor em `src/lib/maintenanceBoard.ts`; o campo virtual `board` é traduzido em `handleUpdateItem` para `on_hold` + `service_type`.
 
 ### 3.2 Cobranças
 `charges`, `charge_payments`, `charge_messages`, `charge_attachments`, `recurring_charges`, `recurring_charge_runs`, `owner_credits`, `owner_credit_applications`.

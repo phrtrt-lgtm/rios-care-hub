@@ -66,28 +66,6 @@ interface MaintenanceItem {
   on_hold?: boolean;
 }
 
-/**
- * Linha crua da query de tickets desta lista. Tipada à mão porque `on_hold`
- * (coluna de 2026-09-22) ainda não está no types.ts gerado — com ela no select,
- * o parser de tipos do supabase-js invalida o resultado inteiro.
- * Quando o types.ts for regenerado, dá para voltar à inferência automática.
- */
-interface TicketRow {
-  id: string;
-  subject: string;
-  status: TicketStatus;
-  scheduled_at: string | null;
-  created_at: string;
-  cost_responsible: string | null;
-  on_hold: boolean | null;
-  charge_draft_amount_cents: number | null;
-  charge_draft_management_contribution_cents: number | null;
-  charge_draft_category: string | null;
-  charge_draft_title: string | null;
-  property: { id: string; name: string } | null;
-  owner: { id: string; name: string } | null;
-}
-
 // ===== CONSTANTS =====
 const SERVICE_LABELS = [
   { value: "refrigeracao", label: "Refrigeração", color: "bg-info" },
@@ -1360,10 +1338,10 @@ export default function AdminManutencoesLista() {
           // Created in "Em espera" — hidden from owner, no notifications until
           // the team picks a real cost_responsible from the list.
           cost_responsible: "pending",
-          // Criado direto no quadro certo. Cast: on_hold ainda não está no types.ts.
+          // Criado direto no quadro certo.
           on_hold: inlineAdd.groupId === "stand_by",
           charge_draft_category: inlineAdd.groupId === "infiltracao" ? "infiltracao" : null,
-        } as any);
+        });
         if (error) throw error;
       } else {
         const amountCents = Math.round(parseBRNumber(inlineAdd.amountCents) * 100);
@@ -1495,7 +1473,7 @@ export default function AdminManutencoesLista() {
   const { data: tickets, isLoading } = useQuery({
     queryKey: ["maintenance-list-view", "v2-draft-fallback"],
     queryFn: async () => {
-      const { data, error } = (await supabase
+      const { data, error } = await supabase
         .from("tickets")
         .select(`
           id,
@@ -1515,10 +1493,7 @@ export default function AdminManutencoesLista() {
         .eq("ticket_type", "manutencao")
         .neq("status", "cancelado")
         .is("archived_at", null)
-        .order("created_at", { ascending: false })) as unknown as {
-        data: TicketRow[] | null;
-        error: { message: string } | null;
-      };
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
 
@@ -1601,8 +1576,7 @@ export default function AdminManutencoesLista() {
                 : (displayCharge?.service_type || (t as any).charge_draft_category || null),
             list_status: t.status === "concluido" ? "feito" : "em_progresso",
             cost_responsible: (t as any).cost_responsible ?? null,
-            // Coluna criada em 2026-09-22; ainda não está no types.ts gerado.
-            on_hold: (t as any).on_hold === true,
+            on_hold: t.on_hold === true,
           };
         }) as MaintenanceItem[];
     },
@@ -1856,10 +1830,10 @@ export default function AdminManutencoesLista() {
           if (error) throw error;
         } else if (field === "on_hold") {
           // Stand-by da lista: coluna própria, sem tocar no status (que o
-          // proprietário vê). Cast porque a coluna ainda não está no types.ts gerado.
+          // proprietário vê).
           const { error } = await supabase
             .from("tickets")
-            .update({ on_hold: !!value } as any)
+            .update({ on_hold: !!value })
             .eq("id", id);
           if (error) throw error;
         } else if (field === "cost_responsible") {
