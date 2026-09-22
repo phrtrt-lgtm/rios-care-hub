@@ -425,6 +425,20 @@ Há **três** fontes de token de cron em uso: a env `CRON_SECRET_TOKEN`, a chave
 
 ---
 
+### 2.6 — Lista de manutenções da equipe: quadros novos e o que sobrou de velocidade `[P]` 🟠 **parcial em 2026-09-22**
+
+> ✅ **Feito:** quadros **Infiltração** e **Stand-by** em `/admin/manutencoes-lista`, desktop e celular, com seletor "Quadro" na linha/card. Coluna `tickets.on_hold` criada em produção; label de serviço `Infiltração` adicionada. Regra em `src/lib/maintenanceBoard.ts` (Infiltração vence Stand-by, decisão do gestor). Itens criados inline dentro de um quadro já nascem nele. Cores dos grupos migradas de Tailwind cru para tokens.
+>
+> ⚠️ `on_hold` **não está no `types.ts` gerado** — quando o Lovable regenerar o arquivo, remover os `as any` em `AdminManutencoesLista.tsx`.
+
+**O que sobrou — velocidade.** A página parece rápida no desktop, mas para mostrar ~30 itens ela baixa **385 tickets, 2.088 linhas de anexo (só para contar quantos cada um tem) e 425 cobranças**, e filtra tudo no navegador — a maior parte dos 361 concluídos é descartada depois de baixada (`AdminManutencoesLista.tsx`, query `maintenance-list-view`). No 4G isso pesa.
+
+**Proposta.** (1) Filtrar no SQL: pedir só `status <> 'concluido'` **ou** concluído sem cobrança real — hoje esse filtro é feito no cliente. (2) Contagem de anexos por agregação (`select ticket_id, count(*) ... group by`) em vez de baixar as 2.088 linhas. (3) Trocar o "Carregando..." solto da tabela desktop por `SectionSkeleton`, que já existe. Cai de ~3.000 linhas para menos de 100.
+
+**Risco.** Baixo — só muda o que é buscado, não o que é mostrado. **Validar:** Network na abertura da lista; contagem de anexos igual antes/depois numa amostra.
+
+---
+
 ### 2.2 — Matar o N+1 de manutenções `[P]` 🔴
 
 **Problema.** Busca todas as charges (sem `limit`, sem paginação, `select("*")`) e dispara uma query de `charge_payments` por charge. 300 manutenções = 301 requisições.

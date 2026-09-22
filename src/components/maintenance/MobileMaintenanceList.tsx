@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 import { formatBRL } from "@/lib/format";
 import { parseBRNumber } from "@/lib/parseBRNumber";
 import { QuickAttachUploader } from "@/components/maintenance/QuickAttachUploader";
+import { BOARD_OPTIONS, deriveBoard, hasInfiltracao } from "@/lib/maintenanceBoard";
 
 export interface MobileMaintenanceItem {
   id: string;
@@ -42,6 +43,8 @@ export interface MobileMaintenanceItem {
   list_status?: string;
   attachments_count?: number;
   itemType?: "ticket" | "charge";
+  /** Stand-by na lista (tickets.on_hold). Só manutenção. */
+  on_hold?: boolean;
 }
 
 interface MobileGroupConfig {
@@ -170,6 +173,8 @@ export function MobileMaintenanceList({
     // Por padrão: Em Progresso e Cobranças Vencidas abertos
     return {
       em_progresso: true,
+      infiltracao: true,
+      stand_by: false,
       cobrancas_vencidas: true,
       concluidas: false,
       cobrancas: false,
@@ -366,6 +371,41 @@ export function MobileMaintenanceList({
                                 </span>
                               )}
                             </div>
+
+                            {/* Quadro: Em Progresso / Stand-by / Infiltração — só manutenção aberta */}
+                            {!isCharge && onUpdateItem && item.list_status !== "feito" && (
+                              <div
+                                className="flex items-center gap-2 mt-2"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <span className="text-[10px] text-muted-foreground">Quadro</span>
+                                <Select
+                                  value={deriveBoard(item)}
+                                  onValueChange={(v) => onUpdateItem(item.id, "board", v, false)}
+                                >
+                                  <SelectTrigger
+                                    className="h-7 px-2 py-0 border-0 bg-transparent hover:bg-muted/60 text-xs w-auto gap-1"
+                                    aria-label="Quadro"
+                                  >
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {BOARD_OPTIONS.map((opt) => (
+                                      <SelectItem key={opt.value} value={opt.value}>
+                                        <Badge className={cn("text-white text-xs", opt.color)}>
+                                          {opt.label}
+                                        </Badge>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                {item.on_hold && hasInfiltracao(item.service_type) && (
+                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                    Stand-by
+                                  </Badge>
+                                )}
+                              </div>
+                            )}
 
                             {/* Valores editáveis */}
                             {onUpdateItem && (

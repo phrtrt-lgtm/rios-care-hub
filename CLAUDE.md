@@ -85,6 +85,8 @@ Fluxo essencial vs estrutural: item `essential` pode ser executado de imediato; 
 
 > ⚠️ `tickets` tem `sla_due_at` e `first_response_at` — resíduo. A regra nº 3 proíbe SLA; não construa UI sobre essas colunas.
 
+**Quadros da lista da equipe** (`/admin/manutencoes-lista`, desde 2026-09-22): Em Progresso · **Infiltração** · **Stand-by** · Aguardando Envio · Cobranças Vencidas · Cobranças Pendentes. "Quadro" não é coluna — é derivado de dois campos, porque um item pode ser as duas coisas: **Infiltração** = label de serviço contém `infiltracao`; **Stand-by** = `tickets.on_hold` (coluna criada em 2026-09-22, invisível ao proprietário, **ainda não está no `types.ts` gerado** — o código usa `as any`). Infiltração vence Stand-by. Regra e seletor em `src/lib/maintenanceBoard.ts`; o campo virtual `board` é traduzido em `handleUpdateItem` para `on_hold` + `service_type`.
+
 ### 3.2 Cobranças
 `charges`, `charge_payments`, `charge_messages`, `charge_attachments`, `recurring_charges`, `recurring_charge_runs`, `owner_credits`, `owner_credit_applications`.
 
@@ -135,7 +137,7 @@ IA: `ai_settings`, `ai_templates`, `ai_prompt_versions`, `ai_usage_logs`; `ai-as
 | # | Regra | Status hoje |
 |---|---|---|
 | 1 | Só tokens semânticos, nunca cor crua do Tailwind. Exceção: tutorial e escala do score | ❌ **804 ocorrências** fora de `ui/` (os tokens agora existem — ver §5, não há mais desculpa) |
-| 2 | `EmptyState` e `SectionSkeleton` para vazio/carregamento. Sem emoji, sem "Carregando..." solto | ❌ **os dois componentes não existem**. 34 "Carregando" soltos. Existe `SkeletonLoading.tsx` e o `Skeleton` do shadcn (26 arquivos) — base para criar o padrão |
+| 2 | `EmptyState` e `SectionSkeleton` para vazio/carregamento. Sem emoji, sem "Carregando..." solto | ⚠️ **Os dois existem desde setembro/2026** em `src/components/ui/empty-state.tsx` e `src/components/ui/section-skeleton.tsx` (a lista mobile de manutenções já usa). Falta adotar nas telas antigas: ainda há "Carregando..." solto, inclusive na tabela desktop de manutenções |
 | 3 | Nunca criar prazo/contador de SLA em ticket | ✅ na UI (colunas legadas seguem no banco) |
 | 4 | Nome de anexo anonimizado ("Imagem", "PDF") | ❌ `file_name` real ainda exibido (`AttachmentBubble.tsx`) |
 | 5 | Proprietário não vê calendário de reservas | ✅ `/calendario-reservas` redireciona para área da equipe (`App.tsx:527`) |
@@ -162,7 +164,7 @@ IA: `ai_settings`, `ai_templates`, `ai_prompt_versions`, `ai_usage_logs`; `ai-as
 **Componentes de padrão que existem:**
 `MobileBottomNav.tsx` (191L, usado em 7 telas) · `MobileHeader.tsx` (95L, 4 telas) · `LoadingScreen.tsx` (19 telas) · `SkeletonLoading.tsx` · `AnimatedCard`, `Section`, `PullToRefresh`, `SwipeableCard`, `OwnerOnboardingTour` (framer-motion) · `MediaGallery` / `MediaThumbnail` / `AttachmentBubble` / `AuthenticatedMedia`.
 
-**Não existem:** `EmptyState`, `SectionSkeleton`. Criar antes de usar.
+**Existem desde setembro/2026:** `src/components/ui/empty-state.tsx` (`EmptyState`) e `src/components/ui/section-skeleton.tsx` (`SectionSkeleton`). Use-os em vez de "Carregando..." solto ou vazio improvisado.
 
 Piores ofensores de cor crua: `OwnerScoreDisplay` (exceção legítima), `CobrancaDetalhes`, `AdminManutencoesLista`, `PropostaCompleta`, `MinhasCobrancas`.
 

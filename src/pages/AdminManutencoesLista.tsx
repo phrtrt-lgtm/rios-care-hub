@@ -37,6 +37,7 @@ import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import { parseBRNumber } from "@/lib/parseBRNumber";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileMaintenanceList } from "@/components/maintenance/MobileMaintenanceList";
+import { BOARD_OPTIONS, boardChange, deriveBoard, hasInfiltracao, type Board } from "@/lib/maintenanceBoard";
 // ===== TYPES =====
 type TicketStatus = "novo" | "em_analise" | "aguardando_info" | "em_execucao" | "concluido" | "cancelado";
 
@@ -61,6 +62,30 @@ interface MaintenanceItem {
   attachments_count?: number;
   itemType?: "ticket" | "charge";
   cost_responsible?: string | null;
+  /** Stand-by na lista (tickets.on_hold). Só manutenção; cobrança não tem. */
+  on_hold?: boolean;
+}
+
+/**
+ * Linha crua da query de tickets desta lista. Tipada à mão porque `on_hold`
+ * (coluna de 2026-09-22) ainda não está no types.ts gerado — com ela no select,
+ * o parser de tipos do supabase-js invalida o resultado inteiro.
+ * Quando o types.ts for regenerado, dá para voltar à inferência automática.
+ */
+interface TicketRow {
+  id: string;
+  subject: string;
+  status: TicketStatus;
+  scheduled_at: string | null;
+  created_at: string;
+  cost_responsible: string | null;
+  on_hold: boolean | null;
+  charge_draft_amount_cents: number | null;
+  charge_draft_management_contribution_cents: number | null;
+  charge_draft_category: string | null;
+  charge_draft_title: string | null;
+  property: { id: string; name: string } | null;
+  owner: { id: string; name: string } | null;
 }
 
 // ===== CONSTANTS =====
@@ -74,6 +99,8 @@ const SERVICE_LABELS = [
   { value: "vidracaria", label: "Vidraçaria", color: "bg-info" },
   { value: "dedetizacao", label: "Dedetização", color: "bg-success" },
   { value: "servico_misto", label: "Serviço Misto", color: "bg-primary" },
+  // Também define o quadro "Infiltração" da lista — ver src/lib/maintenanceBoard.ts
+  { value: "infiltracao", label: "Infiltração", color: "bg-info" },
   // Support legacy values stored as labels
   { value: "Refrigeração", label: "Refrigeração", color: "bg-info" },
   { value: "Elétrica", label: "Elétrica", color: "bg-warning" },
@@ -102,11 +129,15 @@ const COST_RESPONSIBLE_OPTIONS = [
   { value: "guest", label: "Hóspede", color: "bg-warning" },
 ];
 
+// Ordem dos quadros na tela. Infiltração e Stand-by são derivados de dois
+// campos do ticket (label `infiltracao` e `on_hold`) — ver src/lib/maintenanceBoard.ts.
 const GROUPS = [
-  { id: "em_progresso", label: "Em Progresso", color: "border-l-amber-500" },
-  { id: "concluidas", label: "Aguardando Envio ao Proprietário", color: "border-l-green-500" },
-  { id: "cobrancas_vencidas", label: "Cobranças Vencidas", color: "border-l-red-600" },
-  { id: "cobrancas", label: "Cobranças Pendentes", color: "border-l-destructive" },
+  { id: "em_progresso", label: "Em Progresso", color: "border-l-warning" },
+  { id: "infiltracao", label: "Infiltração", color: "border-l-info" },
+  { id: "stand_by", label: "Stand-by", color: "border-l-muted-foreground" },
+  { id: "concluidas", label: "Aguardando Envio ao Proprietário", color: "border-l-success" },
+  { id: "cobrancas_vencidas", label: "Cobranças Vencidas", color: "border-l-destructive" },
+  { id: "cobrancas", label: "Cobranças Pendentes", color: "border-l-primary" },
 ];
 
 // ===== SORTABLE HEADER COMPONENT =====
@@ -447,7 +478,7 @@ function GroupRow({
         )}
         onClick={onToggle}
       >
-        <td colSpan={11} className="p-2">
+        <td colSpan={12} className="p-2">
           <div className="flex items-center gap-2 font-medium">
             {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
             <span>{group.label}</span>
@@ -638,6 +669,28 @@ function GroupRow({
                 onSave={(val) => onUpdateItem(item.id, "service_type", val, isCharge)}
                 className="justify-center"
               />
+            </td>
+
+            {/* Quadro: Em Progresso / Stand-by / Infiltração — só manutenção aberta */}
+            <td className="p-0 w-[120px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
+              {isCharge || item.status === "concluido" ? (
+                <div className="px-1 py-2 text-sm text-center text-muted-foreground">—</div>
+              ) : (
+                <div className="flex items-center justify-center gap-1">
+                  <EditableCell
+                    value={deriveBoard(item)}
+                    type="select"
+                    options={BOARD_OPTIONS}
+                    onSave={(val) => onUpdateItem(item.id, "board", val, false)}
+                    className="justify-center"
+                  />
+                  {item.on_hold && hasInfiltracao(item.service_type) && (
+                    <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0" title="Infiltração em stand-by">
+                      Stand-by
+                    </Badge>
+                  )}
+                </div>
+              )}
             </td>
 
             {/* Status */}
@@ -1191,6 +1244,8 @@ export default function AdminManutencoesLista() {
   const [search, setSearch] = useState("");
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
     em_progresso: false,
+    infiltracao: false,
+    stand_by: false,
     concluidas: false,
     cobrancas_vencidas: false,
     cobrancas: false,
@@ -1290,7 +1345,7 @@ export default function AdminManutencoesLista() {
       const ownerId = prop?.owner_id;
       if (!ownerId) throw new Error("Imóvel sem proprietário associado");
 
-      const isTicketGroup = ["em_progresso", "concluidas"].includes(inlineAdd.groupId);
+      const isTicketGroup = ["em_progresso", "infiltracao", "stand_by", "concluidas"].includes(inlineAdd.groupId);
 
       if (isTicketGroup) {
         const { error } = await supabase.from("tickets").insert({
@@ -1305,7 +1360,10 @@ export default function AdminManutencoesLista() {
           // Created in "Em espera" — hidden from owner, no notifications until
           // the team picks a real cost_responsible from the list.
           cost_responsible: "pending",
-        });
+          // Criado direto no quadro certo. Cast: on_hold ainda não está no types.ts.
+          on_hold: inlineAdd.groupId === "stand_by",
+          charge_draft_category: inlineAdd.groupId === "infiltracao" ? "infiltracao" : null,
+        } as any);
         if (error) throw error;
       } else {
         const amountCents = Math.round(parseBRNumber(inlineAdd.amountCents) * 100);
@@ -1437,7 +1495,7 @@ export default function AdminManutencoesLista() {
   const { data: tickets, isLoading } = useQuery({
     queryKey: ["maintenance-list-view", "v2-draft-fallback"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = (await supabase
         .from("tickets")
         .select(`
           id,
@@ -1446,6 +1504,7 @@ export default function AdminManutencoesLista() {
           scheduled_at,
           created_at,
           cost_responsible,
+          on_hold,
           charge_draft_amount_cents,
           charge_draft_management_contribution_cents,
           charge_draft_category,
@@ -1456,7 +1515,10 @@ export default function AdminManutencoesLista() {
         .eq("ticket_type", "manutencao")
         .neq("status", "cancelado")
         .is("archived_at", null)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })) as unknown as {
+        data: TicketRow[] | null;
+        error: { message: string } | null;
+      };
 
       if (error) throw error;
 
@@ -1539,6 +1601,8 @@ export default function AdminManutencoesLista() {
                 : (displayCharge?.service_type || (t as any).charge_draft_category || null),
             list_status: t.status === "concluido" ? "feito" : "em_progresso",
             cost_responsible: (t as any).cost_responsible ?? null,
+            // Coluna criada em 2026-09-22; ainda não está no types.ts gerado.
+            on_hold: (t as any).on_hold === true,
           };
         }) as MaintenanceItem[];
     },
@@ -1790,6 +1854,14 @@ export default function AdminManutencoesLista() {
             .update({ scheduled_at: value })
             .eq("id", id);
           if (error) throw error;
+        } else if (field === "on_hold") {
+          // Stand-by da lista: coluna própria, sem tocar no status (que o
+          // proprietário vê). Cast porque a coluna ainda não está no types.ts gerado.
+          const { error } = await supabase
+            .from("tickets")
+            .update({ on_hold: !!value } as any)
+            .eq("id", id);
+          if (error) throw error;
         } else if (field === "cost_responsible") {
           // Persist on the ticket
           const { error } = await supabase
@@ -1918,8 +1990,23 @@ export default function AdminManutencoesLista() {
   });
 
   const handleUpdateItem = useCallback((id: string, field: string, value: any, isCharge?: boolean) => {
+    if (field === "board") {
+      // "Quadro" não é coluna: é a combinação de on_hold (Stand-by) com a label
+      // `infiltracao`. Traduz para os dois campos reais e reaproveita as mutations
+      // que já existem — inclusive o otimismo de cada uma, que faz a linha
+      // trocar de grupo na hora.
+      const item = tickets?.find((t) => t.id === id);
+      const { on_hold, service_type } = boardChange(item ?? {}, value as Board);
+      if ((item?.on_hold ?? false) !== on_hold) {
+        updateMutation.mutate({ id, field: "on_hold", value: on_hold, isCharge: false });
+      }
+      if (service_type !== undefined && (service_type || "") !== (item?.service_type || "")) {
+        updateMutation.mutate({ id, field: "service_type", value: service_type, isCharge: false });
+      }
+      return;
+    }
     updateMutation.mutate({ id, field, value, isCharge });
-  }, [updateMutation]);
+  }, [updateMutation, tickets]);
 
   const toggleGroup = useCallback((groupId: string) => {
     setExpandedGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
@@ -2181,11 +2268,17 @@ export default function AdminManutencoesLista() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const emProgresso = (tickets || []).filter(t => 
+    const abertos = (tickets || []).filter(t =>
       t.status !== "concluido" &&
-      (t.subject.toLowerCase().includes(searchLower) || 
+      (t.subject.toLowerCase().includes(searchLower) ||
        t.property?.name.toLowerCase().includes(searchLower))
     );
+
+    // Quadros: Infiltração vence Stand-by (uma infiltração parada continua no
+    // quadro Infiltração, com etiqueta). O resto é Em Progresso.
+    const infiltracao = abertos.filter(t => deriveBoard(t) === "infiltracao");
+    const standBy = abertos.filter(t => deriveBoard(t) === "stand_by");
+    const emProgresso = abertos.filter(t => deriveBoard(t) === "em_progresso");
 
     const concluidas = (tickets || []).filter(t => 
       t.status === "concluido" &&
@@ -2225,6 +2318,8 @@ export default function AdminManutencoesLista() {
 
     return {
       em_progresso: emProgresso,
+      infiltracao,
+      stand_by: standBy,
       concluidas: concluidas,
       cobrancas_vencidas: cobrancasVencidas,
       cobrancas: cobrancasPendentes,
@@ -2416,6 +2511,8 @@ export default function AdminManutencoesLista() {
   if (isMobile) {
     const mobileGroups = [
       { id: "em_progresso", label: "Em Progresso", borderColor: "border-l-warning", dotColor: "bg-warning" },
+      { id: "infiltracao", label: "Infiltração", borderColor: "border-l-info", dotColor: "bg-info" },
+      { id: "stand_by", label: "Stand-by", borderColor: "border-l-muted-foreground", dotColor: "bg-muted-foreground" },
       { id: "cobrancas_vencidas", label: "Cobranças Vencidas", borderColor: "border-l-destructive", dotColor: "bg-destructive" },
       { id: "concluidas", label: "Aguardando Envio ao Proprietário", borderColor: "border-l-success", dotColor: "bg-success" },
       { id: "cobrancas", label: "Cobranças Pendentes", borderColor: "border-l-primary", dotColor: "bg-primary" },
@@ -2424,6 +2521,8 @@ export default function AdminManutencoesLista() {
     // Enrich items with itemType so mobile knows ticket vs charge
     const enrichedGroupedItems: Record<string, any[]> = {
       em_progresso: (groupedItems.em_progresso || []).map((t) => ({ ...t, itemType: "ticket" as const })),
+      infiltracao: (groupedItems.infiltracao || []).map((t) => ({ ...t, itemType: "ticket" as const })),
+      stand_by: (groupedItems.stand_by || []).map((t) => ({ ...t, itemType: "ticket" as const })),
       concluidas: (groupedItems.concluidas || []).map((t) => ({ ...t, itemType: "ticket" as const })),
       cobrancas_vencidas: groupedItems.cobrancas_vencidas || [],
       cobrancas: groupedItems.cobrancas || [],
@@ -2636,6 +2735,7 @@ export default function AdminManutencoesLista() {
                   <th className="text-center px-1 py-2 font-medium w-[70px]">Anexos</th>
                   <th className="text-center px-1 py-2 font-medium w-[120px]">Responsável</th>
                   <SortableHeader label="Label" field="service_type" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[120px]" />
+                  <th className="text-center px-1 py-2 font-medium w-[120px]">Quadro</th>
                   <SortableHeader label="Status" field="list_status" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[140px]" />
                   <th className="text-center px-1 py-2 font-medium w-[76px]">Ações</th>
                 </tr>
@@ -2643,7 +2743,7 @@ export default function AdminManutencoesLista() {
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={11} className="text-center p-8 text-muted-foreground">
+                    <td colSpan={12} className="text-center p-8 text-muted-foreground">
                       Carregando...
                     </td>
                   </tr>
@@ -2757,7 +2857,7 @@ export default function AdminManutencoesLista() {
                         {/* "+ Adicionar item" row */}
                         {isExpanded && !isInlineActive && (
                           <tr className="border-b">
-                            <td colSpan={11} className="p-0">
+                            <td colSpan={12} className="p-0">
                               <button
                                 className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors group"
                                 onClick={() => handleStartInlineAdd(group.id)}
