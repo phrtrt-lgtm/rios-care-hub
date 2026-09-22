@@ -6,12 +6,12 @@ Auditoria de **2026-09-18** sobre o commit `4c49831`. Contexto de arquitetura: `
 
 **Esforço:** P = até meio dia · M = 1–2 dias · G = 3+ dias
 
-## Estado em 2026-09-19
+## Estado em 2026-09-22
 
 | | Itens |
 |---|---|
-| ✅ **No ar e verificado** | 1.1 · 1.4 (contenção) · 1.6 · 1.10 · 4.2 |
-| ✅ **No código, aguardando deploy** | 1.7 · 2.1 (front) · 1.12 (function) |
+| ✅ **No ar e verificado** | 1.1 · 1.4 (contenção) · 1.6 · 1.7 · 1.10 · 1.12 · 2.1 · 2.6 (quadros) · 4.2 |
+| ✅ **No código, aguardando deploy** | — |
 | ⏸️ **Despriorizado pelo gestor** | 1.2 e 1.3 (a equipe confere o valor pago; erro seria pego na conciliação) |
 | ⚠️ **Precisa de decisão sua** | 1.12 — o cron `sync-ical` chama função que não existe: remover o job ou recriar a função? |
 | ⬜ **Abertos** | 1.5 · 1.8 · 1.9 · 1.11 · 1.13 · Ondas 2 (restante), 3, 4 e 5 |
