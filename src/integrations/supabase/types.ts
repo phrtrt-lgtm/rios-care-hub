@@ -3645,6 +3645,7 @@ export type Database = {
           guest_checkout_date: string | null
           id: string
           kind: string | null
+          on_hold: boolean
           owner_action_due_at: string | null
           owner_decision: string | null
           owner_id: string
@@ -3680,6 +3681,7 @@ export type Database = {
           guest_checkout_date?: string | null
           id?: string
           kind?: string | null
+          on_hold?: boolean
           owner_action_due_at?: string | null
           owner_decision?: string | null
           owner_id: string
@@ -3715,6 +3717,7 @@ export type Database = {
           guest_checkout_date?: string | null
           id?: string
           kind?: string | null
+          on_hold?: boolean
           owner_action_due_at?: string | null
           owner_decision?: string | null
           owner_id?: string
