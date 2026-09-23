@@ -103,6 +103,10 @@ Fluxo essencial vs estrutural: item `essential` pode ser executado de imediato; 
 >
 > Consequência prática: **ausência de pagamento no Mercado Pago não significa inadimplência**, e o status de paga não distingue "recebemos" de "perdoamos". Nenhum relatório ou automação deve tratar as duas coisas como iguais. Ver `ROADMAP.md` item 1.11.
 
+**WhatsApp de cobrança (desde 2026-09-23, opt-in).** Switch `profiles.notificar_whatsapp` em `/admin/gerenciar-usuarios` (só proprietário, só com `phone` preenchido — `phone` é o número de WhatsApp; o proprietário não altera o próprio switch, está no trigger anti-escalação). Disparo no backend: trigger `trg_notificar_cobranca_whatsapp` em `charges`, só na transição "virou cobrança" — nasce fora do rascunho ou sai do rascunho para `sent`/`pendente`, ou paga automaticamente por aporte de 100%. Chama `notificar-cobranca` via `pg_net` com token do Vault (`notificar_cobranca_token`, conferido por `verificar_token_interno`, só service role). A function chama a função central de WhatsApp de outro projeto (`gxsdefecwamziirfbzlk…/notificar`, header `x-rios-key` = secret `NOTIFICAR_KEY`) e grava `charges.whatsapp_status` / `_enviado_em` / `_message_id` / `_erro`. Nunca bloqueia a cobrança. Migration: `supabase/migrations/20260923120000_notificar_cobranca_whatsapp.sql`.
+
+> ⚠️ Desde 2026-09-23 `auto_pay_full_contribution_charges` **ignora rascunhos**: aporte ≥ valor só auto-paga quando a cobrança sai do rascunho. Antes auto-pagava durante a edição.
+
 ### 3.3 Vistorias
 `cleaning_inspections`, `inspection_items`, `inspection_settings`, `inspection_comments`, `inspection_drafts`, `routine_inspection_checklists`. Vistoria de faxina, rotina e interna. Resumo por IA: `generate-inspection-summary`, `summarize-inspection`.
 Proprietário só vê se `inspection_settings.owner_portal_enabled = true`.
