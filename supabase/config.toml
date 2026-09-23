@@ -100,3 +100,6 @@ verify_jwt = true
 [functions.recurring-charges-cron]
 verify_jwt = false
 
+[functions.notificar-cobranca]
+verify_jwt = false
+
