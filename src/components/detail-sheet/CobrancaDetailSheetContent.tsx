@@ -16,6 +16,8 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import { CHARGE_CATEGORIES } from '@/constants/chargeCategories';
+import { useAuth } from '@/hooks/useAuth';
+import { CobrancaWhatsappStatus } from '@/components/CobrancaWhatsappStatus';
 
 interface Props {
   id: string;
@@ -34,6 +36,9 @@ interface ChargeData {
   due_date: string | null;
   maintenance_date: string | null;
   payment_link_url: string | null;
+  whatsapp_status: 'enviado' | 'falhou' | 'desativado' | null;
+  whatsapp_enviado_em: string | null;
+  whatsapp_erro: string | null;
   property: { id: string; name: string; cover_photo_url: string | null } | null;
   owner: { name: string; email: string; photo_url: string | null } | null;
   recent_messages: Array<{
@@ -63,11 +68,16 @@ const STATUS_LABELS: Record<string, { label: string; className: string }> = {
 export function CobrancaDetailSheetContent({ id, onOpenFull }: Props) {
   const [charge, setCharge] = useState<ChargeData | null>(null);
   const [loading, setLoading] = useState(true);
+  // Incrementado depois de "Reenviar WhatsApp" para recarregar o status.
+  const [versao, setVersao] = useState(0);
+  const { profile } = useAuth();
+  const isTeam = ['admin', 'agent', 'maintenance'].includes(profile?.role ?? '');
 
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      setLoading(true);
+      // Recarga após reenvio não pisca o painel inteiro com o skeleton.
+      if (versao === 0) setLoading(true);
       try {
         const { data: chargeData, error } = await supabase
           .from('charges')
@@ -135,7 +145,7 @@ export function CobrancaDetailSheetContent({ id, onOpenFull }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, versao]);
 
   if (loading) {
     return (
@@ -188,6 +198,18 @@ export function CobrancaDetailSheetContent({ id, onOpenFull }: Props) {
       <div>
         <h3 className="text-lg font-semibold leading-tight">{charge.title}</h3>
       </div>
+
+      {/* Notificação por WhatsApp — só equipe; reenvio só admin */}
+      {isTeam && charge.status !== 'draft' && (
+        <CobrancaWhatsappStatus
+          cobrancaId={charge.id}
+          status={charge.whatsapp_status}
+          enviadoEm={charge.whatsapp_enviado_em}
+          erro={charge.whatsapp_erro}
+          podeReenviar={profile?.role === 'admin'}
+          onAtualizado={() => setVersao((v) => v + 1)}
+        />
+      )}
 
       {/* Imóvel */}
       {charge.property && (
