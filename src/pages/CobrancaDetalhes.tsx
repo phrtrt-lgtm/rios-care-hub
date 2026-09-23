@@ -7,6 +7,7 @@ import { useReadReceipts } from "@/hooks/useReadReceipts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { CobrancaWhatsappStatus } from "@/components/CobrancaWhatsappStatus";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Send, Calendar, DollarSign, Paperclip, Download, Eye, FileText, Image as ImageIcon, Trash2, Sparkles, ChevronDown, X, ZoomIn, Play, Video, Loader2, Copy, CreditCard, Check, Pencil } from "lucide-react";
@@ -1157,6 +1158,18 @@ export default function CobrancaDetalhes() {
                   </Button>
                 )}
               </div>
+            )}
+
+            {/* Notificação por WhatsApp — só equipe; reenvio só admin */}
+            {isTeamMember && charge.status !== "draft" && (
+              <CobrancaWhatsappStatus
+                cobrancaId={charge.id}
+                status={(charge as any).whatsapp_status}
+                enviadoEm={(charge as any).whatsapp_enviado_em}
+                erro={(charge as any).whatsapp_erro}
+                podeReenviar={profile?.role === "admin"}
+                onAtualizado={fetchChargeData}
+              />
             )}
 
             {/* Categorização */}

@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Search, UserCheck, UserX, Trash2, CheckSquare, History } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { ArrowLeft, Search, UserCheck, UserX, Trash2, CheckSquare, History, MessageCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { LoadingScreen } from "@/components/LoadingScreen";
@@ -32,7 +33,12 @@ type UserProfile = {
   role: string;
   status: string;
   created_at: string;
+  /** Recebe WhatsApp quando uma cobrança é enviada. Só a equipe altera. */
+  notificar_whatsapp?: boolean;
 };
+
+/** O número de WhatsApp é profiles.phone; o switch só liga se ele for utilizável. */
+const temWhatsapp = (phone: string | null) => (phone || "").replace(/\D/g, "").length >= 10;
 
 type BulkAction = "approve" | "reject" | "delete" | null;
 
@@ -137,6 +143,31 @@ export default function AdminGerenciarUsuarios() {
   const sortedRoleKeys = Object.keys(groupedUsers).sort(
     (a, b) => (roleOrder[a] ?? 99) - (roleOrder[b] ?? 99)
   );
+
+  const handleToggleWhatsapp = async (user: UserProfile, ligar: boolean) => {
+    if (ligar && !temWhatsapp(user.phone)) {
+      toast.error("Cadastre o WhatsApp do proprietário antes de ativar.");
+      return;
+    }
+    // Otimista: reflete na hora, desfaz se o banco recusar.
+    const aplicar = (valor: boolean) =>
+      setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, notificar_whatsapp: valor } : u)));
+    aplicar(ligar);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ notificar_whatsapp: ligar } as any) // coluna de 2026-09-23, ainda fora do types.ts gerado
+      .eq("id", user.id);
+    if (error) {
+      aplicar(!ligar);
+      toast.error("Não foi possível alterar a notificação por WhatsApp.");
+      return;
+    }
+    toast.success(
+      ligar
+        ? `${user.name} vai receber cobranças por WhatsApp.`
+        : `${user.name} não recebe mais cobranças por WhatsApp.`,
+    );
+  };
 
   const handleApprove = async (userId: string) => {
     try {
@@ -519,6 +550,9 @@ export default function AdminGerenciarUsuarios() {
                     <TableHead>Nome</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Telefone</TableHead>
+                    <TableHead className="text-center" title="Notificar cobranças por WhatsApp">
+                      WhatsApp
+                    </TableHead>
                     <TableHead>Função</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Cadastro</TableHead>
@@ -528,7 +562,7 @@ export default function AdminGerenciarUsuarios() {
                 <TableBody>
                   {filteredUsers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground">
+                      <TableCell colSpan={9} className="text-center text-muted-foreground">
                         Nenhum usuário encontrado
                       </TableCell>
                     </TableRow>
@@ -536,7 +570,7 @@ export default function AdminGerenciarUsuarios() {
                     sortedRoleKeys.map((role) => (
                       <>
                         <TableRow key={`header-${role}`} className="bg-muted/50 hover:bg-muted/50">
-                          <TableCell colSpan={8} className="py-2">
+                          <TableCell colSpan={9} className="py-2">
                             <span className="text-sm font-semibold text-muted-foreground">
                               {roleLabels[role] || role} ({groupedUsers[role].length})
                             </span>
@@ -559,6 +593,30 @@ export default function AdminGerenciarUsuarios() {
                             <TableCell className="font-medium">{user.name}</TableCell>
                             <TableCell>{user.email}</TableCell>
                             <TableCell>{user.phone || "-"}</TableCell>
+                            <TableCell className="text-center">
+                              {user.role === "owner" ? (
+                                <div
+                                  className="inline-flex items-center gap-1.5"
+                                  title={
+                                    temWhatsapp(user.phone)
+                                      ? "Notificar cobranças por WhatsApp"
+                                      : "Cadastre o telefone para ativar"
+                                  }
+                                >
+                                  <Switch
+                                    checked={!!user.notificar_whatsapp}
+                                    disabled={!user.notificar_whatsapp && !temWhatsapp(user.phone)}
+                                    onCheckedChange={(v) => handleToggleWhatsapp(user, v)}
+                                    aria-label={`Notificar cobranças por WhatsApp para ${user.name}`}
+                                  />
+                                  {user.notificar_whatsapp && (
+                                    <MessageCircle className="h-4 w-4 text-success" aria-hidden="true" />
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </TableCell>
                             <TableCell>{getRoleBadge(user.role)}</TableCell>
                             <TableCell>{getStatusBadge(user.status)}</TableCell>
                             <TableCell>
