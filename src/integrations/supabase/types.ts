@@ -853,6 +853,10 @@ export type Database = {
           ticket_id: string | null
           title: string
           updated_at: string
+          whatsapp_enviado_em: string | null
+          whatsapp_erro: string | null
+          whatsapp_message_id: string | null
+          whatsapp_status: string | null
         }
         Insert: {
           amount_cents: number
@@ -901,6 +905,10 @@ export type Database = {
           ticket_id?: string | null
           title: string
           updated_at?: string
+          whatsapp_enviado_em?: string | null
+          whatsapp_erro?: string | null
+          whatsapp_message_id?: string | null
+          whatsapp_status?: string | null
         }
         Update: {
           amount_cents?: number
@@ -949,6 +957,10 @@ export type Database = {
           ticket_id?: string | null
           title?: string
           updated_at?: string
+          whatsapp_enviado_em?: string | null
+          whatsapp_erro?: string | null
+          whatsapp_message_id?: string | null
+          whatsapp_status?: string | null
         }
         Relationships: [
           {
@@ -2450,6 +2462,7 @@ export type Database = {
           id: string
           must_set_password: boolean
           name: string
+          notificar_whatsapp: boolean
           onboarding_stage: string | null
           payment_score: number
           phone: string | null
@@ -2465,6 +2478,7 @@ export type Database = {
           id: string
           must_set_password?: boolean
           name: string
+          notificar_whatsapp?: boolean
           onboarding_stage?: string | null
           payment_score?: number
           phone?: string | null
@@ -2480,6 +2494,7 @@ export type Database = {
           id?: string
           must_set_password?: boolean
           name?: string
+          notificar_whatsapp?: boolean
           onboarding_stage?: string | null
           payment_score?: number
           phone?: string | null
@@ -3843,6 +3858,7 @@ export type Database = {
         Returns: undefined
       }
       unaccent: { Args: { "": string }; Returns: string }
+      verificar_token_interno: { Args: { p_token: string }; Returns: boolean }
     }
     Enums: {
       app_role:
