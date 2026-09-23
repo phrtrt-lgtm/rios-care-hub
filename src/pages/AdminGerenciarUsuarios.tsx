@@ -155,7 +155,7 @@ export default function AdminGerenciarUsuarios() {
     aplicar(ligar);
     const { error } = await supabase
       .from("profiles")
-      .update({ notificar_whatsapp: ligar } as any) // coluna de 2026-09-23, ainda fora do types.ts gerado
+      .update({ notificar_whatsapp: ligar })
       .eq("id", user.id);
     if (error) {
       aplicar(!ligar);

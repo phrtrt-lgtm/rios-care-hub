@@ -1164,7 +1164,7 @@ export default function CobrancaDetalhes() {
             {isTeamMember && charge.status !== "draft" && (
               <CobrancaWhatsappStatus
                 cobrancaId={charge.id}
-                status={(charge as any).whatsapp_status}
+                status={(charge as any).whatsapp_status as "enviado" | "falhou" | "desativado" | null}
                 enviadoEm={(charge as any).whatsapp_enviado_em}
                 erro={(charge as any).whatsapp_erro}
                 podeReenviar={profile?.role === "admin"}
