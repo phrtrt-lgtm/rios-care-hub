@@ -13,7 +13,8 @@ import { ChargeChatDialog } from "./ChargeChatDialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const COLLAPSED_LIMIT = 3;
-const EXPANDED_LIMIT = 20;
+// Expandido mostra tudo; a lista rola dentro da caixa (ver CollapsibleContent).
+const EXPANDED_LIMIT = Number.POSITIVE_INFINITY;
 
 type Charge = {
   id: string;
@@ -55,8 +56,10 @@ export function ChargesKanbanPreview() {
         `)
         .in("status", ["pendente", "sent", "overdue"])
         .is("archived_at", null)
-        .order("due_date", { ascending: true, nullsFirst: false })
-        .limit(50);
+        // Sem teto: antes era .limit(50) ordenado por vencimento, então o painel
+        // mostrava "50 vencidas" (o teto) com 104 reais, e as pendentes ainda
+        // não vencidas nunca apareciam — as 50 vagas iam todas para as vencidas.
+        .order("due_date", { ascending: true, nullsFirst: false });
 
       if (error) throw error;
       setCharges((data || []) as Charge[]);
@@ -109,7 +112,7 @@ export function ChargesKanbanPreview() {
         key={charge.id}
         className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors overflow-hidden min-w-0 ${
           isOverdue 
-            ? "bg-destructive/10 dark:bg-red-950/30 hover:bg-destructive/10 dark:hover:bg-red-950/50" 
+            ? "bg-destructive/10 hover:bg-destructive/15" 
             : "bg-muted/50 hover:bg-muted"
         }`}
         onClick={() => (saveScrollPosition(pathname), navigate(`/cobranca/${charge.id}`))}
@@ -214,7 +217,7 @@ export function ChargesKanbanPreview() {
                 <div className="space-y-1">
                   {vencidas.slice(0, COLLAPSED_LIMIT).map(c => renderChargeItem(c, true))}
                 </div>
-                <CollapsibleContent className="space-y-1 mt-1">
+                <CollapsibleContent className="mt-1 max-h-72 space-y-1 overflow-y-auto pr-1">
                   {vencidas.slice(COLLAPSED_LIMIT, vencidasLimit).map(c => renderChargeItem(c, true))}
                 </CollapsibleContent>
               </Collapsible>
@@ -237,7 +240,7 @@ export function ChargesKanbanPreview() {
                 <div className="space-y-1">
                   {pendentes.slice(0, COLLAPSED_LIMIT).map(c => renderChargeItem(c, false))}
                 </div>
-                <CollapsibleContent className="space-y-1 mt-1">
+                <CollapsibleContent className="mt-1 max-h-72 space-y-1 overflow-y-auto pr-1">
                   {pendentes.slice(COLLAPSED_LIMIT, pendentesLimit).map(c => renderChargeItem(c, false))}
                 </CollapsibleContent>
               </Collapsible>

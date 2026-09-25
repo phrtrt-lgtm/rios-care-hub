@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from "react-router-dom";
-import { saveScrollPosition } from "@/lib/navigation";
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Calendar, DollarSign, Building2, AlertCircle, ChevronRight, X, Archive } from 'lucide-react';
-import { format, differenceInDays, addDays } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Archive, ChevronDown, ChevronRight, DollarSign, X } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,315 +17,230 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { toast } from 'sonner';
+} from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
+import { useGuestCharges, type GuestChargeItem } from "@/hooks/useGuestCharges";
+import type { DetailEntityType } from "@/hooks/useDetailSheet";
 
-interface GuestChargePending {
-  id: string; // ticket id
-  charge_id?: string | null;
-  subject: string;
-  guest_checkout_date: string | null;
-  property_id: string;
-  property_name: string;
-  days_since_checkout: number;
-  can_charge: boolean;
-  days_until_charge: number;
-  charge_status?: string | null;
+interface Props {
+  /** Controlado pelo painel, para o resumo do topo conseguir abrir o lembrete. */
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** Abre o item no painel lateral, sem sair do painel. */
+  onOpenDetail: (id: string, type: DetailEntityType) => void;
 }
 
-const PAID_STATUSES = new Set([
-  "pago_antecipado",
-  "pago_no_vencimento",
-  "pago_com_atraso",
-  "arquivado",
-  "cancelled",
-  "debited",
-]);
+const GRUPOS: { id: GuestChargeItem["grupo"]; titulo: string; classe: string }[] = [
+  { id: "pronta", titulo: "Prontas para cobrar", classe: "text-success" },
+  { id: "em_breve", titulo: "Em breve", classe: "text-muted-foreground" },
+  { id: "sem_data", titulo: "Sem data de check-out — informe a data para entrar na contagem", classe: "text-warning" },
+];
 
-export function GuestChargeReminders() {
+/**
+ * Lembrete de cobranças de hóspede.
+ *
+ * Fechado, é uma linha só com os totais — lembra sem ocupar o topo do painel.
+ * Aberto, mostra a lista inteira (antes eram 3 itens e um "+ N mais" que não
+ * abria), com rolagem própria, e cada item abre no painel lateral.
+ */
+export function GuestChargeReminders({ open, onOpenChange, onOpenDetail }: Props) {
   const navigate = useNavigate();
-  const { pathname } = useLocation();
-  const [pendingCharges, setPendingCharges] = useState<GuestChargePending[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [dismissingId, setDismissingId] = useState<string | null>(null);
-  const [confirmDismiss, setConfirmDismiss] = useState<GuestChargePending | null>(null);
+  const queryClient = useQueryClient();
+  const { data: itens = [], isLoading } = useGuestCharges();
+  const [confirmar, setConfirmar] = useState<GuestChargeItem | null>(null);
+  const [arquivandoId, setArquivandoId] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchGuestCharges();
-  }, []);
+  if (isLoading) return null;
 
-  const handleDismiss = async (charge: GuestChargePending) => {
-    setDismissingId(charge.id);
+  const prontas = itens.filter((i) => i.grupo === "pronta");
+  const emBreve = itens.filter((i) => i.grupo === "em_breve");
+  const semData = itens.filter((i) => i.grupo === "sem_data");
+  const proxima = emBreve[0]?.days_until_charge;
+
+  const arquivar = async (item: GuestChargeItem) => {
+    setArquivandoId(item.id);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const { error } = await supabase
-        .from('tickets')
+        .from("tickets")
         .update({
           guest_charge_dismissed_at: new Date().toISOString(),
           guest_charge_dismissed_by: user?.id ?? null,
         })
-        .eq('id', charge.id);
+        .eq("id", item.id);
       if (error) throw error;
-      setPendingCharges(prev => prev.filter(c => c.id !== charge.id));
-      toast.success('Cobrança arquivada (feita pelo Airbnb)');
+      await queryClient.invalidateQueries({ queryKey: ["painel", "guest-charges"] });
+      toast.success("Cobrança arquivada (feita pelo Airbnb)");
     } catch (err) {
-      console.error('Error dismissing guest charge:', err);
-      toast.error('Erro ao arquivar cobrança');
+      console.error("Erro ao arquivar cobrança de hóspede:", err);
+      toast.error("Erro ao arquivar cobrança");
     } finally {
-      setDismissingId(null);
-      setConfirmDismiss(null);
+      setArquivandoId(null);
+      setConfirmar(null);
     }
   };
 
-  const fetchGuestCharges = async () => {
-    try {
-      // Tickets de manutenção marcados como cobrança do hóspede com check-out informado
-      const { data: tickets, error } = await supabase
-        .from('tickets')
-        .select(`
-          id,
-          subject,
-          guest_checkout_date,
-          property_id,
-          properties!tickets_property_id_fkey(name)
-        `)
-        .eq('ticket_type', 'manutencao')
-        .eq('cost_responsible', 'guest')
-        .is('guest_charge_dismissed_at', null)
-        .in('status', ['novo', 'em_analise', 'aguardando_info', 'em_execucao', 'concluido']);
+  const abrir = (item: GuestChargeItem) =>
+    item.charge_id ? onOpenDetail(item.charge_id, "cobranca") : onOpenDetail(item.id, "maintenance");
 
-      if (error) throw error;
+  const botaoArquivadas = (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="h-7 gap-1 text-xs text-muted-foreground"
+      onClick={(e) => {
+        e.stopPropagation();
+        navigate("/cobrancas-hospede-arquivadas");
+      }}
+    >
+      <Archive className="h-3.5 w-3.5" aria-hidden="true" />
+      <span className="hidden sm:inline">Arquivadas</span>
+    </Button>
+  );
 
-      // Charges existentes desses tickets (independentemente do cost_responsible da charge,
-      // pois o fluxo atual cria a charge como 'owner' mesmo quando o ticket é de hóspede).
-      const ticketIds = (tickets || []).map(t => t.id);
-      const chargeByTicket = new Map<string, { id: string; status: string | null }>();
-      if (ticketIds.length > 0) {
-        const { data: existingCharges } = await supabase
-          .from('charges')
-          .select('id, ticket_id, status')
-          .in('ticket_id', ticketIds)
-          .not('ticket_id', 'is', null);
-        (existingCharges || []).forEach(c => {
-          if (c.ticket_id) chargeByTicket.set(c.ticket_id as string, { id: c.id, status: c.status });
-        });
-      }
-
-      const today = new Date();
-      const chargesWithDays: GuestChargePending[] = (tickets || [])
-        .map(ticket => {
-          const existing = chargeByTicket.get(ticket.id);
-          // Esconde se a charge já está paga/arquivada/cancelada/debitada
-          if (existing && existing.status && PAID_STATUSES.has(existing.status)) return null;
-          // Sem data de check-out não há como saber quando cobrar — ignora
-          if (!ticket.guest_checkout_date) return null;
-
-          let daysSince = 999;
-          let daysUntil = 0;
-          let canCharge = true;
-          if (ticket.guest_checkout_date) {
-            const checkoutDate = new Date(ticket.guest_checkout_date);
-            daysSince = differenceInDays(today, checkoutDate);
-            const chargeDate = addDays(checkoutDate, 14);
-            daysUntil = differenceInDays(chargeDate, today);
-            canCharge = daysSince >= 14;
-          }
-
-          return {
-            id: ticket.id,
-            charge_id: existing?.id ?? null,
-            subject: ticket.subject,
-            guest_checkout_date: ticket.guest_checkout_date,
-            property_id: ticket.property_id || '',
-            property_name: (ticket.properties as any)?.name || 'Imóvel desconhecido',
-            days_since_checkout: daysSince,
-            can_charge: canCharge,
-            days_until_charge: Math.max(0, daysUntil),
-            charge_status: existing?.status ?? null,
-          } as GuestChargePending;
-        })
-        .filter((c): c is GuestChargePending => c !== null)
-        .sort((a, b) => {
-          if (a.can_charge && !b.can_charge) return -1;
-          if (!a.can_charge && b.can_charge) return 1;
-          return a.days_until_charge - b.days_until_charge;
-        });
-
-      setPendingCharges(chargesWithDays);
-    } catch (error) {
-      console.error('Error fetching guest charges:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) return null;
-
-  const canChargeNow = pendingCharges.filter(c => c.can_charge);
-  const upcoming = pendingCharges.filter(c => !c.can_charge);
-
-  if (pendingCharges.length === 0) {
+  if (itens.length === 0) {
     return (
-      <div className="flex justify-end">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate('/cobrancas-hospede-arquivadas')}
-          className="text-xs text-muted-foreground gap-1"
-        >
-          <Archive className="h-3.5 w-3.5" />
-          Cobranças de hóspede arquivadas
-        </Button>
+      <div className="flex items-center justify-between gap-2 rounded-lg border bg-card px-3 py-2 text-sm text-muted-foreground">
+        <span className="flex items-center gap-2">
+          <DollarSign className="h-4 w-4" aria-hidden="true" />
+          Nenhuma cobrança de hóspede pendente
+        </span>
+        {botaoArquivadas}
       </div>
     );
   }
 
   return (
-    <Card className="border-warning/30 bg-warning/10/50 dark:bg-orange-950/20">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <DollarSign className="h-5 w-5 text-warning" />
-          Cobranças de Hóspede Pendentes
-          <Badge variant="secondary" className="ml-2 bg-warning/10 text-warning">
-            {pendingCharges.length}
-          </Badge>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate('/cobrancas-hospede-arquivadas')}
-            className="ml-auto h-7 text-xs gap-1"
-            title="Ver cobranças arquivadas (feitas pelo Airbnb)"
-          >
-            <Archive className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Arquivadas</span>
-          </Button>
-        </CardTitle>
-      </CardHeader>
-
-      <CardContent className="space-y-3">
-        {/* Can charge now */}
-        {canChargeNow.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-success flex items-center gap-1">
-              <AlertCircle className="h-4 w-4" />
-              Pronto para cobrar ({canChargeNow.length})
-            </p>
-            {canChargeNow.map(charge => (
-              <div
-                key={charge.id}
-                className="flex items-center gap-3 p-3 bg-success/10/50 dark:bg-green-900/20 rounded-lg cursor-pointer hover:bg-success/10 dark:hover:bg-green-900/30 transition-colors"
-                onClick={() => {
-                  saveScrollPosition(pathname);
-                  navigate(charge.charge_id ? `/cobranca/${charge.charge_id}` : `/ticket-detalhes/${charge.id}`);
-                }}
-              >
-                <Building2 className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{charge.subject}</p>
-                  <p className="text-xs text-muted-foreground">{charge.property_name}</p>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <Badge variant="default" className="bg-success">
-                    Cobrar agora
-                  </Badge>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {charge.guest_checkout_date
-                      ? `Check-out: ${format(new Date(charge.guest_checkout_date), 'dd/MM', { locale: ptBR })}`
-                      : 'Sem data de check-out'}
-                  </p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 flex-shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                  disabled={dismissingId === charge.id}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setConfirmDismiss(charge);
-                  }}
-                  title="Descartar (cobrança feita pelo Airbnb)"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </div>
-            ))}
-          </div>
+    <div
+      id="lembrete-hospede"
+      className={cn(
+        "rounded-lg border bg-card",
+        prontas.length > 0 && "border-success/40",
+      )}
+    >
+      {/* Linha de resumo — sempre visível */}
+      <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={open}
+        onClick={() => onOpenChange(!open)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onOpenChange(!open);
+          }
+        }}
+        className="flex w-full cursor-pointer flex-wrap items-center gap-x-3 gap-y-1 rounded-lg px-3 py-2 text-left hover:bg-muted/40"
+      >
+        {open ? (
+          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+        ) : (
+          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
         )}
+        <DollarSign className="h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
+        <span className="text-sm font-medium">Cobranças de hóspede</span>
 
-        {/* Upcoming */}
-        {upcoming.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-              <Calendar className="h-4 w-4" />
-              Em breve ({upcoming.length})
-            </p>
-            {upcoming.slice(0, 3).map(charge => (
-              <div
-                key={charge.id}
-                className="flex items-center gap-3 p-3 bg-background/50 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
-                onClick={() => {
-                  saveScrollPosition(pathname);
-                  navigate(charge.charge_id ? `/cobranca/${charge.charge_id}` : `/ticket-detalhes/${charge.id}`);
-                }}
-              >
-                <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{charge.subject}</p>
-                  <p className="text-xs text-muted-foreground">{charge.property_name}</p>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <Badge variant="outline">
-                    {charge.days_until_charge} {charge.days_until_charge === 1 ? 'dia' : 'dias'}
-                  </Badge>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 flex-shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                  disabled={dismissingId === charge.id}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setConfirmDismiss(charge);
-                  }}
-                  title="Descartar (cobrança feita pelo Airbnb)"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </Button>
+        <div className="flex flex-1 flex-wrap items-center gap-1.5">
+          {prontas.length > 0 && (
+            <Badge className="bg-success text-success-foreground hover:bg-success">
+              {prontas.length} {prontas.length === 1 ? "pronta" : "prontas"} para cobrar
+            </Badge>
+          )}
+          {emBreve.length > 0 && (
+            <Badge variant="outline" className="font-normal">
+              {emBreve.length} em breve
+              {proxima != null && ` · próxima em ${proxima} ${proxima === 1 ? "dia" : "dias"}`}
+            </Badge>
+          )}
+          {semData.length > 0 && (
+            <Badge variant="outline" className="border-warning/40 font-normal text-warning">
+              {semData.length} sem data de check-out
+            </Badge>
+          )}
+        </div>
+
+        {botaoArquivadas}
+      </div>
+
+      {/* Lista completa — rola dentro da caixa, sem empurrar o painel */}
+      {open && (
+        <div className="max-h-[420px] space-y-3 overflow-y-auto border-t px-3 pb-3 pt-2">
+          {GRUPOS.map((grupo) => {
+            const lista = itens.filter((i) => i.grupo === grupo.id);
+            if (lista.length === 0) return null;
+            return (
+              <div key={grupo.id} className="space-y-1">
+                <p className={cn("text-xs font-semibold", grupo.classe)}>
+                  {grupo.titulo} ({lista.length})
+                </p>
+                {lista.map((item) => (
+                  <div
+                    key={item.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => abrir(item)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") abrir(item);
+                    }}
+                    className="flex cursor-pointer items-center gap-3 rounded-md bg-muted/40 px-2.5 py-1.5 transition-colors hover:bg-muted"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{item.property_name}</p>
+                      <p className="truncate text-xs text-muted-foreground">{item.subject}</p>
+                    </div>
+                    <div className="shrink-0 text-right text-xs text-muted-foreground">
+                      {item.guest_checkout_date && (
+                        <p>Check-out {format(new Date(item.guest_checkout_date), "dd/MM", { locale: ptBR })}</p>
+                      )}
+                      {item.grupo === "em_breve" && item.days_until_charge != null && (
+                        <p>
+                          cobrar em {item.days_until_charge} {item.days_until_charge === 1 ? "dia" : "dias"}
+                        </p>
+                      )}
+                      {item.grupo === "pronta" && <p className="font-medium text-success">já pode cobrar</p>}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      disabled={arquivandoId === item.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setConfirmar(item);
+                      }}
+                      aria-label={`Arquivar cobrança de hóspede de ${item.property_name}`}
+                      title="Arquivar (cobrança feita pelo Airbnb)"
+                    >
+                      <X className="h-3.5 w-3.5" aria-hidden="true" />
+                    </Button>
+                  </div>
+                ))}
               </div>
-            ))}
-            {upcoming.length > 3 && (
-              <p className="text-xs text-center text-muted-foreground">
-                + {upcoming.length - 3} mais
-              </p>
-            )}
-          </div>
-        )}
-      </CardContent>
+            );
+          })}
+        </div>
+      )}
 
-      <AlertDialog open={!!confirmDismiss} onOpenChange={(open) => !open && setConfirmDismiss(null)}>
+      <AlertDialog open={!!confirmar} onOpenChange={(o) => !o && setConfirmar(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Arquivar cobrança de hóspede?</AlertDialogTitle>
             <AlertDialogDescription>
-              Use esta opção quando a cobrança já foi feita diretamente pelo Airbnb. O aviso sai do painel mas fica salvo em "Cobranças de hóspede arquivadas" — você pode restaurar depois se precisar.
-              {confirmDismiss && (
-                <span className="block mt-2 font-medium text-foreground">
-                  {confirmDismiss.subject} — {confirmDismiss.property_name}
+              Use esta opção quando a cobrança já foi feita diretamente pelo Airbnb. O aviso sai do painel mas
+              fica salvo em "Cobranças de hóspede arquivadas" — você pode restaurar depois se precisar.
+              {confirmar && (
+                <span className="mt-2 block font-medium text-foreground">
+                  {confirmar.subject} — {confirmar.property_name}
                 </span>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => confirmDismiss && handleDismiss(confirmDismiss)}
-            >
-              Arquivar
-            </AlertDialogAction>
+            <AlertDialogAction onClick={() => confirmar && arquivar(confirmar)}>Arquivar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </Card>
+    </div>
   );
 }

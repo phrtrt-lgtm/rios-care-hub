@@ -15,7 +15,8 @@ import { MaintenanceChatDialog } from "./MaintenanceChatDialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const COLLAPSED_LIMIT = 3;
-const EXPANDED_LIMIT = 20;
+// Expandido mostra tudo; a lista rola dentro da caixa.
+const EXPANDED_LIMIT = Number.POSITIVE_INFINITY;
 
 type OwnerTicket = {
   id: string;
@@ -66,8 +67,7 @@ export function ChamadosKanbanPreview() {
         .neq("ticket_type", "manutencao")
         .neq("status", "cancelado")
         .neq("status", "concluido")
-        .order("sla_due_at", { ascending: true, nullsFirst: false })
-        .limit(50);
+        .order("sla_due_at", { ascending: true, nullsFirst: false });
 
       if (error) throw error;
       setTickets((data || []) as OwnerTicket[]);
@@ -178,7 +178,7 @@ export function ChamadosKanbanPreview() {
                 <div className="space-y-1">
                   {novos.slice(0, COLLAPSED_LIMIT).map(renderTicketItem)}
                 </div>
-                <CollapsibleContent className="space-y-1 mt-1">
+                <CollapsibleContent className="mt-1 max-h-72 space-y-1 overflow-y-auto pr-1">
                   {novos.slice(COLLAPSED_LIMIT, novosLimit).map(renderTicketItem)}
                 </CollapsibleContent>
               </Collapsible>
@@ -201,7 +201,7 @@ export function ChamadosKanbanPreview() {
                 <div className="space-y-1">
                   {emAndamento.slice(0, COLLAPSED_LIMIT).map(renderTicketItem)}
                 </div>
-                <CollapsibleContent className="space-y-1 mt-1">
+                <CollapsibleContent className="mt-1 max-h-72 space-y-1 overflow-y-auto pr-1">
                   {emAndamento.slice(COLLAPSED_LIMIT, emAndamentoLimit).map(renderTicketItem)}
                 </CollapsibleContent>
               </Collapsible>

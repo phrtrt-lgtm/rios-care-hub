@@ -68,7 +68,8 @@ export function MaintenanceKanbanPreview() {
   const [completing, setCompleting] = useState(false);
   
   const COLLAPSED_LIMIT = 3;
-  const EXPANDED_LIMIT = 20;
+  // Expandido mostra tudo; a lista rola dentro da caixa.
+  const EXPANDED_LIMIT = Number.POSITIVE_INFINITY;
 
   const ticketIds = useMemo(() => tickets.map(t => t.id), [tickets]);
   const { unreadCounts, markAsRead } = useUnreadMessages(ticketIds);
@@ -98,8 +99,10 @@ export function MaintenanceKanbanPreview() {
         .eq("ticket_type", "manutencao")
         .neq("status", "cancelado")
         .neq("status", "concluido")
-        .order("created_at", { ascending: false })
-        .limit(15);
+        .is("archived_at", null)
+        // Sem teto: antes era .limit(15), e o "15" do cabeçalho era o limite da
+        // consulta, não o total — as manutenções abertas mais antigas sumiam.
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       setTickets(data || []);
@@ -369,7 +372,7 @@ export function MaintenanceKanbanPreview() {
                   ))}
                   
                   {/* Itens expandidos de pendentes */}
-                  <CollapsibleContent className="space-y-1">
+                  <CollapsibleContent className="max-h-72 space-y-1 overflow-y-auto pr-1">
                     {pendentes.slice(COLLAPSED_LIMIT, EXPANDED_LIMIT).map((ticket) => (
                       <div
                         key={ticket.id}
@@ -481,7 +484,7 @@ export function MaintenanceKanbanPreview() {
                   ))}
                   
                   {/* Itens expandidos de agendados */}
-                  <CollapsibleContent className="space-y-1">
+                  <CollapsibleContent className="max-h-72 space-y-1 overflow-y-auto pr-1">
                     {agendados.slice(COLLAPSED_LIMIT, EXPANDED_LIMIT).map((ticket) => (
                       <div
                         key={ticket.id}

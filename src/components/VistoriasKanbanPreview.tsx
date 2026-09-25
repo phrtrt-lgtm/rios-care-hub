@@ -132,8 +132,8 @@ export function VistoriasKanbanPreview() {
                 <ClipboardCheck className="h-4 w-4" />
                 <CardTitle className="text-sm">Vistorias</CardTitle>
                 {inspections.length > 0 && (
-                  <Badge variant="secondary" className="h-5 px-1.5 text-xs">
-                    {inspections.length}
+                  <Badge variant="secondary" className="h-5 px-1.5 text-xs font-normal" title="As vistorias mais recentes, não o total">
+                    {inspections.length} recentes
                   </Badge>
                 )}
               </div>
@@ -214,7 +214,7 @@ export function VistoriasKanbanPreview() {
                     ))}
                     
                     {/* Itens expandidos de problemas */}
-                    <CollapsibleContent className="space-y-1">
+                    <CollapsibleContent className="max-h-72 space-y-1 overflow-y-auto pr-1">
                       {problemInspections.slice(COLLAPSED_PROBLEM_LIMIT, EXPANDED_LIMIT).map((inspection) => (
                         <div
                           key={inspection.id}
@@ -291,7 +291,7 @@ export function VistoriasKanbanPreview() {
                     ))}
                     
                     {/* Itens expandidos de OK */}
-                    <CollapsibleContent className="space-y-1">
+                    <CollapsibleContent className="max-h-72 space-y-1 overflow-y-auto pr-1">
                       {okInspections.slice(COLLAPSED_OK_LIMIT, EXPANDED_LIMIT).map((inspection) => (
                         <div
                           key={inspection.id}

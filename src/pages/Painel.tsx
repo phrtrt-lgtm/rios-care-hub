@@ -1,21 +1,17 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { LogOut, Users, Ticket, AlertTriangle, CheckCircle2, Plus, DollarSign, Building2, Bell, Settings, Sparkles, UserPlus, Vote, Shield, Wrench, List, Search, FileText, Mail, BookOpen, Download, Calendar, BrainCircuit, MoreHorizontal, ClipboardList } from "lucide-react";
+import { LogOut, Plus, Building2, Sparkles, List, Search, FileText, MoreHorizontal, ClipboardList } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { toast } from "sonner";
 import { UnifiedCalendarWidget } from "@/components/UnifiedCalendarWidget";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { AlertBanner } from "@/components/AlertBanner";
 import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
@@ -28,13 +24,16 @@ import { GuestChargeReminders } from "@/components/GuestChargeReminders";
 import { NotificationButton } from "@/components/NotificationButton";
 import { TeamChatWidget } from "@/components/TeamChatWidget";
 import { GlobalSearch, useGlobalSearch } from "@/components/GlobalSearch";
-import { ResponseTemplatesPanel } from "@/components/ResponseTemplatesPanel";
 import { EnablePushNative } from "@/components/EnablePushNative";
 import { AIConsultaWidget } from "@/components/AIConsultaWidget";
-import StartInspectionButton from "@/components/StartInspectionButton";
 
 import { MobileBottomNav } from "@/components/MobileBottomNav";
-import { StatsCard } from "@/components/StatsCard";
+import { PainelResumo } from "@/components/painel/PainelResumo";
+import { PainelAtalhos } from "@/components/painel/PainelAtalhos";
+import { DetailSheet } from "@/components/detail-sheet/DetailSheet";
+import { useDetailSheet } from "@/hooks/useDetailSheet";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 
 export default function Painel() {
@@ -42,12 +41,6 @@ export default function Painel() {
   const { profile, user, signOut } = useAuth();
   const [photoUrl, setPhotoUrl] = useState(profile?.photo_url);
   const { open: searchOpen, setOpen: setSearchOpen } = useGlobalSearch();
-  const [stats, setStats] = useState({
-    novos: 0,
-    urgentes: 0,
-    pendentes: 0,
-    concluidos: 0,
-  });
   const navigate = useNavigate();
 
   // Save scroll position when leaving, restore when returning
@@ -65,26 +58,24 @@ export default function Painel() {
     };
   }, []);
 
-  useEffect(() => {
-    fetchStats();
+  const isTeam =
+    profile?.role === "admin" || profile?.role === "agent" || profile?.role === "maintenance";
+
+  const {
+    open: detailSheetOpen,
+    entityId: detailEntityId,
+    entityType: detailEntityType,
+    openSheet,
+    closeSheet,
+  } = useDetailSheet();
+
+  const [lembreteHospedeAberto, setLembreteHospedeAberto] = useState(false);
+  const abrirLembreteHospede = useCallback(() => {
+    setLembreteHospedeAberto(true);
+    requestAnimationFrame(() =>
+      document.getElementById("lembrete-hospede")?.scrollIntoView({ behavior: "smooth", block: "center" }),
+    );
   }, []);
-
-  const fetchStats = async () => {
-    const { data: tickets } = await supabase
-      .from("tickets")
-      .select("status, priority");
-
-    if (tickets) {
-      setStats({
-        novos: tickets.filter((t) => t.status === "novo").length,
-        urgentes: tickets.filter((t) => t.priority === "urgente").length,
-        pendentes: tickets.filter((t) =>
-          ["novo", "em_analise", "aguardando_info", "em_execucao"].includes(t.status)
-        ).length,
-        concluidos: tickets.filter((t) => t.status === "concluido").length,
-      });
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 pb-20 md:pb-0 overflow-x-hidden">
@@ -196,7 +187,11 @@ export default function Painel() {
               
               <Dialog>
               <DialogTrigger asChild>
-                <div className="flex items-center gap-2 bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/90 text-white px-3 py-2 rounded-lg cursor-pointer transition-colors">
+                <button
+                  type="button"
+                  aria-label="Meu perfil"
+                  className="flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
                   {photoUrl ? (
                     <img 
                       src={photoUrl} 
@@ -204,12 +199,12 @@ export default function Painel() {
                       className="h-8 w-8 rounded-full object-cover"
                     />
                   ) : (
-                    <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-medium">
+                    <div className="h-8 w-8 rounded-full bg-primary-foreground/20 flex items-center justify-center text-sm font-medium">
                       {profile?.name?.charAt(0).toUpperCase()}
                     </div>
                   )}
                   <span className="text-sm font-medium hidden sm:inline">{profile?.name}</span>
-                </div>
+                </button>
               </DialogTrigger>
               <DialogContent className="max-w-xs sm:max-w-sm">
                 <DialogHeader>
@@ -269,620 +264,71 @@ export default function Painel() {
       </header>
 
       {/* Content */}
-      <main className="container mx-auto px-4 py-6 md:py-8">
-        {/* Banners de acesso rápido */}
-        <div className="grid sm:grid-cols-2 gap-3 mb-6">
-          <div 
-            onClick={() => navigate("/rotina-profissional")}
-            className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20 cursor-pointer hover:bg-primary/10 transition-colors"
-          >
-            <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <BookOpen className="h-4 w-4 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium">Rotina do Profissional RIOS</p>
-              <p className="text-xs text-muted-foreground">Guia completo de organização e manutenção</p>
-            </div>
-            <span className="text-xs text-primary font-medium flex-shrink-0">Ver →</span>
-          </div>
-          <div 
-            onClick={() => navigate("/protocolo-trabalho")}
-            className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border border-border cursor-pointer hover:bg-muted transition-colors"
-          >
-            <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-              <BookOpen className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium">Protocolo de Manutenções</p>
-              <p className="text-xs text-muted-foreground">Fluxo de vistorias, manutenções e cobranças</p>
-            </div>
-            <span className="text-xs text-muted-foreground font-medium flex-shrink-0">Ver →</span>
-          </div>
-        </div>
-
-        <div className="mb-6 md:mb-8">
-          <h2 className="text-2xl md:text-3xl font-bold">Dashboard</h2>
-          <p className="text-sm md:text-base text-muted-foreground">
-            Visão geral dos chamados e solicitações
+      <main className="container mx-auto flex flex-col gap-6 px-4 py-6 md:py-8">
+        <div>
+          <h1 className="text-2xl font-bold md:text-3xl">Painel</h1>
+          <p className="text-sm text-muted-foreground first-letter:uppercase">
+            {format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })}
           </p>
         </div>
 
-        {/* Alert Banner */}
-        <div className="mb-6">
-          <AlertBanner />
-        </div>
+        {/* 1. Números do dia — cada um leva à tela correspondente */}
+        {isTeam && <PainelResumo onAbrirHospede={abrirLembreteHospede} />}
 
-        {/* Propostas Pendentes */}
-        <div className="mb-6">
-          <VotacoesPendentes />
-        </div>
+        {/* 2. Avisos e votações (só aparecem quando existem) */}
+        <AlertBanner />
+        <VotacoesPendentes />
 
-        {/* Guest Charge Reminders - visible to team */}
-        {(profile?.role === "admin" || profile?.role === "maintenance" || profile?.role === "agent") && (
-          <div className="mb-6">
-            <GuestChargeReminders />
-          </div>
-        )}
-
-        {/* Kanban Boards - Operações (Manutenções, Vistorias, Cobranças) */}
-        {(profile?.role === "admin" || profile?.role === "maintenance" || profile?.role === "agent") && (
-          <>
-            <div className="mb-3 flex items-center gap-2">
-              <div className="h-5 w-1 rounded-full bg-primary" />
-              <h3 className="text-base font-semibold">Operações</h3>
-              <span className="text-xs text-muted-foreground">Manutenções, vistorias e cobranças</span>
-            </div>
-            <div className="mb-6 min-w-0 columns-1 md:columns-2 lg:columns-3 gap-3 [&>*]:mb-3 [&>*]:break-inside-avoid">
+        {/* 3. Operações — o trabalho do dia */}
+        {isTeam && (
+          <section aria-labelledby="titulo-operacoes" className="flex min-w-0 flex-col gap-3">
+            <TituloSecao id="titulo-operacoes" titulo="Operações" subtitulo="Manutenções, cobranças, chamados e vistorias" />
+            <div className="grid min-w-0 items-start gap-3 lg:grid-cols-2">
               <MaintenanceKanbanPreview />
-              <VistoriasKanbanPreview />
               <ChargesKanbanPreview />
-            </div>
-
-            {/* Área dedicada — Chamados */}
-            <div className="mb-3 flex items-center gap-2">
-              <div className="h-5 w-1 rounded-full bg-info" />
-              <h3 className="text-base font-semibold">Chamados</h3>
-              <span className="text-xs text-muted-foreground">Atendimento e solicitações dos proprietários</span>
-            </div>
-            <div className="mb-6 min-w-0 rounded-xl border border-info/20 bg-info/5 p-3">
               <ChamadosKanbanPreview />
+              <VistoriasKanbanPreview />
             </div>
-          </>
+            {/* Lembrete compacto: uma linha fechado, lista completa aberto */}
+            <GuestChargeReminders
+              open={lembreteHospedeAberto}
+              onOpenChange={setLembreteHospedeAberto}
+              onOpenDetail={openSheet}
+            />
+          </section>
         )}
 
-        {/* Booking Comissões */}
-        {(profile?.role === "admin" || profile?.role === "agent") && (
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-base font-semibold flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-primary" />
-                Comissões Booking
-              </h3>
-              <Button variant="ghost" size="sm" className="text-xs text-primary" onClick={() => navigate("/booking-comissoes")}>
-                Ver tudo →
-              </Button>
-            </div>
-            <Card
-              className="cursor-pointer hover:shadow-md transition-all border-primary/20 bg-primary/5"
-              onClick={() => navigate("/booking-comissoes")}
-            >
-              <CardContent className="py-4 px-4">
-                <p className="text-sm text-muted-foreground">
-                  Gerencie cobranças de comissão e taxa de limpeza de reservas recebidas diretamente pelos proprietários via Booking.com.
-                </p>
-                <div className="flex gap-2 mt-3">
-                  <Button size="sm" variant="default" onClick={(e) => { e.stopPropagation(); navigate("/nova-comissao-booking"); }}>
-                    <Plus className="mr-1 h-3.5 w-3.5" />
-                    Nova Comissão
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); navigate("/admin/relatorio-booking"); }}>
-                    Relatório
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-
-        {/* Insights IA */}
-        {(profile?.role === "admin" || profile?.role === "maintenance" || profile?.role === "agent") && (
-          <div className="mb-6">
-            <h3 className="mb-4 text-lg font-semibold flex items-center gap-2">
-              <BrainCircuit className="h-5 w-5 text-primary" />
-              Insights
-            </h3>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              <Card 
-                className="cursor-pointer hover-lift group border-info/30 hover:border-info/30 dark:hover:border-info/30 transition-colors"
-                onClick={() => navigate("/admin/central-hostex")}
-              >
-                <CardHeader className="py-3 px-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-info/10 flex items-center justify-center group-hover:bg-info/20 transition-colors">
-                      <Calendar className="h-5 w-5 text-info" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-sm">Calendário & Ocupação</CardTitle>
-                      <CardDescription className="text-xs">
-                        Organize manutenções, veja disponibilidade e ocupação
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-              </Card>
-
-              <Card
-                className="cursor-pointer hover-lift group border-primary/20 hover:border-primary/40 transition-colors"
-                onClick={() => navigate("/admin/relatorios-financeiros")}
-              >
-                <CardHeader className="py-3 px-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                      <FileText className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-sm">Relatórios Financeiros</CardTitle>
-                      <CardDescription className="text-xs">
-                        Consulte relatórios por proprietário
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-              </Card>
-
-              <Card
-                className="cursor-pointer hover-lift group border-primary/20 hover:border-primary/40 transition-colors"
-                onClick={() => navigate("/admin/central-hostex")}
-              >
-                <CardHeader className="py-3 px-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                      <FileText className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-sm">Central Hostex</CardTitle>
-                      <CardDescription className="text-xs">
-                        Reservas, ocupação e insights de preço (sync 6h)
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-              </Card>
-
-              <Card
-                className="cursor-pointer hover-lift group border-primary/20 hover:border-primary/40 transition-colors"
-                onClick={() => navigate("/admin/comissao-rios")}
-              >
-                <CardHeader className="py-3 px-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                      <FileText className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-sm">Comissão RIOS (Hostex)</CardTitle>
-                      <CardDescription className="text-xs">
-                        Importe planilhas Hostex e gere total por imóvel com endereço
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-              </Card>
-
-              <Card
-                className="cursor-pointer hover-lift group border-primary/20 hover:border-primary/40 transition-colors"
-                onClick={() => navigate("/admin/relatorios-manutencoes")}
-              >
-                <CardHeader className="py-3 px-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                      <Wrench className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-sm">Relatórios de Manutenções</CardTitle>
-                      <CardDescription className="text-xs">
-                        Consulte manutenções por proprietário
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-              </Card>
-
-              <Card
-                className="cursor-pointer hover-lift group border-primary/20 hover:border-primary/40 transition-colors"
-                onClick={() => navigate("/admin/fichas-imoveis")}
-              >
-                <CardHeader className="py-3 px-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                      <FileText className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-sm">Fichas dos Imóveis</CardTitle>
-                      <CardDescription className="text-xs">
-                        Documentação completa em Markdown (contexto da IA)
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-              </Card>
-            </div>
-          </div>
-        )}
-
-        {/* Ações de Criar */}
-        {(profile?.role === "admin" || profile?.role === "maintenance" || profile?.role === "agent") && (
-          <div className="mb-8">
-            <h3 className="mb-4 text-lg font-semibold">Criar Novo</h3>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-              {(profile?.role === "admin" || profile?.role === "maintenance") && (
-                <Button 
-                  size="lg" 
-                  className="h-16 text-sm font-semibold justify-start px-4 bg-secondary hover:bg-secondary/90 text-secondary-foreground"
-                  onClick={() => navigate("/admin/nova-manutencao")}
-                >
-                  <Wrench className="mr-3 h-5 w-5" />
-                  Nova Manutenção
-                </Button>
-              )}
-
-              {(profile?.role === "admin" || profile?.role === "maintenance" || profile?.role === "agent") && (
-                <StartInspectionButton variant="panel" />
-              )}
-
-
-              <Button 
-                size="lg" 
-                className="h-16 text-sm font-semibold justify-start px-4 bg-secondary hover:bg-secondary/90 text-secondary-foreground"
-                onClick={() => navigate("/novo-ticket-massa")}
-              >
-                <Ticket className="mr-3 h-5 w-5" />
-                Novo Ticket
-              </Button>
-
-              {(profile?.role === "admin" || profile?.role === "maintenance") && (
-                <>
-                  <Button 
-                    size="lg" 
-                    className="h-16 text-sm font-semibold justify-start px-4 bg-secondary hover:bg-secondary/90 text-secondary-foreground"
-                    onClick={() => navigate("/novo-ticket-interno")}
-                  >
-                    <Users className="mr-3 h-5 w-5" />
-                    Novo Ticket Equipe
-                  </Button>
-
-                  <Button 
-                    size="lg" 
-                    className="h-16 text-sm font-semibold justify-start px-4 bg-secondary hover:bg-secondary/90 text-secondary-foreground"
-                    onClick={() => navigate("/novo-alerta")}
-                  >
-                    <Bell className="mr-3 h-5 w-5" />
-                    Novo Alerta
-                  </Button>
-
-                  <Button 
-                    size="lg" 
-                    className="h-16 text-sm font-semibold justify-start px-4 bg-secondary hover:bg-secondary/90 text-secondary-foreground"
-                    onClick={() => navigate("/nova-proposta-votacao")}
-                  >
-                    <Vote className="mr-3 h-5 w-5" />
-                    Nova Proposta
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Ações de Gerenciar */}
-        <div className="mb-8">
-          <h3 className="mb-4 text-lg font-semibold">Gerenciar</h3>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <Button 
-              size="lg" 
-              className="h-16 text-sm font-semibold"
-              onClick={() => navigate("/todos-tickets")}
-            >
-              <Ticket className="mr-3 h-5 w-5" />
-              Ver Todos os Tickets
-            </Button>
-            
-            {(profile?.role === "admin" || profile?.role === "maintenance") && (
-              <Button 
-                size="lg" 
-                className="h-16 text-sm font-semibold"
-                onClick={() => navigate("/gerenciar-cobrancas")}
-              >
-                <DollarSign className="mr-3 h-5 w-5" />
-                Gerenciar Cobranças
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="mb-8 grid gap-4 grid-cols-2 lg:grid-cols-4">
-          <StatsCard
-            title="Novos"
-            value={stats.novos}
-            description="Tickets recém-criados"
-            icon={<Ticket className="h-4 w-4 text-info" />}
-            iconBgColor="bg-info/10"
-            borderColor="border-l-blue-500"
-            delay={0}
-            onClick={() => navigate("/todos-tickets?status=novo")}
-          />
-          <StatsCard
-            title="Urgentes"
-            value={stats.urgentes}
-            description="Prioridade alta"
-            icon={<AlertTriangle className="h-4 w-4 text-destructive" />}
-            iconBgColor="bg-destructive/10"
-            borderColor="border-l-red-500"
-            delay={0.1}
-            onClick={() => navigate("/todos-tickets?priority=urgente")}
-          />
-          <StatsCard
-            title="Em Andamento"
-            value={stats.pendentes}
-            description="Aguardando conclusão"
-            icon={<Users className="h-4 w-4 text-warning" />}
-            iconBgColor="bg-warning/10"
-            borderColor="border-l-yellow-500"
-            delay={0.2}
-          />
-          <StatsCard
-            title="Concluídos"
-            value={stats.concluidos}
-            description="Total finalizado"
-            icon={<CheckCircle2 className="h-4 w-4 text-success" />}
-            iconBgColor="bg-success/10"
-            borderColor="border-l-green-500"
-            delay={0.3}
-          />
-        </div>
-
-        {/* Quick Actions - Outras Ações - Admin and team */}
-        {(profile?.role === "admin" || profile?.role === "agent" || profile?.role === "maintenance") && (
-          <div>
-            <h3 className="mb-4 text-xl font-semibold">Outras Ações</h3>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {/* Tutoriais */}
-              <Card className="cursor-pointer hover-lift group border-transparent hover:border-primary/20" onClick={() => navigate("/tutoriais")}>
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center group-hover:bg-success/20 transition-colors">
-                      <BookOpen className="h-5 w-5 text-success" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-base">Tutoriais</CardTitle>
-                      <CardDescription className="text-xs">
-                        Guias completos do sistema
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-              </Card>
-
-              {/* Templates de Resposta */}
-              <ResponseTemplatesPanel 
-                triggerElement={
-                  <Card className="cursor-pointer hover-lift group border-transparent hover:border-primary/20">
-                    <CardHeader>
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                          <FileText className="h-5 w-5 text-primary" />
-                        </div>
-                        <div>
-                          <CardTitle className="text-base">Templates de Resposta</CardTitle>
-                          <CardDescription className="text-xs">
-                            Gerenciar respostas rápidas
-                          </CardDescription>
-                        </div>
-                      </div>
-                    </CardHeader>
-                  </Card>
-                }
-              />
-
-              {/* Templates de Email - Admin only */}
-              {profile?.role === "admin" && (
-                <Card className="cursor-pointer hover-lift group border-transparent hover:border-primary/20" onClick={() => navigate("/configuracao-email")}>
-                  <CardHeader>
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                        <Mail className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-base">Templates de Email</CardTitle>
-                        <CardDescription className="text-xs">
-                          Configurar templates de email
-                        </CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                </Card>
-              )}
-              <Card className="cursor-pointer hover-lift group border-transparent hover:border-primary/20" onClick={() => navigate("/admin/cadastrar-proprietario")}>
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                      <UserPlus className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-base">Cadastrar Proprietário</CardTitle>
-                      <CardDescription className="text-xs">
-                        Criar nova conta pendente de aprovação
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-              </Card>
-
-              <Card className="cursor-pointer hover-lift group border-transparent hover:border-primary/20" onClick={() => navigate("/admin/cadastrar-faxineira")}>
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                      <UserPlus className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-base">Cadastrar Faxineira</CardTitle>
-                      <CardDescription className="text-xs">
-                        Criar nova conta de faxineira
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-              </Card>
-
-              <Card className="cursor-pointer hover-lift group border-transparent hover:border-primary/20" onClick={() => navigate("/admin/cadastrar-equipe")}>
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-secondary/10 flex items-center justify-center group-hover:bg-secondary/20 transition-colors">
-                      <Users className="h-5 w-5 text-secondary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-base">Cadastrar Equipe</CardTitle>
-                      <CardDescription className="text-xs">
-                        Adicionar atendente ou manutenção
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-              </Card>
-
-              <Card className="cursor-pointer hover-lift group border-transparent hover:border-primary/20" onClick={() => navigate("/admin/gerenciar-usuarios")}>
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-secondary/10 flex items-center justify-center group-hover:bg-secondary/20 transition-colors">
-                      <Shield className="h-5 w-5 text-secondary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-base">Gerenciar Usuários</CardTitle>
-                      <CardDescription className="text-xs">
-                        Visualizar e gerenciar todas as contas
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-              </Card>
-
-              <Card className="cursor-pointer hover-lift group border-transparent hover:border-primary/20" onClick={() => navigate("/admin/curadorias")}>
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                      <Sparkles className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-base">Curadorias</CardTitle>
-                      <CardDescription className="text-xs">
-                        Histórico por proprietário e itens comprados
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-              </Card>
-
-              <Card className="cursor-pointer hover-lift group border-transparent hover:border-primary/20" onClick={() => navigate("/aprovacoes")}>
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-warning/10 flex items-center justify-center group-hover:bg-warning/20 transition-colors">
-                      <AlertTriangle className="h-5 w-5 text-warning" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-base">Aprovações Pendentes</CardTitle>
-                      <CardDescription className="text-xs">
-                        Gerencie solicitações de cadastro
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-              </Card>
-
-              <Card className="cursor-pointer hover-lift group border-transparent hover:border-primary/20" onClick={() => navigate("/propriedades")}>
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-secondary/10 flex items-center justify-center group-hover:bg-secondary/20 transition-colors">
-                      <Building2 className="h-5 w-5 text-secondary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-base">Gerenciar Unidades</CardTitle>
-                      <CardDescription className="text-xs">
-                        Cadastrar e gerenciar propriedades
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-              </Card>
-
-              {/* Fichas dos Imóveis movidas para a seção Insights */}
-
-              {/* Calendário de Reservas moved to Insights section */}
-
-              <Card className="cursor-pointer hover-lift group border-transparent hover:border-primary/20" onClick={async () => {
-                try {
-                  const { data, error } = await supabase
-                    .from("profiles")
-                    .select("name, phone")
-                    .in("role", ["owner", "pending_owner"])
-                    .not("phone", "is", null)
-                    .neq("phone", "")
-                    .order("name");
-                  
-                  if (error) throw error;
-                  if (!data || data.length === 0) {
-                    toast.error("Nenhum contato encontrado");
-                    return;
-                  }
-
-                  const vcards = data.map(p => {
-                    const fullName = `${p.name} Proprietário`;
-                    const phone = (p.phone || "").replace(/[^\d+]/g, "");
-                    return [
-                      "BEGIN:VCARD",
-                      "VERSION:3.0",
-                      `FN:${fullName}`,
-                      `N:Proprietário;${p.name};;;`,
-                      `TEL;TYPE=CELL:${phone}`,
-                      `ORG:RIOS`,
-                      "END:VCARD"
-                    ].join("\r\n");
-                  }).join("\r\n");
-
-                  const blob = new Blob([vcards], { type: "text/vcard;charset=utf-8" });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = "proprietarios-rios.vcf";
-                  a.click();
-                  URL.revokeObjectURL(url);
-                  toast.success(`${data.length} contatos exportados!`);
-                } catch (err) {
-                  console.error("Erro ao exportar contatos:", err);
-                  toast.error("Erro ao exportar contatos");
-                }
-              }}>
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center group-hover:bg-success/20 transition-colors">
-                      <Download className="h-5 w-5 text-success" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-base">Exportar Contatos</CardTitle>
-                      <CardDescription className="text-xs">
-                        Baixar vCard dos proprietários
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-              </Card>
-            </div>
-          </div>
+        {/* 4. Atalhos — tudo o que era espalhado em cinco seções */}
+        {isTeam && (
+          <section aria-labelledby="titulo-atalhos" className="flex min-w-0 flex-col gap-3">
+            <TituloSecao id="titulo-atalhos" titulo="Atalhos" subtitulo="Criar, consultar e configurar" />
+            <PainelAtalhos />
+          </section>
         )}
       </main>
-      
+
+      {/* Itens do lembrete de hóspede abrem aqui, sem sair do painel */}
+      <DetailSheet
+        open={detailSheetOpen}
+        onClose={closeSheet}
+        entityId={detailEntityId}
+        entityType={detailEntityType}
+      />
+
       {/* Mobile Bottom Navigation */}
       <MobileBottomNav />
+    </div>
+  );
+}
+
+function TituloSecao({ id, titulo, subtitulo }: { id: string; titulo: string; subtitulo?: string }) {
+  return (
+    <div className="flex items-baseline gap-2">
+      <span className="h-4 w-1 self-center rounded-full bg-primary" aria-hidden="true" />
+      <h2 id={id} className="text-base font-semibold">
+        {titulo}
+      </h2>
+      {subtitulo && <span className="text-xs text-muted-foreground">{subtitulo}</span>}
     </div>
   );
 }
