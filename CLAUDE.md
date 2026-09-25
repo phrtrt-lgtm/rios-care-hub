@@ -166,7 +166,7 @@ Reorganizado em 2026-09-25 (`ROADMAP.md` item 4.6). A página tem esta ordem:
 |---|---|---|
 | 1 | Só tokens semânticos, nunca cor crua do Tailwind. Exceção: tutorial e escala do score | ❌ **804 ocorrências** fora de `ui/` (os tokens agora existem — ver §5, não há mais desculpa) |
 | 2 | `EmptyState` e `SectionSkeleton` para vazio/carregamento. Sem emoji, sem "Carregando..." solto | ⚠️ **Os dois existem desde setembro/2026** em `src/components/ui/empty-state.tsx` e `src/components/ui/section-skeleton.tsx` (a lista mobile de manutenções já usa). Falta adotar nas telas antigas: ainda há "Carregando..." solto, inclusive na tabela desktop de manutenções |
-| 3 | Nunca criar prazo/contador de SLA em ticket | ✅ na UI (colunas legadas seguem no banco) |
+| 3 | Nunca criar prazo/contador de SLA em ticket | ⚠️ **`/todos-tickets` ainda mostra** coluna "SLA" com "Expirado", contagem regressiva e ordenação "SLA (vencendo antes)" (`TodosTickets.tsx:289`, `:502`, `:695`). Outras 4 telas só **ordenam** por `sla_due_at`, sem exibir: `ChamadosKanbanPreview`, `TicketList`, `AdminChamadosKanban`, `MeusChamados` |
 | 4 | Nome de anexo anonimizado ("Imagem", "PDF") | ❌ `file_name` real ainda exibido (`AttachmentBubble.tsx`) |
 | 5 | Proprietário não vê calendário de reservas | ✅ `/calendario-reservas` redireciona para área da equipe (`App.tsx:527`) |
 | 6 | Janela de 7 dias; penalidade só depois | ✅ |
@@ -259,6 +259,7 @@ Correção, evidência e plano: `ROADMAP.md`.
 12. **`hostex-sync?force=1` pula o token** 🟡 — `index.ts:89-97`.
 13. **Higiene** 🟡 — 75 `console.log`; `index.html:2` `lang="en"`; sem `viewport-fit=cover`; 132 botões só de ícone e 25 `aria-label`; 34 "Carregando" soltos.
 14. **Arquivos gigantes** 🟡 — `AdminManutencoesLista.tsx` **2920**, `CobrancaDetalhes.tsx` 1804, `AtualizacaoAnuncio.tsx` 1791, `TicketDetalhes.tsx` 1284, `PlanoPerformanceSection.tsx` 1268.
+15. **Anexos listáveis sem login** 🔴 — o bucket `attachments` é público e tem a policy `Anyone can view attachments`, para o papel `public`. Com a chave anônima, qualquer pessoa lista e baixa os **6.002 arquivos**. Confirmado em `pg_policies` em 2026-09-25. Não basta tornar o bucket privado: o app usa `getPublicUrl` e grava URL pública em `ticket_attachments.file_url`. Ver `ROADMAP.md` 1.14.
 
 ---
 

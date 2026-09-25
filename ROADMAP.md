@@ -14,7 +14,7 @@ Auditoria de **2026-09-18** sobre o commit `4c49831`. Contexto de arquitetura: `
 | ✅ **No código, aguardando deploy** | — |
 | ⏸️ **Despriorizado pelo gestor** | 1.2 e 1.3 (a equipe confere o valor pago; erro seria pego na conciliação) |
 | ⚠️ **Precisa de decisão sua** | 1.12 — o cron `sync-ical` chama função que não existe: remover o job ou recriar a função? |
-| ⬜ **Abertos** | 1.5 · 1.8 · 1.9 · 1.11 · 1.13 · Ondas 2 (restante), 3, 4 e 5 |
+| ⬜ **Abertos** | **1.14 (anexos listáveis sem login — novo, 🔴)** · 1.5 · 1.8 · 1.9 · 1.11 · 1.13 · Ondas 2 (restante), 3, 4 e 5 |
 
 > **Toda verificação foi feita por requisição direta ao endpoint**, não pelo relatório de quem aplicou. O padrão que uso: chamar sem credencial, chamar com a chave anônima (que é um JWT válido e passa pelo `verify_jwt`), e um controle numa função que deve continuar viva, para distinguir "bloqueado" de "tudo fora do ar".
 
@@ -392,6 +392,35 @@ Há **três** fontes de token de cron em uso: a env `CRON_SECRET_TOKEN`, a chave
 
 **Proposta.** Uma fonte só, valor aleatório (`openssl rand -hex 32`), passado em header (`x-cron-token`) e não na URL. Atualizar os jobs em `cron.job` no mesmo movimento. Fazer junto com o 1.12, que já mexe nisso.
 
+---
+
+### 1.14 — Anexos abertos na internet: 6.002 arquivos listáveis sem login `[M]` 🔴 **descoberto em 2026-09-25**
+
+O scanner de segurança do Lovable apontou o problema ao publicar o painel. Confirmei em `pg_policies` e `storage.buckets`.
+
+**Problema.** O bucket `attachments` é **público** e, além disso, tem a policy `Anyone can view attachments`:
+
+- tabela `storage.objects`;
+- papel `public`, ou seja, sem login;
+- condição única: `bucket_id = 'attachments'`.
+
+Com a chave anônima, que está no bundle, qualquer pessoa **lista** o bucket e baixa os 6.002 arquivos. São fotos e documentos de chamados, manutenções, cobranças e vistorias.
+
+Existe uma policy mais restrita, `Users can view attachments from their tickets`, que libera só a pasta do próprio usuário ou a equipe. Ela não protege nada: policies permissivas se somam.
+
+**Por que não dá para só fechar o bucket.** O app monta URL pública com `getPublicUrl` em 17 arquivos e grava URL pública em `ticket_attachments.file_url` e `cleaning_inspection_attachments.file_url`. Tornar o bucket privado quebra todas essas imagens de uma vez.
+
+**Proposta, em duas etapas:**
+
+1. **Parar a listagem** `[P]`. Apagar `Anyone can view attachments`. O bucket continua público e segue servindo cada arquivo pela URL, que tem UUID no caminho e é difícil de adivinhar, mas ninguém mais enumera o bucket.
+
+   Antes, conferir quem chama `download()` ou `createSignedUrl` nesse bucket. Essas duas chamadas passam pelo RLS, e a policy que sobra só cobre a pasta do próprio usuário. Isso pode barrar um proprietário vendo anexo que a equipe subiu.
+2. **Bucket privado** `[G]`. Trocar a URL pública por URL assinada ou pelo `AuthenticatedMedia`, que já existe. Migrar os `file_url` gravados para `file_path`.
+
+**Também do scanner, menor.** `hostex_properties` e `hostex_sync_log` têm `SELECT` liberado para qualquer usuário logado (`qual = true`). A primeira tem os 55 imóveis, com nome, endereço e o JSON bruto da Hostex em `raw`. Na prática, proprietário e faxineira leem os dados de todos os imóveis. Restringir à equipe.
+
+**Validar.** Chamar `POST /storage/v1/object/list/attachments` com a chave anônima: hoje devolve arquivos, e depois da etapa 1 tem que devolver vazio. Abrir uma URL pública conhecida: tem que continuar abrindo. Por fim, abrir anexo de ticket logado como proprietário e como equipe.
+
 # Onda 2 — Velocidade
 
 ### 2.1 — Code-splitting por rota `[M]` ✅ **FEITO em 2026-09-18** (aguardando deploy)
@@ -634,9 +663,10 @@ Pedido do gestor: a caixa de cobrança de hóspede ocupava o topo e não abria d
 **O que sobrou:**
 
 1. **Painel lateral só no lembrete de hóspede.** Os itens das caixas Manutenções, Chamados, Cobranças e Vistorias ainda abrem a página inteira. O `DetailSheet` já suporta manutenção, vistoria e cobrança; chamado ainda não.
-2. **`/todos-tickets` abre com 2.089 consultas.** São 4 por ticket (dono, imóvel, contagem e última mensagem) × 522 tickets (`TodosTickets.tsx`, `fetchTickets`). É pior que o N+1 do item 2.2, e é a tela para onde vai "Urgentes abertos".
+2. **`/todos-tickets` abre com até 2.089 consultas.** São até 4 por ticket (dono, imóvel, contagem e última mensagem) × 522 tickets (`TodosTickets.tsx`, `fetchTickets`). Levou uns 20 s para abrir em 25/09. É pior que o N+1 do item 2.2, e é a tela para onde vai "Urgentes abertos".
 3. **[DÚVIDA]** `maintenance` deveria abrir `/todos-tickets`, `/propriedades` e `/novo-alerta`? A rota libera, mas a página recusa. Hoje o painel segue a página.
 4. **`CobrancaDetalhes.tsx:233` ainda lê `due_date` como UTC.** É ali que se decide se o **link de PIX** de uma cobrança vencida deve ser regenerado. Não troquei por `estaVencida` porque a troca tem efeito colateral. Antes, é preciso conferir como a validade do link é gravada no Mercado Pago.
+5. **`/todos-tickets` desrespeita a regra nº 3.** A tela mostra uma coluna "SLA" ("Expirado") com contagem regressiva e oferece a ordenação "SLA (vencendo antes)". A correção é remover a coluna e a opção de ordenação. As outras 4 telas que usam `sla_due_at` só ordenam por ele, sem exibir; ver `CLAUDE.md` §4.
 
 ---
 
@@ -658,13 +688,16 @@ Três valores já circularam: `com.rioscarehubb.app` (original, com "bb" que par
 
 ---
 
-## Ordem sugerida
+## Ordem sugerida (revista em 2026-09-25)
 
-1. ~~**Hoje:** 1.1~~ ✅ feito em 2026-09-18.
-2. **Próximo:** 1.9 (ler as quatro funções órfãs — podem esconder outro `admin-reset-password`) e 1.3 (invalidar tokens de curadoria, é SQL de uma linha).
-3. **Esta semana:** 1.2 (valor da curadoria) e 1.4 etapa 1 (trigger em `profiles`).
-4. **Depois:** 1.5 a 1.8, então 2.1 + 2.2 (velocidade que o proprietário sente), então Onda 3.
-5. **4.1 destrava** a revisão completa de RLS.
+1. **1.14, etapa 1**: parar a listagem pública dos anexos. É apagar uma policy, depois de conferir quem usa `download()` e `createSignedUrl`. É a maior exposição aberta hoje.
+2. **1.9**: ler as três funções órfãs. Podem esconder outro `admin-reset-password`.
+3. **1.5**: pôr guarda nas `notify-*` e no `send-push`. O secret `INTERNAL_FUNCTION_TOKEN` já existe, mas o valor passou pelo chat: gerar outro antes de usar.
+4. **1.8**: idempotência do webhook do MP e conferência do possível pagamento em dobro.
+5. **Velocidade da equipe**: 4.6, item 2 das sobras (`/todos-tickets`), depois 2.2 e 2.3.
+6. **4.1** destrava a revisão completa de RLS.
+
+1.2 e 1.3 estão despriorizados pelo gestor.
 
 ## Como executar sem depender do agente do Lovable
 
@@ -678,12 +711,14 @@ O backend é **Lovable Cloud** — o projeto Supabase pertence ao Lovable e não
 
 Ou seja: os itens 1.2 a 1.4, 1.8, 4.1 e 4.3 são executáveis direto. Só o que mexe em deploy de function depende do agente.
 
-## Cinco de maior impacto
+## Cinco de maior impacto (revisto em 2026-09-25)
 
-1. **1.2** — Curadoria paga por R$ 1,00: o valor do PIX vem do cliente e ninguém confere, em nenhuma das três etapas.
-2. **1.3** — `curation-access`: link de e-mail nunca expira e é reutilizável — login permanente na conta do proprietário.
-3. **1.4** — Escalação de privilégio: proprietário logado vira admin e lê o financeiro de todos.
-4. **1.9** — Quatro funções publicadas sem código no Git. Enquanto existirem, nenhuma auditoria de repositório é completa.
-5. **2.1** — 4,4 MB num chunk só (1,22 MB gzip), crescendo 2,4× a cada nove meses. Maior ganho isolado de velocidade.
+1. **1.14**: 6.002 anexos que qualquer pessoa lista e baixa sem login.
+2. **1.9**: três funções publicadas sem código no Git. Enquanto existirem, nenhuma auditoria do repositório é completa.
+3. **1.5**: `send-push` e `notify-*` abertas. Qualquer um dispara push e e-mail em massa com a marca RIOS.
+4. **1.8**: o webhook do MP não tem idempotência real e não confere o valor. Há um possível pagamento em dobro a reembolsar.
+5. **4.6, item 2 das sobras**: `/todos-tickets` faz até 2.089 consultas e leva uns 20 s para abrir.
 
-> Resolvido: **1.1** (`admin-reset-password`, 2026-09-18) e metade do **4.2**.
+> **Resolvidos:** 1.1, 1.4 (contenção), 1.6, 1.7, 1.10, 1.12 (parcial), 2.1, 4.2 e 4.6.
+>
+> **Despriorizados pelo gestor:** 1.2 e 1.3.
