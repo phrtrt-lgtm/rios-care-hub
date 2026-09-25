@@ -134,6 +134,30 @@ Functions: `create-curation-pix`, `save-curation-selection`, `curation-access`, 
 Chat por contexto (`ticket_messages`, `charge_messages`, `curadoria_messages`, `booking_commission_messages`, `team_chat_messages`) + `message_read_receipts` e `notify-mentions` (menções com `mentioned_user_ids`).
 IA: `ai_settings`, `ai_templates`, `ai_prompt_versions`, `ai_usage_logs`; `ai-assistant`, `ai-consulta`, `summarize-conversation`, `transcribe-audio`.
 
+### 3.11 Painel da equipe (`/painel`)
+Reorganizado em 2026-09-25 (`ROADMAP.md` item 4.6). A página tem esta ordem:
+
+1. resumo com 4 números (`src/components/painel/PainelResumo.tsx`);
+2. avisos e votações;
+3. **Operações**: Manutenções, Cobranças, Chamados e Vistorias em grade 2×2, com o lembrete de cobrança de hóspede logo abaixo;
+4. **Atalhos**: um bloco só, em 5 grupos (`src/components/painel/PainelAtalhos.tsx`).
+
+- **Cada número do topo usa a mesma definição da caixa correspondente.** Ao mudar uma, mude a outra.
+- **"Vencida" vem de `src/lib/vencimento.ts`** (`estaVencida` e `diasParaVencer`): a cobrança só vence depois do dia do vencimento, e a data é lida como dia local. Não use `new Date(due_date)`: isso lê a data como meia-noite UTC, e a cobrança aparece vencida desde as 21h da véspera.
+- **As caixas não têm teto de consulta.** Antes, o `.limit(15)` e o `.limit(50)` apareciam como se fossem o total. Expandir mostra tudo, com rolagem dentro da caixa. A exceção é Vistorias, que é um feed das 15 mais recentes, e o selo diz "recentes".
+- **Lembrete de hóspede:** vem de `useGuestCharges`, com a chave `["painel","guest-charges"]`, compartilhada com o resumo. Os grupos são:
+  - pronta: 14 dias ou mais desde o check-out;
+  - em breve;
+  - sem data de check-out.
+
+  Os itens abrem no `DetailSheet`, sem sair do painel.
+- **Atalho novo: confira a permissão em dois lugares.** Um é o `allowedRoles` da rota em `App.tsx`. O outro é o `useEffect` da própria página, que às vezes é mais restrito:
+  - `TodosTickets`, `Propriedades` e `NovoAlerta` aceitam só admin/agent;
+  - `NovoTicketInterno` aceita só admin.
+
+  Se a página recusar, o atalho devolve a pessoa ao início sem aviso.
+- **`/todos-tickets` aceita `?priority=` e `?status=`.** `status=abertos` significa "nem concluído nem cancelado". Os filtros são aplicados uma vez, a partir de filtros limpos, e depois saem da URL.
+
 ---
 
 ## 4. Regras invioláveis — e o status real de cada uma

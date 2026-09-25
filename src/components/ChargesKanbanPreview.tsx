@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DollarSign, ArrowRight, MessageSquare, ChevronRight, ChevronDown, ChevronUp, Package } from "lucide-react";
-import { differenceInDays, isPast } from "date-fns";
+import { diasParaVencer, estaVencida } from "@/lib/vencimento";
 import { useAuth } from "@/hooks/useAuth";
 import { formatBRL } from "@/lib/format";
 import { ChargeChatDialog } from "./ChargeChatDialog";
@@ -78,11 +78,11 @@ export function ChargesKanbanPreview() {
 
   const getDueInfo = (due_date: string | null, status: string) => {
     if (!due_date) return { text: "", color: "" };
-    const dueDate = new Date(due_date);
-    const daysLeft = differenceInDays(dueDate, new Date());
-    const isOverdue = isPast(dueDate) || status === "overdue";
-    
+    const daysLeft = diasParaVencer(due_date);
+    const isOverdue = daysLeft < 0 || status === "overdue";
+
     if (isOverdue) return { text: `${Math.abs(daysLeft)}d atrás`, color: "text-destructive" };
+    if (daysLeft === 0) return { text: "vence hoje", color: "text-warning" };
     if (daysLeft <= 2) return { text: `${daysLeft}d`, color: "text-warning" };
     if (daysLeft <= 7) return { text: `${daysLeft}d`, color: "text-warning" };
     return { text: `${daysLeft}d`, color: "text-muted-foreground" };
@@ -92,15 +92,11 @@ export function ChargesKanbanPreview() {
 
   const pendentes = charges.filter(c => {
     if (c.status !== "sent" && c.status !== "pendente") return false;
-    if (!c.due_date) return true;
-    return !isPast(new Date(c.due_date));
+    return !estaVencida(c.due_date);
   });
 
-  const vencidas = charges.filter(c => {
-    if (c.status === "overdue") return true;
-    if ((c.status === "sent" || c.status === "pendente") && c.due_date && isPast(new Date(c.due_date))) return true;
-    return false;
-  });
+  // Mesma definição do resumo do topo do painel (PainelResumo).
+  const vencidas = charges.filter(c => estaVencida(c.due_date, c.status));
 
   const vencidasLimit = vencidasExpanded ? EXPANDED_LIMIT : COLLAPSED_LIMIT;
   const pendentesLimit = pendentesExpanded ? EXPANDED_LIMIT : COLLAPSED_LIMIT;

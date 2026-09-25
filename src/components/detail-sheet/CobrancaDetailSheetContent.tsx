@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatBRL } from '@/lib/format';
+import { diasParaVencer } from '@/lib/vencimento';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -173,7 +174,7 @@ export function CobrancaDetailSheetContent({ id, onOpenFull }: Props) {
   const ownerDue = charge.amount_cents - (charge.management_contribution_cents || 0);
   const isOverdue =
     charge.due_date &&
-    new Date(charge.due_date) < new Date() &&
+    diasParaVencer(charge.due_date) < 0 &&
     !['paid', 'pago_no_vencimento', 'pago_antecipado', 'pago_com_atraso', 'cancelled'].includes(
       charge.status,
     );

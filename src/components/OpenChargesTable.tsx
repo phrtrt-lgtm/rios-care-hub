@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatBRL } from "@/lib/format";
+import { diasParaVencer } from "@/lib/vencimento";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CHARGE_CATEGORIES } from "@/constants/chargeCategories";
 import { DebitoReservaCalculator } from "@/components/DebitoReservaCalculator";
@@ -184,7 +185,7 @@ export function OpenChargesTable({
   };
 
   const isChargeOverdue = (charge: Charge) => {
-    return charge.due_date && new Date(charge.due_date) < new Date() && charge.status !== 'paid';
+    return !!charge.due_date && diasParaVencer(charge.due_date) < 0 && charge.status !== 'paid';
   };
 
   const handleOpenCalculator = (charge: Charge) => {
@@ -475,7 +476,7 @@ export function OpenChargesTable({
                         {charge.due_date ? (
                           <span className={cn(
                             "text-xs",
-                            new Date(charge.due_date) < new Date() && charge.status !== 'paid' && "text-destructive font-medium"
+                            isChargeOverdue(charge) && "text-destructive font-medium"
                           )}>
                             {format(new Date(charge.due_date + "T12:00:00"), "dd/MM/yy", { locale: ptBR })}
                           </span>

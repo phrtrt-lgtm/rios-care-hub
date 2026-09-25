@@ -38,6 +38,7 @@ import { parseBRNumber } from "@/lib/parseBRNumber";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileMaintenanceList } from "@/components/maintenance/MobileMaintenanceList";
 import { BOARD_OPTIONS, boardChange, deriveBoard, hasInfiltracao, type Board } from "@/lib/maintenanceBoard";
+import { estaVencida } from "@/lib/vencimento";
 // ===== TYPES =====
 type TicketStatus = "novo" | "em_analise" | "aguardando_info" | "em_execucao" | "concluido" | "cancelado";
 
@@ -2239,8 +2240,6 @@ export default function AdminManutencoesLista() {
   // Organize items into groups with search filter
   const groupedItems = useMemo(() => {
     const searchLower = debouncedSearch.toLowerCase();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
 
     const abertos = (tickets || []).filter(t =>
       t.status !== "concluido" &&
@@ -2281,13 +2280,13 @@ export default function AdminManutencoesLista() {
       c.property?.name?.toLowerCase().includes(searchLower)
     );
 
-    // Split charges into overdue and pending
+    // Split charges into overdue and pending (no dia do vencimento ainda é pendente)
     const cobrancasVencidas = filteredCharges
-      .filter(c => c.due_date && new Date(c.due_date) < today)
+      .filter(c => estaVencida(c.due_date))
       .map(mapCharge);
 
     const cobrancasPendentes = filteredCharges
-      .filter(c => !c.due_date || new Date(c.due_date) >= today)
+      .filter(c => !estaVencida(c.due_date))
       .map(mapCharge);
 
     return {

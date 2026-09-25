@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { goBack, saveScrollPosition } from "@/lib/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -57,7 +57,8 @@ const TodosTickets = () => {
   const [filteredTickets, setFilteredTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const filtersHook = useListFilters("filters:todos-tickets");
-  const { filters, debouncedSearch, applyTo } = filtersHook;
+  const { filters, debouncedSearch, applyTo, reset: resetFilters, setStatus, setPriority } = filtersHook;
+  const [searchParams, setSearchParams] = useSearchParams();
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [selectedTickets, setSelectedTickets] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
@@ -76,6 +77,20 @@ const TodosTickets = () => {
     }
     fetchTickets();
   }, [user, profile, navigate]);
+
+  // Links do painel chegam com ?priority= e ?status= (ex.: "Urgentes abertos").
+  // Aplica uma vez, a partir de filtros limpos — senão uma busca salva de outra
+  // visita esconderia itens e o número não bateria com o do painel — e tira os
+  // parâmetros da URL, para não sobrescrever o filtro ao voltar de um ticket.
+  useEffect(() => {
+    const priority = searchParams.get("priority");
+    const status = searchParams.get("status");
+    if (!priority && !status) return;
+    resetFilters();
+    if (priority) setPriority(priority);
+    if (status) setStatus(status);
+    setSearchParams({}, { replace: true });
+  }, [searchParams, setSearchParams, resetFilters, setPriority, setStatus]);
 
   useEffect(() => {
     filterTickets();
@@ -173,13 +188,20 @@ const TodosTickets = () => {
   };
 
   const filterTickets = () => {
+    // "abertos" não é um status do banco: é qualquer um que não seja concluído
+    // nem cancelado. Filtrado à parte porque applyTo só compara igualdade.
+    const soAbertos = filters.status === "abertos";
     let filtered = applyTo(tickets, {
       searchFields: (t) => [t.subject, t.description, t.owner.name, t.property?.name],
-      status: (t) => t.status,
+      status: soAbertos ? undefined : (t) => t.status,
       priority: (t) => t.priority,
       propertyId: (t) => t.property?.id ?? null,
       date: (t) => t.created_at,
     });
+
+    if (soAbertos) {
+      filtered = filtered.filter((ticket) => isTicketOpen(ticket.status));
+    }
 
     if (typeFilter !== 'all') {
       filtered = filtered.filter(ticket => ticket.ticket_type === typeFilter);
@@ -437,6 +459,7 @@ const TodosTickets = () => {
               {...filtersHook}
               searchPlaceholder="Buscar por assunto, proprietário ou unidade..."
               statusOptions={[
+                { value: "abertos", label: "Abertos (qualquer etapa)" },
                 { value: "novo", label: "Novo" },
                 { value: "em_analise", label: "Em Análise" },
                 { value: "em_execucao", label: "Em Execução" },

@@ -41,7 +41,10 @@ type ServiceProvider = {
 export function MaintenanceKanbanPreview() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  // /admin/manutencoes e /admin/manutencoes-concluidas são só admin/maintenance;
+  // agent vê a caixa, mas o link o devolveria ao início.
+  const podeAbrirQuadro = profile?.role === "admin" || profile?.role === "maintenance";
   const [tickets, setTickets] = useState<MaintenanceTicket[]>([]);
   const [providers, setProviders] = useState<ServiceProvider[]>([]);
   const [loading, setLoading] = useState(true);
@@ -287,25 +290,29 @@ export function MaintenanceKanbanPreview() {
                   </Button>
                 </CollapsibleTrigger>
               )}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate("/admin/manutencoes-concluidas")}
-                className="h-7 text-xs text-success"
-              >
-                <span className="hidden sm:inline">Concluídas</span>
-                <span className="sm:hidden">OK</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate("/admin/manutencoes")}
-                className="h-7 text-xs text-primary"
-              >
-                <span className="hidden sm:inline">Completo</span>
-                <span className="sm:hidden">Ver</span>
-                <ArrowRight className="ml-1 h-3 w-3" />
-              </Button>
+              {podeAbrirQuadro && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate("/admin/manutencoes-concluidas")}
+                    className="h-7 text-xs text-success"
+                  >
+                    <span className="hidden sm:inline">Concluídas</span>
+                    <span className="sm:hidden">OK</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate("/admin/manutencoes")}
+                    className="h-7 text-xs text-primary"
+                  >
+                    <span className="hidden sm:inline">Completo</span>
+                    <span className="sm:hidden">Ver</span>
+                    <ArrowRight className="ml-1 h-3 w-3" />
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </CardHeader>

@@ -40,9 +40,12 @@ interface Atalho {
   rotulo: string;
   icone: ReactNode;
   /**
-   * Quem vê o atalho. Igual à permissão da rota em src/App.tsx — ou mais
-   * restrito, quando o painel antigo já restringia. Nunca mais aberto: um
-   * atalho que a pessoa não pode abrir só a joga de volta ao início.
+   * Quem vê o atalho. Nunca mais aberto do que a tela aceita: um atalho que a
+   * pessoa não pode abrir só a joga de volta ao início, sem aviso.
+   *
+   * Confira os DOIS lugares: allowedRoles da rota em src/App.tsx e o useEffect
+   * da própria página, que às vezes é mais restrito (TodosTickets, Propriedades
+   * e NovoAlerta aceitam só admin/agent; NovoTicketInterno, só admin).
    */
   papeis: Papel[];
   para?: string;
@@ -122,10 +125,10 @@ const GRUPOS: Grupo[] = [
         ),
       },
       { rotulo: "Novo ticket", icone: <Ticket className={ICONE} />, papeis: TODOS, para: "/novo-ticket-massa" },
-      { rotulo: "Ticket de equipe", icone: <Users className={ICONE} />, papeis: ADMIN_MANUT, para: "/novo-ticket-interno" },
+      { rotulo: "Ticket de equipe", icone: <Users className={ICONE} />, papeis: SO_ADMIN, para: "/novo-ticket-interno" },
       { rotulo: "Nova cobrança", icone: <DollarSign className={ICONE} />, papeis: TODOS, para: "/nova-cobranca" },
       { rotulo: "Reposição de itens", icone: <Package className={ICONE} />, papeis: TODOS, para: "/nova-cobranca?reposicao=true" },
-      { rotulo: "Novo alerta", icone: <Bell className={ICONE} />, papeis: ADMIN_MANUT, para: "/novo-alerta" },
+      { rotulo: "Novo alerta", icone: <Bell className={ICONE} />, papeis: ADMIN_AGENT, para: "/novo-alerta" },
       { rotulo: "Nova proposta", icone: <Vote className={ICONE} />, papeis: ADMIN_MANUT, para: "/nova-proposta-votacao" },
       { rotulo: "Nova comissão Booking", icone: <Plus className={ICONE} />, papeis: ADMIN_AGENT, para: "/nova-comissao-booking" },
     ],
@@ -133,10 +136,10 @@ const GRUPOS: Grupo[] = [
   {
     titulo: "Operação",
     atalhos: [
-      { rotulo: "Todos os tickets", icone: <Ticket className={ICONE} />, papeis: TODOS, para: "/todos-tickets" },
+      { rotulo: "Todos os tickets", icone: <Ticket className={ICONE} />, papeis: ADMIN_AGENT, para: "/todos-tickets" },
       { rotulo: "Chamados (quadro)", icone: <MessageSquare className={ICONE} />, papeis: TODOS, para: "/admin/chamados" },
       { rotulo: "Lista de manutenções", icone: <List className={ICONE} />, papeis: ADMIN_MANUT, para: "/admin/manutencoes-lista" },
-      { rotulo: "Gerenciar cobranças", icone: <DollarSign className={ICONE} />, papeis: ADMIN_MANUT, para: "/gerenciar-cobrancas" },
+      { rotulo: "Gerenciar cobranças", icone: <DollarSign className={ICONE} />, papeis: TODOS, para: "/gerenciar-cobrancas" },
       { rotulo: "Vistorias de faxina", icone: <Sparkles className={ICONE} />, papeis: ADMIN_MANUT, para: "/admin/vistorias" },
       { rotulo: "Vistorias de rotina", icone: <ClipboardList className={ICONE} />, papeis: TODOS, para: "/admin/vistorias/rotina" },
       { rotulo: "Comissões Booking", icone: <Sparkles className={ICONE} />, papeis: ADMIN_AGENT, para: "/booking-comissoes" },
@@ -165,7 +168,7 @@ const GRUPOS: Grupo[] = [
       { rotulo: "Cadastrar proprietário", icone: <UserPlus className={ICONE} />, papeis: SO_ADMIN, para: "/admin/cadastrar-proprietario" },
       { rotulo: "Cadastrar faxineira", icone: <UserPlus className={ICONE} />, papeis: SO_ADMIN, para: "/admin/cadastrar-faxineira" },
       { rotulo: "Cadastrar equipe", icone: <Users className={ICONE} />, papeis: SO_ADMIN, para: "/admin/cadastrar-equipe" },
-      { rotulo: "Gerenciar unidades", icone: <Building2 className={ICONE} />, papeis: TODOS, para: "/propriedades" },
+      { rotulo: "Gerenciar unidades", icone: <Building2 className={ICONE} />, papeis: ADMIN_AGENT, para: "/propriedades" },
       { rotulo: "Exportar contatos (vCard)", icone: <Download className={ICONE} />, papeis: TODOS, acao: exportarContatos },
     ],
   },
@@ -184,7 +187,7 @@ const GRUPOS: Grupo[] = [
             triggerElement={
               <button type="button" className={classe}>
                 <FileText className={cn(ICONE, "text-primary")} aria-hidden="true" />
-                <span className="truncate">Templates de resposta</span>
+                <span className="min-w-0 leading-snug">Templates de resposta</span>
               </button>
             }
           />
@@ -195,11 +198,12 @@ const GRUPOS: Grupo[] = [
   },
 ];
 
-// h-auto, justify-start, font-normal e text-foreground neutralizam o estilo
+// h-full, justify-start, font-normal e text-foreground neutralizam o estilo
 // padrão do <Button> do shadcn (usado por StartInspectionButton), que senão
-// deixaria o texto branco e centralizado sobre fundo claro.
+// deixaria o texto branco e centralizado sobre fundo claro. h-full também
+// iguala a altura dos atalhos da mesma linha quando um rótulo quebra.
 const CLASSE_ATALHO =
-  "flex h-auto w-full min-w-0 items-center justify-start gap-2.5 rounded-md border bg-card px-3 py-2 " +
+  "flex h-full w-full min-w-0 items-center justify-start gap-2.5 rounded-md border bg-card px-3 py-2 " +
   "text-left text-sm font-normal text-foreground shadow-none transition-colors hover:border-primary/40 " +
   "hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
@@ -245,7 +249,8 @@ export function PainelAtalhos() {
                   <span className="text-primary" aria-hidden="true">
                     {a.icone}
                   </span>
-                  <span className="truncate">{a.rotulo}</span>
+                  {/* Quebra linha em vez de cortar: "Relatórios de manutenções" some pela metade numa coluna estreita. */}
+                  <span className="min-w-0 leading-snug">{a.rotulo}</span>
                 </button>
               ),
             )}

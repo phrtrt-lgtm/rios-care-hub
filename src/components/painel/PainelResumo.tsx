@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { useGuestCharges } from "@/hooks/useGuestCharges";
 import { formatBRL } from "@/lib/format";
+import { estaVencida } from "@/lib/vencimento";
 import { cn } from "@/lib/utils";
 
 const STATUS_ABERTOS = ["novo", "em_analise", "aguardando_info", "em_execucao"] as const;
@@ -29,9 +30,6 @@ interface Resumo {
  * teto da consulta (15, 50) no lugar do total.
  */
 async function buscarResumo(): Promise<Resumo> {
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-
   const [cobrancas, chamados, manutencoes, urgentes] = await Promise.all([
     supabase
       .from("charges")
@@ -56,9 +54,7 @@ async function buscarResumo(): Promise<Resumo> {
       .in("status", STATUS_ABERTOS),
   ]);
 
-  const vencidas = (cobrancas.data || []).filter(
-    (c) => c.status === "overdue" || (c.due_date && new Date(c.due_date) < hoje),
-  );
+  const vencidas = (cobrancas.data || []).filter((c) => estaVencida(c.due_date, c.status));
   const valorVencido = vencidas.reduce(
     (soma, c) =>
       soma +
@@ -123,6 +119,8 @@ export function PainelResumo({ onAbrirHospede }: { onAbrirHospede: () => void })
   const navigate = useNavigate();
   const { profile } = useAuth();
   const podeVerListaManutencoes = profile?.role === "admin" || profile?.role === "maintenance";
+  // TodosTickets só aceita admin e agent (a página devolve maintenance ao início).
+  const podeVerTodosTickets = profile?.role === "admin" || profile?.role === "agent";
 
   const { data, isLoading } = useQuery({
     queryKey: ["painel", "resumo"],
@@ -174,7 +172,9 @@ export function PainelResumo({ onAbrirHospede }: { onAbrirHospede: () => void })
         detalhe="Chamados e manutenções"
         icone={<AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />}
         destaque={data.urgentesAbertos > 0 ? "destructive" : "neutral"}
-        onClick={() => navigate("/todos-tickets?priority=urgente")}
+        onClick={
+          podeVerTodosTickets ? () => navigate("/todos-tickets?priority=urgente&status=abertos") : undefined
+        }
       />
       {prontasHospede > 0 && (
         <Indicador

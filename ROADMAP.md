@@ -6,11 +6,11 @@ Auditoria de **2026-09-18** sobre o commit `4c49831`. Contexto de arquitetura: `
 
 **Esforço:** P = até meio dia · M = 1–2 dias · G = 3+ dias
 
-## Estado em 2026-09-22
+## Estado em 2026-09-25
 
 | | Itens |
 |---|---|
-| ✅ **No ar e verificado** | 1.1 · 1.4 (contenção) · 1.6 · 1.7 · 1.10 · 1.12 · 2.1 · 2.6 (quadros) · 4.2 |
+| ✅ **No ar e verificado** | 1.1 · 1.4 (contenção) · 1.6 · 1.7 · 1.10 · 1.12 · 2.1 · 2.6 (quadros) · 4.2 · 4.6 (painel) |
 | ✅ **No código, aguardando deploy** | — |
 | ⏸️ **Despriorizado pelo gestor** | 1.2 e 1.3 (a equipe confere o valor pago; erro seria pego na conciliação) |
 | ⚠️ **Precisa de decisão sua** | 1.12 — o cron `sync-ical` chama função que não existe: remover o job ou recriar a função? |
@@ -603,6 +603,40 @@ Manutenção vive em `tickets` (`kind='maintenance'`, com `essential`, `cost_res
 ### 4.5 — Desktop `[M]` 🟡
 
 As telas da equipe (uso diário em desktop) ainda são empilhamento vertical em container centralizado. Layout mestre-detalhe em `xl:` para `/todos-tickets` e `/gerenciar-cobrancas`, filtros persistentes em barra lateral, tabelas mais densas. Mobile fica como está — proprietário é prioridade.
+
+---
+
+### 4.6 — Painel da equipe (`/painel`) `[M]` ✅ **No ar em 2026-09-25**
+
+Pedido do gestor: a caixa de cobrança de hóspede ocupava o topo e não abria direito, e os quadros não davam visibilidade.
+
+**O que estava errado.** Medido em produção em 25/09:
+
+- **Urgentes:** o painel mostrava 37, contando chamados já concluídos. Os abertos eram 3.
+- **Cobranças vencidas:** o "50 vencidas" era o `.limit(50)` da consulta. Eram **106, somando R$ 15.880,98**. As pendentes que ainda não venceram nunca apareciam, porque as 50 vagas iam todas para as vencidas.
+- **Manutenções:** o "15" era o `.limit(15)`. As abertas eram 25.
+- **Caixas expandidas:** mostravam no máximo 20 itens.
+- **Lembrete de hóspede:**
+  - mostrava 3 itens e um "+ N mais" que não abria;
+  - manutenções de hóspede sem data de check-out eram descartadas em silêncio (4 hoje).
+- **Data de vencimento lida como UTC:** a cobrança que vence hoje aparecia vencida desde as 21h da véspera. Acontecia no painel, na lista de manutenções, em Gerenciar cobranças e no painel lateral da cobrança.
+- **Atalhos que a pessoa via mas não conseguia abrir:**
+  - agent e maintenance viam Central Hostex, Comissão RIOS, cadastros e gestão de usuários, que são só de admin;
+  - maintenance via Todos os tickets, Ticket de equipe, Novo alerta e Gerenciar unidades, que a própria página recusa;
+  - agent e proprietário viam "Concluídas" e "Completo" na caixa de Manutenções, links que levam a rotas só de admin/maintenance.
+
+  Em todos esses casos o clique só devolvia a pessoa ao início, sem aviso.
+- **Links repetidos ou faltando:** "Calendário & Ocupação" e "Central Hostex" iam para o mesmo lugar. Contratos e Cadastros de captação não tinham atalho.
+- **Ordem da página:** os números ficavam no fim, abaixo de uns 25 botões espalhados em 5 seções.
+
+**O que mudou.** Ver `CLAUDE.md` §3.11. Commits `d4e12d3` e seguinte.
+
+**O que sobrou:**
+
+1. **Painel lateral só no lembrete de hóspede.** Os itens das caixas Manutenções, Chamados, Cobranças e Vistorias ainda abrem a página inteira. O `DetailSheet` já suporta manutenção, vistoria e cobrança; chamado ainda não.
+2. **`/todos-tickets` abre com 2.089 consultas.** São 4 por ticket (dono, imóvel, contagem e última mensagem) × 522 tickets (`TodosTickets.tsx`, `fetchTickets`). É pior que o N+1 do item 2.2, e é a tela para onde vai "Urgentes abertos".
+3. **[DÚVIDA]** `maintenance` deveria abrir `/todos-tickets`, `/propriedades` e `/novo-alerta`? A rota libera, mas a página recusa. Hoje o painel segue a página.
+4. **`CobrancaDetalhes.tsx:233` ainda lê `due_date` como UTC.** É ali que se decide se o **link de PIX** de uma cobrança vencida deve ser regenerado. Não troquei por `estaVencida` porque a troca tem efeito colateral. Antes, é preciso conferir como a validade do link é gravada no Mercado Pago.
 
 ---
 
