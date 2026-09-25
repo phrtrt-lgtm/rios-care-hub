@@ -372,16 +372,21 @@ function EditableCell({ value, type, options, onSave, className, placeholder }: 
 }
 
 // ===== ENVIO EM LOTE: CONFIRMAÇÃO =====
+/** Pausa entre um envio e outro no lote (e-mail + WhatsApp por item). */
+const INTERVALO_ENVIO_LOTE_MS = 5000;
+
 function EnvioLoteDialog({
   open,
   itens,
   enviando,
+  progresso,
   onCancelar,
   onConfirmar,
 }: {
   open: boolean;
   itens: MaintenanceItem[];
   enviando: boolean;
+  progresso: { feitos: number; total: number } | null;
   onCancelar: () => void;
   onConfirmar: () => void;
 }) {
@@ -409,6 +414,13 @@ function EnvioLoteDialog({
                 e-mail (e por WhatsApp, quem tiver ligado). Total a pagar: {formatBRL(total)}. Cada manutenção é
                 concluída e vira cobrança, igual ao envio de uma por uma.
               </p>
+              {itens.length > 1 && (
+                <p>
+                  Os envios saem um a cada {INTERVALO_ENVIO_LOTE_MS / 1000} segundos (cerca de{" "}
+                  {Math.ceil(((itens.length - 1) * INTERVALO_ENVIO_LOTE_MS) / 60000)} min).{" "}
+                  <span className="font-medium text-foreground">Deixe esta aba aberta até terminar.</span>
+                </p>
+              )}
               {(semValor > 0 || gratuitas > 0 || abertas > 0) && (
                 <ul className="list-disc space-y-1 pl-5 text-foreground">
                   {gratuitas > 0 && <li>{gratuitas} vão de graça: o aporte da gestão cobre 100%.</li>}
@@ -446,7 +458,9 @@ function EnvioLoteDialog({
               onConfirmar();
             }}
           >
-            {enviando ? "Enviando..." : `Enviar ${itens.length}`}
+            {enviando && progresso
+              ? `Enviando ${progresso.feitos + 1} de ${progresso.total}...`
+              : `Enviar ${itens.length}`}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -2251,6 +2265,7 @@ export default function AdminManutencoesLista() {
   // Antes: Feito -> seta -> "Enviar ao Proprietário", item por item. Agora marca
   // vários e envia de uma vez, pelo mesmo enviarAoProprietario do envio único.
   const [confirmarEnvioLote, setConfirmarEnvioLote] = useState(false);
+  const [progressoLote, setProgressoLote] = useState<{ feitos: number; total: number } | null>(null);
   const selecionadosParaEnviar = useMemo(
     () => (tickets || []).filter((t) => selectedIds.has(t.id) && t.owner),
     [tickets, selectedIds],
@@ -2261,8 +2276,13 @@ export default function AdminManutencoesLista() {
       const enviados: string[] = [];
       const falhas: string[] = [];
       const contagem = { enviada: 0, gratuita: 0, sem_valor: 0 };
-      // Um por vez: cada envio cria cobrança, copia anexos e manda e-mail.
-      for (const item of itens) {
+      // Um por vez, com intervalo: cada envio cria cobrança, copia anexos, manda
+      // e-mail e (pelo trigger) WhatsApp. O intervalo espaça as mensagens para o
+      // mesmo proprietário e deixa a Meta ver um ritmo normal, não uma rajada.
+      setProgressoLote({ feitos: 0, total: itens.length });
+      for (const [indice, item] of itens.entries()) {
+        if (indice > 0) await new Promise((r) => setTimeout(r, INTERVALO_ENVIO_LOTE_MS));
+        setProgressoLote({ feitos: indice, total: itens.length });
         try {
           contagem[await enviarAoProprietario(item)]++;
           enviados.push(item.id);
@@ -2295,6 +2315,7 @@ export default function AdminManutencoesLista() {
     },
     onError: () => toast.error("Erro ao enviar em lote"),
     onSettled: () => {
+      setProgressoLote(null);
       setConfirmarEnvioLote(false);
       queryClient.invalidateQueries({ queryKey: ["maintenance-list-view"] });
       queryClient.invalidateQueries({ queryKey: ["pending-charges-list"] });
@@ -2898,13 +2919,16 @@ export default function AdminManutencoesLista() {
               ) : (
                 <Send className="h-4 w-4 mr-2" />
               )}
-              Enviar ao proprietário ({selecionadosParaEnviar.length})
+              {progressoLote
+                ? `Enviando ${progressoLote.feitos + 1} de ${progressoLote.total}...`
+                : `Enviar ao proprietário (${selecionadosParaEnviar.length})`}
             </Button>
           )}
           <EnvioLoteDialog
             open={confirmarEnvioLote}
             itens={selecionadosParaEnviar}
             enviando={envioLoteMutation.isPending}
+            progresso={progressoLote}
             onCancelar={() => setConfirmarEnvioLote(false)}
             onConfirmar={() => envioLoteMutation.mutate(selecionadosParaEnviar)}
           />
