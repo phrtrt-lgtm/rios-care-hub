@@ -125,7 +125,8 @@ Deno.serve(async (req) => {
   }
 
   const custoCheio = cobranca.amount_cents ?? 0;
-  const totalAPagar = custoCheio - (cobranca.management_contribution_cents ?? 0);
+  // Aporte da gestão pode passar do valor (cobrança dada de graça): a pagar é 0, nunca negativo.
+  const totalAPagar = Math.max(0, custoCheio - (cobranca.management_contribution_cents ?? 0));
 
   const chave = Deno.env.get("NOTIFICAR_KEY");
   if (!chave) {
