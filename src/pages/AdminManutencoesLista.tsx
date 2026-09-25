@@ -474,28 +474,6 @@ function EnvioLoteDialog({
   );
 }
 
-/** Linha de charges como a lista busca (ver query "pending-charges-list"). */
-type CobrancaDaLista = {
-  id: string;
-  title: string;
-  amount_cents: number;
-  management_contribution_cents: number | null;
-  service_type: string | null;
-  category: string | null;
-  created_at: string;
-  due_date: string | null;
-  status: string;
-  cost_responsible: string | null;
-  whatsapp_status: string | null;
-  whatsapp_enviado_em: string | null;
-  whatsapp_lembrete_status: string | null;
-  whatsapp_lembrete_enviado_em: string | null;
-  whatsapp_lembretes_enviados: number | null;
-  property: { id: string; name: string } | null;
-  owner: DonoWhatsapp | null;
-  ticket_id: string | null;
-};
-
 // ===== LEMBRETE DE ATRASO EM LOTE: CONFIRMAÇÃO =====
 function LembreteLoteDialog({
   open,
@@ -1842,7 +1820,7 @@ export default function AdminManutencoesLista() {
   const { data: charges } = useQuery({
     queryKey: ["pending-charges-list"],
     queryFn: async () => {
-      const { data: dataBruta, error } = await supabase
+      const { data, error } = await supabase
         .from("charges")
         .select(`
           id,
@@ -1870,10 +1848,6 @@ export default function AdminManutencoesLista() {
         .order("due_date", { ascending: true });
 
       if (error) throw error;
-      // TEMPORÁRIO: whatsapp_lembrete_* ainda não estão no types.ts gerado
-      // (o select tipado vira SelectQueryError). Remover o cast quando o Lovable
-      // regenerar os tipos.
-      const data = dataBruta as unknown as CobrancaDaLista[] | null;
 
       // Fetch attachment counts for charges (paginated to bypass 1000-row default limit)
       const chargeIds = (data || []).map(c => c.id);
