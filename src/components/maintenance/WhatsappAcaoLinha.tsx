@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Loader2, MessageCircle } from "lucide-react";
+import { AlarmClock, Loader2, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -17,6 +17,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { formatBRL } from "@/lib/format";
+import { buscarResumoAtraso, temWhatsapp, type ResumoAtraso } from "@/lib/lembreteAtraso";
 import { cn } from "@/lib/utils";
 
 export interface DonoWhatsapp {
@@ -31,19 +33,23 @@ interface Props {
    * switch: liga/desliga o WhatsApp de cobrança do proprietário (quadro
    * "Aguardando Envio" — vale para as próximas cobranças enviadas).
    * reenviar: dispara de novo o WhatsApp de uma cobrança já enviada.
+   * atraso: lembrete de atraso do proprietário (um resumo de TODAS as
+   * cobranças dele em atraso — quadro "Cobranças Vencidas").
    */
-  modo: "switch" | "reenviar";
+  modo: "switch" | "reenviar" | "atraso";
   owner: DonoWhatsapp | null | undefined;
   cobrancaId?: string;
+  /** reenviar: charges.whatsapp_*; atraso: charges.whatsapp_lembrete_* */
   whatsappStatus?: string | null;
   whatsappEnviadoEm?: string | null;
+  /** atraso: quantos lembretes já incluíram esta cobrança. */
+  lembretesEnviados?: number | null;
   /** Recarrega as listas (o switch vale para todas as linhas do proprietário). */
   onAtualizado: () => void;
   variante?: "tabela" | "card";
 }
 
-// Mesmo critério de /admin/gerenciar-usuarios: telefone com DDD.
-const temWhatsapp = (phone?: string | null) => (phone || "").replace(/\D/g, "").length >= 10;
+const dataHora = (iso: string) => format(new Date(iso), "dd/MM 'às' HH:mm", { locale: ptBR });
 
 /**
  * Controle de WhatsApp de cobrança direto na lista de manutenções, para não
@@ -56,6 +62,7 @@ export function WhatsappAcaoLinha({
   cobrancaId,
   whatsappStatus,
   whatsappEnviadoEm,
+  lembretesEnviados,
   onAtualizado,
   variante = "tabela",
 }: Props) {
@@ -64,12 +71,27 @@ export function WhatsappAcaoLinha({
   const [salvando, setSalvando] = useState(false);
   const [confirmar, setConfirmar] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  const [resumo, setResumo] = useState<ResumoAtraso | null>(null);
 
   useEffect(() => setLigado(!!owner?.notificar_whatsapp), [owner?.notificar_whatsapp]);
+
+  // Atraso: o resumo que vai na mensagem vem do banco (mesma regra da função).
+  useEffect(() => {
+    if (!confirmar || modo !== "atraso" || !owner) return;
+    let vivo = true;
+    setResumo(null);
+    buscarResumoAtraso(owner.id)
+      .then((r) => vivo && setResumo(r))
+      .catch(() => vivo && setResumo({ quantidade: 0, totalCents: 0, maisAntiga: null }));
+    return () => {
+      vivo = false;
+    };
+  }, [confirmar, modo, owner]);
 
   if (profile?.role !== "admin" || !owner) return null;
 
   const semNumero = !temWhatsapp(owner.phone);
+  const atraso = modo === "atraso";
 
   const gravarSwitch = async (valor: boolean) => {
     const { error } = await supabase.from("profiles").update({ notificar_whatsapp: valor }).eq("id", owner.id);
@@ -100,7 +122,7 @@ export function WhatsappAcaoLinha({
   };
 
   const enviar = async () => {
-    if (!cobrancaId) return;
+    if (!atraso && !cobrancaId) return;
     setEnviando(true);
     try {
       // Desativado: o envio seria recusado pela função — ativa antes.
@@ -109,11 +131,15 @@ export function WhatsappAcaoLinha({
         setLigado(true);
       }
       const { data, error } = await supabase.functions.invoke("notificar-cobranca", {
-        body: { cobranca_id: cobrancaId, reenviar: true },
+        body: atraso
+          ? { tipo: "atraso", proprietario_id: owner.id }
+          : { cobranca_id: cobrancaId, reenviar: true },
       });
       if (error) throw error;
-      if (data?.status === "enviado") toast.success(`WhatsApp enviado para ${owner.name}.`);
-      else if (data?.status === "desativado") toast.info("Este proprietário está com o WhatsApp desativado.");
+      if (data?.status === "enviado") {
+        toast.success(atraso ? `Lembrete de atraso enviado para ${owner.name}.` : `WhatsApp enviado para ${owner.name}.`);
+      } else if (data?.status === "desativado") toast.info("Este proprietário está com o WhatsApp desativado.");
+      else if (data?.status === "sem_atraso") toast.info(`${owner.name} não tem cobrança em atraso com saldo a pagar.`);
       else toast.error(`Não foi possível enviar: ${data?.erro || "erro desconhecido"}`);
     } catch (e) {
       toast.error(`Não foi possível enviar o WhatsApp: ${e instanceof Error ? e.message : String(e)}`);
@@ -169,15 +195,24 @@ export function WhatsappAcaoLinha({
       : whatsappStatus === "falhou"
         ? "text-destructive"
         : "text-muted-foreground";
-  const textoStatus =
-    whatsappStatus === "enviado"
-      ? `Enviado${whatsappEnviadoEm ? ` em ${format(new Date(whatsappEnviadoEm), "dd/MM 'às' HH:mm", { locale: ptBR })}` : ""}`
+  const textoStatus = atraso
+    ? whatsappStatus === "enviado"
+      ? `${lembretesEnviados ?? 1} ${(lembretesEnviados ?? 1) === 1 ? "lembrete enviado" : "lembretes enviados"}${whatsappEnviadoEm ? `, o último em ${dataHora(whatsappEnviadoEm)}` : ""}`
+      : whatsappStatus === "falhou"
+        ? "O último lembrete falhou"
+        : whatsappStatus === "desativado"
+          ? "Lembrete não enviado: WhatsApp estava desativado"
+          : "Nenhum lembrete de atraso enviado"
+    : whatsappStatus === "enviado"
+      ? `Enviado${whatsappEnviadoEm ? ` em ${dataHora(whatsappEnviadoEm)}` : ""}`
       : whatsappStatus === "falhou"
         ? "O último envio falhou"
         : whatsappStatus === "desativado"
           ? "Não enviado: WhatsApp estava desativado"
           : "Ainda não enviado por WhatsApp";
   const jaEnviado = whatsappStatus === "enviado";
+  const Icone = atraso ? AlarmClock : MessageCircle;
+  const rotuloAcao = atraso ? "lembrete de atraso" : "WhatsApp da cobrança";
 
   return (
     <>
@@ -196,17 +231,21 @@ export function WhatsappAcaoLinha({
                 setConfirmar(true);
               }}
               disabled={semNumero || enviando}
-              aria-label={`${jaEnviado ? "Reenviar" : "Enviar"} WhatsApp da cobrança para ${owner.name}`}
+              aria-label={`${jaEnviado ? "Reenviar" : "Enviar"} ${rotuloAcao} para ${owner.name}`}
             >
               {enviando ? (
                 <Loader2 className={cn("animate-spin", variante === "card" ? "h-4 w-4" : "h-3.5 w-3.5")} />
               ) : (
-                <MessageCircle className={variante === "card" ? "h-4 w-4" : "h-3.5 w-3.5"} />
+                <Icone className={variante === "card" ? "h-4 w-4" : "h-3.5 w-3.5"} />
               )}
             </button>
           </TooltipTrigger>
           <TooltipContent side="left" className="max-w-xs">
-            <p>{semNumero ? `${owner.name} não tem WhatsApp cadastrado` : `WhatsApp: ${textoStatus}. Clique para ${jaEnviado ? "reenviar" : "enviar"}.`}</p>
+            <p>
+              {semNumero
+                ? `${owner.name} não tem WhatsApp cadastrado`
+                : `${atraso ? "Lembrete de atraso" : "WhatsApp"}: ${textoStatus}. Clique para ${jaEnviado ? "reenviar" : "enviar"}.`}
+            </p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -214,21 +253,41 @@ export function WhatsappAcaoLinha({
       <AlertDialog open={confirmar} onOpenChange={(o) => !enviando && setConfirmar(o)}>
         <AlertDialogContent onClick={(e) => e.stopPropagation()}>
           <AlertDialogHeader>
-            <AlertDialogTitle>{jaEnviado ? "Reenviar" : "Enviar"} WhatsApp da cobrança?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {owner.name} recebe a mensagem de cobrança no WhatsApp {owner.phone}. {textoStatus}.
-              {!ligado && (
-                <span className="mt-2 block font-medium text-foreground">
-                  O WhatsApp de cobrança deste proprietário está desligado. Ao enviar, ele passa a ficar ligado
-                  também para as próximas cobranças.
-                </span>
-              )}
+            <AlertDialogTitle>
+              {atraso ? "Enviar lembrete de atraso?" : `${jaEnviado ? "Reenviar" : "Enviar"} WhatsApp da cobrança?`}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                {atraso ? (
+                  <p>
+                    {owner.name} recebe no WhatsApp {owner.phone} <strong>uma mensagem só</strong>, com o resumo de
+                    todas as cobranças dele em atraso
+                    {resumo === null
+                      ? "..."
+                      : resumo.quantidade > 0
+                        ? `: ${resumo.quantidade} ${resumo.quantidade === 1 ? "cobrança" : "cobranças"}, total de ${formatBRL(resumo.totalCents)}${resumo.maisAntiga ? `, a mais antiga vencida em ${format(new Date(`${resumo.maisAntiga}T12:00:00`), "dd/MM/yyyy")}` : ""}.`
+                        : ". Hoje não há nenhuma com saldo a pagar — nada será enviado."}{" "}
+                    A mensagem avisa que o valor pode ser debitado de uma próxima reserva.
+                  </p>
+                ) : (
+                  <p>
+                    {owner.name} recebe a mensagem de cobrança no WhatsApp {owner.phone}.
+                  </p>
+                )}
+                <p>{textoStatus}.</p>
+                {!ligado && (
+                  <p className="font-medium text-foreground">
+                    O WhatsApp de cobrança deste proprietário está desligado. Ao enviar, ele passa a ficar ligado
+                    também para as próximas cobranças.
+                  </p>
+                )}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={enviando}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              disabled={enviando}
+              disabled={enviando || (atraso && (resumo === null || resumo.quantidade === 0))}
               onClick={(e) => {
                 e.preventDefault();
                 enviar();

@@ -29,7 +29,7 @@ import { CreateMaintenanceFromInspectionDialog } from "@/components/CreateMainte
 import EditInspectionDialog from "@/components/EditInspectionDialog";
 import { EditMaintenanceDialog } from "@/components/EditMaintenanceDialog";
 import { ReserveDebitsTable } from "@/components/ReserveDebitsTable";
-import { Pencil, Send } from "lucide-react";
+import { AlarmClock, Pencil, Send } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,6 +50,8 @@ import { MobileMaintenanceList } from "@/components/maintenance/MobileMaintenanc
 import { BOARD_OPTIONS, boardChange, deriveBoard, hasInfiltracao, type Board } from "@/lib/maintenanceBoard";
 import { estaVencida } from "@/lib/vencimento";
 import { WhatsappAcaoLinha, type DonoWhatsapp } from "@/components/maintenance/WhatsappAcaoLinha";
+import { LembreteAtrasoConfig } from "@/components/maintenance/LembreteAtrasoConfig";
+import { enviarLembreteAtraso, temWhatsapp } from "@/lib/lembreteAtraso";
 // ===== TYPES =====
 type TicketStatus = "novo" | "em_analise" | "aguardando_info" | "em_execucao" | "concluido" | "cancelado";
 
@@ -69,6 +71,10 @@ interface MaintenanceItem {
   /** Só cobrança: resultado do último WhatsApp (charges.whatsapp_*). */
   whatsapp_status?: string | null;
   whatsapp_enviado_em?: string | null;
+  /** Só cobrança vencida: último lembrete de atraso (charges.whatsapp_lembrete_*). */
+  whatsapp_lembrete_status?: string | null;
+  whatsapp_lembrete_enviado_em?: string | null;
+  whatsapp_lembretes_enviados?: number | null;
   // Custom fields for list view
   amount_cents?: number;
   management_contribution_cents?: number;
@@ -468,6 +474,97 @@ function EnvioLoteDialog({
   );
 }
 
+/** Linha de charges como a lista busca (ver query "pending-charges-list"). */
+type CobrancaDaLista = {
+  id: string;
+  title: string;
+  amount_cents: number;
+  management_contribution_cents: number | null;
+  service_type: string | null;
+  category: string | null;
+  created_at: string;
+  due_date: string | null;
+  status: string;
+  cost_responsible: string | null;
+  whatsapp_status: string | null;
+  whatsapp_enviado_em: string | null;
+  whatsapp_lembrete_status: string | null;
+  whatsapp_lembrete_enviado_em: string | null;
+  whatsapp_lembretes_enviados: number | null;
+  property: { id: string; name: string } | null;
+  owner: DonoWhatsapp | null;
+  ticket_id: string | null;
+};
+
+// ===== LEMBRETE DE ATRASO EM LOTE: CONFIRMAÇÃO =====
+function LembreteLoteDialog({
+  open,
+  donos,
+  enviando,
+  onCancelar,
+  onConfirmar,
+}: {
+  open: boolean;
+  donos: { owner: DonoWhatsapp; selecionadas: number }[];
+  enviando: boolean;
+  onCancelar: () => void;
+  onConfirmar: () => void;
+}) {
+  const apto = (d: DonoWhatsapp) => !!d.notificar_whatsapp && temWhatsapp(d.phone);
+  const aptos = donos.filter((d) => apto(d.owner));
+  return (
+    <AlertDialog open={open} onOpenChange={(o) => !o && !enviando && onCancelar()}>
+      <AlertDialogContent className="max-w-xl">
+        <AlertDialogHeader>
+          <AlertDialogTitle>
+            Enviar lembrete de atraso para {aptos.length} {aptos.length === 1 ? "proprietário" : "proprietários"}?
+          </AlertDialogTitle>
+          <AlertDialogDescription asChild>
+            <div className="space-y-3 text-sm text-muted-foreground">
+              <p>
+                Cada proprietário recebe <strong>uma mensagem só</strong> no WhatsApp, com o resumo de todas as
+                cobranças dele em atraso (quantidade, total e vencimento mais antigo) e o aviso de que o valor pode ser
+                debitado de uma próxima reserva.
+                {aptos.length > 1 &&
+                  ` Os envios saem um a cada ${INTERVALO_ENVIO_LOTE_MS / 1000} segundos — deixe esta aba aberta até terminar.`}
+              </p>
+              <div className="max-h-64 overflow-y-auto rounded-md border">
+                {donos.map(({ owner, selecionadas }) => (
+                  <div
+                    key={owner.id}
+                    className="flex items-center justify-between gap-3 border-b px-3 py-1.5 last:border-b-0"
+                  >
+                    <span className="truncate font-medium text-foreground">{owner.name}</span>
+                    <span className={cn("shrink-0 text-xs", apto(owner) ? "text-muted-foreground" : "text-warning")}>
+                      {!temWhatsapp(owner.phone)
+                        ? "sem telefone — fica de fora"
+                        : !owner.notificar_whatsapp
+                          ? "WhatsApp desligado — fica de fora"
+                          : `${selecionadas} ${selecionadas === 1 ? "marcada" : "marcadas"}`}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={enviando}>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            disabled={enviando || aptos.length === 0}
+            onClick={(e) => {
+              e.preventDefault();
+              onConfirmar();
+            }}
+          >
+            {enviando ? "Enviando..." : `Enviar ${aptos.length}`}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 // ===== GROUP ROW COMPONENT =====
 interface GroupRowProps {
   group: typeof GROUPS[0];
@@ -830,7 +927,17 @@ function GroupRow({
                 {group.id === "concluidas" && (
                   <WhatsappAcaoLinha modo="switch" owner={item.owner} onAtualizado={recarregarWhatsapp} />
                 )}
-                {isCharge && (
+                {isCharge && group.id === "cobrancas_vencidas" && (
+                  <WhatsappAcaoLinha
+                    modo="atraso"
+                    owner={item.owner}
+                    whatsappStatus={item.whatsapp_lembrete_status}
+                    whatsappEnviadoEm={item.whatsapp_lembrete_enviado_em}
+                    lembretesEnviados={item.whatsapp_lembretes_enviados}
+                    onAtualizado={recarregarWhatsapp}
+                  />
+                )}
+                {isCharge && group.id !== "cobrancas_vencidas" && (
                   <WhatsappAcaoLinha
                     modo="reenviar"
                     owner={item.owner}
@@ -1366,7 +1473,7 @@ export default function AdminManutencoesLista() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { open: detailSheetOpen, entityId: detailEntityId, entityType: detailEntityType, openSheet, closeSheet } = useDetailSheet();
   const [search, setSearch] = useState("");
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
@@ -1735,7 +1842,7 @@ export default function AdminManutencoesLista() {
   const { data: charges } = useQuery({
     queryKey: ["pending-charges-list"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: dataBruta, error } = await supabase
         .from("charges")
         .select(`
           id,
@@ -1750,6 +1857,9 @@ export default function AdminManutencoesLista() {
           cost_responsible,
           whatsapp_status,
           whatsapp_enviado_em,
+          whatsapp_lembrete_status,
+          whatsapp_lembrete_enviado_em,
+          whatsapp_lembretes_enviados,
           property:properties(id, name),
           owner:profiles!charges_owner_id_fkey(id, name, notificar_whatsapp, phone),
           ticket_id
@@ -1760,6 +1870,10 @@ export default function AdminManutencoesLista() {
         .order("due_date", { ascending: true });
 
       if (error) throw error;
+      // TEMPORÁRIO: whatsapp_lembrete_* ainda não estão no types.ts gerado
+      // (o select tipado vira SelectQueryError). Remover o cast quando o Lovable
+      // regenerar os tipos.
+      const data = dataBruta as unknown as CobrancaDaLista[] | null;
 
       // Fetch attachment counts for charges (paginated to bypass 1000-row default limit)
       const chargeIds = (data || []).map(c => c.id);
@@ -2511,6 +2625,9 @@ export default function AdminManutencoesLista() {
       itemType: "charge" as const,
       whatsapp_status: c.whatsapp_status ?? null,
       whatsapp_enviado_em: c.whatsapp_enviado_em ?? null,
+      whatsapp_lembrete_status: c.whatsapp_lembrete_status ?? null,
+      whatsapp_lembrete_enviado_em: c.whatsapp_lembrete_enviado_em ?? null,
+      whatsapp_lembretes_enviados: c.whatsapp_lembretes_enviados ?? 0,
     });
 
     const filteredCharges = (charges || []).filter(c =>
@@ -2536,6 +2653,53 @@ export default function AdminManutencoesLista() {
       cobrancas: cobrancasPendentes,
     };
   }, [tickets, charges, debouncedSearch]);
+
+  // ===== Lembrete de atraso em lote =====
+  // Cobranças vencidas marcadas -> UM lembrete por proprietário, com o resumo
+  // de todas as cobranças dele em atraso (não só as marcadas).
+  const [confirmarLembreteLote, setConfirmarLembreteLote] = useState(false);
+  const [progressoLembrete, setProgressoLembrete] = useState<{ feitos: number; total: number } | null>(null);
+  const donosParaLembrete = useMemo(() => {
+    const porDono = new Map<string, { owner: DonoWhatsapp; selecionadas: number }>();
+    for (const c of groupedItems.cobrancas_vencidas || []) {
+      if (!selectedIds.has(c.id) || !c.owner) continue;
+      const atual = porDono.get(c.owner.id);
+      if (atual) atual.selecionadas++;
+      else porDono.set(c.owner.id, { owner: c.owner, selecionadas: 1 });
+    }
+    return [...porDono.values()];
+  }, [groupedItems, selectedIds]);
+
+  const lembreteLoteMutation = useMutation({
+    mutationFn: async (donos: DonoWhatsapp[]) => {
+      const aptos = donos.filter((d) => d.notificar_whatsapp && temWhatsapp(d.phone));
+      let enviados = 0;
+      const falhas: string[] = [];
+      setProgressoLembrete({ feitos: 0, total: aptos.length });
+      for (const [indice, dono] of aptos.entries()) {
+        if (indice > 0) await new Promise((r) => setTimeout(r, INTERVALO_ENVIO_LOTE_MS));
+        setProgressoLembrete({ feitos: indice, total: aptos.length });
+        const r = await enviarLembreteAtraso(dono.id);
+        if (r.status === "enviado") enviados++;
+        else if (r.status !== "sem_atraso") falhas.push(`${dono.name}: ${r.erro || r.status}`);
+      }
+      return { enviados, falhas, pulados: donos.length - aptos.length };
+    },
+    onSuccess: ({ enviados, falhas, pulados }) => {
+      setSelectedIds(new Set());
+      if (enviados > 0) {
+        toast.success(`Lembrete de atraso enviado para ${enviados} ${enviados === 1 ? "proprietário" : "proprietários"}.`);
+      }
+      if (pulados > 0) toast.info(`${pulados} ficaram de fora: WhatsApp desligado ou sem telefone.`);
+      if (falhas.length > 0) toast.error(`Não foi possível enviar ${falhas.length}: ${falhas.join("; ")}`, { duration: 10000 });
+    },
+    onError: () => toast.error("Erro ao enviar os lembretes"),
+    onSettled: () => {
+      setProgressoLembrete(null);
+      setConfirmarLembreteLote(false);
+      queryClient.invalidateQueries({ queryKey: ["pending-charges-list"] });
+    },
+  });
 
   // Filter inspections by search and split by type
   const { cleanerInspections, teamInspections, allInspectionsList } = useMemo(() => {
@@ -2924,6 +3088,32 @@ export default function AdminManutencoesLista() {
                 : `Enviar ao proprietário (${selecionadosParaEnviar.length})`}
             </Button>
           )}
+          {profile?.role === "admin" && donosParaLembrete.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={() => setConfirmarLembreteLote(true)}
+              disabled={lembreteLoteMutation.isPending}
+            >
+              {lembreteLoteMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <AlarmClock className="h-4 w-4 mr-2" />
+              )}
+              {progressoLembrete
+                ? `Lembrete ${progressoLembrete.feitos + 1} de ${progressoLembrete.total}...`
+                : `Lembrete de atraso (${donosParaLembrete.length} ${donosParaLembrete.length === 1 ? "proprietário" : "proprietários"})`}
+            </Button>
+          )}
+          <div className="ml-auto">
+            <LembreteAtrasoConfig />
+          </div>
+          <LembreteLoteDialog
+            open={confirmarLembreteLote}
+            donos={donosParaLembrete}
+            enviando={lembreteLoteMutation.isPending}
+            onCancelar={() => setConfirmarLembreteLote(false)}
+            onConfirmar={() => lembreteLoteMutation.mutate(donosParaLembrete.map((d) => d.owner))}
+          />
           <EnvioLoteDialog
             open={confirmarEnvioLote}
             itens={selecionadosParaEnviar}

@@ -49,6 +49,9 @@ export interface MobileMaintenanceItem {
   owner?: DonoWhatsapp | null;
   whatsapp_status?: string | null;
   whatsapp_enviado_em?: string | null;
+  whatsapp_lembrete_status?: string | null;
+  whatsapp_lembrete_enviado_em?: string | null;
+  whatsapp_lembretes_enviados?: number | null;
 }
 
 interface MobileGroupConfig {
@@ -497,7 +500,18 @@ export function MobileMaintenanceList({
                                   onAtualizado={() => onWhatsappAtualizado?.()}
                                 />
                               )}
-                              {isCharge && (
+                              {isCharge && group.id === "cobrancas_vencidas" && (
+                                <WhatsappAcaoLinha
+                                  modo="atraso"
+                                  variante="card"
+                                  owner={item.owner}
+                                  whatsappStatus={item.whatsapp_lembrete_status}
+                                  whatsappEnviadoEm={item.whatsapp_lembrete_enviado_em}
+                                  lembretesEnviados={item.whatsapp_lembretes_enviados}
+                                  onAtualizado={() => onWhatsappAtualizado?.()}
+                                />
+                              )}
+                              {isCharge && group.id !== "cobrancas_vencidas" && (
                                 <WhatsappAcaoLinha
                                   modo="reenviar"
                                   variante="card"

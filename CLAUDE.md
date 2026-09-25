@@ -121,6 +121,15 @@ Switch `profiles.notificar_whatsapp` em `/admin/gerenciar-usuarios` (só proprie
 
 O trigger escuta `status`, `management_contribution_cents` e `amount_cents`. Isso é necessário porque igualar o aporte só altera o aporte, e quem troca o status é o BEFORE `auto_pay_full_contribution_charges`. Migration: `20260925120000_whatsapp_cobranca_perdoada.sql`. Chama `notificar-cobranca` via `pg_net` com token do Vault (`notificar_cobranca_token`, conferido por `verificar_token_interno`, só service role). A function chama a função central de WhatsApp de outro projeto (`gxsdefecwamziirfbzlk…/notificar`, header `x-rios-key` = secret `NOTIFICAR_KEY`) e grava `charges.whatsapp_status` / `_enviado_em` / `_message_id` / `_erro`. Nunca bloqueia a cobrança. Migration: `supabase/migrations/20260923120000_notificar_cobranca_whatsapp.sql`.
 
+**Lembrete de atraso por WhatsApp (desde 2026-09-25).** Usa o modelo `cobranca_atraso_proprietario`, que precisa estar aprovado no Meta.
+
+- **Um por proprietário:** cada mensagem resume todas as cobranças dele em atraso (quantidade, total e vencimento mais antigo). Nunca uma mensagem por cobrança: em 25/09 a Claudia tinha 24 vencidas.
+- **Onde está a regra:** a definição única de "em atraso" é a função SQL `cobrancas_em_atraso()`. Ela deixa de fora contestada, comprovante em análise, débito em reserva e cobrança sem saldo.
+- **Envio:** a `notificar-cobranca` recebe `{tipo:"atraso", proprietario_id}` (enviado pelo admin, pelo botão ⏰ em "Cobranças Vencidas" ou pelo lote da lista) e `{lote_atraso:true}` (enviado pelo cron).
+- **Automático:** o cron `whatsapp-lembrete-atraso` roda todo dia às 10h e chama `disparar_lembretes_atraso_whatsapp()`. A configuração fica em `whatsapp_lembrete_config`, que nasce **desligada** e só admin altera, pelo botão "Lembrete de atraso" na lista. Ela define ativo, intervalo, máximo por cobrança e proprietários por dia.
+- **Registro:** o resultado de cada lembrete fica em `charges.whatsapp_lembrete_*`.
+- Migration: `20260925150000_whatsapp_lembrete_atraso.sql`.
+
 > ⚠️ Desde 2026-09-23 `auto_pay_full_contribution_charges` **ignora rascunhos**: aporte ≥ valor só auto-paga quando a cobrança sai do rascunho. Antes auto-pagava durante a edição.
 
 ### 3.3 Vistorias
