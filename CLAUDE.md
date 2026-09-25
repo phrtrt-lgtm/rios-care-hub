@@ -87,6 +87,14 @@ Fluxo essencial vs estrutural: item `essential` pode ser executado de imediato; 
 
 **Quadros da lista da equipe** (`/admin/manutencoes-lista`, desde 2026-09-22): Em Progresso · **Infiltração** · **Stand-by** · Aguardando Envio · Cobranças Vencidas · Cobranças Pendentes. "Quadro" não é coluna — é derivado de dois campos, porque um item pode ser as duas coisas: **Infiltração** = label de serviço contém `infiltracao`; **Stand-by** = `tickets.on_hold` (coluna criada em 2026-09-22, invisível ao proprietário; já no `types.ts`). Infiltração vence Stand-by. Regra e seletor em `src/lib/maintenanceBoard.ts`; o campo virtual `board` é traduzido em `handleUpdateItem` para `on_hold` + `service_type`.
 
+**Enviar ao proprietário** (desde 2026-09-25) está todo em `enviarAoProprietario()`, dentro de `AdminManutencoesLista.tsx`. A função faz, em ordem:
+1. cria a cobrança como `sent`, ou reaproveita a cobrança aberta;
+2. copia os anexos;
+3. conclui o ticket;
+4. manda o e-mail. O WhatsApp sai pelo trigger.
+
+Dois caminhos usam essa mesma função: o status "Enviar ao Proprietário" de uma linha e o botão em lote "Enviar ao proprietário (N)", que aparece com a seleção (a caixa no cabeçalho marca o grupo inteiro). O lote envia um item por vez, pede confirmação antes e, se um falhar, os outros seguem. **Ao mudar o envio, mude na função**, não em um dos dois caminhos. A versão de celular ainda não tem seleção.
+
 ### 3.2 Cobranças
 `charges`, `charge_payments`, `charge_messages`, `charge_attachments`, `recurring_charges`, `recurring_charge_runs`, `owner_credits`, `owner_credit_applications`.
 
