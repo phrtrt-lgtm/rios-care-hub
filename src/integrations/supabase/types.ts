@@ -855,6 +855,10 @@ export type Database = {
           updated_at: string
           whatsapp_enviado_em: string | null
           whatsapp_erro: string | null
+          whatsapp_lembrete_enviado_em: string | null
+          whatsapp_lembrete_erro: string | null
+          whatsapp_lembrete_status: string | null
+          whatsapp_lembretes_enviados: number
           whatsapp_message_id: string | null
           whatsapp_status: string | null
         }
@@ -907,6 +911,10 @@ export type Database = {
           updated_at?: string
           whatsapp_enviado_em?: string | null
           whatsapp_erro?: string | null
+          whatsapp_lembrete_enviado_em?: string | null
+          whatsapp_lembrete_erro?: string | null
+          whatsapp_lembrete_status?: string | null
+          whatsapp_lembretes_enviados?: number
           whatsapp_message_id?: string | null
           whatsapp_status?: string | null
         }
@@ -959,6 +967,10 @@ export type Database = {
           updated_at?: string
           whatsapp_enviado_em?: string | null
           whatsapp_erro?: string | null
+          whatsapp_lembrete_enviado_em?: string | null
+          whatsapp_lembrete_erro?: string | null
+          whatsapp_lembrete_status?: string | null
+          whatsapp_lembretes_enviados?: number
           whatsapp_message_id?: string | null
           whatsapp_status?: string | null
         }
@@ -3784,6 +3796,36 @@ export type Database = {
           },
         ]
       }
+      whatsapp_lembrete_config: {
+        Row: {
+          ativo: boolean
+          atualizado_em: string
+          atualizado_por: string | null
+          id: boolean
+          intervalo_dias: number
+          max_lembretes: number
+          max_por_dia: number
+        }
+        Insert: {
+          ativo?: boolean
+          atualizado_em?: string
+          atualizado_por?: string | null
+          id?: boolean
+          intervalo_dias?: number
+          max_lembretes?: number
+          max_por_dia?: number
+        }
+        Update: {
+          ativo?: boolean
+          atualizado_em?: string
+          atualizado_por?: string | null
+          id?: boolean
+          intervalo_dias?: number
+          max_lembretes?: number
+          max_por_dia?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -3796,6 +3838,17 @@ export type Database = {
         }
         Returns: boolean
       }
+      cobrancas_em_atraso: {
+        Args: { p_owner?: string }
+        Returns: {
+          a_pagar_cents: number
+          due_date: string
+          id: string
+          owner_id: string
+          whatsapp_lembrete_enviado_em: string
+          whatsapp_lembretes_enviados: number
+        }[]
+      }
       delete_financial_report: {
         Args: {
           p_actor_name: string
@@ -3804,6 +3857,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      disparar_lembretes_atraso_whatsapp: { Args: never; Returns: string }
       find_property_by_name_unaccent: {
         Args: { _name: string }
         Returns: {
@@ -3853,6 +3907,12 @@ export type Database = {
       invoke_charge_cron: { Args: never; Returns: undefined }
       is_admin_or_maintenance: { Args: { _user_id: string }; Returns: boolean }
       is_team_member: { Args: { _user_id: string }; Returns: boolean }
+      proprietarios_para_lembrete_atraso: {
+        Args: { p_limite?: number }
+        Returns: {
+          owner_id: string
+        }[]
+      }
       set_session_context: {
         Args: { p_owner_id: string; p_role: string }
         Returns: undefined
