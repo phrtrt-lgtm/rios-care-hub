@@ -31,6 +31,7 @@ import { formatBRL } from "@/lib/format";
 import { parseBRNumber } from "@/lib/parseBRNumber";
 import { QuickAttachUploader } from "@/components/maintenance/QuickAttachUploader";
 import { BOARD_OPTIONS, deriveBoard, hasInfiltracao } from "@/lib/maintenanceBoard";
+import { WhatsappAcaoLinha, type DonoWhatsapp } from "@/components/maintenance/WhatsappAcaoLinha";
 
 export interface MobileMaintenanceItem {
   id: string;
@@ -45,6 +46,9 @@ export interface MobileMaintenanceItem {
   itemType?: "ticket" | "charge";
   /** Stand-by na lista (tickets.on_hold). Só manutenção. */
   on_hold?: boolean;
+  owner?: DonoWhatsapp | null;
+  whatsapp_status?: string | null;
+  whatsapp_enviado_em?: string | null;
 }
 
 interface MobileGroupConfig {
@@ -76,6 +80,8 @@ interface Props {
   onDelete: (item: MobileMaintenanceItem, isCharge: boolean) => void;
   onUpdateItem?: (id: string, field: string, value: any, isCharge: boolean) => void;
   onAttachmentAdded?: () => void;
+  /** Depois de ligar/desligar ou enviar WhatsApp — recarrega as listas. */
+  onWhatsappAtualizado?: () => void;
   onBack: () => void;
   onNew: () => void;
 }
@@ -163,6 +169,7 @@ export function MobileMaintenanceList({
   onOpenChat,
   onOpenAttachments,
   onEdit,
+  onWhatsappAtualizado,
   onDelete,
   onUpdateItem,
   onAttachmentAdded,
@@ -482,6 +489,25 @@ export function MobileMaintenanceList({
                                   </span>
                                 )}
                               </button>
+                              {group.id === "concluidas" && (
+                                <WhatsappAcaoLinha
+                                  modo="switch"
+                                  variante="card"
+                                  owner={item.owner}
+                                  onAtualizado={() => onWhatsappAtualizado?.()}
+                                />
+                              )}
+                              {isCharge && (
+                                <WhatsappAcaoLinha
+                                  modo="reenviar"
+                                  variante="card"
+                                  owner={item.owner}
+                                  cobrancaId={item.id}
+                                  whatsappStatus={item.whatsapp_status}
+                                  whatsappEnviadoEm={item.whatsapp_enviado_em}
+                                  onAtualizado={() => onWhatsappAtualizado?.()}
+                                />
+                              )}
                               <button
                                 type="button"
                                 className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-primary/10 hover:text-primary text-muted-foreground active:scale-95 transition-all"

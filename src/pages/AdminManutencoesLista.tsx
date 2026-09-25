@@ -39,6 +39,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileMaintenanceList } from "@/components/maintenance/MobileMaintenanceList";
 import { BOARD_OPTIONS, boardChange, deriveBoard, hasInfiltracao, type Board } from "@/lib/maintenanceBoard";
 import { estaVencida } from "@/lib/vencimento";
+import { WhatsappAcaoLinha, type DonoWhatsapp } from "@/components/maintenance/WhatsappAcaoLinha";
 // ===== TYPES =====
 type TicketStatus = "novo" | "em_analise" | "aguardando_info" | "em_execucao" | "concluido" | "cancelado";
 
@@ -54,7 +55,10 @@ interface MaintenanceItem {
   scheduled_at: string | null;
   created_at: string;
   property: { id: string; name: string } | null;
-  owner: { id: string; name: string } | null;
+  owner: DonoWhatsapp | null;
+  /** Só cobrança: resultado do último WhatsApp (charges.whatsapp_*). */
+  whatsapp_status?: string | null;
+  whatsapp_enviado_em?: string | null;
   // Custom fields for list view
   amount_cents?: number;
   management_contribution_cents?: number;
@@ -400,6 +404,12 @@ function GroupRow({
   onDelete
 }: GroupRowProps) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  // O switch de WhatsApp vale para o proprietário inteiro: recarrega as duas listas.
+  const recarregarWhatsapp = () => {
+    queryClient.invalidateQueries({ queryKey: ["maintenance-list-view"] });
+    queryClient.invalidateQueries({ queryKey: ["pending-charges-list"] });
+  };
   // Sort items within the group
   const sortedItems = useMemo(() => {
     if (!sortField || !sortDirection) return items;
@@ -689,9 +699,22 @@ function GroupRow({
               )}
             </td>
 
-            {/* Editar / Excluir */}
-            <td className="p-0 w-[76px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-center gap-1 px-1 py-2">
+            {/* WhatsApp / Editar / Excluir */}
+            <td className="p-0 w-[108px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-end gap-1 px-1 py-2">
+                {group.id === "concluidas" && (
+                  <WhatsappAcaoLinha modo="switch" owner={item.owner} onAtualizado={recarregarWhatsapp} />
+                )}
+                {isCharge && (
+                  <WhatsappAcaoLinha
+                    modo="reenviar"
+                    owner={item.owner}
+                    cobrancaId={item.id}
+                    whatsappStatus={item.whatsapp_status}
+                    whatsappEnviadoEm={item.whatsapp_enviado_em}
+                    onAtualizado={recarregarWhatsapp}
+                  />
+                )}
                 <button
                   type="button"
                   className="p-1.5 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
@@ -1489,7 +1512,7 @@ export default function AdminManutencoesLista() {
           charge_draft_category,
           charge_draft_title,
           property:properties(id, name),
-          owner:profiles!tickets_owner_id_fkey(id, name)
+          owner:profiles!tickets_owner_id_fkey(id, name, notificar_whatsapp, phone)
         `)
         .eq("ticket_type", "manutencao")
         .neq("status", "cancelado")
@@ -1600,8 +1623,10 @@ export default function AdminManutencoesLista() {
           due_date,
           status,
           cost_responsible,
+          whatsapp_status,
+          whatsapp_enviado_em,
           property:properties(id, name),
-          owner:profiles!charges_owner_id_fkey(id, name),
+          owner:profiles!charges_owner_id_fkey(id, name, notificar_whatsapp, phone),
           ticket_id
         `)
         .in("status", ["pendente", "pending", "sent", "contested", "overdue", "debit_notice_sent", "under_review"])
@@ -2273,6 +2298,8 @@ export default function AdminManutencoesLista() {
       list_status: "enviar_proprietario" as ListStatus,
       attachments_count: c.attachments_count || 0,
       itemType: "charge" as const,
+      whatsapp_status: c.whatsapp_status ?? null,
+      whatsapp_enviado_em: c.whatsapp_enviado_em ?? null,
     });
 
     const filteredCharges = (charges || []).filter(c =>
@@ -2526,6 +2553,10 @@ export default function AdminManutencoesLista() {
             queryClient.invalidateQueries({ queryKey: ["maintenance-list-view"] });
             queryClient.invalidateQueries({ queryKey: ["pending-charges-list"] });
           }}
+          onWhatsappAtualizado={() => {
+            queryClient.invalidateQueries({ queryKey: ["maintenance-list-view"] });
+            queryClient.invalidateQueries({ queryKey: ["pending-charges-list"] });
+          }}
           onBack={() => goBack(navigate, "/painel")}
           onNew={() => navigate("/admin/nova-manutencao")}
         />
@@ -2710,7 +2741,7 @@ export default function AdminManutencoesLista() {
                   <SortableHeader label="Label" field="service_type" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[120px]" />
                   <th className="text-center px-1 py-2 font-medium w-[120px]">Quadro</th>
                   <SortableHeader label="Status" field="list_status" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[140px]" />
-                  <th className="text-center px-1 py-2 font-medium w-[76px]">Ações</th>
+                  <th className="text-center px-1 py-2 font-medium w-[108px]">Ações</th>
                 </tr>
               </thead>
               <tbody>
