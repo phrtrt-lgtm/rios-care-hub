@@ -29,7 +29,17 @@ import { CreateMaintenanceFromInspectionDialog } from "@/components/CreateMainte
 import EditInspectionDialog from "@/components/EditInspectionDialog";
 import { EditMaintenanceDialog } from "@/components/EditMaintenanceDialog";
 import { ReserveDebitsTable } from "@/components/ReserveDebitsTable";
-import { Pencil } from "lucide-react";
+import { Pencil, Send } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useDetailSheet } from "@/hooks/useDetailSheet";
 import { DetailSheet } from "@/components/detail-sheet/DetailSheet";
 import { getRowHandlers } from "@/lib/row-interaction";
@@ -361,6 +371,89 @@ function EditableCell({ value, type, options, onSave, className, placeholder }: 
   );
 }
 
+// ===== ENVIO EM LOTE: CONFIRMAÇÃO =====
+function EnvioLoteDialog({
+  open,
+  itens,
+  enviando,
+  onCancelar,
+  onConfirmar,
+}: {
+  open: boolean;
+  itens: MaintenanceItem[];
+  enviando: boolean;
+  onCancelar: () => void;
+  onConfirmar: () => void;
+}) {
+  const aPagar = (i: MaintenanceItem) =>
+    Math.max(0, (i.amount_cents ?? 0) - (i.management_contribution_cents ?? 0));
+  const gratuita = (i: MaintenanceItem) =>
+    (i.amount_cents ?? 0) > 0 && (i.management_contribution_cents ?? 0) >= (i.amount_cents ?? 0);
+  const semValor = itens.filter((i) => (i.amount_cents ?? 0) === 0).length;
+  const gratuitas = itens.filter(gratuita).length;
+  const abertas = itens.filter((i) => i.status !== "concluido").length;
+  const proprietarios = new Set(itens.map((i) => i.owner?.id)).size;
+  const total = itens.reduce((soma, i) => soma + aPagar(i), 0);
+
+  return (
+    <AlertDialog open={open} onOpenChange={(o) => !o && !enviando && onCancelar()}>
+      <AlertDialogContent className="max-w-2xl">
+        <AlertDialogHeader>
+          <AlertDialogTitle>
+            Enviar {itens.length} {itens.length === 1 ? "manutenção" : "manutenções"} ao proprietário?
+          </AlertDialogTitle>
+          <AlertDialogDescription asChild>
+            <div className="space-y-3 text-sm text-muted-foreground">
+              <p>
+                {proprietarios} {proprietarios === 1 ? "proprietário recebe" : "proprietários recebem"} a cobrança por
+                e-mail (e por WhatsApp, quem tiver ligado). Total a pagar: {formatBRL(total)}. Cada manutenção é
+                concluída e vira cobrança, igual ao envio de uma por uma.
+              </p>
+              {(semValor > 0 || gratuitas > 0 || abertas > 0) && (
+                <ul className="list-disc space-y-1 pl-5 text-foreground">
+                  {gratuitas > 0 && <li>{gratuitas} vão de graça: o aporte da gestão cobre 100%.</li>}
+                  {semValor > 0 && <li className="text-warning">{semValor} estão sem valor preenchido.</li>}
+                  {abertas > 0 && (
+                    <li className="text-warning">{abertas} ainda não estão como feitas e serão concluídas.</li>
+                  )}
+                </ul>
+              )}
+              <div className="max-h-64 overflow-y-auto rounded-md border">
+                {itens.map((i) => (
+                  <div
+                    key={i.id}
+                    className="flex items-center justify-between gap-3 border-b px-3 py-1.5 last:border-b-0"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-foreground">{i.property?.name ?? "—"}</p>
+                      <p className="truncate text-xs">{i.subject}</p>
+                    </div>
+                    <span className="shrink-0 text-xs font-medium text-foreground">
+                      {gratuita(i) ? "de graça" : (i.amount_cents ?? 0) === 0 ? "sem valor" : formatBRL(aPagar(i))}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={enviando}>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            disabled={enviando}
+            onClick={(e) => {
+              e.preventDefault();
+              onConfirmar();
+            }}
+          >
+            {enviando ? "Enviando..." : `Enviar ${itens.length}`}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 // ===== GROUP ROW COMPONENT =====
 interface GroupRowProps {
   group: typeof GROUPS[0];
@@ -372,6 +465,8 @@ interface GroupRowProps {
   unreadCounts: Record<string, number>;
   selectedIds: Set<string>;
   onToggleSelection: (id: string) => void;
+  /** Marca/desmarca todos os itens do grupo de uma vez. */
+  onToggleGroupSelection: (ids: string[], selecionar: boolean) => void;
   sortField: SortField | null;
   sortDirection: SortDirection;
   onSort: (field: SortField) => void;
@@ -393,6 +488,7 @@ function GroupRow({
   unreadCounts,
   selectedIds,
   onToggleSelection,
+  onToggleGroupSelection,
   sortField,
   sortDirection,
   onSort,
@@ -469,6 +565,21 @@ function GroupRow({
       >
         <td colSpan={12} className="p-2">
           <div className="flex items-center gap-2 font-medium">
+            {items.length > 0 && (
+              <span className="flex items-center pl-1.5 pr-1" onClick={(e) => e.stopPropagation()}>
+                <Checkbox
+                  checked={
+                    items.every((i) => selectedIds.has(i.id))
+                      ? true
+                      : items.some((i) => selectedIds.has(i.id))
+                        ? "indeterminate"
+                        : false
+                  }
+                  onCheckedChange={(v) => onToggleGroupSelection(items.map((i) => i.id), v === true)}
+                  aria-label={`Selecionar todos de ${group.label}`}
+                />
+              </span>
+            )}
             {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
             <span>{group.label}</span>
             <Badge variant="secondary" className="ml-2">{items.length}</Badge>
@@ -1666,6 +1777,116 @@ export default function AdminManutencoesLista() {
     },
   });
 
+  /**
+   * Envia uma manutenção ao proprietário: cria (ou reaproveita a aberta) a
+   * cobrança como "sent", copia os anexos, conclui o ticket e manda o e-mail.
+   * O WhatsApp sai pelo trigger do banco. Usado pelo envio de um item e pelo
+   * envio em lote — os dois têm que fazer exatamente a mesma coisa.
+   */
+  const enviarAoProprietario = async (
+    ticket: MaintenanceItem,
+  ): Promise<"enviada" | "gratuita" | "sem_valor"> => {
+    if (!ticket.owner) throw new Error("Proprietário não encontrado para este ticket");
+
+    // Buscar cobranças vinculadas que ainda estejam ABERTAS (não pagas).
+    // Cobranças já pagas não devem ser reabertas — geramos uma nova.
+    const { data: existingCharges, error: chargeQueryError } = await supabase
+      .from("charges")
+      .select("id, amount_cents, paid_at, status")
+      .eq("ticket_id", ticket.id)
+      .is("archived_at", null)
+      .is("paid_at", null)
+      .order("created_at", { ascending: false });
+
+    if (chargeQueryError) throw chargeQueryError;
+
+    let chargeId: string;
+
+    if (existingCharges && existingCharges.length > 0) {
+      // Atualizar a cobrança aberta existente para "sent" (envia ao proprietário)
+      const openCharge = existingCharges[0];
+      const { error: updateError } = await supabase
+        .from("charges")
+        .update({
+          status: "sent",
+          amount_cents: ticket.amount_cents || openCharge.amount_cents || 0,
+          management_contribution_cents: ticket.management_contribution_cents ?? 0,
+          service_type: ticket.service_type || null,
+          cost_responsible: ticket.cost_responsible || "owner",
+        })
+        .eq("id", openCharge.id);
+      if (updateError) throw updateError;
+      chargeId = openCharge.id;
+    } else {
+      // Criar nova cobrança já enviada ao proprietário
+      const { data: newCharge, error: chargeError } = await supabase
+        .from("charges")
+        .insert({
+          owner_id: ticket.owner.id,
+          property_id: ticket.property?.id || null,
+          ticket_id: ticket.id,
+          title: ticket.subject,
+          amount_cents: ticket.amount_cents || 0,
+          management_contribution_cents: ticket.management_contribution_cents || 0,
+          service_type: ticket.service_type || null,
+          cost_responsible: ticket.cost_responsible || "owner",
+          status: "sent",
+        })
+        .select("id")
+        .single();
+      if (chargeError) throw chargeError;
+      chargeId = newCharge.id;
+    }
+
+    // Copy ticket attachments to the charge
+    const { data: ticketAttachments } = await supabase
+      .from("ticket_attachments")
+      .select("path, file_name, file_type, file_url, mime_type, file_size, size_bytes")
+      .eq("ticket_id", ticket.id);
+
+    if (ticketAttachments && ticketAttachments.length > 0) {
+      const chargeAttachmentsToInsert = ticketAttachments.map(a => ({
+        charge_id: chargeId,
+        file_path: a.path,
+        file_name: a.file_name || a.path.split("/").pop() || "anexo",
+        mime_type: a.mime_type || a.file_type || null,
+        file_size: a.file_size || a.size_bytes || null,
+      }));
+      await supabase.from("charge_attachments").insert(chargeAttachmentsToInsert);
+    }
+
+    // Only update ticket to concluido if not already (RLS blocks updates on concluido tickets)
+    if (ticket.status !== "concluido") {
+      const { error: ticketError } = await supabase
+        .from("tickets")
+        .update({ status: "concluido" })
+        .eq("id", ticket.id);
+      if (ticketError) throw ticketError;
+    }
+
+    // Detect if the trigger auto-paid the charge because management covers 100%.
+    const fullyCoveredByManagement =
+      (ticket.management_contribution_cents ?? 0) >= (ticket.amount_cents ?? 0) &&
+      (ticket.amount_cents ?? 0) > 0;
+
+    // Notificar o proprietário (email + push + notificação interna)
+    // Pulamos quando o aporte da gestão cobre 100% (não há cobrança a pagar).
+    if (!fullyCoveredByManagement) {
+      try {
+        await supabase.functions.invoke("send-charge-email", {
+          body: { type: "charge_created", chargeId },
+        });
+      } catch (notifyErr) {
+        console.warn("Falha ao notificar proprietário (não crítico):", notifyErr);
+      }
+    }
+
+
+    if (fullyCoveredByManagement) return "gratuita";
+    if ((ticket.amount_cents ?? 0) === 0) return "sem_valor";
+    return "enviada";
+  };
+
   // Update mutation with optimistic updates
   const updateMutation = useMutation({
     mutationFn: async ({ id, field, value, isCharge }: { id: string; field: string; value: any; isCharge?: boolean }) => {
@@ -1682,103 +1903,10 @@ export default function AdminManutencoesLista() {
           if (!ticket || !ticket.owner) {
             throw new Error("Proprietário não encontrado para este ticket");
           }
-
-          // Buscar cobranças vinculadas que ainda estejam ABERTAS (não pagas).
-          // Cobranças já pagas não devem ser reabertas — geramos uma nova.
-          const { data: existingCharges, error: chargeQueryError } = await supabase
-            .from("charges")
-            .select("id, amount_cents, paid_at, status")
-            .eq("ticket_id", id)
-            .is("archived_at", null)
-            .is("paid_at", null)
-            .order("created_at", { ascending: false });
-
-          if (chargeQueryError) throw chargeQueryError;
-
-          let chargeId: string;
-
-          if (existingCharges && existingCharges.length > 0) {
-            // Atualizar a cobrança aberta existente para "sent" (envia ao proprietário)
-            const openCharge = existingCharges[0];
-            const { error: updateError } = await supabase
-              .from("charges")
-              .update({
-                status: "sent",
-                amount_cents: ticket.amount_cents || openCharge.amount_cents || 0,
-                management_contribution_cents: ticket.management_contribution_cents ?? 0,
-                service_type: ticket.service_type || null,
-                cost_responsible: ticket.cost_responsible || "owner",
-              })
-              .eq("id", openCharge.id);
-            if (updateError) throw updateError;
-            chargeId = openCharge.id;
-          } else {
-            // Criar nova cobrança já enviada ao proprietário
-            const { data: newCharge, error: chargeError } = await supabase
-              .from("charges")
-              .insert({
-                owner_id: ticket.owner.id,
-                property_id: ticket.property?.id || null,
-                ticket_id: id,
-                title: ticket.subject,
-                amount_cents: ticket.amount_cents || 0,
-                management_contribution_cents: ticket.management_contribution_cents || 0,
-                service_type: ticket.service_type || null,
-                cost_responsible: ticket.cost_responsible || "owner",
-                status: "sent",
-              })
-              .select("id")
-              .single();
-            if (chargeError) throw chargeError;
-            chargeId = newCharge.id;
-          }
-
-          // Copy ticket attachments to the charge
-          const { data: ticketAttachments } = await supabase
-            .from("ticket_attachments")
-            .select("path, file_name, file_type, file_url, mime_type, file_size, size_bytes")
-            .eq("ticket_id", id);
-
-          if (ticketAttachments && ticketAttachments.length > 0) {
-            const chargeAttachmentsToInsert = ticketAttachments.map(a => ({
-              charge_id: chargeId,
-              file_path: a.path,
-              file_name: a.file_name || a.path.split("/").pop() || "anexo",
-              mime_type: a.mime_type || a.file_type || null,
-              file_size: a.file_size || a.size_bytes || null,
-            }));
-            await supabase.from("charge_attachments").insert(chargeAttachmentsToInsert);
-          }
-
-          // Only update ticket to concluido if not already (RLS blocks updates on concluido tickets)
-          if (ticket.status !== "concluido") {
-            const { error: ticketError } = await supabase
-              .from("tickets")
-              .update({ status: "concluido" })
-              .eq("id", id);
-            if (ticketError) throw ticketError;
-          }
-
-          // Detect if the trigger auto-paid the charge because management covers 100%.
-          const fullyCoveredByManagement =
-            (ticket.management_contribution_cents ?? 0) >= (ticket.amount_cents ?? 0) &&
-            (ticket.amount_cents ?? 0) > 0;
-
-          // Notificar o proprietário (email + push + notificação interna)
-          // Pulamos quando o aporte da gestão cobre 100% (não há cobrança a pagar).
-          if (!fullyCoveredByManagement) {
-            try {
-              await supabase.functions.invoke("send-charge-email", {
-                body: { type: "charge_created", chargeId },
-              });
-            } catch (notifyErr) {
-              console.warn("Falha ao notificar proprietário (não crítico):", notifyErr);
-            }
-          }
-
-          if (fullyCoveredByManagement) {
+          const resultado = await enviarAoProprietario(ticket);
+          if (resultado === "gratuita") {
             toast.success("Manutenção finalizada — aporte da gestão cobriu 100% do custo.");
-          } else if ((ticket.amount_cents ?? 0) === 0) {
+          } else if (resultado === "sem_valor") {
             toast.success("Manutenção enviada ao proprietário sem valor de cobrança.");
           } else {
             toast.success("Cobrança criada e enviada ao proprietário!");
@@ -2110,6 +2238,68 @@ export default function AdminManutencoesLista() {
     if (selectedIds.size === 0) return;
     archiveMutation.mutate(Array.from(selectedIds));
   }, [selectedIds, archiveMutation]);
+
+  const toggleGroupSelection = useCallback((ids: string[], selecionar: boolean) => {
+    setSelectedIds((prev) => {
+      const novo = new Set(prev);
+      ids.forEach((id) => (selecionar ? novo.add(id) : novo.delete(id)));
+      return novo;
+    });
+  }, []);
+
+  // ===== Envio em lote ao proprietário =====
+  // Antes: Feito -> seta -> "Enviar ao Proprietário", item por item. Agora marca
+  // vários e envia de uma vez, pelo mesmo enviarAoProprietario do envio único.
+  const [confirmarEnvioLote, setConfirmarEnvioLote] = useState(false);
+  const selecionadosParaEnviar = useMemo(
+    () => (tickets || []).filter((t) => selectedIds.has(t.id) && t.owner),
+    [tickets, selectedIds],
+  );
+
+  const envioLoteMutation = useMutation({
+    mutationFn: async (itens: MaintenanceItem[]) => {
+      const enviados: string[] = [];
+      const falhas: string[] = [];
+      const contagem = { enviada: 0, gratuita: 0, sem_valor: 0 };
+      // Um por vez: cada envio cria cobrança, copia anexos e manda e-mail.
+      for (const item of itens) {
+        try {
+          contagem[await enviarAoProprietario(item)]++;
+          enviados.push(item.id);
+        } catch (err) {
+          console.error("Envio em lote: falhou", item.id, err);
+          falhas.push(`${item.property?.name ?? "?"} — ${item.subject}`);
+        }
+      }
+      return { enviados, falhas, contagem };
+    },
+    onSuccess: ({ enviados, falhas, contagem }) => {
+      setSelectedIds((prev) => {
+        const novo = new Set(prev);
+        enviados.forEach((id) => novo.delete(id));
+        return novo;
+      });
+      if (enviados.length > 0) {
+        const partes = [
+          contagem.enviada && `${contagem.enviada} com cobrança`,
+          contagem.gratuita && `${contagem.gratuita} de graça (aporte total)`,
+          contagem.sem_valor && `${contagem.sem_valor} sem valor`,
+        ].filter(Boolean);
+        toast.success(
+          `${enviados.length} ${enviados.length === 1 ? "manutenção enviada" : "manutenções enviadas"} ao proprietário: ${partes.join(", ")}.`,
+        );
+      }
+      if (falhas.length > 0) {
+        toast.error(`Não foi possível enviar ${falhas.length}: ${falhas.join("; ")}`, { duration: 10000 });
+      }
+    },
+    onError: () => toast.error("Erro ao enviar em lote"),
+    onSettled: () => {
+      setConfirmarEnvioLote(false);
+      queryClient.invalidateQueries({ queryKey: ["maintenance-list-view"] });
+      queryClient.invalidateQueries({ queryKey: ["pending-charges-list"] });
+    },
+  });
 
   // Helper to get public URL from storage path
   const getStorageUrl = useCallback((path: string, bucket: string = "attachments") => {
@@ -2701,6 +2891,23 @@ export default function AdminManutencoesLista() {
               Arquivar ({selectedIds.size})
             </Button>
           )}
+          {selecionadosParaEnviar.length > 0 && (
+            <Button onClick={() => setConfirmarEnvioLote(true)} disabled={envioLoteMutation.isPending}>
+              {envioLoteMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4 mr-2" />
+              )}
+              Enviar ao proprietário ({selecionadosParaEnviar.length})
+            </Button>
+          )}
+          <EnvioLoteDialog
+            open={confirmarEnvioLote}
+            itens={selecionadosParaEnviar}
+            enviando={envioLoteMutation.isPending}
+            onCancelar={() => setConfirmarEnvioLote(false)}
+            onConfirmar={() => envioLoteMutation.mutate(selecionadosParaEnviar)}
+          />
         </div>
 
         {/* Vistorias Table */}
@@ -2768,6 +2975,7 @@ export default function AdminManutencoesLista() {
                           unreadCounts={unreadCounts}
                           selectedIds={selectedIds}
                           onToggleSelection={toggleSelection}
+                          onToggleGroupSelection={toggleGroupSelection}
                           sortField={sortField}
                           sortDirection={sortDirection}
                           onSort={handleSort}
