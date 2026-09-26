@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CaixaCarregando, CaixaOperacao, SeloContagem } from "@/components/painel/CaixaOperacao";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -41,7 +41,7 @@ const STATUS_CONFIG = {
   aguardando_info: { label: "Aguardando Info", color: "bg-warning", step: 1 },
   em_execucao: { label: "Em Execução", color: "bg-primary", step: 3 },
   concluido: { label: "Concluído", color: "bg-success", step: 4 },
-  cancelado: { label: "Cancelado", color: "bg-gray-500", step: 0 },
+  cancelado: { label: "Cancelado", color: "bg-muted-foreground", step: 0 },
 };
 
 export function OwnerMaintenanceProgress() {
@@ -77,8 +77,7 @@ export function OwnerMaintenanceProgress() {
         .eq("ticket_type", "manutencao")
         .or("cost_responsible.is.null,cost_responsible.neq.guest")
         .in("status", ["novo", "em_analise", "aguardando_info", "em_execucao"])
-        .order("created_at", { ascending: false })
-        .limit(5);
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       return data as unknown as MaintenanceTicket[];
@@ -156,19 +155,7 @@ export function OwnerMaintenanceProgress() {
   };
 
   if (isLoading) {
-    return (
-      <Card className="mb-6">
-        <CardHeader className="pb-3">
-          <Skeleton className="h-6 w-48" />
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <Skeleton className="h-24 w-full" />
-            <Skeleton className="h-24 w-full" />
-          </div>
-        </CardContent>
-      </Card>
-    );
+    return <CaixaCarregando icone={<Wrench />} titulo="Manutenções em andamento" tom="primary" linhas={2} />;
   }
 
   if (!maintenances || maintenances.length === 0) {
@@ -192,20 +179,13 @@ export function OwnerMaintenanceProgress() {
 
   return (
     <>
-      <Card className="mb-6 overflow-hidden border-primary/20">
-        <CardHeader className="pb-3 bg-gradient-to-r from-primary/5 to-transparent">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Wrench className="h-5 w-5 text-primary" />
-              Manutenções em Andamento
-            </CardTitle>
-            <Badge variant="secondary" className="font-medium">
-              {maintenances.length}
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-4">
-          <div className="space-y-4">
+      <CaixaOperacao
+        icone={<Wrench />}
+        titulo="Manutenções em andamento"
+        tom="primary"
+        selos={<SeloContagem tom="primary">{maintenances.length}</SeloContagem>}
+      >
+          <div className="max-h-[480px] space-y-4 overflow-y-auto pr-1">
             {maintenances.map((ticket) => {
               const currentStep = getStep(ticket);
               const unreadCount = unreadCounts[ticket.id] || 0;
@@ -217,12 +197,12 @@ export function OwnerMaintenanceProgress() {
               return (
                 <div
                   key={ticket.id}
-                  className="p-4 rounded-lg border bg-card hover:bg-muted/50 cursor-pointer transition-colors group"
+                  className="group cursor-pointer rounded-lg bg-muted/40 p-4 transition-colors hover:bg-muted/70"
                   onClick={() => { setSelectedTicket(ticket); setChatOpen(true); markAsRead(ticket.id); }}
                 >
                   <div className="flex items-start gap-3 mb-4">
                     {/* Property photo */}
-                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                    <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg bg-background">
                       {ticket.property?.cover_photo_url ? (
                         <img
                           src={ticket.property.cover_photo_url}
@@ -289,7 +269,7 @@ export function OwnerMaintenanceProgress() {
 
                   {/* Quick Decision Buttons - Show when decision is needed */}
                   {showDecisionButtons && (
-                    <div className="mb-4 p-3 bg-muted/50 rounded-lg border border-dashed">
+                    <div className="mb-4 rounded-lg border border-dashed border-primary/40 bg-background p-3">
                       <p className="text-xs text-muted-foreground mb-2 font-medium">
                         {isOverdue ? '⏰ Prazo expirado - ' : ''}Como você gostaria de proceder?
                       </p>
@@ -322,7 +302,7 @@ export function OwnerMaintenanceProgress() {
                   {!showDecisionButtons && (
                     <div className="flex items-center justify-between relative">
                       {/* Progress line */}
-                      <div className="absolute top-4 left-0 right-0 h-0.5 bg-muted" />
+                      <div className="absolute top-4 left-0 right-0 h-0.5 bg-border" />
                       <div 
                         className="absolute top-4 left-0 h-0.5 bg-primary transition-all"
                         style={{ width: `${((currentStep - 1) / 3) * 100}%` }}
@@ -342,7 +322,7 @@ export function OwnerMaintenanceProgress() {
                                   ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
                                   : isComplete
                                   ? "bg-primary/20 text-primary"
-                                  : "bg-muted text-muted-foreground"
+                                  : "bg-background text-muted-foreground ring-1 ring-border"
                               }`}
                             >
                               <Icon className="h-4 w-4" />
@@ -363,8 +343,7 @@ export function OwnerMaintenanceProgress() {
               );
             })}
           </div>
-        </CardContent>
-      </Card>
+      </CaixaOperacao>
 
       <MaintenanceDetailsDialog
         open={chatOpen}

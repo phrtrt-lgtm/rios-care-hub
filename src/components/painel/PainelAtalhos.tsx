@@ -203,9 +203,9 @@ const GRUPOS: Grupo[] = [
 // deixaria o texto branco e centralizado sobre fundo claro. h-full também
 // iguala a altura dos atalhos da mesma linha quando um rótulo quebra.
 const CLASSE_ATALHO =
-  "flex h-full w-full min-w-0 items-center justify-start gap-2.5 rounded-md border bg-card px-3 py-2 " +
-  "text-left text-sm font-normal text-foreground shadow-none transition-colors hover:border-primary/40 " +
-  "hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "group flex h-full w-full min-w-0 items-center justify-start gap-2.5 rounded-lg border border-border/70 bg-card px-3 py-2 " +
+  "text-left text-[13px] font-medium text-foreground shadow-none transition-all hover:-translate-y-px hover:border-primary/40 " +
+  "hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&>svg]:text-primary";
 
 /**
  * Todos os atalhos do painel num bloco só, agrupados por assunto.
@@ -227,10 +227,14 @@ export function PainelAtalhos() {
   })).filter((g) => g.atalhos.length > 0);
 
   return (
-    <div className="grid gap-x-6 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {grupos.map((grupo) => (
-        <section key={grupo.titulo} aria-label={grupo.titulo} className="min-w-0">
-          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <section
+          key={grupo.titulo}
+          aria-label={grupo.titulo}
+          className="min-w-0 rounded-xl border border-border/60 bg-muted/30 p-3"
+        >
+          <h4 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
             {grupo.titulo}
           </h4>
           <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2">

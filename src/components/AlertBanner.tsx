@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { X, Info, AlertTriangle, AlertCircle, CheckCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { TOM, type Tom } from "@/components/painel/tons";
 
 interface AlertData {
   id: string;
@@ -48,8 +49,6 @@ export const AlertBanner = () => {
   const fetchAlerts = async () => {
     if (!user) return;
 
-    console.log('Buscando alertas para user:', user.id);
-
     const { data, error } = await supabase
       .from('alert_recipients')
       .select(`
@@ -73,8 +72,6 @@ export const AlertBanner = () => {
       return;
     }
 
-    console.log('Dados brutos de alertas:', data);
-
     const now = new Date();
     const activeAlerts = (data || [])
       .filter((item: any) => {
@@ -90,7 +87,6 @@ export const AlertBanner = () => {
         is_read: item.is_read,
       }));
 
-    console.log('Alertas ativos processados:', activeAlerts);
     setAlerts(activeAlerts);
   };
 
@@ -121,35 +117,56 @@ export const AlertBanner = () => {
     }
   };
 
-  const getAlertVariant = (type: string): "default" | "destructive" => {
-    return type === 'error' ? 'destructive' : 'default';
+  const getAlertTone = (type: string): Tom => {
+    switch (type) {
+      case 'warning':
+        return 'warning';
+      case 'error':
+        return 'destructive';
+      case 'success':
+        return 'success';
+      default:
+        return 'info';
+    }
   };
 
   if (alerts.length === 0) return null;
 
   return (
     <div className="space-y-2">
-      {alerts.map((alert) => (
-        <Alert key={alert.id} variant={getAlertVariant(alert.type)}>
-          <div className="flex items-start gap-2">
-            {getAlertIcon(alert.type)}
-            <div className="flex-1">
-              <AlertTitle>{alert.title}</AlertTitle>
-              <AlertDescription className="whitespace-pre-wrap">
-                {alert.message}
-              </AlertDescription>
+      {alerts.map((alert) => {
+        const tom = getAlertTone(alert.type);
+        return (
+          <div
+            key={alert.id}
+            role="alert"
+            className={cn(
+              "flex items-start gap-3 rounded-xl border bg-card p-3.5 shadow-sm",
+              TOM[tom].borda,
+            )}
+          >
+            <span
+              className={cn("mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", TOM[tom].caixa)}
+              aria-hidden="true"
+            >
+              {getAlertIcon(alert.type)}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold leading-tight">{alert.title}</p>
+              <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{alert.message}</p>
             </div>
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6"
+              className="h-7 w-7 shrink-0 text-muted-foreground"
               onClick={() => markAsRead(alert.recipient_id)}
+              aria-label="Dispensar aviso"
             >
               <X className="h-4 w-4" />
             </Button>
           </div>
-        </Alert>
-      ))}
+        );
+      })}
     </div>
   );
 };

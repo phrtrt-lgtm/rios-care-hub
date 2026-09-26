@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { PropostaCompleta } from "./PropostaCompleta";
-import { Vote } from "lucide-react";
+import { TituloSecao } from "@/components/painel/TituloSecao";
 
 export function PropostasPendentesCompletas() {
   const { user, profile } = useAuth();
@@ -74,13 +74,12 @@ export function PropostasPendentesCompletas() {
   }
 
   return (
-    <div className="mb-6 space-y-4">
-      <div className="flex items-center gap-2 text-primary">
-        <Vote className="h-5 w-5" />
-        <h2 className="font-bold text-lg">
-          Propostas Pendentes ({pendingProposals.length})
-        </h2>
-      </div>
+    <section aria-labelledby="titulo-propostas" className="flex min-w-0 flex-col gap-4">
+      <TituloSecao
+        id="titulo-propostas"
+        titulo={`Propostas pendentes (${pendingProposals.length})`}
+        subtitulo="Responda para a equipe seguir com a execução"
+      />
       
       {pendingProposals.map((proposal: any) => (
         <PropostaCompleta 
@@ -89,6 +88,6 @@ export function PropostasPendentesCompletas() {
           onResponded={() => refetch()}
         />
       ))}
-    </div>
+    </section>
   );
 }

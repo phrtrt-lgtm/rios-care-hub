@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CaixaCarregando, CaixaOperacao, SeloContagem } from "@/components/painel/CaixaOperacao";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -33,14 +33,14 @@ interface BookingCommission {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  draft:              { label: "Rascunho",       className: "bg-muted text-muted-foreground" },
-  sent:               { label: "Aguardando",     className: "bg-info/10 text-info dark:bg-blue-900/40 dark:text-blue-300" },
-  pendente:           { label: "Pendente",       className: "bg-warning/10 text-warning dark:bg-yellow-900/40 dark:text-yellow-300" },
-  overdue:            { label: "Vencida",        className: "bg-destructive/10 text-destructive dark:bg-red-900/40 dark:text-red-300" },
-  paid:               { label: "Pago",           className: "bg-success/10 text-success dark:bg-green-900/40 dark:text-green-300" },
-  pago_no_vencimento: { label: "Pago no Venc.",  className: "bg-success/10 text-success dark:bg-green-900/40 dark:text-green-300" },
-  pago_antecipado:    { label: "Pago Antecipado",className: "bg-success/10 text-success dark:bg-emerald-900/40 dark:text-emerald-300" },
-  pago_com_atraso:    { label: "Pago c/ Atraso", className: "bg-warning/10 text-warning dark:bg-yellow-900/40 dark:text-yellow-300" },
+  draft:              { label: "Rascunho",        className: "bg-muted text-muted-foreground" },
+  sent:               { label: "Aguardando",      className: "bg-info/10 text-info" },
+  pendente:           { label: "Pendente",        className: "bg-warning/10 text-warning" },
+  overdue:            { label: "Vencida",         className: "bg-destructive/10 text-destructive" },
+  paid:               { label: "Pago",            className: "bg-success/10 text-success" },
+  pago_no_vencimento: { label: "Pago no venc.",   className: "bg-success/10 text-success" },
+  pago_antecipado:    { label: "Pago antecipado", className: "bg-success/10 text-success" },
+  pago_com_atraso:    { label: "Pago c/ atraso",  className: "bg-warning/10 text-warning" },
   cancelled:          { label: "Cancelado",      className: "bg-muted text-muted-foreground" },
 };
 
@@ -120,40 +120,25 @@ export function OwnerBookingCommissionsPreview() {
   };
 
   if (isLoading) {
-    return (
-      <Card>
-        <CardHeader className="pb-3"><Skeleton className="h-5 w-48" /></CardHeader>
-        <CardContent className="space-y-2">
-          <Skeleton className="h-14 w-full" />
-          <Skeleton className="h-14 w-full" />
-        </CardContent>
-      </Card>
-    );
+    return <CaixaCarregando icone={<Hotel />} titulo="Comissões Booking" tom="primary" linhas={2} />;
   }
 
   if (commissions.length === 0) return null;
 
   return (
     <>
-      <Card className="border-primary/20">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-primary/10">
-                <Hotel className="h-4 w-4 text-primary" />
-              </div>
-              <CardTitle className="text-base">Comissões Booking</CardTitle>
-              {pending.length > 0 && (
-                <Badge variant="destructive" className="text-xs px-1.5 py-0.5">{pending.length}</Badge>
-              )}
-            </div>
-            {totalPending > 0 && (
-              <span className="text-sm font-semibold text-destructive">{formatBRL(totalPending)}</span>
-            )}
-          </div>
-        </CardHeader>
-
-        <CardContent className="space-y-3 pt-0">
+      <CaixaOperacao
+        icone={<Hotel />}
+        titulo="Comissões Booking"
+        tom="primary"
+        selos={pending.length > 0 && <SeloContagem tom="destructive">{pending.length}</SeloContagem>}
+        acoes={
+          totalPending > 0 && (
+            <span className="text-sm font-semibold tabular-nums text-destructive">{formatBRL(totalPending)}</span>
+          )
+        }
+      >
+        <div className="space-y-3">
 
           {/* Pendentes */}
           {pending.length > 0 && (
@@ -177,13 +162,13 @@ export function OwnerBookingCommissionsPreview() {
                   )}
                 </div>
 
-                <div className="overflow-y-auto max-h-[5.5rem] space-y-2 pr-1">
+                <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
                   {pending.map(c => {
                     const cfg = STATUS_CONFIG[c.status] || { label: c.status, className: "bg-muted text-muted-foreground" };
                     return (
                       <div
                         key={c.id}
-                        className={`flex items-start gap-3 p-3 rounded-lg border transition-colors cursor-pointer ${selected.includes(c.id) ? "bg-primary/5 border-primary/30" : "hover:bg-accent/50"}`}
+                        className={`flex cursor-pointer items-start gap-3 rounded-lg p-3 transition-colors ${selected.includes(c.id) ? "bg-primary/5 ring-1 ring-primary" : "bg-muted/40 hover:bg-muted/70"}`}
                         onClick={() => toggle(c.id)}
                       >
                         <Checkbox
@@ -237,7 +222,7 @@ export function OwnerBookingCommissionsPreview() {
                   <button
                     key={c.id}
                     onClick={() => (saveScrollPosition(pathname), navigate(`/minha-comissao-booking/${c.id}`))}
-                    className="w-full text-left flex items-center justify-between gap-3 p-3 rounded-lg border bg-muted/30 hover:bg-accent/50 transition-colors"
+                    className="flex w-full items-center justify-between gap-3 rounded-lg bg-muted/40 p-3 text-left transition-colors hover:bg-muted/70"
                   >
                     <div className="flex-1 min-w-0">
                       <p className="text-sm truncate">{c.guest_name || "Hóspede"}</p>
@@ -280,8 +265,8 @@ export function OwnerBookingCommissionsPreview() {
               Pagar selecionadas
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </CaixaOperacao>
 
       <Dialog open={pixOpen} onOpenChange={setPixOpen}>
         <DialogContent className="max-w-sm">

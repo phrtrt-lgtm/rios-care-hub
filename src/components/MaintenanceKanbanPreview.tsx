@@ -2,16 +2,14 @@ import { useEffect, useState, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { saveScrollPosition } from "@/lib/navigation";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Wrench, ArrowRight, Calendar, MessageSquare, ChevronRight, ChevronDown, ChevronUp, CheckCircle } from "lucide-react";
+import { Wrench, ArrowRight, Calendar, MessageSquare, ChevronDown, ChevronUp, CheckCircle } from "lucide-react";
 import { QuickAttachmentButton } from "./QuickAttachmentButton";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -20,6 +18,15 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useChatPreloader } from "@/hooks/useChatPreloader";
 import { MaintenanceChatDialog } from "./MaintenanceChatDialog";
+import {
+  BotaoLinha,
+  CaixaCarregando,
+  CaixaOperacao,
+  CaixaVazia,
+  GrupoCaixa,
+  LinhaCaixa,
+  SeloContagem,
+} from "@/components/painel/CaixaOperacao";
 
 type MaintenanceTicket = {
   id: string;
@@ -245,308 +252,119 @@ export function MaintenanceKanbanPreview() {
   const agendados = tickets.filter(t => t.scheduled_at && t.status !== "em_execucao");
   const hasMoreItems = pendentes.length > COLLAPSED_LIMIT || agendados.length > COLLAPSED_LIMIT;
 
+  const renderRow = (ticket: MaintenanceTicket, agendado: boolean) => (
+    <LinhaCaixa
+      key={ticket.id}
+      titulo={ticket.property?.name || "Sem unidade"}
+      subtitulo={ticket.subject}
+      tom={agendado ? "info" : "neutral"}
+      tingida={agendado}
+      onClick={() => (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${ticket.id}`))}
+      meta={
+        agendado && ticket.scheduled_at ? (
+          <span className="hidden items-center gap-1 whitespace-nowrap text-[11px] font-medium text-info sm:inline-flex">
+            <Calendar className="h-3 w-3" aria-hidden="true" />
+            {format(new Date(ticket.scheduled_at), "dd/MM HH:mm", { locale: ptBR })}
+          </span>
+        ) : undefined
+      }
+      acoes={
+        <>
+          <QuickAttachmentButton ticketId={ticket.id} onSuccess={fetchMaintenanceTickets} />
+          <BotaoLinha
+            rotulo="Abrir conversa da manutenção"
+            naoLidas={unreadCounts[ticket.id] || 0}
+            onClick={(e) => openChatDialog(ticket, e)}
+          >
+            <MessageSquare />
+          </BotaoLinha>
+          {!agendado && (
+            <BotaoLinha rotulo="Agendar manutenção" onClick={(e) => openScheduleDialog(ticket, e)}>
+              <Calendar />
+            </BotaoLinha>
+          )}
+          <BotaoLinha rotulo="Concluir e cobrar" tom="success" onClick={(e) => openCompleteDialog(ticket, e)}>
+            <CheckCircle />
+          </BotaoLinha>
+        </>
+      }
+    />
+  );
+
   if (loading) {
-    return (
-      <Card className="border-primary/30">
-        <CardHeader className="py-3 px-4">
-          <div className="flex items-center gap-2">
-            <Wrench className="h-4 w-4 text-primary animate-pulse" />
-            <div className="h-4 w-36 rounded bg-muted animate-pulse" />
-          </div>
-        </CardHeader>
-      </Card>
-    );
+    return <CaixaCarregando icone={<Wrench />} titulo="Manutenções" tom="primary" />;
   }
 
   return (
     <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-      <Card className="border-primary/30 overflow-hidden w-full min-w-0">
-        <CardHeader className="py-3 px-4">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex items-center gap-2 min-w-0">
-              <Wrench className="h-4 w-4 text-primary" />
-              <CardTitle className="text-sm">Manutenções</CardTitle>
-              {tickets.length > 0 && (
-                <Badge variant="secondary" className="h-5 px-1.5 text-xs bg-primary/10 text-primary dark:bg-purple-900 dark:text-purple-300">
-                  {tickets.length}
-                </Badge>
-              )}
-            </div>
-            <div className="flex items-center gap-1 flex-wrap justify-end">
-              {hasMoreItems && (
-                <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-7 text-xs gap-1">
-                    {isExpanded ? (
-                      <>
-                        <ChevronUp className="h-3 w-3" />
-                        Recolher
-                      </>
-                    ) : (
-                      <>
-                        <ChevronDown className="h-3 w-3" />
-                        Expandir
-                      </>
-                    )}
-                  </Button>
-                </CollapsibleTrigger>
-              )}
-              {podeAbrirQuadro && (
-                <>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => navigate("/admin/manutencoes-concluidas")}
-                    className="h-7 text-xs text-success"
-                  >
-                    <span className="hidden sm:inline">Concluídas</span>
-                    <span className="sm:hidden">OK</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => navigate("/admin/manutencoes")}
-                    className="h-7 text-xs text-primary"
-                  >
-                    <span className="hidden sm:inline">Completo</span>
-                    <span className="sm:hidden">Ver</span>
-                    <ArrowRight className="ml-1 h-3 w-3" />
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-      <CardContent className="px-4 pb-3 pt-0">
+      <CaixaOperacao
+        icone={<Wrench />}
+        titulo="Manutenções"
+        tom="primary"
+        selos={tickets.length > 0 && <SeloContagem tom="primary">{tickets.length}</SeloContagem>}
+        acoes={
+          <>
+            {hasMoreItems && (
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-7 gap-1 px-2 text-xs">
+                  {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                  {isExpanded ? "Recolher" : "Expandir"}
+                </Button>
+              </CollapsibleTrigger>
+            )}
+            {podeAbrirQuadro && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate("/admin/manutencoes-concluidas")}
+                  className="h-7 px-2 text-xs text-success hover:text-success"
+                >
+                  <span className="hidden sm:inline">Concluídas</span>
+                  <span className="sm:hidden">OK</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate("/admin/manutencoes")}
+                  className="h-7 gap-1 px-2 text-xs text-primary hover:text-primary"
+                >
+                  <span className="hidden sm:inline">Quadro completo</span>
+                  <span className="sm:hidden">Ver</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Button>
+              </>
+            )}
+          </>
+        }
+      >
         {tickets.length === 0 ? (
-          <p className="text-xs text-muted-foreground text-center py-4">Nenhuma manutenção</p>
+          <CaixaVazia icone={<Wrench className="h-5 w-5" />} titulo="Nenhuma manutenção aberta" />
         ) : (
           <div className="space-y-3">
             {/* Pendentes */}
             {pendentes.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-warning mb-1.5">Pendentes ({pendentes.length})</p>
-                <div className="space-y-1">
-                  {pendentes.slice(0, COLLAPSED_LIMIT).map((ticket) => (
-                    <div
-                      key={ticket.id}
-                      className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors overflow-hidden"
-                      onClick={() => (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${ticket.id}`))}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium truncate">{ticket.property?.name || "Sem unidade"}</p>
-                        <p className="text-[10px] text-muted-foreground truncate">{ticket.subject}</p>
-                      </div>
-
-                      <div className="flex items-center gap-1 shrink-0">
-                        <QuickAttachmentButton 
-                          ticketId={ticket.id} 
-                          onSuccess={fetchMaintenanceTickets}
-                        />
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0 relative shrink-0"
-                          onClick={(e) => openChatDialog(ticket, e)}
-                        >
-                          <MessageSquare className="h-3.5 w-3.5" />
-                          {unreadCounts[ticket.id] > 0 && (
-                            <span className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-destructive text-[9px] text-white flex items-center justify-center">
-                              {unreadCounts[ticket.id]}
-                            </span>
-                          )}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-6 px-2 text-[10px] shrink-0 whitespace-nowrap"
-                          onClick={(e) => openScheduleDialog(ticket, e)}
-                        >
-                          <Calendar className="h-3 w-3" />
-                          
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-6 px-2 text-[10px] shrink-0 whitespace-nowrap text-success border-success/30 hover:bg-success/10"
-                          onClick={(e) => openCompleteDialog(ticket, e)}
-                        >
-                          <CheckCircle className="h-3 w-3" />
-                          
-                        </Button>
-                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {/* Itens expandidos de pendentes */}
-                  <CollapsibleContent className="max-h-72 space-y-1 overflow-y-auto pr-1">
-                    {pendentes.slice(COLLAPSED_LIMIT, EXPANDED_LIMIT).map((ticket) => (
-                      <div
-                        key={ticket.id}
-                        className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors overflow-hidden"
-                        onClick={() => (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${ticket.id}`))}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium truncate">{ticket.property?.name || "Sem unidade"}</p>
-                          <p className="text-[10px] text-muted-foreground truncate">{ticket.subject}</p>
-                        </div>
-
-                        <div className="flex items-center gap-1 shrink-0">
-                          <QuickAttachmentButton 
-                            ticketId={ticket.id} 
-                            onSuccess={fetchMaintenanceTickets}
-                          />
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 relative shrink-0"
-                            onClick={(e) => openChatDialog(ticket, e)}
-                          >
-                            <MessageSquare className="h-3.5 w-3.5" />
-                            {unreadCounts[ticket.id] > 0 && (
-                              <span className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-destructive text-[9px] text-white flex items-center justify-center">
-                                {unreadCounts[ticket.id]}
-                              </span>
-                            )}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-6 px-2 text-[10px] shrink-0 whitespace-nowrap"
-                            onClick={(e) => openScheduleDialog(ticket, e)}
-                          >
-                            <Calendar className="h-3 w-3" />
-                            
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-6 px-2 text-[10px] shrink-0 whitespace-nowrap text-success border-success/30 hover:bg-success/10"
-                            onClick={(e) => openCompleteDialog(ticket, e)}
-                          >
-                            <CheckCircle className="h-3 w-3" />
-                            
-                          </Button>
-                          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                        </div>
-                      </div>
-                    ))}
-                  </CollapsibleContent>
-                </div>
-              </div>
+              <GrupoCaixa titulo="Pendentes" quantidade={pendentes.length} tom="warning">
+                {pendentes.slice(0, COLLAPSED_LIMIT).map((t) => renderRow(t, false))}
+                {/* Itens expandidos de pendentes */}
+                <CollapsibleContent className="max-h-72 space-y-1 overflow-y-auto pr-1">
+                  {pendentes.slice(COLLAPSED_LIMIT, EXPANDED_LIMIT).map((t) => renderRow(t, false))}
+                </CollapsibleContent>
+              </GrupoCaixa>
             )}
 
             {/* Agendados */}
             {agendados.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-info mb-1.5">Agendados ({agendados.length})</p>
-                <div className="space-y-1">
-                  {agendados.slice(0, COLLAPSED_LIMIT).map((ticket) => (
-                    <div
-                      key={ticket.id}
-                      className="flex items-center gap-2 p-2 rounded-lg bg-info/10 dark:bg-blue-950/30 hover:bg-info/10 dark:hover:bg-blue-950/50 cursor-pointer transition-colors overflow-hidden"
-                      onClick={() => (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${ticket.id}`))}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium truncate">{ticket.property?.name || "Sem unidade"}</p>
-                        <p className="text-[10px] text-muted-foreground truncate">{ticket.subject}</p>
-                      </div>
-
-                      <div className="flex items-center gap-1 shrink-0">
-                        {ticket.scheduled_at && (
-                          <span className="hidden sm:flex text-[10px] font-medium text-info items-center gap-1 whitespace-nowrap shrink-0">
-                            <Calendar className="h-3 w-3" />
-                            {format(new Date(ticket.scheduled_at), "dd/MM HH:mm", { locale: ptBR })}
-                          </span>
-                        )}
-                        <QuickAttachmentButton 
-                          ticketId={ticket.id} 
-                          onSuccess={fetchMaintenanceTickets}
-                        />
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0 relative shrink-0"
-                          onClick={(e) => openChatDialog(ticket, e)}
-                        >
-                          <MessageSquare className="h-3.5 w-3.5" />
-                          {unreadCounts[ticket.id] > 0 && (
-                            <span className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-destructive text-[9px] text-white flex items-center justify-center">
-                              {unreadCounts[ticket.id]}
-                            </span>
-                          )}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-6 px-2 text-[10px] shrink-0 whitespace-nowrap text-success border-success/30 hover:bg-success/10"
-                          onClick={(e) => openCompleteDialog(ticket, e)}
-                        >
-                          <CheckCircle className="h-3 w-3" />
-                          
-                        </Button>
-                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {/* Itens expandidos de agendados */}
-                  <CollapsibleContent className="max-h-72 space-y-1 overflow-y-auto pr-1">
-                    {agendados.slice(COLLAPSED_LIMIT, EXPANDED_LIMIT).map((ticket) => (
-                      <div
-                        key={ticket.id}
-                        className="flex items-center gap-2 p-2 rounded-lg bg-info/10 dark:bg-blue-950/30 hover:bg-info/10 dark:hover:bg-blue-950/50 cursor-pointer transition-colors overflow-hidden"
-                        onClick={() => (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${ticket.id}`))}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium truncate">{ticket.property?.name || "Sem unidade"}</p>
-                          <p className="text-[10px] text-muted-foreground truncate">{ticket.subject}</p>
-                        </div>
-
-                        <div className="flex items-center gap-1 shrink-0">
-                          {ticket.scheduled_at && (
-                            <span className="hidden sm:flex text-[10px] font-medium text-info items-center gap-1 whitespace-nowrap shrink-0">
-                              <Calendar className="h-3 w-3" />
-                              {format(new Date(ticket.scheduled_at), "dd/MM HH:mm", { locale: ptBR })}
-                            </span>
-                          )}
-                          <QuickAttachmentButton 
-                            ticketId={ticket.id} 
-                            onSuccess={fetchMaintenanceTickets}
-                          />
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 relative shrink-0"
-                            onClick={(e) => openChatDialog(ticket, e)}
-                          >
-                            <MessageSquare className="h-3.5 w-3.5" />
-                            {unreadCounts[ticket.id] > 0 && (
-                              <span className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-destructive text-[9px] text-white flex items-center justify-center">
-                                {unreadCounts[ticket.id]}
-                              </span>
-                            )}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-6 px-2 text-[10px] shrink-0 whitespace-nowrap text-success border-success/30 hover:bg-success/10"
-                            onClick={(e) => openCompleteDialog(ticket, e)}
-                          >
-                            <CheckCircle className="h-3 w-3" />
-                            
-                          </Button>
-                          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                        </div>
-                      </div>
-                    ))}
-                  </CollapsibleContent>
-                </div>
-              </div>
+              <GrupoCaixa titulo="Agendados" quantidade={agendados.length} tom="info">
+                {agendados.slice(0, COLLAPSED_LIMIT).map((t) => renderRow(t, true))}
+                {/* Itens expandidos de agendados */}
+                <CollapsibleContent className="max-h-72 space-y-1 overflow-y-auto pr-1">
+                  {agendados.slice(COLLAPSED_LIMIT, EXPANDED_LIMIT).map((t) => renderRow(t, true))}
+                </CollapsibleContent>
+              </GrupoCaixa>
             )}
           </div>
         )}
-      </CardContent>
 
       {/* Schedule Dialog */}
       <Dialog open={scheduleDialogOpen} onOpenChange={setScheduleDialogOpen}>
@@ -691,7 +509,7 @@ export function MaintenanceKanbanPreview() {
         propertyName={chatTicket?.property?.name || "Sem unidade"}
         onTicketUpdated={fetchMaintenanceTickets}
       />
-    </Card>
+      </CaixaOperacao>
     </Collapsible>
   );
 }

@@ -183,6 +183,16 @@ Reorganizado em 2026-09-25 (`ROADMAP.md` item 4.6). A página tem esta ordem:
   Se a página recusar, o atalho devolve a pessoa ao início sem aviso.
 - **`/todos-tickets` aceita `?priority=` e `?status=`.** `status=abertos` significa "nem concluído nem cancelado". Os filtros são aplicados uma vez, a partir de filtros limpos, e depois saem da URL.
 
+**Casco visual compartilhado (desde 2026-09-25).** As duas páginas de painel (`/painel` e `/minha-caixa`) usam as mesmas peças, em `src/components/painel/`:
+- `PainelHeader` — barra fixa do topo (logo, ação principal, menu "Mais", busca, calendário, notificações e o diálogo de perfil). Não repita o cabeçalho na página.
+- `PainelHero` — data, saudação pela hora ("Bom dia, Pedro") e subtítulo.
+- `Indicador` — número de resumo; `PainelResumo` (equipe) e `OwnerResumo` (proprietário) são feitos dele. `OwnerResumo` segue a mesma regra do painel: cada número usa a definição da caixa correspondente, sem o teto de consulta. As caixas do proprietário também não têm teto (desde 2026-09-26): o `.limit(10)` em `OwnerChargesPreview` escondia a 11ª cobrança, e o total que o proprietário via ficava menor que o de `/gerenciar-cobrancas`. Isso aconteceu com Rosana, Aroldo e Claudia. A lista rola dentro da caixa.
+- `CaixaOperacao` + `GrupoCaixa` + `LinhaCaixa` + `BotaoLinha` + `SeloContagem` + `CaixaVazia` + `CaixaCarregando` — o cartão padrão das caixas (cabeçalho com ícone tingido, grupos com ponto colorido, linhas clicáveis). Todas as caixas das duas páginas usam esse casco; ao criar uma caixa nova, comece por ele.
+- `tons.ts` — o mapa de tons semânticos (`TOM[tom].caixa/ponto/texto/borda/fundo`), com as classes escritas por extenso para o Tailwind gerá-las.
+- `TituloSecao` — título de seção com barra de acento.
+
+A página do proprietário ganhou a ordem: saudação → números → avisos → curadoria/contrato/propostas → imóveis (`OwnerPropertiesSection`, que carrega o próprio título) → grade 2/3 + 1/3 (cobranças, comissões, manutenções, chamados | score, `OwnerAjuda`). Os dois banners de guia e os botões de relatório só de desktop viraram a caixa `OwnerAjuda`.
+
 ---
 
 ## 4. Regras invioláveis — e o status real de cada uma
@@ -198,7 +208,7 @@ Reorganizado em 2026-09-25 (`ROADMAP.md` item 4.6). A página tem esta ordem:
 | 7 | Papel em tabela separada, checado por `security definer` | ❌ **`role` é coluna de `profiles`**; não existe `user_roles` em 171 migrations |
 | 8 | Voltar de lista usa `replace: true` | ⚠️ parcial |
 | 9 | Não mexer em autogerados | `src/integrations/supabase/client.ts`, `types.ts`, `.env`, `supabase/config.toml` |
-| 10 | Produto em pt-BR | ✅ na UI — `index.html:2` ainda diz `lang="en"` |
+| 10 | Produto em pt-BR | ✅ na UI e `index.html` (`lang="pt-BR"` desde 2026-09-25) |
 
 ---
 
@@ -218,6 +228,10 @@ Reorganizado em 2026-09-25 (`ROADMAP.md` item 4.6). A página tem esta ordem:
 `MobileBottomNav.tsx` (191L, usado em 7 telas) · `MobileHeader.tsx` (95L, 4 telas) · `LoadingScreen.tsx` (19 telas) · `SkeletonLoading.tsx` · `AnimatedCard`, `Section`, `PullToRefresh`, `SwipeableCard`, `OwnerOnboardingTour` (framer-motion) · `MediaGallery` / `MediaThumbnail` / `AttachmentBubble` / `AuthenticatedMedia`.
 
 **Existem desde setembro/2026:** `src/components/ui/empty-state.tsx` (`EmptyState`) e `src/components/ui/section-skeleton.tsx` (`SectionSkeleton`). Use-os em vez de "Carregando..." solto ou vazio improvisado.
+
+**Fonte:** Inter, carregada do Google Fonts em `index.html` com `display=swap` e definida como `fontFamily.sans` em `tailwind.config.ts` (desde 2026-09-25). Sem rede, cai para a fonte do sistema.
+
+**Casco do painel:** `src/components/painel/` (ver §3.11) — cabeçalho, saudação, indicadores e caixas padronizadas das páginas `/painel` e `/minha-caixa`.
 
 Piores ofensores de cor crua: `OwnerScoreDisplay` (exceção legítima), `CobrancaDetalhes`, `AdminManutencoesLista`, `PropostaCompleta`, `MinhasCobrancas`.
 
@@ -282,7 +296,7 @@ Correção, evidência e plano: `ROADMAP.md`.
 10. **`npm install` quebra numa instalação limpa** 🟠 **(parcialmente corrigido)** — `@capacitor/camera` e `@capacitor/filesystem` voltaram para a 7.x em 2026-09-18, mas **`@capawesome/capacitor-file-picker` segue em `^8.0.0`** e também exige `@capacitor/core >=8.0.0` (o projeto está em `^7.4.4`). `npm install` ainda falha com ERESOLVE. O build do Lovable passa porque usa **bun**, permissivo com peer dependency — o problema só aparece para quem clona e roda `npm install`, que é o que o README documenta.
 11. **`owner-decision-cron` e as `notify-*` sem guarda** 🟡 — qualquer um dispara e-mail/push em massa para proprietários. Custo, reputação de domínio e incômodo.
 12. **`hostex-sync?force=1` pula o token** 🟡 — `index.ts:89-97`.
-13. **Higiene** 🟡 — 75 `console.log`; `index.html:2` `lang="en"`; sem `viewport-fit=cover`; 132 botões só de ícone e 25 `aria-label`; 34 "Carregando" soltos.
+13. **Higiene** 🟡 — 75 `console.log`; 132 botões só de ícone e 25 `aria-label`; 34 "Carregando" soltos. (`lang="pt-BR"` e `viewport-fit=cover` corrigidos em 2026-09-25.)
 14. **Arquivos gigantes** 🟡 — `AdminManutencoesLista.tsx` **2920**, `CobrancaDetalhes.tsx` 1804, `AtualizacaoAnuncio.tsx` 1791, `TicketDetalhes.tsx` 1284, `PlanoPerformanceSection.tsx` 1268.
 15. **Anexos listáveis sem login** 🔴 — o bucket `attachments` é público e tem a policy `Anyone can view attachments`, para o papel `public`. Com a chave anônima, qualquer pessoa lista e baixa os **6.002 arquivos**. Confirmado em `pg_policies` em 2026-09-25. Não basta tornar o bucket privado: o app usa `getPublicUrl` e grava URL pública em `ticket_attachments.file_url`. Ver `ROADMAP.md` 1.14.
 

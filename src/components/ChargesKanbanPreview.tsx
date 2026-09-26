@@ -2,15 +2,24 @@ import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { saveScrollPosition } from "@/lib/navigation";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { DollarSign, ArrowRight, MessageSquare, ChevronRight, ChevronDown, ChevronUp, Package } from "lucide-react";
+import { DollarSign, ArrowRight, MessageSquare, Package } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { diasParaVencer, estaVencida } from "@/lib/vencimento";
 import { useAuth } from "@/hooks/useAuth";
 import { formatBRL } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { ChargeChatDialog } from "./ChargeChatDialog";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  BotaoExpandir,
+  BotaoLinha,
+  CaixaCarregando,
+  CaixaOperacao,
+  CaixaVazia,
+  GrupoCaixa,
+  LinhaCaixa,
+  SeloContagem,
+} from "@/components/painel/CaixaOperacao";
 
 const COLLAPSED_LIMIT = 3;
 // Expandido mostra tudo; a lista rola dentro da caixa (ver CollapsibleContent).
@@ -70,8 +79,7 @@ export function ChargesKanbanPreview() {
     }
   };
 
-  const openChatDialog = (charge: Charge, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const openChatDialog = (charge: Charge) => {
     setChatCharge(charge);
     setChatDialogOpen(true);
   };
@@ -83,167 +91,141 @@ export function ChargesKanbanPreview() {
 
     if (isOverdue) return { text: `${Math.abs(daysLeft)}d atrás`, color: "text-destructive" };
     if (daysLeft === 0) return { text: "vence hoje", color: "text-warning" };
-    if (daysLeft <= 2) return { text: `${daysLeft}d`, color: "text-warning" };
     if (daysLeft <= 7) return { text: `${daysLeft}d`, color: "text-warning" };
     return { text: `${daysLeft}d`, color: "text-muted-foreground" };
   };
 
-  const getDueAmount = (charge: Charge) => Math.max(0, charge.amount_cents - (charge.management_contribution_cents || 0) - (charge.credit_applied_cents || 0));
+  const getDueAmount = (charge: Charge) =>
+    Math.max(0, charge.amount_cents - (charge.management_contribution_cents || 0) - (charge.credit_applied_cents || 0));
 
-  const pendentes = charges.filter(c => {
+  const pendentes = charges.filter((c) => {
     if (c.status !== "sent" && c.status !== "pendente") return false;
     return !estaVencida(c.due_date);
   });
 
   // Mesma definição do resumo do topo do painel (PainelResumo).
-  const vencidas = charges.filter(c => estaVencida(c.due_date, c.status));
+  const vencidas = charges.filter((c) => estaVencida(c.due_date, c.status));
 
   const vencidasLimit = vencidasExpanded ? EXPANDED_LIMIT : COLLAPSED_LIMIT;
   const pendentesLimit = pendentesExpanded ? EXPANDED_LIMIT : COLLAPSED_LIMIT;
 
-  const renderChargeItem = (charge: Charge, isOverdue: boolean = false) => {
+  const renderChargeItem = (charge: Charge, isOverdue = false) => {
     const dueInfo = getDueInfo(charge.due_date, charge.status);
     return (
-      <div
+      <LinhaCaixa
         key={charge.id}
-        className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors overflow-hidden min-w-0 ${
-          isOverdue 
-            ? "bg-destructive/10 hover:bg-destructive/15" 
-            : "bg-muted/50 hover:bg-muted"
-        }`}
+        titulo={charge.property?.name || charge.owner?.name || "Sem unidade"}
+        subtitulo={charge.title}
+        tom={isOverdue ? "destructive" : "neutral"}
+        tingida={isOverdue}
         onClick={() => (saveScrollPosition(pathname), navigate(`/cobranca/${charge.id}`))}
-      >
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium truncate">
-            {charge.property?.name || charge.owner?.name}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-1.5 shrink-0">
-          <span className="text-xs font-bold text-success whitespace-nowrap">
-            {formatBRL(getDueAmount(charge))}
-          </span>
-          <span className={`hidden sm:inline text-[10px] font-medium whitespace-nowrap ${dueInfo.color}`}>{dueInfo.text}</span>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 w-6 p-0 relative shrink-0"
-            onClick={(e) => openChatDialog(charge, e)}
-          >
-            <MessageSquare className="h-3.5 w-3.5" />
-          </Button>
-          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-        </div>
-      </div>
+        meta={
+          <>
+            <p className="font-semibold tabular-nums text-foreground">{formatBRL(getDueAmount(charge))}</p>
+            {dueInfo.text && (
+              <p className={cn("hidden text-[11px] font-medium sm:block", dueInfo.color)}>{dueInfo.text}</p>
+            )}
+          </>
+        }
+        acoes={
+          <BotaoLinha rotulo="Abrir conversa da cobrança" onClick={() => openChatDialog(charge)}>
+            <MessageSquare />
+          </BotaoLinha>
+        }
+      />
     );
   };
 
   if (loading) {
-    return (
-      <Card className="border-success/30">
-        <CardHeader className="py-3 px-4">
-          <div className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4 text-success animate-pulse" />
-            <div className="h-4 w-32 rounded bg-muted animate-pulse" />
-          </div>
-        </CardHeader>
-      </Card>
-    );
+    return <CaixaCarregando icone={<DollarSign />} titulo="Cobranças" tom="success" />;
   }
 
   return (
-    <Card className="border-success/30 w-full min-w-0 overflow-hidden">
-      <CardHeader className="py-3 px-4">
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <div className="flex items-center gap-2 min-w-0 flex-wrap">
-            <DollarSign className="h-4 w-4 text-success" />
-            <CardTitle className="text-sm">Cobranças</CardTitle>
-            {charges.length > 0 && (
-              <Badge variant="secondary" className="h-5 px-1.5 text-xs">
-                {charges.length}
-              </Badge>
-            )}
-            {vencidas.length > 0 && (
-              <Badge variant="destructive" className="h-5 px-1.5 text-xs">
-                {vencidas.length} vencidas
-              </Badge>
-            )}
-          </div>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate("/nova-cobranca?reposicao=true")}
-              className="h-7 text-xs gap-1"
-            >
-              <Package className="h-3 w-3" />
-              <span className="hidden sm:inline">Reposição</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate(isOwner ? "/minhas-cobrancas" : "/gerenciar-cobrancas")}
-              className="h-7 text-xs text-success"
-            >
-              <span className="hidden sm:inline">Ver</span>
-              <ArrowRight className="ml-1 h-3 w-3" />
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="px-4 pb-3 pt-0">
-        {charges.length === 0 ? (
-          <p className="text-xs text-muted-foreground text-center py-4">Nenhuma cobrança pendente</p>
-        ) : (
-          <div className="space-y-3">
-            {/* Vencidas primeiro */}
-            {vencidas.length > 0 && (
-              <Collapsible open={vencidasExpanded} onOpenChange={setVencidasExpanded}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <p className="text-xs font-semibold text-destructive">Vencidas ({vencidas.length})</p>
-                  {vencidas.length > COLLAPSED_LIMIT && (
+    <CaixaOperacao
+      icone={<DollarSign />}
+      titulo="Cobranças"
+      tom="success"
+      selos={
+        <>
+          {charges.length > 0 && <SeloContagem>{charges.length}</SeloContagem>}
+          {vencidas.length > 0 && <SeloContagem tom="destructive">{vencidas.length} vencidas</SeloContagem>}
+        </>
+      }
+      acoes={
+        <>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate("/nova-cobranca?reposicao=true")}
+            className="h-7 gap-1 px-2 text-xs"
+          >
+            <Package className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Reposição</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate(isOwner ? "/minhas-cobrancas" : "/gerenciar-cobrancas")}
+            className="h-7 gap-1 px-2 text-xs text-success hover:text-success"
+          >
+            <span className="hidden sm:inline">Ver todas</span>
+            <span className="sm:hidden">Ver</span>
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Button>
+        </>
+      }
+    >
+      {charges.length === 0 ? (
+        <CaixaVazia icone={<DollarSign className="h-5 w-5" />} titulo="Nenhuma cobrança pendente" />
+      ) : (
+        <div className="space-y-3">
+          {/* Vencidas primeiro */}
+          {vencidas.length > 0 && (
+            <Collapsible open={vencidasExpanded} onOpenChange={setVencidasExpanded}>
+              <GrupoCaixa
+                titulo="Vencidas"
+                quantidade={vencidas.length}
+                tom="destructive"
+                acao={
+                  vencidas.length > COLLAPSED_LIMIT && (
                     <CollapsibleTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-5 px-1.5 text-xs text-muted-foreground">
-                        {vencidasExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                        {vencidasExpanded ? "Recolher" : `+${vencidas.length - COLLAPSED_LIMIT}`}
-                      </Button>
+                      <BotaoExpandir aberto={vencidasExpanded} restantes={vencidas.length - COLLAPSED_LIMIT} />
                     </CollapsibleTrigger>
-                  )}
-                </div>
-                <div className="space-y-1">
-                  {vencidas.slice(0, COLLAPSED_LIMIT).map(c => renderChargeItem(c, true))}
-                </div>
-                <CollapsibleContent className="mt-1 max-h-72 space-y-1 overflow-y-auto pr-1">
-                  {vencidas.slice(COLLAPSED_LIMIT, vencidasLimit).map(c => renderChargeItem(c, true))}
+                  )
+                }
+              >
+                {vencidas.slice(0, COLLAPSED_LIMIT).map((c) => renderChargeItem(c, true))}
+                <CollapsibleContent className="max-h-72 space-y-1 overflow-y-auto pr-1">
+                  {vencidas.slice(COLLAPSED_LIMIT, vencidasLimit).map((c) => renderChargeItem(c, true))}
                 </CollapsibleContent>
-              </Collapsible>
-            )}
+              </GrupoCaixa>
+            </Collapsible>
+          )}
 
-            {/* Pendentes */}
-            {pendentes.length > 0 && (
-              <Collapsible open={pendentesExpanded} onOpenChange={setPendentesExpanded}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <p className="text-xs font-semibold text-warning">Pendentes ({pendentes.length})</p>
-                  {pendentes.length > COLLAPSED_LIMIT && (
+          {/* Pendentes */}
+          {pendentes.length > 0 && (
+            <Collapsible open={pendentesExpanded} onOpenChange={setPendentesExpanded}>
+              <GrupoCaixa
+                titulo="Pendentes"
+                quantidade={pendentes.length}
+                tom="warning"
+                acao={
+                  pendentes.length > COLLAPSED_LIMIT && (
                     <CollapsibleTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-5 px-1.5 text-xs text-muted-foreground">
-                        {pendentesExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                        {pendentesExpanded ? "Recolher" : `+${pendentes.length - COLLAPSED_LIMIT}`}
-                      </Button>
+                      <BotaoExpandir aberto={pendentesExpanded} restantes={pendentes.length - COLLAPSED_LIMIT} />
                     </CollapsibleTrigger>
-                  )}
-                </div>
-                <div className="space-y-1">
-                  {pendentes.slice(0, COLLAPSED_LIMIT).map(c => renderChargeItem(c, false))}
-                </div>
-                <CollapsibleContent className="mt-1 max-h-72 space-y-1 overflow-y-auto pr-1">
-                  {pendentes.slice(COLLAPSED_LIMIT, pendentesLimit).map(c => renderChargeItem(c, false))}
+                  )
+                }
+              >
+                {pendentes.slice(0, COLLAPSED_LIMIT).map((c) => renderChargeItem(c, false))}
+                <CollapsibleContent className="max-h-72 space-y-1 overflow-y-auto pr-1">
+                  {pendentes.slice(COLLAPSED_LIMIT, pendentesLimit).map((c) => renderChargeItem(c, false))}
                 </CollapsibleContent>
-              </Collapsible>
-            )}
-          </div>
-        )}
-      </CardContent>
+              </GrupoCaixa>
+            </Collapsible>
+          )}
+        </div>
+      )}
 
       <ChargeChatDialog
         open={chatDialogOpen}
@@ -252,6 +234,6 @@ export function ChargesKanbanPreview() {
         chargeTitle={chatCharge?.title || ""}
         propertyName={chatCharge?.property?.name || "Sem unidade"}
       />
-    </Card>
+    </CaixaOperacao>
   );
 }

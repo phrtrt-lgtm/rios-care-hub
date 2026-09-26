@@ -2,19 +2,26 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useNavigate, useLocation } from "react-router-dom";
 import { saveScrollPosition } from "@/lib/navigation";
-import { MessageSquare, Building2, Ticket, ChevronRight, ExternalLink } from "lucide-react";
+import { MessageSquare, Building2, Ticket, ArrowRight } from "lucide-react";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useChatPreloader } from "@/hooks/useChatPreloader";
 import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
 import { ownerScopeFilter } from "@/lib/ownerScope";
+import {
+  BotaoLinha,
+  CaixaCarregando,
+  CaixaOperacao,
+  CaixaVazia,
+  LinhaCaixa,
+  MiniaturaImovel,
+  SeloContagem,
+} from "@/components/painel/CaixaOperacao";
 
 interface OwnerTicket {
   id: string;
@@ -29,24 +36,13 @@ interface OwnerTicket {
   } | null;
 }
 
-const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  novo: { label: "Novo", variant: "default" },
-  em_analise: { label: "Em Análise", variant: "secondary" },
-  aguardando_info: { label: "Aguardando Info", variant: "outline" },
-  em_execucao: { label: "Em Execução", variant: "secondary" },
-  concluido: { label: "Concluído", variant: "outline" },
-  cancelado: { label: "Cancelado", variant: "destructive" },
-};
-
-const TICKET_TYPE_LABELS: Record<string, string> = {
-  duvida: "Dúvida",
-  manutencao: "Manutenção",
-  cobranca: "Cobrança",
-  bloqueio_data: "Bloqueio de Data",
-  financeiro: "Financeiro",
-  outros: "Outros",
-  conversar_hospedes: "Conversa com Hóspedes",
-  melhorias_compras: "Melhorias/Compras",
+const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
+  novo: { label: "Novo", className: "border-info/30 bg-info/10 text-info" },
+  em_analise: { label: "Em análise", className: "border-warning/30 bg-warning/10 text-warning" },
+  aguardando_info: { label: "Aguardando info", className: "border-warning/30 bg-warning/10 text-warning" },
+  em_execucao: { label: "Em execução", className: "border-primary/30 bg-primary/10 text-primary" },
+  concluido: { label: "Concluído", className: "border-success/30 bg-success/10 text-success" },
+  cancelado: { label: "Cancelado", className: "border-destructive/30 bg-destructive/10 text-destructive" },
 };
 
 export function OwnerTicketsPreview() {
@@ -75,8 +71,7 @@ export function OwnerTicketsPreview() {
         .or(await ownerScopeFilter(user.id))
         .neq("ticket_type", "manutencao")
         .in("status", ["novo", "em_analise", "aguardando_info"])
-        .order("created_at", { ascending: false })
-        .limit(20);
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
 
@@ -91,7 +86,7 @@ export function OwnerTicketsPreview() {
         return bLatest - aLatest;
       });
 
-      return sorted.slice(0, 5) as unknown as OwnerTicket[];
+      return sorted as unknown as OwnerTicket[];
     },
     enabled: !!user,
   });
@@ -100,129 +95,84 @@ export function OwnerTicketsPreview() {
   const { unreadCounts, markAsRead } = useUnreadMessages(ticketIds);
   useChatPreloader(ticketIds);
 
-  const handleOpenChat = (ticket: OwnerTicket, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleOpenChat = (ticket: OwnerTicket) => {
     setSelectedTicket(ticket);
     setChatOpen(true);
     markAsRead(ticket.id);
   };
 
   if (isLoading) {
-    return (
-      <Card className="overflow-hidden border-info/30/20">
-        <CardHeader className="pb-2 bg-gradient-to-r from-info/5 to-transparent">
-          <Skeleton className="h-5 w-48" />
-        </CardHeader>
-        <CardContent className="pt-3 px-3">
-          <div className="space-y-1.5">
-            <Skeleton className="h-14 w-full" />
-            <Skeleton className="h-14 w-full" />
-          </div>
-        </CardContent>
-      </Card>
-    );
+    return <CaixaCarregando icone={<Ticket />} titulo="Chamados em aberto" tom="info" linhas={2} />;
   }
 
   return (
     <>
-      <Card className="overflow-hidden border-info/30/20">
-        <CardHeader className="pb-2 bg-gradient-to-r from-info/5 to-transparent">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Ticket className="h-5 w-5 text-info" />
-              Chamados em Aberto
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="font-medium text-xs">
-                {tickets?.length || 0}
-              </Badge>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate("/meus-chamados")}
-                className="h-7 text-xs"
-              >
-                <ExternalLink className="h-3 w-3 mr-1" />
-                Ver todos
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-3 px-3">
-          {!tickets || tickets.length === 0 ? (
-            <div className="py-6 text-center text-sm text-muted-foreground">
-              Nenhum chamado em aberto no momento.
-            </div>
-          ) : (
-            <div className="max-h-[360px] overflow-y-auto space-y-1.5 pr-1">
-              {tickets.map((ticket) => {
-                const statusConfig = STATUS_CONFIG[ticket.status] || STATUS_CONFIG.novo;
-                const unreadCount = unreadCounts[ticket.id] || 0;
-
-                return (
-                  <div
-                    key={ticket.id}
-                    className="rounded-lg border bg-card overflow-hidden"
-                  >
-                    <div
-                      className="p-2.5 cursor-pointer hover:bg-muted/50 transition-colors"
-                      onClick={() => (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${ticket.id}`))}
+      <CaixaOperacao
+        icone={<Ticket />}
+        titulo="Chamados em aberto"
+        tom="info"
+        selos={(tickets?.length || 0) > 0 && <SeloContagem>{tickets?.length}</SeloContagem>}
+        acoes={
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate("/meus-chamados")}
+            className="h-7 gap-1 px-2 text-xs text-info hover:text-info"
+          >
+            Ver todos
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Button>
+        }
+      >
+        {!tickets || tickets.length === 0 ? (
+          <CaixaVazia
+            icone={<Ticket className="h-5 w-5" />}
+            titulo="Nenhum chamado em aberto"
+            descricao="Precisa de algo? Abra um chamado e a equipe responde por aqui."
+          />
+        ) : (
+          <div className="max-h-[360px] space-y-1 overflow-y-auto pr-1">
+            {tickets.map((ticket) => {
+              const statusConfig = STATUS_CONFIG[ticket.status] || STATUS_CONFIG.novo;
+              return (
+                <LinhaCaixa
+                  key={ticket.id}
+                  miniatura={
+                    <MiniaturaImovel
+                      url={ticket.property?.cover_photo_url}
+                      alt={ticket.property?.name}
+                      fallback={<Building2 />}
+                    />
+                  }
+                  titulo={ticket.subject}
+                  subtitulo={
+                    <>
+                      {ticket.property?.name}
+                      {ticket.property?.name ? " · " : ""}
+                      {format(new Date(ticket.created_at), "dd/MM", { locale: ptBR })}
+                    </>
+                  }
+                  meta={
+                    <Badge variant="outline" className={`h-5 px-1.5 text-[10px] font-medium ${statusConfig.className}`}>
+                      {statusConfig.label}
+                    </Badge>
+                  }
+                  acoes={
+                    <BotaoLinha
+                      rotulo="Abrir conversa do chamado"
+                      naoLidas={unreadCounts[ticket.id] || 0}
+                      onClick={() => handleOpenChat(ticket)}
                     >
-                      <div className="flex items-center gap-2">
-                        {/* Property photo */}
-                        <div className="w-8 h-8 rounded overflow-hidden bg-muted flex-shrink-0">
-                          {ticket.property?.cover_photo_url ? (
-                            <img
-                              src={ticket.property.cover_photo_url}
-                              alt={ticket.property.name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <Building2 className="h-3 w-3 text-muted-foreground" />
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-xs line-clamp-1">{ticket.subject}</p>
-                          <div className="flex items-center gap-1.5">
-                            <Badge variant={statusConfig.variant} className="text-[10px] px-1.5 py-0 h-4">
-                              {statusConfig.label}
-                            </Badge>
-                            <span className="text-[10px] text-muted-foreground">
-                              {ticket.property?.name} • {format(new Date(ticket.created_at), "dd/MM", { locale: ptBR })}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 w-7 p-0 relative"
-                            onClick={(e) => handleOpenChat(ticket, e)}
-                            title="Chat"
-                          >
-                            <MessageSquare className="h-3.5 w-3.5" />
-                            {unreadCount > 0 && (
-                              <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full min-w-[14px] h-[14px] flex items-center justify-center px-0.5">
-                                {unreadCount > 9 ? "9+" : unreadCount}
-                              </span>
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                      <MessageSquare />
+                    </BotaoLinha>
+                  }
+                  onClick={() => (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${ticket.id}`))}
+                />
+              );
+            })}
+          </div>
+        )}
+      </CaixaOperacao>
 
       <MaintenanceChatDialog
         open={chatOpen}

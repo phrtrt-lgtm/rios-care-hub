@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CaixaCarregando, CaixaOperacao, SeloContagem } from "@/components/painel/CaixaOperacao";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -103,8 +103,7 @@ export function OwnerChargesPreview() {
         .or(await ownerScopeFilter(user.id))
         .in("status", ["pendente", "sent", "overdue"])
         .is("archived_at", null)
-        .order("due_date", { ascending: true })
-        .limit(10);
+        .order("due_date", { ascending: true });
 
       if (error) throw error;
       return data as unknown as OwnerCharge[];
@@ -305,19 +304,7 @@ export function OwnerChargesPreview() {
   );
 
   if (isLoading) {
-    return (
-      <Card className="mb-6">
-        <CardHeader className="pb-3">
-          <Skeleton className="h-6 w-48" />
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <Skeleton className="h-20 w-full" />
-            <Skeleton className="h-20 w-full" />
-          </div>
-        </CardContent>
-      </Card>
-    );
+    return <CaixaCarregando icone={<DollarSign />} titulo="Cobranças em aberto" tom="success" linhas={2} />;
   }
 
   if (!charges || charges.length === 0) {
@@ -326,36 +313,29 @@ export function OwnerChargesPreview() {
 
   return (
     <>
-      <Card className="overflow-hidden border-success/30/20">
-        <CardHeader className="pb-2 bg-gradient-to-r from-success/5 to-transparent">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-success" />
-              Cobranças em Aberto
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="font-medium text-xs">
-                {charges.length}
-              </Badge>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate("/minhas-cobrancas")}
-                className="h-7 text-xs"
-              >
-                <ExternalLink className="h-3 w-3 mr-1" />
-                Ver todas
-              </Button>
-            </div>
-          </div>
-          <div className="flex items-center justify-between mt-1">
-            <p className="text-xs text-muted-foreground">
-              💡 Selecione várias cobranças para gerar um pagamento único
-            </p>
+      <CaixaOperacao
+        icone={<DollarSign />}
+        titulo="Cobranças em aberto"
+        tom="success"
+        selos={<SeloContagem>{charges.length}</SeloContagem>}
+        acoes={
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate("/minhas-cobrancas")}
+            className="h-7 gap-1 px-2 text-xs text-success hover:text-success"
+          >
+            Ver todas
+            <ExternalLink className="h-3.5 w-3.5" />
+          </Button>
+        }
+        subcabecalho={
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs text-muted-foreground">Selecione várias cobranças para gerar um pagamento único.</p>
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 px-2 text-xs"
+              className="h-6 shrink-0 px-2 text-xs"
               onClick={() => {
                 if (selectedCharges.length === charges.length) {
                   setSelectedCharges([]);
@@ -367,11 +347,11 @@ export function OwnerChargesPreview() {
               {selectedCharges.length === charges.length ? "Desmarcar todas" : "Selecionar todas"}
             </Button>
           </div>
-        </CardHeader>
-        <CardContent className="pt-3 px-3">
+        }
+      >
           {/* Bulk payment panel */}
           {selectedCharges.length > 0 && (
-            <div className="mb-3 p-2.5 rounded-lg border-2 border-primary/20 bg-primary/5 space-y-2">
+            <div className="mb-3 space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-muted-foreground">
@@ -432,8 +412,8 @@ export function OwnerChargesPreview() {
             </div>
           )}
 
-          {/* Scrollable charge list - max 2 visible */}
-          <div className="max-h-[200px] overflow-y-auto space-y-1.5 pr-1">
+          {/* Scrollable charge list */}
+          <div className="max-h-[260px] space-y-1.5 overflow-y-auto pr-1">
             {charges.map((charge) => {
               const statusConfig = STATUS_CONFIG[charge.status] || STATUS_CONFIG.pendente;
               const unreadCount = unreadCounts[charge.id] || 0;
@@ -444,12 +424,12 @@ export function OwnerChargesPreview() {
               return (
                 <div
                   key={charge.id}
-                  className={`rounded-lg border bg-card overflow-hidden ${
-                    isSelected ? 'border-primary bg-primary/5' : ''
+                  className={`overflow-hidden rounded-lg bg-muted/40 transition-colors ${
+                    isSelected ? 'ring-1 ring-primary bg-primary/5' : ''
                   }`}
                 >
                   <div
-                    className="p-2.5 cursor-pointer hover:bg-muted/50 transition-colors"
+                    className="cursor-pointer p-2.5 transition-colors hover:bg-muted/70"
                     onClick={() => (saveScrollPosition(pathname), navigate(`/cobranca/${charge.id}`))}
                   >
                     {/* Top row: checkbox + photo + info */}
@@ -476,7 +456,7 @@ export function OwnerChargesPreview() {
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-xs line-clamp-1">{charge.title}</p>
+                        <p className="line-clamp-1 text-[13px] font-medium">{charge.title}</p>
                         <div className="flex items-center gap-1.5 flex-wrap">
                           {charge.management_contribution_cents > 0 ? (
                             <>
@@ -547,42 +527,31 @@ export function OwnerChargesPreview() {
               );
             })}
           </div>
-        </CardContent>
-      </Card>
+      </CaixaOperacao>
 
       {/* Free Maintenances Section */}
       {freeMaintenances && freeMaintenances.length > 0 && (() => {
         const totalFreeCents = freeMaintenances.reduce((sum, c) => sum + (c.amount_cents || 0), 0);
         return (
-        <Card className="overflow-hidden border-success/30/20 mt-4">
-          <CardHeader className="pb-2 bg-gradient-to-r from-success/5 to-transparent">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Gift className="h-5 w-5 text-success" />
-              Manutenções Gratuitas
-              <Badge variant="secondary" className="font-medium text-xs ml-auto">
-                {freeMaintenances.length}
-              </Badge>
-            </CardTitle>
-
-            {/* All-time total */}
-            {(allTimeInvestmentCents ?? 0) > 0 && (
-              <div className="mt-2 rounded-xl bg-gradient-to-r from-success/15 to-success/5 border border-success/30/25 px-4 py-3 text-center">
-                <p className="text-[11px] text-success font-medium tracking-wide uppercase">
-                  A RIOS já aportou no seu imóvel
-                </p>
-                <p className="text-2xl font-extrabold text-success mt-0.5">
-                  {formatBRL(allTimeInvestmentCents ?? 0)}
-                </p>
+        <CaixaOperacao
+          icone={<Gift />}
+          titulo="Manutenções gratuitas"
+          tom="success"
+          selos={<SeloContagem tom="success">{freeMaintenances.length}</SeloContagem>}
+          subcabecalho={
+            (allTimeInvestmentCents ?? 0) > 0 ? (
+              <div className="rounded-lg border border-success/30 bg-success/5 px-4 py-3 text-center">
+                <p className="text-[11px] font-medium uppercase tracking-wide text-success">A RIOS já aportou no seu imóvel</p>
+                <p className="mt-0.5 text-2xl font-bold tabular-nums text-success">{formatBRL(allTimeInvestmentCents ?? 0)}</p>
               </div>
-            )}
-
-          </CardHeader>
-          <CardContent className="pt-3 px-3">
+            ) : undefined
+          }
+        >
             <div className="space-y-1.5">
               {freeMaintenances.map((charge) => (
                 <div
                   key={charge.id}
-                  className="rounded-lg border bg-card overflow-hidden cursor-pointer hover:bg-muted/50 transition-colors"
+                  className="cursor-pointer overflow-hidden rounded-lg bg-muted/40 transition-colors hover:bg-muted/70"
                   onClick={() => (saveScrollPosition(pathname), navigate(`/cobranca/${charge.id}`))}
                 >
                   <div className="p-2.5">
@@ -603,7 +572,7 @@ export function OwnerChargesPreview() {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-xs line-clamp-1">{charge.title}</p>
                         <div className="flex items-center gap-1.5">
-                          <Badge variant="outline" className="text-[10px] h-4 border-success/30/30 text-success">
+                          <Badge variant="outline" className="text-[10px] h-4 border-success/30 text-success">
                             Aporte integral
                           </Badge>
                           <span className="text-[10px] text-muted-foreground">
@@ -623,12 +592,11 @@ export function OwnerChargesPreview() {
               ))}
             </div>
             {/* 7-day integral total below list */}
-            <div className="mt-3 flex items-center justify-between rounded-lg bg-success/10 border border-success/30/20 px-3 py-2">
+            <div className="mt-3 flex items-center justify-between rounded-lg border border-success/30 bg-success/10 px-3 py-2">
               <span className="text-xs text-success font-medium">Aportes integrais dos últimos 7 dias:</span>
               <span className="text-sm font-bold text-success">{formatBRL(totalFreeCents)}</span>
             </div>
-          </CardContent>
-        </Card>
+        </CaixaOperacao>
         );
       })()}
 

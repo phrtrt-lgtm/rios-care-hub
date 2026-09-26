@@ -2,11 +2,10 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Archive, ChevronDown, ChevronRight, DollarSign, X } from "lucide-react";
+import { Archive, ChevronDown, ChevronRight, UserRound, X } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -21,6 +20,8 @@ import {
 import { cn } from "@/lib/utils";
 import { useGuestCharges, type GuestChargeItem } from "@/hooks/useGuestCharges";
 import type { DetailEntityType } from "@/hooks/useDetailSheet";
+import { GrupoCaixa, LinhaCaixa, SeloContagem } from "@/components/painel/CaixaOperacao";
+import { TOM, type Tom } from "@/components/painel/tons";
 
 interface Props {
   /** Controlado pelo painel, para o resumo do topo conseguir abrir o lembrete. */
@@ -30,10 +31,10 @@ interface Props {
   onOpenDetail: (id: string, type: DetailEntityType) => void;
 }
 
-const GRUPOS: { id: GuestChargeItem["grupo"]; titulo: string; classe: string }[] = [
-  { id: "pronta", titulo: "Prontas para cobrar", classe: "text-success" },
-  { id: "em_breve", titulo: "Em breve", classe: "text-muted-foreground" },
-  { id: "sem_data", titulo: "Sem data de check-out — informe a data para entrar na contagem", classe: "text-warning" },
+const GRUPOS: { id: GuestChargeItem["grupo"]; titulo: string; tom: Tom }[] = [
+  { id: "pronta", titulo: "Prontas para cobrar", tom: "success" },
+  { id: "em_breve", titulo: "Em breve", tom: "neutral" },
+  { id: "sem_data", titulo: "Sem data de check-out — informe a data para entrar na contagem", tom: "warning" },
 ];
 
 /**
@@ -60,7 +61,9 @@ export function GuestChargeReminders({ open, onOpenChange, onOpenDetail }: Props
   const arquivar = async (item: GuestChargeItem) => {
     setArquivandoId(item.id);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       const { error } = await supabase
         .from("tickets")
         .update({
@@ -87,7 +90,7 @@ export function GuestChargeReminders({ open, onOpenChange, onOpenDetail }: Props
     <Button
       variant="ghost"
       size="sm"
-      className="h-7 gap-1 text-xs text-muted-foreground"
+      className="h-7 gap-1 px-2 text-xs text-muted-foreground"
       onClick={(e) => {
         e.stopPropagation();
         navigate("/cobrancas-hospede-arquivadas");
@@ -98,11 +101,15 @@ export function GuestChargeReminders({ open, onOpenChange, onOpenDetail }: Props
     </Button>
   );
 
+  const tomCabecalho: Tom = prontas.length > 0 ? "success" : "warning";
+
   if (itens.length === 0) {
     return (
-      <div className="flex items-center justify-between gap-2 rounded-lg border bg-card px-3 py-2 text-sm text-muted-foreground">
-        <span className="flex items-center gap-2">
-          <DollarSign className="h-4 w-4" aria-hidden="true" />
+      <div className="flex items-center justify-between gap-2 rounded-xl border border-border/70 bg-card px-3 py-2 text-sm text-muted-foreground shadow-sm">
+        <span className="flex items-center gap-2.5">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted" aria-hidden="true">
+            <UserRound className="h-4 w-4" />
+          </span>
           Nenhuma cobrança de hóspede pendente
         </span>
         {botaoArquivadas}
@@ -114,7 +121,7 @@ export function GuestChargeReminders({ open, onOpenChange, onOpenDetail }: Props
     <div
       id="lembrete-hospede"
       className={cn(
-        "rounded-lg border bg-card",
+        "rounded-xl border border-border/70 bg-card shadow-sm",
         prontas.length > 0 && "border-success/40",
       )}
     >
@@ -130,92 +137,84 @@ export function GuestChargeReminders({ open, onOpenChange, onOpenDetail }: Props
             onOpenChange(!open);
           }
         }}
-        className="flex w-full cursor-pointer flex-wrap items-center gap-x-3 gap-y-1 rounded-lg px-3 py-2 text-left hover:bg-muted/40"
+        className="flex w-full cursor-pointer flex-wrap items-center gap-x-3 gap-y-1.5 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
+        <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", TOM[tomCabecalho].caixa)} aria-hidden="true">
+          <UserRound className="h-4 w-4" />
+        </span>
+        <span className="text-sm font-semibold tracking-tight">Cobranças de hóspede</span>
+
+        <div className="flex flex-1 flex-wrap items-center gap-1.5">
+          {prontas.length > 0 && (
+            <SeloContagem tom="success">
+              {prontas.length} {prontas.length === 1 ? "pronta" : "prontas"} para cobrar
+            </SeloContagem>
+          )}
+          {emBreve.length > 0 && (
+            <SeloContagem className="font-medium">
+              {emBreve.length} em breve
+              {proxima != null && ` · próxima em ${proxima} ${proxima === 1 ? "dia" : "dias"}`}
+            </SeloContagem>
+          )}
+          {semData.length > 0 && (
+            <SeloContagem tom="warning" className="font-medium">
+              {semData.length} sem data de check-out
+            </SeloContagem>
+          )}
+        </div>
+
+        {botaoArquivadas}
         {open ? (
           <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
         ) : (
           <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
         )}
-        <DollarSign className="h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
-        <span className="text-sm font-medium">Cobranças de hóspede</span>
-
-        <div className="flex flex-1 flex-wrap items-center gap-1.5">
-          {prontas.length > 0 && (
-            <Badge className="bg-success text-success-foreground hover:bg-success">
-              {prontas.length} {prontas.length === 1 ? "pronta" : "prontas"} para cobrar
-            </Badge>
-          )}
-          {emBreve.length > 0 && (
-            <Badge variant="outline" className="font-normal">
-              {emBreve.length} em breve
-              {proxima != null && ` · próxima em ${proxima} ${proxima === 1 ? "dia" : "dias"}`}
-            </Badge>
-          )}
-          {semData.length > 0 && (
-            <Badge variant="outline" className="border-warning/40 font-normal text-warning">
-              {semData.length} sem data de check-out
-            </Badge>
-          )}
-        </div>
-
-        {botaoArquivadas}
       </div>
 
       {/* Lista completa — rola dentro da caixa, sem empurrar o painel */}
       {open && (
-        <div className="max-h-[420px] space-y-3 overflow-y-auto border-t px-3 pb-3 pt-2">
+        <div className="max-h-[420px] space-y-3 overflow-y-auto border-t border-border/60 px-3 pb-3 pt-3">
           {GRUPOS.map((grupo) => {
             const lista = itens.filter((i) => i.grupo === grupo.id);
             if (lista.length === 0) return null;
             return (
-              <div key={grupo.id} className="space-y-1">
-                <p className={cn("text-xs font-semibold", grupo.classe)}>
-                  {grupo.titulo} ({lista.length})
-                </p>
+              <GrupoCaixa key={grupo.id} titulo={grupo.titulo} quantidade={lista.length} tom={grupo.tom}>
                 {lista.map((item) => (
-                  <div
+                  <LinhaCaixa
                     key={item.id}
-                    role="button"
-                    tabIndex={0}
+                    titulo={item.property_name}
+                    subtitulo={item.subject}
                     onClick={() => abrir(item)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") abrir(item);
-                    }}
-                    className="flex cursor-pointer items-center gap-3 rounded-md bg-muted/40 px-2.5 py-1.5 transition-colors hover:bg-muted"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{item.property_name}</p>
-                      <p className="truncate text-xs text-muted-foreground">{item.subject}</p>
-                    </div>
-                    <div className="shrink-0 text-right text-xs text-muted-foreground">
-                      {item.guest_checkout_date && (
-                        <p>Check-out {format(new Date(item.guest_checkout_date), "dd/MM", { locale: ptBR })}</p>
-                      )}
-                      {item.grupo === "em_breve" && item.days_until_charge != null && (
-                        <p>
-                          cobrar em {item.days_until_charge} {item.days_until_charge === 1 ? "dia" : "dias"}
-                        </p>
-                      )}
-                      {item.grupo === "pronta" && <p className="font-medium text-success">já pode cobrar</p>}
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                      disabled={arquivandoId === item.id}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setConfirmar(item);
-                      }}
-                      aria-label={`Arquivar cobrança de hóspede de ${item.property_name}`}
-                      title="Arquivar (cobrança feita pelo Airbnb)"
-                    >
-                      <X className="h-3.5 w-3.5" aria-hidden="true" />
-                    </Button>
-                  </div>
+                    semSeta
+                    meta={
+                      <div className="text-muted-foreground">
+                        {item.guest_checkout_date && (
+                          <p>Check-out {format(new Date(item.guest_checkout_date), "dd/MM", { locale: ptBR })}</p>
+                        )}
+                        {item.grupo === "em_breve" && item.days_until_charge != null && (
+                          <p>
+                            cobrar em {item.days_until_charge} {item.days_until_charge === 1 ? "dia" : "dias"}
+                          </p>
+                        )}
+                        {item.grupo === "pronta" && <p className="font-medium text-success">já pode cobrar</p>}
+                      </div>
+                    }
+                    acoes={
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        disabled={arquivandoId === item.id}
+                        onClick={() => setConfirmar(item)}
+                        aria-label={`Arquivar cobrança de hóspede de ${item.property_name}`}
+                        title="Arquivar (cobrança feita pelo Airbnb)"
+                      >
+                        <X className="h-3.5 w-3.5" aria-hidden="true" />
+                      </Button>
+                    }
+                  />
                 ))}
-              </div>
+              </GrupoCaixa>
             );
           })}
         </div>

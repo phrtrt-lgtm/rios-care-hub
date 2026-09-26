@@ -3,9 +3,9 @@ import { saveScrollPosition } from "@/lib/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Vote, Calendar } from "lucide-react";
+import { Vote, Calendar, ArrowRight } from "lucide-react";
+import { CaixaOperacao, LinhaCaixa, SeloContagem } from "@/components/painel/CaixaOperacao";
 import { useAuth } from "@/hooks/useAuth";
 
 export function VotacoesPendentes() {
@@ -58,58 +58,49 @@ export function VotacoesPendentes() {
   }
 
   return (
-    <Card className="mb-6 border-primary/20 bg-primary/5">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Vote className="h-5 w-5" />
-              Propostas Pendentes
-            </CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              Você tem {pendingProposals.length} {pendingProposals.length === 1 ? 'proposta pendente' : 'propostas pendentes'}
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/votacoes')}
-          >
-            Ver Todas
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {pendingProposals.slice(0, 3).map((proposal) => (
-            <Card
-              key={proposal.id}
-              className="cursor-pointer hover:border-primary transition-colors"
-              onClick={() => (saveScrollPosition(pathname), navigate(`/votacao-detalhes/${proposal.id}`))}
-            >
-              <CardContent className="pt-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold truncate">{proposal.title}</h4>
-                    {proposal.category && (
-                      <Badge variant="outline" className="mt-1">
-                        {proposal.category}
-                      </Badge>
-                    )}
-                    <div className="flex items-center gap-1 mt-2 text-sm text-muted-foreground">
-                      <Calendar className="h-3 w-3" />
-                      Prazo: {new Date(proposal.deadline).toLocaleDateString('pt-BR')}
-                    </div>
-                  </div>
-                  <Button size="sm">
-                    Responder
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+    <CaixaOperacao
+      icone={<Vote />}
+      titulo="Propostas pendentes"
+      tom="primary"
+      selos={<SeloContagem tom="primary">{pendingProposals.length}</SeloContagem>}
+      acoes={
+        <Button variant="ghost" size="sm" className="h-7 gap-1 px-2 text-xs text-primary hover:text-primary" onClick={() => navigate('/votacoes')}>
+          Ver todas
+          <ArrowRight className="h-3.5 w-3.5" />
+        </Button>
+      }
+    >
+      <div className="space-y-1">
+        {pendingProposals.slice(0, 3).map((proposal) => (
+          <LinhaCaixa
+            key={proposal.id}
+            titulo={proposal.title}
+            subtitulo={
+              <span className="inline-flex items-center gap-1">
+                <Calendar className="h-3 w-3" aria-hidden="true" />
+                Prazo: {new Date(proposal.deadline).toLocaleDateString('pt-BR')}
+              </span>
+            }
+            meta={
+              proposal.category ? (
+                <Badge variant="outline" className="hidden font-normal sm:inline-flex">
+                  {proposal.category}
+                </Badge>
+              ) : undefined
+            }
+            acoes={
+              <Button
+                size="sm"
+                className="h-7 px-2.5 text-xs"
+                onClick={() => (saveScrollPosition(pathname), navigate(`/votacao-detalhes/${proposal.id}`))}
+              >
+                Responder
+              </Button>
+            }
+            onClick={() => (saveScrollPosition(pathname), navigate(`/votacao-detalhes/${proposal.id}`))}
+          />
+        ))}
+      </div>
+    </CaixaOperacao>
   );
 }

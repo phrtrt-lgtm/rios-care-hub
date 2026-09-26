@@ -29,9 +29,9 @@ export function OwnerContractInviteCard() {
   if (!contract) return null;
 
   return (
-    <Card className="border-primary/30 bg-primary/5">
-      <CardContent className="p-5 flex items-start gap-4">
-        <div className="rounded-full bg-primary/15 p-3">
+    <Card className="rounded-xl border-primary/30 bg-primary/5">
+      <CardContent className="flex items-start gap-4 p-4 md:p-5">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/15">
           <FileSignature className="h-5 w-5 text-primary" />
         </div>
         <div className="flex-1">

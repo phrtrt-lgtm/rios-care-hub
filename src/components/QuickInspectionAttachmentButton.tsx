@@ -93,7 +93,7 @@ export function QuickInspectionAttachmentButton({ inspectionId, onSuccess }: Qui
       <Button
         variant="ghost"
         size="sm"
-        className="h-6 w-6 p-0 shrink-0"
+        className="h-7 w-7 p-0 shrink-0 text-muted-foreground hover:text-foreground"
         onClick={handleClick}
         disabled={uploading}
         title="Adicionar anexo à vistoria"

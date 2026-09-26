@@ -75,11 +75,11 @@ export const OwnerScoreDisplay = () => {
 
   if (isLoading) {
     return (
-      <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-        <CardHeader className="pb-2">
+      <Card className="rounded-xl border-border/70">
+        <CardHeader className="border-b border-border/60 px-4 py-3">
           <Skeleton className="h-6 w-32" />
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 pt-4">
           <div className="flex items-center gap-4">
             <Skeleton className="h-16 w-16 rounded-full" />
             <div className="space-y-2">
@@ -97,19 +97,21 @@ export const OwnerScoreDisplay = () => {
   // Show intro version for new users (less than 3 charges)
   if (scoreData.totalCharges < 3) {
     return (
-      <Card className="bg-gradient-to-br from-primary/5 via-background to-primary/10 border-primary/20 overflow-hidden">
-        <CardHeader className="pb-2">
+      <Card className="overflow-hidden rounded-xl border-border/70">
+        <CardHeader className="border-b border-border/60 px-4 py-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-medium flex items-center gap-2">
-              <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
-              Score de Pagamentos
+            <CardTitle className="flex items-center gap-2 text-sm font-semibold tracking-tight md:text-[15px]">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-warning/10" aria-hidden="true">
+                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+              </span>
+              Score de pagamentos
             </CardTitle>
             <div className="bg-primary/20 text-primary text-xs font-medium px-2.5 py-1 rounded-full">
               Novo!
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-3 px-4 pt-4">
           {/* Progress indicator */}
           <div className="bg-muted/50 rounded-lg p-3 flex items-center gap-3">
             <div className="flex gap-0.5">
@@ -277,12 +279,14 @@ export const OwnerScoreDisplay = () => {
     }));
 
   return (
-    <Card className="bg-gradient-to-br from-primary/5 via-background to-primary/10 border-primary/20 overflow-hidden">
-      <CardHeader className="pb-2">
+    <Card className="overflow-hidden rounded-xl border-border/70">
+      <CardHeader className="border-b border-border/60 px-4 py-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-medium flex items-center gap-2">
-            <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
-            Meu Score de Pagamentos
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold tracking-tight md:text-[15px]">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-warning/10" aria-hidden="true">
+              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+            </span>
+            Meu score de pagamentos
           </CardTitle>
           <Button
             variant="ghost"
@@ -295,7 +299,7 @@ export const OwnerScoreDisplay = () => {
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 px-4 pt-4">
         {/* Explicação do sistema */}
         <Collapsible open={showInfo} onOpenChange={setShowInfo}>
           <CollapsibleContent>
