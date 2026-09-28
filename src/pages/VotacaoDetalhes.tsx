@@ -1,33 +1,36 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { goBack } from "@/lib/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { 
-  ArrowLeft, 
-  Image as ImageIcon, 
-  Calendar, 
-  User, 
-  FileText, 
-  Paperclip,
-  CreditCard,
+import { EmptyState } from "@/components/ui/empty-state";
+import {
+  ArrowLeft,
+  Calendar,
   Check,
   Clock,
+  CreditCard,
+  FileText,
+  Image as ImageIcon,
   Loader2,
-  QrCode
+  Paperclip,
+  QrCode,
+  Tag,
+  User,
+  Users,
+  Vote,
+  ChartColumn,
+  MessageSquareText,
+  Video,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { MediaGallery } from "@/components/MediaGallery";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { processFileForUpload } from "@/lib/processVideoForUpload";
 import {
   Dialog,
@@ -37,6 +40,86 @@ import {
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { ProposalBulkPurchasePanel } from "@/components/ProposalBulkPurchasePanel";
+import { CabecalhoPagina, PaginaInterna } from "@/components/painel/PaginaInterna";
+import { BotaoLinha, CaixaCarregando, CaixaOperacao, CaixaVazia, SeloContagem } from "@/components/painel/CaixaOperacao";
+import { Definicao, ListaDefinicoes } from "@/components/painel/Definicoes";
+import { Etiqueta } from "@/components/painel/Etiqueta";
+import type { Tom } from "@/components/painel/tons";
+import { formatarBRL, formatarData } from "@/lib/cobrancaMeta";
+import { diasParaVencer } from "@/lib/vencimento";
+import { MentionText } from "@/components/comments/MentionText";
+
+interface Resposta {
+  id: string;
+  owner_id: string;
+  approved: boolean;
+  note: string | null;
+  attachment_path: string | null;
+  responded_at: string;
+  selected_option_id: string | null;
+  is_visible_to_owner: boolean;
+  paid_at: string | null;
+  payment_amount_cents: number | null;
+  payment_status: string | null;
+  profiles?: { id: string; name: string; email: string };
+}
+
+interface Anexo {
+  id: string;
+  file_name: string;
+  file_path: string;
+  file_type: string | null;
+  signedUrl?: string;
+}
+
+interface Opcao {
+  id: string;
+  option_text: string;
+  order_index: number;
+}
+
+interface Proposta {
+  id: string;
+  title: string;
+  description: string;
+  category: string | null;
+  status: string;
+  deadline: string;
+  amount_cents: number | null;
+  payment_type: string | null;
+  target_audience: string;
+  created_by: string | null;
+  proposal_responses: Resposta[];
+  proposal_attachments: Anexo[];
+  proposal_options: Opcao[];
+  creator?: { id: string; name: string; email: string };
+}
+
+interface ItemGaleria {
+  id: string;
+  file_url: string;
+  file_name: string | null;
+  file_type: string | null;
+}
+
+/** Valores reais de `proposals.status` (check constraint da migration). */
+const STATUS_PROPOSTA: Record<string, { rotulo: string; tom: Tom }> = {
+  active: { rotulo: "Aberta", tom: "info" },
+  approved: { rotulo: "Aprovada", tom: "success" },
+  rejected: { rotulo: "Rejeitada", tom: "destructive" },
+  expired: { rotulo: "Expirada", tom: "neutral" },
+};
+
+const PUBLICO: Record<string, string> = {
+  owners: "Proprietários",
+  team: "Equipe",
+};
+
+const iconeAnexo = (tipo: string | null) => {
+  if (tipo?.startsWith("image/")) return <ImageIcon className="h-8 w-8" />;
+  if (tipo?.startsWith("video/")) return <Video className="h-8 w-8" />;
+  return <FileText className="h-8 w-8" />;
+};
 
 export default function VotacaoDetalhes() {
   const { id } = useParams();
@@ -48,7 +131,7 @@ export default function VotacaoDetalhes() {
   const [file, setFile] = useState<File | null>(null);
   const [selectedOption, setSelectedOption] = useState<string>("");
   const [galleryOpen, setGalleryOpen] = useState(false);
-  const [galleryItems, setGalleryItems] = useState<any[]>([]);
+  const [galleryItems, setGalleryItems] = useState<ItemGaleria[]>([]);
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [pixDialogOpen, setPixDialogOpen] = useState(false);
   const [paymentData, setPaymentData] = useState<{
@@ -57,8 +140,9 @@ export default function VotacaoDetalhes() {
     pixQrCodeBase64?: string;
   } | null>(null);
   const [isGeneratingPayment, setIsGeneratingPayment] = useState(false);
+  const [abrindoAnexoResposta, setAbrindoAnexoResposta] = useState<string | null>(null);
 
-  const isTeam = profile?.role && ['admin', 'maintenance', 'agent'].includes(profile.role);
+  const isTeam = !!profile?.role && ['admin', 'maintenance', 'agent'].includes(profile.role);
 
   // Fetch proposal data
   const { data: proposal, isLoading } = useQuery({
@@ -94,48 +178,46 @@ export default function VotacaoDetalhes() {
           )
         `)
         .eq('id', id)
-      .maybeSingle();
-      
+        .maybeSingle();
+
       if (error) throw error;
       if (!data) {
         throw new Error('Proposta não encontrada');
       }
-      
-      // Extend data type to include creator
-      const extendedData = data as typeof data & { creator?: { id: string; name: string; email: string } };
-      
+
+      const extendedData = data as unknown as Proposta;
+
       // Fetch creator profile
-      const { data: creatorProfile } = await supabase
-        .from('profiles')
-        .select('id, name, email')
-        .eq('id', data.created_by)
-        .single();
-      
-      extendedData.creator = creatorProfile || undefined;
-      
+      if (data.created_by) {
+        const { data: creatorProfile } = await supabase
+          .from('profiles')
+          .select('id, name, email')
+          .eq('id', data.created_by)
+          .maybeSingle();
+        extendedData.creator = creatorProfile || undefined;
+      }
+
       // Fetch owner details separately if team member
       if (extendedData.proposal_responses && isTeam) {
-        const ownerIds = extendedData.proposal_responses.map((r: any) => r.owner_id);
+        const ownerIds = extendedData.proposal_responses.map((r) => r.owner_id);
         const { data: profiles } = await supabase
           .from('profiles')
           .select('id, name, email')
           .in('id', ownerIds);
-        
+
         if (profiles) {
-          (extendedData as any).proposal_responses = extendedData.proposal_responses.map((r: any) => ({
+          extendedData.proposal_responses = extendedData.proposal_responses.map((r) => ({
             ...r,
-            profiles: profiles.find((p: any) => p.id === r.owner_id)
+            profiles: profiles.find((p) => p.id === r.owner_id),
           }));
         }
       }
-      
+
       return extendedData;
     },
   });
 
-  const myResponse = proposal?.proposal_responses?.find(
-    (r: any) => r.owner_id === profile?.id
-  );
+  const myResponse = proposal?.proposal_responses?.find((r) => r.owner_id === profile?.id);
 
   const hasResponded = myResponse?.selected_option_id != null;
 
@@ -144,20 +226,20 @@ export default function VotacaoDetalhes() {
     queryKey: ['proposal-attachments', id],
     queryFn: async () => {
       if (!proposal?.proposal_attachments?.length) return [];
-      
+
       const urls = await Promise.all(
-        proposal.proposal_attachments.map(async (att: any) => {
+        proposal.proposal_attachments.map(async (att) => {
           const { data } = await supabase.storage
             .from('proposals')
             .createSignedUrl(att.file_path, 3600);
-          
+
           return {
             ...att,
-            signedUrl: data?.signedUrl
+            signedUrl: data?.signedUrl,
           };
         })
       );
-      
+
       return urls;
     },
     enabled: !!proposal?.proposal_attachments?.length,
@@ -166,12 +248,12 @@ export default function VotacaoDetalhes() {
   // Check if selected option requires payment
   const requiresPayment = () => {
     if (!proposal?.amount_cents || proposal.amount_cents <= 0) return false;
-    
-    const selectedOpt = proposal.proposal_options?.find((o: any) => o.id === selectedOption);
+
+    const selectedOpt = proposal.proposal_options?.find((o) => o.id === selectedOption);
     // If the option contains "sim", "aprovar", "concordo", it likely requires payment
     const optionText = selectedOpt?.option_text?.toLowerCase() || '';
-    return optionText.includes('sim') || 
-           optionText.includes('aprovar') || 
+    return optionText.includes('sim') ||
+           optionText.includes('aprovar') ||
            optionText.includes('concordo') ||
            optionText.includes('aceito');
   };
@@ -190,7 +272,7 @@ export default function VotacaoDetalhes() {
         const processedFile = await processFileForUpload(file);
         const fileExt = processedFile.name.split('.').pop();
         const filePath = `proposals/${id}/${profile?.id}-${Date.now()}.${fileExt}`;
-        
+
         const { error: uploadError } = await supabase.storage
           .from('attachments')
           .upload(filePath, processedFile);
@@ -222,7 +304,7 @@ export default function VotacaoDetalhes() {
             selected_option_id: selectedOption,
             note: note || null,
             attachment_path: attachmentPath,
-            approved: null as any,
+            approved: false,
           }]);
 
         if (error) throw error;
@@ -240,7 +322,7 @@ export default function VotacaoDetalhes() {
           );
 
           if (paymentError) throw paymentError;
-          
+
           setPaymentData(paymentResult);
           setPixDialogOpen(true);
         } catch (err) {
@@ -266,7 +348,7 @@ export default function VotacaoDetalhes() {
       setNote("");
       setFile(null);
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Erro ao registrar resposta",
         description: error.message,
@@ -277,426 +359,431 @@ export default function VotacaoDetalhes() {
 
   const openAttachmentGallery = (index: number) => {
     if (!attachmentUrls?.length) return;
-    
-    setGalleryItems(attachmentUrls.map((att: any) => ({
+
+    // Sem o nome real do arquivo: a galeria mostraria "Arquivo: foto-da-cozinha.jpg".
+    setGalleryItems(attachmentUrls.map((att) => ({
       id: att.id,
-      file_url: att.signedUrl,
-      file_name: att.file_name,
+      file_url: att.signedUrl ?? '',
+      file_name: null,
       file_type: att.file_type || 'application/octet-stream',
     })));
     setGalleryIndex(index);
     setGalleryOpen(true);
   };
 
+  /** Anexo enviado junto com a resposta (bucket `attachments`), aberto na galeria. */
+  const abrirAnexoResposta = async (resposta: Resposta) => {
+    if (!resposta.attachment_path) return;
+    setAbrindoAnexoResposta(resposta.id);
+    try {
+      const { data, error } = await supabase.storage
+        .from('attachments')
+        .createSignedUrl(resposta.attachment_path, 3600);
+      if (error) throw error;
+      setGalleryItems([{ id: resposta.id, file_url: data.signedUrl, file_name: null, file_type: null }]);
+      setGalleryIndex(0);
+      setGalleryOpen(true);
+    } catch (error) {
+      console.error('Erro ao abrir anexo da resposta:', error);
+      toast({ title: "Não foi possível abrir o anexo", variant: "destructive" });
+    } finally {
+      setAbrindoAnexoResposta(null);
+    }
+  };
+
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
+      <PaginaInterna
+        largura="media"
+        comNavInferior
+        cabecalho={<CabecalhoPagina titulo="Proposta" icone={<Vote />} tom="secondary" voltarPara="/votacoes" />}
+      >
+        <CaixaCarregando icone={<FileText />} titulo="Detalhes" tom="secondary" linhas={4} />
+        <CaixaCarregando icone={<Vote />} titulo="Resposta" tom="primary" linhas={3} />
+      </PaginaInterna>
     );
   }
 
   if (!proposal) {
     return (
-      <div className="min-h-screen bg-background p-4 md:p-8">
-        <div className="max-w-3xl mx-auto text-center">
-          <p className="text-muted-foreground">Proposta não encontrada</p>
-          <Button variant="outline" onClick={() => goBack(navigate, "/votacoes")} className="mt-4">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar
-          </Button>
-        </div>
-      </div>
+      <PaginaInterna
+        largura="media"
+        comNavInferior
+        cabecalho={<CabecalhoPagina titulo="Proposta" icone={<Vote />} tom="secondary" voltarPara="/votacoes" />}
+      >
+        <Card className="rounded-xl border-border/70">
+          <EmptyState
+            ilustracao="busca"
+            title="Proposta não encontrada"
+            description="Ela pode ter sido excluída ou o link está incorreto."
+            action={
+              <Button variant="outline" onClick={() => navigate("/votacoes", { replace: true })}>
+                <ArrowLeft className="h-4 w-4" />
+                Voltar às propostas
+              </Button>
+            }
+          />
+        </Card>
+      </PaginaInterna>
     );
   }
 
   const responses = proposal.proposal_responses || [];
-  const options = proposal.proposal_options || [];
-  const optionVotes = options.map((opt: any) => ({
+  const options = [...(proposal.proposal_options || [])].sort((a, b) => a.order_index - b.order_index);
+  const respondidas = responses.filter((r) => r.selected_option_id).length;
+  const optionVotes = options.map((opt) => ({
     ...opt,
-    votes: responses.filter((r: any) => r.selected_option_id === opt.id).length,
+    votes: responses.filter((r) => r.selected_option_id === opt.id).length,
   }));
 
-  const mySelectedOption = options.find((o: any) => o.id === myResponse?.selected_option_id);
+  const mySelectedOption = options.find((o) => o.id === myResponse?.selected_option_id);
+  const publico = PUBLICO[proposal.target_audience] ?? proposal.target_audience;
+  const dias = diasParaVencer(proposal.deadline);
+  const prazoEncerrado = proposal.status === "active" && dias < 0;
+  const statusMeta = prazoEncerrado
+    ? { rotulo: "Prazo encerrado", tom: "neutral" as Tom }
+    : STATUS_PROPOSTA[proposal.status] ?? { rotulo: proposal.status, tom: "neutral" as Tom };
+  const temValor = !!proposal.amount_cents && proposal.amount_cents > 0;
+
+  // Quem pode responder: o proprietário quando a resposta está liberada para
+  // ele; o membro da equipe quando a proposta é para a equipe (essas nascem
+  // com is_visible_to_owner=false, e a checagem antiga barrava a equipe).
+  // O prazo não tranca o formulário: a regra de hoje é a mesma de antes.
+  const podeResponder =
+    !!myResponse &&
+    !hasResponded &&
+    (isTeam ? proposal.target_audience === "team" : myResponse.is_visible_to_owner);
+
+  const paidResponses = responses.filter((r) => r.paid_at);
+  const totalPaid = paidResponses.reduce((sum, r) => sum + (r.payment_amount_cents || 0), 0);
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="bg-primary/5 border-b">
-        <div className="max-w-3xl mx-auto px-4 py-4">
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={() => goBack(navigate, "/votacoes")} 
-            className="mb-4 -ml-2"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar
-          </Button>
+    <PaginaInterna
+      largura="media"
+      comNavInferior
+      cabecalho={
+        <CabecalhoPagina
+          titulo={proposal.title}
+          subtitulo={`${publico} · prazo ${formatarData(proposal.deadline)}`}
+          icone={<Vote />}
+          tom="secondary"
+          voltarPara="/votacoes"
+          acoes={<Etiqueta tom={statusMeta.tom} ponto tamanho="md">{statusMeta.rotulo}</Etiqueta>}
+        />
+      }
+    >
+      {/* Detalhes */}
+      <CaixaOperacao icone={<FileText />} titulo="Detalhes" tom="secondary">
+        <ListaDefinicoes colunas={2}>
+          <Definicao rotulo="Criado por" icone={<User />} valor={proposal.creator?.name || 'Equipe'} />
+          <Definicao
+            rotulo="Prazo"
+            icone={<Calendar />}
+            valor={
+              <>
+                {formatarData(proposal.deadline)}
+                {proposal.status === "active" && (
+                  <span className="ml-1.5 text-xs text-muted-foreground">
+                    {dias === 0 ? "encerra hoje" : dias > 0 ? `encerra em ${dias} dia${dias === 1 ? "" : "s"}` : `encerrou há ${-dias} dia${dias === -1 ? "" : "s"}`}
+                  </span>
+                )}
+              </>
+            }
+          />
+          <Definicao rotulo="Público" icone={<Users />} valor={publico} />
+          <Definicao rotulo="Categoria" icone={<Tag />} valor={proposal.category || undefined} />
+          {temValor && (
+            <Definicao rotulo="Valor da proposta" icone={<CreditCard />} valor={formatarBRL(proposal.amount_cents!)} destaque />
+          )}
+        </ListaDefinicoes>
 
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
-              <Badge 
-                variant="outline" 
-                className="mb-2 bg-primary/10 text-primary border-primary/20"
-              >
-                {proposal.category || 'Proposta'}
-              </Badge>
-              <h1 className="text-2xl font-bold text-foreground">
-                {proposal.title}
-              </h1>
-            </div>
-            <Badge
-              variant={proposal.status === 'active' ? 'secondary' : 'outline'}
-              className={proposal.status === 'active' ? 'bg-success/10 text-success' : ''}
-            >
-              {proposal.status === 'active' ? 'Ativa' : proposal.status}
-            </Badge>
-          </div>
+        <Separator className="my-4" />
+
+        <div>
+          <h4 className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Descrição</h4>
+          <MentionText body={proposal.description} className="mt-1.5 leading-relaxed" />
         </div>
-      </div>
 
-      <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
-        {/* Proposal Details Card */}
-        <Card className="border-0 shadow-md">
-          <CardContent className="p-6 space-y-6">
-            {/* Creator & Date */}
-            <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <User className="h-4 w-4" />
-                <span>Criado por: <strong className="text-foreground">{proposal.creator?.name || 'Equipe'}</strong></span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                <span>Prazo: <strong className="text-foreground">{format(new Date(proposal.deadline), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</strong></span>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Description */}
+        {attachmentUrls && attachmentUrls.length > 0 && (
+          <>
+            <Separator className="my-4" />
             <div>
-              <h3 className="font-semibold mb-3 flex items-center gap-2">
-                <FileText className="h-4 w-4 text-primary" />
-                Descrição
-              </h3>
-              <p className="text-foreground whitespace-pre-wrap leading-relaxed">
-                {proposal.description}
-              </p>
-            </div>
-
-            {/* Amount if exists */}
-            {proposal.amount_cents && proposal.amount_cents > 0 && (
-              <>
-                <Separator />
-                <div className="flex items-center gap-3 p-4 rounded-lg bg-primary/5 border border-primary/10">
-                  <CreditCard className="h-5 w-5 text-primary" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Valor da proposta</p>
-                    <p className="text-2xl font-bold text-primary">
-                      R$ {(proposal.amount_cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* Attachments */}
-            {attachmentUrls && attachmentUrls.length > 0 && (
-              <>
-                <Separator />
-                <div>
-                  <h3 className="font-semibold mb-3 flex items-center gap-2">
-                    <Paperclip className="h-4 w-4 text-primary" />
-                    Anexos
-                  </h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {attachmentUrls.map((att: any, index: number) => (
-                      <button
-                        key={att.id}
-                        onClick={() => openAttachmentGallery(index)}
-                        className="relative aspect-video rounded-lg overflow-hidden border bg-muted hover:ring-2 hover:ring-primary transition-all group"
-                      >
-                        {att.file_type?.startsWith('image/') ? (
-                          <img 
-                            src={att.signedUrl} 
-                            alt={att.file_name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <FileText className="h-8 w-8 text-muted-foreground" />
-                          </div>
-                        )}
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <ImageIcon className="h-6 w-6 text-white" />
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Team: Payment Tracking */}
-        {isTeam && proposal.amount_cents && proposal.amount_cents > 0 && (
-          <Card className="border-0 shadow-md border-success/30">
-            <CardContent className="p-6">
-              <h3 className="font-semibold mb-4 flex items-center gap-2">
-                <CreditCard className="h-4 w-4 text-success" />
-                Pagamentos Recebidos
-              </h3>
-              
-              {(() => {
-                const paidResponses = responses.filter((r: any) => r.paid_at);
-                const totalPaid = paidResponses.reduce((sum: number, r: any) => sum + (r.payment_amount_cents || 0), 0);
-                
-                return (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-3 rounded-lg bg-success/10 dark:bg-green-950/30">
-                      <span className="text-sm text-muted-foreground">Total arrecadado</span>
-                      <span className="text-xl font-bold text-success">
-                        R$ {(totalPaid / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                    
-                    <div className="text-sm text-muted-foreground">
-                      {paidResponses.length} de {responses.length} pagaram
-                    </div>
-                    
-                    {paidResponses.length > 0 && (
-                      <div className="space-y-2">
-                        {paidResponses.map((r: any) => (
-                          <div key={r.id} className="flex items-center justify-between p-2 rounded border bg-background">
-                            <span className="font-medium">{r.profiles?.name || 'Proprietário'}</span>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="bg-success/10 text-success border-success/30">
-                                <Check className="h-3 w-3 mr-1" />
-                                Pago
-                              </Badge>
-                              <span className="text-sm font-medium">
-                                R$ {((r.payment_amount_cents || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
+              <h4 className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                <Paperclip className="h-3.5 w-3.5" aria-hidden="true" />
+                Anexos
+              </h4>
+              <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {attachmentUrls.map((att, index) => (
+                  <button
+                    key={att.id}
+                    type="button"
+                    onClick={() => openAttachmentGallery(index)}
+                    aria-label={`Abrir anexo ${index + 1} de ${attachmentUrls.length}`}
+                    className="group relative aspect-video overflow-hidden rounded-lg border border-border/70 bg-muted transition-all hover:ring-2 hover:ring-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    {att.file_type?.startsWith('image/') && att.signedUrl ? (
+                      <img
+                        src={att.signedUrl}
+                        alt=""
+                        loading="lazy"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                        {iconeAnexo(att.file_type)}
                       </div>
                     )}
-                    
-                    {paidResponses.length === 0 && (
-                      <p className="text-sm text-muted-foreground text-center py-4">
-                        Nenhum pagamento recebido ainda
-                      </p>
+                    <div className="absolute inset-0 flex items-center justify-center bg-foreground/40 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+                      <ImageIcon className="h-6 w-6 text-background" aria-hidden="true" />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+      </CaixaOperacao>
+
+      {/* Equipe: pagamentos */}
+      {isTeam && temValor && (
+        <CaixaOperacao
+          icone={<CreditCard />}
+          titulo="Pagamentos recebidos"
+          tom="success"
+          selos={<SeloContagem tom={paidResponses.length > 0 ? "success" : "neutral"}>{paidResponses.length} de {responses.length}</SeloContagem>}
+        >
+          <div className="space-y-3">
+            <div className="flex items-center justify-between rounded-lg bg-success/10 px-3 py-2.5">
+              <span className="text-sm text-muted-foreground">Total arrecadado</span>
+              <span className="text-lg font-bold tabular-nums text-success">{formatarBRL(totalPaid)}</span>
+            </div>
+
+            {paidResponses.length > 0 ? (
+              <div className="space-y-1">
+                {paidResponses.map((r) => (
+                  <div key={r.id} className="flex items-center justify-between gap-2 rounded-lg bg-muted/40 px-2.5 py-2">
+                    <span className="truncate text-[13px] font-medium">{r.profiles?.name || 'Proprietário'}</span>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Etiqueta tom="success" icone={<Check />}>Pago</Etiqueta>
+                      <span className="text-sm font-medium tabular-nums">{formatarBRL(r.payment_amount_cents || 0)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <CaixaVazia icone={<CreditCard className="h-5 w-5" />} titulo="Nenhum pagamento recebido ainda" />
+            )}
+          </div>
+        </CaixaOperacao>
+      )}
+
+      {/* Equipe: compras por item */}
+      {isTeam && proposal.payment_type === 'items' && (
+        <ProposalBulkPurchasePanel proposalId={id as string} />
+      )}
+
+      {/* Equipe: resultado */}
+      {isTeam && (
+        <CaixaOperacao
+          icone={<ChartColumn />}
+          titulo="Resultado da votação"
+          tom="info"
+          selos={<SeloContagem tom="info">{respondidas} de {responses.length}</SeloContagem>}
+        >
+          {options.length === 0 ? (
+            <CaixaVazia icone={<Vote className="h-5 w-5" />} titulo="Esta proposta não tem opções de resposta" />
+          ) : (
+            <div className="space-y-3">
+              {optionVotes.map((option) => {
+                const percentage = respondidas > 0 ? Math.round((option.votes / respondidas) * 100) : 0;
+                return (
+                  <div key={option.id} className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-2 text-sm">
+                      <span className="min-w-0 truncate">{option.option_text}</span>
+                      <span className="shrink-0 text-xs font-medium tabular-nums text-muted-foreground">
+                        {option.votes} voto{option.votes !== 1 && 's'} · {percentage}%
+                      </span>
+                    </div>
+                    <div
+                      className="h-2 overflow-hidden rounded-full bg-muted"
+                      role="progressbar"
+                      aria-valuenow={percentage}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-label={`${option.option_text}: ${percentage}%`}
+                    >
+                      <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${percentage}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+              <p className="text-xs text-muted-foreground">
+                {respondidas} de {responses.length} responderam
+              </p>
+            </div>
+          )}
+        </CaixaOperacao>
+      )}
+
+      {/* Equipe: respostas individuais */}
+      {isTeam && (
+        <CaixaOperacao icone={<MessageSquareText />} titulo="Respostas" tom="primary" selos={<SeloContagem>{responses.length}</SeloContagem>}>
+          {responses.length === 0 ? (
+            <CaixaVazia icone={<Users className="h-5 w-5" />} titulo="Ninguém foi convidado a responder" />
+          ) : (
+            <div className="space-y-1.5">
+              {responses.map((response) => {
+                const selectedOpt = options.find((o) => o.id === response.selected_option_id);
+                return (
+                  <div key={response.id} className="rounded-lg bg-muted/40 px-3 py-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="min-w-0 truncate text-[13px] font-medium">{response.profiles?.name || 'Proprietário'}</p>
+                      <div className="flex shrink-0 items-center gap-1">
+                        {selectedOpt ? (
+                          <Etiqueta tom="success" ponto>{selectedOpt.option_text}</Etiqueta>
+                        ) : (
+                          <Etiqueta tom="neutral" icone={<Clock />}>Pendente</Etiqueta>
+                        )}
+                        {response.attachment_path && (
+                          <BotaoLinha
+                            rotulo="Ver anexo"
+                            texto="Ver anexo"
+                            onClick={() => abrirAnexoResposta(response)}
+                            disabled={abrindoAnexoResposta === response.id}
+                          >
+                            {abrindoAnexoResposta === response.id ? <Loader2 className="animate-spin" /> : <Paperclip />}
+                          </BotaoLinha>
+                        )}
+                      </div>
+                    </div>
+                    {response.note && (
+                      <MentionText body={response.note} className="mt-1 text-xs text-muted-foreground" />
                     )}
                   </div>
                 );
-              })()}
-            </CardContent>
-          </Card>
-        )}
+              })}
+            </div>
+          )}
+        </CaixaOperacao>
+      )}
 
-        {/* Team: Bulk Purchase Panel for item-based proposals */}
-        {isTeam && proposal.payment_type === 'items' && (
-          <ProposalBulkPurchasePanel proposalId={id as string} />
-        )}
+      {/* Já respondeu (proprietário ou membro da equipe) */}
+      {myResponse && hasResponded && (
+        <CaixaOperacao icone={<Check />} titulo="Sua resposta" tom="success">
+          <div className="flex items-center gap-3 rounded-lg bg-success/10 px-3 py-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-success/10 text-success" aria-hidden="true">
+              <Check className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-success">Resposta registrada</p>
+              <p className="text-sm text-muted-foreground">
+                Você respondeu: <strong className="text-foreground">{mySelectedOption?.option_text}</strong>
+              </p>
+            </div>
+          </div>
+          {myResponse.note && (
+            <div className="mt-3 border-t border-border/60 pt-3">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Observação</p>
+              <MentionText body={myResponse.note} className="mt-1 text-muted-foreground" />
+            </div>
+          )}
+        </CaixaOperacao>
+      )}
 
-        {/* Team: Vote Results */}
-        {isTeam && (
-          <Card className="border-0 shadow-md">
-            <CardContent className="p-6">
-              <h3 className="font-semibold mb-4">Resultado da Votação</h3>
-              <div className="space-y-3">
-                {optionVotes.map((option: any) => {
-                  const percentage = responses.length > 0 
-                    ? Math.round((option.votes / responses.filter((r: any) => r.selected_option_id).length) * 100) || 0
-                    : 0;
-                  
-                  return (
-                    <div key={option.id} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span>{option.option_text}</span>
-                        <span className="text-sm font-medium">{option.votes} voto{option.votes !== 1 && 's'}</span>
-                      </div>
-                      <div className="h-2 bg-muted rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-primary rounded-full transition-all"
-                          style={{ width: `${percentage}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-                <p className="text-sm text-muted-foreground mt-4">
-                  Total: {responses.filter((r: any) => r.selected_option_id).length} de {responses.length} responderam
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+      {/* Formulário de resposta */}
+      {podeResponder && (
+        <CaixaOperacao icone={<Vote />} titulo="Registrar sua resposta" tom="primary">
+          <div className="space-y-5">
+            <div>
+              <Label className="text-sm font-medium">Escolha sua opção *</Label>
+              <RadioGroup
+                value={selectedOption}
+                onValueChange={setSelectedOption}
+                className="mt-2 space-y-2"
+              >
+                {options.map((option) => (
+                  <label
+                    key={option.id}
+                    htmlFor={`opcao-${option.id}`}
+                    className={`flex cursor-pointer items-center gap-3 rounded-lg border-2 px-4 py-3 transition-all ${
+                      selectedOption === option.id
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border hover:border-muted-foreground/30'
+                    }`}
+                  >
+                    <RadioGroupItem value={option.id} id={`opcao-${option.id}`} />
+                    <span className="flex-1 text-sm font-medium">{option.option_text}</span>
+                  </label>
+                ))}
+              </RadioGroup>
+            </div>
 
-        {/* Team: Individual Responses */}
-        {isTeam && (
-          <Card className="border-0 shadow-md">
-            <CardContent className="p-6">
-              <h3 className="font-semibold mb-4">Respostas Individuais</h3>
-              <div className="space-y-3">
-                {responses.map((response: any) => {
-                  const selectedOpt = options.find((o: any) => o.id === response.selected_option_id);
-                  
-                  return (
-                    <div key={response.id} className="p-4 rounded-lg border">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="font-medium">{response.profiles?.name || 'Proprietário'}</p>
-                        {selectedOpt ? (
-                          <Badge variant="secondary">{selectedOpt.option_text}</Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-muted-foreground">
-                            <Clock className="h-3 w-3 mr-1" />
-                            Pendente
-                          </Badge>
-                        )}
-                      </div>
-                      {response.note && (
-                        <p className="text-sm text-muted-foreground">{response.note}</p>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Owner: Already Responded */}
-        {!isTeam && hasResponded && (
-          <Card className="border-0 shadow-md bg-success/10 dark:bg-green-950/20">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-success/10 dark:bg-green-900 flex items-center justify-center">
-                  <Check className="h-5 w-5 text-success" />
-                </div>
-                <div>
-                  <p className="font-semibold text-success">Sua resposta foi registrada</p>
-                  <p className="text-sm text-muted-foreground">
-                    Você respondeu: <strong>{mySelectedOption?.option_text}</strong>
-                  </p>
+            {/* Aviso de pagamento */}
+            {selectedOption && requiresPayment() && (
+              <div className="rounded-lg border border-warning/30 bg-warning/10 p-4">
+                <div className="flex items-start gap-3">
+                  <CreditCard className="mt-0.5 h-5 w-5 shrink-0 text-warning" aria-hidden="true" />
+                  <div>
+                    <p className="font-medium text-warning">Pagamento necessário</p>
+                    <p className="mt-1 text-sm text-foreground">
+                      Ao confirmar esta opção, você será direcionado ao pagamento de{' '}
+                      <strong>{formatarBRL(proposal.amount_cents!)}</strong>
+                    </p>
+                  </div>
                 </div>
               </div>
-              {myResponse?.note && (
-                <p className="mt-3 text-sm text-muted-foreground border-t pt-3">
-                  Observação: {myResponse.note}
+            )}
+
+            <div>
+              <Label htmlFor="observacao">Observação (opcional)</Label>
+              <Textarea
+                id="observacao"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Adicione uma observação se desejar…"
+                className="mt-2"
+                rows={3}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="anexo-resposta">Anexar arquivo (opcional)</Label>
+              <Input
+                id="anexo-resposta"
+                type="file"
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                className="mt-2"
+              />
+              {file && (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Arquivo selecionado: {file.name}
                 </p>
               )}
-            </CardContent>
-          </Card>
-        )}
+            </div>
 
-        {/* Owner: Response Form */}
-        {!isTeam && myResponse && myResponse.is_visible_to_owner && !hasResponded && (
-          <Card className="border-0 shadow-md border-primary/20">
-            <CardContent className="p-6">
-              <h3 className="font-semibold mb-4 flex items-center gap-2">
-                <Check className="h-4 w-4 text-primary" />
-                Registrar sua Resposta
-              </h3>
-              
-              <div className="space-y-6">
-                <div>
-                  <Label className="text-base font-medium">Escolha sua opção *</Label>
-                  <RadioGroup
-                    value={selectedOption}
-                    onValueChange={setSelectedOption}
-                    className="mt-3 space-y-3"
-                  >
-                    {options.map((option: any) => (
-                      <div 
-                        key={option.id} 
-                        className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-all cursor-pointer ${
-                          selectedOption === option.id 
-                            ? 'border-primary bg-primary/5' 
-                            : 'border-border hover:border-muted-foreground/30'
-                        }`}
-                        onClick={() => setSelectedOption(option.id)}
-                      >
-                        <RadioGroupItem value={option.id} id={option.id} />
-                        <label htmlFor={option.id} className="cursor-pointer flex-1 font-medium">
-                          {option.option_text}
-                        </label>
-                      </div>
-                    ))}
-                  </RadioGroup>
-                </div>
-
-                {/* Payment warning */}
-                {selectedOption && requiresPayment() && (
-                  <div className="p-4 rounded-lg bg-warning/10 dark:bg-amber-950/20 border border-warning/30">
-                    <div className="flex items-start gap-3">
-                      <CreditCard className="h-5 w-5 text-warning mt-0.5" />
-                      <div>
-                        <p className="font-medium text-warning">
-                          Pagamento necessário
-                        </p>
-                        <p className="text-sm text-warning mt-1">
-                          Ao confirmar esta opção, você será direcionado para pagamento de{' '}
-                          <strong>R$ {(proposal.amount_cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div>
-                  <Label>Observação (opcional)</Label>
-                  <Textarea
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    placeholder="Adicione uma observação se desejar..."
-                    className="mt-2"
-                    rows={3}
-                  />
-                </div>
-
-                <div>
-                  <Label>Anexar arquivo (opcional)</Label>
-                  <Input
-                    type="file"
-                    onChange={(e) => setFile(e.target.files?.[0] || null)}
-                    className="mt-2"
-                  />
-                  {file && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Arquivo selecionado: {file.name}
-                    </p>
-                  )}
-                </div>
-
-                <Button
-                  onClick={() => respondMutation.mutate()}
-                  disabled={respondMutation.isPending || !selectedOption || isGeneratingPayment}
-                  className="w-full h-12 text-base"
-                  size="lg"
-                >
-                  {respondMutation.isPending || isGeneratingPayment ? (
-                    <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      {isGeneratingPayment ? "Gerando pagamento..." : "Enviando..."}
-                    </>
-                  ) : requiresPayment() ? (
-                    <>
-                      <CreditCard className="mr-2 h-5 w-5" />
-                      Confirmar e Pagar
-                    </>
-                  ) : (
-                    "Enviar Resposta"
-                  )}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+            <Button
+              onClick={() => respondMutation.mutate()}
+              disabled={respondMutation.isPending || !selectedOption || isGeneratingPayment}
+              className="h-12 w-full text-base"
+              size="lg"
+            >
+              {respondMutation.isPending || isGeneratingPayment ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  {isGeneratingPayment ? "Gerando pagamento…" : "Enviando…"}
+                </>
+              ) : requiresPayment() ? (
+                <>
+                  <CreditCard className="h-5 w-5" />
+                  Confirmar e pagar
+                </>
+              ) : (
+                "Enviar resposta"
+              )}
+            </Button>
+          </div>
+        </CaixaOperacao>
+      )}
 
       {/* Media Gallery */}
       <MediaGallery
@@ -711,31 +798,32 @@ export default function VotacaoDetalhes() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-primary" />
+              <CreditCard className="h-5 w-5 text-primary" aria-hidden="true" />
               Pagamento
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
               Sua resposta foi registrada. Complete o pagamento para confirmar.
             </p>
 
-            <div className="p-4 rounded-lg bg-muted text-center">
+            <div className="rounded-lg bg-muted p-4 text-center">
               <p className="text-sm text-muted-foreground">Valor</p>
-              <p className="text-2xl font-bold text-primary">
-                R$ {(proposal.amount_cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              <p className="text-2xl font-bold tabular-nums text-primary">
+                {formatarBRL(proposal.amount_cents ?? 0)}
               </p>
             </div>
 
             {paymentData?.pixQrCodeBase64 && (
-              <div className="text-center space-y-3">
+              <div className="space-y-3 text-center">
                 <p className="text-sm font-medium">Pague com PIX</p>
-                <div className="inline-block p-4 bg-white rounded-lg">
-                  <img 
+                {/* Fundo branco de propósito: o leitor de QR precisa do contraste. */}
+                <div className="inline-block rounded-lg bg-white p-4">
+                  <img
                     src={`data:image/png;base64,${paymentData.pixQrCodeBase64}`}
                     alt="QR Code PIX"
-                    className="w-48 h-48"
+                    className="h-48 w-48"
                   />
                 </div>
                 {paymentData.pixQrCode && (
@@ -746,7 +834,6 @@ export default function VotacaoDetalhes() {
                       navigator.clipboard.writeText(paymentData.pixQrCode!);
                       toast({ title: "Código copiado!" });
                     }}
-                    className="gap-2"
                   >
                     <QrCode className="h-4 w-4" />
                     Copiar código PIX
@@ -762,14 +849,14 @@ export default function VotacaoDetalhes() {
                   className="w-full"
                   onClick={() => window.open(paymentData.paymentLink, '_blank')}
                 >
-                  <CreditCard className="mr-2 h-4 w-4" />
-                  Pagar com Cartão (até 12x)
+                  <CreditCard className="h-4 w-4" />
+                  Pagar com cartão (até 12x)
                 </Button>
               </>
             )}
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </PaginaInterna>
   );
 }

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { processFileForUpload } from "@/lib/fileUpload";
+import { emParaleloOuFalha, processFileForUpload } from "@/lib/fileUpload";
 import { sanitizeFilename } from "@/lib/storage";
 
 interface QuickAttachmentButtonProps {
@@ -33,11 +33,10 @@ export function QuickAttachmentButton({ ticketId, onSuccess }: QuickAttachmentBu
 
     try {
       // Process and upload each file
-      for (const file of Array.from(files)) {
+      // Até 3 arquivos ao mesmo tempo.
+      await emParaleloOuFalha(Array.from(files), async (file, indiceArquivo) => {
         // Process file (compress if video)
-        const processedFile = await processFileForUpload(file, (progress) => {
-          console.log('[QuickAttachment]', progress.message);
-        });
+        const processedFile = await processFileForUpload(file);
 
         // Upload to storage
         const safeName = sanitizeFilename(processedFile.name);
@@ -54,13 +53,14 @@ export function QuickAttachmentButton({ ticketId, onSuccess }: QuickAttachmentBu
           .from('attachments')
           .getPublicUrl(filePath);
 
-        // Create a message with the attachment
+        // Mensagem que acompanha o anexo. Sem o nome do arquivo: o proprietário
+        // lê este texto, e o nome real nunca aparece na interface.
         const { data: message, error: messageError } = await supabase
           .from('ticket_messages')
           .insert({
             ticket_id: ticketId,
             author_id: user.id,
-            body: `📎 Anexo: ${processedFile.name}`,
+            body: 'Anexo enviado',
             is_internal: false,
           })
           .select('id')
@@ -84,7 +84,7 @@ export function QuickAttachmentButton({ ticketId, onSuccess }: QuickAttachmentBu
           });
 
         if (attachmentError) throw attachmentError;
-      }
+      });
 
       toast.success("Anexo enviado!");
       onSuccess?.();
@@ -118,6 +118,7 @@ export function QuickAttachmentButton({ ticketId, onSuccess }: QuickAttachmentBu
         onClick={handleClick}
         disabled={uploading}
         title="Adicionar anexo"
+        aria-label="Adicionar anexo"
       >
         {uploading ? (
           <Loader2 className="h-3.5 w-3.5 animate-spin" />

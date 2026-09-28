@@ -2,15 +2,21 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate, useLocation } from "react-router-dom";
-import { goBack, saveScrollPosition } from "@/lib/navigation";
+import { saveScrollPosition } from "@/lib/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { ArrowLeft, Search, Building, ChevronDown, ChevronRight, Calendar, User, Receipt, Wrench } from "lucide-react";
+import { Search, ChevronDown, ChevronRight, Wrench, Building2 } from "lucide-react";
+import { CabecalhoPagina, PaginaInterna } from "@/components/painel/PaginaInterna";
+import { LinhaCaixa, MiniaturaImovel, SeloContagem } from "@/components/painel/CaixaOperacao";
+import { Etiqueta } from "@/components/painel/Etiqueta";
+import type { Tom } from "@/components/painel/tons";
+import { EtiquetaStatusCobranca } from "@/components/cobrancas/EtiquetaStatusCobranca";
+import { formatarData } from "@/lib/cobrancaMeta";
+import { RESPONSAVEL_CUSTO, type ResponsavelCusto } from "@/constants/chargeCategories";
 
 interface CompletedMaintenance {
   id: string;
@@ -19,7 +25,7 @@ interface CompletedMaintenance {
   created_at: string;
   updated_at: string;
   scheduled_at: string | null;
-  cost_responsible: "owner" | "pm" | "guest" | null;
+  cost_responsible: "owner" | "pm" | "guest" | "pending" | null;
   property_id: string | null;
   service_provider: {
     id: string;
@@ -43,6 +49,20 @@ interface PropertyGroup {
   name: string;
   cover_photo_url: string | null;
   maintenances: CompletedMaintenance[];
+}
+
+/** Tom da etiqueta de responsável; sem valor não há etiqueta (nunca "Proprietário" por padrão). */
+const TOM_RESPONSAVEL: Record<ResponsavelCusto, Tom> = {
+  pending: "neutral",
+  owner: "success",
+  pm: "info",
+  guest: "warning",
+};
+
+function EtiquetaResponsavel({ responsavel }: { responsavel: string | null }) {
+  const chave = responsavel as ResponsavelCusto;
+  if (!responsavel || !RESPONSAVEL_CUSTO[chave]) return null;
+  return <Etiqueta tom={TOM_RESPONSAVEL[chave]}>{RESPONSAVEL_CUSTO[chave]}</Etiqueta>;
 }
 
 const AdminManutencoesConluidas = () => {
@@ -97,10 +117,10 @@ const AdminManutencoesConluidas = () => {
     if (!maintenances || !properties) return [];
 
     const searchLower = search.toLowerCase();
-    
+
     // Filter maintenances by search
-    const filteredMaintenances = search 
-      ? maintenances.filter(m => 
+    const filteredMaintenances = search
+      ? maintenances.filter(m =>
           m.subject.toLowerCase().includes(searchLower) ||
           m.owner?.name.toLowerCase().includes(searchLower) ||
           m.service_provider?.name.toLowerCase().includes(searchLower)
@@ -123,9 +143,9 @@ const AdminManutencoesConluidas = () => {
     });
 
     // Filter properties by search if searching
-    const filteredProperties = search 
-      ? properties.filter(p => 
-          p.name.toLowerCase().includes(searchLower) || 
+    const filteredProperties = search
+      ? properties.filter(p =>
+          p.name.toLowerCase().includes(searchLower) ||
           propertyMap.has(p.id)
         )
       : properties.filter(p => propertyMap.has(p.id));
@@ -142,11 +162,11 @@ const AdminManutencoesConluidas = () => {
       }
     });
 
-    // Add "sem unidade" group if there are maintenances without property
+    // Add "sem imóvel" group if there are maintenances without property
     if (noPropertyMaintenances.length > 0) {
       groups.push({
         id: "no-property",
-        name: "Sem Unidade",
+        name: "Sem imóvel",
         cover_photo_url: null,
         maintenances: noPropertyMaintenances,
       });
@@ -167,182 +187,139 @@ const AdminManutencoesConluidas = () => {
     });
   };
 
-  const getResponsibleBadge = (responsible: string | null) => {
-    switch (responsible) {
-      case "guest":
-        return (
-          <Badge variant="outline" className="text-xs bg-warning/10 text-warning border-warning/30/30">
-            Hóspede
-          </Badge>
-        );
-      case "pm":
-        return (
-          <Badge variant="outline" className="text-xs bg-info/10 text-info border-info/30/30">
-            Gestão
-          </Badge>
-        );
-      default:
-        return (
-          <Badge variant="outline" className="text-xs bg-success/10 text-success border-success/30/30">
-            Proprietário
-          </Badge>
-        );
+  const abrirManutencao = (maintenance: CompletedMaintenance) => {
+    // Se tem cobrança ativa, abre a cobrança; senão a primeira cobrança; senão o ticket
+    const activeCharge = maintenance.charges?.find(c => ['pendente', 'sent', 'overdue', 'contested'].includes(c.status));
+    const anyCharge = maintenance.charges?.[0];
+    if (activeCharge) {
+      navigate(`/manutencao/${activeCharge.id}`);
+    } else if (anyCharge) {
+      navigate(`/manutencao/${anyCharge.id}`);
+    } else {
+      saveScrollPosition(pathname);
+      navigate(`/ticket-detalhes/${maintenance.id}`);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 p-4 md:p-6">
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-4 flex-wrap">
-          <Button variant="ghost" size="icon" onClick={() => goBack(navigate)}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex-1 min-w-[200px]">
-            <h1 className="text-2xl font-bold">Manutenções Concluídas</h1>
-            <p className="text-muted-foreground text-sm">
-              Histórico de manutenções por imóvel
-            </p>
-          </div>
-        </div>
+  const total = maintenances?.length ?? 0;
+  const subtitulo = isLoading ? undefined : `${total} ${total === 1 ? "concluída" : "concluídas"} · histórico por imóvel`;
 
-        {/* Search */}
+  return (
+    <PaginaInterna
+      largura="larga"
+      cabecalho={
+        <CabecalhoPagina
+          titulo="Manutenções concluídas"
+          subtitulo={subtitulo}
+          icone={<Wrench />}
+          tom="success"
+          voltarPara="/admin/manutencoes-lista"
+        />
+      }
+    >
+      {/* Busca */}
+      <Card className="rounded-xl border-border/70 p-3 md:p-4">
         <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por imóvel, proprietário ou profissional..."
-            className="pl-10"
+            placeholder="Buscar por imóvel, proprietário ou profissional…"
+            aria-label="Buscar manutenções concluídas"
+            className="pl-8"
           />
         </div>
+      </Card>
 
-        {/* Property List */}
-        {isLoading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-muted/50 rounded-lg p-4 animate-pulse">
-                <div className="flex items-center gap-3">
-                  <div className="w-16 h-12 bg-muted rounded" />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-5 bg-muted rounded w-1/3" />
-                    <div className="h-4 bg-muted rounded w-1/4" />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : propertyGroups.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <Wrench className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-              <p className="text-muted-foreground">
-                {search ? "Nenhum resultado encontrado" : "Nenhuma manutenção concluída"}
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {propertyGroups.map((group) => (
-              <Collapsible
-                key={group.id}
-                open={expandedProperties.has(group.id)}
-                onOpenChange={() => toggleProperty(group.id)}
-              >
-                <Card className="overflow-hidden">
+      {isLoading ? (
+        <div className="space-y-3" aria-busy="true" aria-label="Carregando manutenções concluídas">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-20 w-full rounded-xl" />
+          ))}
+        </div>
+      ) : propertyGroups.length === 0 ? (
+        <Card className="rounded-xl border-border/70">
+          {search ? (
+            <EmptyState
+              ilustracao="busca"
+              title="Nada encontrado para a busca"
+              description="Tente outro imóvel, proprietário ou profissional."
+              action={
+                <Button variant="outline" onClick={() => setSearch("")}>
+                  Limpar busca
+                </Button>
+              }
+            />
+          ) : (
+            <EmptyState
+              ilustracao="manutencoes"
+              title="Nenhuma manutenção concluída"
+              description="As manutenções concluídas aparecem aqui, agrupadas por imóvel."
+            />
+          )}
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {propertyGroups.map((group) => {
+            const aberto = expandedProperties.has(group.id);
+            return (
+              <Collapsible key={group.id} open={aberto} onOpenChange={() => toggleProperty(group.id)}>
+                <Card className="overflow-hidden rounded-xl border-border/70">
                   <CollapsibleTrigger asChild>
-                    <button className="w-full p-4 flex items-center gap-4 hover:bg-muted/50 transition-colors text-left">
-                      {group.cover_photo_url ? (
-                        <img
-                          src={group.cover_photo_url}
-                          alt={group.name}
-                          className="w-16 h-12 rounded-lg object-cover"
-                        />
-                      ) : (
-                        <div className="w-16 h-12 rounded-lg bg-muted flex items-center justify-center">
-                          <Building className="h-6 w-6 text-muted-foreground" />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold truncate">{group.name}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {group.maintenances.length} manutenção{group.maintenances.length !== 1 ? "ões" : ""} concluída{group.maintenances.length !== 1 ? "s" : ""}
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-3 p-3 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:p-4"
+                      aria-expanded={aberto}
+                    >
+                      <MiniaturaImovel url={group.cover_photo_url} fallback={<Building2 />} tamanho="h-12 w-16" />
+                      <div className="min-w-0 flex-1">
+                        <h3 className="truncate text-sm font-semibold md:text-[15px]">{group.name}</h3>
+                        <p className="text-xs text-muted-foreground">
+                          {group.maintenances.length} {group.maintenances.length === 1 ? "manutenção concluída" : "manutenções concluídas"}
                         </p>
                       </div>
-                      {expandedProperties.has(group.id) ? (
-                        <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                      <SeloContagem tom="success">{group.maintenances.length}</SeloContagem>
+                      {aberto ? (
+                        <ChevronDown className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
                       ) : (
-                        <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                        <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
                       )}
                     </button>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
-                    <div className="border-t divide-y">
-                      {group.maintenances.map((maintenance) => (
-                        <div
-                          key={maintenance.id}
-                          className="p-4 hover:bg-muted/30 cursor-pointer transition-colors"
-                          onClick={() => {
-                            // Se tem cobrança ativa, navega para a cobrança; senão para o ticket
-                            const activeCharge = maintenance.charges?.find(c => ['pendente','sent','overdue','contested'].includes(c.status));
-                            const anyCharge = maintenance.charges?.[0];
-                            if (activeCharge) {
-                              navigate(`/manutencao-detalhes/${activeCharge.id}`);
-                            } else if (anyCharge) {
-                              navigate(`/manutencao-detalhes/${anyCharge.id}`);
-                            } else {
-                              (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${maintenance.id}`));
+                    <div className="space-y-1 border-t border-border/60 p-2">
+                      {group.maintenances.map((maintenance) => {
+                        const cobranca = maintenance.charges?.[0];
+                        return (
+                          <LinhaCaixa
+                            key={maintenance.id}
+                            titulo={maintenance.subject}
+                            subtitulo={
+                              <>
+                                Concluída em {formatarData(maintenance.updated_at)}
+                                {maintenance.service_provider ? ` · ${maintenance.service_provider.name}` : ""}
+                                {cobranca ? ` · Cobrança: ${cobranca.title}` : ""}
+                              </>
                             }
-                          }}
-                        >
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1 min-w-0 space-y-2">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <h4 className="font-medium">{maintenance.subject}</h4>
-                                {getResponsibleBadge(maintenance.cost_responsible)}
+                            meta={
+                              <div className="flex flex-col items-end gap-1">
+                                <EtiquetaResponsavel responsavel={maintenance.cost_responsible} />
+                                {cobranca && <EtiquetaStatusCobranca status={cobranca.status} />}
                               </div>
-                              
-                              <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                                <span className="flex items-center gap-1">
-                                  <Calendar className="h-3.5 w-3.5" />
-                                  Concluído em {format(new Date(maintenance.updated_at), "dd/MM/yyyy", { locale: ptBR })}
-                                </span>
-                                
-                                {maintenance.service_provider && (
-                                  <span className="flex items-center gap-1">
-                                    <User className="h-3.5 w-3.5" />
-                                    {maintenance.service_provider.name}
-                                  </span>
-                                )}
-                              </div>
-
-                              {maintenance.charges && maintenance.charges.length > 0 && (
-                                <div className="flex items-center gap-2">
-                                  <Receipt className="h-3.5 w-3.5 text-muted-foreground" />
-                                  <span className="text-sm">
-                                    Cobrança: {maintenance.charges[0].title}
-                                  </span>
-                                  <Badge variant="outline" className="text-xs">
-                                    {maintenance.charges[0].status === "paid" ? "Pago" : 
-                                     maintenance.charges[0].status === "pending" ? "Pendente" : 
-                                     maintenance.charges[0].status}
-                                  </Badge>
-                                </div>
-                              )}
-                            </div>
-                            <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                          </div>
-                        </div>
-                      ))}
+                            }
+                            onClick={() => abrirManutencao(maintenance)}
+                          />
+                        );
+                      })}
                     </div>
                   </CollapsibleContent>
                 </Card>
               </Collapsible>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+            );
+          })}
+        </div>
+      )}
+    </PaginaInterna>
   );
 };
 

@@ -5,7 +5,8 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useMediaCache } from "@/hooks/useMediaCache";
 import { MediaThumbnail } from "./MediaThumbnail";
 import { Skeleton } from "@/components/ui/skeleton";
-import { detectMediaKind } from "@/lib/mediaType";
+import { detectMediaKind, resolveMimeType } from "@/lib/mediaType";
+import { extensaoPorMime, nomeAnexoAnonimo } from "@/lib/zipFileName";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 
 interface MediaItem {
@@ -126,9 +127,11 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange, onDelete
     if (!currentItem || !currentBlobUrl) return;
 
     try {
+      // Nome anônimo: "anexo-03.jpg". O nome real nunca chega ao usuário.
+      const mime = resolveMimeType(currentItem.file_type, currentItem.file_name, currentItem.file_url);
       const a = document.createElement('a');
       a.href = currentBlobUrl;
-      a.download = currentItem.file_name || `arquivo-${currentIndex + 1}`;
+      a.download = nomeAnexoAnonimo(currentIndex, extensaoPorMime(mime));
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -170,6 +173,7 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange, onDelete
             size="icon"
             className="absolute top-4 right-4 z-50 text-white hover:bg-white/20"
             onClick={() => onOpenChange(false)}
+            aria-label="Fechar"
           >
             <X className="h-6 w-6" />
           </Button>
@@ -181,6 +185,7 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange, onDelete
             className="absolute top-4 right-16 z-50 text-white hover:bg-white/20"
             onClick={handleDownload}
             disabled={!currentBlobUrl}
+            aria-label="Baixar anexo"
           >
             <Download className="h-6 w-6" />
           </Button>
@@ -193,6 +198,7 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange, onDelete
               className="absolute top-4 right-28 z-50 text-white hover:bg-destructive/40"
               onClick={() => setConfirmDeleteOpen(true)}
               title="Excluir anexo"
+              aria-label="Excluir anexo"
             >
               <Trash2 className="h-6 w-6" />
             </Button>
@@ -205,6 +211,7 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange, onDelete
               size="icon"
               className="absolute left-4 z-50 text-white hover:bg-white/20 h-12 w-12"
               onClick={goToPrevious}
+              aria-label="Anexo anterior"
             >
               <ChevronLeft className="h-8 w-8" />
             </Button>
@@ -219,7 +226,7 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange, onDelete
                 {isImage && (
                   <img
                     src={currentBlobUrl}
-                    alt={currentItem.file_name || 'Imagem'}
+                    alt="Anexo"
                     className="max-w-full max-h-full w-auto h-auto object-contain"
                   />
                 )}
@@ -236,7 +243,6 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange, onDelete
                       console.error('[MediaGallery] Video error:', e, {
                         url: currentItem.file_url,
                         type: currentItem.file_type,
-                        name: currentItem.file_name,
                       });
                     }}
                   />
@@ -277,7 +283,7 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange, onDelete
                     <p className="mb-4">Visualização não disponível para este tipo de arquivo</p>
                     <Button onClick={handleDownload} variant="outline">
                       <Download className="h-4 w-4 mr-2" />
-                      Baixar Arquivo
+                      Baixar arquivo
                     </Button>
                   </div>
                 )}
@@ -299,6 +305,7 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange, onDelete
               size="icon"
               className="absolute right-4 z-50 text-white hover:bg-white/20 h-12 w-12"
               onClick={goToNext}
+              aria-label="Próximo anexo"
             >
               <ChevronRight className="h-8 w-8" />
             </Button>
@@ -335,6 +342,7 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange, onDelete
                         setConfirmDeleteOpen(true);
                       }}
                       title="Excluir anexo"
+                      aria-label={`Excluir anexo ${index + 1}`}
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>
@@ -350,17 +358,8 @@ export const MediaGallery = ({ items, initialIndex, open, onOpenChange, onDelete
         <ConfirmationDialog
           open={confirmDeleteOpen}
           onOpenChange={setConfirmDeleteOpen}
-          title="Excluir anexo?"
-          description={
-            <div className="space-y-2">
-              <p>Esta ação é permanente e não pode ser desfeita.</p>
-              {currentItem.file_name && (
-                <p className="text-xs">
-                  Arquivo: <span className="font-mono">{currentItem.file_name}</span>
-                </p>
-              )}
-            </div>
-          }
+          title="Excluir este anexo?"
+          description="Esta ação é permanente e não pode ser desfeita."
           confirmLabel="Excluir"
           variant="destructive"
           loading={deleting}

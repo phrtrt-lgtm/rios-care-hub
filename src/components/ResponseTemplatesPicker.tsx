@@ -75,7 +75,7 @@ export function ResponseTemplatesPicker({ onSelect, disabled }: ResponseTemplate
         .from("response_templates")
         .update({ usage_count: (currentCount?.usage_count || 0) + 1 })
         .eq("id", template.id);
-    } catch (e) {
+    } catch {
       // Ignore usage tracking errors
     }
   };
@@ -98,7 +98,8 @@ export function ResponseTemplatesPicker({ onSelect, disabled }: ResponseTemplate
           size="icon"
           className="h-9 w-9 flex-shrink-0"
           disabled={disabled}
-          title="Templates de resposta"
+          title="Modelos de resposta"
+          aria-label="Modelos de resposta"
         >
           <FileText className="h-4 w-4" />
         </Button>

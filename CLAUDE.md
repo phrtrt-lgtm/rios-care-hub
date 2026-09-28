@@ -159,6 +159,8 @@ Functions: `create-curation-pix`, `save-curation-selection`, `curation-access`, 
 Chat por contexto (`ticket_messages`, `charge_messages`, `curadoria_messages`, `booking_commission_messages`, `team_chat_messages`) + `message_read_receipts` e `notify-mentions` (menções com `mentioned_user_ids`).
 IA: `ai_settings`, `ai_templates`, `ai_prompt_versions`, `ai_usage_logs`; `ai-assistant`, `ai-consulta`, `summarize-conversation`, `transcribe-audio`.
 
+**Conversas (desde 2026-09-28).** Os cinco chats (chamado inline em `TicketDetalhes`, `MaintenanceChatDialog`, `ChargeChatDialog`, cobrança inline em `CobrancaDetalhes`, `BookingCommissionChatDialog`) e o chat da equipe (`TeamChatWidget`) usam o kit `src/components/chat/` e renderizam o corpo por `CorpoMensagem` (`renderizarCorpo`): menção `@[Nome](uuid)` vira nome clicável, `**texto**` vira negrito, emoji de abertura some. `ChatDateDivider` lê a chave do dia como dia local (antes mostrava "Ontem" para hoje). A rolagem vai até a última mensagem por uma âncora no fim da lista, não por `ref` no `ScrollArea`. Voto de equipe em proposta: `VotacaoDetalhes` libera o formulário para membro da equipe quando `target_audience = "team"` (antes era beco sem saída). Link de menção em chamado corrigido em `notify-mentions` (`/ticket-detalhes/`), **precisa de redeploy**.
+
 ### 3.11 Painel da equipe (`/painel`)
 Reorganizado em 2026-09-25 (`ROADMAP.md` item 4.6). A página tem esta ordem:
 
@@ -199,14 +201,14 @@ A página do proprietário ganhou a ordem: saudação → números → avisos �
 
 | # | Regra | Status hoje |
 |---|---|---|
-| 1 | Só tokens semânticos, nunca cor crua do Tailwind. Exceção: tutorial e escala do score | ❌ **804 ocorrências** fora de `ui/` (os tokens agora existem — ver §5, não há mais desculpa) |
-| 2 | `EmptyState` e `SectionSkeleton` para vazio/carregamento. Sem emoji, sem "Carregando..." solto | ⚠️ **Os dois existem desde setembro/2026** em `src/components/ui/empty-state.tsx` e `src/components/ui/section-skeleton.tsx` (a lista mobile de manutenções já usa). Falta adotar nas telas antigas: ainda há "Carregando..." solto, inclusive na tabela desktop de manutenções |
-| 3 | Nunca criar prazo/contador de SLA em ticket | ⚠️ **`/todos-tickets` ainda mostra** coluna "SLA" com "Expirado", contagem regressiva e ordenação "SLA (vencendo antes)" (`TodosTickets.tsx:289`, `:502`, `:695`). Outras 4 telas só **ordenam** por `sla_due_at`, sem exibir: `ChamadosKanbanPreview`, `TicketList`, `AdminChamadosKanban`, `MeusChamados` |
-| 4 | Nome de anexo anonimizado ("Imagem", "PDF") | ❌ `file_name` real ainda exibido (`AttachmentBubble.tsx`) |
+| 1 | Só tokens semânticos, nunca cor crua do Tailwind. Exceção: tutorial e escala do score | ⚠️ **708 ocorrências** fora de `ui/` (eram 804). **Zero** nas páginas de chamados, cobranças, manutenções e comunicação desde 2026-09-28; o que sobra está nos tutoriais e no score (exceções), vistorias, relatórios, contratos e curadoria |
+| 2 | `EmptyState` e `SectionSkeleton` para vazio/carregamento. Sem emoji, sem "Carregando..." solto | ✅ nas páginas de chamados, cobranças, manutenções e comunicação (redesign de 2026-09-28: skeleton + `EmptyState` com ilustração). Sobram 6 "Carregando..." soltos fora delas (vistorias, relatórios) |
+| 3 | Nunca criar prazo/contador de SLA em ticket | ✅ **removido em 2026-09-28**: coluna, contagem regressiva, ordenação por `sla_due_at` e a promessa "resposta em até 24h/6h" do formulário do proprietário. `grep sla_due_at src` fora de `types.ts` = 0 |
+| 4 | Nome de anexo anonimizado ("Imagem", "PDF") | ✅ nas conversas e galerias desde 2026-09-28 (`AttachmentBubble`, `MediaGallery`, ZIP com `anexo-01.jpg` via `zipFileName.ts`, mensagem gravada "Anexo enviado" sem nome). O nome real continua em `file_name` no banco; só não aparece |
 | 5 | Proprietário não vê calendário de reservas | ✅ `/calendario-reservas` redireciona para área da equipe (`App.tsx:527`) |
 | 6 | Janela de 7 dias; penalidade só depois | ✅ |
 | 7 | Papel em tabela separada, checado por `security definer` | ❌ **`role` é coluna de `profiles`**; não existe `user_roles` em 171 migrations |
-| 8 | Voltar de lista usa `replace: true` | ⚠️ parcial |
+| 8 | Voltar de lista usa `replace: true` | ✅ nas páginas do redesign, via `CabecalhoPagina voltarPara` (§5). ⚠️ parcial no resto |
 | 9 | Não mexer em autogerados | `src/integrations/supabase/client.ts`, `types.ts`, `.env`, `supabase/config.toml` |
 | 10 | Produto em pt-BR | ✅ na UI e `index.html` (`lang="pt-BR"` desde 2026-09-25) |
 
@@ -233,13 +235,33 @@ A página do proprietário ganhou a ordem: saudação → números → avisos �
 
 **Casco do painel:** `src/components/painel/` (ver §3.11) — cabeçalho, saudação, indicadores e caixas padronizadas das páginas `/painel` e `/minha-caixa`.
 
-Piores ofensores de cor crua: `OwnerScoreDisplay` (exceção legítima), `CobrancaDetalhes`, `AdminManutencoesLista`, `PropostaCompleta`, `MinhasCobrancas`.
+**Casco das páginas internas (desde 2026-09-28).** Listas, detalhes e formulários de chamados, cobranças, manutenções e comunicação usam `src/components/painel/PaginaInterna.tsx`:
+- `PaginaInterna` — `cabecalho` + `largura` (`estreita` formulários · `media` detalhes · `larga` listas) + `comNavInferior` (reserva espaço para a barra do celular).
+- `CabecalhoPagina` — barra fixa de 56 px: voltar (`voltarPara` usa `replace: true`, regra nº 8), ícone tingido, título único da página, `acoes` e a linha `abaixo` para pílulas de escopo e filtros (`BarraFiltros`, `AbaPilula`).
+- `Etiqueta` (`Etiqueta.tsx`) — pílula de status no tom semântico; `ListaDefinicoes`/`Definicao` (`Definicoes.tsx`) — rótulo/valor nas páginas de detalhe.
+- Padrão de lista: `Card` com `ListFilters`, skeleton no carregamento, `EmptyState` com ilustração, tabela no desktop (`hidden md:block`) e `LinhaCaixa` no celular (`md:hidden`). Referência: `src/pages/TodosTickets.tsx`.
+
+**Vocabulários únicos de status.** Nunca crie mapa local de status:
+- Chamados: `src/lib/ticketMeta.ts` (`STATUS_TICKET`, `PRIORIDADE_TICKET` — só `normal`/`urgente` —, `TIPO_TICKET` com os 9 tipos do enum) e as etiquetas em `src/components/tickets/EtiquetasTicket.tsx`.
+- Cobranças: `src/lib/cobrancaMeta.ts` (`STATUS_COBRANCA` com os 15 status, `estaPaga`/`estaEmAberto`/`estaResolvida`, `valorDevido`, `formatarData` para coluna DATE) e `src/components/cobrancas/` (`EtiquetaStatusCobranca`, `ResumoValorCobranca` com Total · Aporte · Crédito · A pagar). Toda condição "está paga" passa por `estaPaga`: o webhook grava `pago_antecipado`/`pago_no_vencimento`/`pago_com_atraso`, e comparar só com `paid` deixava o QR de pagamento visível em cobrança já paga.
+
+**Ilustrações de estado vazio:** `public/ilustracoes/{chamados,cobrancas,manutencoes,conversa,busca}.webp` (480×360, fundo transparente, geradas no Atlas Cloud em 2026-09-28 com a paleta terracota + azul). Uso: `<EmptyState ilustracao="cobrancas" />` nos vazios de página inteira; nos vazios pequenos, `icon`/`CaixaVazia`.
+
+**Galeria de verificação visual:** para conferir componentes sem sessão, crie `preview.html` na raiz + `src/__preview/main.tsx` (entrada Vite separada, marcada `TEMP-PREVIEW`, apagada antes do commit). Rota com perfil falso para montar páginas protegidas não é aceita.
+
+Piores ofensores de cor crua hoje (fora das exceções de tutorial e score): `OwnerScoreCard`, `PlanoPerformanceSection`, `EditInspectionDialog`, `CleanerInspectionForm`, `TeamInspectionDialog`, `PropostaCompleta`, `ProposalBulkPurchasePanel`. `CobrancaDetalhes`, `AdminManutencoesLista` e `MinhasCobrancas` zeraram em 2026-09-28. As variantes `success`/`warning` do `Button` usam os tokens desde a mesma data.
 
 ---
 
 ## 6. Padrões de dados
 
 Convivem React Query e `useEffect` + `supabase` manual. `new QueryClient()` **sem `defaultOptions`** (`src/App.tsx:102`) → `staleTime: 0`, refetch a cada montagem.
+
+**Envio de anexos (desde 2026-09-28).** Tudo passa por `src/lib/fileUpload.ts`:
+- `processFileForUpload` reduz fotos no aparelho: lado maior de até 1920 px, JPEG 0,82. Uma foto de câmera de 6,7 MB fica com 0,3 MB. Imagem de até 500 KB passa direto, e é o caso da foto do WhatsApp. Se a imagem não puder ser lida, vai a original, porque anexo é prova. Vídeo segue no FFmpeg, que só roda com `SharedArrayBuffer`. O site não tem os cabeçalhos COOP/COEP, então na web o vídeo sobe sem compressão.
+- `emParalelo` / `emParaleloOuFalha` enviam até 3 arquivos ao mesmo tempo. Tela nova de anexo usa os dois.
+- Em envio paralelo, o nome no storage não pode depender só de `Date.now()`. Inclua o índice ou um UUID, senão dois arquivos colidem.
+- `upload-sign` só devolve um nome de arquivo e não autoriza nada. Ele segue nas quatro telas "Novo …", por decisão pendente.
 
 Sinais: **59** `select('*')` · apenas **4** `.range()` (quase nenhuma paginação) · **80** `<img>` e só **1** com `loading="lazy"` · **75** `console.log`.
 
@@ -296,7 +318,7 @@ Correção, evidência e plano: `ROADMAP.md`.
 10. **`npm install` quebra numa instalação limpa** 🟠 **(parcialmente corrigido)** — `@capacitor/camera` e `@capacitor/filesystem` voltaram para a 7.x em 2026-09-18, mas **`@capawesome/capacitor-file-picker` segue em `^8.0.0`** e também exige `@capacitor/core >=8.0.0` (o projeto está em `^7.4.4`). `npm install` ainda falha com ERESOLVE. O build do Lovable passa porque usa **bun**, permissivo com peer dependency — o problema só aparece para quem clona e roda `npm install`, que é o que o README documenta.
 11. **`owner-decision-cron` e as `notify-*` sem guarda** 🟡 — qualquer um dispara e-mail/push em massa para proprietários. Custo, reputação de domínio e incômodo.
 12. **`hostex-sync?force=1` pula o token** 🟡 — `index.ts:89-97`.
-13. **Higiene** 🟡 — 75 `console.log`; 132 botões só de ícone e 25 `aria-label`; 34 "Carregando" soltos. (`lang="pt-BR"` e `viewport-fit=cover` corrigidos em 2026-09-25.)
+13. **Higiene** 🟡 — 51 `console.log`; 192 `aria-label` (eram 25); 6 "Carregando..." soltos (eram 34); **40 classes com opacidade dupla** (`bg-info/10/50`), que o Tailwind não gera, fora das páginas do redesign. (`lang="pt-BR"` e `viewport-fit=cover` corrigidos em 2026-09-25.)
 14. **Arquivos gigantes** 🟡 — `AdminManutencoesLista.tsx` **2920**, `CobrancaDetalhes.tsx` 1804, `AtualizacaoAnuncio.tsx` 1791, `TicketDetalhes.tsx` 1284, `PlanoPerformanceSection.tsx` 1268.
 15. **Anexos listáveis sem login** 🔴 — o bucket `attachments` é público e tem a policy `Anyone can view attachments`, para o papel `public`. Com a chave anônima, qualquer pessoa lista e baixa os **6.002 arquivos**. Confirmado em `pg_policies` em 2026-09-25. Não basta tornar o bucket privado: o app usa `getPublicUrl` e grava URL pública em `ticket_attachments.file_url`. Ver `ROADMAP.md` 1.14.
 

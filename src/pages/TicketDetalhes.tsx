@@ -1,65 +1,94 @@
-import { useEffect, useState, useMemo } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { goBack, saveScrollPosition } from "@/lib/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import JSZip from "jszip";
+import {
+  Activity,
+  ArrowLeft,
+  Building2,
+  Calendar,
+  CheckCircle,
+  Download,
+  Flag,
+  Info,
+  Loader2,
+  MessagesSquare,
+  MoreHorizontal,
+  Paperclip,
+  Pencil,
+  Send,
+  Sparkles,
+  Tag,
+  Ticket as TicketIcon,
+  Upload,
+  User,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useReadReceipts } from "@/hooks/useReadReceipts";
+import { useChatPresence } from "@/hooks/useChatPresence";
+import { preloadMediaUrls } from "@/hooks/useMediaCache";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Send, Paperclip, Loader2, Sparkles, FileText, ChevronDown, X, Download, ZoomIn, Upload, Calendar, CheckCircle, Pencil } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
+import { CabecalhoPagina, PaginaInterna } from "@/components/painel/PaginaInterna";
+import { CaixaCarregando, CaixaOperacao, SeloContagem } from "@/components/painel/CaixaOperacao";
+import { Definicao, ListaDefinicoes } from "@/components/painel/Definicoes";
+import { EtiquetaPrioridadeTicket, EtiquetaStatusTicket, EtiquetaTipoTicket } from "@/components/tickets/EtiquetasTicket";
+import { ORDEM_STATUS_TICKET, STATUS_TICKET, type StatusTicket } from "@/lib/ticketMeta";
 import { EditMaintenanceDialog } from "@/components/EditMaintenanceDialog";
 import { EditTicketDialog } from "@/components/EditTicketDialog";
 import { CompleteMaintenanceDialog } from "@/components/CompleteMaintenanceDialog";
 import { SendToChargeButton } from "@/components/SendToChargeButton";
-import { ptBR } from "date-fns/locale";
 import { ConversationSummaryButton } from "@/components/ConversationSummaryButton";
 import { AttachmentBubble } from "@/components/AttachmentBubble";
-import { deleteAttachmentRow } from "@/lib/deleteAttachment";
 import { MediaGallery } from "@/components/MediaGallery";
-import { LoadingScreen } from "@/components/LoadingScreen";
-import { ReadReceiptDisplay } from "@/components/ReadReceiptDisplay";
+import { TicketBadges } from "@/components/TicketBadges";
+import OwnerMaintenanceDecision from "@/components/OwnerMaintenanceDecision";
+import { renderizarCorpo } from "@/components/chat/CorpoMensagem";
 import { ChatMessageBubble } from "@/components/chat/ChatMessageBubble";
 import { ChatDateDivider } from "@/components/chat/ChatDateDivider";
 import { ChatTypingIndicator } from "@/components/chat/ChatTypingIndicator";
 import { ChatFilePreviewRow } from "@/components/chat/ChatFilePreviewRow";
 import { ChatEmptyState } from "@/components/chat/ChatEmptyState";
-import { useChatPresence } from "@/hooks/useChatPresence";
-import { TicketBadges } from "@/components/TicketBadges";
-import OwnerMaintenanceDecision from "@/components/OwnerMaintenanceDecision";
-import { preloadMediaUrls } from "@/hooks/useMediaCache";
-import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
-import JSZip from "jszip";
+import { deleteAttachmentRow } from "@/lib/deleteAttachment";
 import { buildZipEntryNameFromBlob } from "@/lib/zipFileName";
-
 import { processFileForUpload } from "@/lib/processVideoForUpload";
+import { emParaleloOuFalha } from "@/lib/fileUpload";
+import { cn } from "@/lib/utils";
 
-interface Ticket {
+interface Chamado {
   id: string;
   subject: string;
-  description: string;
+  description: string | null;
   ticket_type: string;
   status: string;
   priority: string;
   created_at: string;
   owner_id: string;
   property_id: string | null;
-  kind?: string;
-  essential?: boolean;
+  kind?: string | null;
+  essential?: boolean | null;
   owner_decision?: string | null;
   owner_action_due_at?: string | null;
+  cost_responsible?: string | null;
+  charge_draft_amount_cents?: number | null;
+  charge_draft_management_contribution_cents?: number | null;
+  charge_draft_category?: string | null;
+  charge_draft_title?: string | null;
+  charge_sent_at?: string | null;
   profiles: {
     name: string;
     photo_url: string | null;
-  };
+  } | null;
   properties: {
     name: string;
   } | null;
@@ -87,13 +116,31 @@ interface Message {
   attachments?: Attachment[];
 }
 
+/** Anexos ainda não enviados nunca ficam em "subindo": a prévia some ao enviar. */
+const SEM_UPLOAD = new Set<string>();
+
+const ehMidia = (att: Attachment) =>
+  att.file_type?.startsWith("image/") || att.file_type?.startsWith("video/") || att.file_type === "application/pdf";
+
+/** Mensagem legível de um erro do Supabase, de uma Error ou de qualquer coisa. */
+function mensagemErro(erro: unknown, padrao = "Tente novamente."): string {
+  if (erro && typeof erro === "object" && "message" in erro && typeof (erro as { message: unknown }).message === "string") {
+    return (erro as { message: string }).message;
+  }
+  return padrao;
+}
+
+
+/* ------------------------------------------------------------------------ */
+/* Página                                                                    */
+/* ------------------------------------------------------------------------ */
+
 export default function TicketDetalhes() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { pathname } = useLocation();
   const { user, profile } = useAuth();
   const { toast } = useToast();
-  const [ticket, setTicket] = useState<Ticket | null>(null);
+  const [ticket, setTicket] = useState<Chamado | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
@@ -102,8 +149,6 @@ export default function TicketDetalhes() {
   const [generatingAI, setGeneratingAI] = useState(false);
   const [aiInstructions, setAiInstructions] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
-  const [selectedImage, setSelectedImage] = useState<{ url: string; name: string } | null>(null);
   const [downloadingAll, setDownloadingAll] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryStartIndex, setGalleryStartIndex] = useState(0);
@@ -119,12 +164,17 @@ export default function TicketDetalhes() {
   const [providers, setProviders] = useState<{ id: string; name: string; phone: string | null }[]>([]);
   const [savingSchedule, setSavingSchedule] = useState(false);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
-  const [completing, setCompleting] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [atualizandoStatus, setAtualizandoStatus] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fimConversaRef = useRef<HTMLDivElement>(null);
+  const totalMensagensAnterior = useRef(0);
 
   const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance';
   const canUpdate = ticket?.status !== 'concluido' && ticket?.status !== 'cancelado';
   const isMaintenance = ticket?.ticket_type === 'manutencao';
+  // Regra nº 8: voltar de um detalhe leva à lista de origem, com replace.
+  const voltarPara = isTeamMember ? "/todos-tickets" : "/meus-chamados";
 
   // Read receipts for messages
   const messageIds = useMemo(() => messages.map(m => m.id), [messages]);
@@ -143,9 +193,19 @@ export default function TicketDetalhes() {
     }
   }, [messages, user, markAsRead]);
 
+  // Mensagem própria recém-enviada: rola até ela, para o autor ver que entrou.
+  useEffect(() => {
+    const ultima = messages[messages.length - 1];
+    const cresceu = messages.length > totalMensagensAnterior.current && totalMensagensAnterior.current > 0;
+    if (cresceu && ultima && ultima.author_id === user?.id) {
+      fimConversaRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+    totalMensagensAnterior.current = messages.length;
+  }, [messages, user?.id]);
+
   useEffect(() => {
     fetchTicketData();
-    
+
     // Realtime subscription for new messages
     const channel = supabase
       .channel(`ticket-${id}`)
@@ -166,6 +226,7 @@ export default function TicketDetalhes() {
     return () => {
       supabase.removeChannel(channel);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const fetchTicketData = async () => {
@@ -191,20 +252,20 @@ export default function TicketDetalhes() {
           .is('archived_at', null)
           .order('created_at', { ascending: false })
           .limit(1);
-        
+
         if (charges && charges.length > 0) {
           navigate(`/cobranca/${charges[0].id}`, { replace: true });
           return;
         }
       }
 
-      setTicket(ticketData);
+      setTicket(ticketData as unknown as Chamado);
 
       await fetchMessages();
-    } catch (error: any) {
+    } catch (error) {
       toast({
-        title: "Erro ao carregar ticket",
-        description: error.message,
+        title: "Erro ao carregar o chamado",
+        description: mensagemErro(error),
         variant: "destructive",
       });
     } finally {
@@ -236,7 +297,8 @@ export default function TicketDetalhes() {
       if (ticketError) throw ticketError;
 
       const provider = providers.find(p => p.id === scheduleData.service_provider_id);
-      let messageBody = "📅 **Manutenção agendada**\n\n";
+      // Sem emoji: a conversa mostra este texto com negrito real.
+      let messageBody = "**Manutenção agendada**\n\n";
       if (scheduleData.scheduled_at) {
         messageBody += `**Data/Hora:** ${format(new Date(scheduleData.scheduled_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}\n`;
       }
@@ -246,30 +308,28 @@ export default function TicketDetalhes() {
       if (scheduleData.observation) messageBody += `\n**Observação:** ${scheduleData.observation}`;
 
       await supabase.from("ticket_messages").insert({ ticket_id: ticket.id, author_id: user.id, body: messageBody, is_internal: false });
-      toast({ title: "Manutenção agendada!" });
+      toast({ title: "Manutenção agendada" });
       setScheduleDialogOpen(false);
       fetchTicketData();
-    } catch (error: any) {
-      toast({ title: "Erro ao agendar", description: error.message, variant: "destructive" });
+    } catch (error) {
+      toast({ title: "Erro ao agendar", description: mensagemErro(error), variant: "destructive" });
     } finally {
       setSavingSchedule(false);
     }
   };
 
-  const handleComplete = async () => {
-    if (!ticket || !user) return;
-    setCompleting(true);
+  const alterarStatus = async (novo: StatusTicket) => {
+    if (!ticket) return;
+    setAtualizandoStatus(true);
     try {
-      const { error: ticketError } = await supabase.from("tickets").update({ status: "concluido" }).eq("id", ticket.id);
-      if (ticketError) throw ticketError;
-
-      toast({ title: "Manutenção concluída!" });
-      setCompleteDialogOpen(false);
-      fetchTicketData();
-    } catch (error: any) {
-      toast({ title: "Erro ao concluir", description: error.message, variant: "destructive" });
+      const { error } = await supabase.from('tickets').update({ status: novo }).eq('id', ticket.id);
+      if (error) throw error;
+      setTicket({ ...ticket, status: novo });
+      toast({ title: "Status atualizado", description: STATUS_TICKET[novo].rotulo });
+    } catch (error) {
+      toast({ title: "Erro ao atualizar status", description: mensagemErro(error), variant: "destructive" });
     } finally {
-      setCompleting(false);
+      setAtualizandoStatus(false);
     }
   };
 
@@ -284,29 +344,29 @@ export default function TicketDetalhes() {
 
       if (error) throw error;
       setMessages(data || []);
-      
+
       // Coletar todos os anexos de mídia para a galeria
       const mediaItems: Attachment[] = [];
       const allUrls: string[] = [];
       (data || []).forEach((msg: Message) => {
         msg.attachments?.forEach((att) => {
           allUrls.push(att.file_url);
-          if (att.file_type?.startsWith('image/') || att.file_type?.startsWith('video/') || att.file_type === 'application/pdf') {
+          if (ehMidia(att)) {
             mediaItems.push(att);
           }
         });
       });
       setAllMediaItems(mediaItems);
-      
+
       // Preload all media URLs for faster display
       if (allUrls.length > 0) {
         preloadMediaUrls(allUrls);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching messages:', error);
       toast({
         title: "Erro ao carregar mensagens",
-        description: error.message,
+        description: mensagemErro(error),
         variant: "destructive",
       });
     }
@@ -318,7 +378,7 @@ export default function TicketDetalhes() {
 
     const messageText = newMessage.trim();
     const filesToUpload = [...selectedFiles];
-    
+
     // Create optimistic message immediately - user sees it instantly
     const optimisticId = `optimistic-${Date.now()}`;
     const optimisticMessage: Message = {
@@ -343,21 +403,24 @@ export default function TicketDetalhes() {
 
     // Add optimistic message immediately
     setMessages(prev => [...prev, optimisticMessage]);
-    
+
     // Clear inputs immediately - feels instant
     setNewMessage("");
     setSelectedFiles([]);
+    setTyping(false);
 
     // Upload and send in background
     (async () => {
       try {
         // Upload de anexos primeiro se houver
-        const attachments = [];
+        const attachments: Array<{ file_url: string; file_name: string; file_type: string; size_bytes: number; path: string }> = [];
         if (filesToUpload.length > 0) {
-          for (const file of filesToUpload) {
+          setUploading(true);
+          // Até 3 arquivos ao mesmo tempo.
+          await emParaleloOuFalha(filesToUpload, async (file, indiceArquivo) => {
             // Compress video if it's a video file
             const processedFile = await processFileForUpload(file);
-            const filePath = `${id}/${Date.now()}_${processedFile.name}`;
+            const filePath = `${id}/${Date.now()}-${indiceArquivo}_${processedFile.name}`;
 
             const { error: uploadError } = await supabase.storage
               .from('attachments')
@@ -376,12 +439,14 @@ export default function TicketDetalhes() {
               size_bytes: processedFile.size,
               path: filePath
             });
-          }
+          });
+          setUploading(false);
         }
 
         // Criar mensagem via edge function
+        setSending(true);
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session) throw new Error('Not authenticated');
+        if (!session) throw new Error('Sessão expirada. Entre novamente para enviar a mensagem.');
 
         const { error } = await supabase.functions.invoke(`create-ticket-message/${id}`, {
           headers: {
@@ -394,46 +459,42 @@ export default function TicketDetalhes() {
           }
         });
 
-        if (error) {
-          // Remove optimistic message on error
-          setMessages(prev => prev.filter(m => m.id !== optimisticId));
-          toast({
-            title: "Erro ao enviar mensagem",
-            description: error.message,
-            variant: "destructive",
-          });
-        }
+        if (error) throw error;
         // Realtime subscription will handle replacing the optimistic message
-      } catch (error: any) {
+      } catch (error) {
         // Remove optimistic message on error
         setMessages(prev => prev.filter(m => m.id !== optimisticId));
         toast({
           title: "Erro ao enviar mensagem",
-          description: error.message,
+          description: mensagemErro(error),
           variant: "destructive",
         });
+      } finally {
+        setUploading(false);
+        setSending(false);
       }
     })();
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files || event.target.files.length === 0) return;
-    
+
     const files = Array.from(event.target.files);
     const maxSize = 20 * 1024 * 1024; // 20MB
-    
+
     const validFiles = files.filter(file => {
       if (file.size > maxSize) {
+        // Nome local, antes do envio: pode aparecer.
         toast({
           title: "Arquivo muito grande",
-          description: `${file.name} excede o limite de 20MB`,
+          description: `${file.name} excede o limite de 20 MB`,
           variant: "destructive",
         });
         return false;
       }
       return true;
     });
-    
+
     setSelectedFiles(prev => [...prev, ...validFiles]);
     event.target.value = '';
   };
@@ -442,233 +503,90 @@ export default function TicketDetalhes() {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const downloadMessageAttachments = async (messageAttachments: Attachment[], messageName: string) => {
-    try {
-      if (messageAttachments.length === 0) return;
-      
-      const zip = new JSZip();
-      let successCount = 0;
-      
-      for (let i = 0; i < messageAttachments.length; i++) {
-        const attachment = messageAttachments[i];
-        
-        try {
-          const url = new URL(attachment.file_url);
-          const pathParts = url.pathname.split('/object/public/');
-          
-          if (pathParts.length === 2) {
-            const [bucket, ...fileParts] = pathParts[1].split('/');
-            const filePath = fileParts.join('/');
-            
-            const { data, error } = await supabase.storage
-              .from(bucket)
-              .download(filePath);
-            
-            if (error) {
-              console.error(`❌ Erro no arquivo:`, error);
-              continue;
-            }
-            
-            if (data) {
-              const fileName = await buildZipEntryNameFromBlob(i, data, attachment.file_name, (attachment as any).file_type || (attachment as any).mime_type, attachment.file_url);
-              zip.file(fileName, data);
-              successCount++;
+  /**
+   * Baixa anexos num ZIP com nomes anônimos ("anexo-01.jpg"). Serve tanto
+   * para uma mensagem quanto para o chamado inteiro. No celular, tenta a
+   * folha de compartilhar antes do download.
+   */
+  const baixarAnexosZip = async (anexos: Attachment[], nomeZip: string) => {
+    if (anexos.length === 0) {
+      toast({ title: "Nenhum anexo para baixar", variant: "destructive" });
+      return;
+    }
 
-            }
+    try {
+      const zip = new JSZip();
+      let baixados = 0;
+
+      for (let i = 0; i < anexos.length; i++) {
+        const anexo = anexos[i];
+        try {
+          const partes = new URL(anexo.file_url).pathname.split('/object/public/');
+          if (partes.length !== 2) continue;
+          const [bucket, ...resto] = partes[1].split('/');
+
+          const { data, error } = await supabase.storage.from(bucket).download(resto.join('/'));
+          if (error || !data) {
+            console.error('Erro ao baixar anexo:', error);
+            continue;
           }
+
+          // O nome real só serve de pista para a extensão; a entrada é "anexo-NN.ext".
+          zip.file(await buildZipEntryNameFromBlob(i, data, anexo.file_name, anexo.file_type, anexo.file_url), data);
+          baixados += 1;
         } catch (error) {
-          console.error(`❌ Erro ao processar arquivo ${i + 1}:`, error);
+          console.error(`Erro ao processar anexo ${i + 1}:`, error);
         }
       }
 
-      if (successCount === 0) {
-        toast({
-          title: "Erro ao baixar",
-          description: "Nenhum arquivo pôde ser processado",
-          variant: "destructive",
-        });
+      if (baixados === 0) {
+        toast({ title: "Erro ao baixar", description: "Nenhum anexo pôde ser baixado.", variant: "destructive" });
         return;
       }
 
-      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const zipBlob = await zip.generateAsync({
+        type: 'blob',
+        compression: "DEFLATE",
+        compressionOptions: { level: 6 },
+      });
+      const arquivo = new File([zipBlob], nomeZip, { type: 'application/zip' });
+
+      if (zipBlob.size < 10 * 1024 * 1024 && typeof navigator.canShare === 'function' && navigator.canShare({ files: [arquivo] })) {
+        try {
+          await navigator.share({ files: [arquivo], title: 'Anexos do chamado' });
+          toast({ title: "Compartilhamento iniciado", description: `${baixados} arquivo(s)` });
+          return;
+        } catch (shareError) {
+          // Cancelou a folha: não força um download por cima.
+          if ((shareError as { name?: string })?.name === 'AbortError') return;
+        }
+      }
+
       const url = URL.createObjectURL(zipBlob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `${messageName}.zip`;
+      link.download = nomeZip;
+      link.style.display = 'none';
       document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      // Revoga depois: no celular o download demora a começar.
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+        link.remove();
+      }, 3000);
 
-      toast({
-        title: "Download concluído!",
-        description: `${successCount} arquivo(s) baixado(s)`,
-      });
-    } catch (error: any) {
-      console.error('❌ Erro geral:', error);
-      toast({
-        title: "Erro ao baixar anexos",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Download iniciado", description: `${baixados} arquivo(s) compactado(s)` });
+    } catch (error) {
+      console.error('Erro ao gerar o ZIP:', error);
+      toast({ title: "Erro ao baixar anexos", description: mensagemErro(error), variant: "destructive" });
     }
   };
 
   const downloadAllAttachments = async () => {
     if (downloadingAll) return;
-    
+    setDownloadingAll(true);
     try {
-      setDownloadingAll(true);
-      
-      // Coleta todos os anexos de todas as mensagens
-      const allAttachments = messages.flatMap(m => m.attachments || []);
-      
-      if (allAttachments.length === 0) {
-        toast({
-          title: "Nenhum anexo encontrado",
-          variant: "destructive",
-        });
-        setDownloadingAll(false);
-        return;
-      }
-
-      console.log(`📦 Iniciando download de ${allAttachments.length} arquivos`);
-
-      const zip = new JSZip();
-      let successCount = 0;
-      let totalSize = 0;
-      
-      for (let i = 0; i < allAttachments.length; i++) {
-        const attachment = allAttachments[i];
-        
-        try {
-          console.log(`📥 Processando ${i + 1}/${allAttachments.length}: ${attachment.file_name || attachment.file_url}`);
-          
-          // Extrai o path do URL do Supabase Storage
-          const url = new URL(attachment.file_url);
-          const pathParts = url.pathname.split('/object/public/');
-          
-          if (pathParts.length === 2) {
-            const [bucket, ...fileParts] = pathParts[1].split('/');
-            const filePath = fileParts.join('/');
-            
-            // Usa a API do Supabase
-            const { data, error } = await supabase.storage
-              .from(bucket)
-              .download(filePath);
-            
-            if (error) {
-              console.error(`❌ Erro no arquivo:`, error);
-              continue;
-            }
-            
-            if (data) {
-              const fileName = await buildZipEntryNameFromBlob(i, data, attachment.file_name, (attachment as any).file_type || (attachment as any).mime_type, attachment.file_url);
-              zip.file(fileName, data);
-
-              successCount++;
-              totalSize += data.size;
-              console.log(`✅ ${fileName} adicionado (${(data.size / 1024).toFixed(1)} KB)`);
-            }
-          }
-        } catch (error) {
-          console.error(`❌ Erro ao processar arquivo ${i + 1}:`, error);
-        }
-      }
-
-      if (successCount === 0) {
-        toast({
-          title: "Erro ao baixar",
-          description: "Nenhum arquivo pôde ser processado",
-          variant: "destructive",
-        });
-        setDownloadingAll(false);
-        return;
-      }
-
-      console.log(`🗜️ Compactando ${successCount} arquivos (${(totalSize / 1024 / 1024).toFixed(2)} MB)...`);
-
-      // Gera o ZIP
-      const zipBlob = await zip.generateAsync({ 
-        type: 'blob',
-        compression: "DEFLATE",
-        compressionOptions: { level: 6 }
-      });
-      
-      console.log(`📦 ZIP gerado: ${(zipBlob.size / 1024 / 1024).toFixed(2)} MB`);
-      
-      // Cria o download - método compatível com mobile
-      const fileName = `ticket-${id?.substring(0, 8)}-anexos.zip`;
-      
-      // Tenta usar a API mais moderna se disponível
-      if (navigator.share && zipBlob.size < 10 * 1024 * 1024) {
-        // Se o arquivo for menor que 10MB, tenta compartilhar (mobile)
-        try {
-          const file = new File([zipBlob], fileName, { type: 'application/zip' });
-          await navigator.share({
-            files: [file],
-            title: 'Anexos do Ticket',
-            text: `${successCount} arquivo(s) compactados`
-          });
-          
-          toast({
-            title: "✅ Compartilhamento iniciado",
-            description: `${successCount} arquivo(s)`,
-          });
-          return;
-        } catch (shareError) {
-          console.log('Share API não disponível, usando download tradicional');
-        }
-      }
-      
-      // Método tradicional de download - otimizado para mobile
-      const url = URL.createObjectURL(zipBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = fileName;
-      
-      // Adiciona atributos importantes para mobile
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      
-      // Trigger do download com eventos múltiplos para garantir compatibilidade
-      console.log(`⬇️ Iniciando download: ${fileName}`);
-      
-      // Tenta múltiplos métodos
-      try {
-        link.click();
-        
-        // Fallback: dispara evento manualmente
-        const event = new MouseEvent('click', {
-          view: window,
-          bubbles: true,
-          cancelable: true
-        });
-        link.dispatchEvent(event);
-      } catch (e) {
-        console.error('Erro ao clicar:', e);
-      }
-      
-      // Limpa após delay maior para mobile
-      setTimeout(() => {
-        URL.revokeObjectURL(url);
-        if (link.parentNode) {
-          document.body.removeChild(link);
-        }
-      }, 3000);
-
-      toast({
-        title: "✅ Download iniciado!",
-        description: `${successCount} arquivo(s) compactados`,
-      });
-      
-    } catch (error: any) {
-      console.error('❌ Erro geral:', error);
-      toast({
-        title: "Erro ao baixar",
-        description: error.message || "Tente novamente",
-        variant: "destructive",
-      });
+      await baixarAnexosZip(messages.flatMap(m => m.attachments || []), `chamado-${id?.substring(0, 8)}-anexos.zip`);
     } finally {
       setDownloadingAll(false);
     }
@@ -686,11 +604,6 @@ export default function TicketDetalhes() {
 
     try {
       setGeneratingAI(true);
-      
-      // Prepara o contexto do ticket e mensagens
-      const messagesContext = messages
-        .map(m => `${m.profiles.name}: ${m.body}`)
-        .join('\n');
 
       const { data, error } = await supabase.functions.invoke('ai-generate-response', {
         body: {
@@ -705,53 +618,18 @@ export default function TicketDetalhes() {
       setNewMessage(data.text);
       setAiInstructions("");
       toast({
-        title: "Resposta gerada com sucesso!",
-        description: "A IA gerou uma sugestão de resposta para você.",
+        title: "Resposta gerada",
+        description: "Revise a sugestão antes de enviar.",
       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Erro ao gerar resposta",
-        description: error.message,
+        description: mensagemErro(error),
         variant: "destructive",
       });
     } finally {
       setGeneratingAI(false);
     }
-  };
-
-
-  if (loading) {
-    return <LoadingScreen message="Carregando ticket..." />;
-  }
-
-  if (!ticket) {
-    return (
-      <div className="container mx-auto p-4 flex flex-col items-center justify-center min-h-[50vh] gap-4">
-        <p className="text-muted-foreground">Ticket não encontrado.</p>
-        <Button variant="outline" onClick={() => goBack(navigate, "/todos-tickets")}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Voltar
-        </Button>
-      </div>
-    );
-  }
-
-  const statusLabels = {
-    novo: "Novo",
-    em_analise: "Em Análise",
-    aguardando_info: "Aguardando Informações",
-    em_execucao: "Em Execução",
-    concluido: "Concluído",
-    cancelado: "Cancelado"
-  };
-
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
   };
 
   const exportToMonday = async () => {
@@ -760,7 +638,7 @@ export default function TicketDetalhes() {
     setExportingToMonday(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Not authenticated');
+      if (!session) throw new Error('Sessão expirada. Entre novamente para exportar.');
 
       const { data, error } = await supabase.functions.invoke('export-ticket-to-monday', {
         headers: {
@@ -776,29 +654,25 @@ export default function TicketDetalhes() {
       }
 
       toast({
-        title: "Ticket exportado!",
-        description: data?.mondayUrl 
-          ? "Ticket criado no Monday.com com sucesso!" 
-          : "Ticket exportado para o Monday.",
+        title: "Chamado exportado",
+        description: data?.mondayUrl
+          ? "Chamado criado no Monday.com."
+          : "Chamado exportado para o Monday.",
       });
 
-      // Log columns found for user to configure
+      // IDs das colunas do quadro, para configurar os secrets do Supabase.
       if (data?.columnsFound) {
         console.log('Colunas disponíveis no Monday:', data.columnsFound);
-        console.log('Configure os IDs das colunas nos secrets do Supabase:');
-        data.columnsFound.forEach((col: any) => {
-          console.log(`- ${col.title} (${col.type}): MONDAY_COL_${col.title.toUpperCase().replace(/ /g, '_')} = "${col.id}"`);
-        });
       }
 
       if (data?.mondayUrl) {
         window.open(data.mondayUrl, '_blank');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error exporting to Monday:', error);
       toast({
         title: "Erro ao exportar",
-        description: error.message,
+        description: mensagemErro(error),
         variant: "destructive",
       });
     } finally {
@@ -806,195 +680,256 @@ export default function TicketDetalhes() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
-      <header className="border-b bg-card/50 backdrop-blur-sm">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => goBack(navigate, "/todos-tickets")}
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar
-          </Button>
-          
-          {isTeamMember && (
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setEditOpen(true)}
-              >
-                <Pencil className="mr-2 h-4 w-4" />
-                Editar
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={exportToMonday}
-                disabled={exportingToMonday}
-              >
-                {exportingToMonday ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Exportando...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="mr-2 h-4 w-4" />
-                    Exportar para Monday
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
-        </div>
-      </header>
+  const abrirGaleria = (attachment: Attachment) => {
+    if (!ehMidia(attachment)) return;
+    const idx = allMediaItems.findIndex((item) => item.id === attachment.id);
+    if (idx !== -1) {
+      setGalleryStartIndex(idx);
+      setGalleryOpen(true);
+    }
+  };
 
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
-        <Card className="mb-6">
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <CardTitle className="text-2xl mb-2">{ticket.subject}</CardTitle>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  <Badge variant="outline">{statusLabels[ticket.status as keyof typeof statusLabels]}</Badge>
-                  <Badge>{ticket.priority}</Badge>
-                  {ticket.properties && (
-                    <Badge variant="secondary">Imóvel: {ticket.properties.name}</Badge>
-                  )}
-                </div>
-                <TicketBadges ticket={ticket} />
-              </div>
-              {isTeamMember && isMaintenance && canUpdate && (
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setScheduleData({ scheduled_at: "", service_provider_id: "", observation: "", cost_responsible: "owner" });
-                      setScheduleDialogOpen(true);
-                    }}
-                  >
-                    <Calendar className="h-4 w-4 mr-1" />
-                    Agendar
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                    onClick={() => setCompleteDialogOpen(true)}
-                  >
-                    <CheckCircle className="h-4 w-4 mr-1" />
-                    Concluir Manutenção
-                  </Button>
-                </div>
-              )}
-              {isTeamMember && isMaintenance && ticket.status === 'concluido' && (
-                <SendToChargeButton
-                  ticket={{
-                    id: ticket.id,
-                    subject: ticket.subject,
-                    owner_id: ticket.owner_id,
-                    property_id: ticket.property_id,
-                    cost_responsible: (ticket as any).cost_responsible || null,
-                    charge_draft_amount_cents: (ticket as any).charge_draft_amount_cents ?? null,
-                    charge_draft_management_contribution_cents: (ticket as any).charge_draft_management_contribution_cents ?? null,
-                    charge_draft_category: (ticket as any).charge_draft_category ?? null,
-                    charge_draft_title: (ticket as any).charge_draft_title ?? null,
-                    charge_sent_at: (ticket as any).charge_sent_at ?? null,
-                  }}
+  /* ---------------------------------------------------------------------- */
+  /* Estados de carregamento e "não encontrado"                              */
+  /* ---------------------------------------------------------------------- */
+
+  if (loading) {
+    return (
+      <PaginaInterna
+        largura="media"
+        comNavInferior
+        cabecalho={<CabecalhoPagina titulo="Chamado" icone={<TicketIcon />} tom="info" voltarPara={voltarPara} />}
+      >
+        <CaixaCarregando icone={<Info />} titulo="Dados do chamado" linhas={3} />
+        <CaixaCarregando icone={<MessagesSquare />} titulo="Conversa" tom="info" linhas={4} />
+      </PaginaInterna>
+    );
+  }
+
+  if (!ticket) {
+    return (
+      <PaginaInterna
+        largura="media"
+        comNavInferior
+        cabecalho={<CabecalhoPagina titulo="Chamado" icone={<TicketIcon />} tom="info" voltarPara={voltarPara} />}
+      >
+        <Card className="rounded-xl border-border/70">
+          <EmptyState
+            ilustracao="busca"
+            title="Chamado não encontrado"
+            description="Ele pode ter sido excluído ou você não tem acesso a ele."
+            action={
+              <Button variant="outline" onClick={() => navigate(voltarPara, { replace: true })}>
+                <ArrowLeft className="h-4 w-4" />
+                Voltar para a lista
+              </Button>
+            }
+          />
+        </Card>
+      </PaginaInterna>
+    );
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Página                                                                  */
+  /* ---------------------------------------------------------------------- */
+
+  const temAnexos = messages.some(m => m.attachments && m.attachments.length > 0);
+  const mostrarDecisaoProprietario =
+    ticket.kind === 'maintenance' && !ticket.essential && !!ticket.owner_action_due_at && !isTeamMember;
+  // Mesma condição do SendToChargeButton, para não sobrar uma linha de ações vazia.
+  const podeEnviarCobranca =
+    isMaintenance &&
+    ticket.status === 'concluido' &&
+    !!ticket.charge_draft_amount_cents &&
+    !ticket.charge_sent_at &&
+    ticket.cost_responsible !== 'guest';
+  const mostrarAcoesEquipe = isTeamMember && (canUpdate || podeEnviarCobranca);
+  const subtituloCabecalho = `${ticket.properties?.name || "Sem imóvel"}${ticket.profiles?.name ? ` · ${ticket.profiles.name}` : ""}`;
+
+  const acoesCabecalho = isTeamMember ? (
+    <>
+      <Button variant="outline" size="sm" className="h-9" onClick={() => setEditOpen(true)} aria-label="Editar chamado">
+        <Pencil className="h-4 w-4" />
+        <span className="hidden sm:inline">Editar</span>
+      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-9 w-9" aria-label="Mais ações">
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="z-50 bg-popover">
+          <DropdownMenuItem onClick={exportToMonday} disabled={exportingToMonday}>
+            {exportingToMonday ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+            Exportar para Monday
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
+  ) : undefined;
+
+  const mensagensPorDia = Object.entries(
+    messages.reduce((groups, message) => {
+      const date = format(new Date(message.created_at), "yyyy-MM-dd");
+      (groups[date] ||= []).push(message);
+      return groups;
+    }, {} as Record<string, Message[]>),
+  );
+
+  return (
+    <PaginaInterna
+      largura="media"
+      comNavInferior
+      cabecalho={
+        <CabecalhoPagina
+          titulo={ticket.subject}
+          subtitulo={subtituloCabecalho}
+          icone={<TicketIcon />}
+          tom="info"
+          voltarPara={voltarPara}
+          acoes={acoesCabecalho}
+        />
+      }
+    >
+      {/* Dados do chamado */}
+      <CaixaOperacao icone={<Info />} titulo="Dados do chamado" tom="neutral">
+        <ListaDefinicoes colunas={2}>
+          <Definicao rotulo="Imóvel" valor={ticket.properties?.name || "Sem imóvel"} icone={<Building2 />} />
+          <Definicao rotulo="Proprietário" valor={ticket.profiles?.name} icone={<User />} />
+          <Definicao rotulo="Tipo" valor={<EtiquetaTipoTicket tipo={ticket.ticket_type} />} icone={<Tag />} />
+          <Definicao
+            rotulo="Prioridade"
+            valor={<EtiquetaPrioridadeTicket prioridade={ticket.priority} mostrarNormal />}
+            icone={<Flag />}
+          />
+          <Definicao
+            rotulo="Aberto em"
+            valor={format(new Date(ticket.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+            icone={<Calendar />}
+          />
+          <Definicao rotulo="Status" valor={<EtiquetaStatusTicket status={ticket.status} />} icone={<Activity />} />
+        </ListaDefinicoes>
+
+        {ticket.description && (
+          <div className="mt-3 border-t border-border/50 pt-3">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Descrição</p>
+            <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed">{ticket.description}</p>
+          </div>
+        )}
+
+        {(ticket.kind === 'maintenance' || ticket.essential) && (
+          <div className="mt-3">
+            <TicketBadges ticket={ticket} />
+          </div>
+        )}
+
+        {mostrarAcoesEquipe && (
+          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/50 pt-3">
+            {isMaintenance && canUpdate && (
+              <>
+                <Button
+                  variant="outline"
                   size="sm"
-                  onSuccess={(chargeId) => navigate(`/cobranca/${chargeId}`)}
-                />
-              )}
-              {isTeamMember && !isMaintenance && canUpdate && (
-                <Select
-                  value={ticket.status}
-                  onValueChange={async (newStatus: 'novo' | 'em_analise' | 'em_execucao' | 'aguardando_info' | 'concluido' | 'cancelado') => {
-                    try {
-                      const { error } = await supabase.from('tickets').update({ status: newStatus }).eq('id', id);
-                      if (error) throw error;
-                      setTicket({ ...ticket, status: newStatus });
-                      toast({ title: "Status atualizado" });
-                    } catch (error: any) {
-                      toast({ title: "Erro ao atualizar status", description: error.message, variant: "destructive" });
-                    }
+                  onClick={() => {
+                    setScheduleData({ scheduled_at: "", service_provider_id: "", observation: "", cost_responsible: "owner" });
+                    setScheduleDialogOpen(true);
                   }}
                 >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Mudar status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="novo">Novo</SelectItem>
-                    <SelectItem value="em_analise">Em Análise</SelectItem>
-                    <SelectItem value="em_execucao">Em Execução</SelectItem>
-                    <SelectItem value="aguardando_info">Aguardando Info</SelectItem>
-                    <SelectItem value="concluido">Concluído</SelectItem>
-                    <SelectItem value="cancelado">Cancelado</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-          </CardHeader>
-          
-          {/* Owner Decision Section - Show for maintenance tickets that need owner decision */}
-          {ticket.kind === 'maintenance' && 
-           !ticket.essential && 
-           ticket.owner_action_due_at && 
-           !isTeamMember && (
-            <CardContent className="pt-0">
-              <OwnerMaintenanceDecision 
+                  <Calendar className="h-4 w-4" />
+                  Agendar
+                </Button>
+                <Button size="sm" onClick={() => setCompleteDialogOpen(true)}>
+                  <CheckCircle className="h-4 w-4" />
+                  Concluir manutenção
+                </Button>
+              </>
+            )}
+            {podeEnviarCobranca && (
+              <SendToChargeButton
                 ticket={{
                   id: ticket.id,
-                  kind: ticket.kind || '',
-                  essential: ticket.essential || false,
-                  owner_decision: ticket.owner_decision || null,
-                  owner_action_due_at: ticket.owner_action_due_at || null,
-                  status: ticket.status,
-                  cost_responsible: (ticket as any).cost_responsible ?? null,
+                  subject: ticket.subject,
+                  owner_id: ticket.owner_id,
+                  property_id: ticket.property_id,
+                  cost_responsible: (ticket.cost_responsible as "owner" | "pm" | "guest" | null) ?? null,
+                  charge_draft_amount_cents: ticket.charge_draft_amount_cents ?? null,
+                  charge_draft_management_contribution_cents: ticket.charge_draft_management_contribution_cents ?? null,
+                  charge_draft_category: ticket.charge_draft_category ?? null,
+                  charge_draft_title: ticket.charge_draft_title ?? null,
+                  charge_sent_at: ticket.charge_sent_at ?? null,
                 }}
-                onUpdate={fetchTicketData}
+                size="sm"
+                onSuccess={(chargeId) => navigate(`/cobranca/${chargeId}`)}
               />
-            </CardContent>
-          )}
-        </Card>
+            )}
+            {!isMaintenance && canUpdate && (
+              <Select value={ticket.status} onValueChange={(v) => alterarStatus(v as StatusTicket)} disabled={atualizandoStatus}>
+                <SelectTrigger className="h-9 w-[200px]" aria-label="Alterar status do chamado">
+                  <SelectValue placeholder="Mudar status" />
+                </SelectTrigger>
+                <SelectContent className="z-50 bg-popover">
+                  {ORDEM_STATUS_TICKET.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {STATUS_TICKET[s].rotulo}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        )}
 
-        <div className="mb-6 flex justify-end gap-2">
-          {isTeamMember && (
-            <ConversationSummaryButton 
-              ticketId={id!} 
-              messageCount={messages.length}
+        {mostrarDecisaoProprietario && (
+          <div className="mt-3">
+            <OwnerMaintenanceDecision
+              ticket={{
+                id: ticket.id,
+                kind: ticket.kind || '',
+                essential: ticket.essential || false,
+                owner_decision: ticket.owner_decision || null,
+                owner_action_due_at: ticket.owner_action_due_at || null,
+                status: ticket.status,
+                cost_responsible: ticket.cost_responsible ?? null,
+              }}
+              onUpdate={fetchTicketData}
             />
-          )}
-          {messages.some(m => m.attachments && m.attachments.length > 0) && (
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={downloadAllAttachments}
-              disabled={downloadingAll}
-            >
-              {downloadingAll ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Download className="h-4 w-4 mr-2" />
-              )}
-              Baixar Todos os Anexos
-            </Button>
-          )}
-        </div>
+          </div>
+        )}
+      </CaixaOperacao>
 
-        <div className="mb-6 rounded-2xl border border-border/60 bg-muted/20 px-3 pb-4">
+      {/* Conversa */}
+      <CaixaOperacao
+        icone={<MessagesSquare />}
+        titulo="Conversa"
+        tom="info"
+        selos={messages.length > 0 ? <SeloContagem>{messages.length}</SeloContagem> : undefined}
+        acoes={
+          <>
+            {isTeamMember && <ConversationSummaryButton ticketId={id!} messageCount={messages.length} />}
+            {temAnexos && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={downloadAllAttachments}
+                disabled={downloadingAll}
+                aria-label="Baixar todos os anexos"
+                title="Baixar todos os anexos"
+              >
+                {downloadingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                <span className="hidden sm:inline">Baixar anexos</span>
+              </Button>
+            )}
+          </>
+        }
+        semPadding
+      >
+        <div className="bg-muted/20 px-3 pb-4">
           {messages.length === 0 ? (
             <ChatEmptyState />
           ) : (
-            Object.entries(
-              messages.reduce((groups, message) => {
-                const date = format(new Date(message.created_at), "yyyy-MM-dd");
-                (groups[date] ||= []).push(message);
-                return groups;
-              }, {} as Record<string, Message[]>),
-            ).map(([date, dayMessages]) => (
+            mensagensPorDia.map(([date, dayMessages]) => (
               <div key={date}>
                 <ChatDateDivider date={date} />
                 {dayMessages.map((message, index) => {
@@ -1006,19 +941,22 @@ export default function TicketDetalhes() {
                     prev.author_id === message.author_id &&
                     new Date(message.created_at).getTime() - new Date(prev.created_at).getTime() <
                       5 * 60 * 1000;
+                  // Nota interna tem fundo warning/10: texto de balão primário ficaria ilegível.
+                  const corTexto = isOwnMessage && !message.is_internal ? "text-primary-foreground" : undefined;
 
                   return (
                     <ChatMessageBubble
                       key={message.id}
-                      authorName={message.profiles.name}
-                      authorPhoto={message.profiles.photo_url}
-                      authorRole={message.profiles.role}
+                      authorName={message.profiles?.name}
+                      authorPhoto={message.profiles?.photo_url}
+                      authorRole={message.profiles?.role}
                       createdAt={message.created_at}
                       isOwn={isOwnMessage}
                       isInternal={message.is_internal}
+                      pending={message.id.startsWith("optimistic-")}
                       receipts={messageReceipts}
                       grouped={grouped}
-                      body={message.body || undefined}
+                      body={message.body ? renderizarCorpo(message.body, corTexto) : undefined}
                       attachments={
                         message.attachments && message.attachments.length > 0 ? (
                           <div className="space-y-1.5">
@@ -1029,13 +967,13 @@ export default function TicketDetalhes() {
                                   size="sm"
                                   className="h-6 text-[11px]"
                                   onClick={() =>
-                                    downloadMessageAttachments(
+                                    baixarAnexosZip(
                                       message.attachments!,
-                                      `anexos-${format(new Date(message.created_at), "dd-MM-yyyy-HH-mm")}`,
+                                      `anexos-${format(new Date(message.created_at), "dd-MM-yyyy-HH-mm")}.zip`,
                                     )
                                   }
                                 >
-                                  <Download className="h-3 w-3 mr-1" />
+                                  <Download className="h-3 w-3" />
                                   Baixar todos
                                 </Button>
                               </div>
@@ -1052,29 +990,12 @@ export default function TicketDetalhes() {
                                   onDelete={
                                     isTeamMember
                                       ? async () => {
-                                          const ok = await deleteAttachmentRow(
-                                            "ticket_attachments",
-                                            attachment.id,
-                                          );
+                                          const ok = await deleteAttachmentRow("ticket_attachments", attachment.id);
                                           if (ok) fetchMessages();
                                         }
                                       : undefined
                                   }
-                                  onPreview={() => {
-                                    if (
-                                      attachment.file_type?.startsWith("image/") ||
-                                      attachment.file_type?.startsWith("video/") ||
-                                      attachment.file_type === "application/pdf"
-                                    ) {
-                                      const idx = allMediaItems.findIndex(
-                                        (item) => item.id === attachment.id,
-                                      );
-                                      if (idx !== -1) {
-                                        setGalleryStartIndex(idx);
-                                        setGalleryOpen(true);
-                                      }
-                                    }
-                                  }}
+                                  onPreview={() => abrirGaleria(attachment)}
                                 />
                               ))}
                             </div>
@@ -1089,106 +1010,100 @@ export default function TicketDetalhes() {
           )}
 
           <ChatTypingIndicator names={typingUsers.map((u) => u.name)} />
+          <div ref={fimConversaRef} aria-hidden="true" />
         </div>
+      </CaixaOperacao>
 
-
-        {canUpdate && (
-          <Card>
-            <CardContent className="pt-6">
-              <div className="space-y-4">
-                <Textarea
-                  placeholder="Digite sua mensagem..."
-                  value={newMessage}
-                  onChange={(e) => {
-                    setNewMessage(e.target.value);
-                    setTyping(e.target.value.length > 0);
+      {/* Compositor: no celular fica colado acima da barra inferior */}
+      {canUpdate ? (
+        <Card
+          className={cn(
+            "rounded-xl border-border/70 p-3 md:p-4",
+            "sticky bottom-[calc(4rem_+_env(safe-area-inset-bottom))] z-20 shadow-lg md:static md:shadow-sm",
+          )}
+        >
+          <div className="space-y-2.5">
+            {isTeamMember && (
+              <div className="flex items-center gap-2">
+                <Input
+                  value={aiInstructions}
+                  onChange={(e) => setAiInstructions(e.target.value)}
+                  placeholder="Instruções para a IA: ex. explique o bloqueio de datas e peça os períodos"
+                  aria-label="Instruções para a IA"
+                  className="h-9 text-sm"
+                  disabled={generatingAI}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      generateAIResponse();
+                    }
                   }}
-                  className="min-h-[100px]"
                 />
-
-                <ChatFilePreviewRow
-                  files={selectedFiles}
-                  uploading={uploadingFiles}
-                  onRemove={removeFile}
-                />
-
-                
-                <div className="flex flex-col gap-4">
-                  {isTeamMember && (
-                    <div className="space-y-2">
-                      <Label htmlFor="ai-instructions" className="text-sm font-medium">
-                        Instruções para a IA
-                      </Label>
-                      <div className="flex gap-2">
-                        <Textarea
-                          id="ai-instructions"
-                          placeholder="Ex: Responda de forma cordial explicando o processo de bloqueio de datas e peça os períodos desejados"
-                          value={aiInstructions}
-                          onChange={(e) => setAiInstructions(e.target.value)}
-                          className="min-h-[80px]"
-                        />
-                        <Button 
-                          variant="outline"
-                          onClick={generateAIResponse}
-                          disabled={generatingAI || !aiInstructions.trim()}
-                          className="flex-shrink-0 h-auto"
-                          title="Gerar resposta com IA"
-                        >
-                          {generatingAI ? (
-                            <Loader2 className="h-5 w-5 animate-spin" />
-                          ) : (
-                            <Sparkles className="h-5 w-5" />
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                  
-                <div className="flex justify-between items-center">
-                  <div className="flex gap-2">
-                    <input
-                      type="file"
-                      id="attachment-upload"
-                      onChange={handleFileSelect}
-                      disabled={uploading || sending}
-                      multiple
-                      className="hidden"
-                    />
-                    <label htmlFor="attachment-upload">
-                      <Button variant="outline" size="sm" disabled={uploading || sending} asChild>
-                        <span className="cursor-pointer">
-                          <Paperclip className="mr-2 h-4 w-4" />
-                          Anexar arquivo
-                        </span>
-                      </Button>
-                    </label>
-                  </div>
-                  <Button
-                    onClick={sendMessage} 
-                    disabled={sending || (!newMessage.trim() && selectedFiles.length === 0)}
-                  >
-                    {sending ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Send className="mr-2 h-4 w-4" />
-                    )}
-                    Enviar
-                  </Button>
-                </div>
-                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-9 shrink-0"
+                  onClick={generateAIResponse}
+                  disabled={generatingAI || !aiInstructions.trim()}
+                  aria-label="Gerar resposta com IA"
+                  title="Gerar resposta com IA"
+                >
+                  {generatingAI ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  <span className="hidden sm:inline">Gerar</span>
+                </Button>
               </div>
-            </CardContent>
-          </Card>
-        )}
+            )}
 
-        {!canUpdate && (
-          <Card className="bg-muted">
-            <CardContent className="pt-6 text-center text-muted-foreground">
-              Este ticket foi {ticket.status === 'concluido' ? 'concluído' : 'cancelado'} e não pode mais receber mensagens.
-            </CardContent>
-          </Card>
-        )}
-      </main>
+            <Textarea
+              placeholder="Escreva sua mensagem…"
+              aria-label="Mensagem"
+              value={newMessage}
+              onChange={(e) => {
+                setNewMessage(e.target.value);
+                setTyping(e.target.value.length > 0);
+              }}
+              rows={3}
+              className="min-h-[72px] resize-y text-sm"
+            />
+
+            <ChatFilePreviewRow files={selectedFiles} uploading={SEM_UPLOAD} onRemove={removeFile} />
+
+            <div className="flex items-center justify-between gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={handleFileSelect}
+                disabled={uploading || sending}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading || sending}
+              >
+                <Paperclip className="h-4 w-4" />
+                <span className="hidden sm:inline">Anexar arquivo</span>
+                <span className="sm:hidden">Anexar</span>
+              </Button>
+              <Button
+                onClick={sendMessage}
+                disabled={sending || uploading || (!newMessage.trim() && selectedFiles.length === 0)}
+              >
+                {sending || uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                {uploading ? "Enviando anexos…" : sending ? "Enviando…" : "Enviar"}
+              </Button>
+            </div>
+          </div>
+        </Card>
+      ) : (
+        <Card className="rounded-xl border-border/70 bg-muted/40 p-4 text-center text-sm text-muted-foreground">
+          Este chamado foi {ticket.status === 'concluido' ? 'concluído' : 'cancelado'} e não recebe mais mensagens.
+        </Card>
+      )}
 
       {/* Galeria de Mídia */}
       <MediaGallery
@@ -1202,65 +1117,66 @@ export default function TicketDetalhes() {
         } : undefined}
       />
 
-      {/* Schedule Dialog */}
+      {/* Agendar manutenção */}
       <Dialog open={scheduleDialogOpen} onOpenChange={setScheduleDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Agendar Manutenção</DialogTitle>
+            <DialogTitle>Agendar manutenção</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div>
-              <Label>Data e Hora</Label>
-              <Input type="datetime-local" value={scheduleData.scheduled_at} onChange={(e) => setScheduleData({ ...scheduleData, scheduled_at: e.target.value })} />
+            <div className="space-y-1.5">
+              <Label htmlFor="agendar-data">Data e hora</Label>
+              <Input id="agendar-data" type="datetime-local" value={scheduleData.scheduled_at} onChange={(e) => setScheduleData({ ...scheduleData, scheduled_at: e.target.value })} />
             </div>
-            <div>
-              <Label>Profissional</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="agendar-profissional">Profissional</Label>
               <Select value={scheduleData.service_provider_id} onValueChange={(v) => setScheduleData({ ...scheduleData, service_provider_id: v })}>
-                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                <SelectContent>
+                <SelectTrigger id="agendar-profissional"><SelectValue placeholder="Selecione…" /></SelectTrigger>
+                <SelectContent className="z-50 bg-popover">
                   {providers.map((p) => (<SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label>Responsável pelo custo</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="agendar-custo">Responsável pelo custo</Label>
               <Select value={scheduleData.cost_responsible} onValueChange={(v) => setScheduleData({ ...scheduleData, cost_responsible: v as "owner" | "pm" | "guest" })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
+                <SelectTrigger id="agendar-custo"><SelectValue /></SelectTrigger>
+                <SelectContent className="z-50 bg-popover">
                   <SelectItem value="owner">Proprietário</SelectItem>
                   <SelectItem value="pm">Gestão</SelectItem>
                   <SelectItem value="guest">Hóspede</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label>Observação (opcional)</Label>
-              <Textarea value={scheduleData.observation} onChange={(e) => setScheduleData({ ...scheduleData, observation: e.target.value })} placeholder="Adicione uma observação..." rows={2} />
+            <div className="space-y-1.5">
+              <Label htmlFor="agendar-obs">Observação (opcional)</Label>
+              <Textarea id="agendar-obs" value={scheduleData.observation} onChange={(e) => setScheduleData({ ...scheduleData, observation: e.target.value })} placeholder="Adicione uma observação…" rows={2} />
             </div>
             <Button onClick={handleSchedule} disabled={savingSchedule} className="w-full">
-              {savingSchedule ? "Salvando..." : "Confirmar Agendamento"}
+              {savingSchedule && <Loader2 className="h-4 w-4 animate-spin" />}
+              {savingSchedule ? "Salvando…" : "Confirmar agendamento"}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Complete & Charge Dialog */}
+      {/* Concluir e cobrar */}
       <CompleteMaintenanceDialog
         open={completeDialogOpen}
         onOpenChange={setCompleteDialogOpen}
-        ticket={ticket ? {
+        ticket={{
           id: ticket.id,
           subject: ticket.subject,
-          cost_responsible: (ticket as any).cost_responsible || null,
+          cost_responsible: (ticket.cost_responsible as "owner" | "pm" | "guest" | null) ?? null,
           owner: { id: ticket.owner_id, name: ticket.profiles?.name || "" },
           property: ticket.properties ? { id: ticket.property_id!, name: ticket.properties.name } : null,
-        } : null}
+        }}
         onSuccess={() => {
           fetchTicketData();
         }}
       />
 
-      {/* Edit Dialog (team only) */}
+      {/* Editar (só equipe) */}
       {isTeamMember && ticket && (
         ticket.ticket_type === 'manutencao' ? (
           <EditMaintenanceDialog
@@ -1279,6 +1195,6 @@ export default function TicketDetalhes() {
           />
         )
       )}
-    </div>
+    </PaginaInterna>
   );
 }

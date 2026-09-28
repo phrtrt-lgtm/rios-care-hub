@@ -4,13 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { CaixaCarregando, CaixaOperacao, SeloContagem } from "@/components/painel/CaixaOperacao";
 import { Badge } from "@/components/ui/badge";
+import { valorDevido } from "@/lib/cobrancaMeta";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { format, differenceInDays, isPast, isToday } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { differenceInDays, isPast, isToday } from "date-fns";
 import { useNavigate, useLocation } from "react-router-dom";
 import { saveScrollPosition } from "@/lib/navigation";
 import { 
@@ -21,10 +19,7 @@ import {
   QrCode, 
   CreditCard,
   Zap,
-  Clock,
-  AlertTriangle,
   ChevronRight,
-  ChevronDown,
   Paperclip,
   Gift
 } from "lucide-react";
@@ -50,16 +45,6 @@ interface OwnerCharge {
     cover_photo_url: string | null;
   } | null;
 }
-
-const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  draft: { label: "Rascunho", variant: "secondary" },
-  pendente: { label: "Pendente", variant: "default" },
-  sent: { label: "Enviada", variant: "default" },
-  overdue: { label: "Vencida", variant: "destructive" },
-  paid: { label: "Paga", variant: "outline" },
-  cancelled: { label: "Cancelada", variant: "outline" },
-  debited: { label: "Debitado", variant: "destructive" },
-};
 
 export function OwnerChargesPreview() {
   const { user } = useAuth();
@@ -300,7 +285,7 @@ export function OwnerChargesPreview() {
 
   const selectedChargesData = charges?.filter(c => selectedCharges.includes(c.id)) || [];
   const totalDue = selectedChargesData.reduce((sum, charge) => 
-    sum + Math.max(0, charge.amount_cents - (charge.management_contribution_cents || 0) - ((charge as any).credit_applied_cents || 0)), 0
+    sum + valorDevido(charge), 0
   );
 
   if (isLoading) {
@@ -415,10 +400,9 @@ export function OwnerChargesPreview() {
           {/* Scrollable charge list */}
           <div className="max-h-[260px] space-y-1.5 overflow-y-auto pr-1">
             {charges.map((charge) => {
-              const statusConfig = STATUS_CONFIG[charge.status] || STATUS_CONFIG.pendente;
               const unreadCount = unreadCounts[charge.id] || 0;
               const dueDateInfo = getDueDateInfo(charge.due_date);
-              const dueAmount = Math.max(0, charge.amount_cents - (charge.management_contribution_cents || 0) - ((charge as any).credit_applied_cents || 0));
+              const dueAmount = valorDevido(charge);
               const isSelected = selectedCharges.includes(charge.id);
 
               return (
@@ -614,7 +598,7 @@ export function OwnerChargesPreview() {
               <div className="text-center">
                 <p className="text-sm text-muted-foreground mb-1">{pixCharge.title}</p>
                 <p className="text-2xl font-bold text-primary">
-                  {formatBRL(Math.max(0, pixCharge.amount_cents - (pixCharge.management_contribution_cents || 0) - ((pixCharge as any).credit_applied_cents || 0)))}
+                  {formatBRL(valorDevido(pixCharge))}
                 </p>
               </div>
               

@@ -2,23 +2,14 @@ import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  ChevronDown, 
-  ChevronRight, 
-  ArrowUpDown, 
-  ArrowUp, 
-  ArrowDown,
-  Check,
-  Loader2
-} from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ChevronDown, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatBRL } from "@/lib/format";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { formatarBRL, formatarData, valorDevido } from "@/lib/cobrancaMeta";
+import { SeloContagem } from "@/components/painel/CaixaOperacao";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -38,6 +29,7 @@ interface ChargeItem {
   reserve_debit_date: string | null;
   amount_cents: number;
   management_contribution_cents: number;
+  credit_applied_cents: number | null;
   reserve_commission_percent: number | null;
 }
 
@@ -47,7 +39,8 @@ interface GroupedDebit {
   owner_name: string;
   reserve_debit_date: string | null;
   properties: string[];
-  total_debit_cents: number; // amount - management_contribution summed
+  /** Soma do valor devido (total − aporte − crédito) das cobranças do grupo. */
+  total_debit_cents: number;
   new_commission_percent: number | null;
   charge_ids: string[];
   charges: ChargeItem[];
@@ -77,6 +70,7 @@ export function ReserveDebitsTable() {
           reserve_debit_date,
           amount_cents,
           management_contribution_cents,
+          credit_applied_cents,
           reserve_commission_percent,
           property:properties!charges_property_id_fkey(id, name),
           owner:profiles!charges_owner_id_fkey(id, name)
@@ -98,7 +92,7 @@ export function ReserveDebitsTable() {
 
     charges.forEach(charge => {
       const key = `${charge.owner?.id || 'unknown'}_${charge.reserve_debit_date || 'no_date'}`;
-      
+
       if (!groupMap.has(key)) {
         groupMap.set(key, {
           key,
@@ -114,16 +108,15 @@ export function ReserveDebitsTable() {
       }
 
       const group = groupMap.get(key)!;
-      
+
       // Add property if not already in list
       const propertyName = charge.property?.name;
       if (propertyName && !group.properties.includes(propertyName)) {
         group.properties.push(propertyName);
       }
 
-      // Sum debit (amount - management contribution)
-      const debitAmount = charge.amount_cents - (charge.management_contribution_cents || 0);
-      group.total_debit_cents += debitAmount;
+      // Valor devido: a mesma conta de todas as telas de cobrança.
+      group.total_debit_cents += valorDevido(charge);
 
       // Track charge IDs for bulk operations
       group.charge_ids.push(charge.id);
@@ -154,7 +147,7 @@ export function ReserveDebitsTable() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reserve-debits-list"] });
-      toast.success("Débito confirmado com sucesso!");
+      toast.success("Débito confirmado");
       setConfirmDialogOpen(false);
       setSelectedGroup(null);
       setNewCommission("");
@@ -248,31 +241,45 @@ export function ReserveDebitsTable() {
 
   const handleConfirmDebit = () => {
     if (!selectedGroup) return;
-    
+
     const newCommissionPercent = newCommission ? parseFloat(newCommission) : undefined;
-    confirmDebitMutation.mutate({ 
-      chargeIds: selectedGroup.charge_ids, 
-      newCommissionPercent 
+    confirmDebitMutation.mutate({
+      chargeIds: selectedGroup.charge_ids,
+      newCommissionPercent
     });
   };
 
   const renderSortableHeader = (label: string, field: SortField, className?: string) => {
     const isActive = sortField === field;
+    const ativar = () => handleSort(field);
     return (
-      <th 
-        className={cn("px-2 py-2 font-medium cursor-pointer hover:bg-muted/50 transition-colors select-none", className)}
-        onClick={() => handleSort(field)}
+      <th
+        scope="col"
+        role="button"
+        tabIndex={0}
+        aria-sort={isActive ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
+        className={cn(
+          "px-2 py-2 font-medium cursor-pointer select-none transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+          className,
+        )}
+        onClick={ativar}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            ativar();
+          }
+        }}
       >
         <div className="flex items-center gap-1">
           <span>{label}</span>
           {isActive ? (
             sortDirection === "asc" ? (
-              <ArrowUp className="h-3.5 w-3.5 text-primary" />
+              <ArrowUp className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
             ) : (
-              <ArrowDown className="h-3.5 w-3.5 text-primary" />
+              <ArrowDown className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
             )
           ) : (
-            <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground opacity-50" />
+            <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground opacity-50" aria-hidden="true" />
           )}
         </div>
       </th>
@@ -280,8 +287,9 @@ export function ReserveDebitsTable() {
   };
 
   const renderDebitRow = (group: GroupedDebit, urgencyColor?: string) => {
+    const imoveis = group.properties.join(", ") || "—";
     return (
-      <tr 
+      <tr
         key={group.key}
         className={cn(
           "border-b hover:bg-muted/30 transition-colors h-12",
@@ -290,34 +298,22 @@ export function ReserveDebitsTable() {
       >
         {/* Imóvel(is) */}
         <td className="p-0 max-w-[220px]">
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="px-3 py-2 text-sm font-medium truncate">
-                  {group.properties.join(", ") || "—"}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>{group.properties.join(", ") || "—"}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <div className="px-3 py-2 text-sm font-medium truncate" title={imoveis}>
+            {imoveis}
+          </div>
         </td>
 
         {/* Data Check-in */}
         <td className="p-0 w-[110px]">
-          <div className="px-2 py-2 text-sm text-center">
-            {group.reserve_debit_date 
-              ? format(new Date(group.reserve_debit_date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })
-              : "—"
-            }
+          <div className="px-2 py-2 text-sm text-center tabular-nums">
+            {formatarData(group.reserve_debit_date)}
           </div>
         </td>
 
-        {/* Valor do Débito (já descontado aporte) */}
+        {/* Valor do débito (total − aporte − crédito) */}
         <td className="p-0 w-[120px]">
-          <div className="px-2 py-2 text-sm text-right font-medium">
-            {formatBRL(group.total_debit_cents)}
+          <div className="px-2 py-2 text-sm text-right font-medium tabular-nums">
+            {formatarBRL(group.total_debit_cents)}
           </div>
         </td>
 
@@ -334,7 +330,7 @@ export function ReserveDebitsTable() {
 
         {/* Qtd Cobranças */}
         <td className="p-0 w-[80px]">
-          <div className="px-2 py-2 text-sm text-center text-muted-foreground">
+          <div className="px-2 py-2 text-sm text-center text-muted-foreground tabular-nums">
             {group.charge_ids.length}
           </div>
         </td>
@@ -348,7 +344,7 @@ export function ReserveDebitsTable() {
               className="h-7 text-xs gap-1"
               onClick={() => handleOpenConfirm(group)}
             >
-              <Check className="h-3 w-3" />
+              <Check className="h-3 w-3" aria-hidden="true" />
               Confirmar
             </Button>
           </div>
@@ -360,12 +356,14 @@ export function ReserveDebitsTable() {
   const totalCount = groupedDebits.length;
 
   if (totalCount === 0 && !isLoading) {
-    return null; // Don't render if no debits
+    return null; // Sem débitos pendentes, a caixa não aparece.
   }
+
+  const alternarExpandido = () => setExpanded((v) => !v);
 
   return (
     <>
-      <Card className="overflow-hidden mt-4">
+      <Card className="overflow-hidden mt-4 rounded-xl border-border/70">
         <div className="overflow-x-auto">
           <table className="w-full text-sm table-fixed">
             <thead className="bg-muted text-muted-foreground">
@@ -373,41 +371,56 @@ export function ReserveDebitsTable() {
             {renderSortableHeader("Imóvel", "property", "text-left w-[220px]")}
             {renderSortableHeader("Check-in", "reserve_debit_date", "text-center w-[110px]")}
             {renderSortableHeader("Débito", "total_debit_cents", "text-right w-[120px]")}
-            {renderSortableHeader("Nova Comissão", "new_commission_percent", "text-center w-[120px]")}
-            <th className="text-center px-2 py-2 font-medium w-[80px]">Qtd</th>
-            <th className="text-center px-2 py-2 font-medium w-[130px]">Ação</th>
+            {renderSortableHeader("Nova comissão", "new_commission_percent", "text-center w-[120px]")}
+            <th scope="col" className="text-center px-2 py-2 font-medium w-[80px]">Qtd</th>
+            <th scope="col" className="text-center px-2 py-2 font-medium w-[130px]">Ação</th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
-                <tr>
-                  <td colSpan={6} className="text-center p-4 text-muted-foreground">
-                    Carregando...
-                  </td>
-                </tr>
+                <>
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <tr key={i} className="border-b h-12" aria-busy="true" aria-label="Carregando débitos em reserva">
+                      <td colSpan={6} className="px-3 py-2">
+                        <Skeleton className="h-7 w-full rounded-md" />
+                      </td>
+                    </tr>
+                  ))}
+                </>
               ) : (
                 <>
                   {/* Group Header */}
-                  <tr 
-                    className="bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors border-l-4 border-l-blue-500"
-                    onClick={() => setExpanded(!expanded)}
+                  <tr
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={expanded}
+                    className="bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors border-l-4 border-l-info focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                    onClick={alternarExpandido}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        alternarExpandido();
+                      }
+                    }}
                   >
                     <td colSpan={6} className="p-2">
                       <div className="flex items-center gap-2 font-medium">
-                        {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                        <span>Débitos em Reserva</span>
-                        <Badge variant="secondary" className="ml-2">
-                          {totalCount}
-                        </Badge>
+                        {expanded ? (
+                          <ChevronDown className="h-4 w-4" aria-hidden="true" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                        )}
+                        <span>Débito em reserva</span>
+                        <SeloContagem className="ml-2">{totalCount}</SeloContagem>
                         {overdueDebits.length > 0 && (
-                          <Badge variant="destructive" className="ml-1">
+                          <SeloContagem tom="destructive" className="ml-1">
                             {overdueDebits.length} atrasado{overdueDebits.length > 1 ? "s" : ""}
-                          </Badge>
+                          </SeloContagem>
                         )}
                         {todayDebits.length > 0 && (
-                          <Badge className="ml-1 bg-warning">
+                          <SeloContagem tom="warning" className="ml-1">
                             {todayDebits.length} hoje
-                          </Badge>
+                          </SeloContagem>
                         )}
                       </div>
                     </td>
@@ -416,8 +429,8 @@ export function ReserveDebitsTable() {
                   {/* Render rows */}
                   {expanded && (
                     <>
-                      {overdueDebits.map((group) => renderDebitRow(group, "bg-destructive/10 dark:bg-red-950/20"))}
-                      {todayDebits.map((group) => renderDebitRow(group, "bg-warning/10 dark:bg-amber-950/20"))}
+                      {overdueDebits.map((group) => renderDebitRow(group, "bg-destructive/10"))}
+                      {todayDebits.map((group) => renderDebitRow(group, "bg-warning/10"))}
                       {upcomingDebits.map((group) => renderDebitRow(group))}
                     </>
                   )}
@@ -432,7 +445,7 @@ export function ReserveDebitsTable() {
       <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirmar Débito em Reserva</DialogTitle>
+            <DialogTitle>Confirmar débito em reserva</DialogTitle>
             <DialogDescription>
               Confirme que o débito foi realizado na plataforma de reservas.
             </DialogDescription>
@@ -450,17 +463,12 @@ export function ReserveDebitsTable() {
                   <p className="font-medium">{selectedGroup.owner_name}</p>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Valor Total do Débito:</span>
-                  <p className="font-medium">{formatBRL(selectedGroup.total_debit_cents)}</p>
+                  <span className="text-muted-foreground">Valor total do débito:</span>
+                  <p className="font-medium tabular-nums">{formatarBRL(selectedGroup.total_debit_cents)}</p>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Data Check-in:</span>
-                  <p className="font-medium">
-                    {selectedGroup.reserve_debit_date 
-                      ? format(new Date(selectedGroup.reserve_debit_date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })
-                      : "—"
-                    }
-                  </p>
+                  <span className="text-muted-foreground">Data do check-in:</span>
+                  <p className="font-medium tabular-nums">{formatarData(selectedGroup.reserve_debit_date)}</p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Cobranças incluídas:</span>
@@ -470,7 +478,7 @@ export function ReserveDebitsTable() {
 
               <div className="space-y-2">
                 <Label htmlFor="newCommission">
-                  Nova Comissão da Reserva (%)
+                  Nova comissão da reserva (%)
                 </Label>
                 <Input
                   id="newCommission"
@@ -491,19 +499,19 @@ export function ReserveDebitsTable() {
             <Button variant="outline" onClick={() => setConfirmDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button 
+            <Button
               onClick={handleConfirmDebit}
               disabled={confirmDebitMutation.isPending}
             >
               {confirmDebitMutation.isPending ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />
                   Confirmando...
                 </>
               ) : (
                 <>
-                  <Check className="h-4 w-4 mr-2" />
-                  Confirmar Débito
+                  <Check className="h-4 w-4 mr-2" aria-hidden="true" />
+                  Confirmar débito
                 </>
               )}
             </Button>

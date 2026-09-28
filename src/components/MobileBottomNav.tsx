@@ -16,7 +16,8 @@ type NavItem = {
 const mainItems: NavItem[] = [
   { icon: Home, label: "Início", path: "/painel", roles: ["admin", "maintenance", "agent"] },
   { icon: Home, label: "Início", path: "/minha-caixa", roles: ["owner"] },
-  { icon: Ticket, label: "Tickets", path: "/todos-tickets" },
+  // /todos-tickets recusa quem não é admin/agent (o useEffect da página devolve ao início).
+  { icon: Ticket, label: "Chamados", path: "/todos-tickets", roles: ["admin", "agent"] },
   { icon: Wrench, label: "Manutenções", path: "/admin/manutencoes-lista", roles: ["admin", "maintenance"] },
   { icon: Wrench, label: "Relatório", path: "/manutencoes", roles: ["owner"] },
   { icon: ClipboardCheck, label: "Vistorias", path: "/admin/vistorias/todas", roles: ["admin", "maintenance", "agent"] },
@@ -24,8 +25,8 @@ const mainItems: NavItem[] = [
 ];
 
 const quickActions: NavItem[] = [
-  { icon: Ticket, label: "Novo Ticket", path: "/novo-ticket-massa", roles: ["admin", "maintenance", "agent"] },
-  { icon: Ticket, label: "Novo Chamado", path: "/novo-ticket", roles: ["owner"] },
+  { icon: Ticket, label: "Novo chamado", path: "/novo-ticket-massa", roles: ["admin", "maintenance", "agent"] },
+  { icon: Ticket, label: "Novo chamado", path: "/novo-ticket", roles: ["owner"] },
   { icon: Wrench, label: "Nova Manutenção", path: "/admin/nova-manutencao", roles: ["admin", "maintenance"] },
   { icon: Package, label: "Reposição de Item", path: "/nova-cobranca?reposicao=true", roles: ["admin", "maintenance"] },
   { icon: BarChart3, label: "Relatório Manutenções", path: "/manutencoes", roles: ["admin", "maintenance", "agent"] },

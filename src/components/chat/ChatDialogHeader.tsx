@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { Building2, Radio } from "lucide-react";
+import { Building2 } from "lucide-react";
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface ChatDialogHeaderProps {
@@ -19,7 +19,7 @@ export function ChatDialogHeader({
   extra,
 }: ChatDialogHeaderProps) {
   return (
-    <DialogHeader className="shrink-0 space-y-0 border-b border-border/60 bg-gradient-to-r from-primary/8 via-background to-background px-4 py-3 pr-12">
+    <DialogHeader className="shrink-0 space-y-0 border-b border-border/60 bg-gradient-to-r from-primary/10 via-background to-background px-4 py-3 pr-12">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <DialogTitle className="truncate text-[15px] font-semibold leading-tight">

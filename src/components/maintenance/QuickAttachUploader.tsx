@@ -3,7 +3,7 @@ import { Plus, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { processFileForUpload, VideoTooLargeError } from "@/lib/fileUpload";
+import { emParalelo, processFileForUpload, VideoTooLargeError } from "@/lib/fileUpload";
 import { sanitizeFilename } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 
@@ -55,7 +55,7 @@ export function QuickAttachUploader({ itemId, isCharge, onSuccess, className }: 
         .insert({
           charge_id: itemId,
           author_id: user!.id,
-          body: `📎 Anexo: ${processed.name}`,
+          body: "Anexo enviado",
           is_internal: false,
         })
         .select("id")
@@ -90,7 +90,7 @@ export function QuickAttachUploader({ itemId, isCharge, onSuccess, className }: 
         .insert({
           ticket_id: itemId,
           author_id: user!.id,
-          body: `📎 Anexo: ${processed.name}`,
+          body: "Anexo enviado",
           is_internal: false,
         })
         .select("id")
@@ -129,25 +129,20 @@ export function QuickAttachUploader({ itemId, isCharge, onSuccess, className }: 
         toast.warning(`Só os primeiros ${MAX_FILES_PER_BATCH} arquivos serão enviados.`);
       }
 
-      for (const [index, file] of limitedFiles.entries()) {
+      // Até 3 arquivos ao mesmo tempo.
+      const resultados = await emParalelo(limitedFiles, async (file, index) => {
         const isVideo = file.type.startsWith("video/");
         const limit = isVideo ? MAX_VIDEO_SIZE_BYTES : MAX_FILE_SIZE_BYTES;
         if (file.size > limit) {
           const limitMb = isVideo ? 100 : 20;
-          failures.push({
-            name: file.name,
-            error: new Error(`Arquivo acima do limite de ${limitMb}MB.`),
-          });
-          continue;
+          throw new Error(`Arquivo acima do limite de ${limitMb}MB.`);
         }
-
-        try {
-          await uploadOne(file, index);
-          successCount += 1;
-        } catch (error) {
-          failures.push({ name: file.name, error });
-        }
-      }
+        await uploadOne(file, index);
+      });
+      resultados.forEach((r, i) => {
+        if (r.ok) successCount += 1;
+        else failures.push({ name: limitedFiles[i].name, error: r.erro });
+      });
 
       failures.forEach(({ name, error }) => {
         console.error("[QuickAttachUploader]", name, error);

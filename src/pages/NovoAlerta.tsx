@@ -1,21 +1,23 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { goBack } from "@/lib/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Send, Upload, X, Loader2, Sparkles } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { CabecalhoPagina, PaginaInterna } from "@/components/painel/PaginaInterna";
+import { FileText, Image as ImageIcon, Loader2, Megaphone, Send, Sparkles, Upload, Users, Video, X } from "lucide-react";
 import { toast } from "sonner";
-import { LoadingScreen } from "@/components/LoadingScreen";
 import { sanitizeFilename } from "@/lib/storage";
 import { VoiceToTextInput } from "@/components/VoiceToTextInput";
 import { processFileForUpload } from "@/lib/processVideoForUpload";
+import { emParalelo } from "@/lib/fileUpload";
 
 interface Owner {
   id: string;
@@ -30,6 +32,26 @@ type ReadyAttachment = {
   name: string;
 };
 
+/** Rótulos na interface; os valores gravados em `alerts.type` não mudam. */
+const TIPOS_AVISO: Array<{ valor: string; rotulo: string }> = [
+  { valor: "info", rotulo: "Informação" },
+  { valor: "warning", rotulo: "Aviso" },
+  { valor: "error", rotulo: "Importante" },
+  { valor: "success", rotulo: "Boa notícia" },
+];
+
+const PUBLICOS: Array<{ valor: string; rotulo: string }> = [
+  { valor: "specific", rotulo: "Proprietários específicos" },
+  { valor: "all_owners", rotulo: "Todos os proprietários" },
+  { valor: "team", rotulo: "Equipe (administração e atendimento)" },
+];
+
+const iconeAnexo = (tipo: string) => {
+  if (tipo.startsWith("image/")) return <ImageIcon className="h-4 w-4" />;
+  if (tipo.startsWith("video/")) return <Video className="h-4 w-4" />;
+  return <FileText className="h-4 w-4" />;
+};
+
 const NovoAlerta = () => {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
@@ -42,7 +64,7 @@ const NovoAlerta = () => {
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  
+
   const [formData, setFormData] = useState({
     title: "",
     message: "",
@@ -68,16 +90,9 @@ const NovoAlerta = () => {
         .order('name');
 
       if (error) throw error;
-      
-      console.log('Perfis carregados:', data);
-      
-      // Filter only actual owners (not agent or admin)
-      const actualOwners = (data || []).filter(p => 
-        p.role === 'owner'
-      );
-      
-      console.log('Proprietários filtrados:', actualOwners);
-      setOwners(actualOwners);
+
+      // Só proprietários de fato (não agente nem admin).
+      setOwners((data || []).filter((p) => p.role === 'owner'));
     } catch (error) {
       console.error('Erro ao carregar proprietários:', error);
       toast.error('Erro ao carregar proprietários');
@@ -153,18 +168,18 @@ const NovoAlerta = () => {
 
     setUploading(true);
     try {
-      const uploaded: ReadyAttachment[] = [];
-      for (const file of Array.from(selectedFiles)) {
-        // Compress video if it's a video file
-        const processedFile = await processFileForUpload(file);
-        const result = await uploadOne(processedFile);
-        uploaded.push(result);
-      }
+      // Até 3 arquivos ao mesmo tempo; os que subirem ficam, mesmo se outro falhar.
+      const resultados = await emParalelo(Array.from(selectedFiles), async (file) =>
+        uploadOne(await processFileForUpload(file)),
+      );
+      const uploaded = resultados.flatMap((r) => (r.ok ? [r.valor] : []));
+      const falhas = resultados.flatMap((r) => (r.ok ? [] : [r.erro]));
       setUploadedFiles((prev) => [...prev, ...uploaded]);
+      if (falhas.length > 0) throw falhas[0];
       toast.success(`${uploaded.length} arquivo(s) enviado(s) com sucesso!`);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Upload error:', error);
-      toast.error(error.message || 'Erro ao fazer upload dos arquivos');
+      toast.error((error instanceof Error && error.message) || 'Erro ao fazer upload dos arquivos');
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = '';
@@ -180,7 +195,7 @@ const NovoAlerta = () => {
     setIsGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke('ai-generate-response', {
-        body: { 
+        body: {
           action: 'generate_alert',
           context: {
             prompt: aiPrompt,
@@ -188,15 +203,15 @@ const NovoAlerta = () => {
           }
         }
       });
-      
+
       if (error) throw error;
       if (data?.generatedText) {
         setFormData({ ...formData, message: data.generatedText });
         setAiPrompt("");
         toast.success("Mensagem gerada! Revise e edite se necessário.");
       }
-    } catch (error: any) {
-      toast.error("Erro ao gerar mensagem: " + error.message);
+    } catch (error) {
+      toast.error("Erro ao gerar mensagem: " + (error instanceof Error ? error.message : String(error)));
     } finally {
       setIsGenerating(false);
     }
@@ -204,7 +219,7 @@ const NovoAlerta = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.title.trim() || !formData.message.trim()) {
       toast.error('Preencha todos os campos obrigatórios');
       return;
@@ -260,7 +275,7 @@ const NovoAlerta = () => {
 
       // Determine recipients
       let recipientIds: string[] = [];
-      
+
       if (formData.target_audience === 'specific') {
         recipientIds = Array.from(selectedOwners);
       } else if (formData.target_audience === 'all_owners') {
@@ -280,8 +295,6 @@ const NovoAlerta = () => {
           recipientIds.push(user!.id);
         }
       }
-
-      console.log('Recipients:', recipientIds);
 
       // Create alert recipients
       const { error: recipientsError } = await supabase
@@ -306,235 +319,253 @@ const NovoAlerta = () => {
         },
       });
 
-      toast.success('Alerta criado e enviado com sucesso!');
-      navigate('/painel');
+      toast.success('Aviso criado e enviado.');
+      navigate('/painel', { replace: true });
     } catch (error) {
-      console.error('Erro ao criar alerta:', error);
-      toast.error('Erro ao criar alerta');
+      console.error('Erro ao criar aviso:', error);
+      toast.error('Erro ao criar o aviso');
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (loading) {
-    return <LoadingScreen message="Carregando..." />;
-  }
+  const todosSelecionados = owners.length > 0 && selectedOwners.size === owners.length;
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
-      <div className="mx-auto max-w-4xl">
-        <div className="mb-6 flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => goBack(navigate, "/painel")}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Novo Alerta</h1>
-            <p className="text-muted-foreground">Crie e envie alertas para proprietários ou equipe</p>
+    <PaginaInterna
+      largura="estreita"
+      cabecalho={
+        <CabecalhoPagina
+          titulo="Novo aviso"
+          subtitulo="Para proprietários ou para a equipe"
+          icone={<Megaphone />}
+          tom="warning"
+          voltarPara="/painel"
+        />
+      }
+    >
+      <Card className="rounded-xl border-border/70 p-4 md:p-5">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-1.5">
+            <Label htmlFor="title">Título *</Label>
+            <Input
+              id="title"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              placeholder="Título do aviso"
+              required
+            />
           </div>
-        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Informações do Alerta</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <Label htmlFor="title">Título *</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="message">Mensagem *</Label>
+            <div className="space-y-2">
+              <div className="flex gap-2">
                 <Input
-                  id="title"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="Título do alerta"
-                  required
+                  placeholder="Digite ou grave um comando para a IA gerar a mensagem…"
+                  aria-label="Comando para a IA gerar a mensagem"
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      generateMessage();
+                    }
+                  }}
                 />
-              </div>
-
-              <div>
-                <Label htmlFor="message">Mensagem *</Label>
-                <div className="space-y-2">
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Digite ou grave um comando para a IA gerar a mensagem..."
-                      value={aiPrompt}
-                      onChange={(e) => setAiPrompt(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), generateMessage())}
-                    />
-                    <VoiceToTextInput
-                      onTranscript={(text) => setAiPrompt(text)}
-                      disabled={isGenerating}
-                    />
-                    <Button 
-                      type="button" 
-                      onClick={generateMessage}
-                      disabled={isGenerating || !aiPrompt.trim()}
-                      variant="secondary"
-                    >
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      {isGenerating ? "Gerando..." : "Gerar"}
-                    </Button>
-                  </div>
-                  <Textarea
-                    id="message"
-                    value={formData.message}
-                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    placeholder="Escreva a mensagem do alerta..."
-                    rows={6}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <Label htmlFor="type">Tipo</Label>
-                  <Select
-                    value={formData.type}
-                    onValueChange={(value) => setFormData({ ...formData, type: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="info">Informação</SelectItem>
-                      <SelectItem value="warning">Aviso</SelectItem>
-                      <SelectItem value="error">Erro</SelectItem>
-                      <SelectItem value="success">Sucesso</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="expires_at">Data de Expiração (Opcional)</Label>
-                  <Input
-                    id="expires_at"
-                    type="datetime-local"
-                    value={formData.expires_at}
-                    onChange={(e) => setFormData({ ...formData, expires_at: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="target_audience">Público Alvo</Label>
-                <Select
-                  value={formData.target_audience}
-                  onValueChange={(value) => setFormData({ ...formData, target_audience: value })}
+                <VoiceToTextInput
+                  onTranscript={(text) => setAiPrompt(text)}
+                  disabled={isGenerating}
+                />
+                <Button
+                  type="button"
+                  onClick={generateMessage}
+                  disabled={isGenerating || !aiPrompt.trim()}
+                  variant="secondary"
                 >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="specific">Proprietários Específicos</SelectItem>
-                    <SelectItem value="all_owners">Todos os Proprietários</SelectItem>
-                    <SelectItem value="team">Equipe (Admins e Agentes)</SelectItem>
-                  </SelectContent>
-                </Select>
+                  {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  {isGenerating ? "Gerando…" : "Gerar"}
+                </Button>
               </div>
+              <Textarea
+                id="message"
+                value={formData.message}
+                onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                placeholder="Escreva a mensagem do aviso…"
+                rows={6}
+                required
+              />
+            </div>
+          </div>
 
-              {formData.target_audience === 'specific' && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <Label>Selecionar Proprietários</Label>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={toggleSelectAll}
-                    >
-                      {selectedOwners.size === owners.length ? 'Desmarcar Todos' : 'Selecionar Todos'}
-                    </Button>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="type">Tipo</Label>
+              <Select
+                value={formData.type}
+                onValueChange={(value) => setFormData({ ...formData, type: value })}
+              >
+                <SelectTrigger id="type" aria-label="Tipo do aviso">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="z-50 bg-popover">
+                  {TIPOS_AVISO.map((t) => (
+                    <SelectItem key={t.valor} value={t.valor}>
+                      {t.rotulo}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="expires_at">Expira em (opcional)</Label>
+              <Input
+                id="expires_at"
+                type="datetime-local"
+                value={formData.expires_at}
+                onChange={(e) => setFormData({ ...formData, expires_at: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="target_audience">Público</Label>
+            <Select
+              value={formData.target_audience}
+              onValueChange={(value) => setFormData({ ...formData, target_audience: value })}
+            >
+              <SelectTrigger id="target_audience" aria-label="Público do aviso">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="z-50 bg-popover">
+                {PUBLICOS.map((p) => (
+                  <SelectItem key={p.valor} value={p.valor}>
+                    {p.rotulo}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {formData.target_audience === 'specific' && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <Label>Destinatários</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleSelectAll}
+                  disabled={loading || owners.length === 0}
+                >
+                  {todosSelecionados ? 'Desmarcar todos' : 'Selecionar todos'}
+                </Button>
+              </div>
+              <div className="max-h-64 overflow-y-auto rounded-lg border border-border/70 p-3">
+                {loading ? (
+                  <div className="space-y-2.5" aria-busy="true" aria-label="Carregando proprietários">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <Skeleton className="h-4 w-4 rounded" />
+                        <Skeleton className="h-4 w-2/3" />
+                      </div>
+                    ))}
                   </div>
-                  <div className="max-h-64 space-y-2 overflow-y-auto rounded-md border p-4">
+                ) : owners.length === 0 ? (
+                  <EmptyState
+                    icon={<Users className="h-5 w-5" />}
+                    title="Nenhum proprietário ativo"
+                    className="py-6 [&>div:first-child]:h-10 [&>div:first-child]:w-10 [&>h3]:text-sm"
+                  />
+                ) : (
+                  <div className="space-y-2">
                     {owners.map((owner) => (
-                      <div key={owner.id} className="flex items-center space-x-2">
+                      <div key={owner.id} className="flex items-center gap-2">
                         <Checkbox
-                          id={owner.id}
+                          id={`owner-${owner.id}`}
                           checked={selectedOwners.has(owner.id)}
                           onCheckedChange={() => toggleOwner(owner.id)}
                         />
-                        <label
-                          htmlFor={owner.id}
-                          className="flex-1 cursor-pointer text-sm"
-                        >
-                          {owner.name} ({owner.email})
+                        <label htmlFor={`owner-${owner.id}`} className="flex-1 cursor-pointer text-sm">
+                          {owner.name} <span className="text-muted-foreground">({owner.email})</span>
                         </label>
                       </div>
                     ))}
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedOwners.size} proprietário(s) selecionado(s)
-                  </p>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="files">Anexos (opcional)</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    ref={inputRef}
-                    id="files"
-                    type="file"
-                    multiple
-                    accept="image/*,video/*,application/pdf,.pdf"
-                    onChange={handleFileChange}
-                    className="cursor-pointer"
-                    disabled={uploading}
-                  />
-                  {uploading ? (
-                    <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
-                  ) : (
-                    <Upload className="h-5 w-5 text-muted-foreground" />
-                  )}
-                </div>
-                {uploadedFiles.length > 0 && (
-                  <div className="space-y-2 mt-2">
-                    <p className="text-sm text-muted-foreground">
-                      {uploadedFiles.length} arquivo(s) pronto(s):
-                    </p>
-                    <div className="space-y-1">
-                      {uploadedFiles.map((file, idx) => (
-                        <div key={idx} className="flex items-center justify-between text-xs border rounded px-2 py-1">
-                          <span className="truncate flex-1">{file.name}</span>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 ml-2"
-                            onClick={() => removeFile(file.file_url)}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
                 )}
               </div>
+              {!loading && (
+                <p className="text-xs text-muted-foreground">
+                  {selectedOwners.size} proprietário(s) selecionado(s)
+                </p>
+              )}
+            </div>
+          )}
 
-              <div className="flex gap-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => navigate('/painel')}
-                  disabled={submitting}
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={submitting || uploading}>
-                  <Send className="mr-2 h-4 w-4" />
-                  {submitting ? 'Enviando...' : 'Criar e Enviar Alerta'}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+          <div className="space-y-2">
+            <Label htmlFor="files">Anexos (opcional)</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                ref={inputRef}
+                id="files"
+                type="file"
+                multiple
+                accept="image/*,video/*,application/pdf,.pdf"
+                onChange={handleFileChange}
+                className="cursor-pointer"
+                disabled={uploading}
+              />
+              {uploading ? (
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" aria-label="Enviando anexos" />
+              ) : (
+                <Upload className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+              )}
+            </div>
+            {uploadedFiles.length > 0 && (
+              <ul className="space-y-1" aria-label="Anexos prontos">
+                {uploadedFiles.map((file) => (
+                  <li
+                    key={file.file_url}
+                    className="flex items-center gap-2 rounded-lg bg-muted/40 px-2.5 py-1.5 text-xs"
+                  >
+                    <span className="text-muted-foreground" aria-hidden="true">
+                      {iconeAnexo(file.file_type)}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate">{file.name}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 shrink-0 text-muted-foreground"
+                      onClick={() => removeFile(file.file_url)}
+                      aria-label="Remover anexo"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate('/painel', { replace: true })}
+              disabled={submitting}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={submitting || uploading || loading}>
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              {submitting ? 'Enviando…' : 'Criar e enviar aviso'}
+            </Button>
+          </div>
+        </form>
+      </Card>
+    </PaginaInterna>
   );
 };
 

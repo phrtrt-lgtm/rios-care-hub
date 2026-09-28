@@ -76,7 +76,7 @@ export function ChatMessageBubble({
               {isOwn ? "Você" : authorName || "Desconhecido"}
             </span>
             {isTeam && !isOwn && (
-              <span className="rounded-full bg-primary/12 px-1.5 py-px text-[8px] font-bold uppercase tracking-wider text-primary">
+              <span className="rounded-full bg-primary/10 px-1.5 py-px text-[9px] font-bold uppercase tracking-wider text-primary">
                 RIOS
               </span>
             )}
@@ -92,7 +92,8 @@ export function ChatMessageBubble({
               isInternal
                 ? "border border-warning/40 bg-warning/10 text-foreground"
                 : isOwn
-                  ? "rounded-br-sm bg-primary text-primary-foreground"
+                  ? // Links e menções (MentionText) herdam a cor clara da bolha própria.
+                    "rounded-br-sm bg-primary text-primary-foreground [&_a]:text-primary-foreground [&_a]:underline [&_button]:text-primary-foreground"
                   : "rounded-bl-sm border border-border/60 bg-muted text-foreground"
             } ${pending ? "opacity-70" : ""}`}
           >

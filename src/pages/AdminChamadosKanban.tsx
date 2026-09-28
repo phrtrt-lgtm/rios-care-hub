@@ -1,32 +1,32 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation, useNavigate } from "react-router-dom";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Building2, Inbox, Kanban, List, MessageSquare, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate, useLocation } from "react-router-dom";
-import { goBack, saveScrollPosition } from "@/lib/navigation";
-import { useAuth } from "@/hooks/useAuth";
+import { saveScrollPosition } from "@/lib/navigation";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { SectionSkeleton } from "@/components/ui/section-skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { format, differenceInHours, differenceInMinutes } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { ArrowLeft, Search, Building, Clock, MessageSquare, HelpCircle, Calendar, DollarSign, Info, MessageCircle, ShoppingBag } from "lucide-react";
 import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
+import { BarraFiltros, CabecalhoPagina, PaginaInterna } from "@/components/painel/PaginaInterna";
+import { CaixaVazia, GrupoCaixa, MiniaturaImovel } from "@/components/painel/CaixaOperacao";
+import { EtiquetaPrioridadeTicket, EtiquetaTipoTicket } from "@/components/tickets/EtiquetasTicket";
+import { ORDEM_TIPO_TICKET, STATUS_TICKET, STATUS_TICKET_ABERTOS, TIPO_TICKET } from "@/lib/ticketMeta";
+import { cn } from "@/lib/utils";
 
-type TicketStatus = "novo" | "em_analise" | "aguardando_info" | "em_execucao" | "concluido" | "cancelado";
-type TicketType = "duvida" | "cobranca" | "financeiro" | "outros" | "conversar_hospedes" | "melhorias_compras";
-
-interface OwnerTicket {
+interface ChamadoQuadro {
   id: string;
   subject: string;
-  description: string;
-  status: TicketStatus;
-  ticket_type: TicketType;
+  description: string | null;
+  status: string;
+  ticket_type: string;
   priority: string;
   created_at: string;
-  sla_due_at: string | null;
   property: {
     id: string;
     name: string;
@@ -43,63 +43,22 @@ interface OwnerTicket {
   } | null;
 }
 
-const TICKET_TYPE_LABELS: Record<TicketType, string> = {
-  duvida: "Dúvida",
-  cobranca: "Cobrança",
-  
-  financeiro: "Financeiro",
-  outros: "Outros",
-  conversar_hospedes: "Conversar c/ Hóspedes",
-  melhorias_compras: "Melhorias/Compras",
-};
+/** O quadro não mostra manutenções: elas têm lista própria. */
+const TIPOS_DO_QUADRO = ORDEM_TIPO_TICKET.filter((t) => t !== "manutencao");
 
-const TICKET_TYPE_ICONS: Record<TicketType, React.ReactNode> = {
-  duvida: <HelpCircle className="h-3 w-3" />,
-  cobranca: <DollarSign className="h-3 w-3" />,
-  
-  financeiro: <DollarSign className="h-3 w-3" />,
-  outros: <Info className="h-3 w-3" />,
-  conversar_hospedes: <MessageCircle className="h-3 w-3" />,
-  melhorias_compras: <ShoppingBag className="h-3 w-3" />,
-};
-
-const KANBAN_COLUMNS = [
-  { 
-    id: "novo", 
-    label: "Novos", 
-    statuses: ["novo"] as TicketStatus[],
-    color: "bg-info/10 border-info/30/30"
-  },
-  { 
-    id: "em_analise", 
-    label: "Em Análise", 
-    statuses: ["em_analise"] as TicketStatus[],
-    color: "bg-warning/10 border-warning/30/30"
-  },
-  { 
-    id: "aguardando_info", 
-    label: "Aguardando Info", 
-    statuses: ["aguardando_info"] as TicketStatus[],
-    color: "bg-warning/10 border-warning/30/30"
-  },
-  { 
-    id: "em_execucao", 
-    label: "Em Execução", 
-    statuses: ["em_execucao"] as TicketStatus[],
-    color: "bg-primary/10 border-primary/30/30"
-  },
-];
+/** Prévia da última mensagem sem os tokens de menção e de negrito. */
+const resumoMensagem = (body: string) =>
+  body.replace(/@\[([^\]]+)\]\([0-9a-f-]+\)/g, "@$1").replace(/\*\*/g, "").trim();
 
 const AdminChamadosKanban = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { user } = useAuth();
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState<"all" | TicketType>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
   const [chatDialogOpen, setChatDialogOpen] = useState(false);
-  const [chatTicket, setChatTicket] = useState<OwnerTicket | null>(null);
+  const [chatTicket, setChatTicket] = useState<ChamadoQuadro | null>(null);
 
-  // Fetch owner tickets (excluding maintenance)
+  // Chamados abertos dos proprietários (sem manutenção)
   const { data: tickets, isLoading } = useQuery({
     queryKey: ["owner-tickets-kanban"],
     queryFn: async () => {
@@ -113,7 +72,6 @@ const AdminChamadosKanban = () => {
           ticket_type,
           priority,
           created_at,
-          sla_due_at,
           property:properties(id, name, cover_photo_url),
           owner:profiles!tickets_owner_id_fkey(id, name)
         `)
@@ -145,13 +103,13 @@ const AdminChamadosKanban = () => {
             last_message: lastMessage ? {
               body: lastMessage.body,
               created_at: lastMessage.created_at,
-              author_name: (lastMessage.author as any)?.name || "Desconhecido",
+              author_name: (lastMessage.author as { name?: string } | null)?.name || "Desconhecido",
             } : null,
           };
         })
       );
 
-      return ticketsWithMessages as OwnerTicket[];
+      return ticketsWithMessages as unknown as ChamadoQuadro[];
     },
   });
 
@@ -159,214 +117,207 @@ const AdminChamadosKanban = () => {
   const ticketIds = useMemo(() => (tickets || []).map(t => t.id), [tickets]);
   const { unreadCounts, markAsRead } = useUnreadMessages(ticketIds);
 
-  const openChatDialog = (ticket: OwnerTicket, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const abrirConversa = (ticket: ChamadoQuadro) => {
     setChatTicket(ticket);
     setChatDialogOpen(true);
     markAsRead(ticket.id);
   };
 
-  // Organize tickets into columns
-  const columns = useMemo(() => {
-    if (!tickets) return KANBAN_COLUMNS.map((col) => ({ ...col, tickets: [] }));
+  const abrirDetalhe = (ticket: ChamadoQuadro) => {
+    saveScrollPosition(pathname);
+    navigate(`/ticket-detalhes/${ticket.id}`);
+  };
 
-    return KANBAN_COLUMNS.map((col) => {
-      let columnTickets = tickets.filter((t) => col.statuses.includes(t.status));
+  // Uma coluna por status aberto, na ordem do vocabulário único.
+  const colunas = useMemo(() => {
+    const busca = search.trim().toLowerCase();
+    return STATUS_TICKET_ABERTOS.map((status) => {
+      let itens = (tickets || []).filter((t) => t.status === status);
 
-      // Apply search filter
-      if (search) {
-        const searchLower = search.toLowerCase();
-        columnTickets = columnTickets.filter(
+      if (busca) {
+        itens = itens.filter(
           (t) =>
-            t.subject.toLowerCase().includes(searchLower) ||
-            t.property?.name.toLowerCase().includes(searchLower) ||
-            t.owner?.name.toLowerCase().includes(searchLower)
+            t.subject.toLowerCase().includes(busca) ||
+            t.property?.name.toLowerCase().includes(busca) ||
+            t.owner?.name.toLowerCase().includes(busca),
         );
       }
 
-      // Apply type filter
       if (typeFilter !== "all") {
-        columnTickets = columnTickets.filter((t) => t.ticket_type === typeFilter);
+        itens = itens.filter((t) => t.ticket_type === typeFilter);
       }
 
-      // Sort by SLA (closest expiration first)
-      columnTickets.sort((a, b) => {
-        if (!a.sla_due_at && !b.sla_due_at) return 0;
-        if (!a.sla_due_at) return 1;
-        if (!b.sla_due_at) return -1;
-        return new Date(a.sla_due_at).getTime() - new Date(b.sla_due_at).getTime();
-      });
+      // Urgentes no topo; depois os mais recentes (a consulta já vem por data).
+      itens = [...itens].sort((a, b) => Number(b.priority === "urgente") - Number(a.priority === "urgente"));
 
-      return { ...col, tickets: columnTickets };
+      return { status, rotulo: STATUS_TICKET[status].rotulo, tom: STATUS_TICKET[status].tom, itens };
     });
   }, [tickets, search, typeFilter]);
 
+  const totalAbertos = tickets?.length ?? 0;
+  const totalUrgentes = (tickets || []).filter((t) => t.priority === "urgente").length;
+  const subtitulo = isLoading
+    ? undefined
+    : `${totalAbertos} ${totalAbertos === 1 ? "aberto" : "abertos"}${
+        totalUrgentes > 0 ? ` · ${totalUrgentes} urgente${totalUrgentes === 1 ? "" : "s"}` : ""
+      }`;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 p-4 md:p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-4 flex-wrap">
-          <Button variant="ghost" size="icon" onClick={() => goBack(navigate, "/painel")}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex-1 min-w-[200px]">
-            <h1 className="text-2xl font-bold">Quadro de Chamados</h1>
-            <p className="text-muted-foreground text-sm">
-              Acompanhe e responda chamados dos proprietários
-            </p>
-          </div>
-          <Button variant="secondary" onClick={() => navigate("/todos-tickets")}>
-            Ver Todos os Tickets
-          </Button>
-        </div>
-
-        {/* Filters */}
-        <div className="flex flex-wrap gap-4 items-center">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por unidade, proprietário ou assunto..."
-              className="pl-10"
-            />
-          </div>
-          <Select value={typeFilter} onValueChange={(v: any) => setTypeFilter(v)}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Tipo de Chamado" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os Tipos</SelectItem>
-              {Object.entries(TICKET_TYPE_LABELS).map(([key, label]) => (
-                <SelectItem key={key} value={key}>{label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Kanban Board */}
-        {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="bg-muted/50 rounded-lg p-4 animate-pulse">
-                <div className="h-6 bg-muted rounded w-1/2 mb-4" />
-                <div className="space-y-3">
-                  <div className="h-32 bg-muted rounded" />
-                  <div className="h-32 bg-muted rounded" />
-                </div>
+    <PaginaInterna
+      largura="larga"
+      comNavInferior
+      cabecalho={
+        <CabecalhoPagina
+          titulo="Quadro de chamados"
+          subtitulo={subtitulo}
+          icone={<Kanban />}
+          tom="info"
+          voltarPara="/painel"
+          acoes={
+            <Button variant="outline" size="sm" className="h-9" onClick={() => navigate("/todos-tickets")}>
+              <List className="h-4 w-4" />
+              Lista
+            </Button>
+          }
+          abaixo={
+            <BarraFiltros>
+              <div className="relative min-w-[220px] flex-1 sm:max-w-sm">
+                <Search
+                  className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Buscar por assunto, imóvel ou proprietário…"
+                  aria-label="Buscar chamados"
+                  className="h-8 pl-8 text-sm"
+                />
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {columns.map((column) => (
-              <div
-                key={column.id}
-                className={`rounded-lg border-2 ${column.color} p-3`}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold">{column.label}</h3>
-                  <Badge variant="secondary">{column.tickets.length}</Badge>
-                </div>
-
-                <div className="space-y-3 max-h-[calc(100vh-280px)] overflow-y-auto">
-                  {column.tickets.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      Nenhum chamado
-                    </p>
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="h-8 w-[180px] shrink-0 text-xs" aria-label="Tipo de chamado">
+                  <SelectValue placeholder="Tipo" />
+                </SelectTrigger>
+                <SelectContent className="z-50 bg-popover">
+                  <SelectItem value="all">Todos os tipos</SelectItem>
+                  {TIPOS_DO_QUADRO.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {TIPO_TICKET[t].rotulo}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </BarraFiltros>
+          }
+        />
+      }
+    >
+      {isLoading ? (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4" aria-busy="true" aria-label="Carregando quadro">
+          {STATUS_TICKET_ABERTOS.map((s) => (
+            <SectionSkeleton key={s} rows={2} showHeader />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {colunas.map((coluna) => (
+            <Card key={coluna.status} className="rounded-xl border-border/70 p-3">
+              <GrupoCaixa titulo={coluna.rotulo} quantidade={coluna.itens.length} tom={coluna.tom}>
+                {/* No celular as colunas empilham com altura automática; só no desktop cada coluna rola. */}
+                <div className="space-y-2 xl:max-h-[calc(100vh-14rem)] xl:overflow-y-auto xl:pr-0.5">
+                  {coluna.itens.length === 0 ? (
+                    <CaixaVazia icone={<Inbox className="h-5 w-5" />} titulo="Nenhum chamado" />
                   ) : (
-                    column.tickets.map((ticket) => {
+                    coluna.itens.map((ticket) => {
+                      const naoLidas = unreadCounts[ticket.id] || 0;
+                      const urgente = ticket.priority === "urgente";
                       return (
-                        <Card
+                        <div
                           key={ticket.id}
-                          className="cursor-pointer hover:shadow-md transition-shadow"
-                          onClick={() => (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${ticket.id}`))}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => abrirDetalhe(ticket)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              abrirDetalhe(ticket);
+                            }
+                          }}
+                          className={cn(
+                            "cursor-pointer rounded-lg border bg-card p-3 transition-colors hover:bg-muted/50",
+                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                            urgente ? "border-destructive/40" : "border-border/70",
+                          )}
                         >
-                          <CardContent className="p-3 space-y-2">
-                            {/* Property */}
-                            <div className="flex items-center gap-2">
-                              {ticket.property?.cover_photo_url ? (
-                                <img
-                                  src={ticket.property.cover_photo_url}
-                                  alt=""
-                                  className="w-8 h-8 rounded object-cover"
-                                />
-                              ) : (
-                                <div className="w-8 h-8 rounded bg-muted flex items-center justify-center">
-                                  <Building className="h-4 w-4 text-muted-foreground" />
-                                </div>
-                              )}
-                              <span className="text-sm font-medium truncate flex-1">
-                                {ticket.property?.name || "Sem unidade"}
-                              </span>
+                          <div className="flex items-center gap-2">
+                            <MiniaturaImovel
+                              url={ticket.property?.cover_photo_url}
+                              fallback={<Building2 />}
+                              tamanho="h-8 w-8"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-xs font-medium">{ticket.property?.name || "Sem imóvel"}</p>
+                              <p className="truncate text-[11px] text-muted-foreground">
+                                {ticket.owner?.name || "Sem proprietário"}
+                              </p>
                             </div>
+                          </div>
 
-                            {/* Ticket Type Badge */}
-                            <div className="flex items-center gap-1">
-                              <Badge variant="outline" className="text-xs gap-1">
-                                {TICKET_TYPE_ICONS[ticket.ticket_type]}
-                                {TICKET_TYPE_LABELS[ticket.ticket_type]}
-                              </Badge>
-                            </div>
+                          <p className="mt-2 line-clamp-2 text-[13px] font-medium leading-snug">{ticket.subject}</p>
 
-                            {/* Subject */}
-                            <p className="text-sm font-medium line-clamp-2">{ticket.subject}</p>
+                          <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                            <EtiquetaPrioridadeTicket prioridade={ticket.priority} />
+                            <EtiquetaTipoTicket tipo={ticket.ticket_type} />
+                            <span className="ml-auto text-[11px] tabular-nums text-muted-foreground">
+                              {format(new Date(ticket.created_at), "dd/MM", { locale: ptBR })}
+                            </span>
+                          </div>
 
-                            {/* Last Message */}
-                            {ticket.last_message && (
-                              <div className="bg-muted/50 rounded p-2 text-xs">
-                                <p className="text-muted-foreground truncate">
-                                  <span className="font-medium">{ticket.last_message.author_name}:</span>{" "}
-                                  {ticket.last_message.body}
-                                </p>
-                              </div>
-                            )}
-
-
-                            {/* Owner */}
-                            <p className="text-xs text-muted-foreground">
-                              {ticket.owner?.name || "Sem proprietário"}
+                          {ticket.last_message && (
+                            <p className="mt-2 line-clamp-2 rounded-md bg-muted/60 px-2 py-1.5 text-xs text-muted-foreground">
+                              <span className="font-medium text-foreground/80">{ticket.last_message.author_name}:</span>{" "}
+                              {resumoMensagem(ticket.last_message.body)}
                             </p>
+                          )}
 
-                            {/* Chat button */}
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="flex-1 text-xs h-7 relative"
-                                onClick={(e) => openChatDialog(ticket, e)}
-                              >
-                                <MessageSquare className="h-3 w-3 mr-1" />
-                                Responder
-                                {unreadCounts[ticket.id] > 0 && (
-                                  <span className="absolute -top-1 -right-1 bg-destructive text-white text-[8px] rounded-full h-4 min-w-[16px] flex items-center justify-center px-1 font-bold">
-                                    {unreadCounts[ticket.id] > 9 ? "9+" : unreadCounts[ticket.id]}
-                                  </span>
-                                )}
-                              </Button>
-                            </div>
-                          </CardContent>
-                        </Card>
+                          <div className="mt-2 flex justify-end" onClick={(e) => e.stopPropagation()}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="relative h-7 text-xs"
+                              onClick={() => abrirConversa(ticket)}
+                            >
+                              <MessageSquare className="h-3.5 w-3.5" />
+                              Responder
+                              {naoLidas > 0 && (
+                                <span
+                                  className="absolute -right-1.5 -top-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-bold text-destructive-foreground"
+                                  aria-label={`${naoLidas} não lidas`}
+                                >
+                                  {naoLidas > 9 ? "9+" : naoLidas}
+                                </span>
+                              )}
+                            </Button>
+                          </div>
+                        </div>
                       );
                     })
                   )}
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+              </GrupoCaixa>
+            </Card>
+          ))}
+        </div>
+      )}
 
-      {/* Chat Dialog */}
       <MaintenanceChatDialog
         open={chatDialogOpen}
         onOpenChange={setChatDialogOpen}
         ticketId={chatTicket?.id || null}
         ticketSubject={chatTicket?.subject || ""}
-        propertyName={chatTicket?.property?.name || "Sem unidade"}
+        propertyName={chatTicket?.property?.name || "Sem imóvel"}
       />
-    </div>
+    </PaginaInterna>
   );
 };
 

@@ -1,35 +1,41 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { goBack, saveScrollPosition } from "@/lib/navigation";
+import { saveScrollPosition } from "@/lib/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CabecalhoPagina, PaginaInterna } from "@/components/painel/PaginaInterna";
+import { CaixaOperacao, CaixaVazia, SeloContagem } from "@/components/painel/CaixaOperacao";
+import { Etiqueta } from "@/components/painel/Etiqueta";
+import { TOM, type Tom } from "@/components/painel/tons";
+import { MentionText } from "@/components/comments/MentionText";
+import { formatarData } from "@/lib/cobrancaMeta";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import {
-  ArrowLeft,
-  MessageSquare,
-  CreditCard,
-  Wrench,
   Bell,
+  Building,
+  CalendarDays,
+  ChevronRight,
+  CreditCard,
+  History,
+  Lock,
+  MessageSquare,
   Search,
   User,
-  Building,
-  Calendar,
-  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+
+type TipoEvento = "ticket_message" | "charge_message" | "notification";
 
 interface CommunicationEvent {
   id: string;
-  type: "ticket_message" | "charge_message" | "notification";
+  type: TipoEvento;
   created_at: string;
   content: string;
   metadata: {
@@ -53,6 +59,20 @@ interface OwnerInfo {
   properties: Array<{ id: string; name: string }>;
 }
 
+const TIPO_EVENTO: Record<TipoEvento, { rotulo: string; tom: Tom; icone: JSX.Element }> = {
+  ticket_message: { rotulo: "Chamado", tom: "info", icone: <MessageSquare className="h-4 w-4" /> },
+  charge_message: { rotulo: "Cobrança", tom: "warning", icone: <CreditCard className="h-4 w-4" /> },
+  notification: { rotulo: "Notificação", tom: "primary", icone: <Bell className="h-4 w-4" /> },
+};
+
+const getInitials = (name: string) =>
+  name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
 export default function HistoricoComunicacao() {
   const { ownerId } = useParams();
   const navigate = useNavigate();
@@ -70,6 +90,7 @@ export default function HistoricoComunicacao() {
     if (ownerId && isTeamMember) {
       fetchOwnerData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ownerId, isTeamMember]);
 
   const fetchOwnerData = async () => {
@@ -145,6 +166,7 @@ export default function HistoricoComunicacao() {
       const allEvents: CommunicationEvent[] = [];
 
       // Add ticket messages
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ticketMessages.data?.forEach((msg: any) => {
         if (!msg.is_internal) {
           allEvents.push({
@@ -165,6 +187,7 @@ export default function HistoricoComunicacao() {
       });
 
       // Add charge messages
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       chargeMessages.data?.forEach((msg: any) => {
         if (!msg.is_internal) {
           allEvents.push({
@@ -185,7 +208,7 @@ export default function HistoricoComunicacao() {
       });
 
       // Add notifications
-      notifications.data?.forEach((notif: any) => {
+      notifications.data?.forEach((notif) => {
         allEvents.push({
           id: `n-${notif.id}`,
           type: "notification",
@@ -200,308 +223,258 @@ export default function HistoricoComunicacao() {
       // Sort by date
       allEvents.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setEvents(allEvents);
-    } catch (error: any) {
-      console.error("Error fetching owner data:", error);
+    } catch (error) {
+      console.error("Erro ao carregar o histórico:", error);
       toast.error("Erro ao carregar histórico");
     } finally {
       setLoading(false);
     }
   };
 
-  const getEventIcon = (type: CommunicationEvent["type"]) => {
-    switch (type) {
-      case "ticket_message":
-        return <MessageSquare className="h-4 w-4" />;
-      case "charge_message":
-        return <CreditCard className="h-4 w-4" />;
-      case "notification":
-        return <Bell className="h-4 w-4" />;
-      default:
-        return <MessageSquare className="h-4 w-4" />;
-    }
-  };
-
-  const getEventColor = (type: CommunicationEvent["type"]) => {
-    switch (type) {
-      case "ticket_message":
-        return "bg-info";
-      case "charge_message":
-        return "bg-warning";
-      case "notification":
-        return "bg-primary";
-      default:
-        return "bg-gray-500";
-    }
-  };
-
-  const getEventLabel = (type: CommunicationEvent["type"]) => {
-    switch (type) {
-      case "ticket_message":
-        return "Ticket";
-      case "charge_message":
-        return "Cobrança";
-      case "notification":
-        return "Notificação";
-      default:
-        return "Mensagem";
-    }
-  };
-
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
   const navigateToDetail = (event: CommunicationEvent) => {
     if (event.type === "ticket_message" && event.metadata.ticketId) {
-      (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${event.metadata.ticketId}`));
+      saveScrollPosition(pathname);
+      navigate(`/ticket-detalhes/${event.metadata.ticketId}`);
     } else if (event.type === "charge_message" && event.metadata.chargeId) {
-      navigate(`/cobranca-detalhes/${event.metadata.chargeId}`);
+      saveScrollPosition(pathname);
+      navigate(`/cobranca/${event.metadata.chargeId}`);
     }
   };
 
-  const filteredEvents = events.filter((event) => {
-    const matchesSearch =
-      event.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      event.metadata.ticketSubject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      event.metadata.chargeTitle?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = typeFilter === "all" || event.type === typeFilter;
-    return matchesSearch && matchesType;
-  });
+  const filteredEvents = useMemo(() => {
+    const termo = searchTerm.trim().toLowerCase();
+    return events.filter((event) => {
+      const matchesSearch =
+        !termo ||
+        event.content.toLowerCase().includes(termo) ||
+        event.metadata.ticketSubject?.toLowerCase().includes(termo) ||
+        event.metadata.chargeTitle?.toLowerCase().includes(termo);
+      const matchesType = typeFilter === "all" || event.type === typeFilter;
+      return matchesSearch && matchesType;
+    });
+  }, [events, searchTerm, typeFilter]);
 
-  // Group events by date
-  const groupedEvents = filteredEvents.reduce((groups, event) => {
-    const date = format(new Date(event.created_at), "yyyy-MM-dd");
-    if (!groups[date]) {
-      groups[date] = [];
-    }
-    groups[date].push(event);
-    return groups;
-  }, {} as Record<string, CommunicationEvent[]>);
+  // Agrupa por dia local; a chave "yyyy-MM-dd" é lida de volta com formatarData.
+  const groupedEvents = useMemo(
+    () =>
+      filteredEvents.reduce((groups, event) => {
+        const date = format(new Date(event.created_at), "yyyy-MM-dd");
+        if (!groups[date]) {
+          groups[date] = [];
+        }
+        groups[date].push(event);
+        return groups;
+      }, {} as Record<string, CommunicationEvent[]>),
+    [filteredEvents],
+  );
+
+  const cabecalho = (
+    <CabecalhoPagina
+      titulo="Histórico de comunicação"
+      subtitulo={ownerInfo?.name}
+      icone={<History />}
+      tom="info"
+      voltarPara="/admin/gerenciar-usuarios"
+    />
+  );
 
   if (!isTeamMember) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p>Acesso não autorizado</p>
-      </div>
+      <PaginaInterna largura="media" cabecalho={cabecalho}>
+        <Card className="rounded-xl border-border/70">
+          <EmptyState
+            icon={<Lock className="h-6 w-6" />}
+            title="Acesso restrito"
+            description="Só a equipe consulta o histórico de comunicação."
+          />
+        </Card>
+      </PaginaInterna>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
-      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto flex h-16 items-center gap-4 px-4">
-          <Button variant="ghost" size="icon" onClick={() => goBack(navigate)}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-lg font-semibold">Histórico de Comunicação</h1>
-            {ownerInfo && (
-              <p className="text-sm text-muted-foreground">{ownerInfo.name}</p>
-            )}
-          </div>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-6">
-        {/* Owner Info Card */}
-        {loading ? (
-          <Card className="mb-6">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-4">
-                <Skeleton className="h-16 w-16 rounded-full" />
-                <div className="space-y-2">
-                  <Skeleton className="h-5 w-40" />
-                  <Skeleton className="h-4 w-60" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ) : ownerInfo ? (
-          <Card className="mb-6">
-            <CardContent className="p-4">
-              <div className="flex items-start gap-4">
-                <Avatar className="h-16 w-16">
-                  <AvatarImage src={ownerInfo.photo_url || undefined} />
-                  <AvatarFallback className="text-lg">
-                    {getInitials(ownerInfo.name)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <h2 className="font-semibold">{ownerInfo.name}</h2>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-2">{ownerInfo.email}</p>
-                  {ownerInfo.properties.length > 0 && (
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Building className="h-4 w-4 text-muted-foreground" />
-                      {ownerInfo.properties.map((prop) => (
-                        <Badge key={prop.id} variant="outline" className="text-xs">
-                          {prop.name}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-primary">{events.length}</p>
-                  <p className="text-xs text-muted-foreground">interações</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ) : null}
-
-        {/* Filters */}
-        <Card className="mb-6">
-          <CardContent className="p-4">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Buscar mensagens..."
-                  className="pl-9"
-                />
-              </div>
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-full sm:w-48">
-                  <SelectValue placeholder="Tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os tipos</SelectItem>
-                  <SelectItem value="ticket_message">Tickets</SelectItem>
-                  <SelectItem value="charge_message">Cobranças</SelectItem>
-                  <SelectItem value="notification">Notificações</SelectItem>
-                </SelectContent>
-              </Select>
+    <PaginaInterna largura="media" cabecalho={cabecalho}>
+      {/* Proprietário */}
+      {loading ? (
+        <Card className="rounded-xl border-border/70 p-4" aria-busy="true" aria-label="Carregando proprietário">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-14 w-14 rounded-full" />
+            <div className="space-y-2">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-4 w-60" />
             </div>
-          </CardContent>
+          </div>
         </Card>
-
-        {/* Timeline */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              Timeline de Comunicação
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <ScrollArea className="h-[calc(100vh-420px)] min-h-[400px]">
-              {loading ? (
-                <div className="p-4 space-y-4">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex gap-3">
-                      <Skeleton className="h-10 w-10 rounded-full" />
-                      <div className="space-y-2 flex-1">
-                        <Skeleton className="h-4 w-32" />
-                        <Skeleton className="h-16 w-full" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : filteredEvents.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-50" />
-                  <p>Nenhuma comunicação encontrada</p>
-                </div>
-              ) : (
-                <div className="p-4">
-                  {Object.entries(groupedEvents).map(([date, dayEvents]) => (
-                    <div key={date} className="mb-6">
-                      {/* Date header */}
-                      <div className="flex items-center gap-2 mb-4">
-                        <div className="h-px flex-1 bg-border" />
-                        <span className="text-xs font-medium text-muted-foreground px-2 bg-background">
-                          {format(new Date(date), "EEEE, dd 'de' MMMM", { locale: ptBR })}
-                        </span>
-                        <div className="h-px flex-1 bg-border" />
-                      </div>
-
-                      {/* Events */}
-                      <div className="space-y-4 relative">
-                        {/* Timeline line */}
-                        <div className="absolute left-5 top-0 bottom-0 w-px bg-border" />
-
-                        {dayEvents.map((event) => (
-                          <div
-                            key={event.id}
-                            className="flex gap-3 relative cursor-pointer hover:bg-muted/50 rounded-lg p-2 -ml-2 transition-colors"
-                            onClick={() => navigateToDetail(event)}
-                          >
-                            {/* Icon */}
-                            <div
-                              className={`h-10 w-10 rounded-full flex items-center justify-center text-white z-10 ${getEventColor(event.type)}`}
-                            >
-                              {getEventIcon(event.type)}
-                            </div>
-
-                            {/* Content */}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                <Badge variant="secondary" className="text-[10px]">
-                                  {getEventLabel(event.type)}
-                                </Badge>
-                                {event.metadata.ticketSubject && (
-                                  <span className="text-xs font-medium truncate">
-                                    {event.metadata.ticketSubject}
-                                  </span>
-                                )}
-                                {event.metadata.chargeTitle && (
-                                  <span className="text-xs font-medium truncate">
-                                    {event.metadata.chargeTitle}
-                                  </span>
-                                )}
-                                {event.metadata.propertyName && (
-                                  <Badge variant="outline" className="text-[10px]">
-                                    {event.metadata.propertyName}
-                                  </Badge>
-                                )}
-                                <span className="text-[10px] text-muted-foreground ml-auto flex-shrink-0">
-                                  {format(new Date(event.created_at), "HH:mm")}
-                                </span>
-                              </div>
-
-                              <p className="text-sm text-muted-foreground line-clamp-2">
-                                {event.content}
-                              </p>
-
-                              {event.metadata.authorName && (
-                                <div className="flex items-center gap-1.5 mt-1">
-                                  <Avatar className="h-4 w-4">
-                                    <AvatarImage src={event.metadata.authorPhoto || undefined} />
-                                    <AvatarFallback className="text-[8px]">
-                                      {getInitials(event.metadata.authorName)}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <span className="text-[10px] text-muted-foreground">
-                                    {event.metadata.authorName}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-
-                            {(event.metadata.ticketId || event.metadata.chargeId) && (
-                              <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+      ) : ownerInfo ? (
+        <CaixaOperacao
+          icone={<User />}
+          titulo="Proprietário"
+          tom="primary"
+          selos={<SeloContagem title="Interações registradas">{events.length} interações</SeloContagem>}
+        >
+          <div className="flex items-start gap-4">
+            <Avatar className="h-14 w-14">
+              <AvatarImage src={ownerInfo.photo_url || undefined} alt="" />
+              <AvatarFallback className="text-base">{getInitials(ownerInfo.name)}</AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold leading-tight">{ownerInfo.name}</p>
+              <p className="text-sm text-muted-foreground">{ownerInfo.email}</p>
+              {ownerInfo.properties.length > 0 && (
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <Building className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+                  {ownerInfo.properties.map((prop) => (
+                    <Etiqueta key={prop.id} tom="neutral">
+                      {prop.name}
+                    </Etiqueta>
                   ))}
                 </div>
               )}
-            </ScrollArea>
-          </CardContent>
-        </Card>
-      </main>
-    </div>
+            </div>
+          </div>
+        </CaixaOperacao>
+      ) : null}
+
+      {/* Filtros */}
+      <Card className="rounded-xl border-border/70 p-3 md:p-4">
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+            <Input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Buscar mensagens…"
+              aria-label="Buscar mensagens"
+              className="pl-9"
+            />
+          </div>
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-full sm:w-48" aria-label="Tipo de comunicação">
+              <SelectValue placeholder="Tipo" />
+            </SelectTrigger>
+            <SelectContent className="z-50 bg-popover">
+              <SelectItem value="all">Todos os tipos</SelectItem>
+              <SelectItem value="ticket_message">Chamados</SelectItem>
+              <SelectItem value="charge_message">Cobranças</SelectItem>
+              <SelectItem value="notification">Notificações</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </Card>
+
+      {/* Linha do tempo */}
+      <CaixaOperacao
+        icone={<CalendarDays />}
+        titulo="Linha do tempo"
+        tom="info"
+        selos={!loading ? <SeloContagem>{filteredEvents.length}</SeloContagem> : undefined}
+      >
+        {loading ? (
+          <div className="space-y-4" aria-busy="true" aria-label="Carregando histórico">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex gap-3">
+                <Skeleton className="h-9 w-9 rounded-full" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-12 w-full" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : events.length === 0 ? (
+          <EmptyState
+            ilustracao="conversa"
+            title="Nenhuma comunicação ainda"
+            description="Mensagens de chamados, de cobranças e notificações deste proprietário aparecem aqui."
+          />
+        ) : filteredEvents.length === 0 ? (
+          <CaixaVazia
+            icone={<Search className="h-5 w-5" />}
+            titulo="Nada com esses filtros"
+            descricao="Mude o tipo ou limpe a busca."
+          />
+        ) : (
+          <div className="space-y-5">
+            {Object.entries(groupedEvents).map(([date, dayEvents]) => (
+              <section key={date} aria-label={formatarData(date, "EEEE, dd 'de' MMMM")}>
+                <div className="mb-2 flex items-center gap-2">
+                  <div className="h-px flex-1 bg-border" aria-hidden="true" />
+                  <span className="px-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    {formatarData(date, "EEEE, dd 'de' MMMM")}
+                  </span>
+                  <div className="h-px flex-1 bg-border" aria-hidden="true" />
+                </div>
+
+                <div className="relative space-y-1">
+                  <div className="absolute bottom-0 left-[26px] top-0 w-px bg-border" aria-hidden="true" />
+
+                  {dayEvents.map((event) => {
+                    const meta = TIPO_EVENTO[event.type];
+                    const navegavel =
+                      (event.type === "ticket_message" && !!event.metadata.ticketId) ||
+                      (event.type === "charge_message" && !!event.metadata.chargeId);
+                    const assunto = event.metadata.ticketSubject || event.metadata.chargeTitle;
+                    return (
+                      <div
+                        key={event.id}
+                        role={navegavel ? "button" : undefined}
+                        tabIndex={navegavel ? 0 : undefined}
+                        onClick={navegavel ? () => navigateToDetail(event) : undefined}
+                        onKeyDown={(e) => {
+                          if (navegavel && (e.key === "Enter" || e.key === " ")) {
+                            e.preventDefault();
+                            navigateToDetail(event);
+                          }
+                        }}
+                        className={cn(
+                          "relative flex gap-3 rounded-lg px-2 py-2 transition-colors",
+                          navegavel && "cursor-pointer hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        )}
+                      >
+                        <span
+                          className={cn("z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ring-4 ring-card", TOM[meta.tom].caixa)}
+                          aria-hidden="true"
+                        >
+                          {meta.icone}
+                        </span>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <Etiqueta tom={meta.tom}>{meta.rotulo}</Etiqueta>
+                            {assunto && <span className="min-w-0 truncate text-xs font-medium">{assunto}</span>}
+                            {event.metadata.propertyName && (
+                              <Etiqueta tom="neutral">{event.metadata.propertyName}</Etiqueta>
+                            )}
+                            <span className="ml-auto shrink-0 text-[10px] tabular-nums text-muted-foreground">
+                              {format(new Date(event.created_at), "HH:mm")}
+                            </span>
+                          </div>
+
+                          <MentionText body={event.content} className="mt-1 line-clamp-2 text-muted-foreground" />
+
+                          {event.metadata.authorName && (
+                            <div className="mt-1 flex items-center gap-1.5">
+                              <Avatar className="h-4 w-4">
+                                <AvatarImage src={event.metadata.authorPhoto || undefined} alt="" />
+                                <AvatarFallback className="text-[8px]">{getInitials(event.metadata.authorName)}</AvatarFallback>
+                              </Avatar>
+                              <span className="text-[10px] text-muted-foreground">{event.metadata.authorName}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {navegavel && (
+                          <ChevronRight className="mt-2 h-4 w-4 shrink-0 text-muted-foreground/60" aria-hidden="true" />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
+          </div>
+        )}
+      </CaixaOperacao>
+    </PaginaInterna>
   );
 }

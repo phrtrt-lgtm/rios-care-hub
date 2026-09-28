@@ -16,6 +16,7 @@ import { LoadingScreen } from "@/components/LoadingScreen";
 import { sanitizeFilename } from "@/lib/storage";
 import { VoiceToTextInput } from "@/components/VoiceToTextInput";
 import { processFileForUpload } from "@/lib/processVideoForUpload";
+import { emParalelo } from "@/lib/fileUpload";
 
 interface Owner {
   id: string;
@@ -168,14 +169,14 @@ const NovoTicketMassa = () => {
 
     setUploading(true);
     try {
-      const uploaded: ReadyAttachment[] = [];
-      for (const file of Array.from(selectedFiles)) {
-        // Compress video if it's a video file
-        const processedFile = await processFileForUpload(file);
-        const result = await uploadOne(processedFile);
-        uploaded.push(result);
-      }
+      // Até 3 arquivos ao mesmo tempo; os que subirem ficam, mesmo se outro falhar.
+      const resultados = await emParalelo(Array.from(selectedFiles), async (file) =>
+        uploadOne(await processFileForUpload(file)),
+      );
+      const uploaded = resultados.flatMap((r) => (r.ok ? [r.valor] : []));
+      const falhas = resultados.flatMap((r) => (r.ok ? [] : [r.erro]));
       setUploadedFiles((prev) => [...prev, ...uploaded]);
+      if (falhas.length > 0) throw falhas[0];
       toast.success(`${uploaded.length} arquivo(s) enviado(s) com sucesso!`);
     } catch (error: any) {
       console.error('Upload error:', error);

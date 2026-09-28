@@ -280,13 +280,132 @@ export function isVideoFile(file: File): boolean {
   return ['mp4', 'mov', 'avi', 'webm', 'mkv', '3gp', '3gpp'].includes(ext || '');
 }
 
-// Process a single file (compress if video, return as-is otherwise)
+// Foto de câmera sai com 3–8 MB; reduzida para 1920 px fica com ~0,3–1 MB,
+// nítida o bastante para servir de prova. Mesma técnica do glisting
+// (bright-space-ai, compressImageForUpload), com uma diferença: aqui, se a
+// imagem não puder ser lida (HEIC no Android, arquivo corrompido), vai a
+// original — anexo de manutenção é prova e não pode ser recusado.
+const IMAGEM_LADO_MAX = 1920;
+const IMAGEM_QUALIDADE = 0.82;
+// Abaixo disso não vale reprocessar: foto do WhatsApp já chega com ~0,1 MB.
+const IMAGEM_BYTES_SEM_COMPRESSAO = 500 * 1024;
+
+function ehImagemComprimivel(file: File): boolean {
+  const tipo = (file.type || '').toLowerCase();
+  if (tipo === 'image/gif' || tipo === 'image/svg+xml') return false;
+  if (tipo.startsWith('image/')) return true;
+  const ext = (file.name || '').split('.').pop()?.toLowerCase();
+  return ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'].includes(ext || '');
+}
+
+async function decodificarImagem(file: File): Promise<ImageBitmap | HTMLImageElement> {
+  if (typeof createImageBitmap === 'function') {
+    try {
+      return await createImageBitmap(file);
+    } catch {
+      // cai para o <img> abaixo
+    }
+  }
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    return img;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+/** Reduz uma foto antes do envio. Qualquer falha devolve a original. */
+export async function comprimirImagem(file: File): Promise<File> {
+  if (!ehImagemComprimivel(file) || file.size <= IMAGEM_BYTES_SEM_COMPRESSAO) {
+    return file;
+  }
+
+  try {
+    const origem = await decodificarImagem(file);
+    const largura = origem.width;
+    const altura = origem.height;
+    if (!largura || !altura) return file;
+
+    const escala = Math.min(1, IMAGEM_LADO_MAX / Math.max(largura, altura));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(largura * escala));
+    canvas.height = Math.max(1, Math.round(altura * escala));
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return file;
+
+    // JPEG não tem transparência: fundo branco para PNG com área vazada.
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(origem, 0, 0, canvas.width, canvas.height);
+    if ('close' in origem) origem.close();
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, 'image/jpeg', IMAGEM_QUALIDADE),
+    );
+    if (!blob || blob.size >= file.size) return file;
+
+    const nome = (file.name || `foto-${Date.now()}`).replace(/\.[^.]+$/, '') + '.jpg';
+    return new File([blob], nome, { type: 'image/jpeg', lastModified: file.lastModified });
+  } catch (error) {
+    console.warn('[ImageCompression] usando a original:', file.name, error);
+    return file;
+  }
+}
+
+export type ResultadoParalelo<R> =
+  | { ok: true; valor: R; erro?: undefined }
+  | { ok: false; valor?: undefined; erro: unknown };
+
+/**
+ * Roda `tarefa` em cada item, com no máximo `limite` ao mesmo tempo.
+ * Devolve os resultados na ordem de entrada; a falha de um item não para os
+ * outros. Enviar um arquivo por vez somava a espera de todos.
+ */
+export async function emParalelo<T, R>(
+  itens: T[],
+  tarefa: (item: T, indice: number) => Promise<R>,
+  limite = 3,
+): Promise<ResultadoParalelo<R>[]> {
+  const resultados: ResultadoParalelo<R>[] = new Array(itens.length);
+  let proximo = 0;
+  const trabalhador = async () => {
+    while (proximo < itens.length) {
+      const indice = proximo++;
+      try {
+        resultados[indice] = { ok: true, valor: await tarefa(itens[indice], indice) };
+      } catch (erro) {
+        resultados[indice] = { ok: false, erro };
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limite, itens.length) }, trabalhador));
+  return resultados;
+}
+
+/** Como `emParalelo`, mas relança o primeiro erro depois que todos terminam. */
+export async function emParaleloOuFalha<T, R>(
+  itens: T[],
+  tarefa: (item: T, indice: number) => Promise<R>,
+  limite = 3,
+): Promise<R[]> {
+  const resultados = await emParalelo(itens, tarefa, limite);
+  const falha = resultados.find((r) => !r.ok);
+  if (falha) throw falha.erro;
+  return resultados.map((r) => r.valor as R);
+}
+
+// Process a single file (compress video or photo, return as-is otherwise)
 export async function processFileForUpload(
   file: File,
   onProgress?: ProgressCallback
 ): Promise<File> {
   if (!isVideoFile(file)) {
-    return file;
+    return comprimirImagem(file);
   }
 
   const originalBytes = file.size;
@@ -329,7 +448,7 @@ export async function processFilesForUpload(
       });
       processedFiles.push(compressed);
     } else {
-      processedFiles.push(file);
+      processedFiles.push(await comprimirImagem(file));
     }
   }
   

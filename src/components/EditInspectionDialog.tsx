@@ -8,7 +8,7 @@ import AudioPlayer from '@/components/AudioPlayer';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { compressVideo, isVideoFile, FileUploadProgress } from '@/lib/fileUpload';
+import { comprimirImagem, compressVideo, emParalelo, isVideoFile, FileUploadProgress } from '@/lib/fileUpload';
 import { VideoCompressionProgress } from '@/components/VideoCompressionProgress';
 import RoutineInspectionChecklist, { ChecklistData, defaultChecklistData } from '@/components/RoutineInspectionChecklist';
 
@@ -145,8 +145,8 @@ export default function EditInspectionDialog({
     setUploadedFiles(prev => [...prev, ...newFiles]);
     e.target.value = '';
 
-    for (let i = 0; i < selectedFiles.length; i++) {
-      const originalFile = selectedFiles[i];
+    // Até 3 arquivos ao mesmo tempo.
+    await emParalelo(selectedFiles, async (originalFile) => {
       let fileToUpload = originalFile;
       
       try {
@@ -173,12 +173,13 @@ export default function EditInspectionDialog({
               f.file === originalFile ? { ...f, uploading: true } : f
             )
           );
+          fileToUpload = await comprimirImagem(originalFile);
         }
 
         const url = await uploadFile(fileToUpload);
         setUploadedFiles(prev => 
           prev.map(f => 
-            (f.file === originalFile || f.file === fileToUpload) ? { ...f, url, uploading: false, compressing: false } : f
+            (f.file === originalFile || f.file === fileToUpload) ? { ...f, file: fileToUpload, url, uploading: false, compressing: false } : f
           )
         );
       } catch (error: any) {
@@ -190,7 +191,7 @@ export default function EditInspectionDialog({
         );
         toast.error(`Erro no upload de ${originalFile.name}`);
       }
-    }
+    });
   };
 
   const handleRemoveFile = (file: File) => {

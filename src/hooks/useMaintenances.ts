@@ -387,6 +387,11 @@ export const useMaintenance = (id?: string) => {
         ticket_description: ticket.description,
         ticket_notes: (await fetchTicketContext(ticket.id)).notes,
         scheduled_at: (ticket as any).scheduled_at ?? null,
+        // Selecionados na consulta, mas não devolvidos: o detalhe mostrava "—"
+        // como responsável em manutenção sem cobrança própria.
+        cost_responsible: (ticket as any).cost_responsible ?? null,
+        split_owner_percent: (ticket as any).split_owner_percent ?? null,
+        service_type: (ticket as any).service_type ?? null,
       };
 
     },

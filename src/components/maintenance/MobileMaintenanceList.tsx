@@ -26,9 +26,13 @@ import {
 } from "@/components/ui/select";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionSkeleton } from "@/components/ui/section-skeleton";
+import { Etiqueta } from "@/components/painel/Etiqueta";
+import { CaixaVazia } from "@/components/painel/CaixaOperacao";
+import type { Tom } from "@/components/painel/tons";
 import { cn } from "@/lib/utils";
 import { formatBRL } from "@/lib/format";
 import { parseBRNumber } from "@/lib/parseBRNumber";
+import { rotulosServico } from "@/constants/chargeCategories";
 import { QuickAttachUploader } from "@/components/maintenance/QuickAttachUploader";
 import { BOARD_OPTIONS, deriveBoard, hasInfiltracao } from "@/lib/maintenanceBoard";
 import { WhatsappAcaoLinha, type DonoWhatsapp } from "@/components/maintenance/WhatsappAcaoLinha";
@@ -57,17 +61,29 @@ export interface MobileMaintenanceItem {
 interface MobileGroupConfig {
   id: string;
   label: string;
-  /** Tailwind border-l color class (e.g. "border-l-amber-500") */
+  /** Classe de borda esquerda no tom semântico (ex.: "border-l-warning") */
   borderColor: string;
-  /** Tailwind dot color (e.g. "bg-amber-500") */
+  /** Classe do ponto no tom semântico (ex.: "bg-warning") */
   dotColor: string;
 }
 
-const LIST_STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  em_progresso: { label: "Em Progresso", color: "bg-warning" },
-  feito: { label: "Feito", color: "bg-success" },
-  enviar_proprietario: { label: "Enviar ao Proprietário", color: "bg-primary" },
+const LIST_STATUS_LABELS: Record<string, { label: string; tom: Tom }> = {
+  em_progresso: { label: "Em Progresso", tom: "warning" },
+  feito: { label: "Feito", tom: "success" },
+  enviar_proprietario: { label: "Enviar ao Proprietário", tom: "primary" },
 };
+
+/** `BOARD_OPTIONS` (src/lib/maintenanceBoard.ts) traz a cor como classe; aqui vira tom. */
+const TOM_POR_COR: Record<string, Tom> = {
+  "bg-warning": "warning",
+  "bg-success": "success",
+  "bg-primary": "primary",
+  "bg-info": "info",
+  "bg-secondary": "secondary",
+  "bg-destructive": "destructive",
+  "bg-muted-foreground": "neutral",
+};
+const tomDaCor = (cor?: string): Tom => TOM_POR_COR[cor ?? ""] ?? "neutral";
 
 interface Props {
   groups: MobileGroupConfig[];
@@ -89,11 +105,10 @@ interface Props {
   onNew: () => void;
 }
 
-const STATUS_OPTIONS = [
-  { value: "em_progresso", label: "Em Progresso", color: "bg-warning" },
-  { value: "feito", label: "Feito", color: "bg-success" },
-  { value: "enviar_proprietario", label: "Enviar ao Proprietário", color: "bg-primary" },
-];
+const STATUS_OPTIONS = (Object.keys(LIST_STATUS_LABELS) as Array<keyof typeof LIST_STATUS_LABELS>).map((value) => ({
+  value,
+  ...LIST_STATUS_LABELS[value],
+}));
 
 interface InlineCurrencyProps {
   value: number;
@@ -277,9 +292,7 @@ export function MobileMaintenanceList({
                 {isOpen && (
                   <div className="space-y-2">
                     {items.length === 0 ? (
-                      <p className="text-xs text-muted-foreground text-center py-3">
-                        Nenhum item neste grupo.
-                      </p>
+                      <CaixaVazia icone={<Wrench className="h-5 w-5" />} titulo="Nenhum item neste grupo" />
                     ) : (
                       items.map((item) => {
                         const isCharge = item.itemType === "charge";
@@ -318,16 +331,12 @@ export function MobileMaintenanceList({
                                   >
                                     <SelectTrigger
                                       className="h-7 px-2 py-0 border-0 bg-transparent hover:bg-muted/60 text-xs w-auto gap-1"
+                                      aria-label="Status da manutenção"
                                     >
                                       {status ? (
-                                        <Badge
-                                          className={cn(
-                                            "text-white text-[10px] px-1.5 py-0",
-                                            status.color,
-                                          )}
-                                        >
+                                        <Etiqueta solida tom={status.tom}>
                                           {status.label}
-                                        </Badge>
+                                        </Etiqueta>
                                       ) : (
                                         <span className="text-[10px] text-muted-foreground">
                                           Definir status
@@ -337,14 +346,9 @@ export function MobileMaintenanceList({
                                     <SelectContent>
                                       {STATUS_OPTIONS.map((opt) => (
                                         <SelectItem key={opt.value} value={opt.value}>
-                                          <Badge
-                                            className={cn(
-                                              "text-white text-xs",
-                                              opt.color,
-                                            )}
-                                          >
+                                          <Etiqueta solida tom={opt.tom}>
                                             {opt.label}
-                                          </Badge>
+                                          </Etiqueta>
                                         </SelectItem>
                                       ))}
                                     </SelectContent>
@@ -352,14 +356,9 @@ export function MobileMaintenanceList({
                                 </div>
                               ) : (
                                 status && (
-                                  <Badge
-                                    className={cn(
-                                      "text-white text-[10px] shrink-0",
-                                      status.color,
-                                    )}
-                                  >
+                                  <Etiqueta solida tom={status.tom} className="shrink-0">
                                     {status.label}
-                                  </Badge>
+                                  </Etiqueta>
                                 )
                               )}
                             </div>
@@ -375,9 +374,9 @@ export function MobileMaintenanceList({
                                   )}
                                 </span>
                               )}
-                              {item.service_type && (
+                              {rotulosServico(item.service_type).length > 0 && (
                                 <span className="truncate">
-                                  {item.service_type.split(",")[0]}
+                                  {rotulosServico(item.service_type).join(", ")}
                                 </span>
                               )}
                             </div>
@@ -402,9 +401,9 @@ export function MobileMaintenanceList({
                                   <SelectContent>
                                     {BOARD_OPTIONS.map((opt) => (
                                       <SelectItem key={opt.value} value={opt.value}>
-                                        <Badge className={cn("text-white text-xs", opt.color)}>
+                                        <Etiqueta solida tom={tomDaCor(opt.color)}>
                                           {opt.label}
-                                        </Badge>
+                                        </Etiqueta>
                                       </SelectItem>
                                     ))}
                                   </SelectContent>
@@ -462,7 +461,8 @@ export function MobileMaintenanceList({
                                   e.stopPropagation();
                                   onOpenAttachments(item, isCharge);
                                 }}
-                                aria-label="Anexos"
+                                aria-label="Ver anexos"
+                                title="Ver anexos"
                               >
                                 <Paperclip className="h-4 w-4 text-muted-foreground" />
                                 {(item.attachments_count ?? 0) > 0 && (
@@ -483,7 +483,8 @@ export function MobileMaintenanceList({
                                   e.stopPropagation();
                                   onOpenChat(item, isCharge);
                                 }}
-                                aria-label="Chat"
+                                aria-label="Abrir conversa"
+                                title="Abrir conversa"
                               >
                                 <MessageSquare className="h-4 w-4 text-muted-foreground" />
                                 {unread > 0 && (

@@ -1,14 +1,27 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { goBack } from "@/lib/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Loader2, Upload, X, AlertTriangle, Sparkles, Trash2, Paperclip } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertTriangle,
+  Clock,
+  Hourglass,
+  Loader2,
+  Paperclip,
+  Siren,
+  Sparkles,
+  Trash2,
+  Upload,
+  Users,
+  Wrench,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -17,9 +30,13 @@ import { VoiceToTextInput } from "@/components/VoiceToTextInput";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { processFileForUpload } from "@/lib/processVideoForUpload";
+import { emParalelo } from "@/lib/fileUpload";
 import { deleteAttachmentRow } from "@/lib/deleteAttachment";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { MediaThumbnail } from "@/components/MediaThumbnail";
+import { CabecalhoPagina, PaginaInterna } from "@/components/painel/PaginaInterna";
+import { RESPONSAVEL_CUSTO } from "@/constants/chargeCategories";
+import { detectMediaKind, type MediaKind } from "@/lib/mediaType";
 
 type ExistingAttachment = {
   id: string;
@@ -28,10 +45,10 @@ type ExistingAttachment = {
   file_type?: string | null;
 };
 
-type ReadyAttachment = { 
-  file_url: string; 
-  file_type: string; 
-  size_bytes: number; 
+type ReadyAttachment = {
+  file_url: string;
+  file_type: string;
+  size_bytes: number;
   name: string;
   ticket_id?: string;
 };
@@ -50,6 +67,25 @@ interface NovaManutencaoProps {
   onSaved?: () => void;
 }
 
+type CostResponsibleForm = "owner" | "management" | "guest" | "pending";
+
+/** O formulário guarda `management`; no banco é `pm` (ver RESPONSAVEL_CUSTO). */
+const OPCOES_RESPONSAVEL: Array<{ value: CostResponsibleForm; rotulo: string; icone?: ReactNode }> = [
+  { value: "pending", rotulo: RESPONSAVEL_CUSTO.pending, icone: <Hourglass className="h-4 w-4 text-muted-foreground" aria-hidden="true" /> },
+  { value: "owner", rotulo: RESPONSAVEL_CUSTO.owner },
+  { value: "management", rotulo: RESPONSAVEL_CUSTO.pm },
+  { value: "guest", rotulo: RESPONSAVEL_CUSTO.guest },
+];
+
+/** O nome real do arquivo nunca aparece: só o tipo. */
+const ROTULO_ANEXO: Record<MediaKind, string> = {
+  image: "Imagem",
+  video: "Vídeo",
+  audio: "Áudio",
+  pdf: "PDF",
+  other: "Documento",
+};
+
 export default function NovaManutencao({ editId, onClose, onSaved }: NovaManutencaoProps = {}) {
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
@@ -60,7 +96,7 @@ export default function NovaManutencao({ editId, onClose, onSaved }: NovaManuten
   const [uploadedFiles, setUploadedFiles] = useState<ReadyAttachment[]>([]);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [costResponsible, setCostResponsible] = useState<'owner' | 'management' | 'guest' | 'pending'>('pending');
+  const [costResponsible, setCostResponsible] = useState<CostResponsibleForm>('pending');
   const [guestCheckoutDate, setGuestCheckoutDate] = useState<string>("");
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -178,10 +214,10 @@ export default function NovaManutencao({ editId, onClose, onSaved }: NovaManuten
     const session = await supabase.auth.getSession();
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-    
+
     const signRes = await fetch(`${supabaseUrl}/functions/v1/upload-sign`, {
       method: 'POST',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${session.data.session?.access_token}`,
         'apikey': supabaseKey,
@@ -192,7 +228,7 @@ export default function NovaManutencao({ editId, onClose, onSaved }: NovaManuten
         filename: file.name,
       }),
     });
-    
+
     if (!signRes.ok) throw new Error('Falha ao assinar upload');
     const { key } = await signRes.json();
 
@@ -223,14 +259,14 @@ export default function NovaManutencao({ editId, onClose, onSaved }: NovaManuten
 
     setUploading(true);
     try {
-      const uploaded: ReadyAttachment[] = [];
-      for (const file of Array.from(selectedFiles)) {
-        // Compress video if it's a video file
-        const processedFile = await processFileForUpload(file);
-        const result = await uploadOne(processedFile);
-        uploaded.push(result);
-      }
+      // Até 3 arquivos ao mesmo tempo; os que subirem ficam, mesmo se outro falhar.
+      const resultados = await emParalelo(Array.from(selectedFiles), async (file) =>
+        uploadOne(await processFileForUpload(file)),
+      );
+      const uploaded = resultados.flatMap((r) => (r.ok ? [r.valor] : []));
+      const falhas = resultados.flatMap((r) => (r.ok ? [] : [r.erro]));
       setUploadedFiles((prev) => [...prev, ...uploaded]);
+      if (falhas.length > 0) throw falhas[0];
       toast.success(`${uploaded.length} arquivo(s) enviado(s) com sucesso!`);
     } catch (error: any) {
       console.error('Upload error:', error);
@@ -254,10 +290,10 @@ export default function NovaManutencao({ editId, onClose, onSaved }: NovaManuten
     setIsGeneratingTitle(true);
     try {
       const selectedProperty = properties.find(p => p.id === propertyId);
-      const propertyContext = selectedProperty ? `Unidade: ${selectedProperty.name}` : '';
-      
+      const propertyContext = selectedProperty ? `Imóvel: ${selectedProperty.name}` : '';
+
       const { data, error } = await supabase.functions.invoke('ai-generate-response', {
-        body: { 
+        body: {
           action: 'generate_title',
           context: {
             description: textToUse,
@@ -266,7 +302,7 @@ export default function NovaManutencao({ editId, onClose, onSaved }: NovaManuten
           }
         }
       });
-      
+
       if (error) throw error;
       if (data?.generatedText) {
         const cleanTitle = data.generatedText.replace(/^["']|["']$/g, '').trim();
@@ -285,25 +321,25 @@ export default function NovaManutencao({ editId, onClose, onSaved }: NovaManuten
     setIsGenerating(true);
     try {
       const selectedProperty = properties.find(p => p.id === propertyId);
-      const propertyContext = selectedProperty ? `Unidade: ${selectedProperty.name}` : '';
-      
+      const propertyContext = selectedProperty ? `Imóvel: ${selectedProperty.name}` : '';
+
       const { data, error } = await supabase.functions.invoke('ai-generate-response', {
-        body: { 
+        body: {
           action: 'generate_maintenance',
           context: {
             prompt: aiPrompt,
             propertyContext,
-            projectContext: 'Sistema de gestão de hospedagens RIOS - registro de manutenção preventiva ou corretiva em unidades de aluguel por temporada. Descreva o problema de forma clara e objetiva, incluindo localização exata, sintomas observados e urgência se aplicável.'
+            projectContext: 'Sistema de gestão de hospedagens RIOS - registro de manutenção preventiva ou corretiva em imóveis de aluguel por temporada. Descreva o problema de forma clara e objetiva, incluindo localização exata, sintomas observados e urgência se aplicável.'
           }
         }
       });
-      
+
       if (error) throw error;
       if (data?.generatedText) {
         setDescription(data.generatedText);
         setAiPrompt("");
         toast.success("Descrição gerada! Revise e edite se necessário.");
-        
+
         // Auto-generate title if subject is empty
         if (!subject.trim()) {
           generateTitle(data.generatedText);
@@ -318,9 +354,9 @@ export default function NovaManutencao({ editId, onClose, onSaved }: NovaManuten
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!propertyId) {
-      toast.error("Selecione a unidade");
+      toast.error("Selecione o imóvel");
       return;
     }
 
@@ -335,7 +371,7 @@ export default function NovaManutencao({ editId, onClose, onSaved }: NovaManuten
       // Get owner_id from property
       const selectedProperty = properties.find(p => p.id === propertyId);
       if (!selectedProperty) {
-        throw new Error("Unidade não encontrada");
+        throw new Error("Imóvel não encontrado");
       }
 
       // Map 'management' to 'pm' for database; keep 'pending' and 'guest' as-is
@@ -478,420 +514,415 @@ export default function NovaManutencao({ editId, onClose, onSaved }: NovaManuten
     }
   };
 
-  const getCostResponsibleLabel = () => {
-    switch (costResponsible) {
-      case 'owner': return 'Proprietário';
-      case 'management': return 'Gestão';
-      case 'guest': return 'Hóspede';
-      case 'pending': return 'Em espera';
-      default: return '';
-    }
-  };
+  const titulo = isEditMode ? "Editar manutenção" : "Nova manutenção";
+  const carregando = isEditMode && (loadingTicket || loadingProperties);
 
-  const handleGoBack = () => {
-    if (isModal) {
-      onClose?.();
-      return;
-    }
-    goBack(navigate, "/admin/manutencoes-lista");
-  };
+  const formulario = carregando ? (
+    <div className="space-y-5" aria-busy="true" aria-label="Carregando manutenção">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="space-y-2">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      ))}
+    </div>
+  ) : (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-2">
+        <Label htmlFor="property">Imóvel *</Label>
+        <Select value={propertyId} onValueChange={setPropertyId} required>
+          <SelectTrigger id="property" aria-label="Imóvel">
+            <SelectValue placeholder="Selecione o imóvel" />
+          </SelectTrigger>
+          <SelectContent className="z-50 bg-popover">
+            {properties.map((property) => (
+              <SelectItem key={property.id} value={property.id}>
+                {property.name}
+                {property.profiles?.name && ` - ${property.profiles.name}`}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-  return (
-    <div className={isModal ? "" : "min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5"}>
-      {!isModal && (
-        <header className="border-b bg-card/50 backdrop-blur-sm">
-          <div className="container mx-auto flex h-16 items-center gap-4 px-4">
-            <Button variant="ghost" size="icon" type="button" onClick={handleGoBack}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-xl font-semibold">{isEditMode ? 'Editar Manutenção' : 'Nova Manutenção'}</h1>
-          </div>
-        </header>
-      )}
-
-      <main className={isModal ? "" : "container mx-auto max-w-2xl px-4 py-8"}>
-        <Card className={isModal ? "shadow-none border-0" : "shadow-xl"}>
-          <CardHeader>
-            <CardTitle>{isEditMode ? 'Editar manutenção' : 'Criar manutenção'}</CardTitle>
-            <CardDescription>
-              {isEditMode ? 'Atualize as informações deste chamado' : 'Registre um novo chamado de manutenção para uma unidade'}
-            </CardDescription>
-          </CardHeader>
-          {(isEditMode && (loadingTicket || loadingProperties)) ? (
-            <CardContent>
-              <div className="flex items-center justify-center py-10 gap-2 text-muted-foreground text-sm">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Carregando dados da manutenção...
-              </div>
-            </CardContent>
-          ) : (
-          <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="property">Unidade *</Label>
-                <Select value={propertyId} onValueChange={setPropertyId} required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a unidade" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background border-border z-50">
-                    {properties.map((property) => (
-                      <SelectItem key={property.id} value={property.id}>
-                        {property.name}
-                        {property.profiles?.name && ` - ${property.profiles.name}`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="subject">Assunto *</Label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Input
-                      id="subject"
-                      placeholder={isGeneratingTitle ? "Gerando título..." : "Ex: Torneira do banheiro vazando"}
-                      value={subject}
-                      onChange={(e) => setSubject(e.target.value)}
-                      disabled={isGeneratingTitle}
-                      required
-                    />
-                    {isGeneratingTitle && (
-                      <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
-                    )}
-                  </div>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="icon"
-                    onClick={() => generateTitle()}
-                    disabled={isGeneratingTitle || !description.trim()}
-                    title="Gerar título com IA"
-                  >
-                    {isGeneratingTitle ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Descrição *</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Descreva o problema encontrado..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={4}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="aiPrompt">Gerar com IA (opcional)</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="aiPrompt"
-                    value={aiPrompt}
-                    onChange={(e) => setAiPrompt(e.target.value)}
-                    placeholder="Ex: torneira vazando no banheiro da suíte"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        generateDescription();
-                      }
-                    }}
-                  />
-                  <VoiceToTextInput onTranscript={(text) => setAiPrompt(prev => prev ? `${prev} ${text}` : text)} />
-                  <Button
-                    type="button"
-                    onClick={generateDescription}
-                    disabled={isGenerating || !aiPrompt.trim()}
-                    variant="secondary"
-                  >
-                    {isGenerating ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Sparkles className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Descreva brevemente o problema e a IA gerará uma descrição detalhada
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                <Label>Responsável pelo custo *</Label>
-                <RadioGroup 
-                  value={costResponsible} 
-                  onValueChange={(v) => setCostResponsible(v as any)}
-                  className="grid grid-cols-2 gap-3"
-                >
-                  <div className="flex items-center space-x-2 border rounded-lg p-3 border-muted-foreground/30 bg-muted/40">
-                    <RadioGroupItem value="pending" id="cost-pending" />
-                    <Label htmlFor="cost-pending" className="font-normal cursor-pointer flex-1">
-                      ⏳ Em espera
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2 border rounded-lg p-3">
-                    <RadioGroupItem value="owner" id="cost-owner" />
-                    <Label htmlFor="cost-owner" className="font-normal cursor-pointer flex-1">
-                      Proprietário
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2 border rounded-lg p-3">
-                    <RadioGroupItem value="management" id="cost-management" />
-                    <Label htmlFor="cost-management" className="font-normal cursor-pointer flex-1">
-                      Gestão
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2 border rounded-lg p-3">
-                    <RadioGroupItem value="guest" id="cost-guest" />
-                    <Label htmlFor="cost-guest" className="font-normal cursor-pointer flex-1">
-                      Hóspede
-                    </Label>
-                  </div>
-                </RadioGroup>
-
-                {costResponsible === 'pending' && (
-                  <Alert className="border-muted-foreground/30 bg-muted/30">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertDescription>
-                      O responsável pelo custo ainda <strong>não foi definido</strong>. A manutenção <strong>não será visível</strong> para o proprietário e <strong>nenhuma notificação</strong> será enviada até que a equipe selecione um responsável na lista.
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {costResponsible === 'management' && (
-                  <Alert className="border-info/30 bg-info/10 dark:bg-blue-950/30">
-                    <AlertTriangle className="h-4 w-4 text-info" />
-                    <AlertDescription className="text-info dark:text-blue-300">
-                      Esta manutenção <strong>não será visível</strong> para o proprietário. Use para manutenções internas ou de responsabilidade da gestão.
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {costResponsible === 'guest' && (
-                  <div className="space-y-3">
-                    <Alert className="border-warning/30 bg-warning/10 dark:bg-orange-950/30">
-                      <AlertTriangle className="h-4 w-4 text-warning" />
-                      <AlertDescription className="text-warning dark:text-orange-300">
-                        Esta manutenção <strong>não será visível</strong> para o proprietário. Use para problemas causados por hóspedes ou substituições internas.
-                      </AlertDescription>
-                    </Alert>
-                    <div className="space-y-2 pl-4 border-l-2 border-warning/30">
-                      <Label htmlFor="guestCheckoutDate">Data de checkout do hóspede *</Label>
-                      <Input
-                        id="guestCheckoutDate"
-                        type="date"
-                        value={guestCheckoutDate}
-                        onChange={(e) => setGuestCheckoutDate(e.target.value)}
-                        required={costResponsible === 'guest'}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        O lembrete de cobrança aparecerá 14 dias após esta data (regra Airbnb)
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-              </div>
-
-              {/* Owner Decision Mode - only show for owner-responsible costs */}
-              {costResponsible === 'owner' && (
-                <div className="space-y-3">
-                  <Label>Modo de decisão do proprietário</Label>
-                  <RadioGroup 
-                    value={ownerActionMode} 
-                    onValueChange={(v) => setOwnerActionMode(v as any)}
-                    className="space-y-2"
-                  >
-                    <div className="flex items-start space-x-2 border rounded-lg p-3">
-                      <RadioGroupItem value="pending_decision" id="mode-pending" className="mt-1" />
-                      <div className="flex-1">
-                        <Label htmlFor="mode-pending" className="font-medium cursor-pointer">
-                          ⏰ Aguardar decisão (72h)
-                        </Label>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          O proprietário terá 72h para decidir se assume a execução ou delega à gestão. 
-                          Ele será notificado por email e push, com lembrete 24h antes do prazo.
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-start space-x-2 border rounded-lg p-3 border-warning/30 bg-warning/10/50">
-                      <RadioGroupItem value="essential" id="mode-essential" className="mt-1" />
-                      <div className="flex-1">
-                        <Label htmlFor="mode-essential" className="font-medium cursor-pointer text-warning">
-                          🚨 Essencial / Urgente
-                        </Label>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Manutenção crítica que precisa ser executada imediatamente (vazamentos, 
-                          problemas elétricos graves, etc). Não aguarda decisão do proprietário.
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-start space-x-2 border rounded-lg p-3 border-info/30 bg-info/10/50">
-                      <RadioGroupItem value="pm_immediate" id="mode-pm" className="mt-1" />
-                      <div className="flex-1">
-                        <Label htmlFor="mode-pm" className="font-medium cursor-pointer text-info">
-                          👥 Gestão assume imediatamente
-                        </Label>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          A gestão assumirá a execução sem consultar o proprietário. 
-                          Útil para manutenções pequenas ou já acordadas.
-                        </p>
-                      </div>
-                    </div>
-                  </RadioGroup>
-                </div>
-              )}
-              <div className="space-y-2">
-                <Label>Prioridade</Label>
-                <RadioGroup value={priority} onValueChange={(v) => setPriority(v as any)}>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="normal" id="normal" />
-                    <Label htmlFor="normal" className="font-normal cursor-pointer">
-                      Normal
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="urgente" id="urgente" />
-                    <Label htmlFor="urgente" className="font-normal cursor-pointer">
-                      Urgente
-                    </Label>
-                  </div>
-                </RadioGroup>
-              </div>
-
-              {isEditMode && (
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <Paperclip className="h-4 w-4" />
-                    Anexos existentes {existingAttachments.length > 0 && `(${existingAttachments.length})`}
-                  </Label>
-                  {loadingAttachments ? (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Loader2 className="h-4 w-4 animate-spin" /> Carregando anexos...
-                    </div>
-                  ) : existingAttachments.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Nenhum anexo nesta manutenção.</p>
-                  ) : (
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-                      {existingAttachments.map((att) => (
-                        <div key={att.id} className="relative group aspect-square">
-                          <MediaThumbnail
-                            src={att.file_url}
-                            fileType={att.file_type}
-                            fileName={att.file_name}
-                            size="md"
-                          />
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="icon"
-                            className="absolute top-1 right-1 h-7 w-7 p-0 z-10 opacity-90 hover:opacity-100"
-                            onClick={() => setAttachmentToDelete(att)}
-                            title="Excluir anexo"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="files">{isEditMode ? 'Adicionar novos anexos' : 'Anexos (opcional)'}</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    ref={inputRef}
-                    id="files"
-                    type="file"
-                    multiple
-                    accept="image/*,video/*,application/pdf,.pdf"
-                    onChange={handleFileChange}
-                    className="cursor-pointer"
-                    disabled={uploading}
-                  />
-                  {uploading ? (
-                    <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
-                  ) : (
-                    <Upload className="h-5 w-5 text-muted-foreground" />
-                  )}
-                </div>
-                {uploadedFiles.length > 0 && (
-                  <div className="space-y-2 mt-2">
-                    <p className="text-sm text-muted-foreground">
-                      {uploadedFiles.length} arquivo(s) pronto(s):
-                    </p>
-                    <div className="space-y-1">
-                      {uploadedFiles.map((file, idx) => (
-                        <div key={idx} className="flex items-center justify-between text-xs border rounded px-2 py-1">
-                          <span className="truncate flex-1">{file.name}</span>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 ml-2"
-                            onClick={() => removeFile(file.file_url)}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <Button type="submit" className="w-full" disabled={loading || uploading || loadingTicket}>
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {isEditMode ? 'Salvando...' : 'Criando...'}
-                  </>
-                ) : (
-                  isEditMode ? 'Salvar Alterações' : 'Criar Manutenção'
-                )}
-              </Button>
-            </CardContent>
-          </form>
-          )}
-        </Card>
-      </main>
-
-      <ConfirmationDialog
-        open={!!attachmentToDelete}
-        onOpenChange={(o) => !o && setAttachmentToDelete(null)}
-        title="Excluir anexo?"
-        description={
-          <div className="space-y-2">
-            <p>Esta ação é permanente e não pode ser desfeita.</p>
-            {attachmentToDelete?.file_name && (
-              <p className="text-xs">
-                Arquivo: <span className="font-mono">{attachmentToDelete.file_name}</span>
-              </p>
+      <div className="space-y-2">
+        <Label htmlFor="subject">Assunto *</Label>
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Input
+              id="subject"
+              placeholder={isGeneratingTitle ? "Gerando título..." : "Ex: Torneira do banheiro vazando"}
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              disabled={isGeneratingTitle}
+              required
+            />
+            {isGeneratingTitle && (
+              <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" aria-hidden="true" />
             )}
           </div>
-        }
-        confirmLabel="Excluir"
-        variant="destructive"
-        loading={deletingAttachment}
-        onConfirm={async () => {
-          if (!attachmentToDelete) return;
-          setDeletingAttachment(true);
-          try {
-            const ok = await deleteAttachmentRow('ticket_attachments', attachmentToDelete.id);
-            if (ok) {
-              setExistingAttachments((prev) => prev.filter((a) => a.id !== attachmentToDelete.id));
-              setAttachmentToDelete(null);
-            }
-          } finally {
-            setDeletingAttachment(false);
+          <Button
+            type="button"
+            variant="secondary"
+            size="icon"
+            onClick={() => generateTitle()}
+            disabled={isGeneratingTitle || !description.trim()}
+            title="Gerar título com IA"
+            aria-label="Gerar título com IA"
+          >
+            {isGeneratingTitle ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+          </Button>
+        </div>
+      </div>
+
+      {/* A IA preenche a Descrição logo abaixo: por isso fica antes dela. */}
+      <div className="space-y-2 rounded-lg border border-border/70 bg-muted/30 p-3">
+        <Label htmlFor="aiPrompt" className="flex items-center gap-1.5">
+          <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+          Gerar descrição com IA (opcional)
+        </Label>
+        <div className="flex gap-2">
+          <Input
+            id="aiPrompt"
+            value={aiPrompt}
+            onChange={(e) => setAiPrompt(e.target.value)}
+            placeholder="Ex: torneira vazando no banheiro da suíte"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                generateDescription();
+              }
+            }}
+          />
+          <VoiceToTextInput onTranscript={(text) => setAiPrompt(prev => prev ? `${prev} ${text}` : text)} />
+          <Button
+            type="button"
+            onClick={generateDescription}
+            disabled={isGenerating || !aiPrompt.trim()}
+            variant="secondary"
+            size="icon"
+            title="Gerar descrição"
+            aria-label="Gerar descrição"
+          >
+            {isGenerating ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Descreva brevemente o problema, por texto ou voz, e a IA escreve a descrição detalhada.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="description">Descrição *</Label>
+        <Textarea
+          id="description"
+          placeholder="Descreva o problema encontrado..."
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={4}
+          required
+        />
+      </div>
+
+      <div className="space-y-3">
+        <Label>Responsável pelo custo *</Label>
+        <RadioGroup
+          value={costResponsible}
+          onValueChange={(v) => setCostResponsible(v as CostResponsibleForm)}
+          className="grid grid-cols-2 gap-3"
+        >
+          {OPCOES_RESPONSAVEL.map((opcao) => (
+            <div
+              key={opcao.value}
+              className={
+                opcao.value === "pending"
+                  ? "flex items-center space-x-2 rounded-lg border border-muted-foreground/30 bg-muted/40 p-3"
+                  : "flex items-center space-x-2 rounded-lg border p-3"
+              }
+            >
+              <RadioGroupItem value={opcao.value} id={`cost-${opcao.value}`} />
+              <Label htmlFor={`cost-${opcao.value}`} className="flex flex-1 cursor-pointer items-center gap-1.5 font-normal">
+                {opcao.icone}
+                {opcao.rotulo}
+              </Label>
+            </div>
+          ))}
+        </RadioGroup>
+
+        {costResponsible === 'pending' && (
+          <Alert className="border-muted-foreground/30 bg-muted/30">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              O responsável pelo custo ainda <strong>não foi definido</strong>. A manutenção <strong>não será visível</strong> para o proprietário e <strong>nenhuma notificação</strong> será enviada até que a equipe selecione um responsável na lista.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {costResponsible === 'management' && (
+          <Alert className="border-info/30 bg-info/10">
+            <AlertTriangle className="h-4 w-4 text-info" />
+            <AlertDescription className="text-info">
+              Esta manutenção <strong>não será visível</strong> para o proprietário. Use para manutenções internas ou de responsabilidade da gestão.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {costResponsible === 'guest' && (
+          <div className="space-y-3">
+            <Alert className="border-warning/30 bg-warning/10">
+              <AlertTriangle className="h-4 w-4 text-warning" />
+              <AlertDescription className="text-warning">
+                Esta manutenção <strong>não será visível</strong> para o proprietário. Use para problemas causados por hóspedes ou substituições internas.
+              </AlertDescription>
+            </Alert>
+            <div className="space-y-2 border-l-2 border-warning/30 pl-4">
+              <Label htmlFor="guestCheckoutDate">Data de checkout do hóspede *</Label>
+              <Input
+                id="guestCheckoutDate"
+                type="date"
+                value={guestCheckoutDate}
+                onChange={(e) => setGuestCheckoutDate(e.target.value)}
+                required={costResponsible === 'guest'}
+              />
+              <p className="text-xs text-muted-foreground">
+                O lembrete de cobrança aparecerá 14 dias após esta data (regra Airbnb)
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Modo de decisão: só quando o custo é do proprietário */}
+      {costResponsible === 'owner' && (
+        <div className="space-y-3">
+          <Label>Modo de decisão do proprietário</Label>
+          <RadioGroup
+            value={ownerActionMode}
+            onValueChange={(v) => setOwnerActionMode(v as typeof ownerActionMode)}
+            className="space-y-2"
+          >
+            <div className="flex items-start space-x-2 rounded-lg border p-3">
+              <RadioGroupItem value="pending_decision" id="mode-pending" className="mt-1" />
+              <div className="flex-1">
+                <Label htmlFor="mode-pending" className="flex cursor-pointer items-center gap-1.5 font-medium">
+                  <Clock className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                  Aguardar decisão (72h)
+                </Label>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  O proprietário terá 72h para decidir se assume a execução ou delega à gestão.
+                  Ele será notificado por email e push, com lembrete 24h antes do prazo.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start space-x-2 rounded-lg border border-warning/30 bg-warning/10 p-3">
+              <RadioGroupItem value="essential" id="mode-essential" className="mt-1" />
+              <div className="flex-1">
+                <Label htmlFor="mode-essential" className="flex cursor-pointer items-center gap-1.5 font-medium text-warning">
+                  <Siren className="h-4 w-4" aria-hidden="true" />
+                  Essencial / Urgente
+                </Label>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Manutenção crítica que precisa ser executada imediatamente (vazamentos,
+                  problemas elétricos graves, etc). Não aguarda decisão do proprietário.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start space-x-2 rounded-lg border border-info/30 bg-info/10 p-3">
+              <RadioGroupItem value="pm_immediate" id="mode-pm" className="mt-1" />
+              <div className="flex-1">
+                <Label htmlFor="mode-pm" className="flex cursor-pointer items-center gap-1.5 font-medium text-info">
+                  <Users className="h-4 w-4" aria-hidden="true" />
+                  Gestão assume imediatamente
+                </Label>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  A gestão assumirá a execução sem consultar o proprietário.
+                  Útil para manutenções pequenas ou já acordadas.
+                </p>
+              </div>
+            </div>
+          </RadioGroup>
+        </div>
+      )}
+
+      <div className="space-y-2">
+        <Label>Prioridade</Label>
+        <RadioGroup value={priority} onValueChange={(v) => setPriority(v as "normal" | "urgente")}>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="normal" id="normal" />
+            <Label htmlFor="normal" className="cursor-pointer font-normal">
+              Normal
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="urgente" id="urgente" />
+            <Label htmlFor="urgente" className="cursor-pointer font-normal">
+              Urgente
+            </Label>
+          </div>
+        </RadioGroup>
+      </div>
+
+      {isEditMode && (
+        <div className="space-y-2">
+          <Label className="flex items-center gap-2">
+            <Paperclip className="h-4 w-4" aria-hidden="true" />
+            Anexos existentes {existingAttachments.length > 0 && `(${existingAttachments.length})`}
+          </Label>
+          {loadingAttachments ? (
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6" aria-busy="true" aria-label="Carregando anexos">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="aspect-square w-full rounded-md" />
+              ))}
+            </div>
+          ) : existingAttachments.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum anexo nesta manutenção.</p>
+          ) : (
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
+              {existingAttachments.map((att) => (
+                <div key={att.id} className="group relative aspect-square">
+                  <MediaThumbnail
+                    src={att.file_url}
+                    fileType={att.file_type}
+                    fileName={att.file_name}
+                    size="md"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    className="absolute right-1 top-1 z-10 h-7 w-7 p-0 opacity-90 hover:opacity-100"
+                    onClick={() => setAttachmentToDelete(att)}
+                    title="Excluir anexo"
+                    aria-label="Excluir anexo"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="space-y-2">
+        <Label htmlFor="files">{isEditMode ? 'Adicionar novos anexos' : 'Anexos (opcional)'}</Label>
+        <input
+          ref={inputRef}
+          id="files"
+          type="file"
+          multiple
+          accept="image/*,video/*,application/pdf,.pdf"
+          onChange={handleFileChange}
+          className="hidden"
+          disabled={uploading}
+        />
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
+        >
+          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+          {uploading ? "Enviando…" : "Escolher arquivos"}
+        </Button>
+        <p className="text-xs text-muted-foreground">Fotos, vídeos ou PDF. Vídeos grandes são reduzidos antes do envio.</p>
+        {uploadedFiles.length > 0 && (
+          <div className="mt-2 space-y-2">
+            <p className="text-sm text-muted-foreground">
+              {uploadedFiles.length} arquivo(s) pronto(s):
+            </p>
+            <div className="space-y-1">
+              {uploadedFiles.map((file, idx) => (
+                <div key={file.file_url} className="flex items-center justify-between rounded-md border border-border/70 px-2.5 py-1.5 text-xs">
+                  <span className="truncate">
+                    {ROTULO_ANEXO[detectMediaKind(file.file_type, file.name, file.file_url)]} {idx + 1}
+                    <span className="text-muted-foreground"> · {(file.size_bytes / 1024).toFixed(0)} KB</span>
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="ml-2 h-6 w-6"
+                    onClick={() => removeFile(file.file_url)}
+                    aria-label="Remover arquivo"
+                    title="Remover arquivo"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <Button type="submit" className="w-full" disabled={loading || uploading || loadingTicket}>
+        {loading ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            {isEditMode ? 'Salvando...' : 'Criando...'}
+          </>
+        ) : (
+          isEditMode ? 'Salvar alterações' : 'Criar manutenção'
+        )}
+      </Button>
+    </form>
+  );
+
+  const dialogoExcluirAnexo = (
+    <ConfirmationDialog
+      open={!!attachmentToDelete}
+      onOpenChange={(o) => !o && setAttachmentToDelete(null)}
+      title="Excluir anexo?"
+      description="Esta ação é permanente e não pode ser desfeita."
+      confirmLabel="Excluir"
+      variant="destructive"
+      loading={deletingAttachment}
+      onConfirm={async () => {
+        if (!attachmentToDelete) return;
+        setDeletingAttachment(true);
+        try {
+          const ok = await deleteAttachmentRow('ticket_attachments', attachmentToDelete.id);
+          if (ok) {
+            setExistingAttachments((prev) => prev.filter((a) => a.id !== attachmentToDelete.id));
+            setAttachmentToDelete(null);
           }
-        }}
-      />
-    </div>
+        } finally {
+          setDeletingAttachment(false);
+        }
+      }}
+    />
+  );
+
+  // Dentro do diálogo de edição só vai o formulário: o título é do diálogo.
+  if (isModal) {
+    return (
+      <div className="px-4 pb-2">
+        {formulario}
+        {dialogoExcluirAnexo}
+      </div>
+    );
+  }
+
+  return (
+    <PaginaInterna
+      largura="estreita"
+      cabecalho={
+        <CabecalhoPagina
+          titulo={titulo}
+          subtitulo={isEditMode ? "Atualize as informações desta manutenção" : "Registre uma manutenção para um imóvel"}
+          icone={<Wrench />}
+          tom="primary"
+          voltarPara="/admin/manutencoes-lista"
+        />
+      }
+    >
+      <Card className="rounded-xl border-border/70 p-4 md:p-6">{formulario}</Card>
+      {dialogoExcluirAnexo}
+    </PaginaInterna>
   );
 }

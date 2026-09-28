@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { isVideoFile, FileUploadProgress } from '@/lib/fileUpload';
 import { processFileForUpload } from '@/lib/processVideoForUpload';
+import { comprimirImagem, emParalelo } from '@/lib/fileUpload';
 import { VideoCompressionProgress } from '@/components/VideoCompressionProgress';
 import { useNativeMedia } from '@/hooks/useNativeMedia';
 import { Capacitor } from '@capacitor/core';
@@ -177,9 +178,8 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
     setUploadedFiles(prev => [...prev, ...newFiles]);
     e.target.value = '';
 
-    // Process and upload each file progressively
-    for (let i = 0; i < selectedFiles.length; i++) {
-      const originalFile = selectedFiles[i];
+    // Process and upload up to 3 files at a time
+    await emParalelo(selectedFiles, async (originalFile) => {
       try {
         let fileToUpload = originalFile;
         
@@ -199,13 +199,15 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
               f.file === originalFile ? { ...f, compressing: false, uploading: true, file: fileToUpload } : f
             )
           );
+        } else {
+          fileToUpload = await comprimirImagem(originalFile);
         }
         
         const url = await uploadFile(fileToUpload);
         setUploadedFiles(prev => 
           prev.map(f => 
             (f.file === originalFile || f.file === fileToUpload) 
-              ? { ...f, url, uploading: false, compressing: false } 
+              ? { ...f, file: fileToUpload, url, uploading: false, compressing: false } 
               : f
           )
         );
@@ -218,7 +220,7 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
         );
         toast.error(`Erro no upload de ${originalFile.name}`);
       }
-    }
+    });
   };
 
   const handleRemoveFile = (file: File) => {
@@ -303,13 +305,15 @@ export default function CleanerInspectionForm({ propertyId, propertyName, onBack
             f.file === file ? { ...f, compressing: false, uploading: true, file: fileToUpload } : f
           )
         );
+      } else {
+        fileToUpload = await comprimirImagem(file);
       }
       
       const url = await uploadFile(fileToUpload);
       setUploadedFiles(prev => 
         prev.map(f => 
           (f.file === file || f.file === fileToUpload) 
-            ? { ...f, url, uploading: false, compressing: false } 
+            ? { ...f, file: fileToUpload, url, uploading: false, compressing: false } 
             : f
         )
       );

@@ -26,14 +26,14 @@ export function ChatReceiptStatus({
 }: ChatReceiptStatusProps) {
   if (!isOwnMessage) return null;
 
-  const time = format(new Date(createdAt), "HH:mm");
   const read = receipts.length > 0;
 
+  // A hora de envio já aparece ao lado do nome; aqui só o estado.
   const label = pending
     ? "Enviando…"
     : read
       ? `Visualizado ${format(new Date(receipts[0].read_at), "HH:mm")}`
-      : `Enviado ${time}`;
+      : "Enviado";
 
   const icon = pending ? (
     <Check className="h-3 w-3 opacity-40" />

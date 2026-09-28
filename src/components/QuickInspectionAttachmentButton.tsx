@@ -3,7 +3,7 @@ import { Paperclip, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { processFileForUpload } from "@/lib/fileUpload";
+import { emParaleloOuFalha, processFileForUpload } from "@/lib/fileUpload";
 
 interface QuickInspectionAttachmentButtonProps {
   inspectionId: string;
@@ -30,7 +30,8 @@ export function QuickInspectionAttachmentButton({ inspectionId, onSuccess }: Qui
 
     try {
       // Process and upload each file
-      for (const file of Array.from(files)) {
+      // Até 3 arquivos ao mesmo tempo.
+      await emParaleloOuFalha(Array.from(files), async (file, indiceArquivo) => {
         // Process file (compress if video)
         const processedFile = await processFileForUpload(file, (progress) => {
           console.log('[QuickInspectionAttachment]', progress.message);
@@ -63,7 +64,7 @@ export function QuickInspectionAttachmentButton({ inspectionId, onSuccess }: Qui
           });
 
         if (attachmentError) throw attachmentError;
-      }
+      });
 
       toast.success("Anexo adicionado à vistoria!");
       onSuccess?.();

@@ -1,8 +1,8 @@
-import { compressVideo, isVideoFile, FileUploadProgress } from '@/lib/fileUpload';
+import { compressVideo, comprimirImagem, isVideoFile, FileUploadProgress } from '@/lib/fileUpload';
 
 /**
- * Process a file for upload, compressing videos if supported
- * Returns the processed file (compressed or original)
+ * Process a file for upload: compresses videos (if supported) and reduces
+ * photos. Returns the processed file (compressed or original)
  */
 export async function processFileForUpload(
   file: File,
@@ -11,7 +11,7 @@ export async function processFileForUpload(
   if (isVideoFile(file)) {
     return await compressVideo(file, onProgress);
   }
-  return file;
+  return comprimirImagem(file);
 }
 
 /**

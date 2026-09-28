@@ -8,6 +8,7 @@ import { formatBRL } from "@/lib/format";
 import { estaVencida } from "@/lib/vencimento";
 import { cn } from "@/lib/utils";
 import { Indicador, IndicadorSkeleton } from "./Indicador";
+import { valorDevido } from "@/lib/cobrancaMeta";
 
 const STATUS_ABERTOS = ["novo", "em_analise", "aguardando_info", "em_execucao"] as const;
 
@@ -57,7 +58,7 @@ async function buscarResumo(): Promise<Resumo> {
   const valorVencido = vencidas.reduce(
     (soma, c) =>
       soma +
-      Math.max(0, c.amount_cents - (c.management_contribution_cents || 0) - (c.credit_applied_cents || 0)),
+      valorDevido(c),
     0,
   );
 

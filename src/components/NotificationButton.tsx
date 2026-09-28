@@ -13,8 +13,24 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { supabase } from "@/integrations/supabase/client";
-import { Bell, Ticket, DollarSign, Wrench, Vote, AlertCircle, BellRing, Loader2 } from "lucide-react";
+import {
+  AlertCircle,
+  Bell,
+  BellRing,
+  ClipboardCheck,
+  DollarSign,
+  FileText,
+  Loader2,
+  MessageSquare,
+  Newspaper,
+  Sparkles,
+  Ticket,
+  Vote,
+  Wrench,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -41,33 +57,39 @@ interface Notification {
 
 const PAGE_SIZE = 50;
 
-const getNotificationIcon = (type: string) => {
-  switch (type) {
-    case "ticket":
-      return <Ticket className="h-4 w-4" />;
-    case "charge":
-      return <DollarSign className="h-4 w-4" />;
-    case "maintenance":
-      return <Wrench className="h-4 w-4" />;
-    case "vote":
-      return <Vote className="h-4 w-4" />;
-    case "alert":
-      return <AlertCircle className="h-4 w-4" />;
-    default:
-      return <Bell className="h-4 w-4" />;
-  }
+/**
+ * Ícone pelo tipo gravado no backend. Os tipos vêm de várias functions
+ * (`ticket_created_team`, `charge_overdue`, `maintenance_update`,
+ * `resumo_diario`, `inspection_created`...), por isso a maioria casa por prefixo.
+ */
+const iconeNotificacao = (type: string) => {
+  if (type === "ticket") return <Ticket className="h-4 w-4" />;
+  if (type.startsWith("ticket")) return <MessageSquare className="h-4 w-4" />;
+  if (type.startsWith("charge")) return <DollarSign className="h-4 w-4" />;
+  if (type.startsWith("maintenance") || type.startsWith("decision")) return <Wrench className="h-4 w-4" />;
+  if (type === "vote" || type.startsWith("proposal")) return <Vote className="h-4 w-4" />;
+  if (type.startsWith("alert")) return <AlertCircle className="h-4 w-4" />;
+  if (type === "resumo_diario") return <Newspaper className="h-4 w-4" />;
+  if (type.startsWith("inspection")) return <ClipboardCheck className="h-4 w-4" />;
+  if (type.startsWith("curation")) return <Sparkles className="h-4 w-4" />;
+  if (type === "report") return <FileText className="h-4 w-4" />;
+  return <Bell className="h-4 w-4" />;
 };
 
 export function NotificationButton() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
+  const [carregando, setCarregando] = useState(true);
   const [isPushEnabled, setIsPushEnabled] = useState(false);
   const [enablingPush, setEnablingPush] = useState(false);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [tab, setTab] = useState<"unread" | "all">("unread");
+  // Lidas nesta abertura do painel: ficam na aba "Não lidas" até fechar,
+  // só com o ponto apagado. Sumir na hora parecia que o clique falhou.
+  const [lidasAgora, setLidasAgora] = useState<Set<string>>(new Set());
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
@@ -98,7 +120,12 @@ export function NotificationButton() {
     return () => {
       supabase.removeChannel(channel);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!open) setLidasAgora(new Set());
+  }, [open]);
 
   const fetchUnreadCount = async () => {
     try {
@@ -224,6 +251,8 @@ export function NotificationButton() {
       }
     } catch (error) {
       console.error("Error fetching notifications:", error);
+    } finally {
+      setCarregando(false);
     }
   }, []);
 
@@ -235,11 +264,12 @@ export function NotificationButton() {
 
   const markAsRead = async (notificationId: string) => {
     try {
+      setLidasAgora(prev => new Set(prev).add(notificationId));
+      setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, read: true } : n));
       await supabase
         .from("notifications")
         .update({ read: true })
         .eq("id", notificationId);
-      setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, read: true } : n));
       fetchUnreadCount();
     } catch (error) {
       console.error("Error marking notification as read:", error);
@@ -272,40 +302,61 @@ export function NotificationButton() {
   };
 
   const renderList = (items: Notification[]) => {
-    if (items.length === 0) {
+    if (carregando) {
       return (
-        <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-          <Bell className="h-12 w-12 mb-3 opacity-20" />
-          <p className="text-sm">Nenhuma notificação</p>
+        <div className="space-y-2 p-4" aria-busy="true" aria-label="Carregando notificações">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex gap-3">
+              <Skeleton className="mt-1 h-4 w-4 rounded" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-1/3" />
+              </div>
+            </div>
+          ))}
         </div>
       );
     }
+    if (items.length === 0) {
+      return (
+        <EmptyState
+          icon={<Bell className="h-5 w-5" />}
+          title="Nenhuma notificação"
+          description={tab === "unread" ? "Você está em dia." : "As notificações do portal aparecem aqui."}
+          className="py-10 [&>div:first-child]:h-10 [&>div:first-child]:w-10 [&>h3]:text-sm [&>p]:text-xs"
+        />
+      );
+    }
     return (
-      <div className="divide-y">
+      <div className="divide-y divide-border/60">
         {items.map((notification) => (
           <button
             key={notification.id}
+            type="button"
             onClick={() => handleNotificationClick(notification)}
-            className={`w-full text-left p-4 hover:bg-muted/50 transition-colors ${
-              !notification.read ? "bg-muted/30" : ""
-            }`}
+            className={cn(
+              "w-full p-4 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:bg-muted/50",
+              !notification.read && "bg-muted/30",
+            )}
           >
             <div className="flex gap-3">
-              <div className={`mt-1 ${!notification.read ? "text-[hsl(var(--rios-terra))]" : "text-muted-foreground"}`}>
-                {getNotificationIcon(notification.type)}
+              <div className={cn("mt-1", !notification.read ? "text-primary" : "text-muted-foreground")} aria-hidden="true">
+                {iconeNotificacao(notification.type)}
               </div>
-              <div className="flex-1 space-y-1 min-w-0">
+              <div className="min-w-0 flex-1 space-y-1">
                 <div className="flex items-start justify-between gap-2">
-                  <p className={`text-sm font-medium leading-tight ${
-                    !notification.read ? "text-foreground font-semibold" : "text-muted-foreground"
-                  }`}>
+                  <p className={cn(
+                    "text-sm leading-tight",
+                    !notification.read ? "font-semibold text-foreground" : "font-medium text-muted-foreground",
+                  )}>
                     {notification.title}
                   </p>
                   {!notification.read && (
-                    <span className="h-2 w-2 rounded-full bg-[hsl(var(--rios-terra))] flex-shrink-0 mt-1" />
+                    <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" aria-hidden="true" />
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground line-clamp-2">
+                <p className="line-clamp-2 text-xs text-muted-foreground">
                   {notification.message}
                 </p>
                 <p className="text-xs text-muted-foreground">
@@ -319,7 +370,7 @@ export function NotificationButton() {
           </button>
         ))}
         {hasMore && (
-          <div className="p-3 flex justify-center">
+          <div className="flex justify-center p-3">
             <Button
               variant="ghost"
               size="sm"
@@ -327,11 +378,8 @@ export function NotificationButton() {
               disabled={loadingMore}
               className="text-xs"
             >
-              {loadingMore ? (
-                <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Carregando...</>
-              ) : (
-                "Carregar mais"
-              )}
+              {loadingMore && <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />}
+              Carregar mais
             </Button>
           </div>
         )}
@@ -339,21 +387,24 @@ export function NotificationButton() {
     );
   };
 
-  const unreadList = notifications.filter(n => !n.read);
+  const unreadList = notifications.filter(n => !n.read || lidasAgora.has(n.id));
+  const rotuloSino = unreadCount > 0
+    ? `Notificações, ${unreadCount} não lida${unreadCount === 1 ? "" : "s"}`
+    : "Notificações";
 
   const Trigger = (
     <Button
       variant="ghost"
       size="icon"
       className="relative h-10 w-10 rounded-full hover:bg-muted"
+      aria-label={rotuloSino}
+      aria-expanded={open}
     >
       <Bell className="h-5 w-5" />
       {unreadCount > 0 && (
         <span
-          className={cn(
-            "absolute -top-1 -right-1 h-5 min-w-[1.25rem] px-1 flex items-center justify-center rounded-full text-[10px] font-semibold text-white",
-            "bg-[hsl(var(--rios-terra))]"
-          )}
+          aria-hidden="true"
+          className="absolute -right-1 -top-1 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground"
         >
           {unreadCount > 9 ? "9+" : unreadCount}
         </span>
@@ -362,7 +413,8 @@ export function NotificationButton() {
   );
 
   const Header = (
-    <div className="flex items-center justify-between gap-2 px-4 py-3 border-b">
+    // pr-12 no celular: o X do Sheet fica no canto direito, em cima dos botões.
+    <div className={cn("flex items-center justify-between gap-2 border-b px-4 py-3", isMobile && "pr-12")}>
       <h3 className="font-semibold">Notificações</h3>
       <div className="flex items-center gap-2">
         {!isPushEnabled && isNative && (
@@ -373,8 +425,8 @@ export function NotificationButton() {
             disabled={enablingPush}
             className="text-xs"
           >
-            <BellRing className="h-3 w-3 mr-1" />
-            {enablingPush ? "Ativando..." : "Ativar Push"}
+            <BellRing className="h-3 w-3" />
+            {enablingPush ? "Ativando…" : "Ativar push"}
           </Button>
         )}
         {unreadCount > 0 && (
@@ -396,7 +448,7 @@ export function NotificationButton() {
       <div className="px-4 pt-3">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="unread">
-            Não lidas {unreadCount > 0 && <span className="ml-1 text-[hsl(var(--rios-terra))]">({unreadCount > 9 ? "9+" : unreadCount})</span>}
+            Não lidas {unreadCount > 0 && <span className="ml-1 text-primary">({unreadCount > 9 ? "9+" : unreadCount})</span>}
           </TabsTrigger>
           <TabsTrigger value="all">Todas</TabsTrigger>
         </TabsList>
@@ -418,7 +470,7 @@ export function NotificationButton() {
     return (
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>{Trigger}</SheetTrigger>
-        <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col">
+        <SheetContent side="right" className="flex w-full flex-col p-0 sm:max-w-md">
           <SheetHeader className="sr-only">
             <SheetTitle>Notificações</SheetTitle>
           </SheetHeader>

@@ -1,15 +1,22 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Archive, Building2, RotateCcw, ChevronRight } from "lucide-react";
+import { Archive, Building2, RotateCcw } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/ui/empty-state";
-import { SectionSkeleton } from "@/components/ui/section-skeleton";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { CabecalhoPagina, PaginaInterna } from "@/components/painel/PaginaInterna";
+import {
+  BotaoLinha,
+  CaixaCarregando,
+  CaixaOperacao,
+  LinhaCaixa,
+  MiniaturaImovel,
+  SeloContagem,
+} from "@/components/painel/CaixaOperacao";
+import { formatarData } from "@/lib/cobrancaMeta";
 
 interface DismissedItem {
   id: string;
@@ -26,6 +33,7 @@ export default function CobrancasHospedeArquivadas() {
   const [items, setItems] = useState<DismissedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [restoringId, setRestoringId] = useState<string | null>(null);
+  const [itemParaRestaurar, setItemParaRestaurar] = useState<DismissedItem | null>(null);
 
   const fetchItems = async () => {
     setLoading(true);
@@ -79,7 +87,7 @@ export default function CobrancasHospedeArquivadas() {
       );
     } catch (err) {
       console.error(err);
-      toast.error("Erro ao carregar arquivadas");
+      toast.error("Não foi possível carregar as cobranças arquivadas.");
     } finally {
       setLoading(false);
     }
@@ -102,85 +110,98 @@ export default function CobrancasHospedeArquivadas() {
         .eq("id", item.id);
       if (error) throw error;
       setItems(prev => prev.filter(i => i.id !== item.id));
+      setItemParaRestaurar(null);
       toast.success("Cobrança restaurada para o painel");
     } catch (err) {
       console.error(err);
-      toast.error("Erro ao restaurar");
+      toast.error("Não foi possível restaurar a cobrança.");
     } finally {
       setRestoringId(null);
     }
   };
 
-  return (
-    <div className="container mx-auto p-4 max-w-4xl space-y-4">
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
-          <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
-        </Button>
-      </div>
+  const abrirItem = (item: DismissedItem) =>
+    navigate(item.charge_id ? `/cobranca/${item.charge_id}` : `/ticket-detalhes/${item.id}`);
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Archive className="h-5 w-5 text-muted-foreground" />
-            Cobranças de hóspede arquivadas
-            <Badge variant="secondary" className="ml-2">{items.length}</Badge>
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Cobranças marcadas como feitas diretamente pelo Airbnb. Restaure se precisar processá-las pelo portal.
-          </p>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <SectionSkeleton />
-          ) : items.length === 0 ? (
-            <EmptyState
-              icon={<Archive className="h-6 w-6" />}
-              title="Nenhuma cobrança arquivada"
-              description="Quando você arquivar uma cobrança de hóspede no painel, ela aparecerá aqui."
-            />
-          ) : (
-            <div className="space-y-2">
-              {items.map(item => (
-                <div
-                  key={item.id}
-                  className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer"
-                  onClick={() => navigate(item.charge_id ? `/cobranca/${item.charge_id}` : `/ticket-detalhes/${item.id}`)}
-                >
-                  <Building2 className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{item.subject}</p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {item.property_name}
-                      {item.guest_checkout_date && (
-                        <> · Check-out {format(new Date(item.guest_checkout_date), "dd/MM/yyyy", { locale: ptBR })}</>
-                      )}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
-                      Arquivada em {format(new Date(item.guest_charge_dismissed_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                      {item.dismissed_by_name && <> por {item.dismissed_by_name}</>}
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-shrink-0 gap-1"
+  const formatarArquivamento = (iso: string) => format(new Date(iso), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+
+  return (
+    <PaginaInterna
+      largura="media"
+      cabecalho={
+        <CabecalhoPagina
+          titulo="Cobranças de hóspede arquivadas"
+          subtitulo="Marcadas como cobradas diretamente pelo Airbnb. Restaure para processar pelo portal."
+          icone={<Archive />}
+          tom="neutral"
+          voltarPara="/painel"
+        />
+      }
+    >
+      {loading ? (
+        <CaixaCarregando icone={<Archive />} titulo="Arquivadas" linhas={4} />
+      ) : items.length === 0 ? (
+        <CaixaOperacao icone={<Archive />} titulo="Arquivadas">
+          <EmptyState
+            ilustracao="cobrancas"
+            title="Nenhuma cobrança arquivada"
+            description="Quando você arquivar uma cobrança de hóspede no painel, ela aparecerá aqui."
+          />
+        </CaixaOperacao>
+      ) : (
+        <CaixaOperacao
+          icone={<Archive />}
+          titulo="Arquivadas"
+          selos={<SeloContagem>{items.length}</SeloContagem>}
+        >
+          <div className="space-y-1">
+            {items.map(item => (
+              <LinhaCaixa
+                key={item.id}
+                miniatura={<MiniaturaImovel fallback={<Building2 />} />}
+                titulo={item.subject}
+                subtitulo={
+                  <>
+                    {item.property_name}
+                    {item.guest_checkout_date && <> · Check-out {formatarData(item.guest_checkout_date)}</>}
+                  </>
+                }
+                meta={
+                  <span className="text-[11px] text-muted-foreground">
+                    Arquivada em {formatarArquivamento(item.guest_charge_dismissed_at)}
+                    {item.dismissed_by_name && <> por {item.dismissed_by_name}</>}
+                  </span>
+                }
+                acoes={
+                  <BotaoLinha
+                    rotulo="Restaurar para o painel"
+                    texto="Restaurar"
                     disabled={restoringId === item.id}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRestore(item);
-                    }}
+                    onClick={() => setItemParaRestaurar(item)}
                   >
-                    <RotateCcw className="h-3.5 w-3.5" />
-                    Restaurar
-                  </Button>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+                    <RotateCcw />
+                  </BotaoLinha>
+                }
+                onClick={() => abrirItem(item)}
+              />
+            ))}
+          </div>
+        </CaixaOperacao>
+      )}
+
+      <ConfirmationDialog
+        open={!!itemParaRestaurar}
+        onOpenChange={(aberto) => !aberto && setItemParaRestaurar(null)}
+        title="Restaurar cobrança de hóspede?"
+        description={
+          itemParaRestaurar
+            ? `"${itemParaRestaurar.subject}" volta para o lembrete de cobrança de hóspede no painel da equipe.`
+            : ""
+        }
+        confirmLabel="Restaurar"
+        loading={!!restoringId}
+        onConfirm={() => itemParaRestaurar && handleRestore(itemParaRestaurar)}
+      />
+    </PaginaInterna>
   );
 }

@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Send, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useChatPresence } from "@/hooks/useChatPresence";
@@ -13,6 +12,7 @@ import { ChatMessageBubble } from "@/components/chat/ChatMessageBubble";
 import { ChatDateDivider } from "@/components/chat/ChatDateDivider";
 import { ChatTypingIndicator } from "@/components/chat/ChatTypingIndicator";
 import { ChatEmptyState } from "@/components/chat/ChatEmptyState";
+import { renderizarCorpo } from "@/components/chat/CorpoMensagem";
 
 
 interface Message {
@@ -170,7 +170,7 @@ export function BookingCommissionChatDialog({ open, onOpenChange, commissionId, 
                       isOwn={isOwnMessage(msg)}
                       isInternal={msg.is_internal}
                       grouped={isGrouped}
-                      body={msg.body}
+                      body={msg.body ? renderizarCorpo(msg.body) : undefined}
                     />
                   );
                 })}

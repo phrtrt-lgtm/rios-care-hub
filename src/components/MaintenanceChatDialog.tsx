@@ -1,40 +1,39 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { useMaintenanceChat, ChatMessage, ChatAttachment } from "@/hooks/useMaintenanceChat";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Etiqueta } from "@/components/painel/Etiqueta";
+import { useMaintenanceChat, ChatMessage } from "@/hooks/useMaintenanceChat";
 import { useAuth } from "@/hooks/useAuth";
 import { useReadReceipts } from "@/hooks/useReadReceipts";
 import { useQueryClient } from "@tanstack/react-query";
 import { AttachmentBubble } from "@/components/AttachmentBubble";
 import { MediaGallery } from "@/components/MediaGallery";
 import { VoiceToTextInput } from "@/components/VoiceToTextInput";
-import { ReadReceiptDisplay } from "@/components/ReadReceiptDisplay";
 import OwnerMaintenanceDecision from "@/components/OwnerMaintenanceDecision";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { Send, Loader2, MessageSquare, Building, ExternalLink, Paperclip, X, Sparkles, CheckCircle2, DollarSign } from "lucide-react";
+import { Send, Loader2, ExternalLink, Sparkles, CheckCircle2, DollarSign } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { saveScrollPosition } from "@/lib/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { ResponseTemplatesPicker } from "@/components/ResponseTemplatesPicker";
 import { ConversationSummaryButton } from "@/components/ConversationSummaryButton";
 import { processFileForUpload } from "@/lib/processVideoForUpload";
+import { emParaleloOuFalha } from "@/lib/fileUpload";
 import { sanitizeFilename } from "@/lib/storage";
 import { NativeMediaPicker } from "@/components/NativeMediaPicker";
 import { toast as sonnerToast } from "sonner";
-import { MentionInput, MentionableUser, extractMentionedIds } from "@/components/comments/MentionInput";
-import { MentionText } from "@/components/comments/MentionText";
+import { MentionInput, MentionableUser } from "@/components/comments/MentionInput";
 import { ChatDialogHeader } from "@/components/chat/ChatDialogHeader";
 import { ChatMessageBubble } from "@/components/chat/ChatMessageBubble";
 import { ChatDateDivider } from "@/components/chat/ChatDateDivider";
 import { ChatTypingIndicator } from "@/components/chat/ChatTypingIndicator";
 import { ChatFilePreviewRow } from "@/components/chat/ChatFilePreviewRow";
 import { ChatEmptyState } from "@/components/chat/ChatEmptyState";
+import { renderizarCorpo } from "@/components/chat/CorpoMensagem";
 
 
 interface MaintenanceChatDialogProps {
@@ -84,9 +83,10 @@ export function MaintenanceChatDialog({
   const [decisionTicket, setDecisionTicket] = useState<OwnerDecisionTicket | null>(null);
   const [ticketDetails, setTicketDetails] = useState<{ owner_id: string; property_id: string | null; status: string; description: string } | null>(null);
   const [completingTicket, setCompletingTicket] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  // Âncora no fim da lista: o ref no Root do ScrollArea não rolava, porque
+  // quem rola é o Viewport interno.
+  const fimRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isTeamMember = profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance';
 
@@ -189,10 +189,9 @@ export function MaintenanceChatDialog({
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
+    if (!open || loading) return;
+    fimRef.current?.scrollIntoView({ block: "end" });
+  }, [open, loading, messages]);
 
   // Focus textarea when dialog opens
   useEffect(() => {
@@ -222,14 +221,15 @@ export function MaintenanceChatDialog({
       const attachments: Array<{ file_url: string; file_name: string; file_type: string; size_bytes: number; path: string }> = [];
 
       if (selectedFiles.length > 0) {
-        for (const file of selectedFiles) {
+        // Até 3 arquivos ao mesmo tempo.
+        await emParaleloOuFalha(selectedFiles, async (file, indiceArquivo) => {
           setUploadingFiles(prev => new Set(prev).add(file.name));
 
           try {
             // Compress video if it's a video file
             const processedFile = await processFileForUpload(file);
             const safeName = sanitizeFilename(processedFile.name);
-            const filePath = `tickets/${ticketId}/${Date.now()}_${safeName}`;
+            const filePath = `tickets/${ticketId}/${Date.now()}-${indiceArquivo}_${safeName}`;
 
             const { error: uploadError } = await supabase.storage
               .from('attachments')
@@ -256,7 +256,7 @@ export function MaintenanceChatDialog({
               return next;
             });
           }
-        }
+        });
       }
 
       const success = await sendMessage(newMessage, attachments);
@@ -288,40 +288,6 @@ export function MaintenanceChatDialog({
       // Safety net: ensure no file remains stuck in "uploading" state
       setUploadingFiles(new Set());
     }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setNewMessage(e.target.value);
-    setTyping(e.target.value.length > 0);
-  };
-
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!event.target.files || event.target.files.length === 0) return;
-    
-    const files = Array.from(event.target.files);
-    const maxSize = 20 * 1024 * 1024; // 20MB
-    
-    const validFiles = files.filter(file => {
-      if (file.size > maxSize) {
-        toast({
-          title: "Arquivo muito grande",
-          description: `${file.name} excede o limite de 20MB`,
-          variant: "destructive",
-        });
-        return false;
-      }
-      return true;
-    });
-    
-    setSelectedFiles(prev => [...prev, ...validFiles]);
-    event.target.value = '';
   };
 
   const removeFile = (index: number) => {
@@ -378,19 +344,6 @@ export function MaintenanceChatDialog({
     }
   };
 
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
-  const isTeamMemberRole = (role: string) => {
-    return ["admin", "agent", "maintenance"].includes(role);
-  };
-
   const renderMessage = (message: ChatMessage, index: number, dayMessages: ChatMessage[]) => {
     const isOwnMessage = message.author?.id === user?.id;
     const messageReceipts = receipts[message.id] || [];
@@ -413,12 +366,8 @@ export function MaintenanceChatDialog({
         receipts={messageReceipts}
         grouped={grouped}
         body={
-          message.body ? (
-            <MentionText
-              body={message.body}
-              className={isOwnMessage ? "text-primary-foreground" : ""}
-            />
-          ) : undefined
+          // A bolha cuida da cor (própria, interna, dos outros); o corpo só formata.
+          message.body ? renderizarCorpo(message.body) : undefined
         }
         attachments={
           message.attachments && message.attachments.length > 0 ? (
@@ -476,7 +425,8 @@ export function MaintenanceChatDialog({
                   className="h-7 px-2 text-[11px] text-primary"
                   onClick={() => {
                     onOpenChange(false);
-                    (saveScrollPosition(pathname), navigate(`/ticket-detalhes/${ticketId}`));
+                    saveScrollPosition(pathname);
+                    navigate(`/ticket-detalhes/${ticketId}`);
                   }}
                 >
                   <ExternalLink className="h-3 w-3 mr-1" />
@@ -514,17 +464,16 @@ export function MaintenanceChatDialog({
                   </div>
                 )}
                 {isTeamMember && ticketDetails?.status === 'concluido' && (
-                  <Badge variant="secondary" className="mt-2 bg-success/20 text-success text-xs">
-                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                  <Etiqueta tom="success" icone={<CheckCircle2 />} className="mt-2">
                     Concluído
-                  </Badge>
+                  </Etiqueta>
                 )}
               </>
             }
           />
 
           {/* Messages area */}
-          <ScrollArea className="flex-1 bg-muted/20 px-3" ref={scrollRef}>
+          <ScrollArea className="flex-1 bg-muted/20 px-3">
             {/* Owner decision block (if applicable) */}
             {decisionTicket && (
               <div className="py-4">
@@ -533,8 +482,10 @@ export function MaintenanceChatDialog({
             )}
 
             {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <div className="space-y-3 py-4" aria-busy="true" aria-label="Carregando mensagens">
+                <Skeleton className="h-12 w-3/5 rounded-2xl" />
+                <Skeleton className="ml-auto h-12 w-1/2 rounded-2xl" />
+                <Skeleton className="h-16 w-2/3 rounded-2xl" />
               </div>
             ) : messages.length === 0 ? (
               <ChatEmptyState />
@@ -550,6 +501,7 @@ export function MaintenanceChatDialog({
             )}
 
             <ChatTypingIndicator names={typingUsers.map((u) => u.name)} />
+            <div ref={fimRef} aria-hidden="true" />
           </ScrollArea>
 
           {/* Selected files preview */}
@@ -585,6 +537,7 @@ export function MaintenanceChatDialog({
                   onClick={generateAIResponse}
                   disabled={sending || generatingAI || !aiCommand.trim()}
                   title="Gerar resposta com IA"
+                  aria-label="Gerar resposta com IA"
                 >
                   {generatingAI ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -632,6 +585,7 @@ export function MaintenanceChatDialog({
                 disabled={(!newMessage.trim() && selectedFiles.length === 0) || sending || uploadingFiles.size > 0}
                 size="icon"
                 className="h-10 w-10 flex-shrink-0"
+                aria-label="Enviar mensagem"
               >
                 {sending || uploadingFiles.size > 0 ? (
                   <Loader2 className="h-4 w-4 animate-spin" />

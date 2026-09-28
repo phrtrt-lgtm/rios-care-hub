@@ -1,409 +1,344 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { goBack, saveScrollPosition } from "@/lib/navigation";
-import { useAuth } from "@/hooks/useAuth";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, Plus, Building2, Clock, MessageSquare, ChevronRight, Ticket } from "lucide-react";
-import { EmptyState } from "@/components/ui/empty-state";
-import { Badge } from "@/components/ui/badge";
-import { TicketBadges } from "@/components/TicketBadges";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { supabase } from "@/integrations/supabase/client";
-import { format, formatDistanceToNow } from "date-fns";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { LoadingScreen } from "@/components/LoadingScreen";
+import { Building2, MessageSquare, Plus, Ticket, Wrench } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { saveScrollPosition } from "@/lib/navigation";
+import { ownerScopeFilter } from "@/lib/ownerScope";
+import { useAuth } from "@/hooks/useAuth";
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
+import { useListFilters } from "@/hooks/useListFilters";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ListFilters } from "@/components/list/ListFilters";
 import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
 import { MaintenanceDetailsDialog } from "@/components/MaintenanceDetailsDialog";
-import { useUnreadMessages } from "@/hooks/useUnreadMessages";
-import { ListFilters } from "@/components/list/ListFilters";
-import { useListFilters } from "@/hooks/useListFilters";
-import { ownerScopeFilter } from "@/lib/ownerScope";
+import { AbaPilula, BarraFiltros, CabecalhoPagina, PaginaInterna } from "@/components/painel/PaginaInterna";
+import { BotaoLinha, LinhaCaixa, MiniaturaImovel } from "@/components/painel/CaixaOperacao";
+import { EtiquetaPrioridadeTicket, EtiquetaStatusTicket } from "@/components/tickets/EtiquetasTicket";
+import { ORDEM_TIPO_TICKET, TIPO_TICKET, ticketAberto } from "@/lib/ticketMeta";
 
-const statusLabels: Record<string, string> = {
-  novo: "Novo",
-  em_analise: "Em Análise",
-  aguardando_info: "Aguardando Info",
-  em_execucao: "Em Execução",
-  concluido: "Concluído",
-  cancelado: "Cancelado",
-};
+interface ChamadoProprietario {
+  id: string;
+  subject: string;
+  description: string | null;
+  status: string;
+  priority: string;
+  ticket_type: string;
+  created_at: string;
+  property_id: string | null;
+  created_by: string | null;
+  properties: { name: string; cover_photo_url: string | null } | null;
+}
 
-const typeLabels: Record<string, string> = {
-  duvida: "Dúvida/Info",
-  conversar_hospedes: "Hóspedes",
-  
-  manutencao: "Manutenção",
-  melhorias_compras: "Melhorias",
-  cobranca: "Cobrança",
-  financeiro: "Financeiro",
-  outros: "Outros",
-};
-
-const typeColors: Record<string, string> = {
-  duvida: "bg-secondary text-secondary-foreground",
-  conversar_hospedes: "bg-secondary text-secondary-foreground",
-  
-  manutencao: "bg-primary text-primary-foreground",
-  melhorias_compras: "bg-primary text-primary-foreground",
-  cobranca: "bg-destructive text-destructive-foreground",
-  financeiro: "bg-destructive text-destructive-foreground",
-  outros: "bg-muted text-muted-foreground",
-};
+type Aba = "abertos" | "fechados";
 
 export default function MeusChamados() {
+  useScrollRestoration();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const [tickets, setTickets] = useState<any[]>([]);
+  const [tickets, setTickets] = useState<ChamadoProprietario[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("abertos");
-  const [ticketTypeFilter, setTicketTypeFilter] = useState("todos");
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const [chatOpen, setChatOpen] = useState(false);
-  const [selectedTicket, setSelectedTicket] = useState<any>(null);
+  const [aba, setAba] = useState<Aba>("abertos");
+  const [tipo, setTipo] = useState<string>("all");
+  const [dialogoAberto, setDialogoAberto] = useState(false);
+  const [selecionado, setSelecionado] = useState<ChamadoProprietario | null>(null);
   const [visibleCount, setVisibleCount] = useState(100);
   const filtersHook = useListFilters("filters:meus-chamados");
-  const { applyTo } = filtersHook;
+  const { filters, applyTo, reset: resetFilters, hasActive, setStatus, setPriority, setDatePreset } = filtersHook;
 
-  const ticketIds = tickets.map(t => t.id);
-  const { unreadCounts, markAsRead } = useUnreadMessages(ticketIds);
-
+  // Status, prioridade e período saíram desta tela (as pílulas cuidam do
+  // escopo). Um valor salvo de uma visita antiga esconderia chamados.
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 60000);
-    return () => clearInterval(interval);
+    if (filters.status !== "all") setStatus("all");
+    if (filters.priority !== "all") setPriority("all");
+    if (filters.datePreset !== "all") setDatePreset("all");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    if (user) {
-      fetchTickets();
-    }
-  }, [user, activeTab, ticketTypeFilter]);
-
-  const fetchTickets = async () => {
+  const fetchTickets = useCallback(async () => {
+    if (!user) return;
     setLoading(true);
-    let query = supabase
-      .from("tickets")
-      .select("*, properties(name, cover_photo_url), kind, essential, owner_decision, owner_action_due_at, sla_due_at, cost_responsible, created_by")
-      .or(await ownerScopeFilter(user!.id))
-      .or("cost_responsible.is.null,cost_responsible.eq.owner,cost_responsible.eq.pm,cost_responsible.eq.split");
+    try {
+      const { data, error } = await supabase
+        .from("tickets")
+        .select("id, subject, description, status, priority, ticket_type, created_at, property_id, created_by, properties(name, cover_photo_url)")
+        .or(await ownerScopeFilter(user.id))
+        .or("cost_responsible.is.null,cost_responsible.eq.owner,cost_responsible.eq.pm,cost_responsible.eq.split")
+        .order("created_at", { ascending: false });
 
-    if (activeTab === "abertos") {
-      query = query.in("status", ["novo", "em_analise", "aguardando_info", "em_execucao"]);
-    } else {
-      query = query.in("status", ["concluido", "cancelado"]);
+      if (error) throw error;
+      setTickets((data || []) as unknown as ChamadoProprietario[]);
+    } catch (error) {
+      console.error("Erro ao carregar chamados:", error);
+      toast.error("Não foi possível carregar os chamados.");
+    } finally {
+      setLoading(false);
     }
+  }, [user]);
 
-    if (ticketTypeFilter !== "todos") {
-      query = query.eq("ticket_type", ticketTypeFilter as any);
-    }
+  useEffect(() => {
+    fetchTickets();
+  }, [fetchTickets]);
 
-    const { data, error } = await query;
+  const contagens = useMemo(() => {
+    const abertos = tickets.filter((t) => ticketAberto(t.status)).length;
+    return { abertos, fechados: tickets.length - abertos };
+  }, [tickets]);
 
-    if (!error && data) {
-      const ticketsWithMessages = await Promise.all(
-        data.map(async (ticket) => {
-          const { data: messages } = await supabase
-            .from("ticket_messages")
-            .select("body, created_at")
-            .eq("ticket_id", ticket.id)
-            .order("created_at", { ascending: false })
-            .limit(1);
-          
-          return {
-            ...ticket,
-            lastMessage: messages?.[0] || null,
-          };
-        })
-      );
+  const daAba = useMemo(
+    () => tickets.filter((t) => (aba === "abertos" ? ticketAberto(t.status) : !ticketAberto(t.status))),
+    [tickets, aba],
+  );
 
-      ticketsWithMessages.sort((a, b) => {
-        const aIsOpen = ["novo", "em_analise", "aguardando_info", "em_execucao"].includes(a.status);
-        const bIsOpen = ["novo", "em_analise", "aguardando_info", "em_execucao"].includes(b.status);
-        
-        if (aIsOpen && !bIsOpen) return -1;
-        if (!aIsOpen && bIsOpen) return 1;
-        
-        if (!a.sla_due_at && !b.sla_due_at) return 0;
-        if (!a.sla_due_at) return 1;
-        if (!b.sla_due_at) return -1;
-        return new Date(a.sla_due_at).getTime() - new Date(b.sla_due_at).getTime();
-      });
+  const filtrados = useMemo(() => {
+    let lista = applyTo(daAba, {
+      searchFields: (t) => [t.subject, t.description, t.properties?.name],
+      propertyId: (t) => t.property_id,
+    });
+    if (tipo !== "all") lista = lista.filter((t) => t.ticket_type === tipo);
+    return lista;
+  }, [daAba, applyTo, tipo]);
 
-      setTickets(ticketsWithMessages);
-    }
-    setLoading(false);
+  useEffect(() => {
+    setVisibleCount(100);
+  }, [filtrados.length]);
+
+  const visiveis = filtrados.slice(0, visibleCount);
+  const ticketIds = useMemo(() => visiveis.map((t) => t.id), [visiveis]);
+  const { unreadCounts, markAsRead } = useUnreadMessages(ticketIds);
+
+  const propertyOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    tickets.forEach((t) => {
+      if (t.property_id && t.properties?.name) map.set(t.property_id, t.properties.name);
+    });
+    return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
+  }, [tickets]);
+
+  const tiposDisponiveis = useMemo(() => {
+    const presentes = new Set(tickets.map((t) => t.ticket_type));
+    return ORDEM_TIPO_TICKET.filter((t) => presentes.has(t));
+  }, [tickets]);
+
+  // Manutenção aberta pela equipe: o proprietário acompanha pelo diálogo de
+  // manutenção, não pela conversa do chamado.
+  const manutencaoDaEquipe = (t: ChamadoProprietario) => t.ticket_type === "manutencao" && t.created_by !== user?.id;
+
+  const abrirDetalhe = (t: ChamadoProprietario) => {
+    saveScrollPosition(pathname);
+    navigate(`/ticket-detalhes/${t.id}`);
   };
 
-  const getStatusStyle = (status: string) => {
-    switch (status) {
-      case "novo":
-        return "bg-secondary text-secondary-foreground";
-      case "em_analise":
-        return "bg-primary/80 text-primary-foreground";
-      case "aguardando_info":
-        return "bg-primary text-primary-foreground";
-      case "em_execucao":
-        return "bg-secondary/80 text-secondary-foreground";
-      case "concluido":
-        return "bg-success text-white";
-      case "cancelado":
-        return "bg-muted text-muted-foreground";
-      default:
-        return "bg-muted text-muted-foreground";
-    }
+  const abrirDialogo = (t: ChamadoProprietario) => {
+    setSelecionado(t);
+    setDialogoAberto(true);
+    markAsRead(t.id);
   };
 
+  const abrirLinha = (t: ChamadoProprietario) => (manutencaoDaEquipe(t) ? abrirDialogo(t) : abrirDetalhe(t));
 
-  const openChat = (ticket: any, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSelectedTicket(ticket);
-    setChatOpen(true);
-    markAsRead(ticket.id);
+  const limparFiltros = () => {
+    resetFilters();
+    setTipo("all");
   };
 
-  const isMaintenanceCreatedByTeam = (ticket: any) =>
-    ticket.ticket_type === "manutencao" && ticket.created_by !== user?.id;
-
-  if (loading) {
-    return <LoadingScreen message="Carregando chamados..." />;
-  }
+  const filtrosAtivos = hasActive || tipo !== "all";
+  const subtitulo = loading
+    ? undefined
+    : `${contagens.abertos} ${contagens.abertos === 1 ? "aberto" : "abertos"} · ${contagens.fechados} ${
+        contagens.fechados === 1 ? "fechado" : "fechados"
+      }`;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-secondary/5 via-background to-primary/5">
-      <header className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => goBack(navigate, "/minha-caixa")}
-                className="shrink-0"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div>
-                <h1 className="text-lg font-semibold text-secondary">Meus Chamados</h1>
-                <p className="text-xs text-muted-foreground">
-                  {tickets.length} {tickets.length === 1 ? "chamado" : "chamados"}
-                </p>
-              </div>
-            </div>
-            <Button size="sm" onClick={() => navigate("/novo-ticket")} className="bg-primary hover:bg-primary/90">
-              <Plus className="h-4 w-4 mr-1" />
-              Novo
+    <PaginaInterna
+      largura="larga"
+      comNavInferior
+      cabecalho={
+        <CabecalhoPagina
+          titulo="Meus chamados"
+          subtitulo={subtitulo}
+          icone={<Ticket />}
+          tom="info"
+          voltarPara="/minha-caixa"
+          acoes={
+            <Button size="sm" className="h-9" onClick={() => navigate("/novo-ticket")} aria-label="Novo chamado">
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Novo chamado</span>
             </Button>
+          }
+          abaixo={
+            <BarraFiltros role="tablist" aria-label="Escopo dos chamados">
+              <AbaPilula
+                ativa={aba === "abertos"}
+                quantidade={loading ? undefined : contagens.abertos}
+                tom="info"
+                onClick={() => setAba("abertos")}
+              >
+                Abertos
+              </AbaPilula>
+              <AbaPilula
+                ativa={aba === "fechados"}
+                quantidade={loading ? undefined : contagens.fechados}
+                onClick={() => setAba("fechados")}
+              >
+                Fechados
+              </AbaPilula>
+            </BarraFiltros>
+          }
+        />
+      }
+    >
+      <Card className="rounded-xl border-border/70 p-3 md:p-4">
+        <ListFilters
+          {...filtersHook}
+          searchPlaceholder="Buscar por assunto ou imóvel…"
+          propertyOptions={propertyOptions}
+          totalCount={daAba.length}
+          filteredCount={filtrados.length}
+          extra={
+            tiposDisponiveis.length > 0 && (
+              <Select value={tipo} onValueChange={setTipo}>
+                <SelectTrigger aria-label="Tipo de chamado">
+                  <SelectValue placeholder="Tipo" />
+                </SelectTrigger>
+                <SelectContent className="z-50 bg-popover">
+                  <SelectItem value="all">Todos os tipos</SelectItem>
+                  {tiposDisponiveis.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {TIPO_TICKET[t].rotulo}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )
+          }
+        />
+      </Card>
+
+      {loading ? (
+        <Card className="rounded-xl border-border/70 p-3" aria-busy="true" aria-label="Carregando chamados">
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-14 w-full rounded-lg" />
+            ))}
           </div>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-4">
-        <div className="space-y-3">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="h-9">
-              <TabsTrigger value="abertos" className="text-sm">Abertos</TabsTrigger>
-              <TabsTrigger value="fechados" className="text-sm">Fechados</TabsTrigger>
-            </TabsList>
-          </Tabs>
-
-          <Tabs value={ticketTypeFilter} onValueChange={setTicketTypeFilter}>
-            <TabsList className="flex-wrap h-auto gap-1 p-1">
-              <TabsTrigger value="todos" className="text-xs h-7 px-2">Todos</TabsTrigger>
-              <TabsTrigger value="manutencao" className="text-xs h-7 px-2">Manutenção</TabsTrigger>
-              
-              <TabsTrigger value="duvida" className="text-xs h-7 px-2">Dúvida</TabsTrigger>
-              <TabsTrigger value="financeiro" className="text-xs h-7 px-2">Financeiro</TabsTrigger>
-              <TabsTrigger value="outros" className="text-xs h-7 px-2">Outros</TabsTrigger>
-            </TabsList>
-          </Tabs>
-
-          {(() => {
-            const propertyOptions = Array.from(
-              new Map(tickets.filter(t => t.properties?.name && t.property_id).map(t => [t.property_id, t.properties.name as string])).entries()
-            ).map(([value, label]) => ({ value, label }));
-            const filteredTickets = applyTo(tickets, {
-              searchFields: (t: any) => [t.subject, t.description, t.properties?.name],
-              status: (t: any) => t.status,
-              priority: (t: any) => t.priority,
-              propertyId: (t: any) => t.property_id,
-              date: (t: any) => t.created_at,
-            });
-            const visibleTickets = filteredTickets.slice(0, visibleCount);
-            const hasMore = filteredTickets.length > visibleCount;
-            return (
-              <>
-                <ListFilters
-                  {...filtersHook}
-                  searchPlaceholder="Buscar por assunto ou imóvel..."
-                  statusOptions={[
-                    { value: "novo", label: "Novo" },
-                    { value: "em_analise", label: "Em Análise" },
-                    { value: "aguardando_info", label: "Aguardando Info" },
-                    { value: "em_execucao", label: "Em Execução" },
-                    { value: "concluido", label: "Concluído" },
-                    { value: "cancelado", label: "Cancelado" },
-                  ]}
-                  priorityOptions={[
-                    { value: "baixa", label: "Baixa" },
-                    { value: "normal", label: "Normal" },
-                    { value: "alta", label: "Alta" },
-                    { value: "urgente", label: "Urgente" },
-                  ]}
-                  propertyOptions={propertyOptions}
-                  showDateRange
-                  totalCount={tickets.length}
-                  filteredCount={filteredTickets.length}
-                />
-
-                {tickets.length === 0 ? (
-                  <EmptyState
-                    icon={<Ticket className="h-6 w-6" />}
-                    title={`Nenhum chamado ${activeTab === "abertos" ? "aberto" : "fechado"}${ticketTypeFilter !== "todos" ? ` em ${typeLabels[ticketTypeFilter]}` : ""}`}
-                    description="Crie um novo chamado para registrar uma solicitação ou dúvida."
-                    action={
-                      <Button onClick={() => navigate("/novo-ticket")} size="sm">
-                        <Plus className="h-4 w-4 mr-1" />
-                        Criar chamado
-                      </Button>
-                    }
-                  />
-                ) : (
-                  <div className="space-y-2">
-                    {visibleTickets.map((ticket) => {
-                      const unreadCount = unreadCounts[ticket.id] || 0;
-                      
+        </Card>
+      ) : tickets.length === 0 ? (
+        <Card className="rounded-xl border-border/70">
+          <EmptyState
+            ilustracao="chamados"
+            title="Nenhum chamado ainda"
+            description="Quando precisar de algo, abra um chamado e acompanhe a conversa com a equipe por aqui."
+            action={
+              <Button onClick={() => navigate("/novo-ticket")}>
+                <Plus className="h-4 w-4" />
+                Novo chamado
+              </Button>
+            }
+          />
+        </Card>
+      ) : daAba.length === 0 ? (
+        <Card className="rounded-xl border-border/70">
+          <EmptyState
+            ilustracao="chamados"
+            title={aba === "abertos" ? "Nenhum chamado aberto" : "Nenhum chamado fechado"}
+            description={
+              aba === "abertos"
+                ? "Tudo resolvido por enquanto. Os chamados concluídos ficam em Fechados."
+                : "Os chamados concluídos ou cancelados aparecem aqui."
+            }
+            action={
+              aba === "abertos" && (
+                <Button onClick={() => navigate("/novo-ticket")}>
+                  <Plus className="h-4 w-4" />
+                  Novo chamado
+                </Button>
+              )
+            }
+          />
+        </Card>
+      ) : filtrados.length === 0 ? (
+        <Card className="rounded-xl border-border/70">
+          <EmptyState
+            ilustracao="busca"
+            title="Nenhum chamado com esses filtros"
+            description="Mude a busca ou limpe os filtros para ver os demais."
+            action={
+              filtrosAtivos && (
+                <Button variant="outline" onClick={limparFiltros}>
+                  Limpar filtros
+                </Button>
+              )
+            }
+          />
+        </Card>
+      ) : (
+        <>
+          <Card className="rounded-xl border-border/70 p-2 md:p-3">
+            <div className="space-y-1.5">
+              {visiveis.map((t) => {
+                const naoLidas = unreadCounts[t.id] || 0;
+                const daEquipe = manutencaoDaEquipe(t);
                 return (
-                  <div
-                    key={ticket.id}
-                    className="bg-card border rounded-lg p-3 cursor-pointer transition-all hover:shadow-md hover:border-primary/30 active:scale-[0.99]"
-                    onClick={() => {
-                      if (isMaintenanceCreatedByTeam(ticket)) {
-                        setSelectedTicket(ticket);
-                        setChatOpen(true);
-                        markAsRead(ticket.id);
-                      } else {
-                        saveScrollPosition(pathname);
-                        navigate(`/ticket-detalhes/${ticket.id}`);
-                      }
-                    }}
-                  >
-                    {/* Row 1: Property + Status + Type + SLA */}
-                    <div className="flex items-center gap-2 mb-2">
-                      {/* Property thumbnail */}
-                      <div className="w-10 h-10 rounded-md overflow-hidden bg-muted shrink-0">
-                        {ticket.properties?.cover_photo_url ? (
-                          <img 
-                            src={ticket.properties.cover_photo_url} 
-                            alt=""
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Building2 className="h-5 w-5 text-muted-foreground/50" />
-                          </div>
-                        )}
+                  <LinhaCaixa
+                    key={t.id}
+                    miniatura={<MiniaturaImovel url={t.properties?.cover_photo_url} fallback={<Building2 />} />}
+                    titulo={t.subject}
+                    subtitulo={`${t.properties?.name || "Sem imóvel"} · ${format(new Date(t.created_at), "dd/MM/yy", { locale: ptBR })}`}
+                    meta={
+                      <div className="flex flex-col items-end gap-1">
+                        <EtiquetaStatusTicket status={t.status} />
+                        <EtiquetaPrioridadeTicket prioridade={t.priority} />
                       </div>
-                      
-                      {/* Property name + badges */}
-                      <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-medium text-secondary truncate max-w-[120px]">
-                          {ticket.properties?.name || "Sem imóvel"}
-                        </span>
-                        <Badge className={`text-[10px] h-5 px-1.5 ${getStatusStyle(ticket.status)}`}>
-                          {statusLabels[ticket.status]}
-                        </Badge>
-                        <Badge className={`text-[10px] h-5 px-1.5 ${typeColors[ticket.ticket_type]}`}>
-                          {typeLabels[ticket.ticket_type]}
-                        </Badge>
-                        <TicketBadges ticket={ticket} />
-                      </div>
-
-                    </div>
-
-                    {/* Row 2: Subject */}
-                    <h3 className="font-semibold text-sm text-foreground mb-1.5 line-clamp-1">
-                      {ticket.subject}
-                    </h3>
-
-                    {/* Row 3: Last message + Actions */}
-                    <div className="flex items-center gap-2">
-                      {/* Last message preview */}
-                      <div className="flex-1 min-w-0">
-                        {ticket.lastMessage ? (
-                          <p className="text-xs text-muted-foreground line-clamp-1">
-                            <MessageSquare className="h-3 w-3 inline mr-1" />
-                            {ticket.lastMessage.body}
-                          </p>
-                        ) : (
-                          <p className="text-xs text-muted-foreground/60 italic">
-                            Sem mensagens
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Date */}
-                      <span className="text-[10px] text-muted-foreground shrink-0">
-                        {format(new Date(ticket.created_at), "dd/MM", { locale: ptBR })}
-                      </span>
-
-                      {/* Chat button */}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 px-2 text-xs shrink-0 border-secondary/30 hover:bg-secondary/10 hover:text-secondary relative"
-                        onClick={(e) => openChat(ticket, e)}
-                      >
-                        <MessageSquare className="h-3.5 w-3.5 mr-1" />
-                        Chat
-                        {unreadCount > 0 && (
-                          <span className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full h-4 min-w-[16px] flex items-center justify-center px-1">
-                            {unreadCount > 9 ? "9+" : unreadCount}
-                          </span>
-                        )}
-                      </Button>
-
-                      {/* Arrow */}
-                      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                    </div>
-                  </div>
+                    }
+                    acoes={
+                      daEquipe ? (
+                        <BotaoLinha rotulo="Ver manutenção" naoLidas={naoLidas} onClick={() => abrirDialogo(t)}>
+                          <Wrench />
+                        </BotaoLinha>
+                      ) : (
+                        <BotaoLinha rotulo="Abrir conversa" naoLidas={naoLidas} onClick={() => abrirDialogo(t)}>
+                          <MessageSquare />
+                        </BotaoLinha>
+                      )
+                    }
+                    onClick={() => abrirLinha(t)}
+                  />
                 );
               })}
-                  </div>
-                )}
+            </div>
+          </Card>
 
-                {hasMore && (
-                  <div className="flex justify-center pt-2">
-                    <Button variant="outline" onClick={() => setVisibleCount((v) => v + 100)}>
-                      Carregar mais ({filteredTickets.length - visibleCount} restantes)
-                    </Button>
-                  </div>
-                )}
-              </>
-            );
-          })()}
-        </div>
-      </main>
+          {filtrados.length > visibleCount && (
+            <div className="flex justify-center pt-1">
+              <Button variant="outline" onClick={() => setVisibleCount((v) => v + 100)}>
+                Carregar mais ({filtrados.length - visibleCount} restantes)
+              </Button>
+            </div>
+          )}
+        </>
+      )}
 
-      {/* Chat / Detalhes Dialog */}
-      {selectedTicket && (
-        isMaintenanceCreatedByTeam(selectedTicket) ? (
-          <MaintenanceDetailsDialog
-            open={chatOpen}
-            onOpenChange={setChatOpen}
-            maintenanceId={selectedTicket.id}
-          />
+      {selecionado &&
+        (manutencaoDaEquipe(selecionado) ? (
+          <MaintenanceDetailsDialog open={dialogoAberto} onOpenChange={setDialogoAberto} maintenanceId={selecionado.id} />
         ) : (
           <MaintenanceChatDialog
-            open={chatOpen}
-            onOpenChange={setChatOpen}
-            ticketId={selectedTicket.id}
-            ticketSubject={selectedTicket.subject}
-            propertyName={selectedTicket.properties?.name}
+            open={dialogoAberto}
+            onOpenChange={setDialogoAberto}
+            ticketId={selecionado.id}
+            ticketSubject={selecionado.subject}
+            propertyName={selecionado.properties?.name}
           />
-        )
-      )}
-    </div>
+        ))}
+    </PaginaInterna>
   );
 }

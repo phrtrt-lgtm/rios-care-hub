@@ -1,20 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { goBack } from "@/lib/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, DollarSign, Search, Trash2, Calculator, CreditCard, Building2, BarChart3, Receipt, Repeat } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { DollarSign, Search, Trash2, Calculator, CreditCard, Building2, BarChart3, Plus, Receipt } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
-import { CHARGE_CATEGORIES } from "@/constants/chargeCategories";
 import { EditChargeDialog } from "@/components/EditChargeDialog";
 import { DebitoReservaCalculator } from "@/components/DebitoReservaCalculator";
 import { ReserveDebitsTable } from "@/components/ReserveDebitsTable";
@@ -22,16 +19,10 @@ import { OpenChargesTable } from "@/components/OpenChargesTable";
 import { ReserveRetentionsHistory } from "@/components/ReserveRetentionsHistory";
 import { RecurringChargesPanel } from "@/components/RecurringChargesPanel";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { AbaPilula, BarraFiltros, CabecalhoPagina, PaginaInterna } from "@/components/painel/PaginaInterna";
+import { CaixaOperacao, MiniaturaImovel, SeloContagem } from "@/components/painel/CaixaOperacao";
+import { formatarBRL, valorDevido } from "@/lib/cobrancaMeta";
+import { cobrancaVencida } from "@/lib/vencimento";
 
 interface Charge {
   id: string;
@@ -40,6 +31,7 @@ interface Charge {
   category: string | null;
   amount_cents: number;
   management_contribution_cents: number;
+  credit_applied_cents?: number | null;
   currency: string;
   due_date: string | null;
   status: string;
@@ -64,10 +56,14 @@ interface PropertyGroup {
   cover_photo_url: string | null;
   ownerName: string;
   charges: Charge[];
+  /** Em aberto e no prazo. */
   openCount: number;
+  /** Vencidas: passou do dia do vencimento e não foi paga (`estaVencida` + `estaPaga`). */
   overdueCount: number;
-  totalDueCents: number; // Total a receber (já com aporte deduzido)
+  totalDueCents: number; // Total a receber (já com aporte e crédito deduzidos)
 }
+
+type Aba = "abertas" | "debito" | "recorrentes";
 
 const GerenciarCobrancas = () => {
   useScrollRestoration();
@@ -79,13 +75,13 @@ const GerenciarCobrancas = () => {
   const [ownerCredits, setOwnerCredits] = useState<{ owner_id: string; owner_name: string; total_cents: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  
+
   const [editingCharge, setEditingCharge] = useState<Charge | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedCharges, setSelectedCharges] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [activeTab, setActiveTab] = useState("abertas");
+  const [activeTab, setActiveTab] = useState<Aba>("abertas");
   const [debitoCharges, setDebitoCharges] = useState<Charge[]>([]);
   const [debitoPropertyGroups, setDebitoPropertyGroups] = useState<PropertyGroup[]>([]);
   const [calculatorOpen, setCalculatorOpen] = useState(false);
@@ -130,7 +126,7 @@ const GerenciarCobrancas = () => {
   const fetchCharges = async () => {
     try {
       setLoading(true);
-      
+
       const { data: chargesData, error } = await supabase
         .from('charges')
         .select('*')
@@ -177,7 +173,8 @@ const GerenciarCobrancas = () => {
 
   const fetchDebitoCharges = async () => {
     try {
-      const todayStr = new Date().toISOString().split('T')[0];
+      // Dia local: toISOString() daria o dia UTC, que vira o dia seguinte a partir das 21h.
+      const todayStr = format(new Date(), "yyyy-MM-dd");
       const { data: chargesData, error } = await supabase
         .from('charges')
         .select('*')
@@ -219,11 +216,11 @@ const GerenciarCobrancas = () => {
 
   const groupDebitoChargesByProperty = () => {
     const groups: Record<string, PropertyGroup> = {};
-    
+
     debitoCharges.forEach(charge => {
       const propertyId = charge.property?.id || 'sem-imovel';
-      const propertyName = charge.property?.name || 'Sem Imóvel';
-      
+      const propertyName = charge.property?.name || 'Sem imóvel';
+
       if (!groups[propertyId]) {
         groups[propertyId] = {
           id: propertyId,
@@ -236,13 +233,12 @@ const GerenciarCobrancas = () => {
           totalDueCents: 0
         };
       }
-      
+
       groups[propertyId].charges.push(charge);
-      const amountDue = Math.max(0, charge.amount_cents - (charge.management_contribution_cents || 0) - ((charge as any).credit_applied_cents || 0));
-      groups[propertyId].totalDueCents += amountDue;
+      groups[propertyId].totalDueCents += valorDevido(charge);
       groups[propertyId].overdueCount++;
     });
-    
+
     const sortedGroups = Object.values(groups).sort((a, b) => b.totalDueCents - a.totalDueCents);
     setDebitoPropertyGroups(sortedGroups);
   };
@@ -263,14 +259,14 @@ const GerenciarCobrancas = () => {
 
   const groupChargesByProperty = () => {
     const groups: Record<string, PropertyGroup> = {};
-    
+
     charges.forEach(charge => {
-      // Exclude charges that are waiting for reserve debit (they show in ReserveDebitsTable)
+      // Aguardando débito em reserva aparece na ReserveDebitsTable, não aqui.
       if (charge.status === 'aguardando_reserva') return;
-      
+
       const propertyId = charge.property?.id || 'sem-imovel';
-      const propertyName = charge.property?.name || 'Sem Imóvel';
-      
+      const propertyName = charge.property?.name || 'Sem imóvel';
+
       // Apply search filter
       if (searchTerm) {
         const search = searchTerm.toLowerCase();
@@ -279,7 +275,7 @@ const GerenciarCobrancas = () => {
         const matchesTitle = charge.title.toLowerCase().includes(search);
         if (!matchesProperty && !matchesOwner && !matchesTitle) return;
       }
-      
+
       if (!groups[propertyId]) {
         groups[propertyId] = {
           id: propertyId,
@@ -292,30 +288,26 @@ const GerenciarCobrancas = () => {
           totalDueCents: 0
         };
       }
-      
+
       groups[propertyId].charges.push(charge);
-      
-      // Calculate amount due (total - management contribution)
-      const amountDue = Math.max(0, charge.amount_cents - (charge.management_contribution_cents || 0) - ((charge as any).credit_applied_cents || 0));
-      groups[propertyId].totalDueCents += amountDue;
-      
-      if (['sent', 'draft'].includes(charge.status)) {
+      groups[propertyId].totalDueCents += valorDevido(charge);
+
+      // Mesma regra de "vencida" da OpenChargesTable: passou do dia e não foi paga.
+      if (cobrancaVencida(charge)) {
+        groups[propertyId].overdueCount++;
+      } else {
         groups[propertyId].openCount++;
       }
-      if (charge.status === 'overdue' || charge.status === 'debited') {
-        groups[propertyId].overdueCount++;
-      }
     });
-    
+
     // Sort by overdue count (most urgent first), then by open count
     const sortedGroups = Object.values(groups).sort((a, b) => {
       if (b.overdueCount !== a.overdueCount) return b.overdueCount - a.overdueCount;
       return b.openCount - a.openCount;
     });
-    
+
     setPropertyGroups(sortedGroups);
   };
-
 
   const handleEdit = (charge: Charge) => {
     setEditingCharge(charge);
@@ -332,21 +324,21 @@ const GerenciarCobrancas = () => {
     setSelectedCharges(newSelected);
   };
 
+  /** Só o que está na tela: busca aplicada e sem as que aguardam reserva. */
+  const cobrancasVisiveis = useMemo(() => propertyGroups.flatMap((g) => g.charges), [propertyGroups]);
+  const todasVisiveisSelecionadas =
+    cobrancasVisiveis.length > 0 && cobrancasVisiveis.every((c) => selectedCharges.has(c.id));
+
   const toggleSelectAll = () => {
-    const allChargeIds = charges.map(c => c.id);
-    if (selectedCharges.size === allChargeIds.length) {
-      setSelectedCharges(new Set());
-    } else {
-      setSelectedCharges(new Set(allChargeIds));
-    }
+    setSelectedCharges(todasVisiveisSelecionadas ? new Set() : new Set(cobrancasVisiveis.map((c) => c.id)));
   };
 
   const handleDeleteSelected = async () => {
     if (selectedCharges.size === 0) return;
-    
+
     try {
       setDeleting(true);
-      
+
       const { error } = await supabase
         .from('charges')
         .update({ archived_at: new Date().toISOString(), status: 'arquivado' })
@@ -355,10 +347,10 @@ const GerenciarCobrancas = () => {
       if (error) throw error;
 
       toast({
-        title: "Cobranças movidas para lixeira",
+        title: "Cobranças movidas para a lixeira",
         description: `${selectedCharges.size} cobrança(s) movida(s) para a lixeira.`,
       });
-      
+
       setSelectedCharges(new Set());
       setDeleteDialogOpen(false);
       fetchCharges();
@@ -375,319 +367,320 @@ const GerenciarCobrancas = () => {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { label: string; variant: "secondary" | "default" | "destructive" | "outline"; className?: string }> = {
-      draft: { label: 'Rascunho', variant: 'secondary' },
-      sent: { label: 'Enviada', variant: 'default' },
-      paid: { label: 'Paga', variant: 'default', className: 'bg-success' },
-      overdue: { label: 'Vencida', variant: 'destructive' },
-      cancelled: { label: 'Cancelada', variant: 'outline' },
-      debited: { label: 'Débito em Reserva', variant: 'destructive', className: 'bg-destructive' }
-    };
+  // Contagem da aba "Em aberto": sem as que aguardam débito em reserva.
+  const cobrancasEmAberto = useMemo(() => charges.filter((c) => c.status !== 'aguardando_reserva'), [charges]);
+  const totalAReceber = useMemo(() => cobrancasEmAberto.reduce((s, c) => s + valorDevido(c), 0), [cobrancasEmAberto]);
+  const totalADebitar = debitoPropertyGroups.reduce((acc, g) => acc + g.totalDueCents, 0);
 
-    const config = statusConfig[status] || { label: status, variant: 'outline' as const };
-    return <Badge variant={config.variant} className={config.className}>{config.label}</Badge>;
-  };
+  const subtitulo = loading
+    ? undefined
+    : `${cobrancasEmAberto.length} em aberto · ${formatarBRL(totalAReceber)} a receber`;
 
-  const formatCurrency = (cents: number, currency: string) => {
-    const value = cents / 100;
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: currency
-    }).format(value);
-  };
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-muted-foreground">Carregando...</div>
-      </div>
-    );
-  }
+  const abas: Array<{ valor: Aba; rotulo: string; quantidade?: number; tom: "success" | "destructive" | "neutral" }> = [
+    { valor: "abertas", rotulo: "Em aberto", quantidade: loading ? undefined : cobrancasEmAberto.length, tom: "success" },
+    { valor: "debito", rotulo: "Débito em reserva", quantidade: loading ? undefined : debitoCharges.length, tom: "destructive" },
+    { valor: "recorrentes", rotulo: "Recorrentes", tom: "neutral" },
+  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
-      <header className="border-b bg-card/50 backdrop-blur-sm">
-        <div className="container mx-auto flex h-16 items-center px-4">
-          <Button variant="ghost" size="sm" onClick={() => goBack(navigate, "/painel")}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar
-          </Button>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Gerenciar Cobranças</h1>
-            <p className="text-muted-foreground">Cobranças em aberto organizadas por imóvel</p>
-          </div>
-          <Button onClick={() => navigate("/nova-cobranca")}>
-            <DollarSign className="mr-2 h-4 w-4" />
-            Nova Cobrança
-          </Button>
-          <Button variant="outline" onClick={() => navigate("/admin/relatorio-cobrancas")}>
-            <BarChart3 className="mr-2 h-4 w-4" />
-            Histórico Pago
-          </Button>
-        </div>
-
-        {/* Saldo Credor dos Proprietários */}
-        {ownerCredits.length > 0 && (
-          <div className="mb-6 rounded-lg border border-success/30 bg-success/5 p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <CreditCard className="h-4 w-4 text-success" />
-              <h3 className="font-semibold text-sm">Saldo credor disponível para abater cobranças</h3>
-            </div>
-            <div className="space-y-1.5">
-              {ownerCredits.map((oc) => (
-                <div key={oc.owner_id} className="flex items-center justify-between text-sm">
-                  <span className="text-foreground">{oc.owner_name}</span>
-                  <span className="font-semibold text-success">{formatCurrency(oc.total_cents, 'BRL')}</span>
-                </div>
+    <PaginaInterna
+      largura="larga"
+      comNavInferior
+      cabecalho={
+        <CabecalhoPagina
+          titulo="Cobranças"
+          subtitulo={subtitulo}
+          icone={<DollarSign />}
+          tom="success"
+          voltarPara="/painel"
+          acoes={
+            <>
+              <Button variant="outline" size="sm" className="hidden h-9 sm:inline-flex" onClick={() => navigate("/admin/relatorio-cobrancas")}>
+                <BarChart3 className="h-4 w-4" />
+                Histórico
+              </Button>
+              <Button size="sm" className="h-9" onClick={() => navigate("/nova-cobranca")}>
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">Nova cobrança</span>
+                <span className="sr-only sm:hidden">Nova cobrança</span>
+              </Button>
+            </>
+          }
+          abaixo={
+            <BarraFiltros role="tablist" aria-label="Seções de cobranças">
+              {abas.map((aba) => (
+                <AbaPilula
+                  key={aba.valor}
+                  ativa={activeTab === aba.valor}
+                  quantidade={aba.quantidade}
+                  tom={aba.tom}
+                  onClick={() => setActiveTab(aba.valor)}
+                >
+                  {aba.rotulo}
+                </AbaPilula>
               ))}
-            </div>
+            </BarraFiltros>
+          }
+        />
+      }
+    >
+      {/* Saldo credor dos proprietários */}
+      {ownerCredits.length > 0 && (
+        <CaixaOperacao
+          icone={<CreditCard />}
+          titulo="Saldo credor disponível"
+          tom="success"
+          selos={<SeloContagem tom="success">{ownerCredits.length}</SeloContagem>}
+          subcabecalho={<p className="text-xs text-muted-foreground">Valores a abater em cobranças futuras dos proprietários.</p>}
+        >
+          <div className="space-y-1.5">
+            {ownerCredits.map((oc) => (
+              <div key={oc.owner_id} className="flex items-center justify-between gap-3 px-1 text-sm">
+                <span className="truncate text-foreground">{oc.owner_name}</span>
+                <span className="shrink-0 font-semibold tabular-nums text-success">{formatarBRL(oc.total_cents)}</span>
+              </div>
+            ))}
           </div>
-        )}
+        </CaixaOperacao>
+      )}
 
+      {/* Aba: cobranças em aberto */}
+      {activeTab === "abertas" && (
+        <div className="space-y-4" role="tabpanel">
+          <ReserveDebitsTable />
 
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="abertas" className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4" />
-              Em Aberto ({charges.length})
-            </TabsTrigger>
-            <TabsTrigger value="debito" className="flex items-center gap-2">
-              <CreditCard className="h-4 w-4" />
-              Débito Reserva ({debitoCharges.length})
-            </TabsTrigger>
-            <TabsTrigger value="recorrentes" className="flex items-center gap-2">
-              <Repeat className="h-4 w-4" />
-              Recorrentes
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Tab: Cobranças em Aberto */}
-          <TabsContent value="abertas" className="space-y-4">
-            {/* Débitos Pendentes em Reserva - Inline Table */}
-            <ReserveDebitsTable />
-
-
-
-
-            {/* Search and Selection Controls */}
+          <Card className="rounded-xl border-border/70 p-3 md:p-4">
             <div className="space-y-3">
               <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
                 <Input
-                  placeholder="Buscar por imóvel, proprietário ou título..."
+                  placeholder="Buscar por imóvel, proprietário ou título…"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9"
+                  aria-label="Buscar cobranças"
                 />
               </div>
-              
-              {/* Selection Controls */}
-              <div className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
+
+              <div className="flex items-center justify-between gap-2 rounded-lg bg-muted/50 p-3">
                 <div className="flex items-center gap-3">
                   <Checkbox
                     id="select-all"
-                    checked={charges.length > 0 && selectedCharges.size === charges.length}
+                    checked={todasVisiveisSelecionadas}
                     onCheckedChange={toggleSelectAll}
+                    disabled={cobrancasVisiveis.length === 0}
+                    aria-label="Selecionar todas as cobranças visíveis"
                   />
-                  <label htmlFor="select-all" className="text-sm cursor-pointer">
-                    {selectedCharges.size === 0 
-                      ? "Selecionar todas" 
+                  <label htmlFor="select-all" className="cursor-pointer text-sm">
+                    {selectedCharges.size === 0
+                      ? "Selecionar todas as visíveis"
                       : `${selectedCharges.size} selecionada(s)`}
                   </label>
                 </div>
-                
+
                 {selectedCharges.size > 0 && (
                   <Button
                     variant="destructive"
                     size="sm"
                     onClick={() => setDeleteDialogOpen(true)}
                   >
-                    <Trash2 className="mr-2 h-4 w-4" />
+                    <Trash2 className="h-4 w-4" />
                     Lixeira ({selectedCharges.size})
                   </Button>
                 )}
               </div>
             </div>
+          </Card>
 
-            {/* Inline Property Table */}
+          {loading ? (
+            <Card className="rounded-xl border-border/70 p-3" aria-busy="true" aria-label="Carregando cobranças">
+              <div className="space-y-2">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full rounded-lg" />
+                ))}
+              </div>
+            </Card>
+          ) : cobrancasEmAberto.length === 0 ? (
+            <Card className="rounded-xl border-border/70">
+              <EmptyState
+                ilustracao="cobrancas"
+                title="Nenhuma cobrança em aberto"
+                description="As cobranças enviadas aos proprietários aparecem aqui até serem pagas."
+                action={
+                  <Button onClick={() => navigate("/nova-cobranca")}>
+                    <Plus className="h-4 w-4" />
+                    Nova cobrança
+                  </Button>
+                }
+              />
+            </Card>
+          ) : propertyGroups.length === 0 ? (
+            <Card className="rounded-xl border-border/70">
+              <EmptyState
+                ilustracao="busca"
+                title="Nenhuma cobrança com essa busca"
+                description="Tente outro imóvel, proprietário ou título."
+                action={
+                  <Button variant="outline" onClick={() => setSearchTerm("")}>
+                    Limpar busca
+                  </Button>
+                }
+              />
+            </Card>
+          ) : (
             <OpenChargesTable
               propertyGroups={propertyGroups}
               selectedCharges={selectedCharges}
               onToggleChargeSelection={toggleChargeSelection}
               onEditCharge={handleEdit}
             />
+          )}
+        </div>
+      )}
 
-          </TabsContent>
-
-          {/* Tab: Débito em Reserva */}
-          <TabsContent value="debito" className="space-y-4">
-            {/* Summary */}
-            {debitoPropertyGroups.length > 0 && (
-              <Card className="bg-gradient-to-r from-red-100 to-red-50 border-destructive/30">
-                <CardContent className="py-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground font-medium">Total a Debitar em Reservas</p>
-                      <p className="text-3xl font-bold text-destructive">
-                        {formatCurrency(debitoPropertyGroups.reduce((acc, g) => acc + g.totalDueCents, 0), 'BRL')}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm text-muted-foreground">{debitoCharges.length} cobranças</p>
-                      <p className="text-sm text-muted-foreground">{debitoPropertyGroups.length} imóveis</p>
-                    </div>
+      {/* Aba: débito em reserva */}
+      {activeTab === "debito" && (
+        <div className="space-y-4" role="tabpanel">
+          {debitoPropertyGroups.length > 0 && (
+            <Card className="rounded-xl border-destructive/30 bg-destructive/10">
+              <CardContent className="py-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Total a debitar em reserva</p>
+                    <p className="text-3xl font-bold tabular-nums text-destructive">{formatarBRL(totalADebitar)}</p>
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                  <div className="text-right text-sm text-muted-foreground">
+                    <p>{debitoCharges.length} {debitoCharges.length === 1 ? "cobrança" : "cobranças"}</p>
+                    <p>{debitoPropertyGroups.length} {debitoPropertyGroups.length === 1 ? "imóvel" : "imóveis"}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-            {/* Property List for Debit */}
-            {debitoPropertyGroups.length === 0 ? (
+          {debitoPropertyGroups.length === 0 ? (
+            <Card className="rounded-xl border-border/70">
               <EmptyState
                 icon={<Receipt className="h-6 w-6" />}
-                title="Nenhuma cobrança pendente"
-                description="Não há cobranças aguardando débito em reserva no momento."
+                title="Nenhuma cobrança vencida para debitar"
+                description="Cobranças vencidas e ainda não pagas aparecem aqui para o débito em reserva."
               />
-            ) : (
-              <div className="space-y-3">
-                {debitoPropertyGroups.map((group) => (
-                  <Card 
-                    key={group.id} 
-                    className="border-destructive/30 bg-destructive/10/30 hover:bg-destructive/10 transition-colors cursor-pointer"
-                    onClick={() => openCalculator(group)}
-                  >
-                    <CardContent className="py-4">
-                      <div className="flex items-center gap-4">
-                        {/* Property Photo */}
-                        <div className="w-14 h-14 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-                          {group.cover_photo_url ? (
-                            <img 
-                              src={group.cover_photo_url} 
-                              alt={group.name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <Building2 className="h-5 w-5 text-muted-foreground" />
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* Property Info */}
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold truncate">{group.name}</p>
-                          <p className="text-sm text-muted-foreground truncate">{group.ownerName}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Badge variant="destructive" className="text-xs">
-                              {group.charges.length} cobrança{group.charges.length > 1 ? 's' : ''}
-                            </Badge>
-                          </div>
-                        </div>
-                        
-                        {/* Amount and Calculator Button */}
-                        <div className="text-right flex items-center gap-3">
-                          <div>
-                            <p className="text-lg font-bold text-destructive">
-                              {formatCurrency(group.totalDueCents, 'BRL')}
-                            </p>
-                            <p className="text-xs text-muted-foreground">a debitar</p>
-                          </div>
-                          <Button variant="outline" size="sm" className="border-destructive/30 hover:bg-destructive/10">
-                            <Calculator className="h-4 w-4" />
-                          </Button>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {debitoPropertyGroups.map((group) => (
+                <Card
+                  key={group.id}
+                  role="button"
+                  tabIndex={0}
+                  className="cursor-pointer rounded-xl border-destructive/30 bg-destructive/10 transition-colors hover:bg-destructive/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  onClick={() => openCalculator(group)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      openCalculator(group);
+                    }
+                  }}
+                >
+                  <CardContent className="py-4">
+                    <div className="flex items-center gap-4">
+                      <MiniaturaImovel url={group.cover_photo_url} alt={group.name} fallback={<Building2 />} tamanho="h-14 w-14" />
+
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-semibold">{group.name}</p>
+                        <p className="truncate text-sm text-muted-foreground">{group.ownerName}</p>
+                        <div className="mt-1 flex items-center gap-2">
+                          <SeloContagem tom="destructive">
+                            {group.charges.length} cobrança{group.charges.length > 1 ? 's' : ''}
+                          </SeloContagem>
                         </div>
                       </div>
 
-                      {/* Charges List Preview */}
-                      <div className="mt-3 pt-3 border-t border-destructive/30 space-y-1">
-                        {group.charges.slice(0, 3).map((charge) => (
-                          <div key={charge.id} className="flex justify-between text-sm">
-                            <span className="text-muted-foreground truncate flex-1">{charge.title}</span>
-                            <span className="font-medium ml-2">
-                              {formatCurrency(Math.max(0, charge.amount_cents - (charge.management_contribution_cents || 0) - ((charge as any).credit_applied_cents || 0)), charge.currency)}
-                            </span>
-                          </div>
-                        ))}
-                        {group.charges.length > 3 && (
-                          <p className="text-xs text-muted-foreground">
-                            + {group.charges.length - 3} mais...
-                          </p>
-                        )}
+                      <div className="flex items-center gap-3 text-right">
+                        <div>
+                          <p className="text-lg font-bold tabular-nums text-destructive">{formatarBRL(group.totalDueCents)}</p>
+                          <p className="text-xs text-muted-foreground">a debitar</p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="border-destructive/30 hover:bg-destructive/10"
+                          aria-label={`Calcular débito em reserva de ${group.name}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openCalculator(group);
+                          }}
+                        >
+                          <Calculator className="h-4 w-4" />
+                        </Button>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
+                    </div>
 
-            {/* Histórico de débitos retroativos em reserva */}
-            <div className="pt-4 border-t">
-              <ReserveRetentionsHistory
-                title="Débitos retroativos já efetuados"
-                emptyDescription="Nenhum débito retroativo em reserva foi registrado ainda."
-              />
+                    <div className="mt-3 space-y-1 border-t border-destructive/30 pt-3">
+                      {group.charges.slice(0, 3).map((charge) => (
+                        <div key={charge.id} className="flex justify-between gap-2 text-sm">
+                          <span className="min-w-0 flex-1 truncate text-muted-foreground">{charge.title}</span>
+                          <span className="font-medium tabular-nums">{formatarBRL(valorDevido(charge))}</span>
+                        </div>
+                      ))}
+                      {group.charges.length > 3 && (
+                        <p className="text-xs text-muted-foreground">
+                          + {group.charges.length - 3} mais
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
-          </TabsContent>
+          )}
 
-          {/* Tab: Contas Recorrentes */}
-          <TabsContent value="recorrentes" className="space-y-4">
-            <RecurringChargesPanel />
-          </TabsContent>
-        </Tabs>
+          <div className="border-t pt-4">
+            <ReserveRetentionsHistory
+              title="Débitos retroativos já efetuados"
+              emptyDescription="Nenhum débito retroativo em reserva foi registrado ainda."
+            />
+          </div>
+        </div>
+      )}
 
+      {/* Aba: contas recorrentes */}
+      {activeTab === "recorrentes" && (
+        <div className="space-y-4" role="tabpanel">
+          <RecurringChargesPanel />
+        </div>
+      )}
 
-        {/* Dialog de Edição */}
-        <EditChargeDialog
-          open={editDialogOpen}
-          onOpenChange={setEditDialogOpen}
-          charge={editingCharge}
-          onSuccess={() => {
-            fetchCharges();
-            fetchDebitoCharges();
-          }}
-        />
+      <EditChargeDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        charge={editingCharge}
+        onSuccess={() => {
+          fetchCharges();
+          fetchDebitoCharges();
+        }}
+      />
 
-        {/* Dialog de Confirmação de Exclusão */}
-        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Mover cobranças para a lixeira?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Você está prestes a mover <strong>{selectedCharges.size} cobrança(s)</strong> para a lixeira. 
-                Elas não serão mais cobradas nem aparecerão nos relatórios.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
-              <AlertDialogAction 
-                onClick={handleDeleteSelected}
-                disabled={deleting}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                {deleting ? "Movendo..." : "Mover para lixeira"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+      <ConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Mover cobranças para a lixeira?"
+        description={`${selectedCharges.size} cobrança(s) deixam de ser cobradas e saem dos relatórios.`}
+        confirmLabel="Mover para a lixeira"
+        variant="destructive"
+        onConfirm={handleDeleteSelected}
+        loading={deleting}
+      />
 
-        {/* Calculadora de Débito em Reserva */}
-        <DebitoReservaCalculator
-          open={calculatorOpen}
-          onOpenChange={setCalculatorOpen}
-          propertyName={selectedPropertyForCalc?.name || ""}
-          totalDebtCents={selectedPropertyForCalc?.totalDueCents || 0}
-          chargeIds={selectedChargeIdsForCalc}
-          onDebitConfirmed={handleDebitConfirmed}
-        />
-      </main>
-    </div>
+      <DebitoReservaCalculator
+        open={calculatorOpen}
+        onOpenChange={setCalculatorOpen}
+        propertyName={selectedPropertyForCalc?.name || ""}
+        totalDebtCents={selectedPropertyForCalc?.totalDueCents || 0}
+        chargeIds={selectedChargeIdsForCalc}
+        onDebitConfirmed={handleDebitConfirmed}
+      />
+    </PaginaInterna>
   );
 };
 

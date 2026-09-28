@@ -99,7 +99,6 @@ export default function Painel() {
       />
 
       <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
-      <TeamChatWidget />
       {isTeam && <AIConsultaWidget />}
 
       <PainelHeader
@@ -118,6 +117,9 @@ export default function Painel() {
           </>
         }
       />
+
+      {/* Abaixo do cabeçalho fixo: em cima dele o chat ficava sob o notch. */}
+      <TeamChatWidget />
 
       <main className="container relative mx-auto flex flex-col gap-7 px-4 py-6 md:gap-8 md:py-8">
         <PainelHero nome={profile?.name} subtitulo="O que precisa de atenção hoje, em um lugar só." />

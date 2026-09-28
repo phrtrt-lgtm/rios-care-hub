@@ -1,20 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { goBack, saveScrollPosition } from "@/lib/navigation";
+import { saveScrollPosition } from "@/lib/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowLeft, Calendar, FileText, Paperclip, QrCode, Building2, DollarSign, Tag, CreditCard, Zap } from "lucide-react";
-import { AuthenticatedImage, AuthenticatedVideo } from "@/components/AuthenticatedMedia";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ChevronRight, Copy, CreditCard, DollarSign, Loader2, Paperclip, QrCode, Zap } from "lucide-react";
 import { MediaGallery } from "@/components/MediaGallery";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
-import { formatBRL } from "@/lib/format";
 import { CHARGE_CATEGORIES } from "@/constants/chargeCategories";
 import { ListFilters } from "@/components/list/ListFilters";
 import { useListFilters } from "@/hooks/useListFilters";
@@ -22,6 +18,14 @@ import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import { OwnerCreditBanner } from "@/components/OwnerCreditBanner";
 import { ReserveRetentionsHistory } from "@/components/ReserveRetentionsHistory";
 import { ownerScopeFilter } from "@/lib/ownerScope";
+import { cn } from "@/lib/utils";
+import { AbaPilula, BarraFiltros, CabecalhoPagina, PaginaInterna } from "@/components/painel/PaginaInterna";
+import { BotaoLinha, CaixaOperacao, SeloContagem } from "@/components/painel/CaixaOperacao";
+import { EtiquetaStatusCobranca } from "@/components/cobrancas/EtiquetaStatusCobranca";
+import { ResumoValorCobranca } from "@/components/cobrancas/ResumoValorCobranca";
+import { estaEmAberto, estaPaga, formatarBRL, formatarData, rotuloStatusCobranca, valorDevido } from "@/lib/cobrancaMeta";
+import { diasParaVencer } from "@/lib/vencimento";
+import { nomeAnonimoAnexo } from "@/lib/zipFileName";
 
 interface Charge {
   id: string;
@@ -31,6 +35,7 @@ interface Charge {
   service_type?: string | null;
   amount_cents: number;
   management_contribution_cents: number;
+  credit_applied_cents?: number | null;
   currency: string;
   due_date: string | null;
   maintenance_date: string | null;
@@ -56,6 +61,31 @@ interface ChargeAttachment {
   poster_path: string | null;
 }
 
+type Escopo = "abertas" | "pagas" | "todas";
+
+const ESCOPOS: Array<{ valor: Escopo; rotulo: string }> = [
+  { valor: "abertas", rotulo: "Em aberto" },
+  { valor: "pagas", rotulo: "Pagas" },
+  { valor: "todas", rotulo: "Todas" },
+];
+
+/**
+ * Nome genérico para a galeria: o nome real do arquivo nunca aparece na
+ * interface (regra nº 4). A extensão é mantida para o download.
+ */
+
+/** "Vence em 3 dias", "Vence hoje", "Vencida há 2 dias" — só para cobranças em aberto. */
+function textoVencimento(charge: Charge): string | null {
+  if (!charge.due_date) return null;
+  const data = formatarData(charge.due_date);
+  if (!estaEmAberto(charge.status)) return `Vencimento ${data}`;
+  const dias = diasParaVencer(charge.due_date);
+  const plural = (n: number) => `${n} ${n === 1 ? "dia" : "dias"}`;
+  if (dias < 0) return `Vencida há ${plural(-dias)} · ${data}`;
+  if (dias === 0) return `Vence hoje · ${data}`;
+  return `Vence em ${plural(dias)} · ${data}`;
+}
+
 const MinhasCobrancas = () => {
   useScrollRestoration();
   const { user, profile } = useAuth();
@@ -63,6 +93,7 @@ const MinhasCobrancas = () => {
   const { pathname } = useLocation();
   const [charges, setCharges] = useState<Charge[]>([]);
   const [loading, setLoading] = useState(true);
+  const [escopo, setEscopo] = useState<Escopo>("abertas");
   const [selectedCharges, setSelectedCharges] = useState<string[]>([]);
   const [generatingPayment, setGeneratingPayment] = useState(false);
   const [groupPayment, setGroupPayment] = useState<{
@@ -75,7 +106,8 @@ const MinhasCobrancas = () => {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryItems, setGalleryItems] = useState<{ id: string; file_url: string; file_name: string; file_type: string }[]>([]);
   const filtersHook = useListFilters("filters:minhas-cobrancas");
-  const { applyTo } = filtersHook;
+  const { applyTo, reset: resetFilters, hasActive } = filtersHook;
+
   useEffect(() => {
     if (!user || profile?.role !== 'owner') {
       navigate("/");
@@ -87,7 +119,7 @@ const MinhasCobrancas = () => {
   const fetchCharges = async () => {
     try {
       setLoading(true);
-      
+
       const { data: chargesData, error: chargesError } = await supabase
         .from('charges')
         .select('*')
@@ -100,7 +132,7 @@ const MinhasCobrancas = () => {
       const enrichedCharges = await Promise.all(
         (chargesData || []).map(async (charge) => {
           const [propertyResult, attachmentsResult, messagesResult] = await Promise.all([
-            charge.property_id 
+            charge.property_id
               ? supabase.from('properties').select('name').eq('id', charge.property_id).single()
               : Promise.resolve({ data: null }),
             supabase
@@ -127,63 +159,31 @@ const MinhasCobrancas = () => {
       setCharges(enrichedCharges);
     } catch (error) {
       console.error('Erro ao carregar cobranças:', error);
+      toast.error("Não foi possível carregar as cobranças.");
     } finally {
       setLoading(false);
     }
   };
 
-  const getAttachmentUrl = (attachment: ChargeAttachment) => {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    return `${supabaseUrl}/functions/v1/serve-attachment/${attachment.id}/file`;
-  };
-
-  const getPosterUrl = (attachment: ChargeAttachment) => {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    return `${supabaseUrl}/functions/v1/serve-attachment/${attachment.id}/poster`;
-  };
-
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      draft: { label: 'Rascunho', variant: 'secondary' as const },
-      sent: { label: 'Enviada', variant: 'default' as const },
-      paid: { label: 'Paga', variant: 'default' as const },
-      overdue: { label: 'Vencida', variant: 'destructive' as const },
-      cancelled: { label: 'Cancelada', variant: 'outline' as const },
-      debited: { label: 'Debitado em Reserva', variant: 'destructive' as const }
-    };
-
-    const config = statusConfig[status as keyof typeof statusConfig] || { label: status, variant: 'outline' as const };
-    return <Badge variant={config.variant}>{config.label}</Badge>;
-  };
-
-  const formatCurrency = (cents: number, currency: string) => {
-    const value = cents / 100;
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: currency
-    }).format(value);
-  };
-
-  const isImageFile = (attachment: ChargeAttachment) => {
-    return attachment.mime_type?.startsWith('image/') || false;
-  };
-
-  const isVideoFile = (attachment: ChargeAttachment) => {
-    return attachment.mime_type?.startsWith('video/') || false;
-  };
-
   const toggleChargeSelection = (chargeId: string) => {
-    setSelectedCharges(prev => 
-      prev.includes(chargeId) 
+    setSelectedCharges(prev =>
+      prev.includes(chargeId)
         ? prev.filter(id => id !== chargeId)
         : [...prev, chargeId]
     );
+    // O link gerado vale para a seleção anterior; com outra seleção, precisa gerar de novo.
+    setGroupPayment(null);
+  };
+
+  const limparSelecao = () => {
+    setSelectedCharges([]);
+    setGroupPayment(null);
   };
 
   const handleGenerateGroupPayment = async () => {
     try {
       setGeneratingPayment(true);
-      
+
       const { data, error } = await supabase.functions.invoke('create-group-payment', {
         body: { chargeIds: selectedCharges }
       });
@@ -197,7 +197,7 @@ const MinhasCobrancas = () => {
         total_amount: data.total_amount
       });
 
-      toast.success('Pagamento agrupado gerado com sucesso!');
+      toast.success('Pagamento agrupado gerado');
     } catch (error) {
       console.error('Erro ao gerar pagamento:', error);
       toast.error('Erro ao gerar pagamento agrupado');
@@ -206,425 +206,360 @@ const MinhasCobrancas = () => {
     }
   };
 
-  const selectedChargesData = charges.filter(c => selectedCharges.includes(c.id));
-  const totalDue = selectedChargesData.reduce((sum, charge) => 
-    sum + Math.max(0, charge.amount_cents - (charge.management_contribution_cents || 0) - ((charge as any).credit_applied_cents || 0)), 0
+  const contagens = useMemo(
+    () => ({
+      abertas: charges.filter((c) => estaEmAberto(c.status)).length,
+      pagas: charges.filter((c) => estaPaga(c.status)).length,
+      todas: charges.length,
+    }),
+    [charges],
   );
 
-  const openChargesCount = charges.filter(c => c.status === 'sent' || c.status === 'overdue' || c.status === 'pendente').length;
+  const selectedChargesData = useMemo(() => charges.filter((c) => selectedCharges.includes(c.id)), [charges, selectedCharges]);
+  const totalSelecionado = useMemo(() => selectedChargesData.reduce((sum, c) => sum + valorDevido(c), 0), [selectedChargesData]);
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-muted-foreground">Carregando...</div>
-      </div>
+  const propertyOptions = useMemo(
+    () =>
+      Array.from(
+        new Map(charges.filter((c) => c.property?.name && c.property_id).map((c) => [c.property_id!, c.property!.name])).entries(),
+      ).map(([value, label]) => ({ value, label })),
+    [charges],
+  );
+
+  // Só os status que existem nas cobranças deste proprietário, com o rótulo do vocabulário único.
+  const statusOptions = useMemo(
+    () =>
+      Array.from(new Set(charges.map((c) => c.status)))
+        .map((s) => ({ value: s, label: rotuloStatusCobranca(s) }))
+        .sort((a, b) => a.label.localeCompare(b.label, "pt-BR")),
+    [charges],
+  );
+
+  const filteredCharges = useMemo(() => {
+    const porEscopo = charges.filter((c) =>
+      escopo === "abertas" ? estaEmAberto(c.status) : escopo === "pagas" ? estaPaga(c.status) : true,
     );
-  }
+    return applyTo(porEscopo, {
+      searchFields: (c) => [c.title, c.description, c.property?.name],
+      status: (c) => c.status,
+      propertyId: (c) => c.property_id,
+      date: (c) => c.created_at,
+    });
+  }, [charges, escopo, applyTo]);
+
+  useEffect(() => {
+    setVisibleCount(100);
+  }, [filteredCharges.length]);
+
+  const visibleCharges = filteredCharges.slice(0, visibleCount);
+  const hasMore = filteredCharges.length > visibleCount;
+
+  const abrirCobranca = (charge: Charge) => {
+    saveScrollPosition(pathname);
+    navigate(`/cobranca/${charge.id}`);
+  };
+
+  const abrirAnexos = (charge: Charge) => {
+    const atts = (charge.attachments || []).map((a, i) => {
+      const path = a.file_path || "";
+      let url = path;
+      if (path && !path.startsWith("http://") && !path.startsWith("https://")) {
+        const { data: pub } = supabase.storage.from("attachments").getPublicUrl(path);
+        url = pub.publicUrl;
+      }
+      return {
+        id: a.id,
+        file_url: url,
+        file_name: nomeAnonimoAnexo(a.file_name, a.mime_type, i),
+        file_type: a.mime_type || "",
+      };
+    });
+    setGalleryItems(atts);
+    setGalleryOpen(true);
+  };
+
+  const subtitulo = loading
+    ? undefined
+    : `${contagens.abertas} em aberto${contagens.abertas > 0 ? ` · ${formatarBRL(charges.filter((c) => estaEmAberto(c.status)).reduce((s, c) => s + valorDevido(c), 0))} a pagar` : ""}`;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
-      <header className="border-b bg-card/50 backdrop-blur-sm">
-        <div className="container mx-auto flex h-16 items-center px-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/minha-caixa", { replace: true })}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar ao início
-          </Button>
-        </div>
-      </header>
+    <PaginaInterna
+      largura="larga"
+      comNavInferior
+      cabecalho={
+        <CabecalhoPagina
+          titulo="Minhas cobranças"
+          subtitulo={subtitulo}
+          icone={<DollarSign />}
+          tom="success"
+          voltarPara="/minha-caixa"
+          abaixo={
+            <BarraFiltros role="tablist" aria-label="Escopo das cobranças">
+              {ESCOPOS.map((e) => (
+                <AbaPilula
+                  key={e.valor}
+                  ativa={escopo === e.valor}
+                  quantidade={loading ? undefined : contagens[e.valor]}
+                  tom={e.valor === "abertas" ? "success" : "neutral"}
+                  onClick={() => setEscopo(e.valor)}
+                >
+                  {e.rotulo}
+                </AbaPilula>
+              ))}
+            </BarraFiltros>
+          }
+        />
+      }
+    >
+      <OwnerCreditBanner ownerId={user?.id} />
 
-      <main className="container mx-auto px-3 py-4 sm:px-4 sm:py-8 max-w-6xl">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-foreground">Minhas Cobranças</h1>
-          <p className="text-muted-foreground">Visualize todas as suas cobranças</p>
-        </div>
+      {/* Pagamento agrupado: só aparece com cobranças selecionadas */}
+      {selectedCharges.length > 0 && (
+        <CaixaOperacao
+          icone={<QrCode />}
+          titulo="Pagamento agrupado"
+          tom="primary"
+          selos={<SeloContagem tom="primary">{selectedCharges.length}</SeloContagem>}
+          acoes={
+            <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={limparSelecao} disabled={generatingPayment}>
+              Limpar seleção
+            </Button>
+          }
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/70 bg-muted/40 px-4 py-3">
+            <div>
+              <p className="text-sm text-muted-foreground">
+                {selectedCharges.length} {selectedCharges.length === 1 ? 'cobrança selecionada' : 'cobranças selecionadas'}
+              </p>
+              <p className="text-2xl font-bold tabular-nums">{formatarBRL(totalSelecionado)}</p>
+              <p className="text-xs text-muted-foreground">PIX à vista ou cartão em até 12x pelo Mercado Pago</p>
+            </div>
+            <Button onClick={handleGenerateGroupPayment} disabled={generatingPayment || groupPayment !== null} size="lg">
+              {generatingPayment ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <CreditCard className="h-4 w-4" aria-hidden="true" />}
+              {generatingPayment ? "Gerando pagamento…" : "Gerar pagamento"}
+            </Button>
+          </div>
 
-        <OwnerCreditBanner ownerId={user?.id} />
-
-
-        {/* Painel de Pagamento Agrupado */}
-        {openChargesCount > 0 && (
-          <Card className="mb-6 border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-background shadow-lg animate-fade-in">
-            <CardHeader className="pb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <QrCode className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <CardTitle className="text-xl">Pagamento Agrupado</CardTitle>
-                  <CardDescription className="mt-1">
-                    Selecione múltiplas cobranças e pague tudo de uma vez com Mercado Pago
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {selectedCharges.length > 0 ? (
-                <div className="space-y-4 animate-scale-in">
-                  {/* Resumo da seleção */}
-                  <div className="flex items-center justify-between p-4 bg-background rounded-xl border-2 border-primary/20 shadow-sm">
-                    <div className="space-y-1">
-                      <p className="text-sm text-muted-foreground font-medium">
-                        {selectedCharges.length} {selectedCharges.length === 1 ? 'cobrança selecionada' : 'cobranças selecionadas'}
-                      </p>
-                      <p className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                        {formatBRL(totalDue)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">Parcele em até 12x com Mercado Pago</p>
-                    </div>
-                    <Button 
-                      onClick={handleGenerateGroupPayment}
-                      disabled={generatingPayment}
-                      size="lg"
-                      className="shadow-lg hover:shadow-xl transition-shadow"
-                    >
-                      {generatingPayment ? (
-                        <div className="flex items-center gap-2">
-                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                          Gerando...
-                        </div>
-                      ) : (
-                        'Gerar Pagamento'
-                      )}
-                    </Button>
-                  </div>
-
-                  {/* Loading state com logo */}
-                  {generatingPayment && (
-                    <div className="p-8 bg-background rounded-xl border flex flex-col items-center justify-center space-y-4 animate-fade-in">
-                      <div className="relative">
-                        <img 
-                          src="/logo.png" 
-                          alt="Logo RIOS" 
-                          className="h-16 w-16 animate-pulse"
-                        />
-                        <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-                      </div>
-                      <p className="text-sm text-muted-foreground animate-pulse">Gerando seu pagamento agrupado...</p>
-                    </div>
-                  )}
-
-                  {/* Opções de pagamento */}
-                  {groupPayment && !generatingPayment && (
-                    <div className="space-y-4 animate-scale-in">
-                      {/* Indicador de sucesso */}
-                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-success/10 text-success rounded-full border border-success/30 mx-auto">
-                        <div className="h-2 w-2 bg-success rounded-full animate-pulse" />
-                        <span className="text-sm font-medium">Opções de pagamento geradas!</span>
-                      </div>
-
-                      {/* Grid de opções de pagamento */}
-                      <div className={`grid gap-4 ${groupPayment.pix_qr_code ? 'md:grid-cols-2' : 'md:grid-cols-1 max-w-md mx-auto'}`}>
-                        {/* Opção 1: PIX Instantâneo - só mostra se disponível */}
-                        {groupPayment.pix_qr_code && (
-                          <Card className="border-2 border-primary/20 hover:border-primary/40 transition-colors">
-                            <CardHeader className="pb-3">
-                              <div className="flex items-center gap-2 mb-2">
-                                <div className="p-2 rounded-lg bg-success/10">
-                                  <Zap className="h-5 w-5 text-success" />
-                                </div>
-                                <div>
-                                  <CardTitle className="text-lg">PIX Instantâneo</CardTitle>
-                                  <CardDescription className="text-xs">À vista - Aprovação imediata</CardDescription>
-                                </div>
-                              </div>
-                            </CardHeader>
-                            <CardContent className="space-y-3">
-                              <div className="flex justify-center p-3 bg-white rounded-lg border">
-                                <img 
-                                  src={groupPayment.pix_qr_code_base64} 
-                                  alt="QR Code PIX" 
-                                  className="w-48 h-48"
-                                />
-                              </div>
-                              <Button 
-                                className="w-full" 
-                                variant="outline"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(groupPayment.pix_qr_code);
-                                  toast.success('Código PIX copiado!');
-                                }}
-                              >
-                                <Paperclip className="h-4 w-4 mr-2" />
-                                Copiar código PIX
-                              </Button>
-                            </CardContent>
-                          </Card>
-                        )}
-
-                        {/* Opção 2: Cartão com Parcelamento */}
-                        <Card className="border-2 border-info/30 hover:border-info/30 transition-colors bg-gradient-to-br from-info/10/50 to-background">
-                          <CardHeader className="pb-3">
-                            <div className="flex items-center gap-2 mb-2">
-                              <div className="p-2 rounded-lg bg-info/10">
-                                <CreditCard className="h-5 w-5 text-info" />
-                              </div>
-                              <div>
-                                <CardTitle className="text-lg">Cartão de Crédito</CardTitle>
-                                <CardDescription className="text-xs">Parcele em até 12x com juros</CardDescription>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 mt-2">
-                              <Badge variant="outline" className="bg-info/10 text-info border-info/30">
-                                Todos os cartões
-                              </Badge>
-                              <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
-                                Débito e Crédito
-                              </Badge>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="space-y-3">
-                            <div className="p-4 bg-white rounded-lg border-2 border-dashed border-info/30 space-y-2">
-                              <div className="flex items-center justify-between text-sm">
-                                <span className="text-muted-foreground">Valor total:</span>
-                                <span className="font-bold text-lg">{formatBRL(totalDue)}</span>
-                              </div>
-                              <div className="text-xs text-muted-foreground space-y-1">
-                                <p>• Parcele em até 12x no cartão</p>
-                                <p>• Aceita todos os principais cartões</p>
-                                <p>• Pagamento seguro pelo Mercado Pago</p>
-                              </div>
-                            </div>
-                            <Button 
-                              className="w-full shadow-lg hover:shadow-xl transition-shadow bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600"
-                              size="lg"
-                              onClick={() => window.open(groupPayment.payment_link, '_blank')}
-                            >
-                              <CreditCard className="h-4 w-4 mr-2" />
-                              Pagar com Mercado Pago
-                            </Button>
-                          </CardContent>
-                        </Card>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="text-center py-4 px-4 bg-background/50 rounded-xl border-2 border-dashed">
-                    <QrCode className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
-                    <p className="text-sm text-muted-foreground">
-                      Selecione as cobranças que deseja pagar usando os checkboxes ao lado
-                    </p>
-                  </div>
-
-                  {/* Preview das opções de pagamento */}
-                  <div className="grid sm:grid-cols-2 gap-3">
-                    {/* Mini Card PIX */}
-                    <div className="p-4 bg-gradient-to-br from-success/10/80 to-background rounded-lg border-2 border-success/30/50 hover:border-success/30/70 transition-all">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="p-1.5 rounded bg-success/10">
-                          <Zap className="h-4 w-4 text-success" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-sm">PIX Instantâneo</p>
-                          <p className="text-xs text-muted-foreground">Aprovação imediata</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Mini Card Cartão */}
-                    <div className="p-4 bg-gradient-to-br from-info/10/80 to-background rounded-lg border-2 border-info/30/50 hover:border-info/30/70 transition-all">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="p-1.5 rounded bg-info/10">
-                          <CreditCard className="h-4 w-4 text-info" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-sm">Cartão de Crédito</p>
-                          <p className="text-xs text-muted-foreground">Parcele em até 12x</p>
-                        </div>
-                      </div>
+          {groupPayment && !generatingPayment && (
+            <div className={cn("mt-3 grid gap-3", groupPayment.pix_qr_code ? "md:grid-cols-2" : "mx-auto max-w-md md:grid-cols-1")}>
+              {groupPayment.pix_qr_code && (
+                <div className="rounded-xl border border-success/30 bg-success/5 p-4">
+                  <div className="mb-3 flex items-center gap-2">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-success/10 text-success" aria-hidden="true">
+                      <Zap className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <p className="text-sm font-semibold">PIX</p>
+                      <p className="text-xs text-muted-foreground">À vista, aprovação imediata</p>
                     </div>
                   </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {(() => {
-          const propertyOptions = Array.from(
-            new Map(charges.filter(c => c.property?.name && c.property_id).map(c => [c.property_id!, c.property!.name])).entries()
-          ).map(([value, label]) => ({ value, label }));
-          const filteredCharges = applyTo(charges, {
-            searchFields: (c) => [c.title, c.description, c.property?.name],
-            status: (c) => c.status,
-            propertyId: (c) => c.property_id,
-            date: (c) => c.created_at,
-          });
-          const visibleCharges = filteredCharges.slice(0, visibleCount);
-          const hasMore = filteredCharges.length > visibleCount;
-          return (
-            <>
-              <Card className="mb-4">
-                <CardContent className="pt-6">
-                  <ListFilters
-                    {...filtersHook}
-                    searchPlaceholder="Buscar por título ou imóvel..."
-                    statusOptions={[
-                      { value: "draft", label: "Rascunho" },
-                      { value: "sent", label: "Enviada" },
-                      { value: "paid", label: "Paga" },
-                      { value: "overdue", label: "Vencida" },
-                      { value: "cancelled", label: "Cancelada" },
-                      { value: "debited", label: "Debitada em Reserva" },
-                    ]}
-                    propertyOptions={propertyOptions}
-                    showDateRange
-                    totalCount={charges.length}
-                    filteredCount={filteredCharges.length}
-                  />
-                </CardContent>
-              </Card>
-
-              {charges.length === 0 ? (
-                <Card>
-                  <CardContent className="py-12 text-center">
-                    <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
-                    <h3 className="mt-4 text-lg font-semibold text-foreground">
-                      Nenhuma cobrança encontrada
-                    </h3>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      Você não possui cobranças no momento.
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="space-y-2">
-                  {visibleCharges.map((charge) => {
-                    const isOpen = charge.status === 'sent' || charge.status === 'overdue' || charge.status === 'pendente';
-                    const isSelected = selectedCharges.includes(charge.id);
-                    const ownerDue = Math.max(0, charge.amount_cents - charge.management_contribution_cents - ((charge as any).credit_applied_cents || 0));
-                    const atts = (charge.attachments || []).map((a) => {
-                      const path = a.file_path || "";
-                      let url = path;
-                      if (path && !path.startsWith("http://") && !path.startsWith("https://")) {
-                        const { data: pub } = supabase.storage.from("attachments").getPublicUrl(path);
-                        url = pub.publicUrl;
-                      }
-                      return {
-                        id: a.id,
-                        file_url: url,
-                        file_name: a.file_name || "",
-                        file_type: a.mime_type || "",
-                      };
-                    });
-
-                    return (
-                      <Card
-                        key={charge.id}
-                        className={`transition-all hover:shadow-md hover:border-primary/20 overflow-hidden group ${isSelected ? 'ring-2 ring-primary' : ''}`}
-                      >
-                        <div className="flex">
-                          {isOpen && (
-                            <div className="flex items-center justify-center w-9 sm:w-12 bg-muted/30 border-r shrink-0">
-                              <Checkbox
-                                checked={isSelected}
-                                onCheckedChange={() => toggleChargeSelection(charge.id)}
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                            </div>
-                          )}
-
-                          <button
-                            type="button"
-                            className="flex-1 p-3 sm:p-4 text-left min-w-0"
-                            onClick={() => { saveScrollPosition(pathname); navigate(`/cobranca/${charge.id}`); }}
-                          >
-                            {/* Título + status */}
-                            <div className="flex items-start justify-between gap-2 mb-1.5">
-                              <h3 className="font-semibold text-sm sm:text-base leading-tight group-hover:text-primary transition-colors line-clamp-2 flex-1 min-w-0">
-                                {charge.title}
-                              </h3>
-                              <div className="shrink-0">{getStatusBadge(charge.status)}</div>
-                            </div>
-
-                            {/* Imóvel + categoria (compacto) */}
-                            <div className="flex flex-wrap gap-1 mb-1.5">
-                              {charge.property && (
-                                <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-                                  <Building2 className="h-3 w-3" />
-                                  <span className="truncate max-w-[140px]">{charge.property.name}</span>
-                                </span>
-                              )}
-                              {charge.category && (
-                                <Badge variant="outline" className="text-[10px] h-4 px-1.5 bg-info/10 text-info border-info/30">
-                                  {CHARGE_CATEGORIES[charge.category as keyof typeof CHARGE_CATEGORIES]}
-                                </Badge>
-                              )}
-                              {charge.service_type && (
-                                <Badge variant="outline" className="text-[10px] h-4 px-1.5 bg-primary/10 text-primary border-primary/30">
-                                  {charge.service_type}
-                                </Badge>
-                              )}
-                            </div>
-
-                            {/* Grid de valores */}
-                            <div className="grid grid-cols-3 gap-1.5 mb-2">
-                              <div className="bg-muted/50 rounded px-2 py-1">
-                                <div className="text-[10px] text-muted-foreground">Total</div>
-                                <div className="text-xs font-medium">{formatCurrency(charge.amount_cents, charge.currency)}</div>
-                              </div>
-                              <div className="bg-muted/50 rounded px-2 py-1">
-                                <div className="text-[10px] text-muted-foreground">Aporte</div>
-                                <div className="text-xs font-medium text-success">
-                                  {charge.management_contribution_cents > 0 ? `- ${formatCurrency(charge.management_contribution_cents, charge.currency)}` : '-'}
-                                </div>
-                              </div>
-                              <div className="bg-primary/10 rounded px-2 py-1">
-                                <div className="text-[10px] text-muted-foreground">Devido</div>
-                                <div className="text-xs font-bold text-primary">{formatCurrency(ownerDue, charge.currency)}</div>
-                              </div>
-                            </div>
-
-                            {/* Footer: data + anexos */}
-                            <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
-                              <div className="flex flex-wrap gap-x-3 gap-y-0.5 min-w-0">
-                                {charge.due_date && (
-                                  <span className="inline-flex items-center gap-1">
-                                    <Calendar className="h-3 w-3" />
-                                    Venc: {format(new Date(charge.due_date), "dd/MM/yyyy", { locale: ptBR })}
-                                  </span>
-                                )}
-                              </div>
-                              {atts.length > 0 && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => { e.stopPropagation(); e.preventDefault(); setGalleryItems(atts); setGalleryOpen(true); }}
-                                  className="inline-flex items-center gap-1 px-2 py-1 rounded hover:bg-primary/10 text-primary transition-colors shrink-0"
-                                >
-                                  <Paperclip className="h-3.5 w-3.5" />
-                                  <span className="text-xs font-medium">{atts.length}</span>
-                                </button>
-                              )}
-                            </div>
-                          </button>
-                        </div>
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
-
-              {hasMore && (
-                <div className="flex justify-center pt-2">
-                  <Button variant="outline" onClick={() => setVisibleCount((v) => v + 100)}>
-                    Carregar mais ({filteredCharges.length - visibleCount} restantes)
+                  {/* Fundo branco atrás do QR: única exceção de cor crua, para o leitor conseguir ler o código. */}
+                  <div className="flex justify-center rounded-lg border bg-white p-3">
+                    <img src={groupPayment.pix_qr_code_base64} alt="QR Code do PIX" className="h-48 w-48" />
+                  </div>
+                  <p className="mt-2 text-center text-sm">
+                    Valor <span className="font-semibold tabular-nums">{formatarBRL(totalSelecionado)}</span>
+                  </p>
+                  <Button
+                    className="mt-2 w-full"
+                    variant="outline"
+                    onClick={() => {
+                      navigator.clipboard.writeText(groupPayment.pix_qr_code);
+                      toast.success('Código PIX copiado');
+                    }}
+                  >
+                    <Copy className="h-4 w-4" aria-hidden="true" />
+                    Copiar código PIX
                   </Button>
                 </div>
               )}
-            </>
-          );
-        })()}
 
-        {/* Débitos retroativos em reserva (retenções já efetuadas) */}
-        <div className="mt-8">
-          <ReserveRetentionsHistory
-            ownerId={user?.id}
-            title="Débitos efetuados em reserva"
-            hideWhenEmpty
+              <div className="rounded-xl border border-info/30 bg-info/10 p-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-info/10 text-info" aria-hidden="true">
+                    <CreditCard className="h-4 w-4" />
+                  </span>
+                  <div>
+                    <p className="text-sm font-semibold">Cartão de crédito</p>
+                    <p className="text-xs text-muted-foreground">Parcele em até 12x com juros</p>
+                  </div>
+                </div>
+                <div className="space-y-2 rounded-lg border border-dashed border-info/30 bg-muted p-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Valor total</span>
+                    <span className="text-lg font-bold tabular-nums">{formatarBRL(totalSelecionado)}</span>
+                  </div>
+                  <ul className="list-disc space-y-1 pl-4 text-xs text-muted-foreground">
+                    <li>Parcele em até 12x no cartão</li>
+                    <li>Aceita os principais cartões</li>
+                    <li>Pagamento seguro pelo Mercado Pago</li>
+                  </ul>
+                </div>
+                <Button className="mt-3 w-full" size="lg" onClick={() => window.open(groupPayment.payment_link, '_blank')}>
+                  <CreditCard className="h-4 w-4" aria-hidden="true" />
+                  Pagar com Mercado Pago
+                </Button>
+              </div>
+            </div>
+          )}
+        </CaixaOperacao>
+      )}
+
+      <Card className="rounded-xl border-border/70 p-3 md:p-4">
+        <ListFilters
+          {...filtersHook}
+          searchPlaceholder="Buscar por título ou imóvel…"
+          statusOptions={statusOptions}
+          propertyOptions={propertyOptions}
+          showDateRange
+          totalCount={charges.length}
+          filteredCount={filteredCharges.length}
+        />
+      </Card>
+
+      {loading ? (
+        <Card className="rounded-xl border-border/70 p-3" aria-busy="true" aria-label="Carregando cobranças">
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-20 w-full rounded-lg" />
+            ))}
+          </div>
+        </Card>
+      ) : charges.length === 0 ? (
+        <Card className="rounded-xl border-border/70">
+          <EmptyState
+            ilustracao="cobrancas"
+            title="Nenhuma cobrança"
+            description="Você não tem cobranças no momento. Quando a RIOS enviar uma, ela aparece aqui."
           />
-        </div>
-      </main>
+        </Card>
+      ) : filteredCharges.length === 0 ? (
+        <Card className="rounded-xl border-border/70">
+          <EmptyState
+            ilustracao="busca"
+            title="Nenhuma cobrança com esses filtros"
+            description="Mude o escopo acima ou limpe os filtros para ver as demais."
+            action={
+              (hasActive || escopo !== "todas") && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    resetFilters();
+                    setEscopo("todas");
+                  }}
+                >
+                  Limpar filtros
+                </Button>
+              )
+            }
+          />
+        </Card>
+      ) : (
+        <CaixaOperacao
+          icone={<DollarSign />}
+          titulo="Cobranças"
+          tom="success"
+          selos={<SeloContagem>{filteredCharges.length}</SeloContagem>}
+          subcabecalho={
+            contagens.abertas > 0 && selectedCharges.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                Marque as cobranças em aberto abaixo para pagar várias de uma vez.
+              </p>
+            ) : undefined
+          }
+        >
+          <div className="space-y-1.5">
+            {visibleCharges.map((charge) => {
+              const aberta = estaEmAberto(charge.status);
+              const selecionada = selectedCharges.includes(charge.id);
+              const vencida = aberta && !!charge.due_date && diasParaVencer(charge.due_date) < 0;
+              const anexos = charge.attachments?.length || 0;
+              const categoria = charge.category
+                ? CHARGE_CATEGORIES[charge.category as keyof typeof CHARGE_CATEGORIES] || charge.category
+                : charge.service_type || null;
+              const vencimento = textoVencimento(charge);
+
+              return (
+                <div
+                  key={charge.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => abrirCobranca(charge)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      abrirCobranca(charge);
+                    }
+                  }}
+                  className={cn(
+                    "flex cursor-pointer items-start gap-2.5 rounded-lg border border-border/60 bg-card px-3 py-2.5 transition-colors hover:bg-muted/60",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    vencida && "border-destructive/30 bg-destructive/5",
+                    selecionada && "border-primary/40 ring-2 ring-primary/40",
+                  )}
+                >
+                  {aberta && (
+                    <span className="flex h-5 items-center pt-0.5" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selecionada}
+                        onCheckedChange={() => toggleChargeSelection(charge.id)}
+                        aria-label={`Selecionar ${charge.title} para pagamento agrupado`}
+                      />
+                    </span>
+                  )}
+
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="line-clamp-2 text-[13px] font-medium leading-tight">{charge.title}</p>
+                      <EtiquetaStatusCobranca status={charge.status} />
+                    </div>
+                    {(charge.property || categoria) && (
+                      <p className="truncate text-xs text-muted-foreground">
+                        {charge.property?.name}
+                        {charge.property && categoria ? " · " : ""}
+                        {categoria}
+                      </p>
+                    )}
+                    {vencimento && (
+                      <p className={cn("text-xs", vencida ? "font-medium text-destructive" : "text-muted-foreground")}>{vencimento}</p>
+                    )}
+                    <ResumoValorCobranca cobranca={charge} variante="compacto" />
+                  </div>
+
+                  {anexos > 0 && (
+                    <div className="flex shrink-0 items-center self-center" onClick={(e) => e.stopPropagation()}>
+                      <BotaoLinha
+                        rotulo={`Ver ${anexos} ${anexos === 1 ? "anexo" : "anexos"}`}
+                        texto={String(anexos)}
+                        tom="primary"
+                        onClick={() => abrirAnexos(charge)}
+                      >
+                        <Paperclip />
+                      </BotaoLinha>
+                    </div>
+                  )}
+                  <ChevronRight className="h-4 w-4 shrink-0 self-center text-muted-foreground/60" aria-hidden="true" />
+                </div>
+              );
+            })}
+          </div>
+
+          {hasMore && (
+            <div className="flex justify-center pt-3">
+              <Button variant="outline" onClick={() => setVisibleCount((v) => v + 100)}>
+                Carregar mais ({filteredCharges.length - visibleCount} restantes)
+              </Button>
+            </div>
+          )}
+        </CaixaOperacao>
+      )}
+
+      {/* Débitos retroativos em reserva (retenções já efetuadas) */}
+      <ReserveRetentionsHistory
+        ownerId={user?.id}
+        title="Débitos efetuados em reserva"
+        hideWhenEmpty
+      />
 
       <MediaGallery
         items={galleryItems}
@@ -632,7 +567,7 @@ const MinhasCobrancas = () => {
         open={galleryOpen}
         onOpenChange={setGalleryOpen}
       />
-    </div>
+    </PaginaInterna>
   );
 };
 

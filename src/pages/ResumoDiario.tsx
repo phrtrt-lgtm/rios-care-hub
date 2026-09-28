@@ -1,14 +1,29 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { goBack } from "@/lib/navigation";
-import { ArrowLeft, RefreshCw, AlertTriangle, Clock, CheckCircle, Calendar, Wrench, Bell, FileText, CreditCard } from "lucide-react";
+import {
+  AlertTriangle,
+  Bell,
+  Calendar,
+  CheckCircle,
+  Clock,
+  CreditCard,
+  FileText,
+  Lightbulb,
+  RefreshCw,
+  Sun,
+  Wrench,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SectionSkeleton } from "@/components/ui/section-skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { CabecalhoPagina, PaginaInterna } from "@/components/painel/PaginaInterna";
+import { CaixaOperacao } from "@/components/painel/CaixaOperacao";
+import { TOM, type Tom } from "@/components/painel/tons";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { MobileBottomNav } from "@/components/MobileBottomNav";
+import { cn } from "@/lib/utils";
 
 interface DailySummary {
   date: string;
@@ -23,259 +38,239 @@ interface DailySummary {
   resumoIA: string;
 }
 
+function StatCard({
+  icone,
+  rotulo,
+  valor,
+  tom = "info",
+  onClick,
+}: {
+  icone: ReactNode;
+  rotulo: string;
+  valor: number;
+  tom?: Tom;
+  onClick?: () => void;
+}) {
+  return (
+    <Card
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (onClick && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      aria-label={onClick ? `${rotulo}: ${valor}. Abrir` : undefined}
+      className={cn(
+        "flex items-center gap-3 rounded-xl border-border/70 p-4 transition-colors",
+        onClick && "cursor-pointer hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+      )}
+    >
+      <span
+        className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-lg [&>svg]:h-5 [&>svg]:w-5", TOM[tom].caixa)}
+        aria-hidden="true"
+      >
+        {icone}
+      </span>
+      <div className="min-w-0">
+        <p className={cn("text-2xl font-bold leading-none tabular-nums", valor > 0 && tom !== "info" && TOM[tom].texto)}>{valor}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{rotulo}</p>
+      </div>
+    </Card>
+  );
+}
+
 export default function ResumoDiario() {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
   const [summary, setSummary] = useState<DailySummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState(false);
 
-  const isTeamMember = profile?.role && ["admin", "agent", "maintenance"].includes(profile.role);
+  const isTeamMember = !!profile?.role && ["admin", "agent", "maintenance"].includes(profile.role);
+  const userId = user?.id;
 
-  const fetchSummary = async () => {
-    if (!user) return;
-    
+  const fetchSummary = useCallback(async () => {
+    if (!userId) return;
+
     setLoading(true);
+    setErro(false);
     try {
       const { data, error } = await supabase.functions.invoke("daily-summary", {
-        body: { userId: user.id },
+        body: { userId },
       });
 
       if (error) throw error;
       setSummary(data);
     } catch (error) {
-      console.error("Error fetching summary:", error);
-      toast.error("Erro ao carregar resumo");
+      console.error("Erro ao carregar o resumo do dia:", error);
+      setErro(true);
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
 
   useEffect(() => {
     fetchSummary();
-  }, [user]);
+  }, [fetchSummary]);
 
-  const today = new Date().toLocaleDateString("pt-BR", {
+  const hoje = new Date().toLocaleDateString("pt-BR", {
     weekday: "long",
     day: "numeric",
     month: "long",
     year: "numeric",
   });
 
-  const StatCard = ({ 
-    icon: Icon, 
-    label, 
-    value, 
-    variant = "default",
-    onClick 
-  }: { 
-    icon: any; 
-    label: string; 
-    value: number; 
-    variant?: "default" | "warning" | "danger" | "success";
-    onClick?: () => void;
-  }) => {
-    const variants = {
-      default: "bg-info/10 text-info border-info/30",
-      warning: "bg-warning/10 text-warning border-warning/30",
-      danger: "bg-destructive/10 text-destructive border-destructive/30",
-      success: "bg-success/10 text-success border-success/30",
-    };
-
-    return (
-      <Card 
-        className={`${variants[variant]} border cursor-pointer hover:shadow-md transition-shadow`}
-        onClick={onClick}
-      >
-        <CardContent className="p-4 flex items-center gap-4">
-          <div className={`p-3 rounded-full ${
-            variant === "danger" ? "bg-destructive/10" :
-            variant === "warning" ? "bg-warning/10" :
-            variant === "success" ? "bg-success/10" :
-            "bg-info/10"
-          }`}>
-            <Icon className="h-5 w-5" />
-          </div>
-          <div className="flex-1">
-            <p className="text-2xl font-bold">{value}</p>
-            <p className="text-sm opacity-80">{label}</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
+  // O proprietário não entra nas telas da equipe: links da caixa dele.
+  const rotaChamados = isTeamMember ? "/todos-tickets" : "/meus-chamados";
+  const rotaCobrancas = isTeamMember ? "/gerenciar-cobrancas" : "/minhas-cobrancas";
+  const inicio = isTeamMember ? "/painel" : "/minha-caixa";
 
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-0">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-primary to-blue-600 text-white p-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-4 mb-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => goBack(navigate, "/painel")}
-              className="text-white hover:bg-white/20"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold">☀️ Resumo Diário</h1>
-              <p className="text-blue-100 text-sm capitalize">{today}</p>
-            </div>
+    <PaginaInterna
+      largura="media"
+      comNavInferior
+      cabecalho={
+        <CabecalhoPagina
+          titulo="Resumo do dia"
+          subtitulo={<span className="capitalize">{hoje}</span>}
+          icone={<Sun />}
+          tom="warning"
+          voltarPara={inicio}
+          acoes={
             <Button
               variant="ghost"
               size="icon"
               onClick={fetchSummary}
               disabled={loading}
-              className="text-white hover:bg-white/20"
+              aria-label="Atualizar resumo"
+              className="h-9 w-9"
             >
-              <RefreshCw className={`h-5 w-5 ${loading ? "animate-spin" : ""}`} />
+              <RefreshCw className={cn("h-5 w-5", loading && "animate-spin")} />
             </Button>
+          }
+        />
+      }
+    >
+      {loading ? (
+        <>
+          <SectionSkeleton rows={1} showHeader />
+          <div className="grid grid-cols-2 gap-3" aria-busy="true" aria-label="Carregando números do dia">
+            {Array.from({ length: isTeamMember ? 8 : 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-[76px] rounded-xl" />
+            ))}
           </div>
-        </div>
-      </div>
+        </>
+      ) : erro || !summary ? (
+        <Card className="rounded-xl border-border/70">
+          <EmptyState
+            icon={<AlertTriangle className="h-6 w-6" />}
+            title="Não foi possível montar o resumo"
+            description="Tente de novo em instantes."
+            action={
+              <Button variant="outline" onClick={fetchSummary}>
+                <RefreshCw className="h-4 w-4" />
+                Tentar de novo
+              </Button>
+            }
+          />
+        </Card>
+      ) : (
+        <>
+          {summary.resumoIA && (
+            <CaixaOperacao icone={<Lightbulb />} titulo="Resumo da IA" tom="info">
+              <p className="text-sm leading-relaxed">{summary.resumoIA}</p>
+            </CaixaOperacao>
+          )}
 
-      <div className="max-w-4xl mx-auto p-4 space-y-6">
-        {/* AI Summary */}
-        {loading ? (
-          <Card className="bg-info/10 border-info/30">
-            <CardContent className="p-6">
-              <Skeleton className="h-4 w-full mb-2" />
-              <Skeleton className="h-4 w-3/4" />
-            </CardContent>
-          </Card>
-        ) : summary?.resumoIA ? (
-          <Card className="bg-gradient-to-r from-info/10 to-indigo-50 border-info/30">
-            <CardContent className="p-6">
-              <div className="flex items-start gap-3">
-                <span className="text-2xl">💡</span>
-                <p className="text-info leading-relaxed">{summary.resumoIA}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ) : null}
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-4">
-          {loading ? (
-            <>
-              {[...Array(6)].map((_, i) => (
-                <Skeleton key={i} className="h-24 rounded-lg" />
-              ))}
-            </>
-          ) : summary ? (
-            <>
-              <StatCard
-                icon={AlertTriangle}
-                label="Tickets Urgentes"
-                value={summary.ticketsUrgentes}
-                variant={summary.ticketsUrgentes > 0 ? "danger" : "success"}
-                onClick={() => navigate("/todos-tickets?priority=urgente")}
-              />
-              <StatCard
-                icon={FileText}
-                label="Tickets Novos"
-                value={summary.ticketsNovos}
-                variant="default"
-                onClick={() => navigate("/todos-tickets?status=novo")}
-              />
-              <StatCard
-                icon={Clock}
-                label="Aguardando Info"
-                value={summary.ticketsAguardando}
-                variant={summary.ticketsAguardando > 0 ? "warning" : "default"}
-                onClick={() => navigate("/todos-tickets?status=aguardando_info")}
-              />
-              <StatCard
-                icon={CreditCard}
-                label="Cobranças Atrasadas"
-                value={summary.cobrancasAtrasadas}
-                variant={summary.cobrancasAtrasadas > 0 ? "danger" : "success"}
-                onClick={() => navigate("/gerenciar-cobrancas?status=atrasado")}
-              />
-              <StatCard
-                icon={CreditCard}
-                label="Vencendo Hoje/Amanhã"
-                value={summary.cobrancasVencendo}
-                variant={summary.cobrancasVencendo > 0 ? "warning" : "default"}
-                onClick={() => navigate("/gerenciar-cobrancas")}
-              />
-              {isTeamMember && (
-                <>
-                  <StatCard
-                    icon={CheckCircle}
-                    label="Vistorias Hoje"
-                    value={summary.vistoriasHoje}
-                    variant="default"
-                    onClick={() => navigate("/admin-vistorias")}
-                  />
-                  <StatCard
-                    icon={Wrench}
-                    label="Manutenções Agendadas"
-                    value={summary.manutencoesAgendadas}
-                    variant="default"
-                    onClick={() => navigate("/manutencoes")}
-                  />
-                  <StatCard
-                    icon={Bell}
-                    label="Alertas Ativos"
-                    value={summary.alertasAtivos}
-                    variant={summary.alertasAtivos > 0 ? "warning" : "default"}
-                    onClick={() => navigate("/painel")}
-                  />
-                </>
-              )}
-            </>
-          ) : null}
-        </div>
-
-        {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Ações Rápidas</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3">
-            <Button 
-              variant="outline" 
-              className="justify-start"
-              onClick={() => navigate("/todos-tickets")}
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              Ver Tickets
-            </Button>
-            <Button 
-              variant="outline" 
-              className="justify-start"
-              onClick={() => navigate("/gerenciar-cobrancas")}
-            >
-              <CreditCard className="h-4 w-4 mr-2" />
-              Ver Cobranças
-            </Button>
+          <div className="grid grid-cols-2 gap-3">
+            <StatCard
+              icone={<AlertTriangle />}
+              rotulo="Chamados urgentes"
+              valor={summary.ticketsUrgentes}
+              tom={summary.ticketsUrgentes > 0 ? "destructive" : "success"}
+              onClick={() => navigate(isTeamMember ? "/todos-tickets?priority=urgente" : rotaChamados)}
+            />
+            <StatCard
+              icone={<FileText />}
+              rotulo="Chamados novos"
+              valor={summary.ticketsNovos}
+              onClick={() => navigate(isTeamMember ? "/todos-tickets?status=novo" : rotaChamados)}
+            />
+            <StatCard
+              icone={<Clock />}
+              rotulo="Aguardando informação"
+              valor={summary.ticketsAguardando}
+              tom={summary.ticketsAguardando > 0 ? "warning" : "info"}
+              onClick={() => navigate(isTeamMember ? "/todos-tickets?status=aguardando_info" : rotaChamados)}
+            />
+            <StatCard
+              icone={<CreditCard />}
+              rotulo="Cobranças atrasadas"
+              valor={summary.cobrancasAtrasadas}
+              tom={summary.cobrancasAtrasadas > 0 ? "destructive" : "success"}
+              onClick={() => navigate(isTeamMember ? "/gerenciar-cobrancas?status=atrasado" : rotaCobrancas)}
+            />
+            <StatCard
+              icone={<CreditCard />}
+              rotulo="Vencendo hoje ou amanhã"
+              valor={summary.cobrancasVencendo}
+              tom={summary.cobrancasVencendo > 0 ? "warning" : "info"}
+              onClick={() => navigate(rotaCobrancas)}
+            />
             {isTeamMember && (
               <>
-                <Button 
-                  variant="outline" 
-                  className="justify-start"
+                <StatCard
+                  icone={<CheckCircle />}
+                  rotulo="Vistorias hoje"
+                  valor={summary.vistoriasHoje}
+                  onClick={() => navigate("/admin/vistorias/todas")}
+                />
+                <StatCard
+                  icone={<Wrench />}
+                  rotulo="Manutenções agendadas"
+                  valor={summary.manutencoesAgendadas}
                   onClick={() => navigate("/manutencoes")}
-                >
-                  <Wrench className="h-4 w-4 mr-2" />
-                  Manutenções
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="justify-start"
-                  onClick={() => navigate("/admin-vistorias")}
-                >
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Vistorias
-                </Button>
+                />
+                <StatCard
+                  icone={<Bell />}
+                  rotulo="Avisos ativos"
+                  valor={summary.alertasAtivos}
+                  tom={summary.alertasAtivos > 0 ? "warning" : "info"}
+                  onClick={() => navigate("/painel")}
+                />
               </>
             )}
-          </CardContent>
-        </Card>
-      </div>
+          </div>
 
-      <MobileBottomNav />
-    </div>
+          <CaixaOperacao icone={<Calendar />} titulo="Atalhos" tom="neutral">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <Button variant="outline" className="justify-start" onClick={() => navigate(rotaChamados)}>
+                <FileText className="h-4 w-4" />
+                {isTeamMember ? "Ver chamados" : "Meus chamados"}
+              </Button>
+              <Button variant="outline" className="justify-start" onClick={() => navigate(rotaCobrancas)}>
+                <CreditCard className="h-4 w-4" />
+                {isTeamMember ? "Ver cobranças" : "Minhas cobranças"}
+              </Button>
+              {isTeamMember && (
+                <>
+                  <Button variant="outline" className="justify-start" onClick={() => navigate("/manutencoes")}>
+                    <Wrench className="h-4 w-4" />
+                    Manutenções
+                  </Button>
+                  <Button variant="outline" className="justify-start" onClick={() => navigate("/admin/vistorias/todas")}>
+                    <Calendar className="h-4 w-4" />
+                    Vistorias
+                  </Button>
+                </>
+              )}
+            </div>
+          </CaixaOperacao>
+        </>
+      )}
+    </PaginaInterna>
   );
 }

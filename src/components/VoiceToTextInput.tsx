@@ -85,8 +85,10 @@ export function VoiceToTextInput({ onTranscript, disabled }: VoiceToTextInputPro
       size="icon"
       onClick={isRecording ? handleStopRecording : handleStartRecording}
       disabled={disabled || isTranscribing}
-      className={isRecording ? "bg-red-500 hover:bg-red-600 text-white" : ""}
+      className={isRecording ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
       title={isRecording ? "Parar gravação" : "Gravar áudio"}
+      aria-label={isRecording ? "Parar gravação" : "Gravar áudio"}
+      aria-pressed={isRecording}
     >
       {isTranscribing ? (
         <Loader2 className="h-4 w-4 animate-spin" />

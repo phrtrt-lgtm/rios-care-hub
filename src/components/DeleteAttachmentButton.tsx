@@ -60,6 +60,7 @@ export function DeleteAttachmentButton({
           }}
           className={"h-7 w-7 p-0 " + (className ?? "")}
           title="Excluir anexo"
+          aria-label="Excluir anexo"
         >
           <Trash2 className="h-3.5 w-3.5" />
         </Button>

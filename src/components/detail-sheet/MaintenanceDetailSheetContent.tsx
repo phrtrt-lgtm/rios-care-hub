@@ -3,28 +3,29 @@ import { useMaintenance } from '@/hooks/useMaintenances';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { uploadFileWithCompression } from '@/lib/fileUpload';
-import { Badge } from '@/components/ui/badge';
+import { uploadFileWithCompression, emParaleloOuFalha } from '@/lib/fileUpload';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { formatBRL } from '@/lib/format';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { EmptyState } from '@/components/ui/empty-state';
+import { formatarBRL, formatarData, valorDevido } from '@/lib/cobrancaMeta';
 import {
   Building2,
   User,
   Calendar,
-  Tag,
   Paperclip,
   ExternalLink,
   Plus,
   Loader2,
-  Pencil,
   ImageIcon,
   ClipboardCheck,
   Trash2,
+  Wrench,
 } from 'lucide-react';
-import { CHARGE_CATEGORIES } from '@/constants/chargeCategories';
+import { CHARGE_CATEGORIES, rotuloResponsavelCusto, rotulosServico } from '@/constants/chargeCategories';
+import { Etiqueta } from '@/components/painel/Etiqueta';
+import { EtiquetaStatusCobranca } from '@/components/cobrancas/EtiquetaStatusCobranca';
+import { EtiquetaStatusTicket } from '@/components/tickets/EtiquetasTicket';
+import { ResumoValorCobranca } from '@/components/cobrancas/ResumoValorCobranca';
 import { MediaThumbnail } from '@/components/MediaThumbnail';
 import { MediaGallery } from '@/components/MediaGallery';
 import { MaintenanceUpdatesThread } from '@/components/MaintenanceUpdatesThread';
@@ -37,32 +38,6 @@ interface Props {
   onOpenFull: () => void;
 }
 
-const STATUS_LABELS: Record<string, { label: string; className: string }> = {
-  draft: { label: 'Rascunho', className: 'bg-muted text-muted-foreground' },
-  sent: { label: 'Enviada', className: 'bg-info/10 text-info border-info/30' },
-  pending: { label: 'Pendente', className: 'bg-warning/10 text-warning border-warning/30' },
-  paid: { label: 'Paga', className: 'bg-success/10 text-success border-success/30' },
-  pago_no_vencimento: { label: 'Paga', className: 'bg-success/10 text-success border-success/30' },
-  pago_antecipado: { label: 'Paga (antecipado)', className: 'bg-success/10 text-success border-success/30' },
-  pago_com_atraso: { label: 'Paga (com atraso)', className: 'bg-success/10 text-success border-success/30' },
-  overdue: { label: 'Vencida', className: 'bg-destructive/10 text-destructive border-destructive/30' },
-  debited: { label: 'Débito em Reserva', className: 'bg-destructive text-destructive-foreground' },
-  cancelled: { label: 'Cancelada', className: 'bg-muted text-muted-foreground' },
-  novo: { label: 'Novo', className: 'bg-info/10 text-info border-info/30' },
-  em_analise: { label: 'Em análise', className: 'bg-warning/10 text-warning border-warning/30' },
-  aguardando_info: { label: 'Aguardando info', className: 'bg-warning/10 text-warning border-warning/30' },
-  em_execucao: { label: 'Em execução', className: 'bg-primary/10 text-primary border-primary/30' },
-  concluido: { label: 'Concluído', className: 'bg-success/10 text-success border-success/30' },
-};
-
-const COST_RESPONSIBLE_LABELS: Record<string, string> = {
-  owner: 'Proprietário',
-  pm: 'Gestão',
-  guest: 'Hóspede',
-  management: 'Gestão',
-  split: 'Dividido',
-};
-
 export function MaintenanceDetailSheetContent({ id, onOpenFull }: Props) {
   const { data: maintenance, isLoading, refetch } = useMaintenance(id);
   const { user } = useAuth();
@@ -71,7 +46,7 @@ export function MaintenanceDetailSheetContent({ id, onOpenFull }: Props) {
   const [uploading, setUploading] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name?: string | null } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   const handleDeleteAttachment = async () => {
@@ -92,36 +67,36 @@ export function MaintenanceDetailSheetContent({ id, onOpenFull }: Props) {
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-6 w-24" />
-        <Skeleton className="h-8 w-3/4" />
+      <div className="space-y-4" aria-busy="true" aria-label="Carregando manutenção">
+        <Skeleton className="h-5 w-24 rounded-full" />
+        <Skeleton className="h-7 w-3/4" />
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-2/3" />
-        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-32 w-full rounded-lg" />
       </div>
     );
   }
 
   if (!maintenance) {
     return (
-      <div className="text-center py-8 text-muted-foreground text-sm">
-        Manutenção não encontrada.
-      </div>
+      <EmptyState
+        icon={<Wrench className="h-5 w-5" />}
+        title="Manutenção não encontrada"
+        description="Ela pode ter sido excluída ou você não tem acesso."
+        className="py-8"
+      />
     );
   }
-
-  const statusInfo = STATUS_LABELS[maintenance.status] || {
-    label: maintenance.status,
-    className: 'bg-muted text-muted-foreground',
-  };
 
   const isCharge = maintenance.source === 'charge';
   const totalPaid =
     maintenance.payments?.reduce((sum: number, p: any) => sum + p.amount_cents, 0) || 0;
   const total = maintenance.amount_cents || 0;
-  const managementContribution = maintenance.management_contribution_cents || 0;
-  const ownerDue = total - managementContribution;
-  const remaining = ownerDue - totalPaid;
+  const remaining = valorDevido(maintenance) - totalPaid;
+  const servicos = rotulosServico(maintenance.service_type);
+  const categoria = maintenance.category
+    ? CHARGE_CATEGORIES[maintenance.category as keyof typeof CHARGE_CATEGORIES] || maintenance.category
+    : null;
 
   const allAttachments: any[] = (maintenance.attachments || []).map((a: any) => ({
     id: a.id,
@@ -145,9 +120,10 @@ export function MaintenanceDetailSheetContent({ id, onOpenFull }: Props) {
 
     setUploading(true);
     try {
-      for (const file of Array.from(files)) {
+      // Até 3 arquivos ao mesmo tempo, gravando os dados do arquivo enviado.
+      await emParaleloOuFalha(Array.from(files), async (original) => {
         const folder = isCharge ? `charges/${id}` : `tickets/${id}`;
-        const { url } = await uploadFileWithCompression(file, 'attachments', folder, () => {});
+        const { url, file } = await uploadFileWithCompression(original, 'attachments', folder);
 
         if (isCharge) {
           const { error } = await supabase.from('charge_attachments').insert({
@@ -171,7 +147,7 @@ export function MaintenanceDetailSheetContent({ id, onOpenFull }: Props) {
           } as any);
           if (error) throw error;
         }
-      }
+      });
       toast.success(files.length > 1 ? 'Anexos enviados!' : 'Anexo enviado!');
       await queryClient.invalidateQueries({ queryKey: ['maintenance', id] });
       await refetch();
@@ -195,106 +171,65 @@ export function MaintenanceDetailSheetContent({ id, onOpenFull }: Props) {
         accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx"
       />
 
-      {/* Status + Categoria */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <Badge variant="outline" className={statusInfo.className}>
-          {statusInfo.label}
-        </Badge>
-        {maintenance.category && (
-          <Badge variant="outline" className="text-xs">
-            <Tag className="h-3 w-3 mr-1" />
-            {CHARGE_CATEGORIES[maintenance.category as keyof typeof CHARGE_CATEGORIES] ||
-              maintenance.category}
-          </Badge>
+      {/* Status + categoria + tipo de serviço. O status vem da cobrança ou do ticket. */}
+      <div className="flex items-center gap-1.5 flex-wrap">
+        {isCharge ? (
+          <EtiquetaStatusCobranca status={maintenance.status} />
+        ) : (
+          <EtiquetaStatusTicket status={maintenance.status} />
         )}
-        {maintenance.service_type && (
-          <Badge variant="secondary" className="text-xs">
-            {maintenance.service_type}
-          </Badge>
-        )}
+        {categoria && <Etiqueta tom="neutral">{categoria}</Etiqueta>}
+        {servicos.map((s) => (
+          <Etiqueta key={s} tom="neutral">
+            {s}
+          </Etiqueta>
+        ))}
       </div>
 
       {/* Título */}
-      <div className="flex items-start justify-between gap-2">
-        <h3 className="text-lg font-semibold leading-tight">
-          {maintenance.title || 'Sem título'}
-        </h3>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 shrink-0 text-muted-foreground"
-          onClick={onOpenFull}
-          title="Editar / Ver completo"
-        >
-          <Pencil className="h-3.5 w-3.5" />
-        </Button>
-      </div>
+      <h3 className="text-lg font-semibold leading-tight">{maintenance.title || 'Sem título'}</h3>
 
-      {/* Imóvel + Proprietário */}
+      {/* Imóvel + Proprietário + vencimento */}
       <div className="space-y-2">
         {maintenance.property?.name && (
           <div className="flex items-start gap-2 text-sm">
-            <Building2 className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+            <Building2 className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" aria-hidden="true" />
             <span>{maintenance.property.name}</span>
           </div>
         )}
         {maintenance.owner?.name && (
           <div className="flex items-start gap-2 text-sm">
-            <User className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+            <User className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" aria-hidden="true" />
             <span>{maintenance.owner.name}</span>
           </div>
         )}
-        {(maintenance.due_date || maintenance.maintenance_date) && (
+        {maintenance.due_date && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Calendar className="h-4 w-4" />
-            {maintenance.due_date && (
-              <span>
-                Vence em{' '}
-                {format(
-                  new Date(maintenance.due_date + 'T12:00:00'),
-                  "dd 'de' MMM 'de' yyyy",
-                  { locale: ptBR },
-                )}
-              </span>
-            )}
+            <Calendar className="h-4 w-4" aria-hidden="true" />
+            <span>Vence em {formatarData(maintenance.due_date, "dd 'de' MMM 'de' yyyy")}</span>
           </div>
         )}
       </div>
 
       {/* Valores (apenas se houver cobrança / valor) */}
       {total > 0 && (
-        <div className="rounded-lg border bg-gradient-to-br from-muted/30 to-muted/10 p-3 space-y-1.5">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Total</span>
-            <span className="font-medium">{formatBRL(total)}</span>
-          </div>
-          {managementContribution > 0 && (
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Aporte da gestão</span>
-              <span className="text-success">- {formatBRL(managementContribution)}</span>
-            </div>
-          )}
-          <div className="flex items-center justify-between text-sm border-t pt-1.5">
-            <span className="text-muted-foreground">Devido pelo proprietário</span>
-            <span className="font-semibold">{formatBRL(ownerDue)}</span>
-          </div>
+        <div className="rounded-lg border border-border/70 bg-muted/30 p-3 space-y-1.5">
+          <ResumoValorCobranca cobranca={maintenance} variante="compacto" />
           {totalPaid > 0 && (
-            <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center justify-between text-sm border-t border-border/60 pt-1.5">
               <span className="text-muted-foreground">Pago</span>
-              <span className="text-success">{formatBRL(totalPaid)}</span>
+              <span className="text-success tabular-nums">{formatarBRL(totalPaid)}</span>
             </div>
           )}
           {remaining > 0 && totalPaid > 0 && (
             <div className="flex items-center justify-between text-sm font-medium">
               <span>Restante</span>
-              <span className="text-destructive">{formatBRL(remaining)}</span>
+              <span className="text-destructive tabular-nums">{formatarBRL(remaining)}</span>
             </div>
           )}
           {maintenance.cost_responsible && (
             <div className="text-xs text-muted-foreground pt-1">
-              Responsável:{' '}
-              {COST_RESPONSIBLE_LABELS[maintenance.cost_responsible] ||
-                maintenance.cost_responsible}
+              Responsável: {rotuloResponsavelCusto(maintenance.cost_responsible, maintenance.split_owner_percent)}
             </div>
           )}
         </div>
@@ -308,11 +243,11 @@ export function MaintenanceDetailSheetContent({ id, onOpenFull }: Props) {
         </div>
       )}
 
-      {/* Anexos — Galeria moderna com upload inline */}
+      {/* Anexos: galeria com upload inline. O nome do arquivo nunca aparece. */}
       <div>
         <div className="flex items-center justify-between mb-2">
           <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-            <Paperclip className="h-3 w-3" />
+            <Paperclip className="h-3 w-3" aria-hidden="true" />
             Anexos {allAttachments.length > 0 && `(${allAttachments.length})`}
           </p>
           <Button
@@ -338,7 +273,7 @@ export function MaintenanceDetailSheetContent({ id, onOpenFull }: Props) {
             disabled={uploading}
             className="w-full rounded-lg border-2 border-dashed border-muted-foreground/20 hover:border-primary/40 hover:bg-muted/30 transition-colors py-6 flex flex-col items-center gap-1.5 text-muted-foreground hover:text-foreground"
           >
-            <ImageIcon className="h-6 w-6 opacity-50" />
+            <ImageIcon className="h-6 w-6 opacity-50" aria-hidden="true" />
             <span className="text-xs">Clique para adicionar fotos, vídeos ou documentos</span>
           </button>
         ) : (
@@ -350,48 +285,49 @@ export function MaintenanceDetailSheetContent({ id, onOpenFull }: Props) {
                   className={`relative group aspect-square rounded-md overflow-hidden border bg-muted hover:ring-2 hover:ring-primary/40 transition-all ${
                     att.from_inspection ? 'border-info/40 ring-1 ring-info/20' : ''
                   }`}
-                  title={att.from_inspection ? 'Anexo vindo da vistoria' : att.file_name}
+                  title={att.from_inspection ? 'Anexo vindo da vistoria' : 'Anexo'}
                 >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setGalleryIndex(idx);
-                      setGalleryOpen(true);
-                    }}
-                    className="absolute inset-0 w-full h-full"
-                  >
+                  {/* A miniatura já é um botão; nada de botão dentro de botão. */}
+                  <div className="absolute inset-0 flex items-center justify-center">
                     <MediaThumbnail
                       src={att.file_url}
                       fileType={att.file_type}
                       fileName={att.file_name}
                       size="lg"
+                      onClick={() => {
+                        setGalleryIndex(idx);
+                        setGalleryOpen(true);
+                      }}
                     />
-                  </button>
+                  </div>
                   {att.from_inspection && (
                     <div className="absolute top-1 left-1 bg-info text-info-foreground rounded-full p-1 shadow-sm pointer-events-none z-10">
-                      <ClipboardCheck className="h-3 w-3" />
+                      <ClipboardCheck className="h-3 w-3" aria-hidden="true" />
                     </div>
                   )}
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="destructive"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDeleteTarget({ id: att.id, name: att.file_name });
-                    }}
-                    className="absolute top-1 right-1 h-7 w-7 p-0 z-20 opacity-90 hover:opacity-100 shadow"
-                    title="Excluir anexo"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
+                  {!att.from_inspection && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="destructive"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteTarget({ id: att.id });
+                      }}
+                      className="absolute top-1 right-1 h-7 w-7 p-0 z-20 opacity-90 hover:opacity-100 shadow"
+                      aria-label="Excluir anexo"
+                      title="Excluir anexo"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
                   <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/10 transition-colors pointer-events-none" />
                 </div>
               ))}
             </div>
             {allAttachments.some((a) => a.from_inspection) && (
               <p className="text-[11px] text-muted-foreground mt-2 flex items-center gap-1">
-                <ClipboardCheck className="h-3 w-3 text-info" />
+                <ClipboardCheck className="h-3 w-3 text-info" aria-hidden="true" />
                 Anexos com este ícone vieram da vistoria de origem
               </p>
             )}
@@ -405,7 +341,7 @@ export function MaintenanceDetailSheetContent({ id, onOpenFull }: Props) {
         chargeId={isCharge ? id : maintenance.charge_id ?? null}
       />
 
-      {/* Botão final */}
+      {/* Único caminho para a página completa (o cabeçalho do painel tem "Editar"). */}
       <div className="pt-2">
         <Button onClick={onOpenFull} className="w-full" variant="outline">
           <ExternalLink className="h-4 w-4 mr-2" />
@@ -433,16 +369,7 @@ export function MaintenanceDetailSheetContent({ id, onOpenFull }: Props) {
         open={!!deleteTarget}
         onOpenChange={(o) => !o && setDeleteTarget(null)}
         title="Excluir anexo?"
-        description={
-          <div className="space-y-2">
-            <p>Esta ação é permanente e não pode ser desfeita.</p>
-            {deleteTarget?.name && (
-              <p className="text-xs">
-                Arquivo: <span className="font-mono">{deleteTarget.name}</span>
-              </p>
-            )}
-          </div>
-        }
+        description="Esta ação é permanente e não pode ser desfeita."
         confirmLabel="Excluir"
         variant="destructive"
         loading={deleting}

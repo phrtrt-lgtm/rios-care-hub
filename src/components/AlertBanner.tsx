@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { X, Info, AlertTriangle, AlertCircle, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TOM, type Tom } from "@/components/painel/tons";
@@ -18,6 +19,9 @@ interface AlertData {
 export const AlertBanner = () => {
   const { user } = useAuth();
   const [alerts, setAlerts] = useState<AlertData[]>([]);
+  // Enquanto busca, reserva uma linha: antes o bloco nascia vazio e a página
+  // pulava quando o primeiro aviso chegava.
+  const [carregando, setCarregando] = useState(true);
 
   useEffect(() => {
     if (!user) return;
@@ -69,6 +73,7 @@ export const AlertBanner = () => {
 
     if (error) {
       console.error('Erro ao carregar alertas:', error);
+      setCarregando(false);
       return;
     }
 
@@ -88,6 +93,7 @@ export const AlertBanner = () => {
       }));
 
     setAlerts(activeAlerts);
+    setCarregando(false);
   };
 
   const markAsRead = async (recipientId: string) => {
@@ -129,6 +135,10 @@ export const AlertBanner = () => {
         return 'info';
     }
   };
+
+  if (carregando && user) {
+    return <Skeleton className="h-14 w-full rounded-xl" aria-busy="true" aria-label="Carregando avisos" />;
+  }
 
   if (alerts.length === 0) return null;
 

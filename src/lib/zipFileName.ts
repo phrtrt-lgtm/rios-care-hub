@@ -12,6 +12,20 @@ const GENERIC_MIMES = new Set([
   'text/plain', 'application/x-empty',
 ]);
 
+/** Extensão a partir do mime declarado ("image/jpeg" → "jpg"); vazio se desconhecido. */
+export function extensaoPorMime(mime?: string | null): string | undefined {
+  const chave = (mime || '').split(';')[0].trim().toLowerCase();
+  return EXT_FROM_MIME[chave];
+}
+
+/**
+ * Nome anônimo para um anexo baixado: "anexo-01.jpg". O nome real do arquivo
+ * nunca sai para o usuário (regra nº 4); só o índice e a extensão.
+ */
+export function nomeAnexoAnonimo(index: number, ext?: string | null): string {
+  return `anexo-${String(index + 1).padStart(2, '0')}.${ext || 'bin'}`;
+}
+
 /** Detects the real file type from the first bytes of the blob (magic numbers). */
 export async function sniffExtension(blob: Blob): Promise<string | undefined> {
   try {
@@ -47,9 +61,12 @@ export async function sniffExtension(blob: Blob): Promise<string | undefined> {
 }
 
 /**
- * Builds a zip entry name with a valid extension.
- * Attachment names are anonymized ("Anexo"), so the extension is inferred
- * from the file name, the blob/declared mime type, or the URL.
+ * Nome de entrada do ZIP: sempre "anexo-01.jpg", pelo índice.
+ *
+ * O nome real (`rawName`) nunca vira o nome do arquivo — serve só como pista
+ * para a extensão em anexos antigos, que têm mime genérico mas extensão
+ * válida. A extensão vem, nesta ordem: bytes iniciais (quando o mime é
+ * genérico), extensão do nome, mime, URL, bytes iniciais, "bin".
  */
 export function buildZipEntryName(
   index: number,
@@ -59,9 +76,7 @@ export function buildZipEntryName(
   blobType?: string | null,
   sniffedExt?: string | null,
 ): string {
-  const name = rawName || 'Anexo';
-  const base = name.replace(/\.[^.]+$/, '') || 'Anexo';
-  const currentExt = /\.([a-z0-9]{2,5})$/i.exec(name)?.[1]?.toLowerCase();
+  const currentExt = /\.([a-z0-9]{2,5})$/i.exec(rawName || '')?.[1]?.toLowerCase();
   const urlExt = /\.([a-z0-9]{2,5})(?:$|\?)/i.exec(url || '')?.[1]?.toLowerCase();
   const blobKey = (blobType || '').split(';')[0].toLowerCase();
   const declaredKey = (mime || '').split(';')[0].toLowerCase();
@@ -70,7 +85,7 @@ export function buildZipEntryName(
   // Magic bytes win when the mime type is generic/unknown.
   const ext = (generic ? sniffedExt || undefined : undefined)
     || currentExt || mimeExt || urlExt || sniffedExt || 'bin';
-  return `${String(index + 1).padStart(2, '0')}-${base}.${ext}`;
+  return nomeAnexoAnonimo(index, ext);
 }
 
 /** Convenience wrapper: sniffs the blob and builds the zip entry name. */
@@ -83,4 +98,24 @@ export async function buildZipEntryNameFromBlob(
 ): Promise<string> {
   const sniffed = await sniffExtension(blob);
   return buildZipEntryName(index, rawName, mime, url, blob.type, sniffed);
+}
+
+/**
+ * Nome genérico para galeria e download ("imagem-2.jpg"): o nome real do
+ * arquivo nunca aparece na interface (regra nº 4). Mantém só a extensão.
+ */
+export function nomeAnonimoAnexo(
+  fileName: string | null | undefined,
+  mime: string | null | undefined,
+  indice: number,
+): string {
+  const tipo = mime?.startsWith("image/")
+    ? "imagem"
+    : mime?.startsWith("video/")
+      ? "video"
+      : mime === "application/pdf"
+        ? "pdf"
+        : "documento";
+  const ext = fileName?.includes(".") ? fileName.split(".").pop() : extensaoPorMime(mime);
+  return ext ? `${tipo}-${indice + 1}.${ext}` : `${tipo}-${indice + 1}`;
 }

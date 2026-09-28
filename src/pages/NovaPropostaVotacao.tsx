@@ -1,6 +1,5 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { goBack } from "@/lib/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -11,24 +10,17 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, X, Plus, Sparkles, Upload, FileIcon, CreditCard } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Etiqueta } from "@/components/painel/Etiqueta";
+import { CabecalhoPagina, PaginaInterna } from "@/components/painel/PaginaInterna";
+import { FileText, Image as ImageIcon, Loader2, Plus, Sparkles, Upload, Video, Vote, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { buildStorageKey } from "@/lib/storage";
 import { VoiceToTextInput } from "@/components/VoiceToTextInput";
 import { processFileForUpload } from "@/lib/processVideoForUpload";
-
-interface OptionConfig {
-  text: string;
-  requiresPayment: boolean;
-}
-
-interface ItemConfig {
-  name: string;
-  unitPriceCents: number;
-}
+import { emParaleloOuFalha } from "@/lib/fileUpload";
+import { formatarBRL } from "@/lib/cobrancaMeta";
 
 const formSchema = z.object({
   title: z.string().min(5, "Título deve ter no mínimo 5 caracteres"),
@@ -36,8 +28,10 @@ const formSchema = z.object({
   category: z.string().optional(),
   deadline: z.string().min(1, "Prazo é obrigatório"),
   target_audience: z.enum(['owners', 'team'], { required_error: "Selecione o público-alvo" }),
-  team_ids: z.array(z.string()).optional(),
-  property_ids: z.array(z.string()).min(1, "Selecione pelo menos uma unidade"),
+  team_ids: z.array(z.string()),
+  // Sem `.min(1)` aqui: proposta para a equipe não tem imóvel. A exigência
+  // por público fica nos `refine` abaixo.
+  property_ids: z.array(z.string()),
   options: z.array(z.object({
     text: z.string().min(1),
     requiresPayment: z.boolean(),
@@ -49,32 +43,74 @@ const formSchema = z.object({
     name: z.string().min(1),
     unitPriceCents: z.number().min(1),
   })).optional(),
-}).refine((data) => {
-  if (data.target_audience === 'owners') {
-    return (data.property_ids?.length ?? 0) > 0;
-  }
-  if (data.target_audience === 'team') {
-    return (data.team_ids?.length ?? 0) > 0;
-  }
-  return true;
-}, {
-  message: "Selecione pelo menos uma unidade ou membro da equipe",
+}).refine((data) => data.target_audience !== 'owners' || data.property_ids.length > 0, {
+  message: "Selecione pelo menos um imóvel",
   path: ["property_ids"],
+}).refine((data) => data.target_audience !== 'team' || data.team_ids.length > 0, {
+  message: "Selecione pelo menos um membro da equipe",
+  path: ["team_ids"],
 }).refine((data) => {
+  // Pagamento só existe para proprietários.
+  if (data.target_audience !== 'owners') return true;
   if (data.payment_type === 'fixed') {
-    return data.amount_cents && data.amount_cents > 0;
+    return !!data.amount_cents && data.amount_cents > 0;
   }
   if (data.payment_type === 'quantity') {
-    return data.unit_price_cents && data.unit_price_cents > 0;
+    return !!data.unit_price_cents && data.unit_price_cents > 0;
   }
   if (data.payment_type === 'items') {
-    return data.items && data.items.length > 0;
+    return !!data.items && data.items.length > 0;
   }
   return true;
 }, {
   message: "Informe o valor do pagamento",
   path: ["amount_cents"],
 });
+
+type FormValues = z.infer<typeof formSchema>;
+
+const TIPOS_PAGAMENTO: Array<{ valor: FormValues["payment_type"]; rotulo: string }> = [
+  { valor: "none", rotulo: "Sem pagamento" },
+  { valor: "fixed", rotulo: "Valor fixo (o mesmo para todos)" },
+  { valor: "quantity", rotulo: "Por quantidade (item único × quantidade)" },
+  { valor: "items", rotulo: "Vários itens (cada um com o seu preço)" },
+];
+
+/** Bloco do formulário: rótulo pequeno em caixa alta e conteúdo. */
+function Bloco({ titulo, descricao, acao, children }: { titulo: string; descricao?: string; acao?: ReactNode; children: ReactNode }) {
+  return (
+    <section className="space-y-3">
+      <div className="flex items-end justify-between gap-2">
+        <div>
+          <h2 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{titulo}</h2>
+          {descricao && <p className="text-xs text-muted-foreground">{descricao}</p>}
+        </div>
+        {acao}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/** Esqueleto das listas de seleção (imóveis, equipe) enquanto carregam. */
+function ListaCarregando({ rotulo }: { rotulo: string }) {
+  return (
+    <div className="space-y-2.5" aria-busy="true" aria-label={rotulo}>
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="flex items-center gap-2">
+          <Skeleton className="h-4 w-4 rounded" />
+          <Skeleton className="h-4 w-1/2" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const iconeArquivo = (tipo: string) => {
+  if (tipo.startsWith("image/")) return <ImageIcon className="h-4 w-4" />;
+  if (tipo.startsWith("video/")) return <Video className="h-4 w-4" />;
+  return <FileText className="h-4 w-4" />;
+};
 
 export default function NovaPropostaVotacao() {
   const navigate = useNavigate();
@@ -87,7 +123,7 @@ export default function NovaPropostaVotacao() {
   const [newItemName, setNewItemName] = useState("");
   const [newItemPrice, setNewItemPrice] = useState("");
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: "",
@@ -105,38 +141,22 @@ export default function NovaPropostaVotacao() {
     },
   });
 
-  // Fetch owners
-  const { data: owners } = useQuery({
-    queryKey: ['owners'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, name, email')
-        .eq('role', 'owner')
-        .eq('status', 'active')
-        .order('name');
-      
-      if (error) throw error;
-      return data;
-    },
-  });
-
   // Fetch properties
-  const { data: properties } = useQuery({
+  const { data: properties, isLoading: carregandoImoveis } = useQuery({
     queryKey: ['properties'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('properties')
         .select('id, name')
         .order('name');
-      
+
       if (error) throw error;
       return data;
     },
   });
 
   // Fetch team members
-  const { data: teamMembers } = useQuery({
+  const { data: teamMembers, isLoading: carregandoEquipe } = useQuery({
     queryKey: ['team-members'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -145,7 +165,7 @@ export default function NovaPropostaVotacao() {
         .in('role', ['admin', 'maintenance', 'agent'])
         .eq('status', 'active')
         .order('name');
-      
+
       if (error) throw error;
       return data;
     },
@@ -156,7 +176,7 @@ export default function NovaPropostaVotacao() {
     setIsGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke('ai-generate-response', {
-        body: { 
+        body: {
           action: 'generate_proposal',
           context: {
             prompt: aiPrompt,
@@ -164,17 +184,17 @@ export default function NovaPropostaVotacao() {
           }
         }
       });
-      
+
       if (error) throw error;
       if (data?.generatedText) {
         form.setValue('description', data.generatedText);
         setAiPrompt("");
         toast({ title: "Descrição gerada!", description: "Revise e edite se necessário." });
       }
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Erro ao gerar descrição",
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: "destructive",
       });
     } finally {
@@ -182,7 +202,7 @@ export default function NovaPropostaVotacao() {
     }
   };
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -190,20 +210,24 @@ export default function NovaPropostaVotacao() {
 
       // Get owner IDs from selected properties
       let participantIds: string[] = [];
-      
+
       if (values.target_audience === 'owners') {
         const { data: properties, error: propertiesError } = await supabase
           .from('properties')
           .select('owner_id')
           .in('id', values.property_ids || []);
-        
+
         if (propertiesError) throw propertiesError;
-        
+
         // Get unique owner IDs
         participantIds = [...new Set(properties?.map(p => p.owner_id) || [])];
       } else {
         participantIds = values.team_ids || [];
       }
+
+      // Pagamento é coisa de proprietário: se o público mudou para equipe
+      // depois de configurar, o que ficou no formulário não vale.
+      const paymentType = values.target_audience === 'owners' ? values.payment_type : 'none';
 
       // Create proposal
       const { data: proposal, error: proposalError } = await supabase
@@ -217,9 +241,9 @@ export default function NovaPropostaVotacao() {
           created_by: user.id,
           required_approvals: participantIds.length,
           has_attachments: attachments.length > 0,
-          payment_type: values.payment_type,
-          amount_cents: values.payment_type === 'fixed' ? values.amount_cents : null,
-          unit_price_cents: values.payment_type === 'quantity' ? values.unit_price_cents : null,
+          payment_type: paymentType,
+          amount_cents: paymentType === 'fixed' ? values.amount_cents : null,
+          unit_price_cents: paymentType === 'quantity' ? values.unit_price_cents : null,
         })
         .select()
         .single();
@@ -228,10 +252,11 @@ export default function NovaPropostaVotacao() {
 
       // Upload attachments
       if (attachments.length > 0) {
-        for (const file of attachments) {
+        // Até 3 arquivos ao mesmo tempo.
+        await emParaleloOuFalha(attachments, async (file, indiceArquivo) => {
           // Compress video if it's a video file
           const processedFile = await processFileForUpload(file);
-          const filePath = `proposals/${proposal.id}/${Date.now()}-${processedFile.name}`;
+          const filePath = `proposals/${proposal.id}/${Date.now()}-${indiceArquivo}-${processedFile.name}`;
           const { error: uploadError } = await supabase.storage
             .from('proposals')
             .upload(filePath, processedFile);
@@ -250,7 +275,7 @@ export default function NovaPropostaVotacao() {
             });
 
           if (attachmentError) throw attachmentError;
-        }
+        });
       }
 
       // Create options
@@ -258,7 +283,7 @@ export default function NovaPropostaVotacao() {
         proposal_id: proposal.id,
         option_text: opt.text,
         order_index: index,
-        requires_payment: opt.requiresPayment,
+        requires_payment: paymentType !== 'none' && opt.requiresPayment,
       }));
 
       const { error: optionsError } = await supabase
@@ -268,7 +293,7 @@ export default function NovaPropostaVotacao() {
       if (optionsError) throw optionsError;
 
       // Create proposal items if payment_type is 'items'
-      if (values.payment_type === 'items' && values.items && values.items.length > 0) {
+      if (paymentType === 'items' && values.items && values.items.length > 0) {
         const itemsData = values.items.map((item, index) => ({
           proposal_id: proposal.id,
           name: item.name,
@@ -283,7 +308,7 @@ export default function NovaPropostaVotacao() {
         if (itemsError) throw itemsError;
       }
 
-      // Create responses for each participant  
+      // Create responses for each participant
       const responses = participantIds.map(userId => ({
         proposal_id: proposal.id,
         owner_id: userId,
@@ -308,12 +333,12 @@ export default function NovaPropostaVotacao() {
         description: `${values.target_audience === 'owners' ? 'Os proprietários' : 'A equipe'} foi notificada.`,
       });
 
-      navigate('/votacoes');
-    } catch (error: any) {
+      navigate('/votacoes', { replace: true });
+    } catch (error) {
       console.error('Error creating proposal:', error);
       toast({
         title: "Erro ao criar proposta",
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: "destructive",
       });
     } finally {
@@ -326,7 +351,7 @@ export default function NovaPropostaVotacao() {
     const updated = current.includes(memberId)
       ? current.filter(id => id !== memberId)
       : [...current, memberId];
-    form.setValue('team_ids', updated);
+    form.setValue('team_ids', updated, { shouldValidate: form.formState.isSubmitted });
   };
 
   const toggleProperty = (propertyId: string) => {
@@ -334,33 +359,35 @@ export default function NovaPropostaVotacao() {
     const updated = current.includes(propertyId)
       ? current.filter(id => id !== propertyId)
       : [...current, propertyId];
-    form.setValue('property_ids', updated);
+    form.setValue('property_ids', updated, { shouldValidate: form.formState.isSubmitted });
   };
 
   const selectAllProperties = () => {
     const allIds = properties?.map(p => p.id) || [];
-    form.setValue('property_ids', allIds);
+    form.setValue('property_ids', allIds, { shouldValidate: form.formState.isSubmitted });
   };
 
   const deselectAllProperties = () => {
-    form.setValue('property_ids', []);
+    form.setValue('property_ids', [], { shouldValidate: form.formState.isSubmitted });
   };
 
   const addOption = () => {
     if (!newOption.trim()) return;
     const current = form.getValues('options') || [];
-    form.setValue('options', [...current, { text: newOption.trim(), requiresPayment: false }]);
+    form.setValue('options', [...current, { text: newOption.trim(), requiresPayment: false }], {
+      shouldValidate: form.formState.isSubmitted,
+    });
     setNewOption("");
   };
 
   const removeOption = (index: number) => {
     const current = form.getValues('options') || [];
-    form.setValue('options', current.filter((_, i) => i !== index));
+    form.setValue('options', current.filter((_, i) => i !== index), { shouldValidate: form.formState.isSubmitted });
   };
 
   const toggleOptionPayment = (index: number) => {
     const current = form.getValues('options') || [];
-    const updated = current.map((opt, i) => 
+    const updated = current.map((opt, i) =>
       i === index ? { ...opt, requiresPayment: !opt.requiresPayment } : opt
     );
     form.setValue('options', updated);
@@ -381,220 +408,242 @@ export default function NovaPropostaVotacao() {
     form.setValue('items', current.filter((_, i) => i !== index));
   };
 
-  const paymentType = form.watch('payment_type');
+  const publico = form.watch('target_audience');
+  const paraProprietarios = publico === 'owners';
+  const paymentType = paraProprietarios ? form.watch('payment_type') : 'none';
+  const imoveisSelecionados = form.watch('property_ids') ?? [];
+  const equipeSelecionada = form.watch('team_ids') ?? [];
+  const opcoes = form.watch('options') ?? [];
+  const itens = form.watch('items') ?? [];
+
+  const voltar = () => navigate('/votacoes', { replace: true });
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
-      <div className="max-w-3xl mx-auto">
-        <Button
-          variant="ghost"
-          onClick={() => goBack(navigate)}
-          className="mb-4"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Voltar
-        </Button>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Nova Proposta</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <FormField
-                  control={form.control}
-                  name="target_audience"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Público-alvo *</FormLabel>
-                      <FormControl>
-                        <RadioGroup
-                          onValueChange={field.onChange}
-                          value={field.value}
-                          className="flex gap-4"
-                        >
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="owners" id="owners" />
-                            <label htmlFor="owners" className="cursor-pointer">Proprietários</label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="team" id="team" />
-                            <label htmlFor="team" className="cursor-pointer">Equipe</label>
-                          </div>
-                        </RadioGroup>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Título *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ex: Compra de Fechaduras Eletrônicas" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Descrição *</FormLabel>
-                      <div className="space-y-2">
-                        <div className="flex gap-2">
-                          <Input
-                            placeholder="Digite ou grave um comando para a IA gerar a descrição..."
-                            value={aiPrompt}
-                            onChange={(e) => setAiPrompt(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), generateDescription())}
-                          />
-                          <VoiceToTextInput
-                            onTranscript={(text) => setAiPrompt(text)}
-                            disabled={isGenerating}
-                          />
-                          <Button 
-                            type="button" 
-                            onClick={generateDescription}
-                            disabled={isGenerating || !aiPrompt.trim()}
-                            variant="secondary"
-                          >
-                            <Sparkles className="h-4 w-4 mr-2" />
-                            {isGenerating ? "Gerando..." : "Gerar"}
-                          </Button>
+    <PaginaInterna
+      largura="media"
+      cabecalho={
+        <CabecalhoPagina
+          titulo="Nova proposta"
+          subtitulo="Votação para proprietários ou para a equipe"
+          icone={<Vote />}
+          tom="secondary"
+          voltarPara="/votacoes"
+        />
+      }
+    >
+      <Card className="rounded-xl border-border/70 p-4 md:p-6">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            {/* 1. Público-alvo */}
+            <Bloco titulo="Público-alvo">
+              <FormField
+                control={form.control}
+                name="target_audience"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        className="flex flex-wrap gap-4"
+                        aria-label="Público-alvo"
+                      >
+                        <div className="flex items-center gap-2">
+                          <RadioGroupItem value="owners" id="publico-owners" />
+                          <label htmlFor="publico-owners" className="cursor-pointer text-sm">Proprietários</label>
                         </div>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Descreva os detalhes da proposta..."
-                            className="min-h-[100px]"
-                            {...field}
-                          />
-                        </FormControl>
+                        <div className="flex items-center gap-2">
+                          <RadioGroupItem value="team" id="publico-team" />
+                          <label htmlFor="publico-team" className="cursor-pointer text-sm">Equipe</label>
+                        </div>
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {publico === 'team' && (
+                <FormField
+                  control={form.control}
+                  name="team_ids"
+                  render={() => (
+                    <FormItem>
+                      <FormLabel>Membros da equipe *</FormLabel>
+                      <div className="max-h-60 space-y-2 overflow-y-auto rounded-lg border border-border/70 p-3">
+                        {carregandoEquipe ? (
+                          <ListaCarregando rotulo="Carregando equipe" />
+                        ) : (
+                          teamMembers?.map((member) => (
+                            <div key={member.id} className="flex items-center gap-2">
+                              <Checkbox
+                                id={`membro-${member.id}`}
+                                checked={equipeSelecionada.includes(member.id)}
+                                onCheckedChange={() => toggleTeamMember(member.id)}
+                              />
+                              <label htmlFor={`membro-${member.id}`} className="flex-1 cursor-pointer text-sm">
+                                {member.name} <span className="text-muted-foreground">({member.email})</span>
+                              </label>
+                            </div>
+                          ))
+                        )}
                       </div>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+              )}
+            </Bloco>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="category"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Categoria</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Ex: Melhorias" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+            {/* 2. Proposta */}
+            <Bloco titulo="Proposta">
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Título *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex.: Compra de fechaduras eletrônicas" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                  <FormField
-                    control={form.control}
-                    name="deadline"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Prazo *</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Descrição *</FormLabel>
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Digite ou grave um comando para a IA gerar a descrição…"
+                          aria-label="Comando para a IA gerar a descrição"
+                          value={aiPrompt}
+                          onChange={(e) => setAiPrompt(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              generateDescription();
+                            }
+                          }}
+                        />
+                        <VoiceToTextInput
+                          onTranscript={(text) => setAiPrompt(text)}
+                          disabled={isGenerating}
+                        />
+                        <Button
+                          type="button"
+                          onClick={generateDescription}
+                          disabled={isGenerating || !aiPrompt.trim()}
+                          variant="secondary"
+                        >
+                          {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                          {isGenerating ? "Gerando…" : "Gerar"}
+                        </Button>
+                      </div>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Descreva os detalhes da proposta…"
+                          className="min-h-[100px]"
+                          {...field}
+                        />
+                      </FormControl>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Categoria</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex.: Melhorias" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="deadline"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Prazo *</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </Bloco>
+
+            {/* 3. Imóveis (só proprietários) */}
+            {paraProprietarios && (
+              <Bloco
+                titulo="Imóveis"
+                descricao="Os proprietários dos imóveis marcados recebem a proposta."
+                acao={
+                  <div className="flex gap-1.5">
+                    <Button type="button" variant="outline" size="sm" onClick={selectAllProperties} disabled={carregandoImoveis}>
+                      Todos
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={deselectAllProperties} disabled={carregandoImoveis}>
+                      Nenhum
+                    </Button>
+                  </div>
+                }
+              >
                 <FormField
                   control={form.control}
                   name="property_ids"
                   render={() => (
                     <FormItem>
-                      <div className="flex items-center justify-between">
-                        <FormLabel>Unidades</FormLabel>
-                        <div className="flex gap-2">
-                          <Button type="button" variant="outline" size="sm" onClick={selectAllProperties}>
-                            Selecionar todas
-                          </Button>
-                          <Button type="button" variant="outline" size="sm" onClick={deselectAllProperties}>
-                            Desselecionar todas
-                          </Button>
-                        </div>
+                      <div className="max-h-60 space-y-2 overflow-y-auto rounded-lg border border-border/70 p-3">
+                        {carregandoImoveis ? (
+                          <ListaCarregando rotulo="Carregando imóveis" />
+                        ) : (
+                          properties?.map((property) => (
+                            <div key={property.id} className="flex items-center gap-2">
+                              <Checkbox
+                                id={`imovel-${property.id}`}
+                                checked={imoveisSelecionados.includes(property.id)}
+                                onCheckedChange={() => toggleProperty(property.id)}
+                              />
+                              <label htmlFor={`imovel-${property.id}`} className="flex-1 cursor-pointer text-sm">
+                                {property.name}
+                              </label>
+                            </div>
+                          ))
+                        )}
                       </div>
-                      <div className="border rounded-md p-4 max-h-60 overflow-y-auto space-y-2">
-                        {properties?.map((property) => (
-                          <div key={property.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              checked={form.watch('property_ids')?.includes(property.id)}
-                              onCheckedChange={() => toggleProperty(property.id)}
-                            />
-                            <label className="text-sm cursor-pointer flex-1" onClick={() => toggleProperty(property.id)}>
-                              {property.name}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
+                      {!carregandoImoveis && (
+                        <p className="text-xs text-muted-foreground">
+                          {imoveisSelecionados.length} de {properties?.length ?? 0} imóveis selecionados
+                        </p>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+              </Bloco>
+            )}
 
-                <div className="space-y-3">
-                  <FormLabel>Anexos</FormLabel>
-                  <div className="flex gap-2">
-                    <Input
-                      type="file"
-                      multiple
-                      onChange={(e) => {
-                        const files = Array.from(e.target.files || []);
-                        setAttachments(prev => [...prev, ...files]);
-                      }}
-                      className="hidden"
-                      id="file-upload"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => document.getElementById('file-upload')?.click()}
-                    >
-                      <Upload className="h-4 w-4 mr-2" />
-                      Adicionar arquivos
-                    </Button>
-                  </div>
-                  {attachments.length > 0 && (
-                    <div className="border rounded-md p-3 space-y-2">
-                      {attachments.map((file, index) => (
-                        <div key={index} className="flex items-center justify-between bg-muted p-2 rounded">
-                          <div className="flex items-center gap-2">
-                            <FileIcon className="h-4 w-4" />
-                            <span className="text-sm">{file.name}</span>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setAttachments(prev => prev.filter((_, i) => i !== index))}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Payment Configuration */}
-                <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
-                  <FormLabel className="text-base font-semibold">Configuração de Pagamento</FormLabel>
-                  
+            {/* 4. Pagamento (só proprietários) */}
+            {paraProprietarios && (
+              <Bloco titulo="Pagamento" descricao="Cobrado do proprietário quando ele escolhe uma opção paga.">
+                <div className="space-y-4 rounded-lg border border-border/70 bg-muted/30 p-4">
                   <FormField
                     control={form.control}
                     name="payment_type"
@@ -605,31 +654,16 @@ export default function NovaPropostaVotacao() {
                             onValueChange={field.onChange}
                             value={field.value}
                             className="space-y-2"
+                            aria-label="Tipo de pagamento"
                           >
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="none" id="payment-none" />
-                              <label htmlFor="payment-none" className="cursor-pointer text-sm">
-                                Sem pagamento
-                              </label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="fixed" id="payment-fixed" />
-                              <label htmlFor="payment-fixed" className="cursor-pointer text-sm">
-                                Valor fixo (mesmo valor para todos)
-                              </label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="quantity" id="payment-quantity" />
-                              <label htmlFor="payment-quantity" className="cursor-pointer text-sm">
-                                Por quantidade (item único × quantidade)
-                              </label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="items" id="payment-items" />
-                              <label htmlFor="payment-items" className="cursor-pointer text-sm">
-                                Múltiplos itens (cada item com preço diferente)
-                              </label>
-                            </div>
+                            {TIPOS_PAGAMENTO.map((t) => (
+                              <div key={t.valor} className="flex items-center gap-2">
+                                <RadioGroupItem value={t.valor} id={`pagamento-${t.valor}`} />
+                                <label htmlFor={`pagamento-${t.valor}`} className="cursor-pointer text-sm">
+                                  {t.rotulo}
+                                </label>
+                              </div>
+                            ))}
                           </RadioGroup>
                         </FormControl>
                         <FormMessage />
@@ -648,7 +682,7 @@ export default function NovaPropostaVotacao() {
                             <Input
                               type="number"
                               step="0.01"
-                              placeholder="Ex: 150.00"
+                              placeholder="Ex.: 150,00"
                               value={field.value ? (field.value / 100).toFixed(2) : ''}
                               onChange={(e) => field.onChange(Math.round(parseFloat(e.target.value || '0') * 100))}
                             />
@@ -670,13 +704,13 @@ export default function NovaPropostaVotacao() {
                             <Input
                               type="number"
                               step="0.01"
-                              placeholder="Ex: 89.90"
+                              placeholder="Ex.: 89,90"
                               value={field.value ? (field.value / 100).toFixed(2) : ''}
                               onChange={(e) => field.onChange(Math.round(parseFloat(e.target.value || '0') * 100))}
                             />
                           </FormControl>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            O proprietário informará a quantidade desejada.
+                          <p className="text-xs text-muted-foreground">
+                            O proprietário informa a quantidade desejada.
                           </p>
                           <FormMessage />
                         </FormItem>
@@ -688,11 +722,12 @@ export default function NovaPropostaVotacao() {
                     <div className="space-y-3">
                       <FormLabel>Itens disponíveis *</FormLabel>
                       <p className="text-xs text-muted-foreground">
-                        Adicione os itens com seus respectivos preços. O proprietário informará a quantidade de cada um.
+                        Adicione os itens com os preços. O proprietário informa a quantidade de cada um.
                       </p>
                       <div className="flex gap-2">
                         <Input
-                          placeholder="Nome do item (ex: Capa Queen)"
+                          placeholder="Nome do item (ex.: capa queen)"
+                          aria-label="Nome do item"
                           value={newItemName}
                           onChange={(e) => setNewItemName(e.target.value)}
                           className="flex-1"
@@ -701,35 +736,34 @@ export default function NovaPropostaVotacao() {
                           type="number"
                           step="0.01"
                           placeholder="Preço (R$)"
+                          aria-label="Preço do item"
                           value={newItemPrice}
                           onChange={(e) => setNewItemPrice(e.target.value)}
                           className="w-28"
                         />
-                        <Button type="button" onClick={addItem} size="icon">
+                        <Button type="button" onClick={addItem} size="icon" aria-label="Adicionar item">
                           <Plus className="h-4 w-4" />
                         </Button>
                       </div>
-                      <div className="border rounded-md p-3 space-y-2 min-h-[80px]">
-                        {form.watch('items')?.map((item, index) => (
-                          <div key={index} className="flex items-center justify-between bg-muted p-2 rounded gap-2">
-                            <div className="flex items-center gap-3 flex-1">
-                              <span className="text-sm flex-1">{item.name}</span>
-                              <Badge variant="secondary" className="text-xs">
-                                R$ {(item.unitPriceCents / 100).toFixed(2)}
-                              </Badge>
-                            </div>
+                      <div className="min-h-[80px] space-y-2 rounded-lg border border-border/70 p-3">
+                        {itens.map((item, index) => (
+                          <div key={index} className="flex items-center gap-2 rounded-lg bg-muted/60 px-2.5 py-1.5">
+                            <span className="min-w-0 flex-1 truncate text-sm">{item.name}</span>
+                            <Etiqueta tom="neutral">{formatarBRL(item.unitPriceCents)}</Etiqueta>
                             <Button
                               type="button"
                               variant="ghost"
-                              size="sm"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground"
                               onClick={() => removeItem(index)}
+                              aria-label={`Remover item ${item.name}`}
                             >
                               <X className="h-4 w-4" />
                             </Button>
                           </div>
                         ))}
-                        {!form.watch('items')?.length && (
-                          <p className="text-sm text-muted-foreground text-center py-2">
+                        {itens.length === 0 && (
+                          <p className="py-2 text-center text-sm text-muted-foreground">
                             Adicione pelo menos 1 item
                           </p>
                         )}
@@ -737,118 +771,133 @@ export default function NovaPropostaVotacao() {
                     </div>
                   )}
                 </div>
+              </Bloco>
+            )}
 
-                <FormField
-                  control={form.control}
-                  name="options"
-                  render={() => (
-                    <FormItem>
-                      <FormLabel>Opções de resposta *</FormLabel>
-                      {paymentType !== 'none' && (
-                        <p className="text-xs text-muted-foreground">
-                          Marque quais opções requerem pagamento (ex: "Sim")
-                        </p>
-                      )}
-                      <div className="space-y-3">
-                        <div className="flex gap-2">
-                          <Input
-                            placeholder="Digite uma opção..."
-                            value={newOption}
-                            onChange={(e) => setNewOption(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addOption())}
-                          />
-                          <Button type="button" onClick={addOption} size="icon">
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        <div className="border rounded-md p-3 space-y-2 min-h-[100px]">
-                          {form.watch('options')?.map((option, index) => (
-                            <div key={index} className="flex items-center justify-between bg-muted p-2 rounded gap-2">
-                              <div className="flex items-center gap-3 flex-1">
-                                {paymentType !== 'none' && (
-                                  <Checkbox
-                                    checked={option.requiresPayment}
-                                    onCheckedChange={() => toggleOptionPayment(index)}
-                                    title="Requer pagamento"
-                                  />
-                                )}
-                                <span className="text-sm flex-1">{option.text}</span>
-                                {option.requiresPayment && paymentType !== 'none' && (
-                                  <Badge variant="secondary" className="text-xs">
-                                    Paga
-                                  </Badge>
-                                )}
-                              </div>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => removeOption(index)}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ))}
-                          {!form.watch('options')?.length && (
-                            <p className="text-sm text-muted-foreground text-center py-4">
-                              Adicione pelo menos 2 opções
-                            </p>
-                          )}
-                        </div>
+            {/* 5. Opções de resposta */}
+            <Bloco
+              titulo="Opções de resposta"
+              descricao={paymentType !== 'none' ? 'Marque quais opções exigem pagamento (ex.: "Sim").' : undefined}
+            >
+              <FormField
+                control={form.control}
+                name="options"
+                render={() => (
+                  <FormItem>
+                    <div className="space-y-3">
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Digite uma opção…"
+                          aria-label="Nova opção de resposta"
+                          value={newOption}
+                          onChange={(e) => setNewOption(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              addOption();
+                            }
+                          }}
+                        />
+                        <Button type="button" onClick={addOption} size="icon" aria-label="Adicionar opção">
+                          <Plus className="h-4 w-4" />
+                        </Button>
                       </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {form.watch('target_audience') === 'team' && (
-                  <FormField
-                    control={form.control}
-                    name="team_ids"
-                    render={() => (
-                      <FormItem>
-                        <FormLabel>Membros da equipe *</FormLabel>
-                        <div className="border rounded-md p-4 max-h-60 overflow-y-auto space-y-2">
-                          {teamMembers?.map((member) => (
-                            <div key={member.id} className="flex items-center space-x-2">
+                      <div className="min-h-[100px] space-y-2 rounded-lg border border-border/70 p-3">
+                        {opcoes.map((option, index) => (
+                          <div key={index} className="flex items-center gap-3 rounded-lg bg-muted/60 px-2.5 py-1.5">
+                            {paymentType !== 'none' && (
                               <Checkbox
-                                checked={form.watch('team_ids')?.includes(member.id)}
-                                onCheckedChange={() => toggleTeamMember(member.id)}
+                                checked={option.requiresPayment}
+                                onCheckedChange={() => toggleOptionPayment(index)}
+                                aria-label={`Opção "${option.text}" exige pagamento`}
                               />
-                              <label className="text-sm cursor-pointer" onClick={() => toggleTeamMember(member.id)}>
-                                {member.name} ({member.email})
-                              </label>
-                            </div>
-                          ))}
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                            )}
+                            <span className="min-w-0 flex-1 truncate text-sm">{option.text}</span>
+                            {option.requiresPayment && paymentType !== 'none' && (
+                              <Etiqueta tom="warning">Paga</Etiqueta>
+                            )}
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground"
+                              onClick={() => removeOption(index)}
+                              aria-label={`Remover opção ${option.text}`}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                        {opcoes.length === 0 && (
+                          <p className="py-4 text-center text-sm text-muted-foreground">
+                            Adicione pelo menos 2 opções
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
                 )}
+              />
+            </Bloco>
 
-                <div className="flex gap-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => goBack(navigate)}
-                    className="flex-1"
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="flex-1"
-                  >
-                    {isSubmitting ? "Criando..." : "Criar Proposta"}
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+            {/* 6. Anexos */}
+            <Bloco titulo="Anexos" descricao="Fotos, vídeos ou PDFs que ajudam a decidir.">
+              <div className="flex gap-2">
+                <Input
+                  type="file"
+                  multiple
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || []);
+                    setAttachments(prev => [...prev, ...files]);
+                    e.target.value = '';
+                  }}
+                  className="hidden"
+                  id="file-upload"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => document.getElementById('file-upload')?.click()}
+                >
+                  <Upload className="h-4 w-4" />
+                  Adicionar arquivos
+                </Button>
+              </div>
+              {attachments.length > 0 && (
+                <ul className="space-y-1.5 rounded-lg border border-border/70 p-2" aria-label="Arquivos selecionados">
+                  {attachments.map((file, index) => (
+                    <li key={`${file.name}-${index}`} className="flex items-center gap-2 rounded-lg bg-muted/60 px-2.5 py-1.5">
+                      <span className="text-muted-foreground" aria-hidden="true">{iconeArquivo(file.type)}</span>
+                      <span className="min-w-0 flex-1 truncate text-sm">{file.name}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground"
+                        onClick={() => setAttachments(prev => prev.filter((_, i) => i !== index))}
+                        aria-label="Remover arquivo"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Bloco>
+
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button type="button" variant="outline" onClick={voltar} disabled={isSubmitting}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                {isSubmitting ? "Criando…" : "Criar proposta"}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </Card>
+    </PaginaInterna>
   );
 }

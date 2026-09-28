@@ -8,6 +8,7 @@ import { ownerScopeFilter } from "@/lib/ownerScope";
 import { formatBRL } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Indicador, IndicadorSkeleton } from "./Indicador";
+import { valorDevido } from "@/lib/cobrancaMeta";
 
 interface Resumo {
   cobrancas: number;
@@ -66,7 +67,7 @@ async function buscarResumo(userId: string): Promise<Resumo> {
     valorCobrancas: listaCobrancas.reduce(
       (soma, c) =>
         soma +
-        Math.max(0, c.amount_cents - (c.management_contribution_cents || 0) - (c.credit_applied_cents || 0)),
+        valorDevido(c),
       0,
     ),
     chamados: chamados.count ?? 0,

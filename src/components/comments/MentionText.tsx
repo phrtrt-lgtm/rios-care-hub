@@ -54,7 +54,7 @@ export function MentionText({ body, className }: MentionTextProps) {
         type="button"
         onClick={(e) => {
           e.stopPropagation();
-          navigate(`/admin/usuarios?focus=${id}`);
+          navigate(`/admin/gerenciar-usuarios?focus=${id}`);
         }}
         className="text-primary font-semibold hover:underline"
       >

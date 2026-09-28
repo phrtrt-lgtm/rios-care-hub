@@ -2,23 +2,70 @@ import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMaintenances, useMaintenanceCharts } from "@/hooks/useMaintenances";
 import { MaintenanceCharts } from "@/components/MaintenanceCharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { formatBRL, formatDateTime } from "@/lib/format";
-import { Badge } from "@/components/ui/badge";
-import { Filter, Building2, ArrowLeft, Paperclip, Gift, ChevronDown, ChevronUp } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { BarChart3, Building2, Gift, Paperclip, Search } from "lucide-react";
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
-import { goBack, saveScrollPosition } from "@/lib/navigation";
+import { saveScrollPosition } from "@/lib/navigation";
 import { supabase } from "@/integrations/supabase/client";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import { MediaGallery } from "@/components/MediaGallery";
 import { ownerScopeFilter } from "@/lib/ownerScope";
-import { fetchChargeGalleryAttachments } from "@/lib/chargeAttachments";
+import { fetchChargeGalleryAttachments, type GalleryAttachment } from "@/lib/chargeAttachments";
+import { CabecalhoPagina, PaginaInterna } from "@/components/painel/PaginaInterna";
+import { BotaoLinha, CaixaOperacao, LinhaCaixa } from "@/components/painel/CaixaOperacao";
+import { TituloSecao } from "@/components/painel/TituloSecao";
+import { EtiquetaStatusCobranca } from "@/components/cobrancas/EtiquetaStatusCobranca";
+import {
+  STATUS_COBRANCA,
+  STATUS_COBRANCA_EDITAVEIS,
+  estaEmAberto,
+  estaPaga,
+  formatarBRL,
+  formatarData,
+  valorDevido,
+} from "@/lib/cobrancaMeta";
+import { rotuloResponsavelCusto, rotulosServico } from "@/constants/chargeCategories";
 
+/** Linha do relatório: uma cobrança de manutenção com o que já foi pago. */
+interface Manutencao {
+  id: string;
+  title: string;
+  created_at: string;
+  property_id: string | null;
+  amount_cents: number | null;
+  management_contribution_cents: number | null;
+  credit_applied_cents?: number | null;
+  paid_cents: number;
+  status: string;
+  cost_responsible: string | null;
+  split_owner_percent: number | null;
+  category: string | null;
+  service_type: string | null;
+  ticket_id: string | null;
+  property: { id: string; name: string } | null;
+  owner: { id: string; name: string } | null;
+}
 
+interface ServiceTypeData {
+  service_type: string;
+  total_amount: number;
+  charge_count: number;
+}
 
+interface PropertyOption {
+  id: string;
+  name: string;
+  owner: { name: string } | null;
+}
+
+const ANO_ATUAL = new Date().getFullYear();
 
 export default function Manutencoes() {
   useScrollRestoration();
@@ -26,50 +73,90 @@ export default function Manutencoes() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [year, setYear] = useState<number>(new Date().getFullYear());
+  const [year, setYear] = useState<number>(ANO_ATUAL);
   const [status, setStatus] = useState<string>("");
   const [search, setSearch] = useState<string>("");
+  const [debouncedSearch, setDebouncedSearch] = useState<string>("");
   const [serviceTypeFilter, setServiceTypeFilter] = useState<string>("");
-  const [activeFilters, setActiveFilters] = useState({ status: "", search: "", serviceType: "" });
-  const [serviceTypeData, setServiceTypeData] = useState<any[]>([]);
-  const [serviceTypes, setServiceTypes] = useState<string[]>([]);
-  const [properties, setProperties] = useState<any[]>([]);
-  const [selectedPropertyId, setSelectedPropertyId] = useState<string>(searchParams.get('property') || "");
-  const [attachmentsByCharge, setAttachmentsByCharge] = useState<Record<string, Array<{ id: string; file_url: string; file_name: string; file_type: string }>>>({});
-  const [showFilters, setShowFilters] = useState(false);
+  const [serviceTypeData, setServiceTypeData] = useState<ServiceTypeData[]>([]);
+  const [properties, setProperties] = useState<PropertyOption[]>([]);
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>(searchParams.get("property") || "");
+  const [attachmentsByCharge, setAttachmentsByCharge] = useState<Record<string, GalleryAttachment[]>>({});
   const [galleryOpen, setGalleryOpen] = useState(false);
-  const [galleryItems, setGalleryItems] = useState<Array<{ id: string; file_url: string; file_name: string; file_type: string }>>([]);
+  const [galleryItems, setGalleryItems] = useState<GalleryAttachment[]>([]);
 
-  const isOwner = profile?.role === 'owner';
-  const isTeam = profile?.role === 'admin' || profile?.role === 'agent' || profile?.role === 'maintenance';
+  const isOwner = profile?.role === "owner";
+  const isTeam = profile?.role === "admin" || profile?.role === "agent" || profile?.role === "maintenance";
   const ownerId = isOwner ? profile?.id : undefined;
   const propertyId = selectedPropertyId || undefined;
 
-  const { data: maintenances, isLoading } = useMaintenances({
+  // Todos os filtros aplicam ao mudar; a busca espera 300 ms de digitação.
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const { data, isLoading } = useMaintenances({
     ownerId,
     propertyId,
-    status: activeFilters.status || undefined,
-    search: activeFilters.search || undefined,
+    status: status || undefined,
+    search: debouncedSearch || undefined,
     serviceType: serviceTypeFilter || undefined,
   });
+  const maintenances = useMemo(() => (data ?? []) as unknown as Manutencao[], [data]);
   const { data: charts } = useMaintenanceCharts(ownerId, year, propertyId, serviceTypeFilter || undefined);
 
-  // Fetch properties for team filter
+  // Imóveis para o filtro da equipe
   useEffect(() => {
-    if (isTeam) {
-      supabase.from('properties').select('id, name, owner:profiles!properties_owner_id_fkey(name)').order('name')
-        .then(({ data }) => setProperties(data || []));
-    }
+    if (!isTeam) return;
+    supabase
+      .from("properties")
+      .select("id, name, owner:profiles!properties_owner_id_fkey(name)")
+      .order("name")
+      .then(({ data: rows }) => setProperties((rows ?? []) as unknown as PropertyOption[]));
   }, [isTeam]);
 
+  // Totais por tipo de serviço (gráfico e opções do filtro)
   useEffect(() => {
-    if (user) {
-      fetchServiceTypeData();
-    }
-  }, [user, year, propertyId, serviceTypeFilter]);
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        let query = supabase
+          .from("charges")
+          .select("service_type, amount_cents")
+          .is("archived_at", null)
+          .not("service_type", "is", null);
+        if (ownerId) query = query.or(await ownerScopeFilter(ownerId));
+        if (propertyId) query = query.eq("property_id", propertyId);
+        if (serviceTypeFilter) query = query.eq("service_type", serviceTypeFilter);
 
+        const { data: rows, error } = await query;
+        if (error) throw error;
+        if (cancelled) return;
+
+        const grouped: Record<string, ServiceTypeData> = {};
+        (rows ?? []).forEach((charge) => {
+          const type = charge.service_type || "Outros";
+          if (!grouped[type]) grouped[type] = { service_type: type, total_amount: 0, charge_count: 0 };
+          grouped[type].total_amount += charge.amount_cents ?? 0;
+          grouped[type].charge_count += 1;
+        });
+        setServiceTypeData(Object.values(grouped));
+      } catch (error) {
+        console.error("Erro ao carregar dados de tipo de serviço:", error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, ownerId, propertyId, serviceTypeFilter]);
+
+  const serviceTypes = useMemo(() => serviceTypeData.map((d) => d.service_type), [serviceTypeData]);
+
+  // Anexos da galeria (da cobrança ou, na falta, do ticket de origem)
   useEffect(() => {
-    const list = (maintenances || []).map((m: any) => ({ id: m.id, ticket_id: m.ticket_id }));
+    const list = maintenances.map((m) => ({ id: m.id, ticket_id: m.ticket_id }));
     if (list.length === 0) {
       setAttachmentsByCharge({});
       return;
@@ -85,500 +172,399 @@ export default function Manutencoes() {
     };
   }, [maintenances]);
 
+  // Aporte da gestão no ano (o único número do resumo que a tela usa)
+  const aporteTotalCents = useMemo(
+    () =>
+      maintenances
+        .filter((m) => new Date(m.created_at).getFullYear() === year)
+        .reduce((sum, m) => sum + (m.management_contribution_cents || 0), 0),
+    [maintenances, year],
+  );
 
-
-  const fetchServiceTypeData = async () => {
-    try {
-      let query = supabase
-        .from('charges')
-        .select('service_type, amount_cents')
-        .is('archived_at', null)
-        .not('service_type', 'is', null) as any;
-
-      if (ownerId) {
-        query = query.or(await ownerScopeFilter(ownerId));
-      }
-
-      if (propertyId) {
-        query = query.eq('property_id', propertyId);
-      }
-
-      if (serviceTypeFilter) {
-        query = query.eq('service_type', serviceTypeFilter);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      const grouped = (data || []).reduce((acc: any, charge: any) => {
-        const type = charge.service_type || 'Outros';
-        if (!acc[type]) {
-          acc[type] = { service_type: type, total_amount: 0, charge_count: 0 };
-        }
-        acc[type].total_amount += charge.amount_cents;
-        acc[type].charge_count += 1;
-        return acc;
-      }, {});
-
-      const groupedData = Object.values(grouped);
-      setServiceTypeData(groupedData);
-      setServiceTypes(groupedData.map((d: any) => d.service_type));
-    } catch (error) {
-      console.error('Erro ao carregar dados de tipo de serviço:', error);
-    }
-  };
-
-  // Summary computed from maintenances
-  const summary = useMemo(() => {
-    if (!maintenances) return null;
-    const yearData = maintenances.filter((m: any) => new Date(m.created_at).getFullYear() === year);
-    const openCount = yearData.filter((m: any) => ['draft', 'pending'].includes(m.status)).length;
-    const completedCount = yearData.filter((m: any) => m.status === 'paid').length;
-    const paidCount = completedCount;
-    const totalCents = yearData.reduce((sum: number, m: any) => sum + ((m.amount_cents || 0) - (m.management_contribution_cents || 0)), 0);
-    const avgOrderCents = yearData.length > 0 ? totalCents / yearData.length : 0;
-    const aporteTotalCents = yearData.reduce((sum: number, m: any) => sum + (m.management_contribution_cents || 0), 0);
-    return { openCount, completedCount, paidCount, totalCents, avgOrderCents, aporteTotalCents };
-  }, [maintenances, year]);
-
-  // Per-property summaries for team overview
+  // Resumo por imóvel (equipe, sem imóvel selecionado)
   const propertyReports = useMemo(() => {
-    if (!isTeam || !maintenances || selectedPropertyId) return [];
-    const yearData = maintenances.filter((m: any) => new Date(m.created_at).getFullYear() === year);
-    const byProperty: Record<string, { name: string; ownerName: string; items: any[] }> = {};
-    yearData.forEach((m: any) => {
-      const pid = m.property_id || 'sem-imovel';
+    if (!isTeam || selectedPropertyId) return [];
+    const yearData = maintenances.filter((m) => new Date(m.created_at).getFullYear() === year);
+    const byProperty: Record<string, { name: string; ownerName: string; items: Manutencao[] }> = {};
+    yearData.forEach((m) => {
+      const pid = m.property_id || "sem-imovel";
       if (!byProperty[pid]) {
         byProperty[pid] = {
-          name: m.property?.name || 'Sem imóvel',
-          ownerName: m.owner?.name || '-',
+          name: m.property?.name || "Sem imóvel",
+          ownerName: m.owner?.name || "—",
           items: [],
         };
       }
       byProperty[pid].items.push(m);
     });
-    return Object.entries(byProperty).map(([id, data]) => {
-      const totalCents = data.items.reduce((s: number, m: any) => s + (m.amount_cents || 0), 0);
-      const openCount = data.items.filter((m: any) => ['draft', 'pending'].includes(m.status)).length;
-      const paidCount = data.items.filter((m: any) => m.status === 'paid').length;
-      return { id, ...data, totalCents, openCount, paidCount, count: data.items.length };
-    }).sort((a, b) => b.totalCents - a.totalCents);
+    return Object.entries(byProperty)
+      .map(([id, group]) => ({
+        id,
+        ...group,
+        totalCents: group.items.reduce((s, m) => s + (m.amount_cents || 0), 0),
+        openCount: group.items.filter((m) => estaEmAberto(m.status)).length,
+        paidCount: group.items.filter((m) => estaPaga(m.status)).length,
+        count: group.items.length,
+      }))
+      .sort((a, b) => b.totalCents - a.totalCents);
   }, [isTeam, maintenances, year, selectedPropertyId]);
-
-  const handleFilter = () => {
-    setActiveFilters({ status, search, serviceType: serviceTypeFilter });
-  };
 
   const handlePropertyChange = (value: string) => {
     const pid = value === "all" ? "" : value;
     setSelectedPropertyId(pid);
-    if (pid) {
-      setSearchParams({ property: pid });
-    } else {
-      setSearchParams({});
-    }
+    setSearchParams(pid ? { property: pid } : {});
   };
 
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, any> = {
-      draft: { variant: "secondary", label: "Rascunho" },
-      pending: { variant: "default", label: "Pendente" },
-      paid: { variant: "default", label: "Paga" },
-      contested: { variant: "destructive", label: "Contestada" },
-      debited: { variant: "outline", label: "Debitada" },
-      cancelled: { variant: "destructive", label: "Cancelada" },
-    };
-    const config = variants[status] || { variant: "secondary", label: status };
-    return <Badge variant={config.variant}>{config.label}</Badge>;
+  const temFiltro = !!(status || debouncedSearch || serviceTypeFilter || selectedPropertyId);
+  const limparFiltros = () => {
+    setStatus("");
+    setSearch("");
+    setServiceTypeFilter("");
+    handlePropertyChange("all");
   };
 
-  const getResponsibleLabel = (responsible: string, percent?: number | null) => {
-    if (responsible === 'owner') return 'Proprietário';
-    if (responsible === 'management') return 'Gestão';
-    if (responsible === 'split') return `Dividido (${percent}% prop.)`;
-    return responsible;
+  const abrirCobranca = (m: Manutencao) => {
+    saveScrollPosition(pathname);
+    navigate(`/cobranca/${m.id}`);
   };
+
+  const abrirGaleria = (itens: GalleryAttachment[]) => {
+    setGalleryItems(itens);
+    setGalleryOpen(true);
+  };
+
+  const subtitulo = isLoading
+    ? undefined
+    : `${maintenances.length} ${maintenances.length === 1 ? "manutenção" : "manutenções"}`;
 
   return (
-    <div className="container mx-auto p-3 sm:p-6 space-y-4 sm:space-y-6">
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => navigate(isOwner ? '/minha-caixa' : '/painel', { replace: true })}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <h1 className="text-2xl sm:text-3xl font-bold">Manutenções</h1>
-      </div>
-
-      {/* Filtros (toggle) */}
-      <div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowFilters((v) => !v)}
-          className="gap-2"
-        >
-          <Filter className="h-4 w-4" />
-          Filtros
-          {showFilters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-        </Button>
-        {showFilters && (
-          <Card className="mt-3">
-            <CardContent className="pt-6">
-              <div className="flex flex-wrap gap-3 items-end">
-                {isTeam && (
-                  <div className="space-y-2 w-full sm:w-56">
-                    <label className="text-sm font-medium flex items-center gap-1">
-                      <Building2 className="h-3 w-3" />
-                      Unidade
-                    </label>
-                    <Select value={selectedPropertyId || "all"} onValueChange={handlePropertyChange}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Todas" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todas as unidades</SelectItem>
-                        {properties.map((p: any) => (
-                          <SelectItem key={p.id} value={p.id}>
-                            {p.name} {p.owner?.name ? `(${p.owner.name})` : ''}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                <div className="space-y-2 w-32">
-                  <label className="text-sm font-medium">Ano</label>
-                  <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[year, year - 1, year - 2].map((y) => (
-                        <SelectItem key={y} value={String(y)}>
-                          {y}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2 w-full sm:w-48">
-                  <label className="text-sm font-medium">Status</label>
-                  <Select value={status || "all"} onValueChange={(v) => setStatus(v === "all" ? "" : v)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Todos" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      <SelectItem value="draft">Rascunho</SelectItem>
-                      <SelectItem value="pending">Pendente</SelectItem>
-                      <SelectItem value="paid">Paga</SelectItem>
-                      <SelectItem value="contested">Contestada</SelectItem>
-                      <SelectItem value="debited">Debitada</SelectItem>
-                      <SelectItem value="cancelled">Cancelada</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {serviceTypes.length > 0 && (
-                  <div className="space-y-2 w-full sm:w-48">
-                    <label className="text-sm font-medium flex items-center gap-1">
-                      <Filter className="h-3 w-3" />
-                      Tipo de Serviço
-                    </label>
-                    <Select value={serviceTypeFilter || "all"} onValueChange={(v) => setServiceTypeFilter(v === "all" ? "" : v)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Todos" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos os tipos</SelectItem>
-                        {serviceTypes.map((type) => (
-                          <SelectItem key={type} value={type}>
-                            {type}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                <div className="space-y-2 flex-1 min-w-[200px]">
-                  <label className="text-sm font-medium">Buscar</label>
-                  <Input
-                    placeholder="Título ou descrição..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleFilter()}
-                  />
-                </div>
-
-                <Button onClick={handleFilter}>Filtrar</Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      {/* Aporte RIOS */}
-      {summary && summary.aporteTotalCents > 0 && (
-        <Card className="overflow-hidden border-success/30">
-          <CardContent className="p-0">
-            <div className="rounded-xl bg-gradient-to-r from-success/15 to-success/5 px-4 py-4 text-center">
-              <div className="flex items-center justify-center gap-2 mb-1">
-                <Gift className="h-4 w-4 text-success" />
-                <p className="text-[11px] text-success font-medium tracking-wide uppercase">
-                  A RIOS já aportou {selectedPropertyId ? 'neste imóvel' : 'no seu imóvel'}
-                </p>
-              </div>
-              <p className="text-2xl font-extrabold text-success">
-                {formatBRL(summary.aporteTotalCents)}
-              </p>
-              <p className="text-[11px] text-muted-foreground mt-1">em {year}</p>
+    <PaginaInterna
+      largura="larga"
+      comNavInferior
+      cabecalho={
+        <CabecalhoPagina
+          titulo="Relatório de manutenções"
+          subtitulo={subtitulo}
+          icone={<BarChart3 />}
+          tom="primary"
+          voltarPara={isOwner ? "/minha-caixa" : "/admin/manutencoes-lista"}
+        />
+      }
+    >
+      {/* Filtros: todos aplicam ao mudar */}
+      <Card className="rounded-xl border-border/70 p-3 md:p-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          {isTeam && (
+            <div className="space-y-1.5">
+              <Label htmlFor="filtro-imovel" className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Building2 className="h-3 w-3" aria-hidden="true" />
+                Imóvel
+              </Label>
+              <Select value={selectedPropertyId || "all"} onValueChange={handlePropertyChange}>
+                <SelectTrigger id="filtro-imovel" aria-label="Imóvel">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent className="z-50 bg-popover">
+                  <SelectItem value="all">Todos os imóveis</SelectItem>
+                  {properties.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                      {p.owner?.name ? ` (${p.owner.name})` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          </CardContent>
+          )}
+
+          <div className="space-y-1.5">
+            <Label htmlFor="filtro-ano" className="text-xs text-muted-foreground">
+              Ano
+            </Label>
+            <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
+              <SelectTrigger id="filtro-ano" aria-label="Ano">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="z-50 bg-popover">
+                {[ANO_ATUAL, ANO_ATUAL - 1, ANO_ATUAL - 2].map((y) => (
+                  <SelectItem key={y} value={String(y)}>
+                    {y}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="filtro-status" className="text-xs text-muted-foreground">
+              Status
+            </Label>
+            <Select value={status || "all"} onValueChange={(v) => setStatus(v === "all" ? "" : v)}>
+              <SelectTrigger id="filtro-status" aria-label="Status">
+                <SelectValue placeholder="Todos" />
+              </SelectTrigger>
+              <SelectContent className="z-50 bg-popover">
+                <SelectItem value="all">Todos</SelectItem>
+                {STATUS_COBRANCA_EDITAVEIS.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {STATUS_COBRANCA[s].rotulo}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {serviceTypes.length > 0 && (
+            <div className="space-y-1.5">
+              <Label htmlFor="filtro-servico" className="text-xs text-muted-foreground">
+                Tipo de serviço
+              </Label>
+              <Select value={serviceTypeFilter || "all"} onValueChange={(v) => setServiceTypeFilter(v === "all" ? "" : v)}>
+                <SelectTrigger id="filtro-servico" aria-label="Tipo de serviço">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent className="z-50 bg-popover">
+                  <SelectItem value="all">Todos os tipos</SelectItem>
+                  {serviceTypes.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {rotulosServico(type).join(", ") || type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <div className="space-y-1.5">
+            <Label htmlFor="filtro-busca" className="text-xs text-muted-foreground">
+              Buscar
+            </Label>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+              <Input
+                id="filtro-busca"
+                placeholder="Título ou descrição…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Aporte da gestão no ano */}
+      {aporteTotalCents > 0 && (
+        <Card className="rounded-xl border-success/30 bg-success/5 px-4 py-4 text-center">
+          <div className="mb-1 flex items-center justify-center gap-2">
+            <Gift className="h-4 w-4 text-success" aria-hidden="true" />
+            <p className="text-[11px] font-medium uppercase tracking-wide text-success">
+              A RIOS já aportou {selectedPropertyId ? "neste imóvel" : isOwner ? "no seu imóvel" : "nos imóveis"}
+            </p>
+          </div>
+          <p className="text-2xl font-extrabold tabular-nums text-success">{formatarBRL(aporteTotalCents)}</p>
+          <p className="mt-1 text-[11px] text-muted-foreground">em {year}</p>
         </Card>
       )}
 
-      {/* Lista de Manutenções */}
-      <Card>
-        <CardHeader className="px-4 py-3 sm:px-6 sm:py-4">
-          <CardTitle className="text-base">Lista de Manutenções</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {/* Desktop / tablet table */}
-          <div className="hidden md:block overflow-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50">
-                <tr>
-                  <th className="text-left p-3">Data</th>
-                  <th className="text-left p-3">Imóvel</th>
-                  <th className="text-left p-3">Título / Categoria</th>
-                  <th className="text-right p-3">Valor Total</th>
-                  <th className="text-right p-3">Aporte Gestão</th>
-                  <th className="text-right p-3">Valor Devido</th>
-                  <th className="text-center p-3">Responsável</th>
-                  <th className="text-right p-3">Pago</th>
-                  <th className="text-left p-3">Anexos</th>
-                  <th className="text-center p-3">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={10} className="text-center p-8 text-muted-foreground">
-                      Carregando...
-                    </td>
-                  </tr>
-                ) : maintenances && maintenances.length > 0 ? (
-                  maintenances
-                    .filter((m: any) => !activeFilters.serviceType || (m.service_type && String(m.service_type).split(",").map((s: string) => s.trim()).includes(activeFilters.serviceType)))
-                    .map((m: any) => (
-                    <tr
-                      key={m.id}
-                      className="border-t hover:bg-accent cursor-pointer transition-colors"
-                      onClick={() => { saveScrollPosition(pathname); navigate(`/cobranca/${m.id}`); }}
-                    >
-                      <td className="p-3">{formatDateTime(m.created_at)}</td>
-                      <td className="p-3">{m.property?.name || '-'}</td>
-                      <td className="p-3">
-                        <div className="font-medium">{m.title}</div>
-                        {m.category && (
-                          <div className="text-xs text-muted-foreground">{m.category}</div>
-                        )}
-                        {m.service_type && (
-                          <div className="text-xs text-muted-foreground">
-                            🏷️ {String(m.service_type).split(",").map((s: string) => s.trim()).filter(Boolean).join(", ")}
-                          </div>
-                        )}
-                      </td>
-                      <td className="p-3 text-right font-medium">
-                        {formatBRL(m.amount_cents)}
-                      </td>
-                      <td className="p-3 text-right font-medium text-success">
-                        {m.management_contribution_cents > 0 ? formatBRL(m.management_contribution_cents) : '-'}
-                      </td>
-                      <td className="p-3 text-right font-bold">
-                        {formatBRL(m.amount_cents - (m.management_contribution_cents || 0))}
-                      </td>
-                      <td className="p-3 text-center text-xs">
-                        {getResponsibleLabel(m.cost_responsible, m.split_owner_percent)}
-                      </td>
-                      <td className="p-3 text-right">
-                        {formatBRL(m.paid_cents)}
-                      </td>
-                      <td className="p-3">
-                        {(() => {
-                          const atts = attachmentsByCharge[m.id] || [];
-                          if (atts.length === 0) return <span className="text-xs text-muted-foreground">-</span>;
-                          return (
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); setGalleryItems(atts); setGalleryOpen(true); }}
-                              className="inline-flex items-center gap-1 px-2 py-1 rounded text-sm hover:bg-primary/10 text-primary transition-colors"
-                            >
-                              <Paperclip className="h-3.5 w-3.5" />
-                              <span>{atts.length}</span>
-                            </button>
-                          );
-                        })()}
-                      </td>
-                      <td className="p-3 text-center">{getStatusBadge(m.status)}</td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={10} className="text-center p-8 text-muted-foreground">
-                      Nenhuma manutenção encontrada
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+      {/* Lista */}
+      {isLoading ? (
+        <Card className="rounded-xl border-border/70 p-3" aria-busy="true" aria-label="Carregando manutenções">
+          <div className="space-y-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-14 w-full rounded-lg" />
+            ))}
           </div>
-
-          {/* Mobile cards */}
-          <div className="md:hidden divide-y">
-            {isLoading ? (
-              <div className="p-6 text-center text-sm text-muted-foreground">Carregando...</div>
-            ) : maintenances && maintenances.length > 0 ? (
-              maintenances
-                .filter((m: any) => !activeFilters.serviceType || (m.service_type && String(m.service_type).split(",").map((s: string) => s.trim()).includes(activeFilters.serviceType)))
-                .map((m: any) => {
-                  const due = m.amount_cents - (m.management_contribution_cents || 0);
+        </Card>
+      ) : maintenances.length === 0 ? (
+        <Card className="rounded-xl border-border/70">
+          {temFiltro ? (
+            <EmptyState
+              ilustracao="busca"
+              title="Nenhuma manutenção com esses filtros"
+              description="Mude os filtros acima ou limpe todos para ver as demais."
+              action={
+                <Button variant="outline" onClick={limparFiltros}>
+                  Limpar filtros
+                </Button>
+              }
+            />
+          ) : (
+            <EmptyState
+              ilustracao="manutencoes"
+              title="Nenhuma manutenção ainda"
+              description={
+                isOwner
+                  ? "As manutenções do seu imóvel aparecem aqui assim que a equipe as enviar."
+                  : "As manutenções enviadas aos proprietários aparecem aqui."
+              }
+            />
+          )}
+        </Card>
+      ) : (
+        <>
+          {/* Desktop: tabela */}
+          <Card className="hidden overflow-hidden rounded-xl border-border/70 md:block">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50 hover:bg-muted/50">
+                  <TableHead className="w-[90px] pl-4">Data</TableHead>
+                  <TableHead className="min-w-[140px]">Imóvel</TableHead>
+                  <TableHead className="min-w-[220px]">Manutenção</TableHead>
+                  <TableHead className="w-[110px] text-right">Total</TableHead>
+                  <TableHead className="w-[110px] text-right">Aporte</TableHead>
+                  <TableHead className="w-[110px] text-right">A pagar</TableHead>
+                  <TableHead className="w-[120px]">Responsável</TableHead>
+                  <TableHead className="w-[110px] text-right">Pago</TableHead>
+                  <TableHead className="w-[80px] text-center">Anexos</TableHead>
+                  <TableHead className="w-[150px] pr-4">Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {maintenances.map((m) => {
                   const atts = attachmentsByCharge[m.id] || [];
+                  const servicos = rotulosServico(m.service_type);
                   return (
-                    <button
+                    <TableRow
                       key={m.id}
-                      onClick={() => { saveScrollPosition(pathname); navigate(`/cobranca/${m.id}`); }}
-                      className="w-full text-left p-3 active:bg-accent transition-colors"
+                      className="cursor-pointer"
+                      onClick={() => abrirCobranca(m)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") abrirCobranca(m);
+                      }}
+                      tabIndex={0}
                     >
-                      {/* Header: property + status */}
-                      <div className="flex items-start justify-between gap-2 mb-1">
-                        <div className="min-w-0 flex-1">
-                          <div className="text-xs text-muted-foreground truncate">
-                            {m.property?.name || '-'} · {formatDateTime(m.created_at)}
-                          </div>
-                          <div className="font-medium text-sm leading-tight truncate">{m.title}</div>
-                          {(m.category || m.service_type) && (
-                            <div className="text-[11px] text-muted-foreground truncate">
-                              {[m.category, m.service_type && String(m.service_type).split(",").map((s: string) => s.trim()).filter(Boolean).join(", ")].filter(Boolean).join(" · ")}
-                            </div>
-                          )}
-                        </div>
-                        <div className="shrink-0">{getStatusBadge(m.status)}</div>
-                      </div>
-
-                      {/* Values grid */}
-                      <div className="grid grid-cols-3 gap-2 mt-2 text-[11px]">
-                        <div className="bg-muted/50 rounded px-2 py-1">
-                          <div className="text-muted-foreground">Total</div>
-                          <div className="font-medium text-xs">{formatBRL(m.amount_cents)}</div>
-                        </div>
-                        <div className="bg-muted/50 rounded px-2 py-1">
-                          <div className="text-muted-foreground">Aporte</div>
-                          <div className="font-medium text-success text-xs">
-                            {m.management_contribution_cents > 0 ? formatBRL(m.management_contribution_cents) : '-'}
-                          </div>
-                        </div>
-                        <div className="bg-muted/50 rounded px-2 py-1">
-                          <div className="text-muted-foreground">Devido</div>
-                          <div className="font-bold text-xs">{formatBRL(due)}</div>
-                        </div>
-                      </div>
-
-                      {/* Footer: paid + responsible + attachments */}
-                      <div className="flex items-center justify-between gap-2 mt-2 text-[11px] text-muted-foreground">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="truncate">
-                            {getResponsibleLabel(m.cost_responsible, m.split_owner_percent)}
-                          </span>
-                          {m.paid_cents > 0 && (
-                            <span className="text-success">· Pago {formatBRL(m.paid_cents)}</span>
-                          )}
-                        </div>
-                        {atts.length > 0 && (
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); e.preventDefault(); setGalleryItems(atts); setGalleryOpen(true); }}
-                            className="inline-flex items-center gap-1 px-2 py-1 rounded hover:bg-primary/10 text-primary transition-colors shrink-0"
-                          >
-                            <Paperclip className="h-3.5 w-3.5" />
-                            <span className="text-xs font-medium">{atts.length}</span>
-                          </button>
+                      <TableCell className="pl-4 text-xs tabular-nums text-muted-foreground">
+                        {formatarData(m.created_at)}
+                      </TableCell>
+                      <TableCell className="text-[13px]">{m.property?.name || "—"}</TableCell>
+                      <TableCell>
+                        <p className="line-clamp-1 text-[13px] font-medium">{m.title}</p>
+                        {(m.category || servicos.length > 0) && (
+                          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                            {[m.category, servicos.join(", ")].filter(Boolean).join(" · ")}
+                          </p>
                         )}
-                      </div>
-                    </button>
+                      </TableCell>
+                      <TableCell className="text-right text-[13px] tabular-nums">{formatarBRL(m.amount_cents ?? 0)}</TableCell>
+                      <TableCell className="text-right text-[13px] tabular-nums text-success">
+                        {(m.management_contribution_cents ?? 0) > 0 ? formatarBRL(m.management_contribution_cents ?? 0) : "—"}
+                      </TableCell>
+                      <TableCell className="text-right text-[13px] font-semibold tabular-nums">{formatarBRL(valorDevido(m))}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {rotuloResponsavelCusto(m.cost_responsible, m.split_owner_percent)}
+                      </TableCell>
+                      <TableCell className="text-right text-[13px] tabular-nums">
+                        {m.paid_cents > 0 ? formatarBRL(m.paid_cents) : "—"}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {atts.length > 0 ? (
+                          <div className="flex justify-center" onClick={(e) => e.stopPropagation()}>
+                            <BotaoLinha rotulo={`Ver anexos (${atts.length})`} texto={String(atts.length)} onClick={() => abrirGaleria(atts)}>
+                              <Paperclip />
+                            </BotaoLinha>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="pr-4">
+                        <EtiquetaStatusCobranca status={m.status} />
+                      </TableCell>
+                    </TableRow>
                   );
-                })
-            ) : (
-              <div className="p-6 text-center text-sm text-muted-foreground">Nenhuma manutenção encontrada</div>
-            )}
+                })}
+              </TableBody>
+            </Table>
+          </Card>
+
+          {/* Celular: linhas */}
+          <div className="space-y-1.5 md:hidden">
+            {maintenances.map((m) => {
+              const atts = attachmentsByCharge[m.id] || [];
+              const servicos = rotulosServico(m.service_type);
+              return (
+                <LinhaCaixa
+                  key={m.id}
+                  titulo={m.title}
+                  subtitulo={
+                    <>
+                      {m.property?.name || "—"} · {formatarData(m.created_at)}
+                      {servicos.length > 0 ? ` · ${servicos.join(", ")}` : ""}
+                    </>
+                  }
+                  meta={
+                    <div className="flex flex-col items-end gap-1">
+                      <EtiquetaStatusCobranca status={m.status} />
+                      <span className="text-[13px] font-semibold tabular-nums">{formatarBRL(valorDevido(m))}</span>
+                      <span className="text-[11px] text-muted-foreground">
+                        {rotuloResponsavelCusto(m.cost_responsible, m.split_owner_percent)}
+                        {m.paid_cents > 0 ? ` · pago ${formatarBRL(m.paid_cents)}` : ""}
+                      </span>
+                    </div>
+                  }
+                  acoes={
+                    atts.length > 0 ? (
+                      <BotaoLinha rotulo={`Ver anexos (${atts.length})`} onClick={() => abrirGaleria(atts)}>
+                        <Paperclip />
+                      </BotaoLinha>
+                    ) : undefined
+                  }
+                  onClick={() => abrirCobranca(m)}
+                  className="bg-card"
+                />
+              );
+            })}
           </div>
-        </CardContent>
-      </Card>
+        </>
+      )}
 
-
-      {/* Por Unidade - Team only */}
+      {/* Resumo por imóvel (equipe) */}
       {isTeam && !selectedPropertyId && propertyReports.length > 0 && (
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold">Resumo por Unidade</h2>
+        <section className="space-y-3">
+          <TituloSecao titulo="Resumo por imóvel" subtitulo={`Manutenções de ${year}`} />
           {propertyReports.map((prop) => (
-            <Card key={prop.id} className="overflow-hidden">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Building2 className="h-4 w-4 text-primary" />
-                      {prop.name}
-                    </CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Proprietário: {prop.ownerName}
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePropertyChange(prop.id)}
-                  >
+            <CaixaOperacao
+              key={prop.id}
+              icone={<Building2 />}
+              titulo={prop.name}
+              tom="primary"
+              subcabecalho={<p className="text-xs text-muted-foreground">Proprietário: {prop.ownerName}</p>}
+              acoes={
+                prop.id !== "sem-imovel" && (
+                  <Button variant="outline" size="sm" className="h-8" onClick={() => handlePropertyChange(prop.id)}>
                     Ver detalhes
                   </Button>
+                )
+              }
+            >
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <div className="text-xs text-muted-foreground">Total gasto</div>
+                  <div className="text-lg font-bold tabular-nums">{formatarBRL(prop.totalCents)}</div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-muted/50 rounded-lg p-3">
-                    <div className="text-xs text-muted-foreground">Total Gasto</div>
-                    <div className="text-lg font-bold">{formatBRL(prop.totalCents)}</div>
-                  </div>
-                  <div className="bg-muted/50 rounded-lg p-3">
-                    <div className="text-xs text-muted-foreground">Manutenções</div>
-                    <div className="text-lg font-bold">{prop.count}</div>
-                  </div>
-                  <div className="bg-muted/50 rounded-lg p-3">
-                    <div className="text-xs text-muted-foreground">Abertas</div>
-                    <div className="text-lg font-bold text-warning">{prop.openCount}</div>
-                  </div>
-                  <div className="bg-muted/50 rounded-lg p-3">
-                    <div className="text-xs text-muted-foreground">Pagas</div>
-                    <div className="text-lg font-bold text-success">{prop.paidCount}</div>
-                  </div>
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <div className="text-xs text-muted-foreground">Manutenções</div>
+                  <div className="text-lg font-bold tabular-nums">{prop.count}</div>
                 </div>
-              </CardContent>
-            </Card>
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <div className="text-xs text-muted-foreground">Em aberto</div>
+                  <div className="text-lg font-bold tabular-nums text-warning">{prop.openCount}</div>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <div className="text-xs text-muted-foreground">Pagas</div>
+                  <div className="text-lg font-bold tabular-nums text-success">{prop.paidCount}</div>
+                </div>
+              </div>
+            </CaixaOperacao>
           ))}
-        </div>
+        </section>
       )}
 
       {/* Gráficos no final */}
-      <MaintenanceCharts charts={charts} serviceTypeData={serviceTypeData} />
+      <MaintenanceCharts charts={charts ?? null} serviceTypeData={serviceTypeData} />
 
-      <MediaGallery
-        items={galleryItems}
-        initialIndex={0}
-        open={galleryOpen}
-        onOpenChange={setGalleryOpen}
-      />
-    </div>
+      <MediaGallery items={galleryItems} initialIndex={0} open={galleryOpen} onOpenChange={setGalleryOpen} />
+    </PaginaInterna>
   );
 }

@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { isVideoFile, FileUploadProgress } from '@/lib/fileUpload';
 import { processFileForUpload } from '@/lib/processVideoForUpload';
+import { comprimirImagem, emParalelo } from '@/lib/fileUpload';
 import { VideoCompressionProgress } from '@/components/VideoCompressionProgress';
 import RoutineInspectionChecklist, { ChecklistData, defaultChecklistData } from '@/components/RoutineInspectionChecklist';
 import { loadDraft, saveDraft, clearDraft, createPlaceholderFile, useAutoSave, type InspectionDraft } from '@/hooks/useInspectionDraft';
@@ -195,9 +196,8 @@ export default function TeamInspectionDialog({
     setUploadedFiles(prev => [...prev, ...newFiles]);
     e.target.value = '';
 
-    // Process and upload each file progressively
-    for (let i = 0; i < selectedFiles.length; i++) {
-      const originalFile = selectedFiles[i];
+    // Process and upload up to 3 files at a time
+    await emParalelo(selectedFiles, async (originalFile) => {
       try {
         let fileToUpload = originalFile;
         
@@ -217,13 +217,15 @@ export default function TeamInspectionDialog({
               f.file === originalFile ? { ...f, compressing: false, uploading: true, file: fileToUpload } : f
             )
           );
+        } else {
+          fileToUpload = await comprimirImagem(originalFile);
         }
         
         const url = await uploadFile(fileToUpload);
         setUploadedFiles(prev => 
           prev.map(f => 
             (f.file === originalFile || f.file === fileToUpload) 
-              ? { ...f, url, uploading: false, compressing: false } 
+              ? { ...f, file: fileToUpload, url, uploading: false, compressing: false } 
               : f
           )
         );
@@ -236,7 +238,7 @@ export default function TeamInspectionDialog({
         );
         toast.error(`Erro no upload de ${originalFile.name}`);
       }
-    }
+    });
   };
 
   const handleRemoveFile = (file: File) => {

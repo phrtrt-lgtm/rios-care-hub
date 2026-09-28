@@ -23,6 +23,15 @@ interface MentionInputProps {
 
 const MENTION_REGEX = /@\[([^\]]+)\]\(([0-9a-f-]+)\)/g;
 
+/** Papel em pt-BR na lista de menção. */
+const ROTULO_PAPEL: Record<string, string> = {
+  admin: "Administração",
+  agent: "Atendimento",
+  maintenance: "Manutenção",
+  owner: "Proprietário",
+  cleaner: "Faxina",
+};
+
 export function extractMentionedIds(text: string): string[] {
   const ids = new Set<string>();
   let m: RegExpExecArray | null;
@@ -63,7 +72,8 @@ export function MentionInput({
 
     // Detect "@" trigger
     const upToCursor = newValue.slice(0, cursor);
-    const atMatch = upToCursor.match(/@(\w*)$/);
+    // \p{L} aceita acentos: "@Jo" continua abrindo a lista ao digitar "@João".
+    const atMatch = upToCursor.match(/@([\p{L}\d_]*)$/u);
 
     if (atMatch) {
       setMentionStart(cursor - atMatch[0].length);
@@ -161,8 +171,8 @@ export function MentionInput({
                 </AvatarFallback>
               </Avatar>
               <span className="flex-1 truncate">{u.name}</span>
-              <span className="text-[10px] text-muted-foreground capitalize">
-                {u.role === "owner" ? "proprietário" : u.role}
+              <span className="text-[10px] text-muted-foreground">
+                {ROTULO_PAPEL[u.role] ?? u.role}
               </span>
             </button>
           ))}

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Badge } from "@/components/ui/badge";
+import { EtiquetaStatusTicket } from "@/components/tickets/EtiquetasTicket";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -35,15 +35,6 @@ interface OwnerTicket {
     cover_photo_url: string | null;
   } | null;
 }
-
-const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  novo: { label: "Novo", className: "border-info/30 bg-info/10 text-info" },
-  em_analise: { label: "Em análise", className: "border-warning/30 bg-warning/10 text-warning" },
-  aguardando_info: { label: "Aguardando info", className: "border-warning/30 bg-warning/10 text-warning" },
-  em_execucao: { label: "Em execução", className: "border-primary/30 bg-primary/10 text-primary" },
-  concluido: { label: "Concluído", className: "border-success/30 bg-success/10 text-success" },
-  cancelado: { label: "Cancelado", className: "border-destructive/30 bg-destructive/10 text-destructive" },
-};
 
 export function OwnerTicketsPreview() {
   const { user } = useAuth();
@@ -133,7 +124,6 @@ export function OwnerTicketsPreview() {
         ) : (
           <div className="max-h-[360px] space-y-1 overflow-y-auto pr-1">
             {tickets.map((ticket) => {
-              const statusConfig = STATUS_CONFIG[ticket.status] || STATUS_CONFIG.novo;
               return (
                 <LinhaCaixa
                   key={ticket.id}
@@ -152,11 +142,7 @@ export function OwnerTicketsPreview() {
                       {format(new Date(ticket.created_at), "dd/MM", { locale: ptBR })}
                     </>
                   }
-                  meta={
-                    <Badge variant="outline" className={`h-5 px-1.5 text-[10px] font-medium ${statusConfig.className}`}>
-                      {statusConfig.label}
-                    </Badge>
-                  }
+                  meta={<EtiquetaStatusTicket status={ticket.status} />}
                   acoes={
                     <BotaoLinha
                       rotulo="Abrir conversa do chamado"

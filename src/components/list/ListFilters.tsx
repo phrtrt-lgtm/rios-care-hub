@@ -2,7 +2,6 @@ import { ReactNode } from "react";
 import { Search, X, SlidersHorizontal, Calendar as CalendarIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -206,8 +205,7 @@ export function ListFilters(props: ListFiltersProps) {
                 <SlidersHorizontal className="h-4 w-4" />
                 {activeCount > 0 && (
                   <span
-                    className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full text-[10px] font-bold flex items-center justify-center text-white"
-                    style={{ background: "hsl(var(--rios-terra, var(--primary)))" }}
+                    className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground"
                   >
                     {activeCount}
                   </span>

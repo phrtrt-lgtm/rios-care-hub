@@ -16,3 +16,24 @@ export function estaVencida(dueDate: string | null, status?: string | null): boo
   if (status === "overdue") return true;
   return !!dueDate && diasParaVencer(dueDate) < 0;
 }
+
+const RESOLVIDAS = new Set([
+  "paid",
+  "pago_antecipado",
+  "pago_no_vencimento",
+  "pago_com_atraso",
+  "debited",
+  "cancelled",
+  "arquivado",
+  "draft",
+]);
+
+/**
+ * Cobrança em atraso de verdade: ainda em aberto e com o vencimento passado.
+ * Uma paga, debitada, cancelada ou em rascunho nunca está vencida, mesmo com
+ * a data no passado. É a regra única das listas, dos contadores e dos selos.
+ */
+export function cobrancaVencida(c: { status?: string | null; due_date?: string | null }): boolean {
+  if (RESOLVIDAS.has(c.status ?? "")) return false;
+  return estaVencida(c.due_date ?? null, c.status);
+}

@@ -19,7 +19,7 @@ interface Body {
 
 const ROUTE_BY_ENTITY: Record<EntityType, (id: string) => string> = {
   inspection: (id) => `/admin/vistorias/${id}`,
-  ticket: (id) => `/ticket/${id}`,
+  ticket: (id) => `/ticket-detalhes/${id}`,
   charge: (id) => `/cobranca/${id}`,
 };
 

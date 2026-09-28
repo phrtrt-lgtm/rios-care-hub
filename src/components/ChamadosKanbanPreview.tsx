@@ -30,7 +30,6 @@ type OwnerTicket = {
   status: string;
   ticket_type: string;
   created_at: string;
-  sla_due_at: string | null;
   property: { name: string } | null;
   owner: { name: string } | null;
 };
@@ -64,14 +63,14 @@ export function ChamadosKanbanPreview() {
       const { data, error } = await supabase
         .from("tickets")
         .select(`
-          id, subject, status, ticket_type, created_at, sla_due_at,
+          id, subject, status, ticket_type, created_at,
           property:properties(name),
           owner:profiles!tickets_owner_id_fkey(name)
         `)
         .neq("ticket_type", "manutencao")
         .neq("status", "cancelado")
         .neq("status", "concluido")
-        .order("sla_due_at", { ascending: true, nullsFirst: false });
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       setTickets((data || []) as OwnerTicket[]);

@@ -51,6 +51,7 @@ export function AttachmentBubble({
       }}
       className="absolute top-1 right-1 h-7 w-7 p-0 opacity-90 hover:opacity-100 z-10"
       title="Excluir anexo"
+      aria-label="Excluir anexo"
     >
       <Trash2 className="h-3.5 w-3.5" />
     </Button>
@@ -60,17 +61,8 @@ export function AttachmentBubble({
     <ConfirmationDialog
       open={confirmOpen}
       onOpenChange={setConfirmOpen}
-      title="Excluir anexo?"
-      description={
-        <div className="space-y-2">
-          <p>Esta ação é permanente e não pode ser desfeita.</p>
-          {file_name && (
-            <p className="text-xs">
-              Arquivo: <span className="font-mono">{file_name}</span>
-            </p>
-          )}
-        </div>
-      }
+      title="Excluir este anexo?"
+      description="Esta ação é permanente e não pode ser desfeita."
       confirmLabel="Excluir"
       variant="destructive"
       onConfirm={handleConfirmDelete}
@@ -96,6 +88,14 @@ export function AttachmentBubble({
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  // A prévia é um div clicável: precisa responder ao teclado como um botão.
+  const abrirPreviaPorTeclado = (e: React.KeyboardEvent, rotulo: string) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onPreview?.(file_url, rotulo);
+    }
   };
 
   // Load thumbnail for images and videos
@@ -158,9 +158,13 @@ export function AttachmentBubble({
     return (
       <div className="relative group">
         {DeleteOverlay}
-        <div 
+        <div
+          role="button"
+          tabIndex={0}
+          aria-label={isVideo ? 'Abrir vídeo' : 'Abrir imagem'}
           onClick={() => onPreview?.(file_url, isVideo ? 'Vídeo' : 'Imagem')}
-          className="cursor-pointer relative overflow-hidden rounded-lg border border-border hover:border-primary transition-colors bg-muted"
+          onKeyDown={(e) => abrirPreviaPorTeclado(e, isVideo ? 'Vídeo' : 'Imagem')}
+          className="cursor-pointer relative overflow-hidden rounded-lg border border-border hover:border-primary transition-colors bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {loading ? (
             <Skeleton className="w-full h-64" />
@@ -203,8 +207,12 @@ export function AttachmentBubble({
       <div className="relative group">
         {DeleteOverlay}
         <div
+          role="button"
+          tabIndex={0}
+          aria-label="Abrir PDF"
           onClick={() => onPreview?.(file_url, 'PDF')}
-          className="cursor-pointer relative overflow-hidden rounded-lg border border-border hover:border-primary transition-colors"
+          onKeyDown={(e) => abrirPreviaPorTeclado(e, 'PDF')}
+          className="cursor-pointer relative overflow-hidden rounded-lg border border-border hover:border-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <div className="w-full h-32 bg-muted flex flex-col items-center justify-center gap-2 relative">
             <FileTextIcon className="h-10 w-10 text-destructive" />

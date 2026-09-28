@@ -103,7 +103,10 @@ export const MediaThumbnail = memo(({
   if (isPDF) {
     return (
       <button
+        type="button"
         onClick={onClick}
+        aria-label="Ver anexo"
+        aria-pressed={isSelected}
         className={`${sizeClass} rounded overflow-hidden border-2 transition-all flex-shrink-0 flex flex-col items-center justify-center gap-0.5 bg-destructive/10 ${
           isSelected ? 'border-primary scale-110' : 'border-border/30 hover:border-border/60'
         }`}
@@ -117,7 +120,10 @@ export const MediaThumbnail = memo(({
   if (!isImage && !isVideo) {
     return (
       <button
+        type="button"
         onClick={onClick}
+        aria-label="Ver anexo"
+        aria-pressed={isSelected}
         className={`${sizeClass} rounded overflow-hidden border-2 transition-all flex items-center justify-center bg-muted ${
           isSelected ? 'border-primary scale-110' : 'border-border/30 hover:border-border/60'
         }`}
@@ -129,7 +135,10 @@ export const MediaThumbnail = memo(({
 
   return (
     <button
+      type="button"
       onClick={onClick}
+      aria-label={isVideo ? "Ver vídeo" : "Ver imagem"}
+      aria-pressed={isSelected}
       className={`relative ${sizeClass} rounded overflow-hidden border-2 transition-all flex-shrink-0 ${
         isSelected ? 'border-primary scale-110' : 'border-border/30 hover:border-border/60'
       }`}
@@ -137,7 +146,7 @@ export const MediaThumbnail = memo(({
       {thumbnailUrl ? (
         <img
           src={thumbnailUrl}
-          alt={fileName || ''}
+          alt="Anexo"
           className="w-full h-full object-cover"
         />
       ) : (

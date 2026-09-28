@@ -54,7 +54,7 @@ export function ConversationSummaryButton({ ticketId, messageCount = 0, disabled
       await navigator.clipboard.writeText(summary);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (e) {
+    } catch {
       toast.error("Erro ao copiar");
     }
   };
@@ -68,6 +68,7 @@ export function ConversationSummaryButton({ ticketId, messageCount = 0, disabled
         disabled={loading || disabled}
         className="gap-1.5"
         title="Resumir conversa com IA"
+        aria-label="Resumir conversa com IA"
       >
         {loading ? (
           <Loader2 className="h-4 w-4 animate-spin" />

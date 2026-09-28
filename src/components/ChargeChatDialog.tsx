@@ -1,24 +1,21 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { useReadReceipts } from "@/hooks/useReadReceipts";
 import { AttachmentBubble } from "@/components/AttachmentBubble";
 import { MediaGallery } from "@/components/MediaGallery";
 import { VoiceToTextInput } from "@/components/VoiceToTextInput";
-import { ReadReceiptDisplay } from "@/components/ReadReceiptDisplay";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { Send, Loader2, MessageSquare, Building, ExternalLink, Paperclip, X, Sparkles } from "lucide-react";
+import { Send, Loader2, ExternalLink, Paperclip, Sparkles } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { saveScrollPosition } from "@/lib/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { processFileForUpload } from "@/lib/processVideoForUpload";
+import { emParaleloOuFalha } from "@/lib/fileUpload";
 import { sanitizeFilename } from "@/lib/storage";
 import { useChatPresence } from "@/hooks/useChatPresence";
 import { ChatDialogHeader } from "@/components/chat/ChatDialogHeader";
@@ -27,6 +24,7 @@ import { ChatDateDivider } from "@/components/chat/ChatDateDivider";
 import { ChatTypingIndicator } from "@/components/chat/ChatTypingIndicator";
 import { ChatFilePreviewRow } from "@/components/chat/ChatFilePreviewRow";
 import { ChatEmptyState } from "@/components/chat/ChatEmptyState";
+import { renderizarCorpo } from "@/components/chat/CorpoMensagem";
 
 
 interface ChargeMessage {
@@ -264,6 +262,7 @@ export function ChargeChatDialog({
 
     // Upload and send in background
     (async () => {
+      setSending(true);
       try {
         // Create message
         const { data: messageData, error: messageError } = await supabase
@@ -281,11 +280,12 @@ export function ChargeChatDialog({
 
         // Upload attachments
         if (filesToUpload.length > 0) {
-          for (const file of filesToUpload) {
+          // Até 3 arquivos ao mesmo tempo.
+          await emParaleloOuFalha(filesToUpload, async (file, indiceArquivo) => {
             // Compress video if it's a video file
             const processedFile = await processFileForUpload(file);
             const safeName = sanitizeFilename(processedFile.name);
-            const filePath = `${chargeId}/${Date.now()}_${safeName}`;
+            const filePath = `${chargeId}/${Date.now()}-${indiceArquivo}_${safeName}`;
             
             const { error: uploadError } = await supabase.storage
               .from('charge-attachments')
@@ -302,7 +302,7 @@ export function ChargeChatDialog({
               file_size: processedFile.size,
               mime_type: processedFile.type,
             });
-          }
+          });
         }
 
         // Notify via edge function
@@ -320,6 +320,8 @@ export function ChargeChatDialog({
           description: error.message,
           variant: "destructive",
         });
+      } finally {
+        setSending(false);
       }
     })();
   };
@@ -413,19 +415,6 @@ export function ChargeChatDialog({
     }
   };
 
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
-  const isTeamMemberRole = (role: string) => {
-    return ["admin", "agent", "maintenance"].includes(role);
-  };
-
   const renderMessage = (message: ChargeMessage, index: number, dayMessages: ChargeMessage[]) => {
     const isOwnMessage = message.author_id === user?.id;
     const messageReceipts = receipts[message.id] || [];
@@ -445,7 +434,7 @@ export function ChargeChatDialog({
         isOwn={isOwnMessage}
         receipts={messageReceipts}
         grouped={grouped}
-        body={message.body || undefined}
+        body={message.body ? renderizarCorpo(message.body) : undefined}
         attachments={
           message.attachments && message.attachments.length > 0 ? (
             <div
@@ -495,7 +484,8 @@ export function ChargeChatDialog({
                 className="h-7 px-2 text-[11px] text-primary"
                 onClick={() => {
                   onOpenChange(false);
-                  (saveScrollPosition(pathname), navigate(`/cobranca/${chargeId}`));
+                  saveScrollPosition(pathname);
+                  navigate(`/cobranca/${chargeId}`);
                 }}
               >
                 <ExternalLink className="h-3 w-3 mr-1" />

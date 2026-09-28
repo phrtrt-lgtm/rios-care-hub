@@ -226,6 +226,7 @@ export function NativeMediaPicker({
               disabled={disabled}
               className={className}
               title="Anexar arquivo"
+              aria-label="Anexar arquivo"
             >
               <Paperclip className="h-4 w-4" />
               {!iconOnly && <span className="ml-2">Anexar</span>}
@@ -237,7 +238,7 @@ export function NativeMediaPicker({
               Tirar foto
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleRecordVideo} className="cursor-pointer">
-              <Video className="h-4 w-4 mr-2 text-red-500" />
+              <Video className="h-4 w-4 mr-2 text-destructive" />
               Gravar vídeo
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handlePickFromGallery} className="cursor-pointer">
@@ -245,7 +246,7 @@ export function NativeMediaPicker({
               Galeria
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handlePickDocument} className="cursor-pointer">
-              <FileText className="h-4 w-4 mr-2 text-orange-500" />
+              <FileText className="h-4 w-4 mr-2 text-warning" />
               Documento
             </DropdownMenuItem>
           </DropdownMenuContent>

@@ -1,22 +1,22 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { goBack } from "@/lib/navigation";
-import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { ArrowLeft, Search, ArrowUpDown, ArrowUp, ArrowDown, ArchiveRestore, Paperclip } from "lucide-react";
+import { Archive, ArchiveRestore, ArrowDown, ArrowUp, ArrowUpDown, Loader2, Paperclip, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatBRL } from "@/lib/format";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { formatarBRL, formatarData } from "@/lib/cobrancaMeta";
+import { rotulosServico } from "@/constants/chargeCategories";
+import { CabecalhoPagina, PaginaInterna } from "@/components/painel/PaginaInterna";
+import { LinhaCaixa } from "@/components/painel/CaixaOperacao";
+import { Etiqueta } from "@/components/painel/Etiqueta";
 
 // ===== TYPES =====
 type SortDirection = "asc" | "desc" | null;
@@ -36,17 +36,6 @@ interface ArchivedItem {
   charge_id?: string | null;
 }
 
-// ===== CONSTANTS =====
-const SERVICE_LABELS = [
-  { value: "refrigeracao", label: "Refrigeração", color: "bg-info" },
-  { value: "eletrica", label: "Elétrica", color: "bg-warning" },
-  { value: "hidraulica", label: "Hidráulica", color: "bg-info" },
-  { value: "marcenaria", label: "Marcenaria", color: "bg-warning" },
-  { value: "estrutural", label: "Estrutural", color: "bg-slate-600" },
-  { value: "itens", label: "Itens", color: "bg-primary" },
-  { value: "dedetizacao", label: "Dedetização", color: "bg-success" },
-];
-
 // ===== SORTABLE HEADER COMPONENT =====
 interface SortableHeaderProps {
   label: string;
@@ -59,25 +48,31 @@ interface SortableHeaderProps {
 
 function SortableHeader({ label, field, currentSort, direction, onSort, className }: SortableHeaderProps) {
   const isActive = currentSort === field;
-  
+  const alinhamento = className?.includes("text-right") ? "justify-end" : className?.includes("text-center") ? "justify-center" : "justify-start";
+
   return (
-    <th 
-      className={cn("px-2 py-2 font-medium cursor-pointer hover:bg-muted/50 transition-colors select-none", className)}
-      onClick={() => onSort(field)}
-    >
-      <div className="flex items-center gap-1">
+    <TableHead className={cn("p-0", className)}>
+      <button
+        type="button"
+        onClick={() => onSort(field)}
+        aria-sort={isActive ? (direction === "asc" ? "ascending" : "descending") : "none"}
+        className={cn(
+          "flex h-10 w-full items-center gap-1 px-3 text-left font-medium transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          alinhamento,
+        )}
+      >
         <span>{label}</span>
         {isActive ? (
           direction === "asc" ? (
-            <ArrowUp className="h-3.5 w-3.5 text-primary" />
+            <ArrowUp className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
           ) : (
-            <ArrowDown className="h-3.5 w-3.5 text-primary" />
+            <ArrowDown className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
           )
         ) : (
-          <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground opacity-50" />
+          <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground opacity-50" aria-hidden="true" />
         )}
-      </div>
-    </th>
+      </button>
+    </TableHead>
   );
 }
 
@@ -119,14 +114,14 @@ export default function AdminManutencoesArquivo() {
 
       // Fetch ticket IDs
       const ticketIds = (tickets || []).map(t => t.id);
-      
+
       // Fetch charges for tickets
       const { data: chargesForTickets } = await supabase
         .from("charges")
-        .select("ticket_id, amount_cents, management_contribution_cents, service_type")
+        .select("id, ticket_id, amount_cents, management_contribution_cents, service_type")
         .in("ticket_id", ticketIds.length > 0 ? ticketIds : ["00000000-0000-0000-0000-000000000000"]);
 
-      const chargeMap: Record<string, any> = {};
+      const chargeMap: Record<string, NonNullable<typeof chargesForTickets>[number]> = {};
       (chargesForTickets || []).forEach(c => {
         if (c.ticket_id) chargeMap[c.ticket_id] = c;
       });
@@ -174,7 +169,7 @@ export default function AdminManutencoesArquivo() {
       });
 
       // Also fetch charge_attachments for charges linked to tickets
-      const linkedChargeIds = Object.values(chargeMap).map((c: any) => c.id).filter(Boolean);
+      const linkedChargeIds = Object.values(chargeMap).map((c) => c.id).filter(Boolean);
       const { data: linkedChargeAttachments } = await supabase
         .from("charge_attachments")
         .select("charge_id")
@@ -296,28 +291,20 @@ export default function AdminManutencoesArquivo() {
     });
   }, []);
 
-  const toggleSelectAll = useCallback(() => {
-    if (!archivedItems) return;
-    if (selectedIds.size === archivedItems.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(archivedItems.map(i => i.id)));
-    }
-  }, [archivedItems, selectedIds.size]);
-
   // Filter and sort items
   const filteredAndSortedItems = useMemo(() => {
     if (!archivedItems) return [];
 
+    const busca = debouncedSearch.toLowerCase();
     let items = archivedItems.filter(item =>
-      item.subject.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-      item.property?.name?.toLowerCase().includes(debouncedSearch.toLowerCase())
+      item.subject.toLowerCase().includes(busca) ||
+      item.property?.name?.toLowerCase().includes(busca)
     );
 
     if (sortField && sortDirection) {
       items = [...items].sort((a, b) => {
-        let aValue: any;
-        let bValue: any;
+        let aValue: string | number;
+        let bValue: string | number;
 
         switch (sortField) {
           case "subject":
@@ -361,242 +348,230 @@ export default function AdminManutencoesArquivo() {
     return items;
   }, [archivedItems, debouncedSearch, sortField, sortDirection]);
 
+  // "Selecionar tudo" marca só o que está visível (a busca pode esconder itens).
+  const todosVisiveisSelecionados =
+    filteredAndSortedItems.length > 0 && filteredAndSortedItems.every((i) => selectedIds.has(i.id));
+  const toggleSelectAll = useCallback(() => {
+    setSelectedIds(todosVisiveisSelecionados ? new Set() : new Set(filteredAndSortedItems.map((i) => i.id)));
+  }, [filteredAndSortedItems, todosVisiveisSelecionados]);
+
   const handleRestore = useCallback(() => {
     if (selectedIds.size === 0) return;
     restoreMutation.mutate(Array.from(selectedIds));
   }, [selectedIds, restoreMutation]);
 
+  const abrirItem = useCallback(
+    (item: ArchivedItem) => {
+      const destino = item.type === "charge" && item.charge_id ? item.charge_id : item.id;
+      navigate(`/manutencao/${destino}`);
+    },
+    [navigate],
+  );
+
+  const total = archivedItems?.length ?? 0;
+  const subtitulo = isLoading ? undefined : `${total} ${total === 1 ? "item arquivado" : "itens arquivados"} · podem ser restaurados`;
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 p-4 md:p-6">
-      <div className="max-w-[1600px] mx-auto space-y-4">
-        {/* Header */}
-        <div className="flex items-center gap-4 flex-wrap">
-          <Button variant="ghost" size="icon" onClick={() => goBack(navigate, "/admin/manutencoes-lista")}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex-1 min-w-[200px]">
-            <h1 className="text-2xl font-bold">Arquivo de Manutenções</h1>
-            <p className="text-muted-foreground text-sm">
-              Itens arquivados podem ser restaurados
-            </p>
-          </div>
+    <PaginaInterna
+      largura="larga"
+      cabecalho={
+        <CabecalhoPagina
+          titulo="Arquivo de manutenções"
+          subtitulo={subtitulo}
+          icone={<Archive />}
+          tom="neutral"
+          voltarPara="/admin/manutencoes-lista"
+          acoes={
+            selectedIds.size > 0 && (
+              <Button size="sm" className="h-9" onClick={handleRestore} disabled={restoreMutation.isPending}>
+                {restoreMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArchiveRestore className="h-4 w-4" />}
+                Restaurar ({selectedIds.size})
+              </Button>
+            )
+          }
+        />
+      }
+    >
+      {/* Busca */}
+      <Card className="rounded-xl border-border/70 p-3 md:p-4">
+        <div className="relative max-w-md">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por manutenção ou imóvel…"
+            aria-label="Buscar no arquivo"
+            className="pl-8"
+          />
         </div>
+      </Card>
 
-        {/* Search and Actions */}
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por nome ou imóvel..."
-              className="pl-10"
-            />
-          </div>
-          {selectedIds.size > 0 && (
-            <Button 
-              onClick={handleRestore}
-              disabled={restoreMutation.isPending}
-            >
-              <ArchiveRestore className="h-4 w-4 mr-2" />
-              Restaurar ({selectedIds.size})
-            </Button>
-          )}
-        </div>
-
-        {/* Table */}
-        <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm table-fixed">
-              <thead className="bg-secondary text-secondary-foreground">
-                <tr className="h-10">
-                  <th className="w-[40px] px-2 py-2">
-                    <Checkbox
-                      checked={archivedItems && archivedItems.length > 0 && selectedIds.size === archivedItems.length}
-                      onCheckedChange={toggleSelectAll}
-                    />
-                  </th>
-                  <SortableHeader
-                    label="Manutenção"
-                    field="subject"
-                    currentSort={sortField}
-                    direction={sortDirection}
-                    onSort={handleSort}
-                    className="text-left w-[200px] max-w-[200px]"
-                  />
-                  <SortableHeader
-                    label="Imóvel"
-                    field="property"
-                    currentSort={sortField}
-                    direction={sortDirection}
-                    onSort={handleSort}
-                    className="text-left w-[130px] max-w-[130px]"
-                  />
-                  <SortableHeader
-                    label="Valor"
-                    field="amount_cents"
-                    currentSort={sortField}
-                    direction={sortDirection}
-                    onSort={handleSort}
-                    className="text-right w-[120px]"
-                  />
-                  <SortableHeader
-                    label="Aporte Gestão"
-                    field="management_contribution_cents"
-                    currentSort={sortField}
-                    direction={sortDirection}
-                    onSort={handleSort}
-                    className="text-right w-[120px]"
-                  />
-                  <SortableHeader
-                    label="Data"
-                    field="scheduled_at"
-                    currentSort={sortField}
-                    direction={sortDirection}
-                    onSort={handleSort}
-                    className="text-center w-[100px]"
-                  />
-                  <th className="text-center px-2 py-2 font-medium w-[60px]">Anexos</th>
-                  <SortableHeader
-                    label="Label"
-                    field="service_type"
-                    currentSort={sortField}
-                    direction={sortDirection}
-                    onSort={handleSort}
-                    className="text-center w-[130px]"
-                  />
-                  <SortableHeader
-                    label="Arquivado em"
-                    field="archived_at"
-                    currentSort={sortField}
-                    direction={sortDirection}
-                    onSort={handleSort}
-                    className="text-center w-[120px]"
-                  />
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={9} className="text-center p-8 text-muted-foreground">
-                      Carregando...
-                    </td>
-                  </tr>
-                ) : filteredAndSortedItems.length === 0 ? (
-                  <tr>
-                    <td colSpan={9} className="text-center p-8 text-muted-foreground">
-                      Nenhum item arquivado encontrado
-                    </td>
-                  </tr>
-                ) : (
-                  filteredAndSortedItems.map((item) => {
-                    const serviceValues = String(item.service_type || "")
-                      .split(",")
-                      .map((v) => v.trim())
-                      .filter(Boolean);
-                    const serviceLabels = serviceValues
-                      .map((v) =>
-                        SERVICE_LABELS.find(
-                          (s) => s.value === v || s.value.toLowerCase() === v.toLowerCase() || s.label === v,
-                        ),
-                      )
-                      .filter(Boolean) as typeof SERVICE_LABELS;
-                    const handleRowClick = (e: React.MouseEvent) => {
-                      // Don't navigate if clicking checkbox
-                      if ((e.target as HTMLElement).closest('[role="checkbox"]')) return;
-                      if (item.type === "charge" && item.charge_id) {
-                        navigate(`/manutencao-detalhes/${item.charge_id}`);
-                      } else if (item.type === "ticket") {
-                        navigate(`/manutencao-detalhes/${item.id}`);
-                      }
-                    };
-                    return (
-                      <tr 
-                        key={item.id}
-                        className="border-b hover:bg-muted/30 transition-colors h-10 cursor-pointer"
-                        onClick={handleRowClick}
-                      >
-                        <td className="px-2 py-2 w-[40px]">
-                          <Checkbox
-                            checked={selectedIds.has(item.id)}
-                            onCheckedChange={() => toggleSelection(item.id)}
-                          />
-                        </td>
-                        <td className="px-2 py-2 max-w-[200px]">
-                          <TooltipProvider delayDuration={300}>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="truncate font-medium">{item.subject}</div>
-                              </TooltipTrigger>
-                              <TooltipContent side="bottom" className="max-w-sm">
-                                <p>{item.subject}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </td>
-                        <td className="px-2 py-2 max-w-[130px]">
-                          <TooltipProvider delayDuration={300}>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="truncate text-muted-foreground">{item.property?.name || "—"}</div>
-                              </TooltipTrigger>
-                              <TooltipContent side="bottom">
-                                <p>{item.property?.name || "—"}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </td>
-                        <td className="px-2 py-2 text-right font-medium w-[120px]">
-                          {item.amount_cents ? formatBRL(item.amount_cents) : "—"}
-                        </td>
-                        <td className="px-2 py-2 text-right text-primary w-[120px]">
-                          {item.management_contribution_cents ? formatBRL(item.management_contribution_cents) : "—"}
-                        </td>
-                        <td className="px-2 py-2 text-center w-[100px]">
-                          {item.scheduled_at 
-                            ? format(new Date(item.scheduled_at), "dd/MM/yyyy", { locale: ptBR }) 
-                            : "—"}
-                        </td>
-                        <td className="px-2 py-2 w-[60px]">
-                          <div className="flex items-center justify-center gap-1">
-                            {(item.attachments_count || 0) > 0 ? (
-                              <>
-                                <Paperclip className="h-3.5 w-3.5 text-primary" />
-                                <span className="font-medium text-primary">{item.attachments_count}</span>
-                              </>
-                            ) : (
-                              <>
-                                <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
-                                <span className="text-muted-foreground">0</span>
-                              </>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-2 py-2 w-[130px]">
-                          <div className="flex flex-wrap justify-center gap-1">
-                            {serviceLabels.length > 0 ? (
-                              serviceLabels.map((s) => (
-                                <Badge key={s.value} className={cn("text-primary-foreground text-xs", s.color)}>
-                                  {s.label}
-                                </Badge>
-                              ))
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-2 py-2 text-center w-[120px] text-muted-foreground">
-                          {format(new Date(item.archived_at), "dd/MM/yyyy", { locale: ptBR })}
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+      {isLoading ? (
+        <Card className="rounded-xl border-border/70 p-3" aria-busy="true" aria-label="Carregando arquivo">
+          <div className="space-y-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full rounded-lg" />
+            ))}
           </div>
         </Card>
-      </div>
-    </div>
+      ) : total === 0 ? (
+        <Card className="rounded-xl border-border/70">
+          <EmptyState
+            ilustracao="manutencoes"
+            title="Nenhum item arquivado"
+            description="Manutenções e cobranças arquivadas na lista aparecem aqui."
+          />
+        </Card>
+      ) : filteredAndSortedItems.length === 0 ? (
+        <Card className="rounded-xl border-border/70">
+          <EmptyState
+            ilustracao="busca"
+            title="Nada encontrado para a busca"
+            description="Tente outro nome de manutenção ou de imóvel."
+            action={
+              <Button variant="outline" onClick={() => setSearch("")}>
+                Limpar busca
+              </Button>
+            }
+          />
+        </Card>
+      ) : (
+        <>
+          {/* Desktop: tabela */}
+          <Card className="hidden overflow-hidden rounded-xl border-border/70 md:block">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50 hover:bg-muted/50">
+                  <TableHead className="w-10 pl-4">
+                    <Checkbox
+                      checked={todosVisiveisSelecionados}
+                      onCheckedChange={toggleSelectAll}
+                      aria-label="Selecionar todos os itens visíveis"
+                    />
+                  </TableHead>
+                  <SortableHeader label="Manutenção" field="subject" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="min-w-[220px]" />
+                  <SortableHeader label="Imóvel" field="property" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="min-w-[140px]" />
+                  <SortableHeader label="Valor" field="amount_cents" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="w-[120px] text-right" />
+                  <SortableHeader label="Aporte da gestão" field="management_contribution_cents" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="w-[140px] text-right" />
+                  <SortableHeader label="Data" field="scheduled_at" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="w-[110px] text-center" />
+                  <TableHead className="w-[80px] text-center">Anexos</TableHead>
+                  <SortableHeader label="Etiqueta" field="service_type" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="w-[160px]" />
+                  <SortableHeader label="Arquivado em" field="archived_at" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="w-[130px] pr-4 text-center" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredAndSortedItems.map((item) => {
+                  const etiquetas = rotulosServico(item.service_type);
+                  const selecionado = selectedIds.has(item.id);
+                  return (
+                    <TableRow
+                      key={item.id}
+                      className={cn("cursor-pointer", selecionado && "bg-primary/5")}
+                      onClick={() => abrirItem(item)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") abrirItem(item);
+                      }}
+                      tabIndex={0}
+                    >
+                      <TableCell className="pl-4" onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selecionado}
+                          onCheckedChange={() => toggleSelection(item.id)}
+                          aria-label={`Selecionar ${item.subject}`}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <p className="line-clamp-1 text-[13px] font-medium" title={item.subject}>
+                          {item.subject}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{item.type === "charge" ? "Cobrança" : "Manutenção"}</p>
+                      </TableCell>
+                      <TableCell className="text-[13px] text-muted-foreground">{item.property?.name || "—"}</TableCell>
+                      <TableCell className="text-right text-[13px] font-medium tabular-nums">
+                        {item.amount_cents ? formatarBRL(item.amount_cents) : "—"}
+                      </TableCell>
+                      <TableCell className="text-right text-[13px] tabular-nums text-success">
+                        {item.management_contribution_cents ? formatarBRL(item.management_contribution_cents) : "—"}
+                      </TableCell>
+                      <TableCell className="text-center text-xs tabular-nums text-muted-foreground">
+                        {item.scheduled_at ? formatarData(item.scheduled_at) : "—"}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <span
+                          className={cn(
+                            "inline-flex items-center gap-1 text-xs tabular-nums",
+                            (item.attachments_count || 0) > 0 ? "text-primary" : "text-muted-foreground",
+                          )}
+                        >
+                          <Paperclip className="h-3.5 w-3.5" aria-hidden="true" />
+                          {item.attachments_count || 0}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        {etiquetas.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {etiquetas.map((e) => (
+                              <Etiqueta key={e} tom="neutral">
+                                {e}
+                              </Etiqueta>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="pr-4 text-center text-xs tabular-nums text-muted-foreground">
+                        {formatarData(item.archived_at)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </Card>
+
+          {/* Celular: linhas */}
+          <div className="space-y-1.5 md:hidden">
+            {filteredAndSortedItems.map((item) => {
+              const etiquetas = rotulosServico(item.service_type);
+              return (
+                <LinhaCaixa
+                  key={item.id}
+                  titulo={item.subject}
+                  subtitulo={
+                    <>
+                      {item.property?.name || "—"} · arquivado em {formatarData(item.archived_at)}
+                      {etiquetas.length > 0 ? ` · ${etiquetas.join(", ")}` : ""}
+                    </>
+                  }
+                  meta={
+                    <div className="flex flex-col items-end gap-0.5">
+                      <span className="text-[13px] font-semibold tabular-nums">
+                        {item.amount_cents ? formatarBRL(item.amount_cents) : "—"}
+                      </span>
+                      {(item.attachments_count || 0) > 0 && (
+                        <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                          <Paperclip className="h-3 w-3" aria-hidden="true" />
+                          {item.attachments_count}
+                        </span>
+                      )}
+                    </div>
+                  }
+                  acoes={
+                    <Checkbox
+                      checked={selectedIds.has(item.id)}
+                      onCheckedChange={() => toggleSelection(item.id)}
+                      aria-label={`Selecionar ${item.subject}`}
+                    />
+                  }
+                  onClick={() => abrirItem(item)}
+                  className="bg-card"
+                />
+              );
+            })}
+          </div>
+        </>
+      )}
+    </PaginaInterna>
   );
 }

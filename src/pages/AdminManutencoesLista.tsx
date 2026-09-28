@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, Search, Plus, ChevronDown, ChevronRight, Paperclip, MessageSquare, ArrowUpDown, ArrowUp, ArrowDown, Archive, Loader2, FileAudio, Sparkles, Wrench, Play, Pause, BarChart3, Check, X, Trash2 } from "lucide-react";
+import { Search, Plus, ChevronDown, ChevronRight, Paperclip, MessageSquare, ArrowUpDown, ArrowUp, ArrowDown, Archive, Loader2, FileAudio, Sparkles, Wrench, Play, Pause, BarChart3, Check, X, Trash2, Kanban, MoreHorizontal } from "lucide-react";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { cn } from "@/lib/utils";
 import { formatBRL } from "@/lib/format";
@@ -24,7 +24,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
 import { MediaGallery } from "@/components/MediaGallery";
 import { deleteAttachmentRow } from "@/lib/deleteAttachment";
-import { uploadFileWithCompression, FileUploadProgress } from "@/lib/fileUpload";
+import { uploadFileWithCompression, emParaleloOuFalha } from "@/lib/fileUpload";
 import { CreateMaintenanceFromInspectionDialog } from "@/components/CreateMaintenanceFromInspectionDialog";
 import EditInspectionDialog from "@/components/EditInspectionDialog";
 import { EditMaintenanceDialog } from "@/components/EditMaintenanceDialog";
@@ -52,6 +52,14 @@ import { estaVencida } from "@/lib/vencimento";
 import { WhatsappAcaoLinha, type DonoWhatsapp } from "@/components/maintenance/WhatsappAcaoLinha";
 import { LembreteAtrasoConfig } from "@/components/maintenance/LembreteAtrasoConfig";
 import { enviarLembreteAtraso, temWhatsapp } from "@/lib/lembreteAtraso";
+import { CabecalhoPagina } from "@/components/painel/PaginaInterna";
+import { BotaoLinha } from "@/components/painel/CaixaOperacao";
+import { Etiqueta } from "@/components/painel/Etiqueta";
+import type { Tom } from "@/components/painel/tons";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { valorDevido } from "@/lib/cobrancaMeta";
 // ===== TYPES =====
 type TicketStatus = "novo" | "em_analise" | "aguardando_info" | "em_execucao" | "concluido" | "cancelado";
 
@@ -93,7 +101,7 @@ const SERVICE_LABELS = [
   { value: "eletrica", label: "Elétrica", color: "bg-warning" },
   { value: "hidraulica", label: "Hidráulica", color: "bg-info" },
   { value: "marcenaria", label: "Marcenaria", color: "bg-warning" },
-  { value: "estrutural", label: "Estrutural", color: "bg-slate-600" },
+  { value: "estrutural", label: "Estrutural", color: "bg-secondary" },
   { value: "itens", label: "Itens", color: "bg-primary" },
   { value: "vidracaria", label: "Vidraçaria", color: "bg-info" },
   { value: "dedetizacao", label: "Dedetização", color: "bg-success" },
@@ -105,7 +113,7 @@ const SERVICE_LABELS = [
   { value: "Elétrica", label: "Elétrica", color: "bg-warning" },
   { value: "Hidráulica", label: "Hidráulica", color: "bg-info" },
   { value: "Marcenaria", label: "Marcenaria", color: "bg-warning" },
-  { value: "Estrutural", label: "Estrutural", color: "bg-slate-600" },
+  { value: "Estrutural", label: "Estrutural", color: "bg-secondary" },
   { value: "Itens", label: "Itens", color: "bg-primary" },
   { value: "Vidraçaria", label: "Vidraçaria", color: "bg-info" },
   { value: "Dedetização", label: "Dedetização", color: "bg-success" },
@@ -138,6 +146,20 @@ const GROUPS = [
   { id: "cobrancas_vencidas", label: "Cobranças Vencidas", color: "border-l-destructive" },
   { id: "cobrancas", label: "Cobranças Pendentes", color: "border-l-primary" },
 ];
+
+// As opções dos seletores (status, responsável, etiqueta e BOARD_OPTIONS de
+// src/lib/maintenanceBoard.ts) trazem a cor como classe; a etiqueta sólida
+// precisa do tom, que já carrega o texto na cor de contraste certa.
+const TOM_POR_COR: Record<string, Tom> = {
+  "bg-warning": "warning",
+  "bg-success": "success",
+  "bg-primary": "primary",
+  "bg-info": "info",
+  "bg-secondary": "secondary",
+  "bg-destructive": "destructive",
+  "bg-muted-foreground": "neutral",
+};
+const tomDaCor = (cor?: string): Tom => TOM_POR_COR[cor ?? ""] ?? "neutral";
 
 // ===== SORTABLE HEADER COMPONENT =====
 interface SortableHeaderProps {
@@ -268,9 +290,9 @@ function EditableCell({ value, type, options, onSave, className, placeholder }: 
             {selectedOptions.length > 0 ? (
               <div className="flex items-center gap-1 flex-wrap">
                 {selectedOptions.slice(0, 2).map((opt) => (
-                  <Badge key={opt.value} className={cn("text-white text-[10px] px-1.5 py-0", opt.color)}>
+                  <Etiqueta key={opt.value} solida tom={tomDaCor(opt.color)}>
                     {opt.label}
-                  </Badge>
+                  </Etiqueta>
                 ))}
                 {selectedOptions.length > 2 && (
                   <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
@@ -295,7 +317,7 @@ function EditableCell({ value, type, options, onSave, className, placeholder }: 
                   className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted/50 transition-colors text-left"
                 >
                   <Checkbox checked={isSelected} className="pointer-events-none" />
-                  <Badge className={cn("text-white text-xs", opt.color)}>{opt.label}</Badge>
+                  <Etiqueta solida tom={tomDaCor(opt.color)}>{opt.label}</Etiqueta>
                 </button>
               );
             })}
@@ -314,9 +336,9 @@ function EditableCell({ value, type, options, onSave, className, placeholder }: 
       >
         <SelectTrigger className={cn("h-8 border-0 bg-transparent hover:bg-muted/50 transition-colors", className)} data-no-sheet>
           {selectedOption ? (
-            <Badge className={cn("text-white text-xs", selectedOption.color)}>
+            <Etiqueta solida tom={tomDaCor(selectedOption.color)}>
               {selectedOption.label}
-            </Badge>
+            </Etiqueta>
           ) : (
             <span className="text-muted-foreground text-sm">{placeholder || "—"}</span>
           )}
@@ -324,7 +346,7 @@ function EditableCell({ value, type, options, onSave, className, placeholder }: 
         <SelectContent data-no-sheet>
           {options?.map(opt => (
             <SelectItem key={opt.value} value={opt.value}>
-              <Badge className={cn("text-white text-xs", opt.color)}>{opt.label}</Badge>
+              <Etiqueta solida tom={tomDaCor(opt.color)}>{opt.label}</Etiqueta>
             </SelectItem>
           ))}
         </SelectContent>
@@ -397,7 +419,7 @@ function EnvioLoteDialog({
   onConfirmar: () => void;
 }) {
   const aPagar = (i: MaintenanceItem) =>
-    Math.max(0, (i.amount_cents ?? 0) - (i.management_contribution_cents ?? 0));
+    valorDevido(i);
   const gratuita = (i: MaintenanceItem) =>
     (i.amount_cents ?? 0) > 0 && (i.management_contribution_cents ?? 0) >= (i.amount_cents ?? 0);
   const semValor = itens.filter((i) => (i.amount_cents ?? 0) === 0).length;
@@ -652,7 +674,7 @@ function GroupRow({
         )}
         onClick={onToggle}
       >
-        <td colSpan={12} className="p-2">
+        <td colSpan={13} className="p-2">
           <div className="flex items-center gap-2 font-medium">
             {items.length > 0 && (
               <span className="flex items-center pl-1.5 pr-1" onClick={(e) => e.stopPropagation()}>
@@ -721,17 +743,23 @@ function GroupRow({
               </TooltipProvider>
             </td>
 
-            {/* Atualizações / Comentários da equipe (preview no painel) */}
-            <td className="p-0 w-[44px]">
-              <div className="flex items-center justify-center px-1 py-2">
-                <div className="relative">
-                  <MessageSquare className="h-4 w-4 text-muted-foreground/50" />
-                  {unread > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center text-[10px] font-bold bg-destructive text-destructive-foreground rounded-full px-1">
-                      {unread > 9 ? "9+" : unread}
-                    </span>
-                  )}
-                </div>
+            {/* Conversa da manutenção. Cobrança não tem chat de ticket: fica um traço. */}
+            <td className="p-0 w-[44px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-center px-1 py-1">
+                {isCharge ? (
+                  <span className="text-sm text-muted-foreground">—</span>
+                ) : (
+                  <BotaoLinha
+                    rotulo="Abrir conversa"
+                    naoLidas={unread}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenChat(item);
+                    }}
+                  >
+                    <MessageSquare />
+                  </BotaoLinha>
+                )}
               </div>
             </td>
 
@@ -804,6 +832,9 @@ function GroupRow({
                       ? "hover:bg-primary/10 cursor-pointer text-primary"
                       : "text-muted-foreground"
                   )}
+                  type="button"
+                  aria-label="Ver anexos"
+                  title="Ver anexos"
                   onClick={(e) => {
                     e.stopPropagation();
                     if (item.attachments_count && item.attachments_count > 0) {
@@ -816,6 +847,9 @@ function GroupRow({
                   <span>{item.attachments_count || 0}</span>
                 </button>
                 <button
+                  type="button"
+                  aria-label="Adicionar anexo"
+                  title="Adicionar anexo"
                   className="p-1 rounded hover:bg-muted/50 transition-colors text-muted-foreground hover:text-primary"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -994,7 +1028,10 @@ function AudioPlayerMini({ url }: { url: string }) {
   return (
     <div className="flex items-center gap-1">
       <button
+        type="button"
         onClick={togglePlay}
+        aria-label={isPlaying ? "Pausar áudio" : "Reproduzir áudio"}
+        title={isPlaying ? "Pausar áudio" : "Reproduzir áudio"}
         className="p-1.5 rounded-full bg-primary/10 hover:bg-primary/20 transition-colors"
       >
         {isPlaying ? (
@@ -1204,7 +1241,7 @@ function VistoriasTable({
           <div className="flex justify-center px-2 py-2">
             <Badge 
               variant={hasProblems ? "destructive" : "secondary"}
-              className={hasProblems ? "" : "bg-success/10 text-success dark:bg-green-900 dark:text-green-300"}
+              className={hasProblems ? "" : "bg-success/10 text-success"}
             >
               {hasProblems ? "NÃO" : "OK"}
             </Badge>
@@ -1240,6 +1277,9 @@ function VistoriasTable({
         <td className="p-0 w-[80px]">
           <div className="flex items-center justify-center gap-1 px-1 py-2">
             <button
+              type="button"
+              aria-label="Ver arquivos da vistoria"
+              title="Ver arquivos da vistoria"
               className={cn(
                 "flex items-center gap-1 px-2 py-1 rounded text-sm transition-colors",
                 inspection.attachments.length > 0
@@ -1272,7 +1312,7 @@ function VistoriasTable({
                   <TooltipTrigger asChild>
                     <div className="text-xs truncate max-w-[220px] cursor-default flex items-center gap-1">
                       <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
-                        RESUMO
+                        Resumo
                       </Badge>
                       <span>{inspection.transcript_summary.substring(0, 50)}...</span>
                     </div>
@@ -1303,7 +1343,7 @@ function VistoriasTable({
                 ) : (
                   <>
                     <Sparkles className="h-3 w-3" />
-                    Gerar Resumo
+                    Gerar resumo
                   </>
                 )}
               </Button>
@@ -1327,12 +1367,13 @@ function VistoriasTable({
                       e.stopPropagation();
                       onEditInspection(inspection);
                     }}
+                    aria-label="Editar vistoria"
                   >
                     <Pencil className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Editar Vistoria</p>
+                  <p>Editar vistoria</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -1347,12 +1388,13 @@ function VistoriasTable({
                       e.stopPropagation();
                       onCreateMaintenance(inspection);
                     }}
+                    aria-label="Nova manutenção a partir da vistoria"
                   >
                     <Wrench className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Nova Manutenção</p>
+                  <p>Nova manutenção</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -1394,7 +1436,7 @@ function VistoriasTable({
               {renderSortableHeader("Data", "created_at", "text-center w-[100px]")}
               {renderSortableHeader("Responsável", "cleaner_name", "text-left w-[120px]")}
               {renderSortableHeader("Status", "status", "text-center w-[80px]")}
-              <th className="text-left px-2 py-2 font-medium w-[250px]">Audio</th>
+              <th className="text-left px-2 py-2 font-medium w-[250px]">Áudio</th>
               <th className="text-center px-2 py-2 font-medium w-[80px]">Arquivos</th>
               <th className="text-left px-2 py-2 font-medium w-[300px]">Resumo</th>
               <th className="text-center px-2 py-2 font-medium w-[80px]"></th>
@@ -1403,7 +1445,7 @@ function VistoriasTable({
           <tbody>
             {/* Vistorias Faxineiras Group Header */}
             <tr 
-              className="bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors border-l-4 border-l-amber-500"
+              className="bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors border-l-4 border-l-warning"
               onClick={onToggleCleaner}
             >
               <td colSpan={9} className="p-2">
@@ -1422,7 +1464,7 @@ function VistoriasTable({
 
             {/* Vistorias Equipe Group Header */}
             <tr 
-              className="bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors border-l-4 border-l-green-500"
+              className="bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors border-l-4 border-l-success"
               onClick={onToggleTeam}
             >
               <td colSpan={9} className="p-2">
@@ -2493,15 +2535,14 @@ export default function AdminManutencoesLista() {
     setUploadingItemId(item.id);
 
     try {
-      for (const file of Array.from(files)) {
+      // Até 3 arquivos ao mesmo tempo. Nome, tipo e tamanho gravados são os do
+      // arquivo enviado (a foto pode ter sido reduzida e virado .jpg).
+      await emParaleloOuFalha(Array.from(files), async (original) => {
         const folder = isCharge ? `charges/${item.id}` : `tickets/${item.id}`;
-        const { url } = await uploadFileWithCompression(
-          file,
+        const { url, file } = await uploadFileWithCompression(
+          original,
           "attachments",
           folder,
-          (progress) => {
-            // Could show progress here if needed
-          }
         );
 
         if (isCharge) {
@@ -2523,7 +2564,7 @@ export default function AdminManutencoesLista() {
             .insert({
               ticket_id: item.id,
               author_id: user?.id,
-              body: `Anexo adicionado: ${file.name}`,
+              body: "Anexo enviado",
               is_internal: true,
             })
             .select("id")
@@ -2544,7 +2585,7 @@ export default function AdminManutencoesLista() {
             });
           if (error) throw error;
         }
-      }
+      });
 
       toast.success("Anexo(s) enviado(s) com sucesso!");
       queryClient.invalidateQueries({ queryKey: ["maintenance-list-view"] });
@@ -2627,6 +2668,11 @@ export default function AdminManutencoesLista() {
       cobrancas: cobrancasPendentes,
     };
   }, [tickets, charges, debouncedSearch]);
+
+  const totalItens = useMemo(
+    () => Object.values(groupedItems).reduce((soma, itens) => soma + itens.length, 0),
+    [groupedItems],
+  );
 
   // ===== Lembrete de atraso em lote =====
   // Cobranças vencidas marcadas -> UM lembrete por proprietário, com o resumo
@@ -2925,8 +2971,8 @@ export default function AdminManutencoesLista() {
           editId={editMaintenanceDialog.id}
           type={editMaintenanceDialog.type}
           onSaved={() => {
-            queryClient.invalidateQueries({ queryKey: ["maintenance-list"] });
-            queryClient.invalidateQueries({ queryKey: ["charges-list"] });
+            queryClient.invalidateQueries({ queryKey: ["maintenance-list-view"] });
+            queryClient.invalidateQueries({ queryKey: ["pending-charges-list"] });
           }}
         />
 
@@ -2989,7 +3035,7 @@ export default function AdminManutencoesLista() {
             const ok = await deleteAttachmentRow(galleryAttachmentTable, item.id);
             if (ok) {
               setGalleryItems((prev) => prev.filter((i) => i.id !== item.id));
-              queryClient.invalidateQueries({ queryKey: ["maintenances-list"] });
+              queryClient.invalidateQueries({ queryKey: ["maintenance-list-view"] });
               queryClient.invalidateQueries({ queryKey: ["inspections-for-list"] });
             }
           } : undefined}
@@ -2998,37 +3044,50 @@ export default function AdminManutencoesLista() {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 p-4 md:p-6">
-      <div className="max-w-[1600px] mx-auto space-y-4">
-        {/* Header */}
-        <div className="flex items-center gap-4 flex-wrap">
-          <Button variant="ghost" size="icon" onClick={() => goBack(navigate, "/painel")}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex-1 min-w-[200px]">
-            <h1 className="text-2xl font-bold">Gestão de Manutenções</h1>
-            <p className="text-muted-foreground text-sm">
-              Lista estilo Monday com edição inline
-            </p>
-          </div>
-          <Button variant="outline" onClick={() => navigate("/admin/manutencoes-arquivo")}>
-            <Archive className="h-4 w-4 mr-2" />
-            Arquivo
-          </Button>
-          <Button variant="outline" onClick={() => navigate("/manutencoes")}>
-            <BarChart3 className="h-4 w-4 mr-2" />
-            Relatório
-          </Button>
-          <Button variant="outline" onClick={() => navigate("/admin/manutencoes")}>
-            Ver Kanban
-          </Button>
-          <Button onClick={() => navigate("/admin/nova-manutencao")}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nova Manutenção
-          </Button>
-        </div>
+  // Tudo que está na lista é item aberto: manutenção não arquivada ou cobrança sem pagamento.
+  const totalAbertos = (tickets?.length ?? 0) + (charges?.length ?? 0);
+  const subtituloLista = isLoading ? undefined : `${totalAbertos} ${totalAbertos === 1 ? "item aberto" : "itens abertos"}`;
 
+  return (
+    <div className="min-h-screen bg-background">
+      <CabecalhoPagina
+        titulo="Manutenções"
+        subtitulo={subtituloLista}
+        icone={<Wrench />}
+        tom="primary"
+        voltarPara="/painel"
+        acoes={
+          <>
+            <Button size="sm" className="h-9" onClick={() => navigate("/admin/nova-manutencao")}>
+              <Plus className="h-4 w-4" />
+              Nova manutenção
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9">
+                  <MoreHorizontal className="h-4 w-4" />
+                  Mais
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="z-50 bg-popover">
+                <DropdownMenuItem onClick={() => navigate("/admin/manutencoes-arquivo")}>
+                  <Archive className="mr-2 h-4 w-4" />
+                  Arquivo
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/manutencoes")}>
+                  <BarChart3 className="mr-2 h-4 w-4" />
+                  Relatório
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/admin/manutencoes")}>
+                  <Kanban className="mr-2 h-4 w-4" />
+                  Quadro
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
+        }
+      />
+      <main className="mx-auto w-full max-w-[1600px] space-y-4 px-4 py-4">
         {/* Search and Actions */}
         <div className="flex items-center gap-4 flex-wrap">
           <div className="relative flex-1 max-w-md">
@@ -3126,14 +3185,14 @@ export default function AdminManutencoesLista() {
                 <tr className="h-10">
                   <th className="w-[36px] px-1 py-2"></th>
                   <SortableHeader label="Manutenção" field="subject" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[220px] max-w-[220px]" />
-                  <th className="text-center px-1 py-2 font-medium w-[44px]">Chat</th>
+                  <th className="text-center px-1 py-2 font-medium w-[44px]">Conversa</th>
                   <SortableHeader label="Imóvel" field="property" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[140px] max-w-[140px]" />
                   <SortableHeader label="Valor" field="amount_cents" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[90px]" />
                   <SortableHeader label="Aporte" field="management_contribution_cents" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[90px]" />
                   <SortableHeader label="Data" field="created_at" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[80px]" />
                   <th className="text-center px-1 py-2 font-medium w-[70px]">Anexos</th>
                   <th className="text-center px-1 py-2 font-medium w-[120px]">Responsável</th>
-                  <SortableHeader label="Label" field="service_type" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[120px]" />
+                  <SortableHeader label="Etiqueta" field="service_type" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[120px]" />
                   <th className="text-center px-1 py-2 font-medium w-[120px]">Quadro</th>
                   <SortableHeader label="Status" field="list_status" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[140px]" />
                   <th className="text-center px-1 py-2 font-medium w-[108px]">Ações</th>
@@ -3141,9 +3200,26 @@ export default function AdminManutencoesLista() {
               </thead>
               <tbody>
                 {isLoading ? (
+                  Array.from({ length: 6 }).map((_, i) => (
+                    <tr key={i} className="border-b" aria-busy="true">
+                      <td colSpan={13} className="px-3 py-1.5">
+                        <Skeleton className="h-7 w-full rounded-md" />
+                      </td>
+                    </tr>
+                  ))
+                ) : totalItens === 0 ? (
                   <tr>
-                    <td colSpan={12} className="text-center p-8 text-muted-foreground">
-                      Carregando...
+                    <td colSpan={13} className="p-0">
+                      <EmptyState
+                        icon={debouncedSearch ? <Search className="h-5 w-5" /> : <Wrench className="h-5 w-5" />}
+                        title={debouncedSearch ? "Nada encontrado para a busca" : "Nenhuma manutenção"}
+                        description={
+                          debouncedSearch
+                            ? "Tente outro nome de manutenção ou de imóvel."
+                            : "Use “Nova manutenção” para abrir a primeira."
+                        }
+                        className="py-8"
+                      />
                     </td>
                   </tr>
                 ) : (
@@ -3231,21 +3307,30 @@ export default function AdminManutencoesLista() {
                             ) : (
                               <td className="p-0 w-[120px]" />
                             )}
+                            {/* Aporte, Data, Anexos, Responsável */}
                             <td colSpan={4} className="p-0" />
-                            <td className="p-0 w-[150px]">
+                            {/* Etiqueta, Quadro, Status: vazias, para a linha somar as 13 colunas */}
+                            <td className="p-0" />
+                            <td className="p-0" />
+                            <td className="p-0" />
+                            <td className="p-0 w-[108px]">
                               <div className="flex items-center justify-center gap-1 px-2">
                                 <button
+                                  type="button"
                                   onClick={handleInlineSave}
                                   disabled={inlineLoading || !inlineAdd!.subject.trim() || !inlineAdd!.propertyId}
                                   className="p-1.5 rounded hover:bg-primary/10 text-primary disabled:opacity-40 disabled:cursor-not-allowed"
                                   title="Salvar (Enter)"
+                                  aria-label="Salvar"
                                 >
                                   {inlineLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                                 </button>
                                 <button
+                                  type="button"
                                   onClick={handleInlineCancel}
                                   className="p-1.5 rounded hover:bg-muted text-muted-foreground"
                                   title="Cancelar (Esc)"
+                                  aria-label="Cancelar"
                                 >
                                   <X className="h-4 w-4" />
                                 </button>
@@ -3257,8 +3342,9 @@ export default function AdminManutencoesLista() {
                         {/* "+ Adicionar item" row */}
                         {isExpanded && !isInlineActive && (
                           <tr className="border-b">
-                            <td colSpan={12} className="p-0">
+                            <td colSpan={13} className="p-0">
                               <button
+                                type="button"
                                 className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors group"
                                 onClick={() => handleStartInlineAdd(group.id)}
                               >
@@ -3309,7 +3395,7 @@ export default function AdminManutencoesLista() {
             const ok = await deleteAttachmentRow(galleryAttachmentTable, item.id);
             if (ok) {
               setGalleryItems((prev) => prev.filter((i) => i.id !== item.id));
-              queryClient.invalidateQueries({ queryKey: ["maintenances-list"] });
+              queryClient.invalidateQueries({ queryKey: ["maintenance-list-view"] });
               queryClient.invalidateQueries({ queryKey: ["inspections-for-list"] });
             }
           } : undefined}
@@ -3358,8 +3444,8 @@ export default function AdminManutencoesLista() {
           editId={editMaintenanceDialog.id}
           type={editMaintenanceDialog.type}
           onSaved={() => {
-            queryClient.invalidateQueries({ queryKey: ["maintenance-list"] });
-            queryClient.invalidateQueries({ queryKey: ["charges-list"] });
+            queryClient.invalidateQueries({ queryKey: ["maintenance-list-view"] });
+            queryClient.invalidateQueries({ queryKey: ["pending-charges-list"] });
           }}
         />
 
@@ -3414,7 +3500,7 @@ export default function AdminManutencoesLista() {
           entityId={detailEntityId}
           entityType={detailEntityType}
         />
-      </div>
+      </main>
     </div>
   );
 }
