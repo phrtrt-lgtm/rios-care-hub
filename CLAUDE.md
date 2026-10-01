@@ -111,7 +111,7 @@ Os dois botões existem no desktop (`GroupRow`) e no celular (`MobileMaintenance
 
 **Estrutura da lista (desde 2026-09-28).** `AdminManutencoesLista.tsx` ficou só com o componente principal (~2.000 linhas). O resto está em `src/components/maintenance/`: `listaTipos.ts` (tipos, `GROUPS` com tom/ponto/`cobranca`, constantes), `EditableCell.tsx` (`SortableHeader` + célula editável), `GroupRow.tsx` (cabeçalho do grupo com contagem e total + linhas), `LoteDialogs.tsx` (envio e lembrete em lote), `VistoriasTable.tsx`. Na tela:
 - três abas no cabeçalho — Manutenções · Vistorias · Débitos em reserva — em vez de três tabelas empilhadas;
-- pílulas de quadro (Todos + os 6 grupos) e filtro por imóvel, além da busca; grupos abertos e aba ficam em `localStorage` (`manutencoes-lista:grupos`, `manutencoes-lista:aba`), com Em progresso e Aguardando envio abertos por padrão;
+- pílulas de quadro (Todos + os 6 grupos) e filtro por imóvel, além da busca; a aba fica em `localStorage` (`manutencoes-lista:aba`); os grupos abrem **todos fechados** a cada visita (desde 2026-10-01, pedido do gestor) e não são mais lembrados;
 - as duas primeiras colunas (seleção e nome) são fixas na rolagem horizontal (`sticky` com fundo opaco), e o cabeçalho do grupo também;
 - a barra de ações da seleção (Arquivar, Enviar ao proprietário, Lembrete de atraso) é fixa no rodapé;
 - no celular (`MobileMaintenanceList`, desde 2026-10-01): as mesmas pílulas de quadro, total por grupo, grupos abertos compartilhados com o desktop, seletor de responsável pelo custo e barra inferior de navegação. Vistorias, débitos em reserva e seleção em lote continuam só no desktop;

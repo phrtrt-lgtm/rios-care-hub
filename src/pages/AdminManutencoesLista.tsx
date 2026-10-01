@@ -58,7 +58,6 @@ import { buscarCobrancaJaLancada } from "@/lib/cobrancaDuplicada";
 
 // ===== PREFERÊNCIAS LEMBRADAS =====
 type AbaLista = "manutencoes" | "vistorias" | "debitos";
-const CHAVE_GRUPOS = "manutencoes-lista:grupos";
 const CHAVE_ABA = "manutencoes-lista:aba";
 
 function lerGuardado<T>(chave: string, padrao: T): T {
@@ -89,20 +88,9 @@ export default function AdminManutencoesLista() {
   const { user, profile } = useAuth();
   const { open: detailSheetOpen, entityId: detailEntityId, entityType: detailEntityType, openSheet, closeSheet } = useDetailSheet();
   const [search, setSearch] = useState("");
-  // Grupos abertos ficam lembrados entre visitas; por padrão, Em progresso e
-  // Aguardando envio abertos (é onde o trabalho do dia acontece).
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() =>
-    lerGuardado(CHAVE_GRUPOS, {
-      em_progresso: true,
-      infiltracao: false,
-      stand_by: false,
-      em_debate: true,
-      concluidas: true,
-      cobrancas_vencidas: false,
-      cobrancas: false,
-    }),
-  );
-  useEffect(() => guardar(CHAVE_GRUPOS, expandedGroups), [expandedGroups]);
+  // Todos os grupos começam fechados a cada abertura da página (pedido do
+  // gestor em 2026-10-01); o que a pessoa abre vale só para aquela visita.
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [abaAtiva, setAbaAtiva] = useState<AbaLista>(() => lerGuardado(CHAVE_ABA, "manutencoes"));
   useEffect(() => guardar(CHAVE_ABA, abaAtiva), [abaAtiva]);
   const [filtroQuadro, setFiltroQuadro] = useState<GrupoId | "todos">("todos");
