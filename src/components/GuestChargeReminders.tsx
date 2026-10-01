@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { Archive, Check, ChevronDown, ChevronRight, UserRound } from "lucide-react";
+import { Archive, Check, ChevronDown, ChevronRight, Download, Loader2, Paperclip, UserRound } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,7 +18,10 @@ import {
 import { cn } from "@/lib/utils";
 import { useGuestCharges, type GuestChargeItem } from "@/hooks/useGuestCharges";
 import type { DetailEntityType } from "@/hooks/useDetailSheet";
-import { GrupoCaixa, LinhaCaixa, SeloContagem } from "@/components/painel/CaixaOperacao";
+import { GrupoCaixa, SeloContagem } from "@/components/painel/CaixaOperacao";
+import { Etiqueta } from "@/components/painel/Etiqueta";
+import { formatarBRL, formatarData } from "@/lib/cobrancaMeta";
+import { baixarAnexosEmZip, resumoDownloadAnexos } from "@/lib/baixarAnexos";
 import { TOM, type Tom } from "@/components/painel/tons";
 
 interface Props {
@@ -50,6 +51,7 @@ export function GuestChargeReminders({ open, onOpenChange, onOpenDetail }: Props
   const { data: itens = [], isLoading } = useGuestCharges();
   const [confirmar, setConfirmar] = useState<GuestChargeItem | null>(null);
   const [arquivandoId, setArquivandoId] = useState<string | null>(null);
+  const [baixandoId, setBaixandoId] = useState<string | null>(null);
 
   if (isLoading) return null;
 
@@ -80,6 +82,30 @@ export function GuestChargeReminders({ open, onOpenChange, onOpenDetail }: Props
     } finally {
       setArquivandoId(null);
       setConfirmar(null);
+    }
+  };
+
+  const baixarAnexos = async (item: GuestChargeItem) => {
+    setBaixandoId(item.id);
+    try {
+      const resultado = await baixarAnexosEmZip([
+        {
+          ticketId: item.id,
+          checkout: item.guest_checkout_date,
+          imovel: item.property_name,
+          dano: item.subject,
+        },
+      ]);
+      if (resultado.baixados === 0) {
+        toast.error(resultado.falhas > 0 ? "Não foi possível baixar os anexos" : "Nenhum anexo para baixar");
+      } else {
+        toast.success("Download iniciado", { description: resumoDownloadAnexos(resultado) });
+      }
+    } catch (err) {
+      console.error("Erro ao baixar anexos:", err);
+      toast.error("Não foi possível baixar os anexos");
+    } finally {
+      setBaixandoId(null);
     }
   };
 
@@ -175,46 +201,21 @@ export function GuestChargeReminders({ open, onOpenChange, onOpenDetail }: Props
 
       {/* Lista completa — rola dentro da caixa, sem empurrar o painel */}
       {open && (
-        <div className="max-h-[420px] space-y-3 overflow-y-auto border-t border-border/60 px-3 pb-3 pt-3">
+        <div className="max-h-[520px] space-y-3 overflow-y-auto border-t border-border/60 px-3 pb-3 pt-3">
           {GRUPOS.map((grupo) => {
             const lista = itens.filter((i) => i.grupo === grupo.id);
             if (lista.length === 0) return null;
             return (
               <GrupoCaixa key={grupo.id} titulo={grupo.titulo} quantidade={lista.length} tom={grupo.tom}>
                 {lista.map((item) => (
-                  <LinhaCaixa
+                  <LinhaHospede
                     key={item.id}
-                    titulo={item.property_name}
-                    subtitulo={item.subject}
-                    onClick={() => abrir(item)}
-                    semSeta
-                    meta={
-                      <div className="text-muted-foreground">
-                        {item.guest_checkout_date && (
-                          <p>Check-out {format(new Date(item.guest_checkout_date), "dd/MM", { locale: ptBR })}</p>
-                        )}
-                        {item.grupo === "em_breve" && item.days_until_charge != null && (
-                          <p>
-                            cobrar em {item.days_until_charge} {item.days_until_charge === 1 ? "dia" : "dias"}
-                          </p>
-                        )}
-                        {item.grupo === "pronta" && <p className="font-medium text-success">já pode cobrar</p>}
-                      </div>
-                    }
-                    acoes={
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 shrink-0 gap-1 border-success/40 px-2 text-xs text-success hover:bg-success/10 hover:text-success"
-                        disabled={arquivandoId === item.id}
-                        onClick={() => setConfirmar(item)}
-                        aria-label={`Marcar como cobrada: ${item.property_name}`}
-                        title="Já cobrei do hóspede: tirar dos avisos"
-                      >
-                        <Check className="h-3.5 w-3.5" aria-hidden="true" />
-                        Cobrada
-                      </Button>
-                    }
+                    item={item}
+                    onAbrir={() => abrir(item)}
+                    onCobrada={() => setConfirmar(item)}
+                    onBaixar={() => baixarAnexos(item)}
+                    baixando={baixandoId === item.id}
+                    arquivando={arquivandoId === item.id}
                   />
                 ))}
               </GrupoCaixa>
@@ -233,6 +234,7 @@ export function GuestChargeReminders({ open, onOpenChange, onOpenDetail }: Props
               {confirmar && (
                 <span className="mt-2 block font-medium text-foreground">
                   {confirmar.subject} — {confirmar.property_name}
+                  {confirmar.amount_cents ? ` — ${formatarBRL(confirmar.amount_cents)}` : ""}
                 </span>
               )}
             </AlertDialogDescription>
@@ -243,6 +245,112 @@ export function GuestChargeReminders({ open, onOpenChange, onOpenDetail }: Props
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+interface LinhaHospedeProps {
+  item: GuestChargeItem;
+  onAbrir: () => void;
+  onCobrada: () => void;
+  onBaixar: () => void;
+  baixando: boolean;
+  arquivando: boolean;
+}
+
+/** Um dado da linha: rótulo pequeno em cima, valor embaixo. */
+function Dado({ rotulo, children, className }: { rotulo: string; children: React.ReactNode; className?: string }) {
+  return (
+    <div className={cn("min-w-0", className)}>
+      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{rotulo}</p>
+      <p className="truncate text-xs font-medium tabular-nums">{children}</p>
+    </div>
+  );
+}
+
+/**
+ * Linha detalhada de uma cobrança de hóspede: dano e imóvel, check-out, valor,
+ * situação da manutenção e do prazo, e as ações (baixar anexos, Cobrada).
+ */
+function LinhaHospede({ item, onAbrir, onCobrada, onBaixar, baixando, arquivando }: LinhaHospedeProps) {
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onAbrir}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onAbrir();
+        }
+      }}
+      className="flex cursor-pointer flex-col gap-2 rounded-lg bg-muted/40 px-2.5 py-2 transition-colors hover:bg-muted/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:flex-row lg:items-center lg:gap-4"
+    >
+      <div className="min-w-0 lg:flex-1">
+        <p className="truncate text-[13px] font-medium leading-tight">{item.subject}</p>
+        <p className="mt-0.5 truncate text-xs text-muted-foreground">{item.property_name}</p>
+      </div>
+
+      <div className="grid grid-cols-3 gap-x-3 gap-y-1 lg:w-[330px] lg:shrink-0">
+        <Dado rotulo="Check-out">
+          {item.guest_checkout_date ? formatarData(item.guest_checkout_date) : <span className="text-warning">Sem data</span>}
+        </Dado>
+        <Dado rotulo="Valor">
+          {item.amount_cents ? formatarBRL(item.amount_cents) : <span className="text-muted-foreground">Sem valor</span>}
+        </Dado>
+        <Dado rotulo="Cobrar">
+          {item.grupo === "pronta" ? (
+            <span className="text-success">Já pode</span>
+          ) : item.grupo === "em_breve" && item.days_until_charge != null ? (
+            <>
+              em {item.days_until_charge} {item.days_until_charge === 1 ? "dia" : "dias"}
+              {item.cobrar_a_partir_de && (
+                <span className="font-normal text-muted-foreground"> · {formatarData(item.cobrar_a_partir_de, "dd/MM")}</span>
+              )}
+            </>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          )}
+        </Dado>
+      </div>
+
+      <div className="flex items-center justify-between gap-1.5 lg:shrink-0 lg:justify-end" onClick={(e) => e.stopPropagation()}>
+        <Etiqueta tom={item.feita ? "success" : "info"} className="shrink-0">
+          {item.feita ? "Manutenção feita" : "Em andamento"}
+        </Etiqueta>
+        <div className="flex items-center gap-1.5">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 shrink-0 gap-1 px-2 text-xs"
+            disabled={baixando || item.attachments_count === 0}
+            onClick={onBaixar}
+            aria-label={`Baixar todos os anexos (.zip): ${item.property_name}`}
+            title={item.attachments_count === 0 ? "Sem anexos" : "Baixar todos os anexos (.zip)"}
+          >
+            {baixando ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+            ) : item.attachments_count === 0 ? (
+              <Paperclip className="h-3.5 w-3.5" aria-hidden="true" />
+            ) : (
+              <Download className="h-3.5 w-3.5" aria-hidden="true" />
+            )}
+            {item.attachments_count === 0 ? "Sem anexos" : `Anexos (${item.attachments_count})`}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 shrink-0 gap-1 border-success/40 px-2 text-xs text-success hover:bg-success/10 hover:text-success"
+            disabled={arquivando}
+            onClick={onCobrada}
+            aria-label={`Marcar como cobrada: ${item.property_name}`}
+            title="Já cobrei do hóspede: tirar dos avisos"
+          >
+            <Check className="h-3.5 w-3.5" aria-hidden="true" />
+            Cobrada
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

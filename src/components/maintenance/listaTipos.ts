@@ -40,6 +40,10 @@ export interface MaintenanceItem {
   on_hold?: boolean;
   /** Diferente de "manutencao" quando está em debate com o proprietário. */
   ticket_type?: string;
+  /** Check-out do hóspede (do ticket; na cobrança, do ticket de origem). */
+  guest_checkout_date?: string | null;
+  /** Só cobrança: ticket de manutenção que a originou. */
+  ticket_id?: string | null;
 }
 
 // ===== CONSTANTS =====

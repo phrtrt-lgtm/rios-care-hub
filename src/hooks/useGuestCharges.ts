@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { addDays, differenceInDays } from "date-fns";
+import { addDays, differenceInDays, format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 
 /** Dias entre o check-out e o momento em que a cobrança ao hóspede pode ser feita. */
@@ -13,6 +13,13 @@ export interface GuestChargeItem {
   subject: string;
   property_name: string;
   guest_checkout_date: string | null;
+  /** Valor a cobrar do hóspede: o da cobrança gerada ou o rascunho do ticket. */
+  amount_cents: number | null;
+  /** Manutenção já feita (ticket concluído; saiu da lista de manutenções). */
+  feita: boolean;
+  attachments_count: number;
+  /** Dia a partir do qual dá para cobrar (check-out + 14), "aaaa-mm-dd". */
+  cobrar_a_partir_de: string | null;
   /** null quando não há data de check-out */
   days_until_charge: number | null;
   grupo: "pronta" | "em_breve" | "sem_data";
@@ -46,7 +53,9 @@ export function useGuestCharges() {
     queryFn: async (): Promise<GuestChargeItem[]> => {
       const { data: tickets, error } = await supabase
         .from("tickets")
-        .select("id, subject, guest_checkout_date, properties!tickets_property_id_fkey(name)")
+        .select(
+          "id, subject, status, guest_checkout_date, charge_draft_amount_cents, ticket_attachments(count), properties!tickets_property_id_fkey(name)",
+        )
         .eq("ticket_type", "manutencao")
         .eq("cost_responsible", "guest")
         .is("guest_charge_dismissed_at", null)
@@ -54,16 +63,16 @@ export function useGuestCharges() {
       if (error) throw error;
 
       const ids = (tickets || []).map((t) => t.id);
-      const cobrancaPorTicket = new Map<string, { id: string; status: string | null }>();
+      const cobrancaPorTicket = new Map<string, { id: string; status: string | null; amount_cents: number | null }>();
       if (ids.length > 0) {
         const { data: charges } = await supabase
           .from("charges")
-          .select("id, ticket_id, status, created_at")
+          .select("id, ticket_id, status, amount_cents, created_at")
           .in("ticket_id", ids)
           .order("created_at", { ascending: true });
         // Ordenado por criação: a mais recente sobrescreve as anteriores.
         (charges || []).forEach((c) => {
-          if (c.ticket_id) cobrancaPorTicket.set(c.ticket_id, { id: c.id, status: c.status });
+          if (c.ticket_id) cobrancaPorTicket.set(c.ticket_id, { id: c.id, status: c.status, amount_cents: c.amount_cents });
         });
       }
 
@@ -80,17 +89,25 @@ export function useGuestCharges() {
           subject: t.subject,
           property_name: (t.properties as { name?: string } | null)?.name || "Imóvel desconhecido",
           guest_checkout_date: t.guest_checkout_date,
+          amount_cents: cobranca?.amount_cents || t.charge_draft_amount_cents || null,
+          feita: t.status === "concluido",
+          attachments_count: (t.ticket_attachments as { count: number }[] | null)?.[0]?.count ?? 0,
         };
 
         if (!t.guest_checkout_date) {
-          itens.push({ ...base, days_until_charge: null, grupo: "sem_data" });
+          itens.push({ ...base, cobrar_a_partir_de: null, days_until_charge: null, grupo: "sem_data" });
           continue;
         }
 
-        const checkout = new Date(t.guest_checkout_date);
-        const faltam = differenceInDays(addDays(checkout, DIAS_PARA_COBRAR_HOSPEDE), hoje);
+        // Coluna DATE: lida como dia local. `new Date("aaaa-mm-dd")` é meia-noite
+        // UTC, e no Brasil cai na véspera.
+        const [ano, mes, dia] = t.guest_checkout_date.slice(0, 10).split("-").map(Number);
+        const checkout = new Date(ano, mes - 1, dia);
+        const liberaEm = addDays(checkout, DIAS_PARA_COBRAR_HOSPEDE);
+        const faltam = differenceInDays(liberaEm, hoje);
         itens.push({
           ...base,
+          cobrar_a_partir_de: format(liberaEm, "yyyy-MM-dd"),
           days_until_charge: Math.max(0, faltam),
           grupo: differenceInDays(hoje, checkout) >= DIAS_PARA_COBRAR_HOSPEDE ? "pronta" : "em_breve",
         });

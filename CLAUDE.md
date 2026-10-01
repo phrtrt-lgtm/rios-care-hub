@@ -104,6 +104,11 @@ Dois caminhos usam essa mesma função: o status "Enviar ao Proprietário" de um
 
 Os dois botões existem no desktop (`GroupRow`) e no celular (`MobileMaintenanceList`); os diálogos são um bloco só (`dialogosDebate`).
 
+**Baixar anexos e cobrança de hóspede feita (desde 2026-10-01).**
+- Download em `.zip` por `src/lib/baixarAnexos.ts` (`baixarAnexosEmZip`): uma pasta por item, nomeada `Check-out aaaa-mm-dd - Imóvel - Dano`, com os arquivos `anexo-01.jpg`… (regra nº 4). Usado no botão da coluna Anexos, no "Baixar anexos (N)" da barra de seleção, no celular e no aviso de hóspede do painel. O navegador não gera `.rar`; o WinRAR abre o `.zip`.
+- Manutenção com `cost_responsible = "guest"` marcada como **Feito** ganha `archived_at`: sai da lista (vai para `/admin/manutencoes-arquivo`) e continua no aviso do painel, porque `useGuestCharges` não olha `archived_at`. Só sai do painel pelo botão "Cobrada" (`guest_charge_dismissed_at`). Não filtre `archived_at` naquele hook.
+- A consulta da lista é uma só: cobranças embutidas no ticket e anti-join `reais:charges(id)` para não trazer as concluídas já cobradas (eram 420 tickets e 370 KB; ficaram ~36 linhas). Índice `idx_charges_ticket_id`.
+
 **Estrutura da lista (desde 2026-09-28).** `AdminManutencoesLista.tsx` ficou só com o componente principal (~2.000 linhas). O resto está em `src/components/maintenance/`: `listaTipos.ts` (tipos, `GROUPS` com tom/ponto/`cobranca`, constantes), `EditableCell.tsx` (`SortableHeader` + célula editável), `GroupRow.tsx` (cabeçalho do grupo com contagem e total + linhas), `LoteDialogs.tsx` (envio e lembrete em lote), `VistoriasTable.tsx`. Na tela:
 - três abas no cabeçalho — Manutenções · Vistorias · Débitos em reserva — em vez de três tabelas empilhadas;
 - pílulas de quadro (Todos + os 6 grupos) e filtro por imóvel, além da busca; grupos abertos e aba ficam em `localStorage` (`manutencoes-lista:grupos`, `manutencoes-lista:aba`), com Em progresso e Aguardando envio abertos por padrão;

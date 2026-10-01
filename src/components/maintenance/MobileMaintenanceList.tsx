@@ -5,6 +5,8 @@ import {
   ChevronDown,
   ChevronRight,
   Paperclip,
+  Download,
+  Loader2,
   Plus,
   MessageSquare,
   Pencil,
@@ -103,6 +105,9 @@ interface Props {
   onOpenDetail: (id: string, isCharge: boolean) => void;
   onOpenChat: (item: MobileMaintenanceItem, isCharge: boolean) => void;
   onOpenAttachments: (item: MobileMaintenanceItem, isCharge: boolean) => void;
+  /** Baixa todos os anexos do item num .zip com nome organizado. */
+  onDownloadAttachments?: (item: MobileMaintenanceItem) => void;
+  downloadingIds?: Set<string>;
   onEdit: (item: MobileMaintenanceItem, isCharge: boolean) => void;
   onDelete: (item: MobileMaintenanceItem, isCharge: boolean) => void;
   onUpdateItem?: (id: string, field: string, value: any, isCharge: boolean) => void;
@@ -204,6 +209,8 @@ export function MobileMaintenanceList({
   onOpenDetail,
   onOpenChat,
   onOpenAttachments,
+  onDownloadAttachments,
+  downloadingIds,
   onEdit,
   onWhatsappAtualizado,
   onDelete,
@@ -535,6 +542,25 @@ export function MobileMaintenanceList({
                                   </span>
                                 )}
                               </button>
+                              {onDownloadAttachments && (item.attachments_count ?? 0) > 0 && (
+                                <button
+                                  type="button"
+                                  className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-muted active:scale-95 transition-all"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onDownloadAttachments(item);
+                                  }}
+                                  disabled={downloadingIds?.has(item.id)}
+                                  aria-label="Baixar todos os anexos (.zip)"
+                                  title="Baixar todos os anexos (.zip)"
+                                >
+                                  {downloadingIds?.has(item.id) ? (
+                                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                                  ) : (
+                                    <Download className="h-4 w-4 text-muted-foreground" />
+                                  )}
+                                </button>
+                              )}
                               <QuickAttachUploader
                                 itemId={item.id}
                                 isCharge={isCharge}

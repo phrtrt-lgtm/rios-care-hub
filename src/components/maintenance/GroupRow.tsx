@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, ChevronRight, Loader2, MessageSquare, MessagesSquare, Paperclip, Pencil, Plus, Trash2, Undo2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Download, Loader2, MessageSquare, MessagesSquare, Paperclip, Pencil, Plus, Trash2, Undo2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -42,6 +42,9 @@ interface GroupRowProps {
   sortDirection: SortDirection;
   onSort: (field: SortField) => void;
   onOpenAttachments: (item: MaintenanceItem) => void;
+  /** Baixa todos os anexos do item num .zip com nome organizado. */
+  onDownloadAttachments?: (item: MaintenanceItem) => void;
+  downloadingIds?: Set<string>;
   onUploadAttachment: (item: MaintenanceItem) => void;
   uploadingItemId: string | null;
   onOpenSheet?: (id: string) => void;
@@ -68,6 +71,8 @@ export function GroupRow({
   sortDirection,
   onSort,
   onOpenAttachments,
+  onDownloadAttachments,
+  downloadingIds,
   onUploadAttachment,
   uploadingItemId,
   onOpenSheet,
@@ -300,7 +305,7 @@ export function GroupRow({
             </td>
 
             {/* Anexos */}
-            <td className="p-0 w-[72px]">
+            <td className="p-0 w-[100px]" data-no-sheet>
               <div className="flex items-center justify-center gap-0.5 px-1 py-2">
                 <button
                   className={cn(
@@ -323,6 +328,25 @@ export function GroupRow({
                   <Paperclip className="h-3.5 w-3.5" />
                   <span>{item.attachments_count || 0}</span>
                 </button>
+                {onDownloadAttachments && (item.attachments_count ?? 0) > 0 && (
+                  <button
+                    type="button"
+                    aria-label="Baixar todos os anexos (.zip)"
+                    title="Baixar todos os anexos (.zip)"
+                    className="p-1 rounded hover:bg-muted/50 transition-colors text-muted-foreground hover:text-primary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDownloadAttachments(item);
+                    }}
+                    disabled={downloadingIds?.has(item.id)}
+                  >
+                    {downloadingIds?.has(item.id) ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Download className="h-3.5 w-3.5" />
+                    )}
+                  </button>
+                )}
                 <button
                   type="button"
                   aria-label="Adicionar anexo"

@@ -21,7 +21,8 @@ import { CreateMaintenanceFromInspectionDialog } from "@/components/CreateMainte
 import EditInspectionDialog from "@/components/EditInspectionDialog";
 import { EditMaintenanceDialog } from "@/components/EditMaintenanceDialog";
 import { ReserveDebitsTable } from "@/components/ReserveDebitsTable";
-import { AlarmClock, Send } from "lucide-react";
+import { AlarmClock, Download, Send } from "lucide-react";
+import { baixarAnexosEmZip, resumoDownloadAnexos } from "@/lib/baixarAnexos";
 import { useDetailSheet } from "@/hooks/useDetailSheet";
 import { DetailSheet } from "@/components/detail-sheet/DetailSheet";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
@@ -137,6 +138,7 @@ export default function AdminManutencoesLista() {
 
   // Gallery state
   const [galleryOpen, setGalleryOpen] = useState(false);
+  const [baixandoAnexos, setBaixandoAnexos] = useState<Set<string>>(new Set());
   const [galleryItems, setGalleryItems] = useState<Array<{ id: string; file_url: string; file_name?: string | null; file_type?: string | null }>>([]);
   const [galleryInitialIndex, setGalleryInitialIndex] = useState(0);
   const [galleryAttachmentTable, setGalleryAttachmentTable] = useState<"ticket_attachments" | "charge_attachments" | "cleaning_inspection_attachments" | null>(null);
@@ -362,11 +364,14 @@ export default function AdminManutencoesLista() {
           created_at,
           cost_responsible,
           on_hold,
+          guest_checkout_date,
           charge_draft_amount_cents,
           charge_draft_management_contribution_cents,
           charge_draft_category,
           charge_draft_title,
           ticket_attachments(count),
+          charges(ticket_id, amount_cents, management_contribution_cents, service_type, status, created_at, archived_at, paid_at),
+          reais:charges(id),
           ticket_type,
           property:properties(id, name),
           owner:profiles!tickets_owner_id_fkey(id, name, notificar_whatsapp, phone)
@@ -374,6 +379,12 @@ export default function AdminManutencoesLista() {
         // Manutenções + as que estão em debate com o proprietário (viraram
         // chamado, mas kind continua "maintenance").
         .or("ticket_type.eq.manutencao,kind.eq.maintenance")
+        // `reais` = cobranças de verdade do ticket (nem rascunho nem arquivada).
+        // Concluída que já tem cobrança real não entra na lista: o filtro é feito
+        // no banco. Antes vinham as 420 manutenções (250 KB) para mostrar ~35.
+        .neq("reais.status", "draft")
+        .is("reais.archived_at", null)
+        .or("status.neq.concluido,reais.is.null")
         .neq("status", "cancelado")
         .is("archived_at", null)
         .order("created_at", { ascending: false });
@@ -382,13 +393,11 @@ export default function AdminManutencoesLista() {
 
       // A contagem de anexos vem embutida na consulta (ticket_attachments(count)):
       // antes eram baixadas todas as linhas de anexo só para contar.
-      const ticketIds = (data || []).map(t => t.id);
-
-      // Fetch associated charges for value/contribution data
-      const { data: charges } = await supabase
-        .from("charges")
-        .select("ticket_id, amount_cents, management_contribution_cents, service_type, status, created_at, archived_at, paid_at")
-        .in("ticket_id", ticketIds);
+      // As cobranças de cada ticket também vêm embutidas (índice
+      // idx_charges_ticket_id). Antes era uma segunda consulta com os 400+ ids
+      // na URL (16 KB) e mais 120 KB de resposta, que segurava a lista inteira
+      // no esqueleto: em conexão lenta passou de 30 s.
+      const charges = (data || []).flatMap((t) => ((t as any).charges as any[]) || []);
 
       // Mapa com a cobrança mais recente (para exibir valores na linha)
       const chargeMap: Record<string, any> = {};
@@ -473,7 +482,8 @@ export default function AdminManutencoesLista() {
           charge_attachments(count),
           property:properties(id, name),
           owner:profiles!charges_owner_id_fkey(id, name, notificar_whatsapp, phone),
-          ticket_id
+          ticket_id,
+          ticket:tickets(guest_checkout_date)
         `)
         .in("status", ["pendente", "pending", "sent", "contested", "overdue", "debit_notice_sent", "under_review"])
         .is("paid_at", null)
@@ -485,6 +495,7 @@ export default function AdminManutencoesLista() {
       return (data || []).map(c => ({
         ...c,
         attachments_count: (c as any).charge_attachments?.[0]?.count ?? 0,
+        guest_checkout_date: ((c as any).ticket?.guest_checkout_date as string | null) ?? null,
       }));
     },
   });
@@ -611,6 +622,13 @@ export default function AdminManutencoesLista() {
     return "enviada";
   };
 
+  const avisarHospedeArquivada = () => {
+    queryClient.invalidateQueries({ queryKey: ["painel", "guest-charges"] });
+    toast.success("Cobrança de hóspede feita: foi para o Arquivo.", {
+      description: 'Continua no aviso do painel até ser marcada como "Cobrada".',
+    });
+  };
+
   // Update mutation with optimistic updates
   const updateMutation = useMutation({
     mutationFn: async ({ id, field, value, isCharge }: { id: string; field: string; value: any; isCharge?: boolean }) => {
@@ -717,12 +735,20 @@ export default function AdminManutencoesLista() {
             .eq("id", id);
           if (error) throw error;
         } else if (field === "cost_responsible") {
-          // Persist on the ticket
+          // Persist on the ticket. Já feita e passou a ser do hóspede: mesma
+          // regra do "feito" — sai da lista e fica no aviso do painel.
+          const hospedeFeito =
+            value === "guest" && tickets?.find((t) => t.id === id)?.status === "concluido";
           const { error } = await supabase
             .from("tickets")
-            .update({ cost_responsible: value })
+            .update(
+              hospedeFeito
+                ? { cost_responsible: value, archived_at: new Date().toISOString() }
+                : { cost_responsible: value },
+            )
             .eq("id", id);
           if (error) throw error;
+          if (hospedeFeito) avisarHospedeArquivada();
 
           // Mirror to the latest open linked charge, if any
           const { data: linkedCharges } = await supabase
@@ -745,11 +771,21 @@ export default function AdminManutencoesLista() {
           // - "em_progresso" -> reopen the ticket as "em_execucao"
           const newTicketStatus =
             value === "feito" ? "concluido" : "em_execucao";
+          // Cobrança de hóspede feita não tem o que enviar ao proprietário: sai
+          // da lista (vai para o Arquivo) e continua no aviso do painel até
+          // alguém marcar como "Cobrada".
+          const hospedeFeito =
+            value === "feito" && tickets?.find((t) => t.id === id)?.cost_responsible === "guest";
           const { error } = await supabase
             .from("tickets")
-            .update({ status: newTicketStatus })
+            .update(
+              hospedeFeito
+                ? { status: newTicketStatus, archived_at: new Date().toISOString() }
+                : { status: newTicketStatus },
+            )
             .eq("id", id);
           if (error) throw error;
+          if (hospedeFeito) avisarHospedeArquivada();
         }
       }
     },
@@ -980,6 +1016,15 @@ export default function AdminManutencoesLista() {
     () => (tickets || []).filter((t) => selectedIds.has(t.id) && t.owner),
     [tickets, selectedIds],
   );
+  // Selecionados que têm anexo, manutenções e cobranças: vão juntos num .zip.
+  const selecionadosComAnexo = useMemo(
+    () =>
+      [
+        ...(tickets || []),
+        ...(charges || []).map((c) => ({ ...c, subject: c.title, itemType: "charge" as const })),
+      ].filter((i) => selectedIds.has(i.id) && (i.attachments_count ?? 0) > 0) as unknown as MaintenanceItem[],
+    [tickets, charges, selectedIds],
+  );
 
   const envioLoteMutation = useMutation({
     mutationFn: async (itens: MaintenanceItem[]) => {
@@ -1135,6 +1180,41 @@ export default function AdminManutencoesLista() {
     onError: (e: any) => toast.error("Não foi possível voltar para manutenção", { description: e?.message }),
     onSettled: recarregarListas,
   });
+
+  /** Baixa os anexos dos itens num .zip, uma pasta por item (check-out, imóvel, dano). */
+  const handleDownloadAttachments = useCallback(async (itens: MaintenanceItem[]) => {
+    if (itens.length === 0) return;
+    const ids = itens.map((i) => i.id);
+    setBaixandoAnexos((prev) => new Set([...prev, ...ids]));
+    try {
+      const resultado = await baixarAnexosEmZip(
+        itens.map((item) => {
+          const isCharge = item.itemType === "charge";
+          return {
+            ticketId: isCharge ? item.ticket_id : item.id,
+            chargeId: isCharge ? item.id : null,
+            checkout: item.guest_checkout_date,
+            imovel: item.property?.name,
+            dano: item.subject,
+          };
+        }),
+      );
+      if (resultado.baixados === 0) {
+        toast.error(resultado.falhas > 0 ? "Não foi possível baixar os anexos" : "Nenhum anexo para baixar");
+      } else {
+        toast.success("Download iniciado", { description: resumoDownloadAnexos(resultado) });
+      }
+    } catch (e: any) {
+      console.error("Erro ao baixar anexos:", e);
+      toast.error("Não foi possível baixar os anexos", { description: e?.message });
+    } finally {
+      setBaixandoAnexos((prev) => {
+        const proximo = new Set(prev);
+        ids.forEach((id) => proximo.delete(id));
+        return proximo;
+      });
+    }
+  }, []);
 
   const handleOpenAttachments = useCallback(async (item: MaintenanceItem) => {
     const isCharge = item.itemType === "charge";
@@ -1645,6 +1725,8 @@ export default function AdminManutencoesLista() {
           onOpenDetail={(id, isCharge) => openSheet(id, isCharge ? "cobranca" : "maintenance")}
           onOpenChat={(item) => handleOpenChat(item as any)}
           onOpenAttachments={(item) => handleOpenAttachments(item as any)}
+          onDownloadAttachments={(item) => handleDownloadAttachments([item as any])}
+          downloadingIds={baixandoAnexos}
           onEdit={(item, isCharge) =>
             setEditMaintenanceDialog({ open: true, id: item.id, type: isCharge ? "charge" : "maintenance" })
           }
@@ -1909,7 +1991,7 @@ export default function AdminManutencoesLista() {
                       <SortableHeader label="Valor" field="amount_cents" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="w-[92px] text-center" />
                       <SortableHeader label="Aporte" field="management_contribution_cents" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="w-[92px] text-center" />
                       <SortableHeader label="Data" field="created_at" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="w-[64px] text-center" />
-                      <th className="w-[72px] px-1 py-2 text-center font-medium">Anexos</th>
+                      <th className="w-[100px] px-1 py-2 text-center font-medium">Anexos</th>
                       <th className="w-[112px] px-1 py-2 text-center font-medium">Responsável</th>
                       <SortableHeader label="Etiqueta" field="service_type" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="w-[112px] text-center" />
                       <th className="w-[112px] px-1 py-2 text-center font-medium">Quadro</th>
@@ -1978,6 +2060,8 @@ export default function AdminManutencoesLista() {
                               sortDirection={sortDirection}
                               onSort={handleSort}
                               onOpenAttachments={handleOpenAttachments}
+                              onDownloadAttachments={(item) => handleDownloadAttachments([item])}
+                              downloadingIds={baixandoAnexos}
                               onUploadAttachment={handleUploadAttachment}
                               uploadingItemId={uploadingItemId}
                               onOpenSheet={(id) => openSheet(id, isChargeGroup ? "cobranca" : "maintenance")}
@@ -2105,6 +2189,22 @@ export default function AdminManutencoesLista() {
                     {archiveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Archive className="h-4 w-4" />}
                     Arquivar
                   </Button>
+                  {selecionadosComAnexo.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8"
+                      onClick={() => handleDownloadAttachments(selecionadosComAnexo)}
+                      disabled={selecionadosComAnexo.some((i) => baixandoAnexos.has(i.id))}
+                    >
+                      {selecionadosComAnexo.some((i) => baixandoAnexos.has(i.id)) ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Download className="h-4 w-4" />
+                      )}
+                      Baixar anexos ({selecionadosComAnexo.length})
+                    </Button>
+                  )}
                   {selecionadosParaEnviar.length > 0 && (
                     <Button size="sm" className="h-8" onClick={() => setConfirmarEnvioLote(true)} disabled={envioLoteMutation.isPending}>
                       {envioLoteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
