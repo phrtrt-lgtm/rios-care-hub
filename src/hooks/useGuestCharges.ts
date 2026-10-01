@@ -13,6 +13,8 @@ export interface GuestChargeItem {
   subject: string;
   property_name: string;
   guest_checkout_date: string | null;
+  /** Status da cobrança já gerada (null se não há). Só rascunho deixa editar o valor. */
+  charge_status: string | null;
   /** Valor a cobrar do hóspede: o da cobrança gerada ou o rascunho do ticket. */
   amount_cents: number | null;
   /** Manutenção já feita (ticket concluído; saiu da lista de manutenções). */
@@ -86,6 +88,7 @@ export function useGuestCharges() {
         const base = {
           id: t.id,
           charge_id: cobranca?.id ?? null,
+          charge_status: cobranca?.status ?? null,
           subject: t.subject,
           property_name: (t.properties as { name?: string } | null)?.name || "Imóvel desconhecido",
           guest_checkout_date: t.guest_checkout_date,

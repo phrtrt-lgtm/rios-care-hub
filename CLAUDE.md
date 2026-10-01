@@ -202,6 +202,8 @@ Reorganizado em 2026-09-25 (`ROADMAP.md` item 4.6). A página tem esta ordem:
   - sem data de check-out.
 
   Os itens abrem no `DetailSheet`, sem sair do painel.
+
+  Cada linha (`LinhaHospede`, em `GuestChargeReminders.tsx`, desde 2026-10-01) mostra check-out, valor, prazo e situação, com os botões de galeria, adicionar anexo (`QuickAttachUploader`), baixar em .zip e "Cobrada". O valor é editável no clique (`ValorEditavel`): grava em `tickets.charge_draft_amount_cents` e na cobrança só se ela for rascunho; cobrança já lançada fica só leitura. No celular a linha vira cartão em três faixas, com botões de 36 px.
 - **Atalho novo: confira a permissão em dois lugares.** Um é o `allowedRoles` da rota em `App.tsx`. O outro é o `useEffect` da própria página, que às vezes é mais restrito:
   - `TodosTickets`, `Propriedades` e `NovoAlerta` aceitam só admin/agent;
   - `NovoTicketInterno` aceita só admin.

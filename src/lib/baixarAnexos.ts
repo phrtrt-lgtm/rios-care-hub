@@ -17,7 +17,8 @@ export interface PacoteAnexos {
   dano?: string | null;
 }
 
-interface AnexoParaBaixar {
+export interface AnexoDoItem {
+  id: string;
   file_url: string;
   file_name?: string | null;
   file_type?: string | null;
@@ -58,7 +59,7 @@ const urlDoStorage = (bruto: string) => {
  * Todos os anexos de um item: os da cobrança (com os do ticket de origem como
  * reserva) ou, na manutenção, os presos ao ticket e às mensagens dele.
  */
-async function listarAnexos(p: PacoteAnexos): Promise<AnexoParaBaixar[]> {
+export async function listarAnexos(p: Pick<PacoteAnexos, "ticketId" | "chargeId">): Promise<AnexoDoItem[]> {
   if (p.chargeId) {
     const porCobranca = await fetchChargeGalleryAttachments([{ id: p.chargeId, ticket_id: p.ticketId }]);
     const lista = porCobranca[p.chargeId] || [];
@@ -85,6 +86,7 @@ async function listarAnexos(p: PacoteAnexos): Promise<AnexoParaBaixar[]> {
   return Array.from(unicos.values())
     .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)))
     .map((a) => ({
+      id: a.id,
       file_url: urlDoStorage(a.file_url || a.path || ""),
       file_name: a.file_name,
       file_type: a.file_type || a.mime_type,
