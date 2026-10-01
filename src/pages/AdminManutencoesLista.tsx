@@ -1604,7 +1604,7 @@ export default function AdminManutencoesLista() {
   // Mobile-only optimized view
   if (isMobile) {
     // Mesmos grupos e mesma ordem do desktop.
-    const mobileGroups = GROUPS.map((g) => ({ id: g.id, label: g.label, borderColor: g.color, dotColor: g.ponto }));
+    const mobileGroups = GROUPS.map((g) => ({ id: g.id, label: g.label, borderColor: g.color, dotColor: g.ponto, tom: g.tom, cobranca: g.cobranca }));
 
     // Enrich items with itemType so mobile knows ticket vs charge
     const enrichedGroupedItems: Record<string, any[]> = {
@@ -1648,6 +1648,10 @@ export default function AdminManutencoesLista() {
           }}
           onBack={() => goBack(navigate, "/painel")}
           onNew={() => navigate("/admin/nova-manutencao")}
+          expanded={expandedGroups}
+          onToggleGroup={toggleGroup}
+          filtroQuadro={filtroQuadro}
+          onFiltroQuadro={(id) => setFiltroQuadro(id as GrupoId | "todos")}
           onDebater={(item) => setItemDebate(item as MaintenanceItem)}
           onVoltarManutencao={(item) => setItemVoltar(item as MaintenanceItem)}
         />

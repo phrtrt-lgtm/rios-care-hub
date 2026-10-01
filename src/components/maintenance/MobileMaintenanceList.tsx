@@ -35,6 +35,11 @@ import { rotulosServico } from "@/constants/chargeCategories";
 import { QuickAttachUploader } from "@/components/maintenance/QuickAttachUploader";
 import { BOARD_OPTIONS, deriveBoard, hasInfiltracao } from "@/lib/maintenanceBoard";
 import { WhatsappAcaoLinha, type DonoWhatsapp } from "@/components/maintenance/WhatsappAcaoLinha";
+import { AbaPilula, BarraFiltros } from "@/components/painel/PaginaInterna";
+import { SeloContagem } from "@/components/painel/CaixaOperacao";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
+import { valorDevido } from "@/lib/cobrancaMeta";
+import { COST_RESPONSIBLE_OPTIONS } from "@/components/maintenance/listaTipos";
 
 export interface MobileMaintenanceItem {
   id: string;
@@ -49,6 +54,7 @@ export interface MobileMaintenanceItem {
   itemType?: "ticket" | "charge";
   /** Stand-by na lista (tickets.on_hold). Só manutenção. */
   on_hold?: boolean;
+  cost_responsible?: string | null;
   owner?: DonoWhatsapp | null;
   whatsapp_status?: string | null;
   whatsapp_enviado_em?: string | null;
@@ -64,6 +70,9 @@ interface MobileGroupConfig {
   borderColor: string;
   /** Classe do ponto no tom semântico (ex.: "bg-warning") */
   dotColor: string;
+  tom?: Tom;
+  /** Grupo de cobrança: o total é "a receber"; nos outros é "previsto". */
+  cobranca?: boolean;
 }
 
 const LIST_STATUS_LABELS: Record<string, { label: string; tom: Tom }> = {
@@ -106,6 +115,12 @@ interface Props {
   onDebater?: (item: MobileMaintenanceItem) => void;
   /** Devolve à lista de manutenções um item em debate. */
   onVoltarManutencao?: (item: MobileMaintenanceItem) => void;
+  /** Grupos abertos, compartilhados com o desktop (lembrados entre visitas). */
+  expanded: Record<string, boolean>;
+  onToggleGroup: (id: string) => void;
+  /** Quadro escolhido nas pílulas: "todos" ou o id de um grupo. */
+  filtroQuadro: string;
+  onFiltroQuadro: (id: string) => void;
 }
 
 const STATUS_OPTIONS = (Object.keys(LIST_STATUS_LABELS) as Array<keyof typeof LIST_STATUS_LABELS>).map((value) => ({
@@ -198,31 +213,24 @@ export function MobileMaintenanceList({
   onNew,
   onDebater,
   onVoltarManutencao,
+  expanded,
+  onToggleGroup,
+  filtroQuadro,
+  onFiltroQuadro,
 }: Props) {
-  const [expanded, setExpanded] = useState<Record<string, boolean>>(() => {
-    // Por padrão: Em Progresso e Cobranças Vencidas abertos
-    return {
-      em_progresso: true,
-      infiltracao: true,
-      stand_by: false,
-      cobrancas_vencidas: true,
-      concluidas: false,
-      cobrancas: false,
-    };
-  });
 
   const totalItems = useMemo(
     () => Object.values(groupedItems).reduce((sum, arr) => sum + arr.length, 0),
     [groupedItems],
   );
 
-  const toggle = (id: string) =>
-    setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
+  const toggle = onToggleGroup;
+  const gruposVisiveis = filtroQuadro === "todos" ? groups : groups.filter((g) => g.id === filtroQuadro);
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
+    <div className="flex flex-col min-h-screen bg-background pb-24">
       {/* Header fixo */}
-      <div className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b">
+      <div className="safe-area-top sticky top-0 z-20 bg-background/95 backdrop-blur border-b">
         <div className="flex items-center gap-2 px-3 py-2">
           <Button
             variant="ghost"
@@ -248,9 +256,27 @@ export function MobileMaintenanceList({
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="Buscar manutenção, cobrança ou imóvel..."
               className="pl-8 h-9 text-sm"
+              aria-label="Buscar"
             />
           </div>
         </div>
+        {/* Quadros: toque para ver só um grupo */}
+        <BarraFiltros role="tablist" aria-label="Quadros" className="px-3 pb-2">
+          <AbaPilula ativa={filtroQuadro === "todos"} quantidade={isLoading ? undefined : totalItems} onClick={() => onFiltroQuadro("todos")}>
+            Todos
+          </AbaPilula>
+          {groups.map((g) => (
+            <AbaPilula
+              key={g.id}
+              ativa={filtroQuadro === g.id}
+              quantidade={isLoading ? undefined : (groupedItems[g.id] || []).length}
+              tom={g.tom}
+              onClick={() => onFiltroQuadro(g.id)}
+            >
+              {g.label}
+            </AbaPilula>
+          ))}
+        </BarraFiltros>
       </div>
 
       {/* Conteúdo */}
@@ -259,7 +285,7 @@ export function MobileMaintenanceList({
           <SectionSkeleton rows={5} />
         ) : totalItems === 0 ? (
           <EmptyState
-            icon={<Wrench className="h-6 w-6" />}
+            ilustracao={search ? "busca" : "manutencoes"}
             title="Nenhuma manutenção encontrada"
             description={
               search
@@ -268,9 +294,12 @@ export function MobileMaintenanceList({
             }
           />
         ) : (
-          groups.map((group) => {
+          gruposVisiveis.map((group) => {
             const items = groupedItems[group.id] || [];
-            const isOpen = expanded[group.id] ?? false;
+            // Com um quadro só escolhido, ele aparece sempre aberto.
+            const isOpen = filtroQuadro !== "todos" || (expanded[group.id] ?? false);
+            const totalGrupo = items.reduce((soma, i) => soma + valorDevido(i), 0);
+            const emDebate = group.id === "em_debate";
             return (
               <div key={group.id} className="space-y-2">
                 <button
@@ -289,9 +318,12 @@ export function MobileMaintenanceList({
                   <span className="text-sm font-medium flex-1 text-left">
                     {group.label}
                   </span>
-                  <Badge variant="secondary" className="text-xs">
-                    {items.length}
-                  </Badge>
+                  {totalGrupo > 0 && (
+                    <span className="text-[11px] tabular-nums text-muted-foreground">
+                      {formatBRL(totalGrupo)} {group.cobranca ? "a receber" : "previsto"}
+                    </span>
+                  )}
+                  <SeloContagem tom={items.length > 0 ? (group.tom ?? "neutral") : "neutral"}>{items.length}</SeloContagem>
                 </button>
 
                 {isOpen && (
@@ -326,7 +358,9 @@ export function MobileMaintenanceList({
                                 )}
                               </div>
                               {/* Status: editável apenas para tickets (manutenção) */}
-                              {!isCharge && onUpdateItem ? (
+                              {emDebate ? (
+                                <Etiqueta tom="secondary" className="shrink-0">Em debate</Etiqueta>
+                              ) : !isCharge && onUpdateItem ? (
                                 <div onClick={(e) => e.stopPropagation()} className="shrink-0">
                                   <Select
                                     value={item.list_status || ""}
@@ -387,7 +421,32 @@ export function MobileMaintenanceList({
                             </div>
 
                             {/* Quadro: Em Progresso / Stand-by / Infiltração — só manutenção aberta */}
-                            {!isCharge && onUpdateItem && item.list_status !== "feito" && (
+                            {/* Responsável pelo custo: sem ele o item fica "Em espera" e o proprietário não vê */}
+                            {!isCharge && onUpdateItem && !emDebate && (
+                              <div className="flex items-center gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
+                                <span className="text-[10px] text-muted-foreground">Responsável</span>
+                                <Select
+                                  value={item.cost_responsible || "pending"}
+                                  onValueChange={(v) => onUpdateItem(item.id, "cost_responsible", v, false)}
+                                >
+                                  <SelectTrigger
+                                    className="h-7 px-2 py-0 border-0 bg-transparent hover:bg-muted/60 text-xs w-auto gap-1"
+                                    aria-label="Responsável pelo custo"
+                                  >
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {COST_RESPONSIBLE_OPTIONS.map((opt) => (
+                                      <SelectItem key={opt.value} value={opt.value}>
+                                        <Etiqueta solida tom={tomDaCor(opt.color)}>{opt.label}</Etiqueta>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
+
+                            {!isCharge && onUpdateItem && item.list_status !== "feito" && !emDebate && (
                               <div
                                 className="flex items-center gap-2 mt-2"
                                 onClick={(e) => e.stopPropagation()}
@@ -590,6 +649,7 @@ export function MobileMaintenanceList({
           })
         )}
       </div>
+      <MobileBottomNav />
     </div>
   );
 }

@@ -107,6 +107,7 @@ Os dois botões existem no desktop (`GroupRow`) e no celular (`MobileMaintenance
 - pílulas de quadro (Todos + os 6 grupos) e filtro por imóvel, além da busca; grupos abertos e aba ficam em `localStorage` (`manutencoes-lista:grupos`, `manutencoes-lista:aba`), com Em progresso e Aguardando envio abertos por padrão;
 - as duas primeiras colunas (seleção e nome) são fixas na rolagem horizontal (`sticky` com fundo opaco), e o cabeçalho do grupo também;
 - a barra de ações da seleção (Arquivar, Enviar ao proprietário, Lembrete de atraso) é fixa no rodapé;
+- no celular (`MobileMaintenanceList`, desde 2026-10-01): as mesmas pílulas de quadro, total por grupo, grupos abertos compartilhados com o desktop, seletor de responsável pelo custo e barra inferior de navegação. Vistorias, débitos em reserva e seleção em lote continuam só no desktop;
 - a contagem de anexos vem embutida na consulta (`ticket_attachments(count)`, `charge_attachments(count)`); antes eram baixadas todas as linhas de anexo (2.700) só para contar. As duas consultas têm `staleTime` de 30 s e `useIsMobile` lê a largura já na montagem, para o celular não renderizar a versão desktop primeiro.
 
 ### 3.2 Cobranças
