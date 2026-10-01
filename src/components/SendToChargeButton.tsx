@@ -15,6 +15,7 @@ import { Send, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { buscarCobrancaJaLancada } from "@/lib/cobrancaDuplicada";
 
 interface SendToChargeButtonProps {
   ticket: {
@@ -99,6 +100,14 @@ export function SendToChargeButton({
         if (updateErr) throw updateErr;
         chargeId = existingCharges[0].id;
       } else {
+        // Mesma manutenção, mesmo valor, cobrança já lançada: não cria outra.
+        const jaLancada = await buscarCobrancaJaLancada(ticket.id, amountCents);
+        if (jaLancada) {
+          toast.error("Esta manutenção já tem uma cobrança lançada com esse valor.", {
+            description: "Abra a cobrança existente em vez de criar outra.",
+          });
+          return;
+        }
         const { data: newCharge, error: chargeErr } = await supabase
           .from("charges")
           .insert({

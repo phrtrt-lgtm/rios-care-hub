@@ -53,6 +53,7 @@ import { GroupRow } from "@/components/maintenance/GroupRow";
 import { EnvioLoteDialog, LembreteLoteDialog } from "@/components/maintenance/LoteDialogs";
 import { VistoriasTable } from "@/components/maintenance/VistoriasTable";
 import { DebateDialog } from "@/components/maintenance/DebateDialog";
+import { buscarCobrancaJaLancada } from "@/lib/cobrancaDuplicada";
 
 // ===== PREFERÊNCIAS LEMBRADAS =====
 type AbaLista = "manutencoes" | "vistorias" | "debitos";
@@ -496,7 +497,7 @@ export default function AdminManutencoesLista() {
    */
   const enviarAoProprietario = async (
     ticket: MaintenanceItem,
-  ): Promise<"enviada" | "gratuita" | "sem_valor"> => {
+  ): Promise<"enviada" | "gratuita" | "sem_valor" | "ja_cobrada"> => {
     if (!ticket.owner) throw new Error("Proprietário não encontrado para este ticket");
 
     // Buscar cobranças vinculadas que ainda estejam ABERTAS (não pagas).
@@ -512,8 +513,15 @@ export default function AdminManutencoesLista() {
     if (chargeQueryError) throw chargeQueryError;
 
     let chargeId: string;
+    // Já existe cobrança (paga) deste ticket com o mesmo valor: não cria outra.
+    const jaLancada =
+      existingCharges && existingCharges.length > 0
+        ? null
+        : await buscarCobrancaJaLancada(ticket.id, ticket.amount_cents || 0);
 
-    if (existingCharges && existingCharges.length > 0) {
+    if (jaLancada) {
+      chargeId = jaLancada.id;
+    } else if (existingCharges && existingCharges.length > 0) {
       // Atualizar a cobrança aberta existente para "sent" (envia ao proprietário)
       const openCharge = existingCharges[0];
       const { error: updateError } = await supabase
@@ -549,11 +557,13 @@ export default function AdminManutencoesLista() {
       chargeId = newCharge.id;
     }
 
-    // Copy ticket attachments to the charge
-    const { data: ticketAttachments } = await supabase
-      .from("ticket_attachments")
-      .select("path, file_name, file_type, file_url, mime_type, file_size, size_bytes")
-      .eq("ticket_id", ticket.id);
+    // Copy ticket attachments to the charge (a cobrança que já existia fica como está)
+    const { data: ticketAttachments } = jaLancada
+      ? { data: null }
+      : await supabase
+          .from("ticket_attachments")
+          .select("path, file_name, file_type, file_url, mime_type, file_size, size_bytes")
+          .eq("ticket_id", ticket.id);
 
     if (ticketAttachments && ticketAttachments.length > 0) {
       const chargeAttachmentsToInsert = ticketAttachments.map(a => ({
@@ -574,6 +584,9 @@ export default function AdminManutencoesLista() {
         .eq("id", ticket.id);
       if (ticketError) throw ticketError;
     }
+
+    // Nada novo foi criado: o proprietário já recebeu esta cobrança antes.
+    if (jaLancada) return "ja_cobrada";
 
     // Detect if the trigger auto-paid the charge because management covers 100%.
     const fullyCoveredByManagement =
@@ -617,6 +630,8 @@ export default function AdminManutencoesLista() {
           const resultado = await enviarAoProprietario(ticket);
           if (resultado === "gratuita") {
             toast.success("Manutenção finalizada — aporte da gestão cobriu 100% do custo.");
+          } else if (resultado === "ja_cobrada") {
+            toast.info("Esta manutenção já tinha cobrança lançada com esse valor. Foi só concluída, sem criar outra.");
           } else if (resultado === "sem_valor") {
             toast.success("Manutenção enviada ao proprietário sem valor de cobrança.");
           } else {
@@ -970,7 +985,7 @@ export default function AdminManutencoesLista() {
     mutationFn: async (itens: MaintenanceItem[]) => {
       const enviados: string[] = [];
       const falhas: string[] = [];
-      const contagem = { enviada: 0, gratuita: 0, sem_valor: 0 };
+      const contagem = { enviada: 0, gratuita: 0, sem_valor: 0, ja_cobrada: 0 };
       // Um por vez, com intervalo: cada envio cria cobrança, copia anexos, manda
       // e-mail e (pelo trigger) WhatsApp. O intervalo espaça as mensagens para o
       // mesmo proprietário e deixa a Meta ver um ritmo normal, não uma rajada.
@@ -999,6 +1014,7 @@ export default function AdminManutencoesLista() {
           contagem.enviada && `${contagem.enviada} com cobrança`,
           contagem.gratuita && `${contagem.gratuita} de graça (aporte total)`,
           contagem.sem_valor && `${contagem.sem_valor} sem valor`,
+          contagem.ja_cobrada && `${contagem.ja_cobrada} já tinham cobrança (não duplicadas)`,
         ].filter(Boolean);
         toast.success(
           `${enviados.length} ${enviados.length === 1 ? "manutenção enviada" : "manutenções enviadas"} ao proprietário: ${partes.join(", ")}.`,

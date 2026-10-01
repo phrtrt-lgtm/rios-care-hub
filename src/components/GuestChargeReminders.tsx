@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Archive, ChevronDown, ChevronRight, UserRound, X } from "lucide-react";
+import { Archive, Check, ChevronDown, ChevronRight, UserRound } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -73,10 +73,10 @@ export function GuestChargeReminders({ open, onOpenChange, onOpenDetail }: Props
         .eq("id", item.id);
       if (error) throw error;
       await queryClient.invalidateQueries({ queryKey: ["painel", "guest-charges"] });
-      toast.success("Cobrança arquivada (feita pelo Airbnb)");
+      toast.success("Marcada como cobrada. Saiu dos avisos.");
     } catch (err) {
       console.error("Erro ao arquivar cobrança de hóspede:", err);
-      toast.error("Erro ao arquivar cobrança");
+      toast.error("Não foi possível marcar como cobrada");
     } finally {
       setArquivandoId(null);
       setConfirmar(null);
@@ -97,7 +97,7 @@ export function GuestChargeReminders({ open, onOpenChange, onOpenDetail }: Props
       }}
     >
       <Archive className="h-3.5 w-3.5" aria-hidden="true" />
-      <span className="hidden sm:inline">Arquivadas</span>
+      <span className="hidden sm:inline">Cobradas</span>
     </Button>
   );
 
@@ -142,9 +142,11 @@ export function GuestChargeReminders({ open, onOpenChange, onOpenDetail }: Props
         <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", TOM[tomCabecalho].caixa)} aria-hidden="true">
           <UserRound className="h-4 w-4" />
         </span>
-        <span className="text-sm font-semibold tracking-tight">Cobranças de hóspede</span>
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold tracking-tight sm:flex-none">Cobranças de hóspede</span>
 
-        <div className="flex flex-1 flex-wrap items-center gap-1.5">
+        {/* No celular os selos vão para a linha de baixo: espremidos ao lado do
+            título, o texto quebrava dentro da pílula de altura fixa. */}
+        <div className="order-last flex basis-full flex-wrap items-center gap-1.5 sm:order-none sm:basis-auto sm:flex-1 [&>span]:whitespace-nowrap">
           {prontas.length > 0 && (
             <SeloContagem tom="success">
               {prontas.length} {prontas.length === 1 ? "pronta" : "prontas"} para cobrar
@@ -201,15 +203,16 @@ export function GuestChargeReminders({ open, onOpenChange, onOpenDetail }: Props
                     }
                     acoes={
                       <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 shrink-0 gap-1 border-success/40 px-2 text-xs text-success hover:bg-success/10 hover:text-success"
                         disabled={arquivandoId === item.id}
                         onClick={() => setConfirmar(item)}
-                        aria-label={`Arquivar cobrança de hóspede de ${item.property_name}`}
-                        title="Arquivar (cobrança feita pelo Airbnb)"
+                        aria-label={`Marcar como cobrada: ${item.property_name}`}
+                        title="Já cobrei do hóspede: tirar dos avisos"
                       >
-                        <X className="h-3.5 w-3.5" aria-hidden="true" />
+                        <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                        Cobrada
                       </Button>
                     }
                   />
@@ -223,10 +226,10 @@ export function GuestChargeReminders({ open, onOpenChange, onOpenDetail }: Props
       <AlertDialog open={!!confirmar} onOpenChange={(o) => !o && setConfirmar(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Arquivar cobrança de hóspede?</AlertDialogTitle>
+            <AlertDialogTitle>Marcar como cobrada?</AlertDialogTitle>
             <AlertDialogDescription>
-              Use esta opção quando a cobrança já foi feita diretamente pelo Airbnb. O aviso sai do painel mas
-              fica salvo em "Cobranças de hóspede arquivadas" — você pode restaurar depois se precisar.
+              Confirme quando a cobrança já foi feita ao hóspede (pelo Airbnb ou por fora). O aviso sai do painel e
+              fica salvo em "Cobradas", de onde dá para restaurar se precisar.
               {confirmar && (
                 <span className="mt-2 block font-medium text-foreground">
                   {confirmar.subject} — {confirmar.property_name}
@@ -236,7 +239,7 @@ export function GuestChargeReminders({ open, onOpenChange, onOpenDetail }: Props
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => confirmar && arquivar(confirmar)}>Arquivar</AlertDialogAction>
+            <AlertDialogAction onClick={() => confirmar && arquivar(confirmar)}>Sim, já foi cobrada</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

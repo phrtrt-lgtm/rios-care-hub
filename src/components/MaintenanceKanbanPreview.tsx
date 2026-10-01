@@ -18,6 +18,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useChatPreloader } from "@/hooks/useChatPreloader";
 import { MaintenanceChatDialog } from "./MaintenanceChatDialog";
+import { buscarCobrancaJaLancada } from "@/lib/cobrancaDuplicada";
 import {
   BotaoLinha,
   CaixaCarregando,
@@ -223,7 +224,9 @@ export function MaintenanceKanbanPreview() {
           .eq("id", completeTicket.id)
           .single();
 
-        if (ticketData) {
+        // Mesma manutenção, mesmo valor, cobrança já lançada: não cria outra.
+        const jaLancada = await buscarCobrancaJaLancada(completeTicket.id, amountCents);
+        if (ticketData && !jaLancada) {
           await supabase.from("charges").insert({
             owner_id: ticketData.owner_id,
             property_id: ticketData.property_id,

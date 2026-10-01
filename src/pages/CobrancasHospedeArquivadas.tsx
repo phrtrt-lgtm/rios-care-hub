@@ -130,8 +130,8 @@ export default function CobrancasHospedeArquivadas() {
       largura="media"
       cabecalho={
         <CabecalhoPagina
-          titulo="Cobranças de hóspede arquivadas"
-          subtitulo="Marcadas como cobradas diretamente pelo Airbnb. Restaure para processar pelo portal."
+          titulo="Cobranças de hóspede já cobradas"
+          subtitulo="Marcadas como cobradas e fora dos avisos. Restaure se precisar cobrar de novo."
           icone={<Archive />}
           tom="neutral"
           voltarPara="/painel"
@@ -139,19 +139,19 @@ export default function CobrancasHospedeArquivadas() {
       }
     >
       {loading ? (
-        <CaixaCarregando icone={<Archive />} titulo="Arquivadas" linhas={4} />
+        <CaixaCarregando icone={<Archive />} titulo="Cobradas" linhas={4} />
       ) : items.length === 0 ? (
-        <CaixaOperacao icone={<Archive />} titulo="Arquivadas">
+        <CaixaOperacao icone={<Archive />} titulo="Cobradas">
           <EmptyState
             ilustracao="cobrancas"
-            title="Nenhuma cobrança arquivada"
+            title="Nenhuma cobrança marcada como cobrada"
             description="Quando você arquivar uma cobrança de hóspede no painel, ela aparecerá aqui."
           />
         </CaixaOperacao>
       ) : (
         <CaixaOperacao
           icone={<Archive />}
-          titulo="Arquivadas"
+          titulo="Cobradas"
           selos={<SeloContagem>{items.length}</SeloContagem>}
         >
           <div className="space-y-1">
@@ -168,7 +168,7 @@ export default function CobrancasHospedeArquivadas() {
                 }
                 meta={
                   <span className="text-[11px] text-muted-foreground">
-                    Arquivada em {formatarArquivamento(item.guest_charge_dismissed_at)}
+                    Cobrada em {formatarArquivamento(item.guest_charge_dismissed_at)}
                     {item.dismissed_by_name && <> por {item.dismissed_by_name}</>}
                   </span>
                 }
