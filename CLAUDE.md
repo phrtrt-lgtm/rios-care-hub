@@ -93,7 +93,21 @@ Fluxo essencial vs estrutural: item `essential` pode ser executado de imediato; 
 3. conclui o ticket;
 4. manda o e-mail. O WhatsApp sai pelo trigger.
 
-Dois caminhos usam essa mesma função: o status "Enviar ao Proprietário" de uma linha e o botão em lote "Enviar ao proprietário (N)", que aparece com a seleção (a caixa no cabeçalho marca o grupo inteiro). O lote envia um item por vez, pede confirmação antes e, se um falhar, os outros seguem. **Ao mudar o envio, mude na função**, não em um dos dois caminhos. A versão de celular ainda não tem seleção.
+Dois caminhos usam essa mesma função: o status "Enviar ao Proprietário" de uma linha e o botão em lote "Enviar ao proprietário (N)", que aparece na barra de ações da seleção (a caixa no cabeçalho marca o grupo inteiro). O lote envia um item por vez, pede confirmação antes e, se um falhar, os outros seguem. **Ao mudar o envio, mude na função**, não em um dos dois caminhos. A versão de celular ainda não tem seleção.
+
+**Debate com o proprietário (desde 2026-10-01).** Uma manutenção aberta pode virar chamado para o proprietário opinar e depois voltar. Não há cópia: o mesmo ticket troca `ticket_type` de `manutencao` para `duvida` (o proprietário vê em Meus chamados) e `kind = "maintenance"` marca a origem. Na lista ele vai para o quadro **Em debate com o proprietário** (`kind = maintenance` e `ticket_type ≠ manutencao`); o botão de voltar devolve `ticket_type = "manutencao"`. Tudo em `debateMutation` / `voltarManutencaoMutation` (`AdminManutencoesLista.tsx`) e `DebateDialog.tsx`. Ao abrir:
+- a mensagem digitada vai como mensagem pública por `create-ticket-message`, que avisa o proprietário;
+- anexos presos a nota interna ou sem mensagem passam para essa mensagem, senão ele não os veria;
+- `cost_responsible` `pending`/`guest` esconde o ticket do proprietário, então vira `null` durante o debate (fica anotado em nota interna) e volta como `pending`.
+
+Os dois botões existem no desktop (`GroupRow`) e no celular (`MobileMaintenanceList`); os diálogos são um bloco só (`dialogosDebate`).
+
+**Estrutura da lista (desde 2026-09-28).** `AdminManutencoesLista.tsx` ficou só com o componente principal (~2.000 linhas). O resto está em `src/components/maintenance/`: `listaTipos.ts` (tipos, `GROUPS` com tom/ponto/`cobranca`, constantes), `EditableCell.tsx` (`SortableHeader` + célula editável), `GroupRow.tsx` (cabeçalho do grupo com contagem e total + linhas), `LoteDialogs.tsx` (envio e lembrete em lote), `VistoriasTable.tsx`. Na tela:
+- três abas no cabeçalho — Manutenções · Vistorias · Débitos em reserva — em vez de três tabelas empilhadas;
+- pílulas de quadro (Todos + os 6 grupos) e filtro por imóvel, além da busca; grupos abertos e aba ficam em `localStorage` (`manutencoes-lista:grupos`, `manutencoes-lista:aba`), com Em progresso e Aguardando envio abertos por padrão;
+- as duas primeiras colunas (seleção e nome) são fixas na rolagem horizontal (`sticky` com fundo opaco), e o cabeçalho do grupo também;
+- a barra de ações da seleção (Arquivar, Enviar ao proprietário, Lembrete de atraso) é fixa no rodapé;
+- a contagem de anexos vem embutida na consulta (`ticket_attachments(count)`, `charge_attachments(count)`); antes eram baixadas todas as linhas de anexo (2.700) só para contar. As duas consultas têm `staleTime` de 30 s e `useIsMobile` lê a largura já na montagem, para o celular não renderizar a versão desktop primeiro.
 
 ### 3.2 Cobranças
 `charges`, `charge_payments`, `charge_messages`, `charge_attachments`, `recurring_charges`, `recurring_charge_runs`, `owner_credits`, `owner_credit_applications`.
@@ -164,10 +178,12 @@ IA: `ai_settings`, `ai_templates`, `ai_prompt_versions`, `ai_usage_logs`; `ai-as
 ### 3.11 Painel da equipe (`/painel`)
 Reorganizado em 2026-09-25 (`ROADMAP.md` item 4.6). A página tem esta ordem:
 
-1. resumo com 4 números (`src/components/painel/PainelResumo.tsx`);
+1. lembrete de cobrança de hóspede (`GuestChargeReminders`), no topo desde 2026-10-01;
 2. avisos e votações;
-3. **Operações**: Manutenções, Cobranças, Chamados e Vistorias em grade 2×2, com o lembrete de cobrança de hóspede logo abaixo;
-4. **Atalhos**: um bloco só, em 5 grupos (`src/components/painel/PainelAtalhos.tsx`).
+3. **Operações**: Manutenções, Cobranças, Chamados e Vistorias em grade 2×2;
+4. **Atalhos**: um bloco só, em 5 grupos (`src/components/painel/PainelAtalhos.tsx`);
+5. resumo com 4 números (`src/components/painel/PainelResumo.tsx`), no fim da página desde 2026-10-01;
+6. chat da equipe (`TeamChatWidget`), depois do conteúdo, fora do topo.
 
 - **Cada número do topo usa a mesma definição da caixa correspondente.** Ao mudar uma, mude a outra.
 - **"Vencida" vem de `src/lib/vencimento.ts`** (`estaVencida` e `diasParaVencer`): a cobrança só vence depois do dia do vencimento, e a data é lida como dia local. Não use `new Date(due_date)`: isso lê a data como meia-noite UTC, e a cobrança aparece vencida desde as 21h da véspera.
@@ -319,7 +335,7 @@ Correção, evidência e plano: `ROADMAP.md`.
 11. **`owner-decision-cron` e as `notify-*` sem guarda** 🟡 — qualquer um dispara e-mail/push em massa para proprietários. Custo, reputação de domínio e incômodo.
 12. **`hostex-sync?force=1` pula o token** 🟡 — `index.ts:89-97`.
 13. **Higiene** 🟡 — 51 `console.log`; 192 `aria-label` (eram 25); 6 "Carregando..." soltos (eram 34); **40 classes com opacidade dupla** (`bg-info/10/50`), que o Tailwind não gera, fora das páginas do redesign. (`lang="pt-BR"` e `viewport-fit=cover` corrigidos em 2026-09-25.)
-14. **Arquivos gigantes** 🟡 — `AdminManutencoesLista.tsx` **2920**, `CobrancaDetalhes.tsx` 1804, `AtualizacaoAnuncio.tsx` 1791, `TicketDetalhes.tsx` 1284, `PlanoPerformanceSection.tsx` 1268.
+14. **Arquivos gigantes** 🟡 — `AdminManutencoesLista.tsx` ~2000 (era 3419; dividida em 2026-09-28, ver §3.1), `AtualizacaoAnuncio.tsx` 1791, `CobrancaDetalhes.tsx` ~1700, `PlanoPerformanceSection.tsx` 1268, `TicketDetalhes.tsx` ~1160.
 15. **Anexos listáveis sem login** 🔴 — o bucket `attachments` é público e tem a policy `Anyone can view attachments`, para o papel `public`. Com a chave anônima, qualquer pessoa lista e baixa os **6.002 arquivos**. Confirmado em `pg_policies` em 2026-09-25. Não basta tornar o bucket privado: o app usa `getPublicUrl` e grava URL pública em `ticket_attachments.file_url`. Ver `ROADMAP.md` 1.14.
 
 ---

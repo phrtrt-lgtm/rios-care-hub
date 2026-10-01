@@ -9,18 +9,10 @@ import { useChatPreloader } from "@/hooks/useChatPreloader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { Search, Plus, ChevronDown, ChevronRight, Paperclip, MessageSquare, ArrowUpDown, ArrowUp, ArrowDown, Archive, Loader2, FileAudio, Sparkles, Wrench, Play, Pause, BarChart3, Check, X, Trash2, Kanban, MoreHorizontal } from "lucide-react";
+import { Search, Plus, MessageSquare, Archive, Loader2, Wrench, BarChart3, Check, X, Kanban, MoreHorizontal, ChevronsDownUp, ChevronsUpDown } from "lucide-react";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { cn } from "@/lib/utils";
-import { formatBRL } from "@/lib/format";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
 import { MediaGallery } from "@/components/MediaGallery";
 import { deleteAttachmentRow } from "@/lib/deleteAttachment";
@@ -29,1462 +21,61 @@ import { CreateMaintenanceFromInspectionDialog } from "@/components/CreateMainte
 import EditInspectionDialog from "@/components/EditInspectionDialog";
 import { EditMaintenanceDialog } from "@/components/EditMaintenanceDialog";
 import { ReserveDebitsTable } from "@/components/ReserveDebitsTable";
-import { AlarmClock, Pencil, Send } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { AlarmClock, Send } from "lucide-react";
 import { useDetailSheet } from "@/hooks/useDetailSheet";
 import { DetailSheet } from "@/components/detail-sheet/DetailSheet";
-import { getRowHandlers } from "@/lib/row-interaction";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import { parseBRNumber } from "@/lib/parseBRNumber";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileMaintenanceList } from "@/components/maintenance/MobileMaintenanceList";
-import { BOARD_OPTIONS, boardChange, deriveBoard, hasInfiltracao, type Board } from "@/lib/maintenanceBoard";
+import { boardChange, deriveBoard, type Board } from "@/lib/maintenanceBoard";
 import { estaVencida } from "@/lib/vencimento";
-import { WhatsappAcaoLinha, type DonoWhatsapp } from "@/components/maintenance/WhatsappAcaoLinha";
 import { LembreteAtrasoConfig } from "@/components/maintenance/LembreteAtrasoConfig";
+import type { DonoWhatsapp } from "@/components/maintenance/WhatsappAcaoLinha";
 import { enviarLembreteAtraso, temWhatsapp } from "@/lib/lembreteAtraso";
-import { CabecalhoPagina } from "@/components/painel/PaginaInterna";
-import { BotaoLinha } from "@/components/painel/CaixaOperacao";
-import { Etiqueta } from "@/components/painel/Etiqueta";
-import type { Tom } from "@/components/painel/tons";
+import { AbaPilula, BarraFiltros, CabecalhoPagina } from "@/components/painel/PaginaInterna";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { valorDevido } from "@/lib/cobrancaMeta";
-// ===== TYPES =====
-type TicketStatus = "novo" | "em_analise" | "aguardando_info" | "em_execucao" | "concluido" | "cancelado";
+import {
+  GROUPS,
+  INTERVALO_ENVIO_LOTE_MS,
+  type GrupoId,
+  type InspectionItem,
+  type ListStatus,
+  type MaintenanceItem,
+  type SortDirection,
+  type SortField,
+  type TicketStatus,
+} from "@/components/maintenance/listaTipos";
+import { SortableHeader } from "@/components/maintenance/EditableCell";
+import { GroupRow } from "@/components/maintenance/GroupRow";
+import { EnvioLoteDialog, LembreteLoteDialog } from "@/components/maintenance/LoteDialogs";
+import { VistoriasTable } from "@/components/maintenance/VistoriasTable";
+import { DebateDialog } from "@/components/maintenance/DebateDialog";
 
-type ListStatus = "em_progresso" | "feito" | "enviar_proprietario";
+// ===== PREFERÊNCIAS LEMBRADAS =====
+type AbaLista = "manutencoes" | "vistorias" | "debitos";
+const CHAVE_GRUPOS = "manutencoes-lista:grupos";
+const CHAVE_ABA = "manutencoes-lista:aba";
 
-type SortDirection = "asc" | "desc" | null;
-type SortField = "subject" | "property" | "amount_cents" | "management_contribution_cents" | "created_at" | "service_type" | "list_status";
-
-interface MaintenanceItem {
-  id: string;
-  subject: string;
-  status: TicketStatus;
-  scheduled_at: string | null;
-  created_at: string;
-  property: { id: string; name: string } | null;
-  owner: DonoWhatsapp | null;
-  /** Só cobrança: resultado do último WhatsApp (charges.whatsapp_*). */
-  whatsapp_status?: string | null;
-  whatsapp_enviado_em?: string | null;
-  /** Só cobrança vencida: último lembrete de atraso (charges.whatsapp_lembrete_*). */
-  whatsapp_lembrete_status?: string | null;
-  whatsapp_lembrete_enviado_em?: string | null;
-  whatsapp_lembretes_enviados?: number | null;
-  // Custom fields for list view
-  amount_cents?: number;
-  management_contribution_cents?: number;
-  service_type?: string;
-  list_status?: ListStatus;
-  attachments_count?: number;
-  itemType?: "ticket" | "charge";
-  cost_responsible?: string | null;
-  /** Stand-by na lista (tickets.on_hold). Só manutenção; cobrança não tem. */
-  on_hold?: boolean;
-}
-
-// ===== CONSTANTS =====
-const SERVICE_LABELS = [
-  { value: "refrigeracao", label: "Refrigeração", color: "bg-info" },
-  { value: "eletrica", label: "Elétrica", color: "bg-warning" },
-  { value: "hidraulica", label: "Hidráulica", color: "bg-info" },
-  { value: "marcenaria", label: "Marcenaria", color: "bg-warning" },
-  { value: "estrutural", label: "Estrutural", color: "bg-secondary" },
-  { value: "itens", label: "Itens", color: "bg-primary" },
-  { value: "vidracaria", label: "Vidraçaria", color: "bg-info" },
-  { value: "dedetizacao", label: "Dedetização", color: "bg-success" },
-  { value: "servico_misto", label: "Serviço Misto", color: "bg-primary" },
-  // Também define o quadro "Infiltração" da lista — ver src/lib/maintenanceBoard.ts
-  { value: "infiltracao", label: "Infiltração", color: "bg-info" },
-  // Support legacy values stored as labels
-  { value: "Refrigeração", label: "Refrigeração", color: "bg-info" },
-  { value: "Elétrica", label: "Elétrica", color: "bg-warning" },
-  { value: "Hidráulica", label: "Hidráulica", color: "bg-info" },
-  { value: "Marcenaria", label: "Marcenaria", color: "bg-warning" },
-  { value: "Estrutural", label: "Estrutural", color: "bg-secondary" },
-  { value: "Itens", label: "Itens", color: "bg-primary" },
-  { value: "Vidraçaria", label: "Vidraçaria", color: "bg-info" },
-  { value: "Dedetização", label: "Dedetização", color: "bg-success" },
-  { value: "Serviço Misto", label: "Serviço Misto", color: "bg-primary" },
-];
-
-const LIST_STATUSES = [
-  { value: "em_progresso", label: "Em Progresso", color: "bg-warning" },
-  { value: "feito", label: "Feito", color: "bg-success" },
-  { value: "enviar_proprietario", label: "Enviar ao Proprietário", color: "bg-primary" },
-];
-
-// Cost responsible options shown in the list. 'pending' means the team hasn't
-// decided yet — owner does not see the maintenance and no notification is sent.
-// Selecting any other value triggers the "ticket created" notification flow.
-const COST_RESPONSIBLE_OPTIONS = [
-  { value: "pending", label: "Em espera", color: "bg-muted-foreground" },
-  { value: "owner", label: "Proprietário", color: "bg-primary" },
-  { value: "pm", label: "Gestão", color: "bg-info" },
-  { value: "guest", label: "Hóspede", color: "bg-warning" },
-];
-
-// Ordem dos quadros na tela. Infiltração e Stand-by são derivados de dois
-// campos do ticket (label `infiltracao` e `on_hold`) — ver src/lib/maintenanceBoard.ts.
-const GROUPS = [
-  { id: "em_progresso", label: "Em Progresso", color: "border-l-warning" },
-  { id: "infiltracao", label: "Infiltração", color: "border-l-info" },
-  { id: "stand_by", label: "Stand-by", color: "border-l-muted-foreground" },
-  { id: "concluidas", label: "Aguardando Envio ao Proprietário", color: "border-l-success" },
-  { id: "cobrancas_vencidas", label: "Cobranças Vencidas", color: "border-l-destructive" },
-  { id: "cobrancas", label: "Cobranças Pendentes", color: "border-l-primary" },
-];
-
-// As opções dos seletores (status, responsável, etiqueta e BOARD_OPTIONS de
-// src/lib/maintenanceBoard.ts) trazem a cor como classe; a etiqueta sólida
-// precisa do tom, que já carrega o texto na cor de contraste certa.
-const TOM_POR_COR: Record<string, Tom> = {
-  "bg-warning": "warning",
-  "bg-success": "success",
-  "bg-primary": "primary",
-  "bg-info": "info",
-  "bg-secondary": "secondary",
-  "bg-destructive": "destructive",
-  "bg-muted-foreground": "neutral",
-};
-const tomDaCor = (cor?: string): Tom => TOM_POR_COR[cor ?? ""] ?? "neutral";
-
-// ===== SORTABLE HEADER COMPONENT =====
-interface SortableHeaderProps {
-  label: string;
-  field: SortField;
-  currentSort: SortField | null;
-  direction: SortDirection;
-  onSort: (field: SortField) => void;
-  className?: string;
-}
-
-function SortableHeader({ label, field, currentSort, direction, onSort, className }: SortableHeaderProps) {
-  const isActive = currentSort === field;
-
-  // Detect text alignment from className to align the inner flex accordingly.
-  const justify = className?.includes("text-right")
-    ? "justify-end"
-    : className?.includes("text-left")
-    ? "justify-start"
-    : "justify-center";
-
-  return (
-    <th
-      className={cn("px-1 py-2 font-medium cursor-pointer hover:bg-muted/50 transition-colors select-none", className)}
-      onClick={() => onSort(field)}
-    >
-      <div className={cn("flex items-center gap-1", justify)}>
-        <span>{label}</span>
-        {isActive ? (
-          direction === "asc" ? (
-            <ArrowUp className="h-3.5 w-3.5 text-primary" />
-          ) : (
-            <ArrowDown className="h-3.5 w-3.5 text-primary" />
-          )
-        ) : (
-          <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground opacity-50" />
-        )}
-      </div>
-    </th>
-  );
-}
-
-// ===== INLINE EDIT CELL COMPONENT =====
-interface EditableCellProps {
-  value: string | number | null;
-  type: "text" | "currency" | "date" | "select" | "multi-select";
-  options?: { value: string; label: string; color?: string }[];
-  onSave: (newValue: string | number | null) => void;
-  className?: string;
-  placeholder?: string;
-}
-
-function EditableCell({ value, type, options, onSave, className, placeholder }: EditableCellProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState<string>(String(value ?? ""));
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (isEditing && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
-    }
-  }, [isEditing]);
-
-  const handleSave = useCallback(() => {
-    setIsEditing(false);
-    if (type === "currency") {
-      const numValue = parseBRNumber(editValue);
-      if (!isNaN(numValue)) {
-        onSave(Math.round(numValue * 100));
-      }
-    } else {
-      onSave(editValue || null);
-    }
-  }, [editValue, type, onSave]);
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleSave();
-    } else if (e.key === "Escape") {
-      setIsEditing(false);
-      setEditValue(String(value ?? ""));
-    }
-  }, [handleSave, value]);
-
-  if (type === "multi-select") {
-    // Value stored as CSV string. Dedupe + filter empties.
-    const selectedValues = String(value || "")
-      .split(",")
-      .map((v) => v.trim())
-      .filter(Boolean);
-    // De-duplicate options by canonical value (lower-case) so legacy + new options don't repeat
-    const uniqueOptions = options?.filter((opt, idx, arr) => {
-      return arr.findIndex((o) => o.label === opt.label) === idx;
-    }) || [];
-    const selectedOptions = uniqueOptions.filter((o) =>
-      selectedValues.some(
-        (sv) => sv === o.value || sv.toLowerCase() === o.value.toLowerCase() || sv === o.label,
-      ),
-    );
-
-    const toggleValue = (optValue: string) => {
-      const exists = selectedValues.some(
-        (sv) => sv === optValue || sv.toLowerCase() === optValue.toLowerCase(),
-      );
-      let next: string[];
-      if (exists) {
-        next = selectedValues.filter(
-          (sv) => sv !== optValue && sv.toLowerCase() !== optValue.toLowerCase(),
-        );
-      } else {
-        next = [...selectedValues, optValue];
-      }
-      onSave(next.length > 0 ? next.join(",") : null);
-    };
-
-    return (
-      <Popover>
-        <PopoverTrigger asChild>
-          <button
-            type="button"
-            className={cn(
-              "h-8 w-full flex items-center gap-1 px-2 rounded hover:bg-muted/50 transition-colors text-sm overflow-hidden",
-              className,
-            )}
-            data-no-sheet
-          >
-            {selectedOptions.length > 0 ? (
-              <div className="flex items-center gap-1 flex-wrap">
-                {selectedOptions.slice(0, 2).map((opt) => (
-                  <Etiqueta key={opt.value} solida tom={tomDaCor(opt.color)}>
-                    {opt.label}
-                  </Etiqueta>
-                ))}
-                {selectedOptions.length > 2 && (
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                    +{selectedOptions.length - 2}
-                  </Badge>
-                )}
-              </div>
-            ) : (
-              <span className="text-muted-foreground text-sm">{placeholder || "—"}</span>
-            )}
-          </button>
-        </PopoverTrigger>
-        <PopoverContent className="w-56 p-2" align="start" data-no-sheet>
-          <div className="flex flex-col gap-1 max-h-72 overflow-y-auto">
-            {uniqueOptions.map((opt) => {
-              const isSelected = selectedOptions.some((s) => s.label === opt.label);
-              return (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => toggleValue(opt.value)}
-                  className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted/50 transition-colors text-left"
-                >
-                  <Checkbox checked={isSelected} className="pointer-events-none" />
-                  <Etiqueta solida tom={tomDaCor(opt.color)}>{opt.label}</Etiqueta>
-                </button>
-              );
-            })}
-          </div>
-        </PopoverContent>
-      </Popover>
-    );
+function lerGuardado<T>(chave: string, padrao: T): T {
+  try {
+    const bruto = localStorage.getItem(chave);
+    if (!bruto) return padrao;
+    const lido = JSON.parse(bruto);
+    return typeof padrao === "object" && padrao !== null ? { ...(padrao as object), ...lido } : lido;
+  } catch {
+    return padrao;
   }
+}
 
-  if (type === "select") {
-    const selectedOption = options?.find(o => o.value === value);
-    return (
-      <Select 
-        value={String(value || "")} 
-        onValueChange={(v) => onSave(v)}
-      >
-        <SelectTrigger className={cn("h-8 border-0 bg-transparent hover:bg-muted/50 transition-colors", className)} data-no-sheet>
-          {selectedOption ? (
-            <Etiqueta solida tom={tomDaCor(selectedOption.color)}>
-              {selectedOption.label}
-            </Etiqueta>
-          ) : (
-            <span className="text-muted-foreground text-sm">{placeholder || "—"}</span>
-          )}
-        </SelectTrigger>
-        <SelectContent data-no-sheet>
-          {options?.map(opt => (
-            <SelectItem key={opt.value} value={opt.value}>
-              <Etiqueta solida tom={tomDaCor(opt.color)}>{opt.label}</Etiqueta>
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    );
+function guardar(chave: string, valor: unknown) {
+  try {
+    localStorage.setItem(chave, JSON.stringify(valor));
+  } catch {
+    /* modo privado ou cota cheia: segue sem lembrar */
   }
-
-  if (isEditing) {
-    return (
-      <div className="flex items-center gap-1" data-no-sheet>
-        <Input
-          ref={inputRef}
-          value={editValue}
-          onChange={(e) => setEditValue(e.target.value)}
-          onBlur={handleSave}
-          onKeyDown={handleKeyDown}
-          type={type === "date" ? "date" : "text"}
-          className="h-8 text-sm w-full"
-        />
-      </div>
-    );
-  }
-
-  let displayValue = value;
-  if (type === "currency" && typeof value === "number") {
-    displayValue = formatBRL(value);
-  } else if (type === "date" && value) {
-    displayValue = format(new Date(String(value)), "dd/MM/yyyy", { locale: ptBR });
-  }
-
-  return (
-    <div
-      data-no-sheet
-      onClick={(e) => {
-        e.stopPropagation();
-        setEditValue(type === "currency" && typeof value === "number" 
-          ? (value / 100).toFixed(2).replace(".", ",")
-          : String(value ?? "")
-        );
-        setIsEditing(true);
-      }}
-      className={cn(
-        "h-8 flex items-center px-2 rounded cursor-pointer hover:bg-muted/50 transition-colors text-sm",
-        !displayValue && "text-muted-foreground",
-        className
-      )}
-    >
-      {displayValue || placeholder || "—"}
-    </div>
-  );
-}
-
-// ===== ENVIO EM LOTE: CONFIRMAÇÃO =====
-/** Pausa entre um envio e outro no lote (e-mail + WhatsApp por item). */
-const INTERVALO_ENVIO_LOTE_MS = 5000;
-
-function EnvioLoteDialog({
-  open,
-  itens,
-  enviando,
-  progresso,
-  onCancelar,
-  onConfirmar,
-}: {
-  open: boolean;
-  itens: MaintenanceItem[];
-  enviando: boolean;
-  progresso: { feitos: number; total: number } | null;
-  onCancelar: () => void;
-  onConfirmar: () => void;
-}) {
-  const aPagar = (i: MaintenanceItem) =>
-    valorDevido(i);
-  const gratuita = (i: MaintenanceItem) =>
-    (i.amount_cents ?? 0) > 0 && (i.management_contribution_cents ?? 0) >= (i.amount_cents ?? 0);
-  const semValor = itens.filter((i) => (i.amount_cents ?? 0) === 0).length;
-  const gratuitas = itens.filter(gratuita).length;
-  const abertas = itens.filter((i) => i.status !== "concluido").length;
-  const proprietarios = new Set(itens.map((i) => i.owner?.id)).size;
-  const total = itens.reduce((soma, i) => soma + aPagar(i), 0);
-
-  return (
-    <AlertDialog open={open} onOpenChange={(o) => !o && !enviando && onCancelar()}>
-      <AlertDialogContent className="max-w-2xl">
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            Enviar {itens.length} {itens.length === 1 ? "manutenção" : "manutenções"} ao proprietário?
-          </AlertDialogTitle>
-          <AlertDialogDescription asChild>
-            <div className="space-y-3 text-sm text-muted-foreground">
-              <p>
-                {proprietarios} {proprietarios === 1 ? "proprietário recebe" : "proprietários recebem"} a cobrança por
-                e-mail (e por WhatsApp, quem tiver ligado). Total a pagar: {formatBRL(total)}. Cada manutenção é
-                concluída e vira cobrança, igual ao envio de uma por uma.
-              </p>
-              {itens.length > 1 && (
-                <p>
-                  Os envios saem um a cada {INTERVALO_ENVIO_LOTE_MS / 1000} segundos (cerca de{" "}
-                  {Math.ceil(((itens.length - 1) * INTERVALO_ENVIO_LOTE_MS) / 60000)} min).{" "}
-                  <span className="font-medium text-foreground">Deixe esta aba aberta até terminar.</span>
-                </p>
-              )}
-              {(semValor > 0 || gratuitas > 0 || abertas > 0) && (
-                <ul className="list-disc space-y-1 pl-5 text-foreground">
-                  {gratuitas > 0 && <li>{gratuitas} vão de graça: o aporte da gestão cobre 100%.</li>}
-                  {semValor > 0 && <li className="text-warning">{semValor} estão sem valor preenchido.</li>}
-                  {abertas > 0 && (
-                    <li className="text-warning">{abertas} ainda não estão como feitas e serão concluídas.</li>
-                  )}
-                </ul>
-              )}
-              <div className="max-h-64 overflow-y-auto rounded-md border">
-                {itens.map((i) => (
-                  <div
-                    key={i.id}
-                    className="flex items-center justify-between gap-3 border-b px-3 py-1.5 last:border-b-0"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate font-medium text-foreground">{i.property?.name ?? "—"}</p>
-                      <p className="truncate text-xs">{i.subject}</p>
-                    </div>
-                    <span className="shrink-0 text-xs font-medium text-foreground">
-                      {gratuita(i) ? "de graça" : (i.amount_cents ?? 0) === 0 ? "sem valor" : formatBRL(aPagar(i))}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={enviando}>Cancelar</AlertDialogCancel>
-          <AlertDialogAction
-            disabled={enviando}
-            onClick={(e) => {
-              e.preventDefault();
-              onConfirmar();
-            }}
-          >
-            {enviando && progresso
-              ? `Enviando ${progresso.feitos + 1} de ${progresso.total}...`
-              : `Enviar ${itens.length}`}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-}
-
-// ===== LEMBRETE DE ATRASO EM LOTE: CONFIRMAÇÃO =====
-function LembreteLoteDialog({
-  open,
-  donos,
-  enviando,
-  onCancelar,
-  onConfirmar,
-}: {
-  open: boolean;
-  donos: { owner: DonoWhatsapp; selecionadas: number }[];
-  enviando: boolean;
-  onCancelar: () => void;
-  onConfirmar: () => void;
-}) {
-  const apto = (d: DonoWhatsapp) => !!d.notificar_whatsapp && temWhatsapp(d.phone);
-  const aptos = donos.filter((d) => apto(d.owner));
-  return (
-    <AlertDialog open={open} onOpenChange={(o) => !o && !enviando && onCancelar()}>
-      <AlertDialogContent className="max-w-xl">
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            Enviar lembrete de atraso para {aptos.length} {aptos.length === 1 ? "proprietário" : "proprietários"}?
-          </AlertDialogTitle>
-          <AlertDialogDescription asChild>
-            <div className="space-y-3 text-sm text-muted-foreground">
-              <p>
-                Cada proprietário recebe <strong>uma mensagem só</strong> no WhatsApp, com o resumo de todas as
-                cobranças dele em atraso (quantidade, total e vencimento mais antigo) e o aviso de que o valor pode ser
-                debitado de uma próxima reserva.
-                {aptos.length > 1 &&
-                  ` Os envios saem um a cada ${INTERVALO_ENVIO_LOTE_MS / 1000} segundos — deixe esta aba aberta até terminar.`}
-              </p>
-              <div className="max-h-64 overflow-y-auto rounded-md border">
-                {donos.map(({ owner, selecionadas }) => (
-                  <div
-                    key={owner.id}
-                    className="flex items-center justify-between gap-3 border-b px-3 py-1.5 last:border-b-0"
-                  >
-                    <span className="truncate font-medium text-foreground">{owner.name}</span>
-                    <span className={cn("shrink-0 text-xs", apto(owner) ? "text-muted-foreground" : "text-warning")}>
-                      {!temWhatsapp(owner.phone)
-                        ? "sem telefone — fica de fora"
-                        : !owner.notificar_whatsapp
-                          ? "WhatsApp desligado — fica de fora"
-                          : `${selecionadas} ${selecionadas === 1 ? "marcada" : "marcadas"}`}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={enviando}>Cancelar</AlertDialogCancel>
-          <AlertDialogAction
-            disabled={enviando || aptos.length === 0}
-            onClick={(e) => {
-              e.preventDefault();
-              onConfirmar();
-            }}
-          >
-            {enviando ? "Enviando..." : `Enviar ${aptos.length}`}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-}
-
-// ===== GROUP ROW COMPONENT =====
-interface GroupRowProps {
-  group: typeof GROUPS[0];
-  items: MaintenanceItem[];
-  isExpanded: boolean;
-  onToggle: () => void;
-  onUpdateItem: (id: string, field: string, value: any, isCharge?: boolean) => void;
-  onOpenChat: (item: MaintenanceItem) => void;
-  unreadCounts: Record<string, number>;
-  selectedIds: Set<string>;
-  onToggleSelection: (id: string) => void;
-  /** Marca/desmarca todos os itens do grupo de uma vez. */
-  onToggleGroupSelection: (ids: string[], selecionar: boolean) => void;
-  sortField: SortField | null;
-  sortDirection: SortDirection;
-  onSort: (field: SortField) => void;
-  onOpenAttachments: (item: MaintenanceItem) => void;
-  onUploadAttachment: (item: MaintenanceItem) => void;
-  uploadingItemId: string | null;
-  onOpenSheet?: (id: string) => void;
-  onEdit: (item: MaintenanceItem, isCharge: boolean) => void;
-  onDelete: (item: MaintenanceItem, isCharge: boolean) => void;
-}
-
-function GroupRow({ 
-  group, 
-  items, 
-  isExpanded, 
-  onToggle, 
-  onUpdateItem, 
-  onOpenChat, 
-  unreadCounts,
-  selectedIds,
-  onToggleSelection,
-  onToggleGroupSelection,
-  sortField,
-  sortDirection,
-  onSort,
-  onOpenAttachments,
-  onUploadAttachment,
-  uploadingItemId,
-  onOpenSheet,
-  onEdit,
-  onDelete
-}: GroupRowProps) {
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  // O switch de WhatsApp vale para o proprietário inteiro: recarrega as duas listas.
-  const recarregarWhatsapp = () => {
-    queryClient.invalidateQueries({ queryKey: ["maintenance-list-view"] });
-    queryClient.invalidateQueries({ queryKey: ["pending-charges-list"] });
-  };
-  // Sort items within the group
-  const sortedItems = useMemo(() => {
-    if (!sortField || !sortDirection) return items;
-    
-    return [...items].sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
-
-      switch (sortField) {
-        case "subject":
-          aValue = a.subject.toLowerCase();
-          bValue = b.subject.toLowerCase();
-          break;
-        case "property":
-          aValue = (a.property?.name || "").toLowerCase();
-          bValue = (b.property?.name || "").toLowerCase();
-          break;
-        case "amount_cents":
-          aValue = a.amount_cents || 0;
-          bValue = b.amount_cents || 0;
-          break;
-        case "management_contribution_cents":
-          aValue = a.management_contribution_cents || 0;
-          bValue = b.management_contribution_cents || 0;
-          break;
-        case "created_at":
-          aValue = a.created_at || "";
-          bValue = b.created_at || "";
-          break;
-        case "service_type":
-          aValue = (a.service_type || "").toLowerCase();
-          bValue = (b.service_type || "").toLowerCase();
-          break;
-        case "list_status":
-          aValue = (a.list_status || "").toLowerCase();
-          bValue = (b.list_status || "").toLowerCase();
-          break;
-        default:
-          return 0;
-      }
-
-      if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
-      if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
-      return 0;
-    });
-  }, [items, sortField, sortDirection]);
-
-  return (
-    <>
-      {/* Group Header */}
-      <tr 
-        className={cn(
-          "bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors border-l-4",
-          group.color
-        )}
-        onClick={onToggle}
-      >
-        <td colSpan={13} className="p-2">
-          <div className="flex items-center gap-2 font-medium">
-            {items.length > 0 && (
-              <span className="flex items-center pl-1.5 pr-1" onClick={(e) => e.stopPropagation()}>
-                <Checkbox
-                  checked={
-                    items.every((i) => selectedIds.has(i.id))
-                      ? true
-                      : items.some((i) => selectedIds.has(i.id))
-                        ? "indeterminate"
-                        : false
-                  }
-                  onCheckedChange={(v) => onToggleGroupSelection(items.map((i) => i.id), v === true)}
-                  aria-label={`Selecionar todos de ${group.label}`}
-                />
-              </span>
-            )}
-            {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-            <span>{group.label}</span>
-            <Badge variant="secondary" className="ml-2">{items.length}</Badge>
-          </div>
-        </td>
-      </tr>
-
-      {/* Group Items */}
-      {isExpanded && sortedItems.map((item) => {
-        const unread = unreadCounts[item.id] || 0;
-        const isCharge = ["cobrancas_vencidas", "cobrancas"].includes(group.id);
-        return (
-          <tr 
-            key={item.id}
-            className={cn(
-              "border-b hover:bg-muted/30 transition-colors group h-10",
-              selectedIds.has(item.id) && "bg-primary/5",
-              onOpenSheet && "cursor-pointer"
-            )}
-            {...(onOpenSheet
-              ? (() => {
-                  const route = isCharge ? `/cobranca/${item.id}` : `/manutencao/${item.id}`;
-                  return getRowHandlers(route, () => onOpenSheet!(item.id));
-                })()
-              : {})}
-          >
-            {/* Checkbox */}
-            <td className="p-0 w-[36px]" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-center px-1 py-2">
-                <Checkbox
-                  checked={selectedIds.has(item.id)}
-                  onCheckedChange={() => onToggleSelection(item.id)}
-                />
-              </div>
-            </td>
-
-            {/* Nome da Manutenção - Abre painel lateral */}
-            <td className="p-0 w-[220px] max-w-[220px]">
-              <TooltipProvider delayDuration={300}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="px-1 py-2 font-medium text-sm hover:text-primary transition-colors truncate text-center">
-                      <span className="truncate">{item.subject}</span>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="max-w-sm">
-                    <p>{item.subject}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </td>
-
-            {/* Conversa da manutenção. Cobrança não tem chat de ticket: fica um traço. */}
-            <td className="p-0 w-[44px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-center px-1 py-1">
-                {isCharge ? (
-                  <span className="text-sm text-muted-foreground">—</span>
-                ) : (
-                  <BotaoLinha
-                    rotulo="Abrir conversa"
-                    naoLidas={unread}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onOpenChat(item);
-                    }}
-                  >
-                    <MessageSquare />
-                  </BotaoLinha>
-                )}
-              </div>
-            </td>
-
-            {/* Imóvel */}
-            <td className="p-0 w-[140px] max-w-[140px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
-              <TooltipProvider delayDuration={300}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    {item.property && item.owner?.id ? (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/admin/relatorios-manutencoes/${item.owner!.id}?propertyId=${item.property!.id}`);
-                        }}
-                        className="w-full px-1 py-2 text-sm text-primary hover:underline truncate text-center"
-                        title="Abrir relatório deste imóvel"
-                      >
-                        {item.property.name}
-                      </button>
-                    ) : (
-                      <div className="px-1 py-2 text-sm text-muted-foreground truncate text-center">
-                        {item.property?.name || "—"}
-                      </div>
-                    )}
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    <p>{item.property?.name || "—"}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </td>
-
-            {/* Valor */}
-            <td className="p-0 w-[90px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
-              <EditableCell
-                value={item.amount_cents || null}
-                type="currency"
-                placeholder="R$ 0,00"
-                onSave={(val) => onUpdateItem(item.id, "amount_cents", val, isCharge)}
-                className="justify-center font-medium"
-              />
-            </td>
-
-            {/* Aporte Gestão */}
-            <td className="p-0 w-[90px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
-              <EditableCell
-                value={item.management_contribution_cents || null}
-                type="currency"
-                placeholder="R$ 0,00"
-                onSave={(val) => onUpdateItem(item.id, "management_contribution_cents", val, isCharge)}
-                className="justify-center text-success"
-              />
-            </td>
-
-            {/* Data (criação) */}
-            <td className="p-0 w-[80px]">
-              <div className="px-1 py-2 text-sm text-center text-muted-foreground">
-                {item.created_at ? format(new Date(item.created_at), "dd MMM", { locale: ptBR }) : "—"}
-              </div>
-            </td>
-
-            {/* Anexos */}
-            <td className="p-0 w-[70px]">
-              <div className="flex items-center justify-center gap-0.5 px-1 py-2">
-                <button
-                  className={cn(
-                    "flex items-center gap-1 px-1.5 py-1 rounded text-sm transition-colors",
-                    item.attachments_count && item.attachments_count > 0
-                      ? "hover:bg-primary/10 cursor-pointer text-primary"
-                      : "text-muted-foreground"
-                  )}
-                  type="button"
-                  aria-label="Ver anexos"
-                  title="Ver anexos"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (item.attachments_count && item.attachments_count > 0) {
-                      onOpenAttachments(item);
-                    }
-                  }}
-                  disabled={!item.attachments_count || item.attachments_count === 0}
-                >
-                  <Paperclip className="h-3.5 w-3.5" />
-                  <span>{item.attachments_count || 0}</span>
-                </button>
-                <button
-                  type="button"
-                  aria-label="Adicionar anexo"
-                  title="Adicionar anexo"
-                  className="p-1 rounded hover:bg-muted/50 transition-colors text-muted-foreground hover:text-primary"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onUploadAttachment(item);
-                  }}
-                  disabled={uploadingItemId === item.id}
-                >
-                  {uploadingItemId === item.id ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Plus className="h-3.5 w-3.5" />
-                  )}
-                </button>
-              </div>
-            </td>
-
-            {/* Responsável pelo custo */}
-            <td className="p-0 w-[120px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
-              {isCharge ? (
-                <div className="px-1 py-2 text-sm text-center text-muted-foreground">
-                  {COST_RESPONSIBLE_OPTIONS.find(o => o.value === item.cost_responsible)?.label || "—"}
-                </div>
-              ) : (
-                <EditableCell
-                  value={item.cost_responsible || "pending"}
-                  type="select"
-                  options={COST_RESPONSIBLE_OPTIONS}
-                  onSave={(val) => onUpdateItem(item.id, "cost_responsible", val, false)}
-                  className="justify-center"
-                />
-              )}
-            </td>
-
-            <td className="p-0 w-[120px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
-              <EditableCell
-                value={item.service_type || null}
-                type="multi-select"
-                options={SERVICE_LABELS}
-                placeholder="Selecionar"
-                onSave={(val) => onUpdateItem(item.id, "service_type", val, isCharge)}
-                className="justify-center"
-              />
-            </td>
-
-            {/* Quadro: Em Progresso / Stand-by / Infiltração — só manutenção aberta */}
-            <td className="p-0 w-[120px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
-              {isCharge || item.status === "concluido" ? (
-                <div className="px-1 py-2 text-sm text-center text-muted-foreground">—</div>
-              ) : (
-                <div className="flex items-center justify-center gap-1">
-                  <EditableCell
-                    value={deriveBoard(item)}
-                    type="select"
-                    options={BOARD_OPTIONS}
-                    onSave={(val) => onUpdateItem(item.id, "board", val, false)}
-                    className="justify-center"
-                  />
-                  {item.on_hold && hasInfiltracao(item.service_type) && (
-                    <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0" title="Infiltração em stand-by">
-                      Stand-by
-                    </Badge>
-                  )}
-                </div>
-              )}
-            </td>
-
-            {/* Status */}
-            <td className="p-0 w-[140px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
-              {isCharge ? (
-                <div className="px-1 py-2 text-sm text-center text-muted-foreground">
-                  {item.list_status === "feito" ? "Pago" : "Pendente"}
-                </div>
-              ) : (
-                <EditableCell
-                  value={item.list_status || "em_progresso"}
-                  type="select"
-                  options={LIST_STATUSES}
-                  onSave={(val) => onUpdateItem(item.id, "list_status", val, false)}
-                  className="justify-center"
-                />
-              )}
-            </td>
-
-            {/* WhatsApp / Editar / Excluir */}
-            <td className="p-0 w-[108px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-end gap-1 px-1 py-2">
-                {group.id === "concluidas" && (
-                  <WhatsappAcaoLinha modo="switch" owner={item.owner} onAtualizado={recarregarWhatsapp} />
-                )}
-                {isCharge && group.id === "cobrancas_vencidas" && (
-                  <WhatsappAcaoLinha
-                    modo="atraso"
-                    owner={item.owner}
-                    whatsappStatus={item.whatsapp_lembrete_status}
-                    whatsappEnviadoEm={item.whatsapp_lembrete_enviado_em}
-                    lembretesEnviados={item.whatsapp_lembretes_enviados}
-                    onAtualizado={recarregarWhatsapp}
-                  />
-                )}
-                {isCharge && group.id !== "cobrancas_vencidas" && (
-                  <WhatsappAcaoLinha
-                    modo="reenviar"
-                    owner={item.owner}
-                    cobrancaId={item.id}
-                    whatsappStatus={item.whatsapp_status}
-                    whatsappEnviadoEm={item.whatsapp_enviado_em}
-                    onAtualizado={recarregarWhatsapp}
-                  />
-                )}
-                <button
-                  type="button"
-                  className="p-1.5 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(item, isCharge);
-                  }}
-                  title="Editar"
-                  aria-label="Editar"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  type="button"
-                  className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(item, isCharge);
-                  }}
-                  title="Excluir"
-                  aria-label="Excluir"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </td>
-          </tr>
-        );
-      })}
-    </>
-  );
-}
-
-// ===== INSPECTION TYPES =====
-interface InspectionItem {
-  id: string;
-  property: { id: string; name: string; owner_id: string } | null;
-  owner_name: string | null;
-  created_at: string;
-  cleaner_name: string | null;
-  notes: string | null;
-  transcript: string | null;
-  transcript_summary: string | null;
-  audio_url: string | null;
-  internal_only: boolean;
-  is_routine: boolean;
-  is_team_inspection: boolean;
-  attachments: Array<{ id: string; file_url: string; file_name?: string; file_type?: string }>;
-}
-
-// ===== AUDIO PLAYER MINI COMPONENT =====
-function AudioPlayerMini({ url }: { url: string }) {
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-
-  const togglePlay = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!audioRef.current) return;
-    if (isPlaying) {
-      audioRef.current.pause();
-    } else {
-      audioRef.current.play();
-    }
-    setIsPlaying(!isPlaying);
-  }, [isPlaying]);
-
-  return (
-    <div className="flex items-center gap-1">
-      <button
-        type="button"
-        onClick={togglePlay}
-        aria-label={isPlaying ? "Pausar áudio" : "Reproduzir áudio"}
-        title={isPlaying ? "Pausar áudio" : "Reproduzir áudio"}
-        className="p-1.5 rounded-full bg-primary/10 hover:bg-primary/20 transition-colors"
-      >
-        {isPlaying ? (
-          <Pause className="h-3 w-3 text-primary" />
-        ) : (
-          <Play className="h-3 w-3 text-primary" />
-        )}
-      </button>
-      <audio
-        ref={audioRef}
-        src={url}
-        onEnded={() => setIsPlaying(false)}
-        onPause={() => setIsPlaying(false)}
-        onPlay={() => setIsPlaying(true)}
-      />
-    </div>
-  );
-}
-
-// ===== VISTORIAS SORT =====
-type InspectionSortField = "property" | "created_at" | "cleaner_name" | "status";
-
-// ===== VISTORIAS TABLE COMPONENT =====
-interface VistoriasTableProps {
-  cleanerInspections: InspectionItem[];
-  teamInspections: InspectionItem[];
-  cleanerExpanded: boolean;
-  teamExpanded: boolean;
-  onToggleCleaner: () => void;
-  onToggleTeam: () => void;
-  onOpenAttachments: (inspection: InspectionItem) => void;
-  onGenerateSummary: (inspection: InspectionItem) => void;
-  onCreateMaintenance: (inspection: InspectionItem) => void;
-  onEditInspection: (inspection: InspectionItem) => void;
-  generatingIds: Set<string>;
-  selectedInspectionIds: Set<string>;
-  onToggleInspectionSelection: (id: string, shiftKey: boolean) => void;
-  onArchiveInspections: () => void;
-  archivingInspections: boolean;
-  onOpenSheet: (id: string) => void;
-}
-
-function VistoriasTable({
-  cleanerInspections,
-  teamInspections,
-  cleanerExpanded,
-  teamExpanded,
-  onToggleCleaner,
-  onToggleTeam,
-  onOpenAttachments,
-  onGenerateSummary,
-  onCreateMaintenance,
-  onEditInspection,
-  generatingIds,
-  selectedInspectionIds,
-  onToggleInspectionSelection,
-  onArchiveInspections,
-  archivingInspections,
-  onOpenSheet,
-}: VistoriasTableProps) {
-  const [sortField, setSortField] = useState<InspectionSortField | null>(null);
-  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
-
-  const handleSort = useCallback((field: InspectionSortField) => {
-    if (sortField === field) {
-      if (sortDirection === "asc") {
-        setSortDirection("desc");
-      } else if (sortDirection === "desc") {
-        setSortField(null);
-        setSortDirection(null);
-      } else {
-        setSortDirection("asc");
-      }
-    } else {
-      setSortField(field);
-      setSortDirection("asc");
-    }
-  }, [sortField, sortDirection]);
-
-  const sortInspections = useCallback((items: InspectionItem[]) => {
-    if (!sortField || !sortDirection) return items;
-    
-    return [...items].sort((a, b) => {
-      let aValue: string;
-      let bValue: string;
-
-      switch (sortField) {
-        case "property":
-          aValue = (a.property?.name || "").toLowerCase();
-          bValue = (b.property?.name || "").toLowerCase();
-          break;
-        case "created_at":
-          aValue = a.created_at;
-          bValue = b.created_at;
-          break;
-        case "cleaner_name":
-          aValue = (a.cleaner_name || "").toLowerCase();
-          bValue = (b.cleaner_name || "").toLowerCase();
-          break;
-        case "status":
-          const aHasProblems = a.notes?.toLowerCase().includes('não') || 
-                               a.transcript_summary?.toLowerCase().includes('problema');
-          const bHasProblems = b.notes?.toLowerCase().includes('não') || 
-                               b.transcript_summary?.toLowerCase().includes('problema');
-          aValue = aHasProblems ? "nao" : "ok";
-          bValue = bHasProblems ? "nao" : "ok";
-          break;
-        default:
-          return 0;
-      }
-
-      if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
-      if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
-      return 0;
-    });
-  }, [sortField, sortDirection]);
-
-  const sortedCleanerInspections = useMemo(() => sortInspections(cleanerInspections), [cleanerInspections, sortInspections]);
-  const sortedTeamInspections = useMemo(() => sortInspections(teamInspections), [teamInspections, sortInspections]);
-
-  const renderSortableHeader = (label: string, field: InspectionSortField, className?: string) => {
-    const isActive = sortField === field;
-    return (
-      <th 
-        className={cn("px-2 py-2 font-medium cursor-pointer hover:bg-muted/50 transition-colors select-none", className)}
-        onClick={() => handleSort(field)}
-      >
-        <div className="flex items-center gap-1">
-          <span>{label}</span>
-          {isActive ? (
-            sortDirection === "asc" ? (
-              <ArrowUp className="h-3.5 w-3.5 text-primary" />
-            ) : (
-              <ArrowDown className="h-3.5 w-3.5 text-primary" />
-            )
-          ) : (
-            <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground opacity-50" />
-          )}
-        </div>
-      </th>
-    );
-  };
-
-  const renderInspectionRow = (inspection: InspectionItem, showCleanerColumn: boolean) => {
-    const hasProblems = inspection.notes?.toLowerCase().includes('não') ||
-                        inspection.transcript_summary?.toLowerCase().includes('problema') ||
-                        (inspection.transcript && inspection.transcript.length > 0 && !inspection.transcript_summary?.toLowerCase().includes('sem problema'));
-    const isSelected = selectedInspectionIds.has(inspection.id);
-    
-    return (
-      <tr 
-        key={inspection.id}
-        className={cn(
-          "border-b hover:bg-muted/30 transition-colors h-12 cursor-pointer",
-          isSelected && "bg-primary/5"
-        )}
-        {...getRowHandlers(`/admin/vistoria/${inspection.id}`, () => onOpenSheet(inspection.id))}
-      >
-        {/* Checkbox */}
-        <td 
-          className="p-0 w-[40px] cursor-pointer" 
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleInspectionSelection(inspection.id, e.shiftKey);
-          }}
-        >
-          <div className="flex items-center justify-center px-2 py-2">
-            <Checkbox
-              checked={isSelected}
-              className="pointer-events-none"
-            />
-          </div>
-        </td>
-
-        {/* Imóvel */}
-        <td className="p-0 max-w-[150px]">
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="px-2 py-2 text-sm font-medium truncate">
-                  {inspection.property?.name || "—"}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>{inspection.property?.name || "—"}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </td>
-
-        {/* Data */}
-        <td className="p-0 w-[100px]">
-          <div className="px-2 py-2 text-sm text-center text-muted-foreground">
-            {format(new Date(inspection.created_at), "dd MMM", { locale: ptBR })}
-          </div>
-        </td>
-
-        {/* Faxineira/Equipe */}
-        <td className="p-0 max-w-[120px]">
-          <div className="px-2 py-2 text-sm truncate">
-            {showCleanerColumn ? (inspection.cleaner_name || "—") : (inspection.cleaner_name || inspection.owner_name || "Equipe")}
-          </div>
-        </td>
-
-        {/* OK ou NÃO */}
-        <td className="p-0 w-[80px]">
-          <div className="flex justify-center px-2 py-2">
-            <Badge 
-              variant={hasProblems ? "destructive" : "secondary"}
-              className={hasProblems ? "" : "bg-success/10 text-success"}
-            >
-              {hasProblems ? "NÃO" : "OK"}
-            </Badge>
-          </div>
-        </td>
-
-        {/* Audio (transcript) */}
-        <td className="p-0 w-[250px]">
-          <div className="px-2 py-2 flex items-center gap-2">
-            {inspection.audio_url && (
-              <AudioPlayerMini url={inspection.audio_url} />
-            )}
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="text-xs text-muted-foreground truncate max-w-[200px] cursor-default">
-                    {inspection.transcript 
-                      ? `${inspection.transcript.substring(0, 60)}...` 
-                      : inspection.notes || "—"}
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="max-w-md">
-                  <p className="text-sm whitespace-pre-wrap">
-                    {inspection.transcript || inspection.notes || "—"}
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        </td>
-
-        {/* Arquivos */}
-        <td className="p-0 w-[80px]">
-          <div className="flex items-center justify-center gap-1 px-1 py-2">
-            <button
-              type="button"
-              aria-label="Ver arquivos da vistoria"
-              title="Ver arquivos da vistoria"
-              className={cn(
-                "flex items-center gap-1 px-2 py-1 rounded text-sm transition-colors",
-                inspection.attachments.length > 0
-                  ? "hover:bg-primary/10 cursor-pointer text-primary"
-                  : "text-muted-foreground"
-              )}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (inspection.attachments.length > 0) {
-                  onOpenAttachments(inspection);
-                }
-              }}
-              disabled={inspection.attachments.length === 0}
-            >
-              <Paperclip className="h-3.5 w-3.5" />
-              <span>{inspection.attachments.length}</span>
-            </button>
-            {inspection.audio_url && (
-              <FileAudio className="h-3.5 w-3.5 text-info" />
-            )}
-          </div>
-        </td>
-
-        {/* Summarize */}
-        <td className="p-0 w-[300px]">
-          <div className="px-2 py-2 flex items-center gap-2">
-            {inspection.transcript_summary ? (
-              <TooltipProvider delayDuration={300}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="text-xs truncate max-w-[220px] cursor-default flex items-center gap-1">
-                      <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
-                        Resumo
-                      </Badge>
-                      <span>{inspection.transcript_summary.substring(0, 50)}...</span>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="left" className="max-w-md">
-                    <p className="text-sm whitespace-pre-wrap">
-                      {inspection.transcript_summary}
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            ) : inspection.transcript ? (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 text-xs gap-1"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onGenerateSummary(inspection);
-                }}
-                disabled={generatingIds.has(inspection.id)}
-              >
-                {generatingIds.has(inspection.id) ? (
-                  <>
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    Gerando...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-3 w-3" />
-                    Gerar resumo
-                  </>
-                )}
-              </Button>
-            ) : (
-              <span className="text-xs text-muted-foreground">—</span>
-            )}
-          </div>
-        </td>
-
-        {/* Ações */}
-        <td className="p-0 w-[80px]">
-          <div className="flex justify-center gap-1 px-1 py-2">
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-7 w-7"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEditInspection(inspection);
-                    }}
-                    aria-label="Editar vistoria"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Editar vistoria</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-7 w-7"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onCreateMaintenance(inspection);
-                    }}
-                    aria-label="Nova manutenção a partir da vistoria"
-                  >
-                    <Wrench className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Nova manutenção</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        </td>
-      </tr>
-    );
-  };
-
-  return (
-    <Card className="overflow-hidden mb-4">
-      {/* Archive button when items selected */}
-      {selectedInspectionIds.size > 0 && (
-        <div className="bg-muted/50 p-2 flex items-center justify-between border-b">
-          <span className="text-sm text-muted-foreground">
-            {selectedInspectionIds.size} vistoria(s) selecionada(s)
-          </span>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={onArchiveInspections}
-            disabled={archivingInspections}
-          >
-            {archivingInspections ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Archive className="h-4 w-4 mr-2" />
-            )}
-            Arquivar
-          </Button>
-        </div>
-      )}
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm table-fixed">
-          <thead className="bg-muted text-muted-foreground">
-            <tr className="h-10">
-              <th className="w-[40px] px-2 py-2"></th>
-              {renderSortableHeader("Imóvel", "property", "text-left w-[150px]")}
-              {renderSortableHeader("Data", "created_at", "text-center w-[100px]")}
-              {renderSortableHeader("Responsável", "cleaner_name", "text-left w-[120px]")}
-              {renderSortableHeader("Status", "status", "text-center w-[80px]")}
-              <th className="text-left px-2 py-2 font-medium w-[250px]">Áudio</th>
-              <th className="text-center px-2 py-2 font-medium w-[80px]">Arquivos</th>
-              <th className="text-left px-2 py-2 font-medium w-[300px]">Resumo</th>
-              <th className="text-center px-2 py-2 font-medium w-[80px]"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {/* Vistorias Faxineiras Group Header */}
-            <tr 
-              className="bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors border-l-4 border-l-warning"
-              onClick={onToggleCleaner}
-            >
-              <td colSpan={9} className="p-2">
-                <div className="flex items-center gap-2 font-medium">
-                  {cleanerExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                  <span>Vistorias de Faxineiras</span>
-                  <Badge variant="secondary" className="ml-2">
-                    {cleanerInspections.length}
-                  </Badge>
-                </div>
-              </td>
-            </tr>
-
-            {/* Cleaner Inspection Rows */}
-            {cleanerExpanded && sortedCleanerInspections.map((inspection) => renderInspectionRow(inspection, true))}
-
-            {/* Vistorias Equipe Group Header */}
-            <tr 
-              className="bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors border-l-4 border-l-success"
-              onClick={onToggleTeam}
-            >
-              <td colSpan={9} className="p-2">
-                <div className="flex items-center gap-2 font-medium">
-                  {teamExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                  <span>Vistorias de Equipe</span>
-                  <Badge variant="secondary" className="ml-2">
-                    {teamInspections.length}
-                  </Badge>
-                </div>
-              </td>
-            </tr>
-
-            {/* Team Inspection Rows */}
-            {teamExpanded && sortedTeamInspections.map((inspection) => renderInspectionRow(inspection, false))}
-          </tbody>
-        </table>
-      </div>
-    </Card>
-  );
 }
 
 // ===== MAIN COMPONENT =====
@@ -1496,14 +87,24 @@ export default function AdminManutencoesLista() {
   const { user, profile } = useAuth();
   const { open: detailSheetOpen, entityId: detailEntityId, entityType: detailEntityType, openSheet, closeSheet } = useDetailSheet();
   const [search, setSearch] = useState("");
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
-    em_progresso: false,
-    infiltracao: false,
-    stand_by: false,
-    concluidas: false,
-    cobrancas_vencidas: false,
-    cobrancas: false,
-  });
+  // Grupos abertos ficam lembrados entre visitas; por padrão, Em progresso e
+  // Aguardando envio abertos (é onde o trabalho do dia acontece).
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() =>
+    lerGuardado(CHAVE_GRUPOS, {
+      em_progresso: true,
+      infiltracao: false,
+      stand_by: false,
+      em_debate: true,
+      concluidas: true,
+      cobrancas_vencidas: false,
+      cobrancas: false,
+    }),
+  );
+  useEffect(() => guardar(CHAVE_GRUPOS, expandedGroups), [expandedGroups]);
+  const [abaAtiva, setAbaAtiva] = useState<AbaLista>(() => lerGuardado(CHAVE_ABA, "manutencoes"));
+  useEffect(() => guardar(CHAVE_ABA, abaAtiva), [abaAtiva]);
+  const [filtroQuadro, setFiltroQuadro] = useState<GrupoId | "todos">("todos");
+  const [filtroImovel, setFiltroImovel] = useState<string>("todos");
 
   // Vistorias state
   const [vistoriasFaxineirasExpanded, setVistoriasFaxineirasExpanded] = useState(false);
@@ -1748,6 +349,7 @@ export default function AdminManutencoesLista() {
   // Fetch maintenance tickets
   const { data: tickets, isLoading } = useQuery({
     queryKey: ["maintenance-list-view", "v2-draft-fallback"],
+    staleTime: 30_000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tickets")
@@ -1763,37 +365,23 @@ export default function AdminManutencoesLista() {
           charge_draft_management_contribution_cents,
           charge_draft_category,
           charge_draft_title,
+          ticket_attachments(count),
+          ticket_type,
           property:properties(id, name),
           owner:profiles!tickets_owner_id_fkey(id, name, notificar_whatsapp, phone)
         `)
-        .eq("ticket_type", "manutencao")
+        // Manutenções + as que estão em debate com o proprietário (viraram
+        // chamado, mas kind continua "maintenance").
+        .or("ticket_type.eq.manutencao,kind.eq.maintenance")
         .neq("status", "cancelado")
         .is("archived_at", null)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
 
-      // Fetch attachments count for each ticket (paginated to bypass 1000-row default limit)
+      // A contagem de anexos vem embutida na consulta (ticket_attachments(count)):
+      // antes eram baixadas todas as linhas de anexo só para contar.
       const ticketIds = (data || []).map(t => t.id);
-      const attachmentCounts: Record<string, number> = {};
-      const CHUNK = 1000;
-      let from = 0;
-      // eslint-disable-next-line no-constant-condition
-      while (ticketIds.length > 0) {
-        const { data: attRows, error: attErr } = await supabase
-          .from("ticket_attachments")
-          .select("ticket_id")
-          .in("ticket_id", ticketIds)
-          .range(from, from + CHUNK - 1);
-        if (attErr) break;
-        (attRows || []).forEach(a => {
-          if (a.ticket_id) {
-            attachmentCounts[a.ticket_id] = (attachmentCounts[a.ticket_id] || 0) + 1;
-          }
-        });
-        if (!attRows || attRows.length < CHUNK) break;
-        from += CHUNK;
-      }
 
       // Fetch associated charges for value/contribution data
       const { data: charges } = await supabase
@@ -1837,7 +425,7 @@ export default function AdminManutencoesLista() {
 
           return {
             ...t,
-            attachments_count: attachmentCounts[t.id] || 0,
+            attachments_count: (t as any).ticket_attachments?.[0]?.count ?? 0,
             amount_cents:
               displayCharge?.status === "draft"
                 ? (displayCharge?.amount_cents ?? (t as any).charge_draft_amount_cents ?? null)
@@ -1861,6 +449,7 @@ export default function AdminManutencoesLista() {
   // Fetch pending charges (cobranças pendentes de pagamento)
   const { data: charges } = useQuery({
     queryKey: ["pending-charges-list"],
+    staleTime: 30_000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("charges")
@@ -1880,6 +469,7 @@ export default function AdminManutencoesLista() {
           whatsapp_lembrete_status,
           whatsapp_lembrete_enviado_em,
           whatsapp_lembretes_enviados,
+          charge_attachments(count),
           property:properties(id, name),
           owner:profiles!charges_owner_id_fkey(id, name, notificar_whatsapp, phone),
           ticket_id
@@ -1891,32 +481,9 @@ export default function AdminManutencoesLista() {
 
       if (error) throw error;
 
-      // Fetch attachment counts for charges (paginated to bypass 1000-row default limit)
-      const chargeIds = (data || []).map(c => c.id);
-      const attachmentCounts: Record<string, number> = {};
-      {
-        const CHUNK = 1000;
-        let from = 0;
-        while (chargeIds.length > 0) {
-          const { data: attRows, error: attErr } = await supabase
-            .from("charge_attachments")
-            .select("charge_id")
-            .in("charge_id", chargeIds)
-            .range(from, from + CHUNK - 1);
-          if (attErr) break;
-          (attRows || []).forEach(a => {
-            if (a.charge_id) {
-              attachmentCounts[a.charge_id] = (attachmentCounts[a.charge_id] || 0) + 1;
-            }
-          });
-          if (!attRows || attRows.length < CHUNK) break;
-          from += CHUNK;
-        }
-      }
-
       return (data || []).map(c => ({
         ...c,
-        attachments_count: attachmentCounts[c.id] || 0,
+        attachments_count: (c as any).charge_attachments?.[0]?.count ?? 0,
       }));
     },
   });
@@ -2157,12 +724,6 @@ export default function AdminManutencoesLista() {
               .update({ cost_responsible: value })
               .eq("id", linked.id);
           }
-        } else if (field === "scheduled_at") {
-          const { error } = await supabase
-            .from("tickets")
-            .update({ scheduled_at: value })
-            .eq("id", id);
-          if (error) throw error;
         } else if (field === "list_status") {
           // Persist the list-status change to the underlying ticket.
           // - "feito"        -> ticket.status = "concluido"
@@ -2282,6 +843,10 @@ export default function AdminManutencoesLista() {
 
   const toggleGroup = useCallback((groupId: string) => {
     setExpandedGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
+  }, []);
+
+  const expandirTodos = useCallback((abrir: boolean) => {
+    setExpandedGroups(Object.fromEntries(GROUPS.map((g) => [g.id, abrir])));
   }, []);
 
   // Get all ticket IDs for unread messages tracking
@@ -2464,6 +1029,97 @@ export default function AdminManutencoesLista() {
   }, []);
 
   // Open attachments gallery
+  // ===== Debate com o proprietário =====
+  // A manutenção já é um ticket: para o proprietário opinar, ela troca de tipo
+  // (vira "duvida", que ele vê em Meus chamados) e volta a "manutencao" depois.
+  // Conversa e anexos são os mesmos; kind = "maintenance" marca a origem.
+  const [itemDebate, setItemDebate] = useState<MaintenanceItem | null>(null);
+  const [itemVoltar, setItemVoltar] = useState<MaintenanceItem | null>(null);
+  const recarregarListas = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["maintenance-list-view"] });
+    queryClient.invalidateQueries({ queryKey: ["pending-charges-list"] });
+  }, [queryClient]);
+
+  const debateMutation = useMutation({
+    mutationFn: async ({ item, mensagem }: { item: MaintenanceItem; mensagem: string }) => {
+      const custoAntes = item.cost_responsible ?? null;
+      // "Em espera" e "Hóspede" escondem o ticket do proprietário: sai do campo
+      // enquanto durar o debate e fica anotado numa nota interna.
+      const escondido = custoAntes === "pending" || custoAntes === "guest";
+      const { error } = await supabase
+        .from("tickets")
+        .update({ ticket_type: "duvida", kind: "maintenance", ...(escondido ? { cost_responsible: null } : {}) })
+        .eq("id", item.id);
+      if (error) throw error;
+
+      // Mensagem pública (a function também avisa o proprietário).
+      const { data: msg, error: erroMsg } = await supabase.functions.invoke(`create-ticket-message/${item.id}`, {
+        body: { message: mensagem, is_internal: false },
+      });
+      if (erroMsg || !msg?.id) {
+        // Sem a mensagem o proprietário veria um chamado vazio: desfaz a troca.
+        await supabase
+          .from("tickets")
+          .update({ ticket_type: "manutencao", ...(escondido ? { cost_responsible: custoAntes } : {}) })
+          .eq("id", item.id);
+        throw erroMsg ?? new Error("Não foi possível enviar a mensagem ao proprietário.");
+      }
+
+      // Anexos presos a nota interna (ou sem mensagem) não aparecem para o
+      // proprietário: passam para a mensagem do debate.
+      const { data: internas } = await supabase
+        .from("ticket_messages")
+        .select("id")
+        .eq("ticket_id", item.id)
+        .eq("is_internal", true);
+      const idsInternas = (internas || []).map((m) => m.id);
+      await supabase.from("ticket_attachments").update({ message_id: msg.id }).eq("ticket_id", item.id).is("message_id", null);
+      if (idsInternas.length > 0) {
+        await supabase.from("ticket_attachments").update({ message_id: msg.id }).eq("ticket_id", item.id).in("message_id", idsInternas);
+      }
+
+      const rotuloCusto = custoAntes === "guest" ? "Hóspede" : "Em espera";
+      await supabase.from("ticket_messages").insert({
+        ticket_id: item.id,
+        author_id: user?.id,
+        is_internal: true,
+        body: escondido
+          ? `Aberta para debate com o proprietário. Responsável pelo custo antes: ${rotuloCusto}.`
+          : "Aberta para debate com o proprietário.",
+      });
+    },
+    onSuccess: () => {
+      toast.success("Debate aberto. O proprietário foi avisado.");
+      setItemDebate(null);
+      setExpandedGroups((prev) => ({ ...prev, em_debate: true }));
+    },
+    onError: (e: any) => toast.error("Não foi possível abrir o debate", { description: e?.message }),
+    onSettled: recarregarListas,
+  });
+
+  const voltarManutencaoMutation = useMutation({
+    mutationFn: async (item: MaintenanceItem) => {
+      const { error } = await supabase
+        .from("tickets")
+        // Sem responsável definido, volta como "Em espera" (invisível ao proprietário).
+        .update({ ticket_type: "manutencao", cost_responsible: item.cost_responsible ?? "pending" })
+        .eq("id", item.id);
+      if (error) throw error;
+      await supabase.from("ticket_messages").insert({
+        ticket_id: item.id,
+        author_id: user?.id,
+        is_internal: true,
+        body: "Debate encerrado: voltou para a lista de manutenções.",
+      });
+    },
+    onSuccess: () => {
+      toast.success("Voltou para manutenção.");
+      setItemVoltar(null);
+    },
+    onError: (e: any) => toast.error("Não foi possível voltar para manutenção", { description: e?.message }),
+    onSettled: recarregarListas,
+  });
+
   const handleOpenAttachments = useCallback(async (item: MaintenanceItem) => {
     const isCharge = item.itemType === "charge";
     
@@ -2605,9 +1261,20 @@ export default function AdminManutencoesLista() {
   // Organize items into groups with search filter
   const groupedItems = useMemo(() => {
     const searchLower = debouncedSearch.toLowerCase();
+    const bateImovel = (p?: { id: string } | null) => filtroImovel === "todos" || p?.id === filtroImovel;
+    const emDebate = (t: MaintenanceItem) => !!t.ticket_type && t.ticket_type !== "manutencao";
+
+    const debate = (tickets || []).filter(t =>
+      emDebate(t) &&
+      bateImovel(t.property) &&
+      (t.subject.toLowerCase().includes(searchLower) ||
+       t.property?.name.toLowerCase().includes(searchLower))
+    );
 
     const abertos = (tickets || []).filter(t =>
+      !emDebate(t) &&
       t.status !== "concluido" &&
+      bateImovel(t.property) &&
       (t.subject.toLowerCase().includes(searchLower) ||
        t.property?.name.toLowerCase().includes(searchLower))
     );
@@ -2618,9 +1285,11 @@ export default function AdminManutencoesLista() {
     const standBy = abertos.filter(t => deriveBoard(t) === "stand_by");
     const emProgresso = abertos.filter(t => deriveBoard(t) === "em_progresso");
 
-    const concluidas = (tickets || []).filter(t => 
+    const concluidas = (tickets || []).filter(t =>
+      !emDebate(t) &&
       t.status === "concluido" &&
-      (t.subject.toLowerCase().includes(searchLower) || 
+      bateImovel(t.property) &&
+      (t.subject.toLowerCase().includes(searchLower) ||
        t.property?.name.toLowerCase().includes(searchLower))
     );
 
@@ -2646,8 +1315,9 @@ export default function AdminManutencoesLista() {
     });
 
     const filteredCharges = (charges || []).filter(c =>
-      c.title.toLowerCase().includes(searchLower) ||
-      c.property?.name?.toLowerCase().includes(searchLower)
+      bateImovel(c.property) &&
+      (c.title.toLowerCase().includes(searchLower) ||
+       c.property?.name?.toLowerCase().includes(searchLower))
     );
 
     // Split charges into overdue and pending (no dia do vencimento ainda é pendente)
@@ -2663,11 +1333,12 @@ export default function AdminManutencoesLista() {
       em_progresso: emProgresso,
       infiltracao,
       stand_by: standBy,
+      em_debate: debate,
       concluidas: concluidas,
       cobrancas_vencidas: cobrancasVencidas,
       cobrancas: cobrancasPendentes,
     };
-  }, [tickets, charges, debouncedSearch]);
+  }, [tickets, charges, debouncedSearch, filtroImovel]);
 
   const totalItens = useMemo(
     () => Object.values(groupedItems).reduce((soma, itens) => soma + itens.length, 0),
@@ -2902,22 +1573,45 @@ export default function AdminManutencoesLista() {
     setEditInspectionDialogOpen(true);
   }, []);
 
+  // Diálogos do debate: os mesmos no celular e no desktop.
+  const dialogosDebate = (
+    <>
+        {/* Debate com o proprietário */}
+        <DebateDialog
+          item={itemDebate}
+          enviando={debateMutation.isPending}
+          onCancelar={() => setItemDebate(null)}
+          onConfirmar={(mensagem) => itemDebate && debateMutation.mutate({ item: itemDebate, mensagem })}
+        />
+        <ConfirmationDialog
+          open={!!itemVoltar}
+          onOpenChange={(aberto) => !aberto && setItemVoltar(null)}
+          title="Voltar para manutenção?"
+          description={
+            <>
+              <span className="font-medium text-foreground">{itemVoltar?.subject}</span> sai dos chamados do proprietário e
+              volta para a lista de manutenções, com a conversa e os anexos.
+              {!itemVoltar?.cost_responsible && " O responsável pelo custo volta como “Em espera”."}
+            </>
+          }
+          confirmLabel="Voltar para manutenção"
+          loading={voltarManutencaoMutation.isPending}
+          onConfirm={() => itemVoltar && voltarManutencaoMutation.mutate(itemVoltar)}
+        />
+    </>
+  );
+
   // Mobile-only optimized view
   if (isMobile) {
-    const mobileGroups = [
-      { id: "em_progresso", label: "Em Progresso", borderColor: "border-l-warning", dotColor: "bg-warning" },
-      { id: "infiltracao", label: "Infiltração", borderColor: "border-l-info", dotColor: "bg-info" },
-      { id: "stand_by", label: "Stand-by", borderColor: "border-l-muted-foreground", dotColor: "bg-muted-foreground" },
-      { id: "cobrancas_vencidas", label: "Cobranças Vencidas", borderColor: "border-l-destructive", dotColor: "bg-destructive" },
-      { id: "concluidas", label: "Aguardando Envio ao Proprietário", borderColor: "border-l-success", dotColor: "bg-success" },
-      { id: "cobrancas", label: "Cobranças Pendentes", borderColor: "border-l-primary", dotColor: "bg-primary" },
-    ];
+    // Mesmos grupos e mesma ordem do desktop.
+    const mobileGroups = GROUPS.map((g) => ({ id: g.id, label: g.label, borderColor: g.color, dotColor: g.ponto }));
 
     // Enrich items with itemType so mobile knows ticket vs charge
     const enrichedGroupedItems: Record<string, any[]> = {
       em_progresso: (groupedItems.em_progresso || []).map((t) => ({ ...t, itemType: "ticket" as const })),
       infiltracao: (groupedItems.infiltracao || []).map((t) => ({ ...t, itemType: "ticket" as const })),
       stand_by: (groupedItems.stand_by || []).map((t) => ({ ...t, itemType: "ticket" as const })),
+      em_debate: (groupedItems.em_debate || []).map((t) => ({ ...t, itemType: "ticket" as const })),
       concluidas: (groupedItems.concluidas || []).map((t) => ({ ...t, itemType: "ticket" as const })),
       cobrancas_vencidas: groupedItems.cobrancas_vencidas || [],
       cobrancas: groupedItems.cobrancas || [],
@@ -2954,7 +1648,11 @@ export default function AdminManutencoesLista() {
           }}
           onBack={() => goBack(navigate, "/painel")}
           onNew={() => navigate("/admin/nova-manutencao")}
+          onDebater={(item) => setItemDebate(item as MaintenanceItem)}
+          onVoltarManutencao={(item) => setItemVoltar(item as MaintenanceItem)}
         />
+
+        {dialogosDebate}
 
         {/* Reuso dos diálogos da versão desktop */}
         <MaintenanceChatDialog
@@ -3047,6 +1745,10 @@ export default function AdminManutencoesLista() {
   // Tudo que está na lista é item aberto: manutenção não arquivada ou cobrança sem pagamento.
   const totalAbertos = (tickets?.length ?? 0) + (charges?.length ?? 0);
   const subtituloLista = isLoading ? undefined : `${totalAbertos} ${totalAbertos === 1 ? "item aberto" : "itens abertos"}`;
+  const totalVistorias = cleanerInspections.length + teamInspections.length;
+  const gruposVisiveis = filtroQuadro === "todos" ? GROUPS : GROUPS.filter((g) => g.id === filtroQuadro);
+  const todosAbertos = GROUPS.every((g) => expandedGroups[g.id]);
+  const temFiltro = debouncedSearch.length > 0 || filtroImovel !== "todos" || filtroQuadro !== "todos";
 
   return (
     <div className="min-h-screen bg-background">
@@ -3086,285 +1788,387 @@ export default function AdminManutencoesLista() {
             </DropdownMenu>
           </>
         }
+        abaixo={
+          <BarraFiltros role="tablist" aria-label="Seções da lista">
+            <AbaPilula
+              ativa={abaAtiva === "manutencoes"}
+              quantidade={isLoading ? undefined : totalAbertos}
+              tom="primary"
+              onClick={() => setAbaAtiva("manutencoes")}
+            >
+              Manutenções
+            </AbaPilula>
+            <AbaPilula
+              ativa={abaAtiva === "vistorias"}
+              quantidade={inspections ? totalVistorias : undefined}
+              tom="warning"
+              onClick={() => setAbaAtiva("vistorias")}
+            >
+              Vistorias
+            </AbaPilula>
+            <AbaPilula ativa={abaAtiva === "debitos"} onClick={() => setAbaAtiva("debitos")}>
+              Débitos em reserva
+            </AbaPilula>
+          </BarraFiltros>
+        }
       />
-      <main className="mx-auto w-full max-w-[1600px] space-y-4 px-4 py-4">
-        {/* Search and Actions */}
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por nome ou imóvel..."
-              className="pl-10"
-            />
-          </div>
-          {selectedIds.size > 0 && (
-            <Button 
-              variant="outline"
-              onClick={handleArchive}
-              disabled={archiveMutation.isPending}
-            >
-              <Archive className="h-4 w-4 mr-2" />
-              Arquivar ({selectedIds.size})
-            </Button>
-          )}
-          {selecionadosParaEnviar.length > 0 && (
-            <Button onClick={() => setConfirmarEnvioLote(true)} disabled={envioLoteMutation.isPending}>
-              {envioLoteMutation.isPending ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4 mr-2" />
-              )}
-              {progressoLote
-                ? `Enviando ${progressoLote.feitos + 1} de ${progressoLote.total}...`
-                : `Enviar ao proprietário (${selecionadosParaEnviar.length})`}
-            </Button>
-          )}
-          {profile?.role === "admin" && donosParaLembrete.length > 0 && (
-            <Button
-              variant="outline"
-              onClick={() => setConfirmarLembreteLote(true)}
-              disabled={lembreteLoteMutation.isPending}
-            >
-              {lembreteLoteMutation.isPending ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <AlarmClock className="h-4 w-4 mr-2" />
-              )}
-              {progressoLembrete
-                ? `Lembrete ${progressoLembrete.feitos + 1} de ${progressoLembrete.total}...`
-                : `Lembrete de atraso (${donosParaLembrete.length} ${donosParaLembrete.length === 1 ? "proprietário" : "proprietários"})`}
-            </Button>
-          )}
-          <div className="ml-auto">
-            <LembreteAtrasoConfig />
-          </div>
-          <LembreteLoteDialog
-            open={confirmarLembreteLote}
-            donos={donosParaLembrete}
-            enviando={lembreteLoteMutation.isPending}
-            onCancelar={() => setConfirmarLembreteLote(false)}
-            onConfirmar={() => lembreteLoteMutation.mutate(donosParaLembrete.map((d) => d.owner))}
-          />
-          <EnvioLoteDialog
-            open={confirmarEnvioLote}
-            itens={selecionadosParaEnviar}
-            enviando={envioLoteMutation.isPending}
-            progresso={progressoLote}
-            onCancelar={() => setConfirmarEnvioLote(false)}
-            onConfirmar={() => envioLoteMutation.mutate(selecionadosParaEnviar)}
-          />
-        </div>
+      <main className="mx-auto w-full max-w-[1600px] space-y-3 px-4 py-4 pb-24">
+        {abaAtiva === "manutencoes" && (
+          <>
+            {/* Busca, imóvel e controles */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative min-w-[220px] max-w-md flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Buscar por nome ou imóvel…"
+                  className="h-9 pl-9"
+                  aria-label="Buscar manutenção"
+                />
+              </div>
+              <Select value={filtroImovel} onValueChange={setFiltroImovel}>
+                <SelectTrigger className="h-9 w-[210px]" aria-label="Filtrar por imóvel">
+                  <SelectValue placeholder="Todos os imóveis" />
+                </SelectTrigger>
+                <SelectContent className="z-50 max-h-72 bg-popover">
+                  <SelectItem value="todos">Todos os imóveis</SelectItem>
+                  {propertiesList?.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button variant="ghost" size="sm" className="h-9 text-xs" onClick={() => expandirTodos(!todosAbertos)}>
+                {todosAbertos ? <ChevronsDownUp className="h-4 w-4" /> : <ChevronsUpDown className="h-4 w-4" />}
+                {todosAbertos ? "Recolher tudo" : "Expandir tudo"}
+              </Button>
+              <div className="ml-auto">
+                <LembreteAtrasoConfig />
+              </div>
+            </div>
 
-        {/* Vistorias Table */}
-        <VistoriasTable
-          cleanerInspections={cleanerInspections}
-          teamInspections={teamInspections}
-          cleanerExpanded={vistoriasFaxineirasExpanded}
-          teamExpanded={vistoriasEquipeExpanded}
-          onToggleCleaner={() => setVistoriasFaxineirasExpanded(!vistoriasFaxineirasExpanded)}
-          onToggleTeam={() => setVistoriasEquipeExpanded(!vistoriasEquipeExpanded)}
-          onOpenAttachments={handleOpenInspectionAttachments}
-          onGenerateSummary={handleGenerateSummary}
-          onCreateMaintenance={handleCreateMaintenanceFromInspection}
-          onEditInspection={handleEditInspection}
-          generatingIds={generatingSummaryIds}
-          selectedInspectionIds={selectedInspectionIds}
-          onToggleInspectionSelection={handleToggleInspectionSelection}
-          onArchiveInspections={handleArchiveInspections}
-          archivingInspections={archivingInspections}
-          onOpenSheet={(id) => openSheet(id, "vistoria")}
-        />
+            {/* Quadros */}
+            <BarraFiltros role="tablist" aria-label="Quadros">
+              <AbaPilula
+                ativa={filtroQuadro === "todos"}
+                quantidade={isLoading ? undefined : totalItens}
+                onClick={() => setFiltroQuadro("todos")}
+              >
+                Todos
+              </AbaPilula>
+              {GROUPS.map((g) => (
+                <AbaPilula
+                  key={g.id}
+                  ativa={filtroQuadro === g.id}
+                  quantidade={isLoading ? undefined : groupedItems[g.id].length}
+                  tom={g.tom}
+                  onClick={() => {
+                    setFiltroQuadro(g.id);
+                    setExpandedGroups((prev) => ({ ...prev, [g.id]: true }));
+                  }}
+                >
+                  {g.label}
+                </AbaPilula>
+              ))}
+            </BarraFiltros>
 
-        {/* Maintenances Table */}
-        <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm table-fixed">
-              <thead className="bg-secondary text-secondary-foreground">
-                <tr className="h-10">
-                  <th className="w-[36px] px-1 py-2"></th>
-                  <SortableHeader label="Manutenção" field="subject" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[220px] max-w-[220px]" />
-                  <th className="text-center px-1 py-2 font-medium w-[44px]">Conversa</th>
-                  <SortableHeader label="Imóvel" field="property" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[140px] max-w-[140px]" />
-                  <SortableHeader label="Valor" field="amount_cents" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[90px]" />
-                  <SortableHeader label="Aporte" field="management_contribution_cents" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[90px]" />
-                  <SortableHeader label="Data" field="created_at" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[80px]" />
-                  <th className="text-center px-1 py-2 font-medium w-[70px]">Anexos</th>
-                  <th className="text-center px-1 py-2 font-medium w-[120px]">Responsável</th>
-                  <SortableHeader label="Etiqueta" field="service_type" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[120px]" />
-                  <th className="text-center px-1 py-2 font-medium w-[120px]">Quadro</th>
-                  <SortableHeader label="Status" field="list_status" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="text-center w-[140px]" />
-                  <th className="text-center px-1 py-2 font-medium w-[108px]">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading ? (
-                  Array.from({ length: 6 }).map((_, i) => (
-                    <tr key={i} className="border-b" aria-busy="true">
-                      <td colSpan={13} className="px-3 py-1.5">
-                        <Skeleton className="h-7 w-full rounded-md" />
-                      </td>
+            {/* Tabela de manutenções */}
+            <Card className="overflow-hidden rounded-xl border-border/70">
+              <div className="overflow-x-auto">
+                <table className="w-full table-fixed text-sm">
+                  <thead className="bg-muted text-[11px] uppercase tracking-wide text-muted-foreground">
+                    <tr className="h-9">
+                      <th className="sticky left-0 z-[2] w-[36px] bg-muted px-1 py-2"></th>
+                      <SortableHeader label="Manutenção" field="subject" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="sticky left-[36px] z-[2] w-[240px] max-w-[240px] bg-muted px-2 text-left" />
+                      <th className="w-[40px] px-1 py-2 text-center font-medium" title="Conversa">
+                        <MessageSquare className="mx-auto h-3.5 w-3.5" aria-label="Conversa" />
+                      </th>
+                      <SortableHeader label="Imóvel" field="property" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="w-[150px] max-w-[150px] px-2 text-left" />
+                      <SortableHeader label="Valor" field="amount_cents" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="w-[92px] text-center" />
+                      <SortableHeader label="Aporte" field="management_contribution_cents" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="w-[92px] text-center" />
+                      <SortableHeader label="Data" field="created_at" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="w-[64px] text-center" />
+                      <th className="w-[72px] px-1 py-2 text-center font-medium">Anexos</th>
+                      <th className="w-[112px] px-1 py-2 text-center font-medium">Responsável</th>
+                      <SortableHeader label="Etiqueta" field="service_type" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="w-[112px] text-center" />
+                      <th className="w-[112px] px-1 py-2 text-center font-medium">Quadro</th>
+                      <SortableHeader label="Status" field="list_status" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="w-[124px] text-center" />
+                      <th className="w-[128px] px-1 py-2 text-center font-medium">Ações</th>
                     </tr>
-                  ))
-                ) : totalItens === 0 ? (
-                  <tr>
-                    <td colSpan={13} className="p-0">
-                      <EmptyState
-                        icon={debouncedSearch ? <Search className="h-5 w-5" /> : <Wrench className="h-5 w-5" />}
-                        title={debouncedSearch ? "Nada encontrado para a busca" : "Nenhuma manutenção"}
-                        description={
-                          debouncedSearch
-                            ? "Tente outro nome de manutenção ou de imóvel."
-                            : "Use “Nova manutenção” para abrir a primeira."
-                        }
-                        className="py-8"
-                      />
-                    </td>
-                  </tr>
-                ) : (
-                  GROUPS.map(group => {
-                    const isExpanded = expandedGroups[group.id] ?? false;
-                    const isChargeGroup = ["cobrancas_vencidas", "cobrancas"].includes(group.id);
-                    const isInlineActive = inlineAdd?.groupId === group.id;
-                    return (
-                      <React.Fragment key={group.id}>
-                        <GroupRow
-                          group={group}
-                          items={groupedItems[group.id as keyof typeof groupedItems] || []}
-                          isExpanded={isExpanded}
-                          onToggle={() => toggleGroup(group.id)}
-                          onUpdateItem={handleUpdateItem}
-                          onOpenChat={handleOpenChat}
-                          unreadCounts={unreadCounts}
-                          selectedIds={selectedIds}
-                          onToggleSelection={toggleSelection}
-                          onToggleGroupSelection={toggleGroupSelection}
-                          sortField={sortField}
-                          sortDirection={sortDirection}
-                          onSort={handleSort}
-                          onOpenAttachments={handleOpenAttachments}
-                          onUploadAttachment={handleUploadAttachment}
-                          uploadingItemId={uploadingItemId}
-                          onOpenSheet={(id) => {
-                            const isCharge = ["cobrancas_vencidas", "cobrancas"].includes(group.id);
-                            openSheet(id, isCharge ? "cobranca" : "maintenance");
-                          }}
-                          onEdit={(item, isCharge) => {
-                            setEditMaintenanceDialog({
-                              open: true,
-                              id: item.id,
-                              type: isCharge ? "charge" : "maintenance",
-                            });
-                          }}
-                          onDelete={(item, isCharge) => {
-                            setDeleteDialog({ open: true, item, isCharge });
-                          }}
-                        />
+                  </thead>
+                  <tbody>
+                    {isLoading ? (
+                      Array.from({ length: 6 }).map((_, i) => (
+                        <tr key={i} className="border-b" aria-busy="true">
+                          <td colSpan={13} className="px-3 py-1.5">
+                            <Skeleton className="h-7 w-full rounded-md" />
+                          </td>
+                        </tr>
+                      ))
+                    ) : totalItens === 0 ? (
+                      <tr>
+                        <td colSpan={13} className="p-0">
+                          <EmptyState
+                            ilustracao={temFiltro ? "busca" : "manutencoes"}
+                            title={temFiltro ? "Nada encontrado com esses filtros" : "Nenhuma manutenção"}
+                            description={
+                              temFiltro
+                                ? "Tente outro nome, outro imóvel ou volte para Todos."
+                                : "Use “Nova manutenção” para abrir a primeira."
+                            }
+                            action={
+                              temFiltro ? (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSearch("");
+                                    setFiltroImovel("todos");
+                                    setFiltroQuadro("todos");
+                                  }}
+                                >
+                                  Limpar filtros
+                                </Button>
+                              ) : undefined
+                            }
+                            className="py-8"
+                          />
+                        </td>
+                      </tr>
+                    ) : (
+                      gruposVisiveis.map(group => {
+                        const isExpanded = expandedGroups[group.id] ?? false;
+                        const isChargeGroup = group.cobranca;
+                        const isInlineActive = inlineAdd?.groupId === group.id;
+                        return (
+                          <React.Fragment key={group.id}>
+                            <GroupRow
+                              group={group}
+                              items={groupedItems[group.id] || []}
+                              isExpanded={isExpanded}
+                              onToggle={() => toggleGroup(group.id)}
+                              onUpdateItem={handleUpdateItem}
+                              onOpenChat={handleOpenChat}
+                              unreadCounts={unreadCounts}
+                              selectedIds={selectedIds}
+                              onToggleSelection={toggleSelection}
+                              onToggleGroupSelection={toggleGroupSelection}
+                              sortField={sortField}
+                              sortDirection={sortDirection}
+                              onSort={handleSort}
+                              onOpenAttachments={handleOpenAttachments}
+                              onUploadAttachment={handleUploadAttachment}
+                              uploadingItemId={uploadingItemId}
+                              onOpenSheet={(id) => openSheet(id, isChargeGroup ? "cobranca" : "maintenance")}
+                              onEdit={(item, isCharge) => {
+                                setEditMaintenanceDialog({
+                                  open: true,
+                                  id: item.id,
+                                  type: isCharge ? "charge" : "maintenance",
+                                });
+                              }}
+                              onDelete={(item, isCharge) => {
+                                setDeleteDialog({ open: true, item, isCharge });
+                              }}
+                              onDebater={setItemDebate}
+                              onVoltarManutencao={setItemVoltar}
+                            />
 
-                        {/* Inline form row */}
-                        {isExpanded && isInlineActive && (
-                          <tr className="border-b bg-muted/20">
-                            <td className="p-0 w-[40px]" />
-                            <td className="p-0" colSpan={2}>
-                              <input
-                                ref={inlineInputRef}
-                                autoFocus
-                                type="text"
-                                placeholder={isChargeGroup ? "Título da cobrança..." : "Nome da manutenção..."}
-                                value={inlineAdd!.subject}
-                                onChange={(e) => setInlineAdd((prev) => prev ? { ...prev, subject: e.target.value } : null)}
-                                onKeyDown={handleInlineKeyDown}
-                                className="w-full h-10 px-3 text-sm bg-transparent border-0 border-b-2 border-primary focus:outline-none placeholder:text-muted-foreground"
-                              />
-                            </td>
-                            <td className="p-0 w-[130px]">
-                              <Select
-                                value={inlineAdd!.propertyId}
-                                onValueChange={(val) => setInlineAdd((prev) => prev ? { ...prev, propertyId: val } : null)}
-                              >
-                                <SelectTrigger className="h-10 border-0 border-b-2 border-transparent focus:border-primary rounded-none text-sm">
-                                  <SelectValue placeholder="Imóvel..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {propertiesList?.map((p) => (
-                                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </td>
-                            {isChargeGroup ? (
-                              <td className="p-0 w-[120px]">
-                                <input
-                                  type="text"
-                                  placeholder="R$ 0,00"
-                                  value={inlineAdd!.amountCents}
-                                  onChange={(e) => setInlineAdd((prev) => prev ? { ...prev, amountCents: e.target.value } : null)}
-                                  onKeyDown={handleInlineKeyDown}
-                                  className="w-full h-10 px-3 text-sm bg-transparent border-0 border-b-2 border-transparent focus:border-primary focus:outline-none placeholder:text-muted-foreground text-right"
-                                />
-                              </td>
-                            ) : (
-                              <td className="p-0 w-[120px]" />
+                            {/* Linha de inclusão rápida */}
+                            {isExpanded && isInlineActive && (
+                              <tr className="border-b bg-muted/20">
+                                <td className="w-[36px] p-0" />
+                                <td className="p-0" colSpan={2}>
+                                  <input
+                                    ref={inlineInputRef}
+                                    autoFocus
+                                    type="text"
+                                    placeholder={isChargeGroup ? "Título da cobrança…" : "Nome da manutenção…"}
+                                    value={inlineAdd!.subject}
+                                    onChange={(e) => setInlineAdd((prev) => prev ? { ...prev, subject: e.target.value } : null)}
+                                    onKeyDown={handleInlineKeyDown}
+                                    className="h-10 w-full border-0 border-b-2 border-primary bg-transparent px-3 text-sm placeholder:text-muted-foreground focus:outline-none"
+                                    aria-label={isChargeGroup ? "Título da cobrança" : "Nome da manutenção"}
+                                  />
+                                </td>
+                                <td className="w-[150px] p-0">
+                                  <Select
+                                    value={inlineAdd!.propertyId}
+                                    onValueChange={(val) => setInlineAdd((prev) => prev ? { ...prev, propertyId: val } : null)}
+                                  >
+                                    <SelectTrigger className="h-10 rounded-none border-0 border-b-2 border-transparent text-sm focus:border-primary" aria-label="Imóvel">
+                                      <SelectValue placeholder="Imóvel…" />
+                                    </SelectTrigger>
+                                    <SelectContent className="z-50 max-h-72 bg-popover">
+                                      {propertiesList?.map((p) => (
+                                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </td>
+                                {isChargeGroup ? (
+                                  <td className="w-[92px] p-0">
+                                    <input
+                                      type="text"
+                                      placeholder="R$ 0,00"
+                                      value={inlineAdd!.amountCents}
+                                      onChange={(e) => setInlineAdd((prev) => prev ? { ...prev, amountCents: e.target.value } : null)}
+                                      onKeyDown={handleInlineKeyDown}
+                                      className="h-10 w-full border-0 border-b-2 border-transparent bg-transparent px-3 text-right text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+                                      aria-label="Valor"
+                                    />
+                                  </td>
+                                ) : (
+                                  <td className="w-[92px] p-0" />
+                                )}
+                                {/* Aporte, Data, Anexos, Responsável, Etiqueta, Quadro, Status: vazias, para somar 13 colunas */}
+                                <td colSpan={7} className="p-0" />
+                                <td className="w-[128px] p-0">
+                                  <div className="flex items-center justify-center gap-1 px-2">
+                                    <button
+                                      type="button"
+                                      onClick={handleInlineSave}
+                                      disabled={inlineLoading || !inlineAdd!.subject.trim() || !inlineAdd!.propertyId}
+                                      className="rounded p-1.5 text-primary hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-40"
+                                      title="Salvar (Enter)"
+                                      aria-label="Salvar"
+                                    >
+                                      {inlineLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={handleInlineCancel}
+                                      className="rounded p-1.5 text-muted-foreground hover:bg-muted"
+                                      title="Cancelar (Esc)"
+                                      aria-label="Cancelar"
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
                             )}
-                            {/* Aporte, Data, Anexos, Responsável */}
-                            <td colSpan={4} className="p-0" />
-                            {/* Etiqueta, Quadro, Status: vazias, para a linha somar as 13 colunas */}
-                            <td className="p-0" />
-                            <td className="p-0" />
-                            <td className="p-0" />
-                            <td className="p-0 w-[108px]">
-                              <div className="flex items-center justify-center gap-1 px-2">
-                                <button
-                                  type="button"
-                                  onClick={handleInlineSave}
-                                  disabled={inlineLoading || !inlineAdd!.subject.trim() || !inlineAdd!.propertyId}
-                                  className="p-1.5 rounded hover:bg-primary/10 text-primary disabled:opacity-40 disabled:cursor-not-allowed"
-                                  title="Salvar (Enter)"
-                                  aria-label="Salvar"
-                                >
-                                  {inlineLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={handleInlineCancel}
-                                  className="p-1.5 rounded hover:bg-muted text-muted-foreground"
-                                  title="Cancelar (Esc)"
-                                  aria-label="Cancelar"
-                                >
-                                  <X className="h-4 w-4" />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
 
-                        {/* "+ Adicionar item" row */}
-                        {isExpanded && !isInlineActive && (
-                          <tr className="border-b">
-                            <td colSpan={13} className="p-0">
-                              <button
-                                type="button"
-                                className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors group"
-                                onClick={() => handleStartInlineAdd(group.id)}
-                              >
-                                <Plus className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100 transition-opacity" />
-                                <span>Adicionar item</span>
-                              </button>
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+                            {/* "+ Adicionar item" */}
+                            {isExpanded && !isInlineActive && (
+                              <tr className="border-b border-border/60">
+                                <td colSpan={13} className="p-0">
+                                  <button
+                                    type="button"
+                                    className="group sticky left-0 flex items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                                    onClick={() => handleStartInlineAdd(group.id)}
+                                  >
+                                    <Plus className="h-3.5 w-3.5 opacity-60 transition-opacity group-hover:opacity-100" />
+                                    <span>Adicionar item</span>
+                                  </button>
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
 
-        {/* Reserve Debits Table - Below maintenances */}
-        <ReserveDebitsTable />
+            {/* Barra de ações da seleção */}
+            {selectedIds.size > 0 && (
+              <div className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-4">
+                <div className="pointer-events-auto flex flex-wrap items-center gap-2 rounded-xl border border-border/70 bg-card/95 px-3 py-2 shadow-lg backdrop-blur-md">
+                  <span className="px-1 text-sm font-medium tabular-nums">
+                    {selectedIds.size} {selectedIds.size === 1 ? "selecionado" : "selecionados"}
+                  </span>
+                  <Button variant="outline" size="sm" className="h-8" onClick={handleArchive} disabled={archiveMutation.isPending}>
+                    {archiveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Archive className="h-4 w-4" />}
+                    Arquivar
+                  </Button>
+                  {selecionadosParaEnviar.length > 0 && (
+                    <Button size="sm" className="h-8" onClick={() => setConfirmarEnvioLote(true)} disabled={envioLoteMutation.isPending}>
+                      {envioLoteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                      {progressoLote
+                        ? `Enviando ${progressoLote.feitos + 1} de ${progressoLote.total}…`
+                        : `Enviar ao proprietário (${selecionadosParaEnviar.length})`}
+                    </Button>
+                  )}
+                  {profile?.role === "admin" && donosParaLembrete.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8"
+                      onClick={() => setConfirmarLembreteLote(true)}
+                      disabled={lembreteLoteMutation.isPending}
+                    >
+                      {lembreteLoteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <AlarmClock className="h-4 w-4" />}
+                      {progressoLembrete
+                        ? `Lembrete ${progressoLembrete.feitos + 1} de ${progressoLembrete.total}…`
+                        : `Lembrete de atraso (${donosParaLembrete.length})`}
+                    </Button>
+                  )}
+                  <Button variant="ghost" size="sm" className="h-8" onClick={() => setSelectedIds(new Set())}>
+                    <X className="h-4 w-4" />
+                    Limpar
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {abaAtiva === "vistorias" && (
+          <VistoriasTable
+            cleanerInspections={cleanerInspections}
+            teamInspections={teamInspections}
+            cleanerExpanded={vistoriasFaxineirasExpanded}
+            teamExpanded={vistoriasEquipeExpanded}
+            onToggleCleaner={() => setVistoriasFaxineirasExpanded(!vistoriasFaxineirasExpanded)}
+            onToggleTeam={() => setVistoriasEquipeExpanded(!vistoriasEquipeExpanded)}
+            onOpenAttachments={handleOpenInspectionAttachments}
+            onGenerateSummary={handleGenerateSummary}
+            onCreateMaintenance={handleCreateMaintenanceFromInspection}
+            onEditInspection={handleEditInspection}
+            generatingIds={generatingSummaryIds}
+            selectedInspectionIds={selectedInspectionIds}
+            onToggleInspectionSelection={handleToggleInspectionSelection}
+            onArchiveInspections={handleArchiveInspections}
+            archivingInspections={archivingInspections}
+            onOpenSheet={(id) => openSheet(id, "vistoria")}
+          />
+        )}
+
+        {abaAtiva === "debitos" && (
+          <ReserveDebitsTable
+            vazio={
+              <Card className="rounded-xl border-border/70">
+                <EmptyState
+                  ilustracao="cobrancas"
+                  title="Nenhum débito em reserva"
+                  description="Cobranças marcadas para desconto na próxima reserva aparecem aqui."
+                  className="py-8"
+                />
+              </Card>
+            }
+          />
+        )}
+
+        {/* Diálogos de lote (a barra de ações abre; ficam montados em qualquer aba) */}
+        <LembreteLoteDialog
+          open={confirmarLembreteLote}
+          donos={donosParaLembrete}
+          enviando={lembreteLoteMutation.isPending}
+          onCancelar={() => setConfirmarLembreteLote(false)}
+          onConfirmar={() => lembreteLoteMutation.mutate(donosParaLembrete.map((d) => d.owner))}
+        />
+        <EnvioLoteDialog
+          open={confirmarEnvioLote}
+          itens={selecionadosParaEnviar}
+          enviando={envioLoteMutation.isPending}
+          progresso={progressoLote}
+          onCancelar={() => setConfirmarEnvioLote(false)}
+          onConfirmar={() => envioLoteMutation.mutate(selecionadosParaEnviar)}
+        />
 
         {/* Hidden file input for uploads */}
         <input
@@ -3492,6 +2296,8 @@ export default function AdminManutencoesLista() {
             }
           }}
         />
+
+        {dialogosDebate}
 
         {/* Detail Sheet (preview lateral) */}
         <DetailSheet

@@ -11,8 +11,7 @@ import {
   Trash2,
   Wrench,
   Search,
-  ArrowLeft,
-} from "lucide-react";
+  ArrowLeft, MessagesSquare, Undo2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -103,6 +102,10 @@ interface Props {
   onWhatsappAtualizado?: () => void;
   onBack: () => void;
   onNew: () => void;
+  /** Abre a manutenção como chamado para o proprietário. */
+  onDebater?: (item: MobileMaintenanceItem) => void;
+  /** Devolve à lista de manutenções um item em debate. */
+  onVoltarManutencao?: (item: MobileMaintenanceItem) => void;
 }
 
 const STATUS_OPTIONS = (Object.keys(LIST_STATUS_LABELS) as Array<keyof typeof LIST_STATUS_LABELS>).map((value) => ({
@@ -193,6 +196,8 @@ export function MobileMaintenanceList({
   onAttachmentAdded,
   onBack,
   onNew,
+  onDebater,
+  onVoltarManutencao,
 }: Props) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>(() => {
     // Por padrão: Em Progresso e Cobranças Vencidas abertos
@@ -493,6 +498,34 @@ export function MobileMaintenanceList({
                                   </span>
                                 )}
                               </button>
+                              {onDebater && ["em_progresso", "infiltracao", "stand_by"].includes(group.id) && (
+                                <button
+                                  type="button"
+                                  className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-secondary/10 hover:text-secondary text-muted-foreground active:scale-95 transition-all"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onDebater(item);
+                                  }}
+                                  aria-label="Debater com o proprietário"
+                                  title="Debater com o proprietário"
+                                >
+                                  <MessagesSquare className="h-4 w-4" />
+                                </button>
+                              )}
+                              {onVoltarManutencao && group.id === "em_debate" && (
+                                <button
+                                  type="button"
+                                  className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-success/10 hover:text-success text-muted-foreground active:scale-95 transition-all"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onVoltarManutencao(item);
+                                  }}
+                                  aria-label="Voltar para manutenção"
+                                  title="Voltar para manutenção"
+                                >
+                                  <Undo2 className="h-4 w-4" />
+                                </button>
+                              )}
                               {group.id === "concluidas" && (
                                 <WhatsappAcaoLinha
                                   modo="switch"

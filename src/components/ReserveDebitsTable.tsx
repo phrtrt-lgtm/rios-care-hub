@@ -1,3 +1,4 @@
+import type React from "react";
 import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -49,7 +50,8 @@ interface GroupedDebit {
 type SortField = "property" | "reserve_debit_date" | "total_debit_cents" | "new_commission_percent";
 type SortDirection = "asc" | "desc" | null;
 
-export function ReserveDebitsTable() {
+/** `vazio`: o que mostrar sem débitos (por padrão, nada — em Cobranças a caixa some). */
+export function ReserveDebitsTable({ vazio }: { vazio?: React.ReactNode } = {}) {
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(true);
   const [sortField, setSortField] = useState<SortField | null>("reserve_debit_date");
@@ -356,7 +358,7 @@ export function ReserveDebitsTable() {
   const totalCount = groupedDebits.length;
 
   if (totalCount === 0 && !isLoading) {
-    return null; // Sem débitos pendentes, a caixa não aparece.
+    return <>{vazio ?? null}</>; // Sem débitos pendentes, a caixa não aparece (salvo `vazio`).
   }
 
   const alternarExpandido = () => setExpanded((v) => !v);

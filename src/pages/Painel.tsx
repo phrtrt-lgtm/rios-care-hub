@@ -118,14 +118,17 @@ export default function Painel() {
         }
       />
 
-      {/* Abaixo do cabeçalho fixo: em cima dele o chat ficava sob o notch. */}
-      <TeamChatWidget />
-
       <main className="container relative mx-auto flex flex-col gap-7 px-4 py-6 md:gap-8 md:py-8">
         <PainelHero nome={profile?.name} subtitulo="O que precisa de atenção hoje, em um lugar só." />
 
-        {/* 1. Números do dia — cada um leva à tela correspondente */}
-        {isTeam && <PainelResumo onAbrirHospede={abrirLembreteHospede} />}
+        {/* 1. Cobrança de hóspede: uma linha fechado, lista completa aberto */}
+        {isTeam && (
+          <GuestChargeReminders
+            open={lembreteHospedeAberto}
+            onOpenChange={setLembreteHospedeAberto}
+            onOpenDetail={openSheet}
+          />
+        )}
 
         {/* 2. Avisos e votações (só aparecem quando existem) */}
         <AlertBanner />
@@ -141,12 +144,6 @@ export default function Painel() {
               <ChamadosKanbanPreview />
               <VistoriasKanbanPreview />
             </div>
-            {/* Lembrete compacto: uma linha fechado, lista completa aberto */}
-            <GuestChargeReminders
-              open={lembreteHospedeAberto}
-              onOpenChange={setLembreteHospedeAberto}
-              onOpenDetail={openSheet}
-            />
           </section>
         )}
 
@@ -157,7 +154,13 @@ export default function Painel() {
             <PainelAtalhos />
           </section>
         )}
+
+        {/* 5. Números do dia — cada um leva à tela correspondente */}
+        {isTeam && <PainelResumo onAbrirHospede={abrirLembreteHospede} />}
       </main>
+
+      {/* Chat da equipe no fim da página, fora do topo */}
+      <TeamChatWidget />
 
       {/* Itens do lembrete de hóspede abrem aqui, sem sair do painel */}
       <DetailSheet
