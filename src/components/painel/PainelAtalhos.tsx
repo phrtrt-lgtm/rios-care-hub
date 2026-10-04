@@ -151,6 +151,7 @@ const GRUPOS: Grupo[] = [
     titulo: "Relatórios e dados",
     atalhos: [
       { rotulo: "Central Hostex · calendário e ocupação", icone: <Calendar className={ICONE} />, papeis: SO_ADMIN, para: "/admin/central-hostex" },
+      { rotulo: "Resultados por imóvel (visão do proprietário)", icone: <BarChart3 className={ICONE} />, papeis: ADMIN_AGENT, para: "/resultados" },
       { rotulo: "Relatórios financeiros", icone: <BarChart3 className={ICONE} />, papeis: TODOS, para: "/admin/relatorios-financeiros" },
       { rotulo: "Relatórios de manutenções", icone: <Wrench className={ICONE} />, papeis: TODOS, para: "/admin/relatorios-manutencoes" },
       { rotulo: "Relatório Booking", icone: <BarChart3 className={ICONE} />, papeis: ADMIN_AGENT, para: "/admin/relatorio-booking" },

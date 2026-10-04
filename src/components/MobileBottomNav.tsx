@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { coletaEmDia, useColetaHostex } from "@/lib/coletaHostex";
 
 type NavItem = {
   icon: typeof Home;
@@ -19,6 +20,7 @@ const mainItems: NavItem[] = [
   // /todos-tickets recusa quem não é admin/agent (o useEffect da página devolve ao início).
   { icon: Ticket, label: "Chamados", path: "/todos-tickets", roles: ["admin", "agent"] },
   { icon: Wrench, label: "Manutenções", path: "/admin/manutencoes-lista", roles: ["admin", "maintenance"] },
+  { icon: BarChart3, label: "Resultados", path: "/resultados", roles: ["owner"] },
   { icon: Wrench, label: "Relatório", path: "/manutencoes", roles: ["owner"] },
   { icon: ClipboardCheck, label: "Vistorias", path: "/admin/vistorias/todas", roles: ["admin", "maintenance", "agent"] },
   { icon: DollarSign, label: "Cobranças", path: "/minhas-cobrancas", roles: ["owner"] },
@@ -40,16 +42,23 @@ export function MobileBottomNav() {
   const { profile } = useAuth();
   const [showQuickActions, setShowQuickActions] = useState(false);
 
-  const isActive = (path: string) => location.pathname === path;
+  // /resultados/:id também acende o item "Resultados".
+  const isActive = (path: string) =>
+    location.pathname === path || (path === "/resultados" && location.pathname.startsWith("/resultados/"));
 
   const userRole = profile?.role;
+
+  // "Resultados" só entra na barra com a coleta da Hostex em dia (ver useColetaHostex).
+  const { data: ultimaColeta } = useColetaHostex(userRole === "owner");
+  const resultadosNoAr = coletaEmDia(ultimaColeta);
 
   const filteredMainItems = useMemo(() => {
     if (!userRole) return [];
     return mainItems
       .filter((item) => !item.roles || item.roles.includes(userRole))
+      .filter((item) => item.path !== "/resultados" || resultadosNoAr)
       .slice(0, 4);
-  }, [userRole]);
+  }, [userRole, resultadosNoAr]);
 
   const filteredQuickActions = useMemo(() => {
     if (!userRole) return [];

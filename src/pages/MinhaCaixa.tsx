@@ -114,13 +114,10 @@ export default function MinhaCaixa() {
       <main className="container relative mx-auto flex flex-col gap-7 px-4 py-6 md:gap-8 md:py-8">
         <PainelHero nome={profile?.name} subtitulo="Seus imóveis, cobranças e chamados em um lugar só." />
 
-        {/* 1. Números — cada um leva à tela correspondente */}
-        {isOwner && <OwnerResumo />}
-
-        {/* 2. Avisos da equipe (só aparecem quando existem) */}
+        {/* 1. Avisos da equipe (só aparecem quando existem) */}
         <AlertBanner />
 
-        {/* 3. O que pede uma decisão: curadoria, contrato, propostas */}
+        {/* 2. O que pede uma decisão: curadoria, contrato, propostas */}
         <OwnerCuradoriaBanner />
         <OwnerContractInviteCard />
         <PropostasPendentesCompletas />
@@ -128,10 +125,10 @@ export default function MinhaCaixa() {
         {/* Kanban de Manutenções - visível para equipe */}
         {isTeam && <MaintenanceKanbanPreview />}
 
-        {/* 4. Imóveis — o ponto de partida para chamado, vistoria e relatório por unidade (o título vem junto) */}
+        {/* 3. Imóveis — o ponto de partida para resultados, chamado, vistoria e relatório por unidade (o título vem junto) */}
         {isOwner && <OwnerPropertiesSection />}
 
-        {/* 5. Acompanhamento: cobranças e chamados à esquerda; score e guias à direita */}
+        {/* 4. Acompanhamento: cobranças e chamados à esquerda; score e guias à direita */}
         {isOwner && (
           <div className="grid min-w-0 items-start gap-6 lg:grid-cols-3">
             <div className="flex min-w-0 flex-col gap-6 lg:col-span-2">
@@ -148,6 +145,9 @@ export default function MinhaCaixa() {
             </div>
           </div>
         )}
+
+        {/* 5. Números de resumo — no fim da página desde 2026-10-03 (pedido do gestor); cada um leva à tela correspondente */}
+        {isOwner && <OwnerResumo />}
       </main>
 
       <MobileBottomNav />

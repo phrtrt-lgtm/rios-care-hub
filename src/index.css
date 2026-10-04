@@ -50,6 +50,15 @@ All colors MUST be HSL.
     --info: 199 89% 48%;
     --info-foreground: 0 0% 100%;
 
+    /* Gráficos: cores de série (identidade), em ordem fixa. Validadas para
+       daltonismo e contraste sobre o cartão claro (skill dataviz, 2026-10-03):
+       1 terracota · 2 azul · 3 ocre · 4 roxo. Não reutilize para status. */
+    --grafico-1: 20 63% 48%;
+    --grafico-2: 206 62% 40%;
+    --grafico-3: 42 85% 40%;
+    --grafico-4: 280 40% 48%;
+    --grafico-neutro: 206 14% 72%;
+
     --border: 206 20% 88%;
     --input: 206 20% 88%;
     --ring: 206 56% 22%;
@@ -105,6 +114,13 @@ All colors MUST be HSL.
     --warning-foreground: 0 0% 100%;
     --info: 199 89% 55%;
     --info-foreground: 0 0% 100%;
+
+    /* Gráficos — passos próprios do modo escuro, validados sobre o cartão escuro */
+    --grafico-1: 20 68% 52%;
+    --grafico-2: 204 62% 48%;
+    --grafico-3: 42 82% 40%;
+    --grafico-4: 280 48% 60%;
+    --grafico-neutro: 206 14% 42%;
 
     --border: 206 35% 22%;
     --input: 206 35% 22%;

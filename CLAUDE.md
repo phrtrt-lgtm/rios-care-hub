@@ -65,7 +65,7 @@ Redirecionamento de entrada: `src/pages/Index.tsx`.
 
 ### Grupos de rota
 
-- **Proprietário:** `/minha-caixa`, `/minhas-cobrancas`, `/novo-ticket`, `/meus-chamados`, `/vistorias`, `/minha-curadoria`, `/minhas-comissoes-booking`, `/relatorio-financeiro`, `/contrato/:id`, `/bem-vindo`
+- **Proprietário:** `/minha-caixa`, `/resultados` (também admin e agent, ver §3.12), `/minhas-cobrancas`, `/novo-ticket`, `/meus-chamados`, `/vistorias`, `/minha-curadoria`, `/minhas-comissoes-booking`, `/relatorio-financeiro`, `/contrato/:id`, `/bem-vindo`
 - **Equipe:** `/painel`, `/todos-tickets`, `/propriedades`, `/gerenciar-cobrancas`, `/admin/vistorias*`, `/admin/chamados`, `/admin/manutencoes*`, `/booking-comissoes`, `/admin/central-hostex`, `/admin/contratos*`, `/admin/curadorias`
 - **Só admin:** `/configuracao-email`, `/configuracao-ia`, `/admin/gerenciar-usuarios`, `/admin/cadastrar-equipe`, `/admin/vistorias/configuracoes`
 - **`cleaner`:** `/faxineira`, `/rotina-profissional`, `/protocolo-trabalho`
@@ -166,7 +166,16 @@ Functions: `create-curation-pix`, `save-curation-selection`, `curation-access`, 
 `booking_commissions` + `_messages` + `_attachments`. Importação em `/importar-comissoes-booking`, visão do proprietário em `/minhas-comissoes-booking`, relatório em `/admin/relatorio-booking`, comissão RIOS em `/admin/comissao-rios`. PIX próprio: `create-booking-pix`, `create-group-booking-payment`.
 
 ### 3.6 Hostex
-`hostex_properties`, `hostex_reservations`, `hostex_listing_calendar`, `hostex_sync_log`. Sincronização por `hostex-sync` (cron + manual) e `hostex-proxy`. Central em `/admin/central-hostex`.
+`hostex_properties`, `hostex_reservations`, `hostex_listing_calendar`, `hostex_sync_log`. Sincronização por `hostex-sync` (cron `hostex-sync-6h` + manual) e `hostex-proxy`. Central em `/admin/central-hostex`.
+
+> ⚠️ **Coleta parada desde 2026-07-03 (verificado em 2026-10-03).** O secret `HOSTEX_API_KEY` está inválido: a Hostex responde HTTP 200 com `{"error_code":401,"error_msg":"Invalid access token."}` no corpo, e a function tratava isso como lista vazia — o log dizia `ok` com 0 reservas a cada 6 h. Corrigido no código em 2026-10-03 (`conferirRespostaHostex`: erro no corpo vira erro de verdade no `hostex_sync_log`), **mas depende de três passos fora do repositório**:
+> 1. gerar um token novo na Hostex e gravar no secret `HOSTEX_API_KEY` (Lovable Cloud);
+> 2. redeploy de `hostex-sync` e `hostex-proxy` pelo agente do Lovable;
+> 3. rodar uma vez com `?past_days=120` (ou `{"past_days":120}` no corpo) para recuperar as reservas que entraram e saíram enquanto a coleta esteve parada — a janela normal só olha 45 dias para trás.
+>
+> "Log `ok`" não prova coleta em dia: confira `reservations_upserted > 0` (é o que `useColetaHostex` faz).
+
+`hostex-sync` desde 2026-10-03: janela de reservas de 45 dias para trás (parâmetro `past_days`, até 400) a 365 à frente; calendário de preços (`/listings/calendar`, 60 dias) só uma vez por dia (pula se a última coleta tem menos de 20 h; `?calendar=1` força); vínculo `id_hostex → property_id` preservado quando o nome deixa de casar. `hostex-proxy` passou a exigir papel de equipe (`exigirPapel`): antes devolvia reservas com nome de hóspede a qualquer um com a chave pública.
 
 ### 3.7 Contratos
 `contracts`, `contract_templates`, `contract_events`, `contract_owner_submissions`, `contract_submission_attachments`. Admin em `/admin/contratos`, assinatura do proprietário em `/contrato/:id`.
@@ -219,7 +228,19 @@ Reorganizado em 2026-09-25 (`ROADMAP.md` item 4.6). A página tem esta ordem:
 - `tons.ts` — o mapa de tons semânticos (`TOM[tom].caixa/ponto/texto/borda/fundo`), com as classes escritas por extenso para o Tailwind gerá-las.
 - `TituloSecao` — título de seção com barra de acento.
 
-A página do proprietário ganhou a ordem: saudação → números → avisos → curadoria/contrato/propostas → imóveis (`OwnerPropertiesSection`, que carrega o próprio título) → grade 2/3 + 1/3 (cobranças, comissões, manutenções, chamados | score, `OwnerAjuda`). Os dois banners de guia e os botões de relatório só de desktop viraram a caixa `OwnerAjuda`.
+A página do proprietário tem a ordem: saudação → avisos → curadoria/contrato/propostas → imóveis (`OwnerPropertiesSection`, que carrega o próprio título e o botão "Ver resultados") → grade 2/3 + 1/3 (cobranças, comissões, manutenções, chamados | score, `OwnerAjuda`) → números de resumo (`OwnerResumo`, no fim desde 2026-10-03, pedido do gestor). Os dois banners de guia e os botões de relatório só de desktop viraram a caixa `OwnerAjuda`.
+
+### 3.12 Resultados do imóvel (`/resultados/:propertyId`, desde 2026-10-03)
+Dashboard por imóvel para o proprietário, com os dados da Hostex: ocupação, diárias, calendário e reservas. Admin e agent abrem a mesma página para qualquer imóvel (atalho "Resultados por imóvel" no painel), para conferir o que o proprietário vê.
+
+- **Uma chamada, zero Hostex.** `resultados_imovel(p_property_id)` (SECURITY DEFINER, migration `20261003120000_resultados_imovel.sql`) devolve reservas, preços anunciados e a média da carteira, lendo só o cache local. Confere o acesso por `auth.uid()`: admin/agent, ou `has_property_access`. **Não devolve dado pessoal do hóspede** — nome só para a equipe; do telefone sai só a região (`BR-31`, `+54`).
+- **Tudo calculado no navegador**, em `src/lib/resultadosImovel.ts` (datas em "número do dia", para o fuso não deslocar noite). O filtro de período responde sem voltar ao banco.
+- **Dinheiro = mesma conta do relatório financeiro** (`report-calculations.ts`): diárias = valor da reserva sem limpeza; base = diárias − taxa do canal; líquido = base × (1 − comissão). Comissão: `properties.default_commission_percentage`, senão o contrato mais recente. O líquido aparece como **estimativa** (some quando não há % ou ele é ≥ 100); o oficial é o relatório.
+- **Só com coleta em dia.** Se a última coleta com reservas tem mais de 72 h (`src/lib/coletaHostex.ts`), o proprietário não vê o botão no cartão do imóvel nem o item "Resultados" da barra do celular, e a página mostra "Resultados em atualização". A equipe vê os dados com um aviso. `coletaHostex.ts` é separado de propósito, para o cálculo da página não entrar no chunk inicial.
+- **Peças** em `src/components/resultados/`: `VisaoGeral` (hero, "A seguir", números, destaques, gráficos), `CalendarioReservas`, `ListaReservas`, `blocos.tsx` (`Cartao`, `Cifra`, `DetalheReserva`, `DivisaoDoValor`), `graficos.tsx` (SVG próprio, sem recharts). Página: `src/pages/ResultadosImovel.tsx`, abas por `?aba=`.
+- **Gráficos**: cores de série em `--grafico-1..4` + `--grafico-neutro` (`index.css`, claro e escuro), validadas para daltonismo; a cor segue o canal (`CANAIS`), nunca a posição. Texto nunca usa a cor da série. Um eixo por gráfico; toda marca tem dica no hover/foco e o gráfico mensal tem visão em tabela.
+- **Animação do topo**: `public/animacoes/rios-fluxo.{webm,mp4}` + `-poster.jpg`, gerados em Remotion a partir de `motion/rios-fluxo/` (fora do build; README lá ensina a regerar). Com "reduzir movimento", fica o quadro parado.
+- **"Destaques"** são frases calculadas (`gerarDestaques`), sem IA.
 
 ---
 
@@ -231,7 +252,7 @@ A página do proprietário ganhou a ordem: saudação → números → avisos �
 | 2 | `EmptyState` e `SectionSkeleton` para vazio/carregamento. Sem emoji, sem "Carregando..." solto | ✅ nas páginas de chamados, cobranças, manutenções e comunicação (redesign de 2026-09-28: skeleton + `EmptyState` com ilustração). Sobram 6 "Carregando..." soltos fora delas (vistorias, relatórios) |
 | 3 | Nunca criar prazo/contador de SLA em ticket | ✅ **removido em 2026-09-28**: coluna, contagem regressiva, ordenação por `sla_due_at` e a promessa "resposta em até 24h/6h" do formulário do proprietário. `grep sla_due_at src` fora de `types.ts` = 0 |
 | 4 | Nome de anexo anonimizado ("Imagem", "PDF") | ✅ nas conversas e galerias desde 2026-09-28 (`AttachmentBubble`, `MediaGallery`, ZIP com `anexo-01.jpg` via `zipFileName.ts`, mensagem gravada "Anexo enviado" sem nome). O nome real continua em `file_name` no banco; só não aparece |
-| 5 | Proprietário não vê calendário de reservas | ✅ `/calendario-reservas` redireciona para área da equipe (`App.tsx:527`) |
+| 5 | Proprietário não vê o calendário geral de reservas nem dado pessoal de hóspede | ✅ `/calendario-reservas` redireciona para área da equipe. **Mudou em 2026-10-03 (pedido do gestor):** o proprietário vê o calendário e as reservas **do próprio imóvel** em `/resultados` (§3.12), sem nome, telefone ou e-mail do hóspede |
 | 6 | Janela de 7 dias; penalidade só depois | ✅ |
 | 7 | Papel em tabela separada, checado por `security definer` | ❌ **`role` é coluna de `profiles`**; não existe `user_roles` em 171 migrations |
 | 8 | Voltar de lista usa `replace: true` | ✅ nas páginas do redesign, via `CabecalhoPagina voltarPara` (§5). ⚠️ parcial no resto |
@@ -347,6 +368,7 @@ Correção, evidência e plano: `ROADMAP.md`.
 13. **Higiene** 🟡 — 51 `console.log`; 192 `aria-label` (eram 25); 6 "Carregando..." soltos (eram 34); **40 classes com opacidade dupla** (`bg-info/10/50`), que o Tailwind não gera, fora das páginas do redesign. (`lang="pt-BR"` e `viewport-fit=cover` corrigidos em 2026-09-25.)
 14. **Arquivos gigantes** 🟡 — `AdminManutencoesLista.tsx` ~2000 (era 3419; dividida em 2026-09-28, ver §3.1), `AtualizacaoAnuncio.tsx` 1791, `CobrancaDetalhes.tsx` ~1700, `PlanoPerformanceSection.tsx` 1268, `TicketDetalhes.tsx` ~1160.
 15. **Anexos listáveis sem login** 🔴 — o bucket `attachments` é público e tem a policy `Anyone can view attachments`, para o papel `public`. Com a chave anônima, qualquer pessoa lista e baixa os **6.002 arquivos**. Confirmado em `pg_policies` em 2026-09-25. Não basta tornar o bucket privado: o app usa `getPublicUrl` e grava URL pública em `ticket_attachments.file_url`. Ver `ROADMAP.md` 1.14.
+16. **Proprietário lê `hostex_reservations` cru** 🟠 — a policy `Owners can read own hostex_reservations` libera a linha inteira, com `guest_name` e `raw` (telefone e e-mail do hóspede). Nenhuma tela usa isso: `/resultados` lê pela função `resultados_imovel`, que já filtra. Remover a policy fecha a exposição sem quebrar nada (confirmado por busca no `src/` em 2026-10-03); decisão pendente do gestor.
 
 ---
 

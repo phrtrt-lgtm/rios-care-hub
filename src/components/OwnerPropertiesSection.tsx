@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Building2, ClipboardCheck, Plus, MapPin, Wrench, CalendarX, FileText } from "lucide-react";
+import { BarChart3, Building2, ClipboardCheck, Plus, MapPin, Wrench, CalendarX, FileText } from "lucide-react";
+import { coletaEmDia, useColetaHostex } from "@/lib/coletaHostex";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DateBlockRequestDialog } from "@/components/DateBlockRequestDialog";
 import { propertiesScopeFilter } from "@/lib/ownerScope";
@@ -25,6 +26,9 @@ export const OwnerPropertiesSection = () => {
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [blockDialogProperty, setBlockDialogProperty] = useState<Property | null>(null);
+  // "Resultados" só aparece com a coleta da Hostex em dia: número velho é pior que nenhum.
+  const { data: ultimaColeta } = useColetaHostex();
+  const resultadosNoAr = coletaEmDia(ultimaColeta);
 
   useEffect(() => {
     const fetchProperties = async () => {
@@ -104,7 +108,11 @@ export const OwnerPropertiesSection = () => {
       <TituloSecao
         id="titulo-imoveis"
         titulo="Meus imóveis"
-        subtitulo="Chamados, vistorias, manutenções e relatórios por unidade"
+        subtitulo={
+          resultadosNoAr
+            ? "Resultados, chamados, vistorias, manutenções e relatórios por unidade"
+            : "Chamados, vistorias, manutenções e relatórios por unidade"
+        }
       />
       <div className={GRADE}>
         {properties.map((property) => (
@@ -143,6 +151,17 @@ export const OwnerPropertiesSection = () => {
 
             {/* Ações */}
             <div className="flex flex-1 flex-col gap-1.5 p-3">
+              {resultadosNoAr && (
+                <Button
+                  onClick={() => navigate(`/resultados/${property.id}`)}
+                  variant="secondary"
+                  className="h-9 w-full text-sm"
+                  size="sm"
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  Ver resultados
+                </Button>
+              )}
               <Button
                 onClick={() => navigate(`/novo-ticket?property=${property.id}`)}
                 className="h-9 w-full text-sm"

@@ -10,11 +10,31 @@ const corsHeaders = {
 };
 
 const HOSTEX_BASE = "https://api.hostex.io/v3";
-const SYNC_WINDOW_PAST_DAYS = 30;
-const SYNC_WINDOW_FUTURE_DAYS = 180;
+const SYNC_WINDOW_PAST_DAYS = 45;
+// Limite do parâmetro `past_days` (recarga do histórico depois de um período sem coleta).
+const SYNC_WINDOW_PAST_DAYS_MAX = 400;
+const SYNC_WINDOW_FUTURE_DAYS = 365;
 const CALENDAR_WINDOW_DAYS = 60; // janela de preços futuros (atual)
 const CALENDAR_BATCH_SIZE = 20; // listings por chamada /listings/calendar
+// O calendário de preços é a parte pesada (centenas de listings × dias). Uma
+// vez por dia basta: as outras rodadas do cron só atualizam reservas.
+const CALENDAR_MIN_INTERVAL_HOURS = 20;
 const PAGE_SIZE = 100;
+
+/**
+ * A Hostex responde HTTP 200 mesmo quando recusa a chamada: o erro vem no
+ * corpo, como `{ error_code: 401, error_msg: "Invalid access token." }`. Sem
+ * conferir isso, um token vencido virava uma sincronização "ok" com zero
+ * reservas — foi assim que a coleta ficou parada de julho a outubro de 2026
+ * sem ninguém perceber.
+ */
+function conferirRespostaHostex(json: any, path: string) {
+  const code = json?.error_code;
+  if (typeof code === "number" && code !== 200 && code !== 0) {
+    throw new Error(`hostex_api_${code} em ${path}: ${String(json?.error_msg ?? "sem mensagem").slice(0, 200)}`);
+  }
+  return json;
+}
 
 function toMoneyCents(v: any): number | null {
   if (v == null) return null;
@@ -45,7 +65,7 @@ async function hostexGet(path: string, params: Record<string, any>, apiKey: stri
     const txt = await resp.text();
     throw new Error(`hostex_${resp.status}: ${txt.slice(0, 300)}`);
   }
-  return await resp.json();
+  return conferirRespostaHostex(await resp.json(), path);
 }
 
 async function hostexPost(path: string, body: Record<string, any>, apiKey: string) {
@@ -62,7 +82,7 @@ async function hostexPost(path: string, body: Record<string, any>, apiKey: strin
     const txt = await resp.text();
     throw new Error(`hostex_${resp.status}: ${txt.slice(0, 300)}`);
   }
-  return await resp.json();
+  return conferirRespostaHostex(await resp.json(), path);
 }
 
 function extractList(payload: any, key: string): any[] {
@@ -86,6 +106,14 @@ Deno.serve(async (req) => {
   const tokenParam = url.searchParams.get("token") || req.headers.get("x-cron-token");
   const cronToken = Deno.env.get("CRON_SECRET_TOKEN");
   const triggeredBy = force ? "manual" : "cron";
+  // `past_days`: quantos dias para trás buscar reservas. O padrão cobre o dia a
+  // dia; depois de um período sem coleta, rode uma vez com um valor maior para
+  // recuperar as reservas que entraram e saíram nesse intervalo.
+  const pastDaysParam = Number(url.searchParams.get("past_days") ?? body?.past_days);
+  const pastDays = Number.isFinite(pastDaysParam) && pastDaysParam > 0
+    ? Math.min(Math.floor(pastDaysParam), SYNC_WINDOW_PAST_DAYS_MAX)
+    : SYNC_WINDOW_PAST_DAYS;
+  const forcarCalendario = url.searchParams.get("calendar") === "1" || body?.calendar === true;
 
   // Antes, o token só era exigido quando `force` era falso — e `force` vem da
   // query string. Bastava `?force=1` para disparar a sincronização inteira sem
@@ -196,13 +224,21 @@ Deno.serve(async (req) => {
       if (p.name) localByName.set(norm(p.name), p.id);
     }
 
+    // Vínculo já gravado (id_hostex -> imóvel local). Se o nome mudar na Hostex e
+    // deixar de casar, o vínculo antigo vale: antes ele era apagado, e as
+    // reservas do imóvel ficavam órfãs.
+    const { data: vinculos } = await supabase.from("hostex_properties").select("id_hostex, property_id");
+    const vinculoAnterior = new Map<string, string | null>();
+    for (const v of vinculos || []) vinculoAnterior.set(String(v.id_hostex), v.property_id ?? null);
+
     const hxPropertyMap = new Map<string, string | null>(); // id_hostex -> property_id local
     for (const p of propsList) {
       const id_hostex = String(p.id ?? p.property_id ?? p.listing_id ?? "");
       if (!id_hostex) continue;
       const name = p.name ?? p.title ?? "";
       const address = p.address ?? p.full_address ?? null;
-      const matchedLocal = name ? localByName.get(norm(name)) ?? null : null;
+      const matchedLocal =
+        (name ? localByName.get(norm(name)) ?? null : null) ?? vinculoAnterior.get(id_hostex) ?? null;
       hxPropertyMap.set(id_hostex, matchedLocal);
 
       await supabase.from("hostex_properties").upsert(
@@ -244,9 +280,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 2) Reservas (janela passado 30d ... futuro 180d)
+    // 2) Reservas (janela: `pastDays` para trás ... 365 dias à frente)
     const now = new Date();
-    const start = new Date(now.getTime() - SYNC_WINDOW_PAST_DAYS * 86400000);
+    const start = new Date(now.getTime() - pastDays * 86400000);
     const end = new Date(now.getTime() + SYNC_WINDOW_FUTURE_DAYS * 86400000);
     const startStr = ymd(start);
     const endStr = ymd(end);
@@ -330,10 +366,24 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 4) Calendário de preços listados (preço atual cobrado) — próximos CALENDAR_WINDOW_DAYS dias
+    // 4) Calendário de preços listados (preço atual cobrado) — próximos CALENDAR_WINDOW_DAYS dias.
+    //    Uma vez por dia: pula se a última coleta do calendário tem menos de 20 h.
+    const { data: ultimoCal } = await supabase
+      .from("hostex_listing_calendar")
+      .select("synced_at")
+      .order("synced_at", { ascending: false })
+      .limit(1);
+    const horasDoCalendario = ultimoCal?.[0]?.synced_at
+      ? (Date.now() - new Date(ultimoCal[0].synced_at).getTime()) / 3_600_000
+      : Infinity;
+    const coletarCalendario = forcarCalendario || horasDoCalendario >= CALENDAR_MIN_INTERVAL_HOURS;
+    if (!coletarCalendario) {
+      console.log(`[hostex-sync] calendario coletado ha ${horasDoCalendario.toFixed(1)} h; pulando nesta rodada`);
+    }
+
     const calStart = ymd(now);
     const calEnd = ymd(new Date(now.getTime() + CALENDAR_WINDOW_DAYS * 86400000));
-    for (let i = 0; i < allListings.length; i += CALENDAR_BATCH_SIZE) {
+    for (let i = 0; coletarCalendario && i < allListings.length; i += CALENDAR_BATCH_SIZE) {
       const batch = allListings.slice(i, i + CALENDAR_BATCH_SIZE);
       try {
         const payload = await hostexPost(

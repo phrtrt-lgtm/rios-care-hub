@@ -15,6 +15,7 @@ const Cadastro = lazyPage(() => import("./pages/Cadastro"));
 const AguardandoAprovacao = lazyPage(() => import("./pages/AguardandoAprovacao"));
 import MinhaCaixa from "./pages/MinhaCaixa";
 const MinhasCobrancas = lazyPage(() => import("./pages/MinhasCobrancas"));
+const ResultadosImovel = lazyPage(() => import("./pages/ResultadosImovel"));
 const NovoTicket = lazyPage(() => import("./pages/NovoTicket"));
 const Painel = lazyPage(() => import("./pages/Painel"));
 const Aprovacoes = lazyPage(() => import("./pages/Aprovacoes"));
@@ -634,6 +635,23 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['owner', 'agent', 'admin', 'maintenance']}>
                   <OwnerRelatorioFinanceiro />
+                </ProtectedRoute>
+              }
+            />
+            {/* Resultados do imóvel (Hostex): o proprietário vê os dele; admin e agent, qualquer um. */}
+            <Route
+              path="/resultados"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'agent', 'admin']}>
+                  <ResultadosImovel />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/resultados/:propertyId"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'agent', 'admin']}>
+                  <ResultadosImovel />
                 </ProtectedRoute>
               }
             />

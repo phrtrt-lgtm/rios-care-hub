@@ -1,5 +1,6 @@
 // hostex-proxy — leitura via cache local (sync 6h) + fallback ao vivo + iCal
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { exigirPapel } from "../_shared/auth-guard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -158,6 +159,12 @@ async function isCacheStale(supabase: any): Promise<boolean> {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
+  // Devolve reservas com nome de hóspede de todos os imóveis: só para a equipe.
+  // `verify_jwt = true` não basta — a chave pública do site é um JWT válido, e
+  // com ela qualquer visitante lia tudo (ver CLAUDE.md §7).
+  const { resposta } = await exigirPapel(req, ["admin", "agent", "maintenance"], corsHeaders);
+  if (resposta) return resposta;
+
   try {
     const body = await req.json().catch(() => ({}));
     const action = body?.action as Action | undefined;
@@ -226,6 +233,10 @@ Deno.serve(async (req) => {
           throw new Error(`hostex_${resp.status}: ${txt.slice(0, 200)}`);
         }
         const json = await resp.json();
+        // A Hostex devolve 200 com o erro no corpo (token recusado, por exemplo).
+        if (typeof json?.error_code === "number" && json.error_code !== 200 && json.error_code !== 0) {
+          throw new Error(`hostex_api_${json.error_code}: ${String(json?.error_msg ?? "").slice(0, 200)}`);
+        }
         const payload = { source: "hostex_live", data: json };
         cache.set(key, { at: Date.now(), payload });
         return new Response(JSON.stringify(payload), {
