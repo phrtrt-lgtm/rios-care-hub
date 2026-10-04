@@ -1,12 +1,9 @@
 import { useEffect, useMemo } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, BarChart3 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { propertiesScopeFilter } from "@/lib/ownerScope";
 import { AbaPilula, BarraFiltros, CabecalhoPagina, PaginaInterna } from "@/components/painel/PaginaInterna";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,7 +11,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { VisaoGeral } from "@/components/resultados/VisaoGeral";
 import { CalendarioReservas } from "@/components/resultados/CalendarioReservas";
 import { ListaReservas } from "@/components/resultados/ListaReservas";
-import { calcularReserva, coletaEmDia, hojeDia, paraDia, useResultadosImovel } from "@/lib/resultadosImovel";
+import {
+  calcularReserva,
+  coletaEmDia,
+  hojeDia,
+  paraDia,
+  useImoveisDeResultados,
+  useResultadosImovel,
+} from "@/lib/resultadosImovel";
 
 type Aba = "geral" | "calendario" | "reservas";
 const ABAS: { id: Aba; rotulo: string }[] = [
@@ -43,18 +47,7 @@ export default function ResultadosImovel() {
   const trocarAba = (id: Aba) => setBusca(id === "geral" ? {} : { aba: id }, { replace: true });
 
   // Imóveis que a pessoa pode abrir, para o seletor.
-  const { data: imoveis, isLoading: carregandoImoveis } = useQuery({
-    queryKey: ["resultados-imoveis", user?.id, equipe],
-    enabled: !!user && !!profile,
-    staleTime: 10 * 60_000,
-    queryFn: async () => {
-      let consulta = supabase.from("properties").select("id, name").is("archived_at", null).order("name");
-      if (!equipe) consulta = consulta.or(await propertiesScopeFilter(user!.id));
-      const { data, error } = await consulta;
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
+  const { data: imoveis, isLoading: carregandoImoveis } = useImoveisDeResultados(user?.id, equipe, !!profile);
 
   // Sem imóvel na URL: abre o primeiro.
   useEffect(() => {

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { propertiesScopeFilter } from "@/lib/ownerScope";
 
 // A função resultados_imovel ainda não está no types.ts gerado; o cliente sem
 // tipo evita o cast na chamada (mesmo padrão de lembreteAtraso.ts).
@@ -71,9 +72,13 @@ export interface ResultadoImovel {
 
 // ===== Consulta =====
 
-export function useResultadosImovel(propertyId: string | undefined) {
-  return useQuery({
-    queryKey: ["resultados-imovel", propertyId],
+/**
+ * Opções da consulta de um imóvel. A página e a versão mini do painel usam a
+ * mesma chave: quem abre a página depois de ver o painel não espera de novo.
+ */
+export function consultaResultadosImovel(propertyId: string | undefined) {
+  return {
+    queryKey: ["resultados-imovel", propertyId] as const,
     enabled: !!propertyId,
     // A coleta é diária: não há por que refazer a consulta a cada visita.
     staleTime: 10 * 60_000,
@@ -81,6 +86,29 @@ export function useResultadosImovel(propertyId: string | undefined) {
       const { data, error } = await db.rpc("resultados_imovel", { p_property_id: propertyId });
       if (error) throw error;
       return data as ResultadoImovel;
+    },
+  };
+}
+
+export function useResultadosImovel(propertyId: string | undefined) {
+  return useQuery(consultaResultadosImovel(propertyId));
+}
+
+/**
+ * Imóveis que a pessoa pode abrir em /resultados: a equipe vê todos; o
+ * proprietário, os dele e os compartilhados com ele.
+ */
+export function useImoveisDeResultados(userId: string | undefined, equipe: boolean, ativo = true) {
+  return useQuery({
+    queryKey: ["resultados-imoveis", userId, equipe],
+    enabled: !!userId && ativo,
+    staleTime: 10 * 60_000,
+    queryFn: async (): Promise<{ id: string; name: string }[]> => {
+      let consulta = supabase.from("properties").select("id, name").is("archived_at", null).order("name");
+      if (!equipe) consulta = consulta.or(await propertiesScopeFilter(userId!));
+      const { data, error } = await consulta;
+      if (error) throw error;
+      return data ?? [];
     },
   });
 }

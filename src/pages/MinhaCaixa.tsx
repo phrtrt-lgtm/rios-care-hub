@@ -20,6 +20,7 @@ import { OwnerCuradoriaBanner } from "@/components/OwnerCuradoriaBanner";
 import { PainelHeader, type AcaoHeader } from "@/components/painel/PainelHeader";
 import { PainelHero } from "@/components/painel/PainelHero";
 import { OwnerResumo } from "@/components/painel/OwnerResumo";
+import { ResultadosMini } from "@/components/resultados/ResultadosMini";
 import { OwnerAjuda } from "@/components/painel/OwnerAjuda";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 
@@ -114,10 +115,13 @@ export default function MinhaCaixa() {
       <main className="container relative mx-auto flex flex-col gap-7 px-4 py-6 md:gap-8 md:py-8">
         <PainelHero nome={profile?.name} subtitulo="Seus imóveis, cobranças e chamados em um lugar só." />
 
-        {/* 1. Avisos da equipe (só aparecem quando existem) */}
+        {/* 1. Resultados dos imóveis, em versão mini (só com a coleta da Hostex em dia) */}
+        {isOwner && <ResultadosMini />}
+
+        {/* 2. Avisos da equipe (só aparecem quando existem) */}
         <AlertBanner />
 
-        {/* 2. O que pede uma decisão: curadoria, contrato, propostas */}
+        {/* 3. O que pede uma decisão: curadoria, contrato, propostas */}
         <OwnerCuradoriaBanner />
         <OwnerContractInviteCard />
         <PropostasPendentesCompletas />
@@ -125,10 +129,10 @@ export default function MinhaCaixa() {
         {/* Kanban de Manutenções - visível para equipe */}
         {isTeam && <MaintenanceKanbanPreview />}
 
-        {/* 3. Imóveis — o ponto de partida para resultados, chamado, vistoria e relatório por unidade (o título vem junto) */}
+        {/* 4. Imóveis — o ponto de partida para resultados, chamado, vistoria e relatório por unidade (o título vem junto) */}
         {isOwner && <OwnerPropertiesSection />}
 
-        {/* 4. Acompanhamento: cobranças e chamados à esquerda; score e guias à direita */}
+        {/* 5. Acompanhamento: cobranças e chamados à esquerda; score e guias à direita */}
         {isOwner && (
           <div className="grid min-w-0 items-start gap-6 lg:grid-cols-3">
             <div className="flex min-w-0 flex-col gap-6 lg:col-span-2">
@@ -146,7 +150,7 @@ export default function MinhaCaixa() {
           </div>
         )}
 
-        {/* 5. Números de resumo — no fim da página desde 2026-10-03 (pedido do gestor); cada um leva à tela correspondente */}
+        {/* 6. Números de resumo — no fim da página desde 2026-10-03 (pedido do gestor); cada um leva à tela correspondente */}
         {isOwner && <OwnerResumo />}
       </main>
 
