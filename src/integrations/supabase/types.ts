@@ -3913,6 +3913,7 @@ export type Database = {
           owner_id: string
         }[]
       }
+      resultados_imovel: { Args: { p_property_id: string }; Returns: Json }
       set_session_context: {
         Args: { p_owner_id: string; p_role: string }
         Returns: undefined
