@@ -89,7 +89,7 @@ export function OwnerResumo() {
   });
   const { data: score } = useOwnerScore(user?.id);
 
-  const temComissoes = (data?.comissoes ?? 0) > 0;
+  const temComissoes = false;
   const grade = cn("grid grid-cols-2 gap-3", temComissoes ? "lg:grid-cols-5" : "lg:grid-cols-4");
 
   if (isLoading || !data) {
@@ -115,7 +115,7 @@ export function OwnerResumo() {
         realcarValor={data.cobrancas > 0}
         onClick={() => navigate("/minhas-cobrancas")}
       />
-      {temComissoes && (
+      {false && (
         <Indicador
           rotulo="Comissões Booking"
           valor={data.comissoes}
