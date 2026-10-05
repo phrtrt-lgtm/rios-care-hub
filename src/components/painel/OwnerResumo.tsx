@@ -89,7 +89,7 @@ export function OwnerResumo() {
   });
   const { data: score } = useOwnerScore(user?.id);
 
-  const temComissoes = (data?.comissoes ?? 0) > 0;
+  const temComissoes = false;
   const grade = cn("grid grid-cols-2 gap-3", temComissoes ? "lg:grid-cols-5" : "lg:grid-cols-4");
 
   if (isLoading || !data) {
