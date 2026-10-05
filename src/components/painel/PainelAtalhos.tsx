@@ -130,7 +130,6 @@ const GRUPOS: Grupo[] = [
       { rotulo: "Reposição de itens", icone: <Package className={ICONE} />, papeis: TODOS, para: "/nova-cobranca?reposicao=true" },
       { rotulo: "Novo alerta", icone: <Bell className={ICONE} />, papeis: ADMIN_AGENT, para: "/novo-alerta" },
       { rotulo: "Nova proposta", icone: <Vote className={ICONE} />, papeis: ADMIN_MANUT, para: "/nova-proposta-votacao" },
-      { rotulo: "Nova comissão Booking", icone: <Plus className={ICONE} />, papeis: ADMIN_AGENT, para: "/nova-comissao-booking" },
     ],
   },
   {
@@ -142,7 +141,6 @@ const GRUPOS: Grupo[] = [
       { rotulo: "Gerenciar cobranças", icone: <DollarSign className={ICONE} />, papeis: TODOS, para: "/gerenciar-cobrancas" },
       { rotulo: "Vistorias de faxina", icone: <Sparkles className={ICONE} />, papeis: ADMIN_MANUT, para: "/admin/vistorias" },
       { rotulo: "Vistorias de rotina", icone: <ClipboardList className={ICONE} />, papeis: TODOS, para: "/admin/vistorias/rotina" },
-      { rotulo: "Comissões Booking", icone: <Sparkles className={ICONE} />, papeis: ADMIN_AGENT, para: "/booking-comissoes" },
       { rotulo: "Curadorias", icone: <Sparkles className={ICONE} />, papeis: ADMIN_AGENT, para: "/admin/curadorias" },
       { rotulo: "Contratos", icone: <FileSignature className={ICONE} />, papeis: SO_ADMIN, para: "/admin/contratos" },
     ],
@@ -154,7 +152,6 @@ const GRUPOS: Grupo[] = [
       { rotulo: "Resultados por imóvel (visão do proprietário)", icone: <BarChart3 className={ICONE} />, papeis: ADMIN_AGENT, para: "/resultados" },
       { rotulo: "Relatórios financeiros", icone: <BarChart3 className={ICONE} />, papeis: TODOS, para: "/admin/relatorios-financeiros" },
       { rotulo: "Relatórios de manutenções", icone: <Wrench className={ICONE} />, papeis: TODOS, para: "/admin/relatorios-manutencoes" },
-      { rotulo: "Relatório Booking", icone: <BarChart3 className={ICONE} />, papeis: ADMIN_AGENT, para: "/admin/relatorio-booking" },
       { rotulo: "Comissão RIOS (Hostex)", icone: <FileText className={ICONE} />, papeis: SO_ADMIN, para: "/admin/comissao-rios" },
       { rotulo: "Resumo por propriedade", icone: <Building2 className={ICONE} />, papeis: TODOS, para: "/resumo-propriedades" },
       { rotulo: "Fichas dos imóveis", icone: <FileText className={ICONE} />, papeis: TODOS, para: "/admin/fichas-imoveis" },

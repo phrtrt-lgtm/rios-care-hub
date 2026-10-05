@@ -68,13 +68,6 @@ const Tutoriais = lazyPage(() => import("./pages/Tutoriais"));
 
 const AdminRelatorioCobrancas = lazyPage(() => import("./pages/AdminRelatorioCobrancas"));
 const RotinaProfissional = lazyPage(() => import("./pages/RotinaProfissional"));
-const BookingComissoes = lazyPage(() => import("./pages/BookingComissoes"));
-const NovaComissaoBooking = lazyPage(() => import("./pages/NovaComissaoBooking"));
-const ComissaoBookingDetalhes = lazyPage(() => import("./pages/ComissaoBookingDetalhes"));
-const AdminRelatorioBooking = lazyPage(() => import("./pages/AdminRelatorioBooking"));
-const ImportarComissoesBooking = lazyPage(() => import("./pages/ImportarComissoesBooking"));
-const MinhasComissoesBooking = lazyPage(() => import("./pages/MinhasComissoesBooking"));
-const MinhaComissaoBookingDetalhes = lazyPage(() => import("./pages/MinhaComissaoBookingDetalhes"));
 const AdminManutencoesArquivo = lazyPage(() => import("./pages/AdminManutencoesArquivo"));
 const AdminBloqueiosDatas = lazyPage(() => import("./pages/AdminBloqueiosDatas"));
 const RelatorioFinanceiro = lazyPage(() => import("./pages/RelatorioFinanceiro"));
@@ -556,63 +549,14 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            {/* Booking Comissões */}
-            <Route
-              path="/booking-comissoes"
-              element={
-                <ProtectedRoute allowedRoles={['agent', 'admin', 'maintenance']}>
-                  <BookingComissoes />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/nova-comissao-booking"
-              element={
-                <ProtectedRoute allowedRoles={['agent', 'admin', 'maintenance']}>
-                  <NovaComissaoBooking />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/comissao-booking/:id"
-              element={
-                <ProtectedRoute allowedRoles={['owner', 'agent', 'admin', 'maintenance']}>
-                  <ComissaoBookingDetalhes />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/relatorio-booking"
-              element={
-                <ProtectedRoute allowedRoles={['agent', 'admin', 'maintenance']}>
-                  <AdminRelatorioBooking />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/importar-comissoes-booking"
-              element={
-                <ProtectedRoute allowedRoles={['agent', 'admin', 'maintenance']}>
-                  <ImportarComissoesBooking />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/minhas-comissoes-booking"
-              element={
-                <ProtectedRoute allowedRoles={['owner']}>
-                  <MinhasComissoesBooking />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/minha-comissao-booking/:id"
-              element={
-                <ProtectedRoute allowedRoles={['owner']}>
-                  <MinhaComissaoBookingDetalhes />
-                </ProtectedRoute>
-              }
-            />
+            {/* Comissões Booking desativadas: dinheiro vem para a empresa e é repassado */}
+            <Route path="/booking-comissoes" element={<Navigate to="/painel" replace />} />
+            <Route path="/nova-comissao-booking" element={<Navigate to="/painel" replace />} />
+            <Route path="/comissao-booking/:id" element={<Navigate to="/painel" replace />} />
+            <Route path="/admin/relatorio-booking" element={<Navigate to="/painel" replace />} />
+            <Route path="/importar-comissoes-booking" element={<Navigate to="/painel" replace />} />
+            <Route path="/minhas-comissoes-booking" element={<Navigate to="/minha-caixa" replace />} />
+            <Route path="/minha-comissao-booking/:id" element={<Navigate to="/minha-caixa" replace />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route
               path="/admin/bloqueios-datas"

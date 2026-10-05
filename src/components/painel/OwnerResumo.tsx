@@ -115,7 +115,7 @@ export function OwnerResumo() {
         realcarValor={data.cobrancas > 0}
         onClick={() => navigate("/minhas-cobrancas")}
       />
-      {temComissoes && (
+      {false && (
         <Indicador
           rotulo="Comissões Booking"
           valor={data.comissoes}

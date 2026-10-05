@@ -14,7 +14,6 @@ import { OwnerTicketsPreview } from "@/components/OwnerTicketsPreview";
 import { OwnerChargesPreview } from "@/components/OwnerChargesPreview";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { OwnerOnboardingTour } from "@/components/OwnerOnboardingTour";
-import { OwnerBookingCommissionsPreview } from "@/components/OwnerBookingCommissionsPreview";
 import { OwnerContractInviteCard } from "@/components/contracts/OwnerContractInviteCard";
 import { OwnerCuradoriaBanner } from "@/components/OwnerCuradoriaBanner";
 import { PainelHeader, type AcaoHeader } from "@/components/painel/PainelHeader";
@@ -137,7 +136,6 @@ export default function MinhaCaixa() {
           <div className="grid min-w-0 items-start gap-6 lg:grid-cols-3">
             <div className="flex min-w-0 flex-col gap-6 lg:col-span-2">
               <OwnerChargesPreview />
-              <OwnerBookingCommissionsPreview />
               <OwnerMaintenanceProgress />
               <OwnerTicketsPreview />
             </div>
