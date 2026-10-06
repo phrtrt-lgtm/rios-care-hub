@@ -336,6 +336,11 @@ export function DetalheReserva({
           {canal.rotulo}
         </span>
         <Etiqueta tom={situacao.tom}>{situacao.rotulo}</Etiqueta>
+        {reserva.fonte === "relatorio" && (
+          <Etiqueta tom="neutral" title="Veio do relatório financeiro do mês, não da integração com a Hostex">
+            Do relatório financeiro
+          </Etiqueta>
+        )}
         {visaoEquipe && reserva.hospede && <span className="text-xs text-muted-foreground">· {reserva.hospede}</span>}
       </div>
 

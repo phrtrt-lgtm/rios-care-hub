@@ -27,7 +27,10 @@ const db = supabase as unknown as SupabaseClient;
 
 export interface ReservaResultado {
   id: string;
-  canal: string;
+  /** De onde veio: "hostex" (integração) ou "relatorio" (relatório financeiro do mês). */
+  fonte: "hostex" | "relatorio";
+  /** null quando a fonte não informa o canal (relatórios antigos). */
+  canal: string | null;
   /** "aaaa-mm-dd" */
   check_in: string;
   check_out: string;
@@ -243,17 +246,21 @@ export const CANAIS: { id: CanalId; rotulo: string; cor: string }[] = [
   { id: "outros", rotulo: "Outros", cor: "hsl(var(--grafico-4))" },
 ];
 
-export function canalDe(canal: string | null | undefined): CanalId {
-  const c = (canal || "").toLowerCase();
+/** null = a fonte não disse o canal (reservas vindas dos relatórios antigos). */
+export function canalDe(canal: string | null | undefined): CanalId | null {
+  const c = (canal || "").toLowerCase().trim();
+  if (!c) return null;
   if (c.includes("airbnb")) return "airbnb";
   if (c.includes("booking")) return "booking";
   if (c.includes("direct") || c.includes("diret") || c === "hostex_direct") return "direto";
   return "outros";
 }
 
+export const CANAL_DESCONHECIDO = { id: "desconhecido" as const, rotulo: "Canal não informado", cor: "hsl(var(--grafico-neutro))" };
+
 export function infoCanal(canal: string | null | undefined) {
   const id = canalDe(canal);
-  return CANAIS.find((c) => c.id === id)!;
+  return id ? CANAIS.find((c) => c.id === id)! : CANAL_DESCONHECIDO;
 }
 
 // ===== Período =====
@@ -493,25 +500,40 @@ export interface FatiaCanal {
   parte: number;
 }
 
-export function mixCanais(reservas: ReservaCalculada[], inicio: number, fim: number): FatiaCanal[] {
+/**
+ * Divisão das diárias por canal. Reserva sem canal informado (relatórios
+ * antigos) fica fora da divisão e é contada à parte em `semCanal`.
+ */
+export function mixCanais(
+  reservas: ReservaCalculada[],
+  inicio: number,
+  fim: number,
+): { fatias: FatiaCanal[]; semCanal: { reservas: number; receita: number } } {
   const acumulado = new Map<CanalId, { receita: number; noites: number; reservas: number }>();
+  const semCanal = { reservas: 0, receita: 0 };
   let total = 0;
   for (const r of reservas) {
     const n = Math.min(r.co, fim) - Math.max(r.ci, inicio);
     if (n <= 0) continue;
-    const id = canalDe(r.canal);
-    const a = acumulado.get(id) ?? { receita: 0, noites: 0, reservas: 0 };
     const valor = r.diarias * (n / r.noites);
+    const id = canalDe(r.canal);
+    if (!id) {
+      semCanal.reservas += 1;
+      semCanal.receita += valor;
+      continue;
+    }
+    const a = acumulado.get(id) ?? { receita: 0, noites: 0, reservas: 0 };
     a.receita += valor;
     a.noites += n;
     a.reservas += 1;
     acumulado.set(id, a);
     total += valor;
   }
-  return CANAIS.filter((c) => acumulado.has(c.id)).map((c) => {
+  const fatias = CANAIS.filter((c) => acumulado.has(c.id)).map((c) => {
     const a = acumulado.get(c.id)!;
     return { ...c, ...a, parte: total > 0 ? a.receita / total : 0 };
   });
+  return { fatias, semCanal };
 }
 
 export interface DiaSemana {

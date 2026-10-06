@@ -6,6 +6,7 @@ import { Legenda } from "./graficos";
 import { Cartao, DetalheReserva } from "./blocos";
 import {
   CANAIS,
+  CANAL_DESCONHECIDO,
   canalDe,
   deDia,
   diaDaSemana,
@@ -31,6 +32,10 @@ interface Props {
 }
 
 const SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+// Contorno da reserva selecionada: só em cima e embaixo. Um anel completo em
+// cada meia-célula desenhava uma divisória a cada dia, e a faixa parecia fatiada.
+const CONTORNO = "inset 0 2px 0 hsl(var(--foreground) / 0.6), inset 0 -2px 0 hsl(var(--foreground) / 0.6)";
 
 /**
  * Calendário do imóvel, mês a mês.
@@ -64,7 +69,10 @@ export function CalendarioReservas({ reservas, anunciado, hoje, primeira, comiss
   );
   const resumo = useMemo(() => metricas(reservas, inicio, fim, primeira), [reservas, inicio, fim, primeira]);
   const reservaSelecionada = doMes.find((r) => r.id === selecionada) ?? null;
-  const canaisDoMes = CANAIS.filter((c) => doMes.some((r) => canalDe(r.canal) === c.id));
+  const canaisDoMes = [
+    ...CANAIS.filter((c) => doMes.some((r) => canalDe(r.canal) === c.id)),
+    ...(doMes.some((r) => canalDe(r.canal) == null) ? [CANAL_DESCONHECIDO] : []),
+  ];
 
   const mudarMes = (delta: number) => {
     const d = new Date(mes.ano, mes.mes0 + delta, 1);
@@ -163,11 +171,11 @@ export function CalendarioReservas({ reservas, anunciado, hoje, primeira, comiss
                 <span className="absolute inset-x-0 bottom-2 flex h-[18px] md:bottom-3 md:h-5" aria-hidden="true">
                   <span
                     className={cn("h-full w-1/2 transition-opacity", manha && !meioDaEstadia && saida && "rounded-r-full", apagada(manha) && "opacity-30")}
-                    style={manha ? { background: infoCanal(manha.canal).cor, boxShadow: ativa(manha) ? "inset 0 0 0 2px hsl(var(--foreground) / 0.55)" : undefined } : undefined}
+                    style={manha ? { background: infoCanal(manha.canal).cor, boxShadow: ativa(manha) ? CONTORNO : undefined } : undefined}
                   />
                   <span
                     className={cn("h-full w-1/2 transition-opacity", noite && noite.ci === d && "rounded-l-full", apagada(noite) && "opacity-30")}
-                    style={noite ? { background: infoCanal(noite.canal).cor, boxShadow: ativa(noite) ? "inset 0 0 0 2px hsl(var(--foreground) / 0.55)" : undefined } : undefined}
+                    style={noite ? { background: infoCanal(noite.canal).cor, boxShadow: ativa(noite) ? CONTORNO : undefined } : undefined}
                   />
                 </span>
 

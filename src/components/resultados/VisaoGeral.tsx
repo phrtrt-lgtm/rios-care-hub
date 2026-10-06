@@ -308,7 +308,18 @@ export function VisaoGeral({ dados, reservas, hoje, primeira }: Props) {
 
         <div className="grid min-w-0 items-start gap-4 lg:grid-cols-3">
           <Cartao titulo="Por onde chegam as reservas" subtitulo="Diárias por canal, no período">
-            {canais.length > 0 ? <BarraDeCanais fatias={canais} /> : <p className="py-6 text-center text-sm text-muted-foreground">Sem reservas neste período.</p>}
+            {canais.fatias.length > 0 ? (
+              <BarraDeCanais fatias={canais.fatias} />
+            ) : (
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                {canais.semCanal.reservas > 0 ? "As reservas deste período vieram dos relatórios, sem o canal informado." : "Sem reservas neste período."}
+              </p>
+            )}
+            {canais.fatias.length > 0 && canais.semCanal.reservas > 0 && (
+              <p className="mt-3 text-[11px] leading-snug text-muted-foreground">
+                Fora da divisão: {canais.semCanal.reservas} {canais.semCanal.reservas === 1 ? "reserva" : "reservas"} dos relatórios financeiros, sem canal informado ({reais(canais.semCanal.receita)}).
+              </p>
+            )}
           </Cartao>
 
           <Cartao
