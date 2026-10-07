@@ -285,9 +285,9 @@ function colunaArredondada(x: number, yTopo: number, w: number, h: number, raio:
 /* ------------------------------------------------------------------------ */
 
 /**
- * Duas linhas no mesmo eixo de 0 a 100%: o imóvel (cor) e a média da carteira
- * RIOS (cinza). Nos meses à frente a linha fica tracejada: é o que já está
- * reservado até agora, não o resultado final.
+ * Até três linhas no mesmo eixo de 0 a 100%: o imóvel (cor), a média da
+ * carteira RIOS (cinza) e o mercado em volta, pelo PriceLabs (azul). Nos meses
+ * à frente a linha do imóvel fica tracejada: é o que já está reservado.
  */
 export function GraficoOcupacao({ serie, selecao }: { serie: MesSerie[]; selecao: { inicio: number; fim: number } }) {
   const [ref, largura] = useLargura<HTMLDivElement>();
@@ -303,7 +303,7 @@ export function GraficoOcupacao({ serie, selecao }: { serie: MesSerie[]; selecao
   const x = (i: number) => EIXO + 6 + passo * i;
   const y = (v: number) => TOPO + ALTURA_PLOT - v * ALTURA_PLOT;
 
-  const trecho = (campo: "ocupacao" | "ocupacaoRios", filtro: (m: MesSerie, i: number) => boolean) => {
+  const trecho = (campo: "ocupacao" | "ocupacaoRios" | "ocupacaoMercado", filtro: (m: MesSerie, i: number) => boolean) => {
     let d = "";
     let aberto = false;
     serie.forEach((m, i) => {
@@ -321,6 +321,7 @@ export function GraficoOcupacao({ serie, selecao }: { serie: MesSerie[]; selecao
   const iAtual = serie.findIndex((m) => m.atual);
   const corte = iAtual < 0 ? serie.length - 1 : iAtual;
   const temRios = serie.some((m) => m.ocupacaoRios != null);
+  const temMercado = serie.some((m) => m.ocupacaoMercado != null);
 
   // Área sob a linha do imóvel (só a parte realizada), como uma lavagem leve.
   const realizados = serie.map((m, i) => ({ m, i })).filter(({ m, i }) => i <= corte && m.ocupacao != null);
@@ -363,6 +364,9 @@ export function GraficoOcupacao({ serie, selecao }: { serie: MesSerie[]; selecao
           {temRios && (
             <path d={trecho("ocupacaoRios", () => true)} fill="none" stroke={COR.neutro} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
           )}
+          {temMercado && (
+            <path d={trecho("ocupacaoMercado", () => true)} fill="none" stroke={COR.serie2} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+          )}
 
           {area && <path d={area} fill="hsl(var(--grafico-1) / 0.1)" />}
           <path d={trecho("ocupacao", (_m, i) => i <= corte)} fill="none" stroke={COR.serie1} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
@@ -390,6 +394,9 @@ export function GraficoOcupacao({ serie, selecao }: { serie: MesSerie[]; selecao
               )}
               {m.ocupacaoRios != null && ativo === i && (
                 <circle cx={x(i)} cy={y(m.ocupacaoRios)} r={4.5} fill={COR.neutro} stroke={COR.superficie} strokeWidth={2} />
+              )}
+              {m.ocupacaoMercado != null && ativo === i && (
+                <circle cx={x(i)} cy={y(m.ocupacaoMercado)} r={4.5} fill={COR.serie2} stroke={COR.superficie} strokeWidth={2} />
               )}
             </g>
           ))}
@@ -419,6 +426,9 @@ export function GraficoOcupacao({ serie, selecao }: { serie: MesSerie[]; selecao
           />
           {temRios && (
             <LinhaDica cor={COR.neutro} rotulo="Média RIOS" valor={serie[ativo].ocupacaoRios != null ? pct(serie[ativo].ocupacaoRios!) : "—"} />
+          )}
+          {temMercado && (
+            <LinhaDica cor={COR.serie2} rotulo="Mercado" valor={serie[ativo].ocupacaoMercado != null ? pct(serie[ativo].ocupacaoMercado!) : "—"} />
           )}
           <LinhaDica rotulo="Noites reservadas" valor={`${serie[ativo].noites} de ${serie[ativo].disponiveis}`} />
         </Dica>

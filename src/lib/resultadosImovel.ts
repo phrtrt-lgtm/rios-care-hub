@@ -57,9 +57,22 @@ export interface DiaAnunciado {
 export interface ReferenciaMes {
   /** "aaaa-mm" */
   mes: string;
+  /** Média dos imóveis RIOS que tiveram ao menos uma noite reservada no mês */
   ocupacao: number | null;
   diaria_cents: number | null;
   imoveis: number;
+}
+
+/** Mercado em volta do imóvel, pelo PriceLabs (mês fechado: realizado; à frente: já reservado). */
+export interface MercadoMes {
+  /** "aaaa-mm" */
+  mes: string;
+  ocupacao: number | null;
+  ocupacao_ano_anterior: number | null;
+  diaria_cents: number | null;
+  preco_mediano_cents: number | null;
+  listagens: number | null;
+  origem: "historico" | "futuro";
 }
 
 export interface ResultadoImovel {
@@ -69,6 +82,9 @@ export interface ResultadoImovel {
   reservas: ReservaResultado[];
   calendario: DiaAnunciado[];
   referencia: ReferenciaMes[];
+  /** Vazio enquanto a coleta do PriceLabs não rodou para o imóvel. */
+  mercado?: MercadoMes[];
+  mercado_categoria?: string | null;
   coletado_em: string | null;
   visao_equipe: boolean;
 }
@@ -420,6 +436,8 @@ export interface MesSerie {
   diariaMedia: number;
   /** Média da carteira RIOS no mês (null se a amostra for pequena) */
   ocupacaoRios: number | null;
+  /** Mercado em volta do imóvel (PriceLabs); null sem coleta */
+  ocupacaoMercado: number | null;
   futuro: boolean;
   atual: boolean;
 }
@@ -434,9 +452,11 @@ export function serieMensal(
   primeira: number | null,
   mesesAtras = 11,
   mesesAFrente = 3,
+  mercado: MercadoMes[] = [],
 ): MesSerie[] {
   const d = deDia(hoje);
   const ref = new Map(referencia.map((r) => [r.mes, r]));
+  const merc = new Map(mercado.map((m) => [m.mes, m]));
   const serie: MesSerie[] = [];
   for (let i = -mesesAtras; i <= mesesAFrente; i++) {
     const base = new Date(d.getFullYear(), d.getMonth() + i, 1);
@@ -465,6 +485,7 @@ export function serieMensal(
       ocupacao: tudo.disponiveis > 0 ? tudo.ocupacao : null,
       diariaMedia: tudo.diariaMedia,
       ocupacaoRios: r && r.imoveis >= MIN_IMOVEIS_REFERENCIA && r.ocupacao != null ? r.ocupacao : null,
+      ocupacaoMercado: merc.get(chave)?.ocupacao ?? null,
       futuro: inicio > hoje,
       atual: inicio <= hoje && hoje < fim,
     });
@@ -472,20 +493,34 @@ export function serieMensal(
   return serie;
 }
 
-/** Ocupação média da carteira RIOS em [inicio, fim), ponderada pelos dias de cada mês. */
-export function ocupacaoRiosNoPeriodo(referencia: ReferenciaMes[], inicio: number, fim: number): number | null {
+/** Ocupação média de uma série mensal em [inicio, fim), ponderada pelos dias de cada mês. */
+function ocupacaoNoPeriodo(meses: { mes: string; ocupacao: number | null }[], inicio: number, fim: number): number | null {
   let soma = 0;
   let dias = 0;
-  for (const r of referencia) {
-    if (r.ocupacao == null || r.imoveis < MIN_IMOVEIS_REFERENCIA) continue;
+  for (const r of meses) {
+    if (r.ocupacao == null) continue;
     const [a, m] = r.mes.split("-").map(Number);
     const n = Math.min(diaDe(a, m), fim) - Math.max(diaDe(a, m - 1), inicio);
     if (n <= 0) continue;
     soma += r.ocupacao * n;
     dias += n;
   }
-  // Só compara se a referência cobre a maior parte do período.
+  // Só compara se a série cobre a maior parte do período.
   return dias >= (fim - inicio) * 0.6 ? soma / dias : null;
+}
+
+/** Ocupação média da carteira RIOS em [inicio, fim). */
+export function ocupacaoRiosNoPeriodo(referencia: ReferenciaMes[], inicio: number, fim: number): number | null {
+  return ocupacaoNoPeriodo(
+    referencia.filter((r) => r.imoveis >= MIN_IMOVEIS_REFERENCIA),
+    inicio,
+    fim,
+  );
+}
+
+/** Ocupação média do mercado (PriceLabs) em [inicio, fim). */
+export function ocupacaoMercadoNoPeriodo(mercado: MercadoMes[], inicio: number, fim: number): number | null {
+  return ocupacaoNoPeriodo(mercado, inicio, fim);
 }
 
 // ===== Recortes =====
@@ -764,10 +799,12 @@ export function gerarDestaques(args: {
   atual: Metricas;
   serie: MesSerie[];
   referencia: ReferenciaMes[];
+  mercado?: MercadoMes[];
   adiante: Adiante;
   primeira: number | null;
 }): Destaque[] {
   const { reservas, periodo, atual, serie, referencia, adiante, primeira } = args;
+  const mercado = args.mercado ?? [];
   const destaques: Destaque[] = [];
 
   // Melhor mês já fechado
@@ -792,6 +829,20 @@ export function gerarDestaques(args: {
         tom: pontos > 0 ? "success" : "info",
         titulo: pontos > 0 ? "Acima da média RIOS" : "Abaixo da média RIOS",
         texto: `Ocupação de ${pct(atual.ocupacao)} no período, ${Math.abs(pontos)} ${Math.abs(pontos) === 1 ? "ponto" : "pontos"} ${pontos > 0 ? "acima" : "abaixo"} da média da carteira (${pct(rios)}).`,
+      });
+    }
+  }
+
+  // Contra o mercado em volta (PriceLabs)
+  const merc = ocupacaoMercadoNoPeriodo(mercado, periodo.inicio, periodo.fim);
+  if (merc != null && atual.disponiveis >= 14) {
+    const pontos = Math.round((atual.ocupacao - merc) * 100);
+    if (Math.abs(pontos) >= 3) {
+      destaques.push({
+        id: "vs-mercado",
+        tom: pontos > 0 ? "success" : "warning",
+        titulo: pontos > 0 ? "Acima do mercado" : "Abaixo do mercado",
+        texto: `Os imóveis em volta ficaram ${pct(merc)} ocupados no período; o seu, ${pct(atual.ocupacao)} (${Math.abs(pontos)} ${Math.abs(pontos) === 1 ? "ponto" : "pontos"} ${pontos > 0 ? "acima" : "abaixo"}).`,
       });
     }
   }

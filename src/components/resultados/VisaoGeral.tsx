@@ -61,7 +61,11 @@ export function VisaoGeral({ dados, reservas, hoje, primeira }: Props) {
   const [verTabela, setVerTabela] = useState(false);
 
   const adiante = useMemo(() => olharAdiante(reservas, hoje), [reservas, hoje]);
-  const serie = useMemo(() => serieMensal(reservas, dados.referencia, hoje, primeira), [reservas, dados.referencia, hoje, primeira]);
+  const mercado = useMemo(() => dados.mercado ?? [], [dados.mercado]);
+  const serie = useMemo(
+    () => serieMensal(reservas, dados.referencia, hoje, primeira, 11, 3, mercado),
+    [reservas, dados.referencia, hoje, primeira, mercado],
+  );
 
   const atual = useMemo(() => metricas(reservas, periodo.inicio, periodo.fim, primeira), [reservas, periodo, primeira]);
   const anterior = useMemo(() => {
@@ -76,14 +80,15 @@ export function VisaoGeral({ dados, reservas, hoje, primeira }: Props) {
   const antecedencia = useMemo(() => faixasDeAntecedencia(reservas, periodo.inicio, periodo.fim), [reservas, periodo]);
   const origens = useMemo(() => origensDosHospedes(reservas, periodo.inicio, periodo.fim), [reservas, periodo]);
   const destaques = useMemo(
-    () => gerarDestaques({ reservas, periodo, atual, serie, referencia: dados.referencia, adiante, primeira }),
-    [reservas, periodo, atual, serie, dados.referencia, adiante, primeira],
+    () => gerarDestaques({ reservas, periodo, atual, serie, referencia: dados.referencia, mercado, adiante, primeira }),
+    [reservas, periodo, atual, serie, dados.referencia, mercado, adiante, primeira],
   );
 
   const passados = serie.filter((m) => !m.futuro);
   const liquido = liquidoEstimado(atual.base, dados.comissao_pct);
   const liquidoAnterior = anterior ? liquidoEstimado(anterior.base, dados.comissao_pct) : null;
   const temRios = serie.some((m) => m.ocupacaoRios != null);
+  const temMercado = serie.some((m) => m.ocupacaoMercado != null);
 
   return (
     <div className="space-y-6 md:space-y-8">
@@ -227,6 +232,7 @@ export function VisaoGeral({ dados, reservas, hoje, primeira }: Props) {
                       <th className="px-3 py-2 text-right font-medium">Já reservado</th>
                       <th className="px-3 py-2 text-right font-medium">Ocupação</th>
                       {temRios && <th className="px-3 py-2 text-right font-medium">Média RIOS</th>}
+                      {temMercado && <th className="px-3 py-2 text-right font-medium">Mercado</th>}
                       <th className="py-2 pl-3 text-right font-medium">Diária média</th>
                     </tr>
                   </thead>
@@ -238,6 +244,7 @@ export function VisaoGeral({ dados, reservas, hoje, primeira }: Props) {
                         <td className="px-3 py-2 text-right">{m.reservado > 0 ? reais(m.reservado) : "—"}</td>
                         <td className="px-3 py-2 text-right">{m.ocupacao != null ? pct(m.ocupacao) : "—"}</td>
                         {temRios && <td className="px-3 py-2 text-right text-muted-foreground">{m.ocupacaoRios != null ? pct(m.ocupacaoRios) : "—"}</td>}
+                        {temMercado && <td className="px-3 py-2 text-right text-muted-foreground">{m.ocupacaoMercado != null ? pct(m.ocupacaoMercado) : "—"}</td>}
                         <td className="py-2 pl-3 text-right">{m.diariaMedia > 0 ? reais(m.diariaMedia) : "—"}</td>
                       </tr>
                     ))}
@@ -275,7 +282,13 @@ export function VisaoGeral({ dados, reservas, hoje, primeira }: Props) {
         <div className="grid min-w-0 items-start gap-4 lg:grid-cols-2">
           <Cartao
             titulo="Ocupação mês a mês"
-            subtitulo={temRios ? "Seu imóvel e a média dos imóveis RIOS" : "Noites reservadas sobre noites do mês"}
+            subtitulo={
+              temMercado
+                ? "Seu imóvel, a média dos imóveis RIOS e o mercado em volta"
+                : temRios
+                  ? "Seu imóvel e a média dos imóveis RIOS"
+                  : "Noites reservadas sobre noites do mês"
+            }
           >
             <GraficoOcupacao serie={serie} selecao={periodo} />
             <Legenda
@@ -283,9 +296,14 @@ export function VisaoGeral({ dados, reservas, hoje, primeira }: Props) {
               itens={[
                 { cor: COR.serie1, rotulo: "Seu imóvel", linha: true },
                 ...(temRios ? [{ cor: COR.neutro, rotulo: "Média RIOS", linha: true }] : []),
+                ...(temMercado ? [{ cor: COR.serie2, rotulo: "Mercado (PriceLabs)", linha: true }] : []),
               ]}
             />
-            <p className="mt-1.5 text-[11px] text-muted-foreground">Linha pontilhada: meses à frente, com o que já está reservado até agora.</p>
+            <p className="mt-1.5 text-[11px] text-muted-foreground">
+              Linha pontilhada: meses à frente, com o que já está reservado até agora.
+              {temRios && " Média RIOS: só imóveis com reserva no mês."}
+              {temMercado && " Mercado: imóveis vizinhos, pelo PriceLabs."}
+            </p>
           </Cartao>
 
           <Cartao titulo="Dias da semana" subtitulo="Ocupação por noite da semana, no período">
