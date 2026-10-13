@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "13.0.5"
   }
   public: {
     Tables: {
@@ -2162,6 +2162,59 @@ export type Database = {
         }
         Relationships: []
       }
+      mercado_mensal: {
+        Row: {
+          categoria: string
+          diaria_cents: number | null
+          listagens: number | null
+          listing_id: string
+          mes: string
+          ocupacao: number | null
+          ocupacao_ano_anterior: number | null
+          origem: string
+          pms: string
+          preco_mediano_cents: number | null
+          property_id: string | null
+          synced_at: string
+        }
+        Insert: {
+          categoria: string
+          diaria_cents?: number | null
+          listagens?: number | null
+          listing_id: string
+          mes: string
+          ocupacao?: number | null
+          ocupacao_ano_anterior?: number | null
+          origem: string
+          pms?: string
+          preco_mediano_cents?: number | null
+          property_id?: string | null
+          synced_at?: string
+        }
+        Update: {
+          categoria?: string
+          diaria_cents?: number | null
+          listagens?: number | null
+          listing_id?: string
+          mes?: string
+          ocupacao?: number | null
+          ocupacao_ano_anterior?: number | null
+          origem?: string
+          pms?: string
+          preco_mediano_cents?: number | null
+          property_id?: string | null
+          synced_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mercado_mensal_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       message_read_receipts: {
         Row: {
           id: string
@@ -2466,6 +2519,42 @@ export type Database = {
           },
         ]
       }
+      pricelabs_sync_log: {
+        Row: {
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          listings_synced: number | null
+          listings_total: number | null
+          rows_upserted: number | null
+          started_at: string
+          status: string
+          triggered_by: string | null
+        }
+        Insert: {
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          listings_synced?: number | null
+          listings_total?: number | null
+          rows_upserted?: number | null
+          started_at?: string
+          status?: string
+          triggered_by?: string | null
+        }
+        Update: {
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          listings_synced?: number | null
+          listings_total?: number | null
+          rows_upserted?: number | null
+          started_at?: string
+          status?: string
+          triggered_by?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -2526,7 +2615,9 @@ export type Database = {
           cover_photo_url: string | null
           created_at: string
           default_commission_percentage: number | null
+          fora_da_media_rios: boolean
           id: string
+          mercado_categoria: string | null
           name: string
           owner_id: string
           owner_phone: string | null
@@ -2540,7 +2631,9 @@ export type Database = {
           cover_photo_url?: string | null
           created_at?: string
           default_commission_percentage?: number | null
+          fora_da_media_rios?: boolean
           id?: string
+          mercado_categoria?: string | null
           name: string
           owner_id: string
           owner_phone?: string | null
@@ -2554,7 +2647,9 @@ export type Database = {
           cover_photo_url?: string | null
           created_at?: string
           default_commission_percentage?: number | null
+          fora_da_media_rios?: boolean
           id?: string
+          mercado_categoria?: string | null
           name?: string
           owner_id?: string
           owner_phone?: string | null
@@ -3911,6 +4006,25 @@ export type Database = {
         Args: { p_limite?: number }
         Returns: {
           owner_id: string
+        }[]
+      }
+      reservas_unificadas: {
+        Args: never
+        Returns: {
+          canal: string
+          check_in: string
+          check_out: string
+          codigo: string
+          fone: string
+          fonte: string
+          hospede: string
+          hospedes: number
+          limpeza_cents: number
+          property_id: string
+          reservado_em: string
+          situacao: string
+          taxa_canal_cents: number
+          total_cents: number
         }[]
       }
       resultados_imovel: { Args: { p_property_id: string }; Returns: Json }
