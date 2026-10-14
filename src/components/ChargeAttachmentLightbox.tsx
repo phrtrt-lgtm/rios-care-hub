@@ -2,6 +2,8 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, FileText } from "lucide-react";
 import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
@@ -17,21 +19,62 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
+// O serve-attachment exige autenticação. <img>/<iframe> não mandam o token,
+// então baixamos o arquivo com o token da sessão e abrimos como blob local.
+async function baixarAnexoAutenticado(id: string): Promise<string | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) return null;
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/serve-attachment/${id}/file`, {
+    headers: { Authorization: `Bearer ${session.access_token}` },
+  });
+  if (!res.ok) return null;
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
+}
+
 export function ChargeAttachmentLightbox({ attachments, initialIndex, open, onOpenChange }: Props) {
   const [index, setIndex] = useState(initialIndex);
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [carregando, setCarregando] = useState(false);
+  const [erro, setErro] = useState(false);
 
   useEffect(() => {
     if (open) setIndex(initialIndex);
   }, [open, initialIndex]);
 
-  if (!attachments.length) return null;
   const current = attachments[Math.min(index, attachments.length - 1)];
-  if (!current) return null;
+
+  useEffect(() => {
+    if (!open || !current) return;
+    let cancelado = false;
+    let urlCriada: string | null = null;
+
+    setCarregando(true);
+    setErro(false);
+    setBlobUrl(null);
+
+    baixarAnexoAutenticado(current.id).then((url) => {
+      if (cancelado) {
+        if (url) URL.revokeObjectURL(url);
+        return;
+      }
+      urlCriada = url;
+      setBlobUrl(url);
+      setErro(!url);
+      setCarregando(false);
+    });
+
+    return () => {
+      cancelado = true;
+      if (urlCriada) URL.revokeObjectURL(urlCriada);
+    };
+  }, [open, current?.id]);
+
+  if (!attachments.length || !current) return null;
 
   const isImage = current.mime?.startsWith("image/");
   const isVideo = current.mime?.startsWith("video/");
   const isPdf = current.mime === "application/pdf";
-  const url = `${SUPABASE_URL}/functions/v1/serve-attachment/${current.id}/file`;
 
   const prev = () => setIndex((i) => (i - 1 + attachments.length) % attachments.length);
   const next = () => setIndex((i) => (i + 1) % attachments.length);
@@ -40,27 +83,39 @@ export function ChargeAttachmentLightbox({ attachments, initialIndex, open, onOp
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl p-0 overflow-hidden bg-black/95 border-0">
         <div className="relative w-full h-[80vh] flex items-center justify-center">
-          {isImage && (
-            <img src={url} alt="" className="max-w-full max-h-full object-contain" />
-          )}
-          {isVideo && (
-            <video src={url} controls autoPlay className="max-w-full max-h-full" />
-          )}
-          {isPdf && (
-            <iframe src={url} className="w-full h-full bg-white" title="PDF" />
-          )}
-          {!isImage && !isVideo && !isPdf && (
+          {carregando && <Skeleton className="w-full h-full" />}
+
+          {!carregando && erro && (
             <div className="text-white flex flex-col items-center gap-3 p-8">
               <FileText className="h-12 w-12" />
-              <a
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline text-sm"
-              >
-                Abrir anexo
-              </a>
+              <p className="text-sm">Não foi possível abrir o anexo. Tente novamente.</p>
             </div>
+          )}
+
+          {!carregando && !erro && blobUrl && (
+            <>
+              {isImage && (
+                <img src={blobUrl} alt="" className="max-w-full max-h-full object-contain" />
+              )}
+              {isVideo && (
+                <video src={blobUrl} controls autoPlay className="max-w-full max-h-full" />
+              )}
+              {isPdf && (
+                <iframe src={blobUrl} className="w-full h-full bg-white" title="PDF" />
+              )}
+              {!isImage && !isVideo && !isPdf && (
+                <div className="text-white flex flex-col items-center gap-3 p-8">
+                  <FileText className="h-12 w-12" />
+                  <a
+                    href={blobUrl}
+                    download="anexo"
+                    className="underline text-sm"
+                  >
+                    Baixar anexo
+                  </a>
+                </div>
+              )}
+            </>
           )}
 
           {attachments.length > 1 && (
