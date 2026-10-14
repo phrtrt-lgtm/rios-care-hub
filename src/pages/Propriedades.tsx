@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { ArrowLeft, Building2, Plus, Pencil, Archive, ArchiveRestore, X, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Building2, Plus, Pencil, Archive, ArchiveRestore, X, Eye, EyeOff, MessageCircle, Send } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { PropertyPhotoUpload } from "@/components/PropertyPhotoUpload";
@@ -26,6 +26,7 @@ interface Property {
   assigned_cleaner_phone: string | null;
   owner_phone: string | null;
   archived_at: string | null;
+  notificar_reservas_whatsapp?: boolean;
   owner: {
     name: string;
     email: string;
@@ -291,6 +292,53 @@ const Propriedades = () => {
     }
   };
 
+  const telefoneAviso = (p: Property) =>
+    (p.owner_phone || owners.find((o) => o.id === p.owner_id)?.phone || "").replace(/\D/g, "");
+
+  const toggleAvisoReservas = async (p: Property, ligado: boolean) => {
+    const { error } = await supabase.from("properties").update({ notificar_reservas_whatsapp: ligado }).eq("id", p.id);
+    if (error) {
+      toast({ title: "Não foi possível salvar", description: error.message, variant: "destructive" });
+      return;
+    }
+    setProperties((prev) => prev.map((x) => (x.id === p.id ? { ...x, notificar_reservas_whatsapp: ligado } : x)));
+    setEditingProperty((e) => (e && e.id === p.id ? { ...e, notificar_reservas_whatsapp: ligado } : e));
+    toast({ title: ligado ? "Aviso de reservas ligado" : "Aviso de reservas desligado" });
+  };
+
+  const [enviandoTeste, setEnviandoTeste] = useState(false);
+  const enviarTesteReserva = async (p: Property) => {
+    setEnviandoTeste(true);
+    try {
+      const { data: r } = await supabase
+        .from("hostex_reservations")
+        .select("reservation_code")
+        .eq("property_id", p.id)
+        .eq("status", "accepted")
+        .order("booked_at", { ascending: false, nullsFirst: false })
+        .limit(1)
+        .maybeSingle();
+      if (!r) {
+        toast({ title: "Nenhuma reserva confirmada para este imóvel", variant: "destructive" });
+        return;
+      }
+      const { data, error } = await supabase.functions.invoke("notificar-reserva", {
+        body: { reservation_code: r.reservation_code, reenviar: true },
+      });
+      if (error) throw error;
+      const st = (data as any)?.status;
+      toast({
+        title: st === "enviado" ? "Teste enviado" : `Resultado: ${st}`,
+        description: (data as any)?.erro,
+        variant: st === "enviado" ? undefined : "destructive",
+      });
+    } catch (e: any) {
+      toast({ title: "Falha no teste", description: e.message, variant: "destructive" });
+    } finally {
+      setEnviandoTeste(false);
+    }
+  };
+
   const resetForm = () => {
     setFormData({ name: "", address: "", owner_id: "", assigned_cleaner_id: "" });
     setEditingProperty(null);
@@ -404,6 +452,42 @@ const Propriedades = () => {
                       </Button>
                     )}
                   </div>
+                  {editingProperty && (() => {
+                    const temTel = telefoneAviso(editingProperty).length >= 10;
+                    const ligado = !!editingProperty.notificar_reservas_whatsapp;
+                    return (
+                      <div className="space-y-2 rounded-md border p-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <Label htmlFor="aviso-reservas" className="text-sm">
+                            Avisar proprietário sobre novas reservas (WhatsApp)
+                          </Label>
+                          <Switch
+                            id="aviso-reservas"
+                            checked={ligado}
+                            disabled={!temTel && !ligado}
+                            onCheckedChange={(v) => toggleAvisoReservas(editingProperty, v)}
+                          />
+                        </div>
+                        {!temTel && (
+                          <p className="text-xs text-muted-foreground">
+                            Sem WhatsApp cadastrado no imóvel nem no perfil do proprietário.
+                          </p>
+                        )}
+                        {profile?.role === "admin" && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={enviandoTeste || !temTel || !ligado}
+                            onClick={() => enviarTesteReserva(editingProperty)}
+                          >
+                            <Send className="mr-2 h-3 w-3" />
+                            {enviandoTeste ? "Enviando..." : "Enviar teste com a última reserva"}
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
                 <DialogFooter>
                   <Button type="button" variant="outline" onClick={() => handleDialogChange(false)}>
@@ -459,6 +543,14 @@ const Propriedades = () => {
                       {property.archived_at && (
                         <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase text-muted-foreground">
                           Arquivada
+                        </span>
+                      )}
+                      {property.notificar_reservas_whatsapp && (
+                        <span
+                          title="Aviso de reservas por WhatsApp ligado"
+                          className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-medium text-success"
+                        >
+                          <MessageCircle className="h-3 w-3" /> Reservas
                         </span>
                       )}
                     </CardTitle>
