@@ -49,12 +49,13 @@ import { EditTicketDialog } from "@/components/EditTicketDialog";
 import { CompleteMaintenanceDialog } from "@/components/CompleteMaintenanceDialog";
 import { SendToChargeButton } from "@/components/SendToChargeButton";
 import { ConversationSummaryButton } from "@/components/ConversationSummaryButton";
-import { AttachmentBubble } from "@/components/AttachmentBubble";
 import { MediaGallery } from "@/components/MediaGallery";
 import { TicketBadges } from "@/components/TicketBadges";
 import OwnerMaintenanceDecision from "@/components/OwnerMaintenanceDecision";
 import { renderizarCorpo } from "@/components/chat/CorpoMensagem";
 import { ChatMessageBubble } from "@/components/chat/ChatMessageBubble";
+import { ChatAnexos } from "@/components/chat/ChatAnexos";
+import { ehCorpoDeAnexo, juntarMensagensDeMidia } from "@/components/chat/anexos";
 import { ChatDateDivider } from "@/components/chat/ChatDateDivider";
 import { ChatTypingIndicator } from "@/components/chat/ChatTypingIndicator";
 import { ChatFilePreviewRow } from "@/components/chat/ChatFilePreviewRow";
@@ -121,6 +122,15 @@ const SEM_UPLOAD = new Set<string>();
 
 const ehMidia = (att: Attachment) =>
   att.file_type?.startsWith("image/") || att.file_type?.startsWith("video/") || att.file_type === "application/pdf";
+
+/** Como o agrupador de mídias lê a mensagem desta página. */
+const LEITOR_CHAT = {
+  autorId: (m: Message) => m.author_id,
+  criadoEm: (m: Message) => m.created_at,
+  corpo: (m: Message) => m.body,
+  anexos: (m: Message) => m.attachments,
+  interna: (m: Message) => m.is_internal,
+};
 
 /** Mensagem legível de um erro do Supabase, de uma Error ou de qualquer coisa. */
 function mensagemErro(erro: unknown, padrao = "Tente novamente."): string {
@@ -932,74 +942,71 @@ export default function TicketDetalhes() {
             mensagensPorDia.map(([date, dayMessages]) => (
               <div key={date}>
                 <ChatDateDivider date={date} />
-                {dayMessages.map((message, index) => {
-                  const isOwnMessage = message.author_id === user?.id;
-                  const messageReceipts = receipts[message.id] || [];
-                  const prev = dayMessages[index - 1];
+                {juntarMensagensDeMidia(dayMessages, LEITOR_CHAT).map((grupo, index, grupos) => {
+                  const { primeira, ultima, anexos } = grupo;
+                  const isOwnMessage = primeira.author_id === user?.id;
+                  const messageReceipts = receipts[ultima.id] || [];
+                  const anterior = grupos[index - 1];
                   const grouped =
-                    !!prev &&
-                    prev.author_id === message.author_id &&
-                    new Date(message.created_at).getTime() - new Date(prev.created_at).getTime() <
+                    !!anterior &&
+                    anterior.ultima.author_id === primeira.author_id &&
+                    new Date(primeira.created_at).getTime() - new Date(anterior.ultima.created_at).getTime() <
                       5 * 60 * 1000;
+                  const pendente = grupo.membros.some((m) => m.id.startsWith("optimistic-"));
                   // Nota interna tem fundo warning/10: texto de balão primário ficaria ilegível.
-                  const corTexto = isOwnMessage && !message.is_internal ? "text-primary-foreground" : undefined;
+                  const corTexto = isOwnMessage && !primeira.is_internal ? "text-primary-foreground" : undefined;
+                  // "Anexo enviado" só existia para a mensagem não ficar vazia; com o mosaico, sai.
+                  const mostrarCorpo = !!primeira.body && !(anexos.length > 0 && ehCorpoDeAnexo(primeira.body));
+                  const anexosDoGrupo = anexos as Attachment[];
 
                   return (
                     <ChatMessageBubble
-                      key={message.id}
-                      authorName={message.profiles?.name}
-                      authorPhoto={message.profiles?.photo_url}
-                      authorRole={message.profiles?.role}
-                      createdAt={message.created_at}
+                      key={primeira.id}
+                      authorName={primeira.profiles?.name}
+                      authorPhoto={primeira.profiles?.photo_url}
+                      authorRole={primeira.profiles?.role}
+                      createdAt={ultima.created_at}
                       isOwn={isOwnMessage}
-                      isInternal={message.is_internal}
-                      pending={message.id.startsWith("optimistic-")}
+                      isInternal={primeira.is_internal}
+                      pending={pendente}
                       receipts={messageReceipts}
                       grouped={grouped}
-                      body={message.body ? renderizarCorpo(message.body, corTexto) : undefined}
+                      largura={anexos.length > 0 ? "larga" : "normal"}
+                      body={mostrarCorpo ? renderizarCorpo(primeira.body, corTexto) : undefined}
                       attachments={
-                        message.attachments && message.attachments.length > 0 ? (
-                          <div className="space-y-1.5">
-                            {message.attachments.length > 1 && (
-                              <div className="flex justify-end">
+                        anexos.length > 0 ? (
+                          <ChatAnexos
+                            anexos={anexos}
+                            pending={pendente}
+                            alinharDireita={isOwnMessage}
+                            aoAbrir={(a) => abrirGaleria(a as Attachment)}
+                            aoExcluir={
+                              isTeamMember
+                                ? async (a) => {
+                                    const ok = await deleteAttachmentRow("ticket_attachments", a.id);
+                                    if (ok) fetchMessages();
+                                  }
+                                : undefined
+                            }
+                            acoes={
+                              anexos.length > 1 ? (
                                 <Button
                                   variant="ghost"
                                   size="sm"
                                   className="h-6 text-[11px]"
                                   onClick={() =>
                                     baixarAnexosZip(
-                                      message.attachments!,
-                                      `anexos-${format(new Date(message.created_at), "dd-MM-yyyy-HH-mm")}.zip`,
+                                      anexosDoGrupo,
+                                      `anexos-${format(new Date(ultima.created_at), "dd-MM-yyyy-HH-mm")}.zip`,
                                     )
                                   }
                                 >
                                   <Download className="h-3 w-3" />
                                   Baixar todos
                                 </Button>
-                              </div>
-                            )}
-                            <div
-                              className={`grid gap-1.5 ${
-                                message.attachments.length > 1 ? "grid-cols-2" : "grid-cols-1"
-                              }`}
-                            >
-                              {message.attachments.map((attachment) => (
-                                <AttachmentBubble
-                                  key={attachment.id}
-                                  {...attachment}
-                                  onDelete={
-                                    isTeamMember
-                                      ? async () => {
-                                          const ok = await deleteAttachmentRow("ticket_attachments", attachment.id);
-                                          if (ok) fetchMessages();
-                                        }
-                                      : undefined
-                                  }
-                                  onPreview={() => abrirGaleria(attachment)}
-                                />
-                              ))}
-                            </div>
-                          </div>
+                              ) : undefined
+                            }
+                          />
                         ) : undefined
                       }
                     />

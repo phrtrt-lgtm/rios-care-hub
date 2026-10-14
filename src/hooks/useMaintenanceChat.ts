@@ -3,6 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { preloadMediaUrls } from "./useMediaCache";
 import { getCachedMessages, getCachedMedia, setCachedMessages } from "./useChatPreloader";
+import { descreverErroDaFunction } from "@/lib/erroFunction";
+import { toast as sonnerToast } from "sonner";
+
+const ehMidia = (a: ChatAttachment) =>
+  !!a.file_type && (a.file_type.startsWith("image/") || a.file_type.startsWith("video/") || a.file_type === "application/pdf");
 
 export interface ChatAttachment {
   id: string;
@@ -136,9 +141,9 @@ export function useMaintenanceChat(ticketId: string | null) {
           filter: `ticket_id=eq.${ticketId}`,
         },
         async () => {
-          console.log("New message received, refetching...");
-          // Refetch to get complete message with attachments
-          await fetchMessages();
+          // Direto no servidor: a cópia em cache ainda não tem a mensagem nova
+          // e, mostrada antes, faria a última bolha sumir por um instante.
+          await fetchMessages(true);
         }
       )
       .subscribe();
@@ -267,37 +272,56 @@ export function useMaintenanceChat(ticketId: string | null) {
       // Clear typing indicator
       setTyping(false);
 
-      // Send in background - no await blocking UI
-      (async () => {
-        try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (!session) throw new Error('Not authenticated');
+      // Envia e espera a resposta: o campo só limpa quando a mensagem gravou,
+      // e a bolha provisória ("Enviando…") é trocada pela real aqui mesmo.
+      // Antes o envio corria em segundo plano e a troca dependia do realtime,
+      // que não existia para ticket_messages: a bolha ficava "Enviando…" para
+      // sempre e, se a function recusasse (chamado concluído), sumia sem aviso.
+      setSending(true);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error("Sessão expirada. Entre de novo para enviar.");
 
-          const { error } = await supabase.functions.invoke(`create-ticket-message/${ticketId}`, {
-            headers: {
-              Authorization: `Bearer ${session.access_token}`
-            },
-            body: {
-              message: body.trim() || null,
-              attachments,
-              is_internal: isInternal
-            }
-          });
-
-          if (error) {
-            console.error("Error sending message:", error);
-            // Remove optimistic message on error
-            setMessages(prev => prev.filter(m => m.id !== optimisticId));
+        const { data, error } = await supabase.functions.invoke(`create-ticket-message/${ticketId}`, {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`
+          },
+          body: {
+            message: body.trim() || null,
+            attachments,
+            is_internal: isInternal
           }
-          // Realtime subscription will handle adding the real message
-        } catch (error) {
-          console.error("Error sending message:", error);
-          // Remove optimistic message on error
-          setMessages(prev => prev.filter(m => m.id !== optimisticId));
+        });
+        if (error) throw error;
+
+        const real: ChatMessage = {
+          id: typeof data?.id === "string" ? data.id : optimisticId,
+          body: typeof data?.body === "string" ? data.body : optimisticMessage.body,
+          created_at: typeof data?.created_at === "string" ? data.created_at : optimisticMessage.created_at,
+          is_internal: typeof data?.is_internal === "boolean" ? data.is_internal : isInternal,
+          author: optimisticMessage.author,
+          attachments: Array.isArray(data?.attachments) && data.attachments.length > 0
+            ? (data.attachments as ChatAttachment[])
+            : optimisticMessage.attachments,
+        };
+        setMessages(prev => {
+          const semProvisoria = prev.filter(m => m.id !== optimisticId);
+          // O realtime pode ter chegado antes e já trazido a mensagem real.
+          return semProvisoria.some(m => m.id === real.id) ? semProvisoria : [...semProvisoria, real];
+        });
+        const midias = (real.attachments || []).filter(ehMidia);
+        if (midias.length > 0) {
+          setAllMediaItems(prev => [...prev, ...midias.filter(m => !prev.some(p => p.id === m.id))]);
         }
-      })();
-      
-      return true;
+        return true;
+      } catch (error) {
+        console.error("Error sending message:", error);
+        setMessages(prev => prev.filter(m => m.id !== optimisticId));
+        sonnerToast.error("A mensagem não foi enviada", { description: await descreverErroDaFunction(error) });
+        return false;
+      } finally {
+        setSending(false);
+      }
     },
     [ticketId, user, profile, setTyping]
   );

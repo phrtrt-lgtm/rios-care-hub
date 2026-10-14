@@ -78,8 +78,12 @@ Deno.serve(async (req) => {
       })
     }
 
-    if (ticket.status === 'concluido' || ticket.status === 'cancelado') {
-      return new Response(JSON.stringify({ error: 'Cannot add messages to closed tickets' }), {
+    // Chamado concluído ou cancelado: a equipe continua escrevendo (a manutenção
+    // é concluída ao enviar a cobrança e a conversa segue na lista); só o
+    // proprietário é barrado. Antes todo mundo era, e o chat da lista perdia a
+    // mensagem sem aviso.
+    if (!isTeam && (ticket.status === 'concluido' || ticket.status === 'cancelado')) {
+      return new Response(JSON.stringify({ error: 'Este chamado está encerrado e não aceita mensagens novas.' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })

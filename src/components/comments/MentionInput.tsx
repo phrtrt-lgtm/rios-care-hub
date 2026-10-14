@@ -18,6 +18,11 @@ interface MentionInputProps {
   rows?: number;
   disabled?: boolean;
   onSubmit?: () => void;
+  /**
+   * Enter envia e Shift+Enter quebra a linha, como nos outros chats. Sem isso,
+   * só Ctrl/Cmd+Enter envia (comentários de vistoria, onde o texto é longo).
+   */
+  enterEnvia?: boolean;
   className?: string;
 }
 
@@ -48,6 +53,7 @@ export function MentionInput({
   rows = 3,
   disabled,
   onSubmit,
+  enterEnvia = false,
   className,
 }: MentionInputProps) {
   const [showPicker, setShowPicker] = useState(false);
@@ -128,9 +134,11 @@ export function MentionInput({
         return;
       }
     }
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && onSubmit) {
-      e.preventDefault();
-      onSubmit();
+    if (onSubmit && e.key === "Enter" && !e.nativeEvent.isComposing) {
+      if (e.metaKey || e.ctrlKey || (enterEnvia && !e.shiftKey)) {
+        e.preventDefault();
+        onSubmit();
+      }
     }
   };
 

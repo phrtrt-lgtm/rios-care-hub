@@ -9,13 +9,12 @@ import { useMaintenanceChat, ChatMessage } from "@/hooks/useMaintenanceChat";
 import { useAuth } from "@/hooks/useAuth";
 import { useReadReceipts } from "@/hooks/useReadReceipts";
 import { useQueryClient } from "@tanstack/react-query";
-import { AttachmentBubble } from "@/components/AttachmentBubble";
 import { MediaGallery } from "@/components/MediaGallery";
 import { VoiceToTextInput } from "@/components/VoiceToTextInput";
 import OwnerMaintenanceDecision from "@/components/OwnerMaintenanceDecision";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
-import { Send, Loader2, ExternalLink, Sparkles, CheckCircle2, DollarSign } from "lucide-react";
+import { Send, Loader2, ExternalLink, Sparkles, CheckCircle2, DollarSign, Images } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { saveScrollPosition } from "@/lib/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -34,6 +33,17 @@ import { ChatTypingIndicator } from "@/components/chat/ChatTypingIndicator";
 import { ChatFilePreviewRow } from "@/components/chat/ChatFilePreviewRow";
 import { ChatEmptyState } from "@/components/chat/ChatEmptyState";
 import { renderizarCorpo } from "@/components/chat/CorpoMensagem";
+import { ChatAnexos } from "@/components/chat/ChatAnexos";
+import { ehCorpoDeAnexo, juntarMensagensDeMidia, type GrupoMensagem } from "@/components/chat/anexos";
+
+/** Como o agrupador lê a mensagem deste chat. */
+const LEITOR = {
+  autorId: (m: ChatMessage) => m.author?.id,
+  criadoEm: (m: ChatMessage) => m.created_at,
+  corpo: (m: ChatMessage) => m.body,
+  anexos: (m: ChatMessage) => m.attachments,
+  interna: (m: ChatMessage) => m.is_internal,
+};
 
 
 interface MaintenanceChatDialogProps {
@@ -277,11 +287,12 @@ export function MaintenanceChatDialog({
         setMentionedIds([]);
         setSelectedFiles([]);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Falha no envio dos anexos (o envio da mensagem em si avisa no hook).
       console.error('[MaintenanceChat] Erro ao enviar:', error);
       toast({
-        title: "Erro ao enviar mensagem",
-        description: error?.message || "Tente novamente.",
+        title: "Erro ao enviar os anexos",
+        description: error instanceof Error ? error.message : "Tente novamente.",
         variant: "destructive",
       });
     } finally {
@@ -344,50 +355,48 @@ export function MaintenanceChatDialog({
     }
   };
 
-  const renderMessage = (message: ChatMessage, index: number, dayMessages: ChatMessage[]) => {
-    const isOwnMessage = message.author?.id === user?.id;
-    const messageReceipts = receipts[message.id] || [];
-    const prev = dayMessages[index - 1];
+  const renderMessage = (
+    grupo: GrupoMensagem<ChatMessage>,
+    index: number,
+    gruposDoDia: GrupoMensagem<ChatMessage>[],
+  ) => {
+    const { primeira, ultima, anexos } = grupo;
+    const isOwnMessage = primeira.author?.id === user?.id;
+    const messageReceipts = receipts[ultima.id] || [];
+    const anterior = gruposDoDia[index - 1];
     const grouped =
-      !!prev &&
-      prev.author?.id === message.author?.id &&
-      new Date(message.created_at).getTime() - new Date(prev.created_at).getTime() < 5 * 60 * 1000;
+      !!anterior &&
+      anterior.ultima.author?.id === primeira.author?.id &&
+      new Date(primeira.created_at).getTime() - new Date(anterior.ultima.created_at).getTime() < 5 * 60 * 1000;
+    const pendente = grupo.membros.some((m) => m.id.startsWith("optimistic-"));
+    // "Anexo enviado" só existia para a mensagem não ficar vazia; com o mosaico, sai.
+    const mostrarCorpo = !!primeira.body && !(anexos.length > 0 && ehCorpoDeAnexo(primeira.body));
 
     return (
       <ChatMessageBubble
-        key={message.id}
-        authorName={message.author?.name}
-        authorPhoto={message.author?.photo_url}
-        authorRole={message.author?.role}
-        createdAt={message.created_at}
+        key={primeira.id}
+        authorName={primeira.author?.name}
+        authorPhoto={primeira.author?.photo_url}
+        authorRole={primeira.author?.role}
+        createdAt={ultima.created_at}
         isOwn={isOwnMessage}
-        isInternal={message.is_internal}
-        pending={message.id.startsWith("optimistic-")}
+        isInternal={primeira.is_internal}
+        pending={pendente}
         receipts={messageReceipts}
         grouped={grouped}
+        largura={anexos.length > 0 ? "larga" : "normal"}
         body={
           // A bolha cuida da cor (própria, interna, dos outros); o corpo só formata.
-          message.body ? renderizarCorpo(message.body) : undefined
+          mostrarCorpo ? renderizarCorpo(primeira.body) : undefined
         }
         attachments={
-          message.attachments && message.attachments.length > 0 ? (
-            <div
-              className={`grid gap-1.5 ${
-                message.attachments.length > 1 ? "grid-cols-2" : "grid-cols-1"
-              }`}
-            >
-              {message.attachments.map((att) => (
-                <AttachmentBubble
-                  key={att.id}
-                  id={att.id}
-                  file_url={att.file_url}
-                  file_name={att.file_name}
-                  file_type={att.file_type}
-                  size_bytes={att.size_bytes}
-                  onPreview={handlePreviewMedia}
-                />
-              ))}
-            </div>
+          anexos.length > 0 ? (
+            <ChatAnexos
+              anexos={anexos}
+              pending={pendente}
+              alinharDireita={isOwnMessage}
+              aoAbrir={(a) => handlePreviewMedia(a.file_url, a.file_name ?? "")}
+            />
           ) : undefined
         }
       />
@@ -408,13 +417,28 @@ export function MaintenanceChatDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-[95vw] max-w-lg h-[85vh] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden rounded-2xl">
+        <DialogContent className="w-[96vw] max-w-lg sm:max-w-2xl h-[90dvh] max-h-[90dvh] sm:h-[86vh] sm:max-h-[86vh] flex flex-col p-0 gap-0 overflow-hidden rounded-2xl">
           <ChatDialogHeader
             title={ticketSubject || "Mensagens"}
             propertyName={propertyName}
             live={onlineUsers.length > 0}
             actions={
               <>
+                {allMediaItems.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-[11px]"
+                    onClick={() => {
+                      setGalleryStartIndex(0);
+                      setGalleryOpen(true);
+                    }}
+                    aria-label={`Abrir a galeria com ${allMediaItems.length} anexos`}
+                  >
+                    <Images className="h-3 w-3 mr-1" />
+                    Galeria · {allMediaItems.length}
+                  </Button>
+                )}
                 <ConversationSummaryButton
                   ticketId={ticketId || ''}
                   messageCount={messages.length}
@@ -473,7 +497,7 @@ export function MaintenanceChatDialog({
           />
 
           {/* Messages area */}
-          <ScrollArea className="flex-1 bg-muted/20 px-3">
+          <ScrollArea className="flex-1 bg-muted/20 px-3 sm:px-5">
             {/* Owner decision block (if applicable) */}
             {decisionTicket && (
               <div className="py-4">
@@ -491,12 +515,15 @@ export function MaintenanceChatDialog({
               <ChatEmptyState />
             ) : (
               <div className="pb-3">
-                {Object.entries(groupedMessages).map(([date, dayMessages]) => (
-                  <div key={date}>
-                    <ChatDateDivider date={date} />
-                    {dayMessages.map((m, i) => renderMessage(m, i, dayMessages))}
-                  </div>
-                ))}
+                {Object.entries(groupedMessages).map(([date, dayMessages]) => {
+                  const grupos = juntarMensagensDeMidia(dayMessages, LEITOR);
+                  return (
+                    <div key={date}>
+                      <ChatDateDivider date={date} />
+                      {grupos.map((g, i) => renderMessage(g, i, grupos))}
+                    </div>
+                  );
+                })}
               </div>
             )}
 
@@ -572,10 +599,10 @@ export function MaintenanceChatDialog({
                     setTyping(v.length > 0);
                   }}
                   users={mentionableUsers}
-                  placeholder="Mensagem para enviar... use @ para mencionar"
+                  placeholder="Escreva uma mensagem… (Enter envia, @ menciona)"
                   rows={1}
-                  disabled={sending}
                   onSubmit={handleSend}
+                  enterEnvia
                   className="min-h-[40px]"
                 />
               </div>

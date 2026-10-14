@@ -21,6 +21,8 @@ export interface ChatMessageBubbleProps {
   attachments?: ReactNode;
   /** Hide avatar/name when grouped with previous message from same author */
   grouped?: boolean;
+  /** "larga" dá mais espaço à coluna, para o mosaico de fotos. */
+  largura?: "normal" | "larga";
 }
 
 function initials(name?: string | null) {
@@ -45,6 +47,7 @@ export function ChatMessageBubble({
   body,
   attachments,
   grouped,
+  largura = "normal",
 }: ChatMessageBubbleProps) {
   const isTeam = TEAM_ROLES.includes(authorRole || "");
 
@@ -69,7 +72,11 @@ export function ChatMessageBubble({
         )}
       </div>
 
-      <div className={`flex min-w-0 max-w-[78%] flex-col ${isOwn ? "items-end" : "items-start"}`}>
+      <div
+        className={`flex min-w-0 flex-col ${largura === "larga" ? "max-w-[92%] sm:max-w-[84%]" : "max-w-[78%]"} ${
+          isOwn ? "items-end" : "items-start"
+        }`}
+      >
         {!grouped && (
           <div className="mb-1 flex items-center gap-1.5 px-1">
             <span className="text-[11px] font-semibold text-foreground">
@@ -101,7 +108,13 @@ export function ChatMessageBubble({
           </div>
         ) : null}
 
-        {attachments && <div className="mt-1.5 w-full">{attachments}</div>}
+        {/* Mídia de nota interna sem texto: sem a bolha amarela, precisa do selo. */}
+        {isInternal && !body && attachments && (
+          <span className="mb-1 rounded-full border border-warning/40 bg-warning/10 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wider text-warning">
+            Nota interna
+          </span>
+        )}
+        {attachments && <div className={`w-full ${body ? "mt-1.5" : ""}`}>{attachments}</div>}
 
         <div className="mt-1 px-1">
           <ChatReceiptStatus
