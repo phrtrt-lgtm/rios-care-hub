@@ -402,7 +402,7 @@ export default function ManutencaoDetalhes({ embedded = false, idOverride }: Man
 
             {outros.length > 0 && (
               <div className="divide-y divide-border/60">
-                {outros.map((attachment: any) => (
+                {outros.map((attachment: any, idx: number) => (
                   <div key={attachment.id} className="flex items-center gap-3 py-2">
                     <FileText className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
                     <div className="min-w-0 flex-1">
@@ -412,10 +412,17 @@ export default function ManutencaoDetalhes({ embedded = false, idOverride }: Man
                       <div className="text-xs text-muted-foreground">{tamanhoKB(attachment.size_bytes)}</div>
                     </div>
                     <div className="flex shrink-0 items-center gap-1">
-                      <Button variant="ghost" size="sm" className="h-7 text-xs" asChild>
-                        <a href={attachment.file_url} target="_blank" rel="noopener noreferrer">
-                          Ver
-                        </a>
+                      {/* Abre na galeria: o link direto ia sem o token e a function devolvia 401. */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => {
+                          setGalleryStartIndex(midia.length + idx);
+                          setGalleryOpen(true);
+                        }}
+                      >
+                        Ver
                       </Button>
                       {isTeam && !attachment.from_inspection && (
                         <Button
@@ -437,7 +444,7 @@ export default function ManutencaoDetalhes({ embedded = false, idOverride }: Man
             )}
 
             <MediaGallery
-              items={midia.map((a: any) => ({
+              items={[...midia, ...outros].map((a: any) => ({
                 id: a.id,
                 file_url: a.file_url,
                 file_name: a.file_name,

@@ -64,6 +64,7 @@ import { emParaleloOuFalha } from "@/lib/fileUpload";
 import { MaintenanceServiceLog } from "@/components/MaintenanceServiceLog";
 import type { MaintenanceNote } from "@/hooks/useMaintenances";
 import { fetchChargeGalleryAttachments, type GalleryAttachment } from "@/lib/chargeAttachments";
+import { baixarAnexoAutenticado } from "@/lib/abrirAnexo";
 import { CabecalhoPagina, PaginaInterna } from "@/components/painel/PaginaInterna";
 import { BotaoLinha, CaixaOperacao, SeloContagem } from "@/components/painel/CaixaOperacao";
 import { Definicao, ListaDefinicoes } from "@/components/painel/Definicoes";
@@ -485,21 +486,23 @@ export default function CobrancaDetalhes() {
     [allAttachmentFiles],
   );
 
-  /** Fotos e vídeos das mensagens, na ordem em que aparecem, para a galeria. */
+  /**
+   * Anexos das mensagens, na ordem em que aparecem, para a galeria. PDF e
+   * outros arquivos também entram: o link direto ia sem o token e a function
+   * serve-attachment devolvia 401; a galeria baixa com o token.
+   */
   const messageMediaItems = useMemo(() => {
     const base = import.meta.env.VITE_SUPABASE_URL;
     const items: MediaItem[] = [];
     messages.forEach((m) =>
       (m.attachments || []).forEach((a) => {
-        if (a.mime_type?.startsWith('image/') || a.mime_type?.startsWith('video/')) {
-          items.push({
-            id: a.id,
-            file_url: `${base}/functions/v1/serve-attachment/${a.id}/file`,
-            file_name: nomeAnonimoAnexo(a.file_name, a.mime_type, items.length),
-            file_type: a.mime_type,
-            size_bytes: a.file_size,
-          });
-        }
+        items.push({
+          id: a.id,
+          file_url: `${base}/functions/v1/serve-attachment/${a.id}/file`,
+          file_name: nomeAnonimoAnexo(a.file_name, a.mime_type, items.length),
+          file_type: a.mime_type,
+          size_bytes: a.file_size,
+        });
       }),
     );
     return items;
@@ -1411,7 +1414,13 @@ export default function CobrancaDetalhes() {
                       </p>
                       {tamanho && <p className="text-[11px] text-muted-foreground">{tamanho}</p>}
                     </div>
-                    <BotaoLinha rotulo={`Baixar ${rotuloAnexo(file.mime).toLowerCase()} ${i + 1}`} onClick={() => window.open(file.download_url, '_blank')}>
+                    <BotaoLinha
+                      rotulo={`Baixar ${rotuloAnexo(file.mime).toLowerCase()} ${i + 1}`}
+                      onClick={async () => {
+                        const ok = await baixarAnexoAutenticado(file.download_url, i, file.mime);
+                        if (!ok) toast({ title: "Não foi possível baixar o anexo", variant: "destructive" });
+                      }}
+                    >
                       <Download />
                     </BotaoLinha>
                   </div>
@@ -1514,11 +1523,11 @@ export default function CobrancaDetalhes() {
                                 }
 
                                 return (
-                                  <a
+                                  <button
                                     key={attachment.id}
-                                    href={attachmentUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
+                                    type="button"
+                                    onClick={() => abrirGaleriaMensagem(attachment.id)}
+                                    aria-label={`Abrir ${rotuloAnexo(attachment.mime_type).toLowerCase()}`}
                                     className="flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border border-border bg-muted p-2 text-center text-xs text-muted-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                   >
                                     <FileText className="h-6 w-6" aria-hidden="true" />
@@ -1526,7 +1535,7 @@ export default function CobrancaDetalhes() {
                                     {formatarTamanho(attachment.file_size) && (
                                       <span className="text-[10px]">{formatarTamanho(attachment.file_size)}</span>
                                     )}
-                                  </a>
+                                  </button>
                                 );
                               })}
                             </div>
