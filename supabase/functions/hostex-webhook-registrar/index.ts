@@ -14,7 +14,7 @@ const json = (b: unknown, status = 200) =>
   new Response(JSON.stringify(b), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
 const ALVO = "https://ktzfovzwayfqczytmhno.supabase.co/functions/v1/hostex-webhook";
-const normUrl = (u: string) => u.trim().replace(/\/+$/, "").toLowerCase();
+const ehNosso = (u: string) => /ktzfovzwayfqczytmhno\.supabase\.co\/functions\/v1\/hostex-webhook\/?(\?.*)?$/i.test(u.trim());
 
 async function hx(method: string, path: string, apiKey: string, body?: unknown) {
   const resp = await fetch(`${HOSTEX_BASE}${path}`, {
@@ -45,7 +45,8 @@ Deno.serve(async (req) => {
 
   try {
     const lista = await hx("GET", "/webhooks", apiKey);
-    const nossos = ((lista?.data?.webhooks ?? []) as any[]).filter((w) => normUrl(String(w.url ?? "")) === normUrl(ALVO));
+    const nossos = ((lista?.data?.webhooks ?? []) as any[]).filter((w) => ehNosso(String(w.url ?? "")));
+    const todasUrls = ((lista?.data?.webhooks ?? []) as any[]).map((w) => ({ id: w.id, url: w.url, manageable: w.manageable }));
     let apagados = 0;
     const naoApagados: { id: unknown; erro: string }[] = [];
     for (const w of nossos) {
@@ -53,7 +54,12 @@ Deno.serve(async (req) => {
       catch (e) { naoApagados.push({ id: w.id, erro: (e as Error).message }); }
     }
 
-    const criado = await hx("POST", "/webhooks", apiKey, { url: ALVO, events: ["reservation_created", "reservation_updated"] });
+    if (naoApagados.length) return json({ error: "Não consegui apagar todos os webhooks antigos.", encontrados: nossos.length, apagados, nao_apagados: naoApagados, webhooks: todasUrls }, 409);
+    let criado: any;
+    try { criado = await hx("POST", "/webhooks", apiKey, { url: ALVO, events: ["reservation_created", "reservation_updated"] }); }
+    catch (e) { return json({ error: (e as Error).message, encontrados: nossos.length, apagados, webhooks: todasUrls }, 502); }
+    const _ignorar = await Promise.resolve(null); void _ignorar;
+    if (false) criado = await hx("POST", "/webhooks", apiKey, { url: ALVO, events: ["reservation_created", "reservation_updated"] });
     const id = criado?.data?.id;
     const segredo = criado?.data?.secret_token;
     if (!segredo) return json({ error: "A Hostex não devolveu secret_token.", encontrados: nossos.length, apagados, webhook_id: id }, 502);
