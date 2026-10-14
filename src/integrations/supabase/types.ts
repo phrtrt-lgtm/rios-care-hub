@@ -1792,6 +1792,10 @@ export type Database = {
           total_commission_cents: number | null
           total_rate_cents: number | null
           updated_at: string
+          whatsapp_reserva_enviado_em: string | null
+          whatsapp_reserva_erro: string | null
+          whatsapp_reserva_message_id: string | null
+          whatsapp_reserva_status: string | null
         }
         Insert: {
           booked_at?: string | null
@@ -1814,6 +1818,10 @@ export type Database = {
           total_commission_cents?: number | null
           total_rate_cents?: number | null
           updated_at?: string
+          whatsapp_reserva_enviado_em?: string | null
+          whatsapp_reserva_erro?: string | null
+          whatsapp_reserva_message_id?: string | null
+          whatsapp_reserva_status?: string | null
         }
         Update: {
           booked_at?: string | null
@@ -1836,6 +1844,10 @@ export type Database = {
           total_commission_cents?: number | null
           total_rate_cents?: number | null
           updated_at?: string
+          whatsapp_reserva_enviado_em?: string | null
+          whatsapp_reserva_erro?: string | null
+          whatsapp_reserva_message_id?: string | null
+          whatsapp_reserva_status?: string | null
         }
         Relationships: [
           {
@@ -1883,6 +1895,36 @@ export type Database = {
           started_at?: string
           status?: string
           triggered_by?: string | null
+        }
+        Relationships: []
+      }
+      hostex_webhook_events: {
+        Row: {
+          error: string | null
+          event: string | null
+          event_id: string | null
+          id: string
+          payload: Json | null
+          processed_at: string | null
+          received_at: string
+        }
+        Insert: {
+          error?: string | null
+          event?: string | null
+          event_id?: string | null
+          id?: string
+          payload?: Json | null
+          processed_at?: string | null
+          received_at?: string
+        }
+        Update: {
+          error?: string | null
+          event?: string | null
+          event_id?: string | null
+          id?: string
+          payload?: Json | null
+          processed_at?: string | null
+          received_at?: string
         }
         Relationships: []
       }
@@ -2619,6 +2661,7 @@ export type Database = {
           id: string
           mercado_categoria: string | null
           name: string
+          notificar_reservas_whatsapp: boolean
           owner_id: string
           owner_phone: string | null
           updated_at: string
@@ -2635,6 +2678,7 @@ export type Database = {
           id?: string
           mercado_categoria?: string | null
           name: string
+          notificar_reservas_whatsapp?: boolean
           owner_id: string
           owner_phone?: string | null
           updated_at?: string
@@ -2651,6 +2695,7 @@ export type Database = {
           id?: string
           mercado_categoria?: string | null
           name?: string
+          notificar_reservas_whatsapp?: boolean
           owner_id?: string
           owner_phone?: string | null
           updated_at?: string
