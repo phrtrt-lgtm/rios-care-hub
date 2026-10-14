@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
-import { mensagemDeErroFunction } from "@/lib/erroFunction";
+import { descreverErroDaFunction } from "@/lib/erroFunction";
 
 /** Botão discreto, só admin: recria o webhook da Hostex e guarda o novo token. */
 export function ReconectarWebhookHostex() {
@@ -17,7 +17,7 @@ export function ReconectarWebhookHostex() {
     setRodando(true);
     try {
       const { data, error } = await supabase.functions.invoke("hostex-webhook-registrar", { body: {} });
-      if (error) throw new Error(await mensagemDeErroFunction(error));
+      if (error) throw new Error(await descreverErroDaFunction(error));
       toast({ title: "Webhook da Hostex reconectado", description: `${(data as any)?.apagados ?? 0} antigo(s) apagado(s).` });
     } catch (e: any) {
       toast({ title: "Não foi possível reconectar", description: e.message, variant: "destructive" });
