@@ -103,3 +103,9 @@ verify_jwt = false
 [functions.notificar-cobranca]
 verify_jwt = false
 
+
+[functions.hostex-webhook]
+verify_jwt = false
+
+[functions.notificar-reserva]
+verify_jwt = false
