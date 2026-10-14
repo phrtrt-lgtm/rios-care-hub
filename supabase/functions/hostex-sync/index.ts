@@ -2,6 +2,7 @@
 // Rodado por pg_cron a cada 6h ou on-demand via ?force=1
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { exigirPapel } from "../_shared/auth-guard.ts";
+import { linhaReserva } from "../_shared/hostexReserva.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -305,32 +306,9 @@ Deno.serve(async (req) => {
       if (!list.length) break;
 
       const rows = list.map((r: any) => {
-        const code = String(
-          r.reservation_code ?? r.code ?? r.id ?? r.uid ?? "",
-        );
-        seenCodes.add(code);
-        const hxPid = String(r.property_id ?? r.listing_id ?? "");
-        const totalRate = r.rates?.total_rate?.amount ?? r.total_rate?.amount;
-        const totalComm = r.rates?.total_commission?.amount ?? r.total_commission?.amount;
-        return {
-          reservation_code: code,
-          property_id_hostex: hxPid || null,
-          property_id: hxPid ? hxPropertyMap.get(hxPid) ?? null : null,
-          property_name: r.property_name ?? null,
-          channel_type: r.channel_type ?? r.channel ?? null,
-          check_in_date: r.check_in_date ?? r.check_in ?? r.checkin_date,
-          check_out_date: r.check_out_date ?? r.check_out ?? r.checkout_date,
-          guests: r.number_of_guests ?? r.guests ?? null,
-          status: r.status ?? "confirmed",
-          stay_status: r.stay_status ?? null,
-          guest_name: r.guest_name ?? null,
-          booked_at: r.booked_at ?? null,
-          total_rate_cents: toMoneyCents(totalRate),
-          total_commission_cents: toMoneyCents(totalComm),
-          currency: r.rates?.total_rate?.currency ?? r.currency ?? "BRL",
-          raw: r,
-          synced_at: new Date().toISOString(),
-        };
+        const row = linhaReserva(r, (hxPid) => hxPropertyMap.get(hxPid) ?? null);
+        seenCodes.add(row.reservation_code);
+        return row;
       }).filter((row: any) => row.reservation_code && row.check_in_date && row.check_out_date);
 
       if (rows.length) {
