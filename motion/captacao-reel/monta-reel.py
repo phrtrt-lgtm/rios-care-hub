@@ -4,16 +4,16 @@ import subprocess, sys, os
 D = r"C:\Users\pc\Downloads"
 # (arquivo, inicio, duracao)
 CLIPES = [
+    # Só imóveis decorados pela RIOS (curadoria) e a praia do Forte (pedido do gestor, 2026-10-14).
     ("kXSyZZdo3ewW2lTvtaXK-A.mp4", 0.3, 4.0),                                   # praia do Forte do alto
-    ("hf_20260822_175207_4a39c78b-5118-44d8-9dc9-cb0566cf2585.mp4", 0.5, 4.5),  # sala com vista
-    ("hf_20260824_203026_86508868-7aa5-40df-b7f0-7d36e8200347.mp4", 0.3, 4.0),  # cozinha
-    ("hf_20260822_180609_5ffffbf2-11ad-4555-8ca4-d6f2098a2c00.mp4", 0.5, 4.5),  # sala de jantar
-    ("8dcffa65660d414ca3317d2b3204aeb8-640ac0e8af831780.mp4", 0.3, 4.0),        # jardim na lagoa
-    ("hf_20260822_184156_3290ea83-1039-4cbb-a65c-4786aa9ad8b2.mp4", 0.5, 4.5),  # sala com varanda
-    ("638deb2070ff41c4b0b23633f1ba20e6-ae500b24a652444b.mp4", 0.3, 4.0),        # casa ao entardecer
-    ("7emQ3IuX6wKx9eEO7X2K0A.mp4", 0.3, 4.0),                                   # marina do alto
-    ("464a35c744d347ce8d02bdec59315424-metadata_dl3VGneq_ac67a957946c.mp4", 1.0, 4.0),  # sala sofás
-    ("b9ca3b2dd7944e6cb5d147bb17f4178d-a33843603cb05245.mp4", 0.3, 4.0),        # varanda com pérgola
+    ("RIOS_Reel_TourCompleto_1.mp4", 0.4, 2.9),                                 # tour: sala de jantar com vista
+    ("hf_20260822_175207_4a39c78b-5118-44d8-9dc9-cb0566cf2585.mp4", 0.5, 4.5),  # curadoria: sala com vista
+    ("RIOS_Reel_TourCompleto_1.mp4", 3.9, 2.9),                                 # tour: sala de estar
+    ("hf_20260824_203026_86508868-7aa5-40df-b7f0-7d36e8200347.mp4", 0.3, 4.0),  # curadoria: cozinha
+    ("hf_20260822_180609_5ffffbf2-11ad-4555-8ca4-d6f2098a2c00.mp4", 0.5, 4.5),  # curadoria: sala de jantar
+    ("RIOS_Reel_TourCompleto_1.mp4", 11.0, 2.9),                                # tour: quarto
+    ("hf_20260822_184156_3290ea83-1039-4cbb-a65c-4786aa9ad8b2.mp4", 0.5, 4.5),  # curadoria: sala com varanda
+    ("QLCg-xbnO3GxnlfNcl5-1A.mp4", 0.3, 4.0),                                   # praia do Forte, outro ângulo
 ]
 FUSAO = 0.6
 FPS = 24

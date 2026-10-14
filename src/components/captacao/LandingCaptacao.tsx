@@ -143,9 +143,10 @@ export function PainelMarca({ aoCadastrar, className }: PainelMarcaProps) {
           <source src={video} type="video/mp4" />
         </video>
       )}
-      {/* Escurece mais no canto do texto e deixa o imóvel aparecer no canto oposto. */}
-      <div className="absolute inset-0 -z-10 bg-gradient-to-br from-secondary/95 via-secondary/75 to-secondary/40" aria-hidden="true" />
-      <div className="absolute inset-x-0 bottom-0 -z-10 h-2/5 bg-gradient-to-t from-secondary/85 to-transparent" aria-hidden="true" />
+      {/* O vídeo é o protagonista: tinta leve no todo e faixas escuras só onde há texto (topo e base). */}
+      <div className="absolute inset-0 -z-10 bg-secondary/20" aria-hidden="true" />
+      <div className="absolute inset-x-0 top-0 -z-10 h-[62%] bg-gradient-to-b from-secondary/85 via-secondary/45 to-transparent" aria-hidden="true" />
+      <div className="absolute inset-x-0 bottom-0 -z-10 h-[46%] bg-gradient-to-t from-secondary/90 via-secondary/50 to-transparent" aria-hidden="true" />
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 sm:p-7 xl:p-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <motion.div
@@ -160,11 +161,11 @@ export function PainelMarca({ aoCadastrar, className }: PainelMarcaProps) {
           </p>
           <h1
             id="titulo-captacao"
-            className="mt-3 text-[clamp(1.55rem,2.6vw+0.6rem,2.9rem)] font-bold leading-[1.05] tracking-tight"
+            className="mt-3 text-[clamp(1.55rem,2.6vw+0.6rem,2.9rem)] font-bold leading-[1.05] tracking-tight [text-shadow:0_2px_16px_hsl(var(--secondary)/0.95)]"
           >
             Seu imóvel rendendo até 40% mais.
           </h1>
-          <p className="mt-2 max-w-lg text-[clamp(0.9rem,0.45vw+0.7rem,1.075rem)] leading-snug text-secondary-foreground/80 sm:leading-relaxed">
+          <p className="mt-2 max-w-lg text-[clamp(0.9rem,0.45vw+0.7rem,1.075rem)] leading-snug text-secondary-foreground/90 [text-shadow:0_1px_10px_hsl(var(--secondary)/0.95)] sm:leading-relaxed">
             Uma comissão só, com tudo dentro. Você não precisa se envolver com nada.
           </p>
           <p className="mt-2 text-[11px] text-secondary-foreground/70 sm:hidden">
@@ -291,7 +292,7 @@ function Vitrine() {
       onMouseLeave={() => setSobreposto(false)}
       onFocus={() => setSobreposto(true)}
       onBlur={() => setSobreposto(false)}
-      className="w-full rounded-2xl bg-background/10 p-3.5 ring-1 ring-secondary-foreground/15 backdrop-blur-md sm:p-5"
+      className="w-full rounded-2xl bg-secondary/60 p-3.5 ring-1 ring-secondary-foreground/15 backdrop-blur-md sm:p-5"
     >
       <div className="relative min-h-[5.25rem] sm:min-h-[6.5rem]">
         <AnimatePresence mode="wait" initial={false}>
@@ -419,7 +420,7 @@ function Numero({ valor, prefixo, rotulo, ativo, atraso }: { valor: number; pref
   const atual = useContagem(valor, comecou);
   return (
     <div>
-      <p className="text-xl font-bold tabular-nums tracking-tight sm:text-2xl xl:text-3xl">
+      <p className="text-xl font-bold tabular-nums tracking-tight [text-shadow:0_1px_10px_hsl(var(--secondary)/0.95)] sm:text-2xl xl:text-3xl">
         {prefixo}
         {atual.toLocaleString("pt-BR")}
       </p>
