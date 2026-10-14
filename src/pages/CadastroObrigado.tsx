@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { CheckCircle2, ArrowRight, Loader2 } from "lucide-react";
+import { CheckCircle2, ArrowRight, Loader2, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MetaPixel, trackMetaEvent } from "@/components/MetaPixel";
 import riosLogo from "@/assets/rios-logo.png";
+import { LINKS } from "@/components/captacao/conteudo";
 
 export default function CadastroObrigado() {
   const navigate = useNavigate();
@@ -80,6 +81,12 @@ export default function CadastroObrigado() {
             >
               Acessar meu portal agora
               <ArrowRight className="h-4 w-4" />
+            </Button>
+            <Button asChild variant="ghost" size="lg" className="mt-2 w-full gap-2 text-muted-foreground">
+              <a href={LINKS.site} target="_blank" rel="noopener noreferrer">
+                Enquanto isso, conheça a RIOS no site
+                <ExternalLink className="h-4 w-4" aria-hidden="true" />
+              </a>
             </Button>
           </div>
         </motion.div>

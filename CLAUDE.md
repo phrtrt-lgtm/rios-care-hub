@@ -184,6 +184,8 @@ Functions: `create-curation-pix`, `save-curation-selection`, `curation-access`, 
 ### 3.8 Fichas de imóvel e captação
 `property_files`, `property_file_versions`, `property_intake_submissions`, `property_members`. Ficha pública `/cadastro-imovel` → `submit-property-intake`. Edição em `/admin/fichas-imoveis`, `/atualizacao-anuncio`. Parsing por IA: `parse-ficha-anuncio`, `bulk-edit-fichas`.
 
+**`/cadastro-imovel` é a landing dos anúncios (desde 2026-10-14, pedido do gestor).** A página pública virou uma mini landing com o formulário no fim: cabeçalho fixo com âncoras e "Conhecer a RIOS" (site), abertura com a animação `rios-fluxo` (quadro parado com "reduzir movimento"), números, "Como funciona", "O que está incluso", resultados, cidades e comissões, formulário, dúvidas (Accordion) e rodapé com links do site, Instagram e e-mail; no celular, barra fixa "Cadastrar meu imóvel" que some quando a abertura ou o formulário estão na tela. Peças em `src/components/captacao/LandingCaptacao.tsx`; **todo o texto, números, comissões e links estão em `conteudo.ts` e espelham o site rioshospedagens.com.br** (lido em 2026-10-14): mudou lá, mude ali. O envio não mudou (`submit-property-intake` + login automático + `MetaPixel`); `/cadastro-imovel/obrigado` ganhou o link para o site. Validado por captura headless em 1280 e 390 px.
+
 ### 3.9 Relatórios financeiros
 `financial_reports`, `financial_report_audit_log`. `/relatorio-financeiro/:id` (proprietário) e `/admin/relatorios-financeiros`. Envio por `send-report-email`.
 
