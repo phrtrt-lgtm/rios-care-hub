@@ -66,11 +66,16 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 interface FormularioCaptacaoProps {
   onEnviar: (form: IntakeFormData) => Promise<void>;
   enviando: boolean;
+  /** No celular: volta para a tela do painel da marca. */
+  aoVoltarParaMarca?: () => void;
 }
 
+// `autoFocus` só no desktop: no celular o foco puxava o trilho de telas para o
+// formulário antes da hora e abria o teclado.
 export function FormularioCaptacao({
   onEnviar,
   enviando,
+  aoVoltarParaMarca,
 }: FormularioCaptacaoProps) {
   const reduzido = useReducedMotion();
   const [form, setForm] = useState<IntakeFormData>(FORM_INICIAL);
@@ -139,6 +144,16 @@ export function FormularioCaptacao({
       aria-labelledby="titulo-formulario"
       className="scroll-mt-6"
     >
+      {aoVoltarParaMarca && (
+        <button
+          type="button"
+          onClick={aoVoltarParaMarca}
+          className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          Ver o que a RIOS inclui
+        </button>
+      )}
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -203,7 +218,7 @@ export function FormularioCaptacao({
                     onChange={(e) => update("owner_name", e.target.value)}
                     placeholder="Ex.: Maria Silva"
                     autoComplete="name"
-                    autoFocus
+                    autoFocus={!aoVoltarParaMarca}
                   />
                 </Campo>
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -237,7 +252,7 @@ export function FormularioCaptacao({
                     onChange={(e) => update("property_address", e.target.value)}
                     placeholder="Rua, número, bairro, cidade"
                     autoComplete="street-address"
-                    autoFocus
+                    autoFocus={!aoVoltarParaMarca}
                   />
                 </Campo>
                 <div className="grid gap-2.5 sm:grid-cols-2">

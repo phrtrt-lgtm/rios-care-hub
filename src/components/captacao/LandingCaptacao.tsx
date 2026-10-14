@@ -1,35 +1,61 @@
-// Landing de captação (/cadastro-imovel): uma tela só. À esquerda o painel da
-// marca, animado (vitrine que roda sozinha, números que contam); à direita o
-// formulário, que fica fixo na tela. O conteúdo vem de conteudo.ts.
+// Landing de captação (/cadastro-imovel), sem rolagem de página: no desktop,
+// painel da marca à esquerda e formulário à direita cabendo na tela; no
+// celular, duas telas (painel e formulário) que deslizam de lado. O
+// conteúdo vem de conteudo.ts.
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useInView, useReducedMotion } from "framer-motion";
-import { ArrowDown, ArrowUpRight, ExternalLink, Instagram, Mail, Pause, Play, Sparkles, TrendingUp, type LucideIcon } from "lucide-react";
+import {
+  ArrowRight,
+  ArrowUpRight,
+  ExternalLink,
+  Instagram,
+  Mail,
+  Pause,
+  Play,
+  Sparkles,
+  TrendingUp,
+  type LucideIcon,
+} from "lucide-react";
 import riosLogo from "@/assets/rios-logo.png";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { CIDADES, INCLUSOS, LINKS, NUMEROS, RESULTADOS } from "./conteudo";
 
 export const ID_FORMULARIO = "cadastro";
+const LARGURA_DESKTOP = 1024;
 
-function LinkExterno({ href, className, children }: { href: string; className?: string; children: React.ReactNode }) {
+/** true a partir de 1024 px (duas colunas). Lido já na montagem, para não piscar o layout errado. */
+export function useTelaLarga() {
+  const [larga, setLarga] = useState(() => (typeof window === "undefined" ? true : window.innerWidth >= LARGURA_DESKTOP));
+  useEffect(() => {
+    const mql = window.matchMedia(`(min-width: ${LARGURA_DESKTOP}px)`);
+    const ler = () => setLarga(mql.matches);
+    mql.addEventListener("change", ler);
+    ler();
+    return () => mql.removeEventListener("change", ler);
+  }, []);
+  return larga;
+}
+
+function LinkExterno({ href, className, children, ...resto }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }) {
   return (
-    <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
+    <a href={href} target="_blank" rel="noopener noreferrer" className={className} {...resto}>
       {children}
     </a>
   );
 }
 
 /* ------------------------------------------------------------------------ */
-/* Cabeçalho e rodapé: uma linha cada                                        */
+/* Cabeçalho (uma linha) e contatos                                          */
 /* ------------------------------------------------------------------------ */
 
 export function CabecalhoCaptacao() {
   return (
-    <header className="relative">
+    <header className="relative shrink-0">
       <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-[hsl(var(--rios-blue))] via-[hsl(var(--rios-blue-light))] to-[hsl(var(--rios-terra))]" />
-      <div className="container mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
+      <div className="container mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4">
         <LinkExterno href={LINKS.site} className="flex items-center gap-3" aria-label="Site da RIOS Hospedagens">
-          <img src={riosLogo} alt="RIOS Hospedagens" className="h-8 w-auto object-contain sm:h-9" />
+          <img src={riosLogo} alt="RIOS Hospedagens" className="h-8 w-auto object-contain" />
           <span className="hidden text-[11px] font-bold uppercase tracking-[0.2em] text-[hsl(var(--rios-blue))] sm:inline">
             Hospedagens
           </span>
@@ -45,27 +71,26 @@ export function CabecalhoCaptacao() {
   );
 }
 
-export function RodapeCaptacao() {
+/** Site, Instagram e e-mail numa linha. `escuro` para dentro do painel. */
+export function ContatoCaptacao({ escuro, className }: { escuro?: boolean; className?: string }) {
+  const cor = escuro
+    ? "text-secondary-foreground/70 hover:text-secondary-foreground"
+    : "text-muted-foreground hover:text-foreground";
   return (
-    <footer className="border-t border-border/60">
-      <div className="container mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 py-5 text-xs text-muted-foreground sm:flex-row">
-        <p>© {new Date().getFullYear()} RIOS Hospedagens · Cabo Frio – RJ · Região dos Lagos</p>
-        <nav aria-label="Contato" className="flex items-center gap-4">
-          <LinkExterno href={LINKS.site} className="inline-flex items-center gap-1 transition-colors hover:text-foreground">
-            rioshospedagens.com.br
-            <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
-          </LinkExterno>
-          <LinkExterno href={LINKS.instagram} className="inline-flex items-center gap-1 transition-colors hover:text-foreground">
-            <Instagram className="h-3.5 w-3.5" aria-hidden="true" />
-            @rioshospedagens
-          </LinkExterno>
-          <a href={`mailto:${LINKS.email}`} className="inline-flex items-center gap-1 transition-colors hover:text-foreground">
-            <Mail className="h-3.5 w-3.5" aria-hidden="true" />
-            E-mail
-          </a>
-        </nav>
-      </div>
-    </footer>
+    <nav aria-label="Contato" className={cn("flex flex-wrap items-center gap-x-4 gap-y-1 text-xs", className)}>
+      <LinkExterno href={LINKS.site} className={cn("inline-flex items-center gap-1 transition-colors", cor)}>
+        rioshospedagens.com.br
+        <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
+      </LinkExterno>
+      <LinkExterno href={LINKS.instagram} className={cn("inline-flex items-center gap-1 transition-colors", cor)}>
+        <Instagram className="h-3.5 w-3.5" aria-hidden="true" />
+        @rioshospedagens
+      </LinkExterno>
+      <a href={`mailto:${LINKS.email}`} className={cn("inline-flex items-center gap-1 transition-colors", cor)}>
+        <Mail className="h-3.5 w-3.5" aria-hidden="true" />
+        E-mail
+      </a>
+    </nav>
   );
 }
 
@@ -73,12 +98,23 @@ export function RodapeCaptacao() {
 /* Painel da marca                                                           */
 /* ------------------------------------------------------------------------ */
 
-export function PainelMarca() {
+const PLATAFORMAS = ["Airbnb", "Booking", "Expedia", "Google"];
+
+interface PainelMarcaProps {
+  /** No celular: botão que leva à tela do formulário. */
+  aoCadastrar?: () => void;
+  className?: string;
+}
+
+export function PainelMarca({ aoCadastrar, className }: PainelMarcaProps) {
   const reduzido = useReducedMotion();
   return (
     <section
       aria-labelledby="titulo-captacao"
-      className="relative isolate flex flex-col overflow-hidden rounded-3xl bg-secondary text-secondary-foreground shadow-xl lg:min-h-[calc(100dvh-8.5rem)]"
+      className={cn(
+        "relative isolate flex min-h-0 flex-col overflow-hidden rounded-3xl bg-secondary text-secondary-foreground shadow-xl",
+        className,
+      )}
     >
       {reduzido ? (
         <img src="/animacoes/rios-fluxo-poster.jpg" alt="" aria-hidden="true" className="absolute inset-0 -z-10 h-full w-full object-cover" />
@@ -100,36 +136,46 @@ export function PainelMarca() {
       )}
       <div className="absolute inset-0 -z-10 bg-gradient-to-br from-secondary/95 via-secondary/85 to-secondary/55" aria-hidden="true" />
 
-      <div className="flex flex-1 flex-col gap-5 p-6 sm:p-8 lg:justify-between lg:p-10">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 sm:p-7 xl:p-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <motion.div
-          initial={reduzido ? false : { opacity: 0, y: 14 }}
+          initial={reduzido ? false : { opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.45 }}
+          className="shrink-0"
         >
-          <p className="inline-flex items-center gap-2 rounded-full bg-background/10 px-3 py-1 text-xs font-medium ring-1 ring-secondary-foreground/15 backdrop-blur-sm">
+          <p className="inline-flex items-center gap-2 rounded-full bg-background/10 px-3 py-1 text-[11px] font-medium ring-1 ring-secondary-foreground/15 backdrop-blur-sm sm:text-xs">
             <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
             Gestão de temporada em Cabo Frio e região
           </p>
-          <h1 id="titulo-captacao" className="mt-4 text-3xl font-bold leading-[1.05] tracking-tight sm:text-4xl xl:text-5xl">
+          <h1
+            id="titulo-captacao"
+            className="mt-3 text-[clamp(1.55rem,2.6vw+0.6rem,2.9rem)] font-bold leading-[1.05] tracking-tight"
+          >
             Seu imóvel rendendo até 40% mais.
           </h1>
-          <p className="mt-3 max-w-lg text-base leading-relaxed text-secondary-foreground/80 sm:text-lg">
-            Uma comissão só, com tudo dentro. Sem taxa de setup, sem mensalidade e sem você precisar se envolver.
+          <p className="mt-2 max-w-lg text-[clamp(0.9rem,0.45vw+0.7rem,1.075rem)] leading-snug text-secondary-foreground/80 sm:leading-relaxed">
+            Uma comissão só, com tudo dentro. Você não precisa se envolver com nada.
           </p>
-          <a
-            href={`#${ID_FORMULARIO}`}
-            className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold underline-offset-4 hover:underline lg:hidden"
-          >
-            Preencher o cadastro
-            <ArrowDown className="h-4 w-4" aria-hidden="true" />
-          </a>
+          <p className="mt-2 text-[11px] text-secondary-foreground/70 sm:hidden">
+            Anunciado no Airbnb, Booking, Expedia e Google
+          </p>
+          <ul className="mt-3 hidden flex-wrap items-center gap-1.5 sm:flex" aria-label="Onde o imóvel é anunciado">
+            <li className="text-[11px] text-secondary-foreground/60">Anunciado em</li>
+            {PLATAFORMAS.map((p) => (
+              <li key={p} className="rounded-full bg-background/10 px-2 py-0.5 text-[11px] font-semibold ring-1 ring-secondary-foreground/15">
+                {p}
+              </li>
+            ))}
+          </ul>
         </motion.div>
 
-        <Vitrine />
+        <div className="flex flex-1 items-center py-3 sm:py-5">
+          <Vitrine />
+        </div>
 
-        <div>
+        <div className="shrink-0">
           <Numeros />
-          <p className="mt-4 text-xs text-secondary-foreground/70">
+          <p className="mt-2.5 text-[11px] text-secondary-foreground/70 sm:mt-3 sm:text-xs">
             {CIDADES.map((c, i) => (
               <span key={c.nome}>
                 {i > 0 && <span aria-hidden="true"> · </span>}
@@ -139,16 +185,28 @@ export function PainelMarca() {
             <span aria-hidden="true"> · </span>
             sem taxa de setup
           </p>
-          <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm">
+
+          {aoCadastrar && (
+            <Button size="lg" onClick={aoCadastrar} className="mt-3 h-12 w-full gap-2 text-base shadow-lg">
+              Cadastrar meu imóvel
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          )}
+
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs sm:mt-4 sm:text-sm">
             <LinkExterno href={LINKS.simulador} className="inline-flex items-center gap-1 font-medium underline-offset-4 hover:underline">
               Simular a receita do meu imóvel
-              <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+              <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
             </LinkExterno>
-            <LinkExterno href={LINKS.comoTrabalhamos} className="inline-flex items-center gap-1 font-medium text-secondary-foreground/80 underline-offset-4 hover:underline">
+            <LinkExterno
+              href={LINKS.comoTrabalhamos}
+              className="hidden items-center gap-1 font-medium text-secondary-foreground/80 underline-offset-4 hover:underline sm:inline-flex"
+            >
               Como a RIOS trabalha
-              <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+              <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
             </LinkExterno>
           </div>
+          {!aoCadastrar && <ContatoCaptacao escuro className="mt-3 border-t border-secondary-foreground/10 pt-3" />}
         </div>
       </div>
     </section>
@@ -181,7 +239,8 @@ function montarSlides(): Slide[] {
 }
 
 const SLIDES = montarSlides();
-const DURACAO_MS = 4500;
+/** Tempo de cada item. Em 4,5 s parecia parado; 3 s mantém o olho. */
+const DURACAO_MS = 3000;
 
 function Vitrine() {
   const reduzido = useReducedMotion();
@@ -193,8 +252,7 @@ function Vitrine() {
   const inicioRef = useRef(0);
   const slide = SLIDES[indice];
 
-  // A cada slide novo o relógio recomeça do zero (este efeito vem antes do
-  // relógio, então vale para a mesma renderização).
+  // A cada item novo o relógio recomeça (este efeito vem antes do relógio).
   useEffect(() => {
     restanteRef.current = DURACAO_MS;
   }, [indice]);
@@ -222,41 +280,51 @@ function Vitrine() {
       onMouseLeave={() => setSobreposto(false)}
       onFocus={() => setSobreposto(true)}
       onBlur={() => setSobreposto(false)}
-      className="rounded-2xl bg-background/10 p-4 ring-1 ring-secondary-foreground/15 backdrop-blur-md sm:p-5"
+      className="w-full rounded-2xl bg-background/10 p-3.5 ring-1 ring-secondary-foreground/15 backdrop-blur-md sm:p-5"
     >
-      <div className="relative min-h-[7rem]">
+      <div className="relative min-h-[5.25rem] sm:min-h-[6.5rem]">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={indice}
-            initial={reduzido ? false : { opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={reduzido ? undefined : { opacity: 0, y: -12 }}
-            transition={{ duration: 0.32, ease: "easeOut" }}
-            className="flex items-start gap-4"
+            initial={reduzido ? false : { opacity: 0, y: 10, scale: 0.985 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={reduzido ? undefined : { opacity: 0, y: -10, scale: 0.985 }}
+            transition={{ duration: 0.24, ease: "easeOut" }}
+            className="flex items-start gap-3.5 sm:gap-4"
             aria-live="polite"
           >
             {slide.tipo === "diferencial" ? (
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--rios-blue-light))]/25 text-secondary-foreground ring-1 ring-secondary-foreground/15">
-                <slide.icone className="h-6 w-6" aria-hidden="true" />
-              </span>
+              <motion.span
+                initial={reduzido ? false : { scale: 0.6, rotate: -10 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ type: "spring", stiffness: 420, damping: 22 }}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--rios-blue-light))]/25 text-secondary-foreground ring-1 ring-secondary-foreground/15 sm:h-12 sm:w-12"
+              >
+                <slide.icone className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden="true" />
+              </motion.span>
             ) : (
-              <span className="flex h-12 shrink-0 items-center justify-center gap-1 rounded-xl bg-success/25 px-3 text-sm font-bold text-secondary-foreground ring-1 ring-success/40">
+              <motion.span
+                initial={reduzido ? false : { scale: 0.6 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 420, damping: 22 }}
+                className="flex h-10 shrink-0 items-center justify-center gap-1 rounded-xl bg-success/25 px-2.5 text-sm font-bold text-secondary-foreground ring-1 ring-success/40 sm:h-12 sm:px-3"
+              >
                 <TrendingUp className="h-4 w-4" aria-hidden="true" />
                 {slide.ganho}
-              </span>
+              </motion.span>
             )}
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-secondary-foreground/60">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-secondary-foreground/60 sm:text-[11px]">
                 {slide.tipo === "diferencial" ? "Incluso na comissão" : "Resultado de um imóvel RIOS"}
               </p>
-              <h2 className="mt-1 text-lg font-semibold leading-tight sm:text-xl">{slide.titulo}</h2>
-              <p className="mt-1 text-sm leading-relaxed text-secondary-foreground/80">{slide.texto}</p>
+              <h2 className="mt-0.5 text-[15px] font-semibold leading-tight sm:text-lg xl:text-xl">{slide.titulo}</h2>
+              <p className="mt-1 text-xs leading-snug text-secondary-foreground/80 sm:text-sm sm:leading-relaxed">{slide.texto}</p>
             </div>
           </motion.div>
         </AnimatePresence>
       </div>
 
-      <div className="mt-4 flex items-center gap-3">
+      <div className="mt-2.5 flex items-center gap-3 sm:mt-4">
         <div role="tablist" aria-label="Itens da vitrine" className="flex flex-1 gap-1">
           {SLIDES.map((s, k) => (
             <button
@@ -293,9 +361,9 @@ function Vitrine() {
             onClick={() => setPausadoPeloUsuario((v) => !v)}
             aria-pressed={pausadoPeloUsuario}
             aria-label={pausadoPeloUsuario ? "Retomar a vitrine" : "Pausar a vitrine"}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-background/10 text-secondary-foreground/80 ring-1 ring-secondary-foreground/15 transition hover:bg-background/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-background/10 text-secondary-foreground/80 ring-1 ring-secondary-foreground/15 transition hover:bg-background/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            {pausadoPeloUsuario ? <Play className="h-3.5 w-3.5" aria-hidden="true" /> : <Pause className="h-3.5 w-3.5" aria-hidden="true" />}
+            {pausadoPeloUsuario ? <Play className="h-3 w-3" aria-hidden="true" /> : <Pause className="h-3 w-3" aria-hidden="true" />}
           </button>
         )}
       </div>
@@ -307,7 +375,7 @@ function Vitrine() {
 /* Números que contam ao aparecer                                            */
 /* ------------------------------------------------------------------------ */
 
-function useContagem(alvo: number, ativo: boolean, duracaoMs = 1400) {
+function useContagem(alvo: number, ativo: boolean, duracaoMs = 900) {
   const reduzido = useReducedMotion();
   const [valor, setValor] = useState(reduzido ? alvo : 0);
   useEffect(() => {
@@ -340,23 +408,23 @@ function Numero({ valor, prefixo, rotulo, ativo, atraso }: { valor: number; pref
   const atual = useContagem(valor, comecou);
   return (
     <div>
-      <p className="text-2xl font-bold tabular-nums tracking-tight sm:text-3xl">
+      <p className="text-xl font-bold tabular-nums tracking-tight sm:text-2xl xl:text-3xl">
         {prefixo}
         {atual.toLocaleString("pt-BR")}
       </p>
-      <p className="mt-0.5 text-[11px] leading-snug text-secondary-foreground/70 sm:text-xs">{rotulo}</p>
+      <p className="mt-0.5 text-[10px] leading-snug text-secondary-foreground/70 sm:text-xs">{rotulo}</p>
     </div>
   );
 }
 
 function Numeros() {
   const ref = useRef<HTMLDListElement>(null);
-  const naTela = useInView(ref, { once: true, margin: "-40px" });
+  const naTela = useInView(ref, { once: true, margin: "-20px" });
   return (
-    <dl ref={ref} className="grid grid-cols-4 gap-3 border-t border-secondary-foreground/15 pt-5">
+    <dl ref={ref} className="grid grid-cols-4 gap-2 border-t border-secondary-foreground/15 pt-3 sm:gap-3 sm:pt-4">
       {NUMEROS.map((n, i) => (
         <div key={n.rotulo}>
-          <Numero {...n} ativo={naTela} atraso={i * 120} />
+          <Numero {...n} ativo={naTela} atraso={i * 90} />
         </div>
       ))}
     </dl>
