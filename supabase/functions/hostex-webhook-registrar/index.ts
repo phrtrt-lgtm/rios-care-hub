@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
       catch (e) { naoApagados.push({ id: w.id, erro: (e as Error).message }); }
     }
 
-    if (naoApagados.length) return json({ error: "Não consegui apagar todos os webhooks antigos.", encontrados: nossos.length, apagados, nao_apagados: naoApagados, webhooks: todasUrls }, 409);
+    if (naoApagados.length) return json({ error: "Há um webhook cadastrado manualmente que a API da Hostex não deixa apagar. Apague-o na tela de webhooks da Hostex e tente de novo.", encontrados: nossos.length, apagados, nao_apagados: naoApagados, webhooks: todasUrls }, 409);
     let criado: any;
     try { criado = await hx("POST", "/webhooks", apiKey, { url: ALVO, events: ["reservation_created", "reservation_updated"] }); }
     catch (e) { return json({ error: (e as Error).message, encontrados: nossos.length, apagados, webhooks: todasUrls }, 502); }
