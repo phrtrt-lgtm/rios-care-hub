@@ -109,3 +109,6 @@ verify_jwt = false
 
 [functions.notificar-reserva]
 verify_jwt = false
+
+[functions.hostex-webhook-registrar]
+verify_jwt = false

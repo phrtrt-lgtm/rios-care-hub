@@ -1,5 +1,6 @@
 // hostex-webhook — recebe eventos da Hostex em tempo real.
-// Autenticação: header Hostex-Webhook-Secret-Token == secret HOSTEX_WEBHOOK_SECRET
+// Autenticação: header Hostex-Webhook-Secret-Token == integration_secrets.hostex_webhook_secret
+// (ou env HOSTEX_WEBHOOK_SECRET)
 // (fail closed: sem secret ou diferente -> 401).
 // reservation_created / reservation_updated: grava o payload bruto em
 // hostex_webhook_events (event_id único = não processa duas vezes), busca a
@@ -59,15 +60,16 @@ async function processar(supabase: any, eventRowId: string, payload: any) {
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ ok: true });
-  const segredo = Deno.env.get("HOSTEX_WEBHOOK_SECRET");
+  const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const recebido = req.headers.get("hostex-webhook-secret-token") ?? "";
-  if (!segredo || !recebido || !iguais(recebido, segredo)) return json({ error: "unauthorized" }, 401);
+  const { data: sec } = await supabase.from("integration_secrets").select("value").eq("name", "hostex_webhook_secret").maybeSingle();
+  const validos = [sec?.value, Deno.env.get("HOSTEX_WEBHOOK_SECRET")].filter((v): v is string => !!v);
+  if (!recebido || validos.length === 0 || !validos.some((v) => iguais(recebido, v))) return json({ error: "unauthorized" }, 401);
 
   let payload: any = null;
   try { payload = await req.json(); } catch { return json({ ok: true, ignorado: "corpo inválido" }); }
 
   const evento = String(payload?.event ?? payload?.event_type ?? payload?.type ?? "");
-  const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const eventId = String(payload?.event_id ?? payload?.id ?? crypto.randomUUID());
 
   const { data: ins, error } = await supabase
