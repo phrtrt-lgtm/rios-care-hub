@@ -106,8 +106,17 @@ interface PainelMarcaProps {
   className?: string;
 }
 
+/** Reel dos imóveis RIOS (montado por motion/captacao-reel/monta-reel.py). */
+const REEL = {
+  poster: "/videos/captacao/imoveis-poster.jpg",
+  desktop: "/videos/captacao/imoveis-640.mp4",
+  celular: "/videos/captacao/imoveis-432.mp4",
+};
+
 export function PainelMarca({ aoCadastrar, className }: PainelMarcaProps) {
   const reduzido = useReducedMotion();
+  const larga = useTelaLarga();
+  const video = larga ? REEL.desktop : REEL.celular;
   return (
     <section
       aria-labelledby="titulo-captacao"
@@ -117,24 +126,26 @@ export function PainelMarca({ aoCadastrar, className }: PainelMarcaProps) {
       )}
     >
       {reduzido ? (
-        <img src="/animacoes/rios-fluxo-poster.jpg" alt="" aria-hidden="true" className="absolute inset-0 -z-10 h-full w-full object-cover" />
+        <img src={REEL.poster} alt="" aria-hidden="true" className="absolute inset-0 -z-10 h-full w-full object-cover" />
       ) : (
         <video
+          key={video}
           autoPlay
           muted
           loop
           playsInline
           preload="metadata"
-          poster="/animacoes/rios-fluxo-poster.jpg"
+          poster={REEL.poster}
           aria-hidden="true"
           tabIndex={-1}
           className="absolute inset-0 -z-10 h-full w-full object-cover"
         >
-          <source src="/animacoes/rios-fluxo.webm" type="video/webm" />
-          <source src="/animacoes/rios-fluxo.mp4" type="video/mp4" />
+          <source src={video} type="video/mp4" />
         </video>
       )}
-      <div className="absolute inset-0 -z-10 bg-gradient-to-br from-secondary/95 via-secondary/85 to-secondary/55" aria-hidden="true" />
+      {/* Escurece mais no canto do texto e deixa o imóvel aparecer no canto oposto. */}
+      <div className="absolute inset-0 -z-10 bg-gradient-to-br from-secondary/95 via-secondary/75 to-secondary/40" aria-hidden="true" />
+      <div className="absolute inset-x-0 bottom-0 -z-10 h-2/5 bg-gradient-to-t from-secondary/85 to-transparent" aria-hidden="true" />
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 sm:p-7 xl:p-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <motion.div
