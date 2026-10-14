@@ -450,3 +450,13 @@ All colors MUST be HSL.
   }
 }
 
+
+/* Barra de progresso da vitrine da landing de captação (LandingCaptacao.tsx). */
+@keyframes vitrine-progresso {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
