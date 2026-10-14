@@ -2106,6 +2106,24 @@ export type Database = {
           },
         ]
       }
+      integration_secrets: {
+        Row: {
+          created_at: string | null
+          name: string
+          value: string
+        }
+        Insert: {
+          created_at?: string | null
+          name: string
+          value: string
+        }
+        Update: {
+          created_at?: string | null
+          name?: string
+          value?: string
+        }
+        Relationships: []
+      }
       maintenance_payment_attachments: {
         Row: {
           created_at: string
