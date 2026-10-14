@@ -58,8 +58,6 @@ Deno.serve(async (req) => {
     let criado: any;
     try { criado = await hx("POST", "/webhooks", apiKey, { url: ALVO, events: ["reservation_created", "reservation_updated"] }); }
     catch (e) { return json({ error: (e as Error).message, encontrados: nossos.length, apagados, webhooks: todasUrls }, 502); }
-    const _ignorar = await Promise.resolve(null); void _ignorar;
-    if (false) criado = await hx("POST", "/webhooks", apiKey, { url: ALVO, events: ["reservation_created", "reservation_updated"] });
     const id = criado?.data?.id;
     const segredo = criado?.data?.secret_token;
     if (!segredo) return json({ error: "A Hostex não devolveu secret_token.", encontrados: nossos.length, apagados, webhook_id: id }, 502);
