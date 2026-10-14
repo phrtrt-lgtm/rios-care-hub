@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { ReconectarWebhookHostex } from "@/components/hostex/ReconectarWebhookHostex";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -324,6 +325,7 @@ export default function AdminCentralHostex() {
             {source === "ical_fallback" && "iCal (fallback)"}
             {!source && "Sem dados"}
           </Badge>
+          <ReconectarWebhookHostex />
           <Button onClick={triggerSync} disabled={syncing} size="sm" variant="outline">
             <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
             Sincronizar agora
