@@ -13,6 +13,18 @@ import {
 } from "@/components/captacao/LandingCaptacao";
 import { FormularioCaptacao } from "@/components/captacao/FormularioCaptacao";
 
+const UTM_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "fbclid"];
+const UTM_STORAGE = "cadastro-imovel:utm";
+
+function lerUtm(): Record<string, string> | null {
+  try {
+    const raw = sessionStorage.getItem(UTM_STORAGE);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
 const TITULO_PAGINA = "Cadastre seu imóvel · RIOS Hospedagens";
 
 /**
@@ -29,6 +41,18 @@ export default function CadastroImovel() {
   const [enviando, setEnviando] = useState(false);
 
   useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const utm: Record<string, string> = {};
+    for (const k of UTM_KEYS) {
+      const v = sp.get(k);
+      if (v) utm[k] = v;
+    }
+    if (Object.keys(utm).length) {
+      try { sessionStorage.setItem(UTM_STORAGE, JSON.stringify(utm)); } catch { /* */ }
+    }
+  }, []);
+
+  useEffect(() => {
     const anterior = document.title;
     document.title = TITULO_PAGINA;
     return () => {
@@ -42,7 +66,7 @@ export default function CadastroImovel() {
       const { data, error } = await supabase.functions.invoke(
         "submit-property-intake",
         {
-          body: { ...form, notes: form.notes, rooms_data: [] },
+          body: { ...form, notes: form.notes, rooms_data: [], utm: lerUtm() },
         },
       );
       if (error) throw error;
