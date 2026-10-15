@@ -8,6 +8,7 @@ const corsHeaders = {
 };
 
 interface IntakePayload {
+  utm?: Record<string, string> | null;
   owner_name: string;
   owner_email: string;
   owner_phone?: string;
@@ -622,6 +623,16 @@ serve(async (req) => {
         status: "novo",
         ip_address: ipAddress,
         user_agent: userAgent,
+        utm: (() => {
+          const u = payload.utm;
+          if (!u || typeof u !== "object") return null;
+          const out: Record<string, string> = {};
+          for (const k of ["utm_source","utm_medium","utm_campaign","utm_content","utm_term","fbclid"]) {
+            const v = (u as Record<string, unknown>)[k];
+            if (typeof v === "string" && v.trim()) out[k] = v.trim().slice(0, 300);
+          }
+          return Object.keys(out).length ? out : null;
+        })(),
       })
       .select("id")
       .single();

@@ -2846,6 +2846,8 @@ export type Database = {
           bedrooms_count: number
           building_floors: number | null
           condo_amenities: Json
+          contato_em: string | null
+          contato_por: string | null
           created_at: string
           has_elevator: boolean
           has_wifi: boolean
@@ -2872,6 +2874,12 @@ export type Database = {
           suites_count: number
           updated_at: string
           user_agent: string | null
+          utm: Json | null
+          whatsapp_equipe_status: string | null
+          whatsapp_lead_enviado_em: string | null
+          whatsapp_lead_erro: string | null
+          whatsapp_lead_message_id: string | null
+          whatsapp_lead_status: string | null
         }
         Insert: {
           apartment_floor?: number | null
@@ -2880,6 +2888,8 @@ export type Database = {
           bedrooms_count?: number
           building_floors?: number | null
           condo_amenities?: Json
+          contato_em?: string | null
+          contato_por?: string | null
           created_at?: string
           has_elevator?: boolean
           has_wifi?: boolean
@@ -2906,6 +2916,12 @@ export type Database = {
           suites_count?: number
           updated_at?: string
           user_agent?: string | null
+          utm?: Json | null
+          whatsapp_equipe_status?: string | null
+          whatsapp_lead_enviado_em?: string | null
+          whatsapp_lead_erro?: string | null
+          whatsapp_lead_message_id?: string | null
+          whatsapp_lead_status?: string | null
         }
         Update: {
           apartment_floor?: number | null
@@ -2914,6 +2930,8 @@ export type Database = {
           bedrooms_count?: number
           building_floors?: number | null
           condo_amenities?: Json
+          contato_em?: string | null
+          contato_por?: string | null
           created_at?: string
           has_elevator?: boolean
           has_wifi?: boolean
@@ -2940,6 +2958,12 @@ export type Database = {
           suites_count?: number
           updated_at?: string
           user_agent?: string | null
+          utm?: Json | null
+          whatsapp_equipe_status?: string | null
+          whatsapp_lead_enviado_em?: string | null
+          whatsapp_lead_erro?: string | null
+          whatsapp_lead_message_id?: string | null
+          whatsapp_lead_status?: string | null
         }
         Relationships: []
       }
