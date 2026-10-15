@@ -7,6 +7,15 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+const WHATS_LABELS: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
+  enviado: { label: "enviado", variant: "secondary" },
+  falhou: { label: "falhou", variant: "destructive" },
+  sem_telefone: { label: "sem telefone", variant: "outline" },
+  pendente: { label: "pendente", variant: "outline" },
+};
 
 interface Submission {
   id: string;
@@ -27,6 +36,10 @@ interface Submission {
   notes: string | null;
   status: string;
   created_at: string;
+  utm: { utm_content?: string } | null;
+  whatsapp_lead_status: string | null;
+  whatsapp_lead_erro: string | null;
+  contato_em: string | null;
 }
 
 const STATUS_LABELS: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
@@ -41,6 +54,32 @@ export default function AdminCadastrosProprietarios() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<Submission[]>([]);
+  const { profile } = useAuth();
+  const isAdmin = profile?.role === "admin";
+  const [ocupado, setOcupado] = useState<string | null>(null);
+
+  const reenviarWhats = async (id: string) => {
+    setOcupado(id);
+    const { data, error } = await supabase.functions.invoke("notificar-lead", { body: { id, reenviar: true } });
+    setOcupado(null);
+    const st = (data as { status?: string; lead?: { erro?: string } })?.status;
+    if (error || !st) toast.error("Falha ao reenviar WhatsApp");
+    else if (st === "enviado") toast.success("WhatsApp enviado");
+    else toast.error(`WhatsApp: ${WHATS_LABELS[st]?.label ?? st}${(data as any)?.lead?.erro ? ` — ${(data as any).lead.erro}` : ""}`);
+    load();
+  };
+
+  const marcarContato = async (id: string) => {
+    setOcupado(id);
+    const { data: u } = await supabase.auth.getUser();
+    const { error } = await supabase
+      .from("property_intake_submissions")
+      .update({ contato_em: new Date().toISOString(), contato_por: u.user?.id ?? null } as any)
+      .eq("id", id);
+    setOcupado(null);
+    if (error) toast.error("Erro ao marcar contato");
+    else { toast.success("Contato registrado"); load(); }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -119,7 +158,18 @@ export default function AdminCadastrosProprietarios() {
                       <div className="flex items-center gap-2 mb-2">
                         <h3 className="text-lg font-semibold">{s.owner_name}</h3>
                         <Badge variant={status.variant}>{status.label}</Badge>
+                        {(() => {
+                          const w = WHATS_LABELS[s.whatsapp_lead_status ?? "pendente"] ?? WHATS_LABELS.pendente;
+                          const badge = <Badge variant={w.variant} className="text-[10px]">WhatsApp: {w.label}</Badge>;
+                          return s.whatsapp_lead_status === "falhou" && s.whatsapp_lead_erro ? (
+                            <TooltipProvider><Tooltip><TooltipTrigger asChild><span>{badge}</span></TooltipTrigger>
+                              <TooltipContent className="max-w-xs">{s.whatsapp_lead_erro}</TooltipContent></Tooltip></TooltipProvider>
+                          ) : badge;
+                        })()}
                       </div>
+                      {s.utm?.utm_content && (
+                        <p className="text-xs text-muted-foreground mb-2">via anúncio: {s.utm.utm_content}</p>
+                      )}
                       <div className="grid sm:grid-cols-2 gap-2 text-sm text-muted-foreground">
                         <a href={`mailto:${s.owner_email}`} className="flex items-center gap-2 hover:text-primary">
                           <Mail className="h-3.5 w-3.5" />
@@ -160,8 +210,9 @@ export default function AdminCadastrosProprietarios() {
                       )}
                     </div>
 
+                    <div className="flex flex-col gap-2 w-48">
                     <Select value={s.status} onValueChange={(v) => updateStatus(s.id, v)}>
-                      <SelectTrigger className="w-48">
+                      <SelectTrigger className="w-full">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -170,6 +221,19 @@ export default function AdminCadastrosProprietarios() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {isAdmin && (
+                      <Button size="sm" variant="outline" disabled={ocupado === s.id} onClick={() => reenviarWhats(s.id)}>
+                        Reenviar WhatsApp
+                      </Button>
+                    )}
+                    {s.contato_em ? (
+                      <p className="text-xs text-muted-foreground text-center">Contato feito em {new Date(s.contato_em).toLocaleString("pt-BR")}</p>
+                    ) : (
+                      <Button size="sm" variant="secondary" disabled={ocupado === s.id} onClick={() => marcarContato(s.id)}>
+                        Marcar contato feito
+                      </Button>
+                    )}
+                    </div>
                   </div>
                 </Card>
               );
