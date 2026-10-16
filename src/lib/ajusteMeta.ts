@@ -1,14 +1,15 @@
-import { BedDouble, FileText, Megaphone, MessageSquareText, MoreHorizontal, type LucideIcon } from "lucide-react";
+import { BedDouble, FileText, Megaphone, MessageSquareText, Monitor, MoreHorizontal, type LucideIcon } from "lucide-react";
 import type { Tom } from "@/components/painel/tons";
 
 /**
  * Vocabulário único dos ajustes (tabela `ajustes`, página /ajustes).
  *
- * As chaves espelham os `check` da migration `20261016120000_ajustes.sql`:
+ * As chaves espelham o `check` da tabela (migrations `20261016120000_ajustes.sql`
+ * e `20261016130000_ajustes_sistema.sql`):
  * mudou lá, mude aqui.
  */
 
-export type CategoriaAjuste = "anuncio" | "ficha" | "mensagens" | "roupa_de_cama" | "outro";
+export type CategoriaAjuste = "anuncio" | "ficha" | "mensagens" | "roupa_de_cama" | "sistema" | "outro";
 export type StatusAjuste = "aberto" | "feito" | "descartado";
 
 export interface MetaCategoria {
@@ -45,6 +46,12 @@ export const CATEGORIA_AJUSTE: Record<CategoriaAjuste, MetaCategoria> = {
     dica: "Lençóis, fronhas, toalhas, edredons",
     exemplo: "Ex.: só tem 1 jogo de lençol de casal no quarto 2; precisa de 2.",
   },
+  sistema: {
+    rotulo: "Sistema",
+    icone: Monitor,
+    dica: "O próprio portal RIOS: tela com erro, botão que não funciona, algo que falta",
+    exemplo: "Ex.: na vistoria, o botão de enviar foto não funciona no celular.",
+  },
   outro: {
     rotulo: "Outro",
     icone: MoreHorizontal,
@@ -54,7 +61,7 @@ export const CATEGORIA_AJUSTE: Record<CategoriaAjuste, MetaCategoria> = {
 };
 
 /** Ordem dos botões e das pílulas de filtro. */
-export const ORDEM_CATEGORIA_AJUSTE: CategoriaAjuste[] = ["anuncio", "ficha", "mensagens", "roupa_de_cama", "outro"];
+export const ORDEM_CATEGORIA_AJUSTE: CategoriaAjuste[] = ["anuncio", "ficha", "mensagens", "roupa_de_cama", "sistema", "outro"];
 
 export const STATUS_AJUSTE: Record<StatusAjuste, { rotulo: string; tom: Tom }> = {
   aberto: { rotulo: "A fazer", tom: "warning" },

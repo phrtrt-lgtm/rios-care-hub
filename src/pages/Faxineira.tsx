@@ -229,7 +229,7 @@ export default function Faxineira() {
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-semibold">Viu algo errado?</span>
             <span className="block text-xs text-muted-foreground">
-              Avise aqui: anúncio, ficha, mensagens ou roupa de cama.
+              Avise aqui: anúncio, ficha, mensagens, roupa de cama ou sistema.
             </span>
           </span>
           <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />

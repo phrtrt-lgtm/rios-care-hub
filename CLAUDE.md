@@ -270,10 +270,10 @@ Dashboard por imóvel para o proprietário, com os dados da Hostex: ocupação, 
 - **"Destaques"** são frases calculadas (`gerarDestaques`), sem IA.
 
 ### 3.13 Ajustes (`/ajustes`, desde 2026-10-16)
-Pedido do gestor: a equipe via erro em anúncio, ficha, mensagens automáticas e roupa de cama e avisava pelo WhatsApp, e o aviso se perdia. Agora cada aviso fica numa lista até alguém marcar como feito.
+Pedido do gestor: a equipe via erro em anúncio, ficha, mensagens automáticas, roupa de cama e no próprio sistema e avisava pelo WhatsApp, e o aviso se perdia. Agora cada aviso fica numa lista até alguém marcar como feito.
 
 - **Quem usa:** equipe (admin, agent, maintenance) e faxineiras. Equipe avisa, vê tudo e resolve: aba "A fazer" (urgentes primeiro, depois o mais antigo) e aba "Feitos" (os 60 mais recentes). A faxineira avisa e vê só os próprios avisos, com a situação e a observação de quem resolveu. Ela entra pelo cartão "Viu algo errado?" no topo de `/faxineira`.
-- **Tabela `ajustes`** (migration `20261016120000_ajustes.sql`, **aplicada em 2026-10-16** pelo `query_database`): imóvel (nulo = geral ou fora da lista), `categoria` (`anuncio` · `ficha` · `mensagens` · `roupa_de_cama` · `outro`), descrição, `urgente`, `fotos` (caminhos), `status` (`aberto` · `feito` · `descartado`, este mostrado como "Sem mudança"), `resposta`. Vocabulário em `src/lib/ajusteMeta.ts`.
+- **Tabela `ajustes`** (migration `20261016120000_ajustes.sql`, **aplicada em 2026-10-16** pelo `query_database`): imóvel (nulo = geral ou fora da lista), `categoria` (`anuncio` · `ficha` · `mensagens` · `roupa_de_cama` · `sistema` · `outro`; `sistema` = erro ou melhoria no próprio portal, migration `20261016130000_ajustes_sistema.sql`, aplicada), descrição, `urgente`, `fotos` (caminhos), `status` (`aberto` · `feito` · `descartado`, este mostrado como "Sem mudança"), `resposta`. Vocabulário em `src/lib/ajusteMeta.ts`.
 - **O trigger `ajustes_preencher` grava autoria e resolução**, nunca o cliente: `autor_nome` e `resolvido_por_nome` ficam na linha porque a faxineira não lê perfis alheios. Reabrir limpa resolução e observação.
 - **RLS** (17 casos testados em transação desfeita antes de aplicar):
   - SELECT: equipe vê tudo; o autor vê os seus.

@@ -184,7 +184,7 @@ export default function Ajustes() {
       cabecalho={
         <CabecalhoPagina
           titulo="Ajustes"
-          subtitulo={ehEquipe ? "Anúncios, fichas, mensagens e roupa de cama" : "Avise o que precisa arrumar"}
+          subtitulo={ehEquipe ? "Anúncios, fichas, mensagens, roupa de cama e sistema" : "Avise o que precisa arrumar"}
           icone={<SlidersHorizontal />}
           voltarPara={ehEquipe ? "/painel" : "/faxineira"}
           abaixo={
