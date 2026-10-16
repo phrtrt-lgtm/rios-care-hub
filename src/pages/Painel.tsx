@@ -10,6 +10,7 @@ import { ChamadosKanbanPreview } from "@/components/ChamadosKanbanPreview";
 import { VistoriasKanbanPreview } from "@/components/VistoriasKanbanPreview";
 import { ChargesKanbanPreview } from "@/components/ChargesKanbanPreview";
 import { GuestChargeReminders } from "@/components/GuestChargeReminders";
+import { LembreteAjustes } from "@/components/ajustes/LembreteAjustes";
 import { TeamChatWidget } from "@/components/TeamChatWidget";
 import { GlobalSearch, useGlobalSearch } from "@/components/GlobalSearch";
 import { EnablePushNative } from "@/components/EnablePushNative";
@@ -121,13 +122,17 @@ export default function Painel() {
       <main className="container relative mx-auto flex flex-col gap-7 px-4 py-6 md:gap-8 md:py-8">
         <PainelHero nome={profile?.name} subtitulo="O que precisa de atenção hoje, em um lugar só." />
 
-        {/* 1. Cobrança de hóspede: uma linha fechado, lista completa aberto */}
+        {/* 1. Lembretes do topo: cobrança de hóspede (uma linha fechado, lista
+            completa aberto) e ajustes que a equipe avisou */}
         {isTeam && (
-          <GuestChargeReminders
-            open={lembreteHospedeAberto}
-            onOpenChange={setLembreteHospedeAberto}
-            onOpenDetail={openSheet}
-          />
+          <div className="flex min-w-0 flex-col gap-2">
+            <GuestChargeReminders
+              open={lembreteHospedeAberto}
+              onOpenChange={setLembreteHospedeAberto}
+              onOpenDetail={openSheet}
+            />
+            <LembreteAjustes />
+          </div>
         )}
 
         {/* 2. Avisos e votações (só aparecem quando existem) */}

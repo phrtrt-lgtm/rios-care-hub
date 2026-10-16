@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { Home, Ticket, DollarSign, Wrench, Plus, X, BarChart3, ClipboardCheck, Package } from "lucide-react";
+import { Home, Ticket, DollarSign, Wrench, Plus, X, BarChart3, ClipboardCheck, Package, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useMemo, useState } from "react";
@@ -31,6 +31,7 @@ const quickActions: NavItem[] = [
   { icon: Ticket, label: "Novo chamado", path: "/novo-ticket", roles: ["owner"] },
   { icon: Wrench, label: "Nova Manutenção", path: "/admin/nova-manutencao", roles: ["admin", "maintenance"] },
   { icon: Package, label: "Reposição de Item", path: "/nova-cobranca?reposicao=true", roles: ["admin", "maintenance"] },
+  { icon: SlidersHorizontal, label: "Avisar ajuste", path: "/ajustes?novo=1", roles: ["admin", "maintenance", "agent"] },
   { icon: BarChart3, label: "Relatório Manutenções", path: "/manutencoes", roles: ["admin", "maintenance", "agent"] },
   { icon: Wrench, label: "Relatório Manutenções", path: "/manutencoes", roles: ["owner"] },
   { icon: BarChart3, label: "Resumo Propriedades", path: "/resumo-propriedades", roles: ["owner"] },

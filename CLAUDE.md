@@ -66,9 +66,9 @@ Redirecionamento de entrada: `src/pages/Index.tsx`.
 ### Grupos de rota
 
 - **Proprietário:** `/minha-caixa`, `/resultados` (também admin e agent, ver §3.12), `/minhas-cobrancas`, `/novo-ticket`, `/meus-chamados`, `/vistorias`, `/minha-curadoria`, `/minhas-comissoes-booking`, `/relatorio-financeiro`, `/contrato/:id`, `/bem-vindo`
-- **Equipe:** `/painel`, `/todos-tickets`, `/propriedades`, `/gerenciar-cobrancas`, `/admin/vistorias*`, `/admin/chamados`, `/admin/manutencoes*`, `/booking-comissoes`, `/admin/central-hostex`, `/admin/contratos*`, `/admin/curadorias`
+- **Equipe:** `/painel`, `/todos-tickets`, `/propriedades`, `/gerenciar-cobrancas`, `/admin/vistorias*`, `/admin/chamados`, `/admin/manutencoes*`, `/booking-comissoes`, `/admin/central-hostex`, `/admin/contratos*`, `/admin/curadorias`, `/ajustes` (também `cleaner`, §3.13)
 - **Só admin:** `/configuracao-email`, `/configuracao-ia`, `/admin/gerenciar-usuarios`, `/admin/cadastrar-equipe`, `/admin/vistorias/configuracoes`
-- **`cleaner`:** `/faxineira`, `/rotina-profissional`, `/protocolo-trabalho`
+- **`cleaner`:** `/faxineira`, `/rotina-profissional`, `/protocolo-trabalho`, `/ajustes`
 
 > `/calendario-reservas` **redireciona para `/admin/central-hostex`** (`src/App.tsx:527`), área da equipe. A regra "proprietário não vê calendário de reservas" está respeitada.
 
@@ -268,6 +268,28 @@ Dashboard por imóvel para o proprietário, com os dados da Hostex: ocupação, 
 - **Gráficos**: cores de série em `--grafico-1..4` + `--grafico-neutro` (`index.css`, claro e escuro), validadas para daltonismo; a cor segue o canal (`CANAIS`), nunca a posição. Texto nunca usa a cor da série. Um eixo por gráfico; toda marca tem dica no hover/foco e o gráfico mensal tem visão em tabela.
 - **Animação do topo**: `public/animacoes/rios-fluxo.{webm,mp4}` + `-poster.jpg`, gerados em Remotion a partir de `motion/rios-fluxo/` (fora do build; README lá ensina a regerar). Com "reduzir movimento", fica o quadro parado.
 - **"Destaques"** são frases calculadas (`gerarDestaques`), sem IA.
+
+### 3.13 Ajustes (`/ajustes`, desde 2026-10-16)
+Pedido do gestor: a equipe via erro em anúncio, ficha, mensagens automáticas e roupa de cama e avisava pelo WhatsApp, e o aviso se perdia. Agora cada aviso fica numa lista até alguém marcar como feito.
+
+- **Quem usa:** equipe (admin, agent, maintenance) e faxineiras. Equipe avisa, vê tudo e resolve: aba "A fazer" (urgentes primeiro, depois o mais antigo) e aba "Feitos" (os 60 mais recentes). A faxineira avisa e vê só os próprios avisos, com a situação e a observação de quem resolveu. Ela entra pelo cartão "Viu algo errado?" no topo de `/faxineira`.
+- **Tabela `ajustes`** (migration `20261016120000_ajustes.sql`, **aplicada em 2026-10-16** pelo `query_database`): imóvel (nulo = geral ou fora da lista), `categoria` (`anuncio` · `ficha` · `mensagens` · `roupa_de_cama` · `outro`), descrição, `urgente`, `fotos` (caminhos), `status` (`aberto` · `feito` · `descartado`, este mostrado como "Sem mudança"), `resposta`. Vocabulário em `src/lib/ajusteMeta.ts`.
+- **O trigger `ajustes_preencher` grava autoria e resolução**, nunca o cliente: `autor_nome` e `resolvido_por_nome` ficam na linha porque a faxineira não lê perfis alheios. Reabrir limpa resolução e observação.
+- **RLS** (17 casos testados em transação desfeita antes de aplicar):
+  - SELECT: equipe vê tudo; o autor vê os seus.
+  - INSERT: equipe e `cleaner`.
+  - UPDATE: só equipe.
+  - DELETE: admin, ou o autor enquanto está aberto.
+  - `anon` sem acesso.
+- **Fotos:** bucket **privado** `ajustes` (não o `attachments`, ver §8.15), pasta `<autor>/<aviso>/1.jpg`, só imagem, até 15 MB. A foto é reduzida no aparelho (`comprimirImagem`) e lida por URL assinada de 1 h. Equipe vê todas; o autor vê as suas. O envio fica em `src/lib/enviarAjuste.ts`: se a gravação falhar, apaga as fotos já enviadas.
+- **O `types.ts` ainda não tem a tabela**: `tabelaAjustes()` (`src/hooks/useAjustes.ts`) usa o cliente sem tipos até o Lovable regenerar.
+- **Entradas:**
+  - lembrete `LembreteAjustes` no topo de `/painel`, abaixo do de cobrança de hóspede, com "N a fazer · M urgentes" e o botão "Avisar";
+  - atalho "Avisar ajuste" no grupo Criar;
+  - ação rápida no "+" do celular.
+- **Link direto:** `/ajustes?novo=1&imovel=<id|geral>&tipo=<categoria>` abre o formulário preenchido. Os parâmetros saem da URL depois de lidos.
+- **Peças** em `src/components/ajustes/`: `FormularioAjuste`, `CartaoAjuste`, `DialogoResposta`, `LembreteAjustes`. No celular a equipe vê a lista primeiro (formulário atrás de "Avisar um ajuste") e a faxineira vê o formulário; no desktop são duas colunas.
+- **Sem notificação por enquanto:** o lembrete do painel é o aviso.
 
 ---
 
