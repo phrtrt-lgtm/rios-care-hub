@@ -10,7 +10,8 @@ import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { MediaGallery } from "@/components/MediaGallery";
 import { AbaPilula, BarraFiltros, CabecalhoPagina, PaginaInterna } from "@/components/painel/PaginaInterna";
 import { TituloSecao } from "@/components/painel/TituloSecao";
-import { FormularioAjuste, IMOVEL_GERAL } from "@/components/ajustes/FormularioAjuste";
+import { FormularioAjuste } from "@/components/ajustes/FormularioAjuste";
+import { IMOVEL_GERAL } from "@/components/listas/imovel";
 import { CartaoAjuste } from "@/components/ajustes/CartaoAjuste";
 import { DialogoResposta } from "@/components/ajustes/DialogoResposta";
 import {

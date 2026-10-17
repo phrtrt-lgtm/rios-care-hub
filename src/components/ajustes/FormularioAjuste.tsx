@@ -1,21 +1,11 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Building2, Camera, Check, ChevronsUpDown, Globe2, ImageIcon, Loader2, Send, X } from "lucide-react";
+import { Camera, ImageIcon, Loader2, Send, X } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-} from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import {
   CATEGORIA_AJUSTE,
@@ -27,9 +17,8 @@ import {
 } from "@/lib/ajusteMeta";
 import { enviarAjuste } from "@/lib/enviarAjuste";
 import type { ImovelAjuste } from "@/hooks/useAjustes";
-
-/** Valor do seletor para "não é de um imóvel só" (grava property_id nulo). */
-export const IMOVEL_GERAL = "geral";
+import { SeletorImovel } from "@/components/listas/SeletorImovel";
+import { IMOVEL_GERAL, imovelEhValido } from "@/components/listas/imovel";
 
 interface Props {
   autorId: string;
@@ -94,22 +83,12 @@ export function FormularioAjuste({
   const [descricao, setDescricao] = useState("");
   const [urgente, setUrgente] = useState(false);
   const [fotos, setFotos] = useState<FotoEscolhida[]>([]);
-  const [seletorAberto, setSeletorAberto] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [tentouEnviar, setTentouEnviar] = useState(false);
   const inputFotos = useRef<HTMLInputElement>(null);
   const campoDescricao = useRef<HTMLTextAreaElement>(null);
 
-  const imovelValido = imovel === IMOVEL_GERAL || imoveis.some((i) => i.id === imovel);
-  const rotuloGeral = ehFaxineira ? "Outro imóvel ou geral" : "Geral (vale para todos)";
-  const nomeImovel = imovel === IMOVEL_GERAL ? rotuloGeral : imoveis.find((i) => i.id === imovel)?.name;
-
-  // Faxineira com uma casa só: já vem escolhida.
-  useEffect(() => {
-    if (ehFaxineira && imovel === null && !carregandoImoveis && imoveis.length === 1) {
-      setImovel(imoveis[0].id);
-    }
-  }, [ehFaxineira, imovel, carregandoImoveis, imoveis]);
+  const imovelValido = imovelEhValido(imovel, imoveis);
 
   // As miniaturas usam URL local; libera ao sair da página.
   const fotosAtuais = useRef(fotos);
@@ -119,11 +98,6 @@ export function FormularioAjuste({
   const erroImovel = tentouEnviar && !imovelValido;
   const erroCategoria = tentouEnviar && !categoria;
   const erroDescricao = tentouEnviar && descricao.trim().length < DESCRICAO_MIN;
-
-  const escolherImovel = (valor: string) => {
-    setImovel(valor);
-    setSeletorAberto(false);
-  };
 
   const escolherFotos = (lista: FileList | null) => {
     if (!lista || lista.length === 0) return;
@@ -212,32 +186,15 @@ export function FormularioAjuste({
         )}
       </div>
 
-      {/* Imóvel */}
-      <div className="space-y-1.5">
-        <Label id="rotulo-imovel-ajuste">Imóvel</Label>
-        <Button
-          type="button"
-          variant="outline"
-          aria-labelledby="rotulo-imovel-ajuste"
-          aria-haspopup="dialog"
-          aria-invalid={erroImovel || undefined}
-          onClick={() => setSeletorAberto(true)}
-          className={cn("h-11 w-full justify-between px-3 font-normal", erroImovel && "border-destructive")}
-        >
-          <span className="flex min-w-0 items-center gap-2">
-            {imovel === IMOVEL_GERAL ? (
-              <Globe2 className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-            ) : (
-              <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-            )}
-            <span className={cn("truncate", !nomeImovel && "text-muted-foreground")}>
-              {nomeImovel ?? (carregandoImoveis ? "Carregando imóveis…" : "Escolher imóvel")}
-            </span>
-          </span>
-          <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" aria-hidden="true" />
-        </Button>
-        {erroImovel && <p className="text-xs text-destructive">Escolha o imóvel.</p>}
-      </div>
+      <SeletorImovel
+        id="imovel-ajuste"
+        valor={imovel}
+        onChange={setImovel}
+        imoveis={imoveis}
+        carregando={carregandoImoveis}
+        ehFaxineira={ehFaxineira}
+        erro={erroImovel}
+      />
 
       {/* Onde está o erro */}
       <fieldset className="space-y-1.5">
@@ -374,43 +331,6 @@ export function FormularioAjuste({
         )}
       </Button>
 
-      <Dialog open={seletorAberto} onOpenChange={setSeletorAberto}>
-        <DialogContent className="max-w-md overflow-hidden p-0">
-          <DialogHeader className="p-4 pb-2">
-            <DialogTitle>Qual imóvel?</DialogTitle>
-            <DialogDescription>
-              {ehFaxineira
-                ? "Estes são os seus imóveis. Se não estiver aqui, escolha “Outro imóvel ou geral” e diga qual na descrição."
-                : "Escolha “Geral” quando vale para todos os imóveis."}
-            </DialogDescription>
-          </DialogHeader>
-          <Command>
-            {imoveis.length > 6 && <CommandInput placeholder="Buscar imóvel..." />}
-            <CommandList className="max-h-80">
-              <CommandEmpty>Nenhum imóvel encontrado.</CommandEmpty>
-              <CommandGroup>
-                <CommandItem value={rotuloGeral} onSelect={() => escolherImovel(IMOVEL_GERAL)} className="gap-2">
-                  <Globe2 className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                  <span className="truncate">{rotuloGeral}</span>
-                  {imovel === IMOVEL_GERAL && <Check className="ml-auto h-4 w-4 text-primary" aria-hidden="true" />}
-                </CommandItem>
-              </CommandGroup>
-              {imoveis.length > 0 && <CommandSeparator />}
-              {imoveis.length > 0 && (
-                <CommandGroup heading="Imóveis">
-                  {imoveis.map((i) => (
-                    <CommandItem key={i.id} value={i.name} onSelect={() => escolherImovel(i.id)} className="gap-2">
-                      <Building2 className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                      <span className="truncate">{i.name}</span>
-                      {imovel === i.id && <Check className="ml-auto h-4 w-4 text-primary" aria-hidden="true" />}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-            </CommandList>
-          </Command>
-        </DialogContent>
-      </Dialog>
     </form>
   );
 }

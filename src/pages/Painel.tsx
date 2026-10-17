@@ -11,6 +11,7 @@ import { VistoriasKanbanPreview } from "@/components/VistoriasKanbanPreview";
 import { ChargesKanbanPreview } from "@/components/ChargesKanbanPreview";
 import { GuestChargeReminders } from "@/components/GuestChargeReminders";
 import { LembreteAjustes } from "@/components/ajustes/LembreteAjustes";
+import { LembreteCompras } from "@/components/compras/LembreteCompras";
 import { TeamChatWidget } from "@/components/TeamChatWidget";
 import { GlobalSearch, useGlobalSearch } from "@/components/GlobalSearch";
 import { EnablePushNative } from "@/components/EnablePushNative";
@@ -123,7 +124,7 @@ export default function Painel() {
         <PainelHero nome={profile?.name} subtitulo="O que precisa de atenção hoje, em um lugar só." />
 
         {/* 1. Lembretes do topo: cobrança de hóspede (uma linha fechado, lista
-            completa aberto) e ajustes que a equipe avisou */}
+            completa aberto), ajustes avisados e lista de compras */}
         {isTeam && (
           <div className="flex min-w-0 flex-col gap-2">
             <GuestChargeReminders
@@ -132,6 +133,7 @@ export default function Painel() {
               onOpenDetail={openSheet}
             />
             <LembreteAjustes />
+            <LembreteCompras />
           </div>
         )}
 

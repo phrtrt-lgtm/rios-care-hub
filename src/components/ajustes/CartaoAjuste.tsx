@@ -1,6 +1,4 @@
 import { Check, ImageIcon, Loader2, MessageSquarePlus, MoreHorizontal, RotateCcw, Trash2, XCircle } from "lucide-react";
-import { format, formatDistanceToNowStrict } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -14,6 +12,7 @@ import { TOM } from "@/components/painel/tons";
 import { cn } from "@/lib/utils";
 import { CATEGORIA_AJUSTE, STATUS_AJUSTE } from "@/lib/ajusteMeta";
 import type { Ajuste } from "@/hooks/useAjustes";
+import { nomeCurto, quando } from "@/components/listas/formato";
 
 interface Props {
   ajuste: Ajuste;
@@ -31,21 +30,6 @@ interface Props {
   onReabrir: () => void;
   onApagar: () => void;
   onAbrirFoto: (indice: number) => void;
-}
-
-/** "Paulo Henrique Ribeiro Toledo Rios" → "Paulo Henrique"; "Maria" e "Maria Cristina" continuam distintas. */
-function nomeCurto(nome?: string | null): string {
-  return (nome ?? "").trim().split(/\s+/).slice(0, 2).join(" ");
-}
-
-function quando(data: string) {
-  const d = new Date(data);
-  const recente = Date.now() - d.getTime() < 60_000;
-  return {
-    // "há 3 horas", sem o "cerca de" que cortava a linha no celular.
-    relativo: recente ? "agora" : formatDistanceToNowStrict(d, { addSuffix: true, locale: ptBR }),
-    completo: format(d, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }),
-  };
 }
 
 /** Um aviso: imóvel, tipo, o que mudar, fotos, quem avisou e o que foi feito. */

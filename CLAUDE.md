@@ -66,9 +66,9 @@ Redirecionamento de entrada: `src/pages/Index.tsx`.
 ### Grupos de rota
 
 - **Proprietário:** `/minha-caixa`, `/resultados` (também admin e agent, ver §3.12), `/minhas-cobrancas`, `/novo-ticket`, `/meus-chamados`, `/vistorias`, `/minha-curadoria`, `/minhas-comissoes-booking`, `/relatorio-financeiro`, `/contrato/:id`, `/bem-vindo`
-- **Equipe:** `/painel`, `/todos-tickets`, `/propriedades`, `/gerenciar-cobrancas`, `/admin/vistorias*`, `/admin/chamados`, `/admin/manutencoes*`, `/booking-comissoes`, `/admin/central-hostex`, `/admin/contratos*`, `/admin/curadorias`, `/ajustes` (também `cleaner`, §3.13)
+- **Equipe:** `/painel`, `/todos-tickets`, `/propriedades`, `/gerenciar-cobrancas`, `/admin/vistorias*`, `/admin/chamados`, `/admin/manutencoes*`, `/booking-comissoes`, `/admin/central-hostex`, `/admin/contratos*`, `/admin/curadorias`, `/ajustes` (§3.13) e `/compras` (§3.14), as duas também para `cleaner`
 - **Só admin:** `/configuracao-email`, `/configuracao-ia`, `/admin/gerenciar-usuarios`, `/admin/cadastrar-equipe`, `/admin/vistorias/configuracoes`
-- **`cleaner`:** `/faxineira`, `/rotina-profissional`, `/protocolo-trabalho`, `/ajustes`
+- **`cleaner`:** `/faxineira`, `/rotina-profissional`, `/protocolo-trabalho`, `/ajustes`, `/compras`
 
 > `/calendario-reservas` **redireciona para `/admin/central-hostex`** (`src/App.tsx:527`), área da equipe. A regra "proprietário não vê calendário de reservas" está respeitada.
 
@@ -290,6 +290,16 @@ Pedido do gestor: a equipe via erro em anúncio, ficha, mensagens automáticas, 
 - **Link direto:** `/ajustes?novo=1&imovel=<id|geral>&tipo=<categoria>` abre o formulário preenchido. Os parâmetros saem da URL depois de lidos.
 - **Peças** em `src/components/ajustes/`: `FormularioAjuste`, `CartaoAjuste`, `DialogoResposta`, `LembreteAjustes`. No celular a equipe vê a lista primeiro (formulário atrás de "Avisar um ajuste") e a faxineira vê o formulário; no desktop são duas colunas.
 - **Sem notificação por enquanto:** o lembrete do painel é o aviso.
+- **Peças compartilhadas com Compras (§3.14)** em `src/components/listas/`: `SeletorImovel` (+ `imovel.ts` com `IMOVEL_GERAL` e `imovelEhValido`), `DialogoObservacao`, `LinhaLembrete` e `formato.ts` (`nomeCurto`, `quando`). Lista nova do mesmo tipo começa por elas.
+
+### 3.14 Compras (`/compras`, desde 2026-10-17)
+Pedido do gestor: lista de compras no mesmo molde dos ajustes. Cada pedido tem item, imóvel, quantidade e o link do produto. Não tem cômodo: o gestor desistiu dele no pedido.
+
+- **Quem usa:** os mesmos papéis e regras de §3.13. Equipe pede, vê tudo e marca "Comprado" (com desfazer) ou "Não vai comprar", com observação opcional. A faxineira pede e vê os seus. Aba "A comprar" **agrupada por imóvel** (ordem alfabética, "Geral" no fim; dentro do grupo, o pedido mais antigo primeiro); aba "Comprados" com os 80 mais recentes.
+- **Tabela `compras`** (migration `20261017120000_compras.sql`, **aplicada em 2026-10-17**, 12 casos de RLS testados antes em transação desfeita): `property_id` (nulo = geral/estoque), `item` (2–200), `quantidade` (1–999), `link` (só `http(s)`, checado no banco), `status` (`pendente` · `comprado` · `descartado`), `resposta`. Trigger `compras_preencher` grava autor e resolução. RLS igual à de `ajustes`. Sem fotos.
+- **Link:** `normalizarLink` (`src/lib/compraMeta.ts`) pega a primeira URL do que foi colado (o "compartilhar" das lojas cola texto junto), aceita `www.` sem `https://` e recusa o resto. O cartão mostra "Ver na loja · amazon.com.br" e abre em nova aba (`noopener`). É link externo de loja, não anexo, então a regra de §3.10 não vale aqui.
+- **Entradas:** linha `LembreteCompras` no topo do painel, abaixo da de ajustes ("N a comprar"); atalho "Adicionar compra" no grupo Criar; ação no "+" do celular; cartão "Precisa comprar algo?" ao lado do de ajustes em `/faxineira`. Link direto: `/compras?novo=1&imovel=<id|geral>`.
+- **Peças:** `src/pages/Compras.tsx`, `src/components/compras/` (`FormularioCompra`, `CartaoCompra`, `LembreteCompras`), `src/hooks/useCompras.ts` (cliente sem tipos até o `types.ts` ter a tabela). A lista de imóveis do formulário reaproveita `useImoveisAjuste`.
 
 ---
 

@@ -8,7 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { LogOut, Building2, ChevronRight, SlidersHorizontal } from 'lucide-react';
+import { LogOut, Building2, ChevronRight, ShoppingCart, SlidersHorizontal } from 'lucide-react';
 import { AvatarUpload } from '@/components/AvatarUpload';
 import { EmptyState } from '@/components/ui/empty-state';
 
@@ -217,23 +217,39 @@ export default function Faxineira() {
 
       {/* Content */}
       <main className="container mx-auto px-4 py-6 md:py-8">
-        {/* Avisos de ajuste (anúncio, ficha, mensagens, roupa de cama) em vez do WhatsApp */}
-        <button
-          type="button"
-          onClick={() => navigate('/ajustes')}
-          className="mb-6 flex w-full max-w-xl items-center gap-3 rounded-xl border border-border/70 bg-card p-3 text-left shadow-sm transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary" aria-hidden="true">
-            <SlidersHorizontal className="h-5 w-5" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm font-semibold">Viu algo errado?</span>
-            <span className="block text-xs text-muted-foreground">
-              Avise aqui: anúncio, ficha, mensagens, roupa de cama ou sistema.
-            </span>
-          </span>
-          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-        </button>
+        {/* Avisos de ajuste e pedidos de compra, em vez do WhatsApp */}
+        <div className="mb-6 grid max-w-3xl gap-2 sm:grid-cols-2">
+          {[
+            {
+              para: '/ajustes',
+              icone: <SlidersHorizontal className="h-5 w-5" />,
+              titulo: 'Viu algo errado?',
+              texto: 'Avise aqui: anúncio, ficha, mensagens, roupa de cama ou sistema.',
+            },
+            {
+              para: '/compras',
+              icone: <ShoppingCart className="h-5 w-5" />,
+              titulo: 'Precisa comprar algo?',
+              texto: 'Coloque na lista de compras, com o link do produto.',
+            },
+          ].map((c) => (
+            <button
+              key={c.para}
+              type="button"
+              onClick={() => navigate(c.para)}
+              className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-card p-3 text-left shadow-sm transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary" aria-hidden="true">
+                {c.icone}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold">{c.titulo}</span>
+                <span className="block text-xs text-muted-foreground">{c.texto}</span>
+              </span>
+              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+            </button>
+          ))}
+        </div>
 
         <div className="mb-6 md:mb-8">
           <h2 className="text-2xl md:text-3xl font-bold">Escolha o imóvel</h2>
