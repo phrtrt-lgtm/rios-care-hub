@@ -69,3 +69,14 @@ export const ESTADO_HOJE: Record<EstadoHoje, { rotulo: string; tom: Tom }> = {
   sai_hoje: { rotulo: "Sai hoje", tom: "info" },
   livre: { rotulo: "Livre", tom: "success" },
 };
+
+/** Ordem para ordenar por estado: livre primeiro (dá para ir agora), depois sai hoje, ocupado, sem dado. */
+export function ordemEstado(j?: JanelaImovel): number {
+  if (!j) return 3;
+  return j.estado === "livre" ? 0 : j.estado === "sai_hoje" ? 1 : 2;
+}
+
+/** Ordem para ordenar por próximo check-out; sem check-out à frente vai para o fim. */
+export function ordemCheckout(j?: JanelaImovel): number {
+  return j?.proximoCheckout ? j.proximoCheckout.getTime() : Number.MAX_SAFE_INTEGER;
+}

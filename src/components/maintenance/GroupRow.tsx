@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import { EstadoImovel } from "@/components/listas/EstadoImovel";
-import type { JanelaImovel } from "@/hooks/useJanelaImoveis";
+import { CelulaCheckout, CelulaEstadoHoje } from "@/components/listas/EstadoImovel";
+import { ordemCheckout, ordemEstado, type JanelaImovel } from "@/hooks/useJanelaImoveis";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, ChevronRight, Download, Loader2, MessageSquare, MessagesSquare, Paperclip, Pencil, Plus, Trash2, Undo2 } from "lucide-react";
@@ -110,6 +110,14 @@ export function GroupRow({
           aValue = (a.property?.name || "").toLowerCase();
           bValue = (b.property?.name || "").toLowerCase();
           break;
+        case "estado_hoje":
+          aValue = ordemEstado(a.property ? janelas?.get(a.property.id) : undefined);
+          bValue = ordemEstado(b.property ? janelas?.get(b.property.id) : undefined);
+          break;
+        case "proximo_checkout":
+          aValue = ordemCheckout(a.property ? janelas?.get(a.property.id) : undefined);
+          bValue = ordemCheckout(b.property ? janelas?.get(b.property.id) : undefined);
+          break;
         case "amount_cents":
           aValue = a.amount_cents || 0;
           bValue = b.amount_cents || 0;
@@ -138,7 +146,7 @@ export function GroupRow({
       if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
       return 0;
     });
-  }, [items, sortField, sortDirection]);
+  }, [items, sortField, sortDirection, janelas]);
 
   // Soma do que o proprietário paga (total − aporte); nas cobranças é o que
   // falta receber, nas manutenções abertas é o valor previsto.
@@ -149,7 +157,7 @@ export function GroupRow({
       {/* Cabeçalho do grupo: ponto colorido, contagem e total. O conteúdo é
           sticky para continuar visível quando a tabela rola na horizontal. */}
       <tr className="cursor-pointer bg-muted/40 transition-colors hover:bg-muted/70" onClick={onToggle}>
-        <td colSpan={14} className="p-0">
+        <td colSpan={15} className="p-0">
           <div className="sticky left-0 flex w-max max-w-[calc(100vw-3rem)] items-center gap-2 px-2 py-1.5">
             {items.length > 0 && (
               <span className="flex items-center pr-0.5" onClick={(e) => e.stopPropagation()}>
@@ -280,10 +288,17 @@ export function GroupRow({
               </TooltipProvider>
             </td>
 
-            {/* Estado do imóvel hoje e próximo check-out */}
-            <td className="p-0 w-[124px]">
+            {/* Estado do imóvel hoje */}
+            <td className="p-0 w-[112px]">
               <div className="px-2 py-1.5">
-                <EstadoImovel janela={item.property ? janelas?.get(item.property.id) : undefined} />
+                <CelulaEstadoHoje janela={item.property ? janelas?.get(item.property.id) : undefined} />
+              </div>
+            </td>
+
+            {/* Próximo check-out */}
+            <td className="p-0 w-[92px]">
+              <div className="px-2 py-1.5 text-center">
+                <CelulaCheckout janela={item.property ? janelas?.get(item.property.id) : undefined} />
               </div>
             </td>
 

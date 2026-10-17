@@ -43,6 +43,7 @@ const Faxineira = lazyPage(() => import("./pages/Faxineira"));
 const Ajustes = lazyPage(() => import("./pages/Ajustes"));
 const Compras = lazyPage(() => import("./pages/Compras"));
 const TarefasRua = lazyPage(() => import("./pages/TarefasRua"));
+const AvisosProprietarios = lazyPage(() => import("./pages/AvisosProprietarios"));
 const AdminVistorias = lazyPage(() => import("./pages/AdminVistorias"));
 const AdminVistoriasImovel = lazyPage(() => import("./pages/AdminVistoriasImovel"));
 const AdminVistoriaDetalhes = lazyPage(() => import("./pages/AdminVistoriaDetalhes"));
@@ -361,6 +362,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['agent', 'admin', 'maintenance']}>
                   <TarefasRua />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/avisos-proprietarios"
+              element={
+                <ProtectedRoute allowedRoles={['agent', 'admin', 'maintenance']}>
+                  <AvisosProprietarios />
                 </ProtectedRoute>
               }
             />

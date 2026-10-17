@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { SeletorImovel } from "@/components/listas/SeletorImovel";
 import { IMOVEL_GERAL, imovelEhValido, type ImovelOpcao } from "@/components/listas/imovel";
-import { CANAL_COMPRA, ITEM_MAX, ITEM_MIN, QUANTIDADE_MAX, lojaDoLink, normalizarLink, type CanalCompra } from "@/lib/compraMeta";
+import { CANAL_COMPRA, CUSTO_COMPRA, ITEM_MAX, ITEM_MIN, QUANTIDADE_MAX, lojaDoLink, normalizarLink, type CanalCompra, type CustoCompra } from "@/lib/compraMeta";
 import { useCriarCompra } from "@/hooks/useCompras";
 
 interface Props {
@@ -44,6 +44,9 @@ export function FormularioCompra({
   const [canal, setCanal] = useState<CanalCompra>("rua");
   // Colar um link sugere "Online", até a pessoa escolher por conta própria.
   const [canalEscolhido, setCanalEscolhido] = useState(false);
+  // Quem paga: imóvel escolhido sugere o proprietário; "geral" sugere a gestão.
+  const [custoEscolhido, setCustoEscolhido] = useState<CustoCompra | null>(null);
+  const custo: CustoCompra = custoEscolhido ?? (imovel && imovel !== IMOVEL_GERAL ? "owner" : "pm");
   const [tentouEnviar, setTentouEnviar] = useState(false);
   const campoItem = useRef<HTMLInputElement>(null);
 
@@ -71,6 +74,7 @@ export function FormularioCompra({
         quantidade,
         link: linkNormalizado ?? null,
         canal,
+        custo,
       });
       toast.success("Adicionado à lista de compras");
       setItem("");
@@ -78,6 +82,7 @@ export function FormularioCompra({
       setLink("");
       setCanal("rua");
       setCanalEscolhido(false);
+      setCustoEscolhido(null);
       setTentouEnviar(false);
       campoItem.current?.focus();
       onEnviado?.();
@@ -231,6 +236,40 @@ export function FormularioCompra({
           })}
         </div>
         <p className="text-xs text-muted-foreground">{CANAL_COMPRA[canal].dica}. Quem compra recebe aviso no WhatsApp.</p>
+      </fieldset>
+
+      <fieldset className="space-y-1.5">
+        <legend className="mb-1.5 text-sm font-medium leading-none">Quem paga</legend>
+        <div className="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label="Quem paga">
+          {(Object.keys(CUSTO_COMPRA) as CustoCompra[]).map((c) => {
+            const ativo = custo === c;
+            return (
+              <button
+                key={c}
+                type="button"
+                role="radio"
+                aria-checked={ativo}
+                onClick={() => setCustoEscolhido(c)}
+                className={cn(
+                  "h-10 rounded-lg border text-sm transition-colors",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  ativo
+                    ? "border-primary bg-primary/10 font-medium text-primary"
+                    : "border-border/70 bg-background text-foreground/80 hover:bg-muted",
+                )}
+              >
+                {CUSTO_COMPRA[c].rotulo}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {custo === "owner"
+            ? "Ao marcar como comprado, abre a cobrança ao proprietário já preenchida."
+            : custo === "guest"
+              ? "Fica registrado que o custo é do hóspede."
+              : "A gestão paga; não vira cobrança."}
+        </p>
       </fieldset>
 
       <Button type="submit" size="lg" className="w-full gap-2 px-4" disabled={criar.isPending}>

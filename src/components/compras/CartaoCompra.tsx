@@ -10,7 +10,8 @@ import {
 import { Etiqueta } from "@/components/painel/Etiqueta";
 import { TOM } from "@/components/painel/tons";
 import { cn } from "@/lib/utils";
-import { CANAL_COMPRA, STATUS_COMPRA, lojaDoLink } from "@/lib/compraMeta";
+import { CANAL_COMPRA, CUSTO_COMPRA, STATUS_COMPRA, lojaDoLink } from "@/lib/compraMeta";
+import { Link } from "react-router-dom";
 import { SeloWhatsapp } from "@/components/listas/SeloWhatsapp";
 import { nomeCurto, quando } from "@/components/listas/formato";
 import type { Compra } from "@/hooks/useCompras";
@@ -64,6 +65,7 @@ export function CartaoCompra({
         )}
         {mostrarImovel && <span className="text-xs text-muted-foreground">{nomeImovel}</span>}
         <Etiqueta tom={compra.canal === "online" ? "info" : "neutral"}>{CANAL_COMPRA[compra.canal]?.rotulo ?? "Na rua"}</Etiqueta>
+        <Etiqueta tom={compra.custo === "owner" ? "secondary" : "neutral"}>{CUSTO_COMPRA[compra.custo]?.curto ?? "Do proprietário"}</Etiqueta>
         {(!pendente || mostrarStatusPendente) && (
           <Etiqueta tom={status.tom} ponto>
             {status.rotulo}
@@ -81,6 +83,15 @@ export function CartaoCompra({
           <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           <span className="truncate">Ver na loja · {lojaDoLink(compra.link)}</span>
         </a>
+      )}
+
+      {compra.charge_id && mostrarAutor && (
+        <Link
+          to={`/cobranca/${compra.charge_id}`}
+          className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline"
+        >
+          Ver a cobrança ao proprietário
+        </Link>
       )}
 
       {!pendente && (

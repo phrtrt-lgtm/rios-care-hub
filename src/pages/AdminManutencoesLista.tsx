@@ -1992,7 +1992,8 @@ export default function AdminManutencoesLista() {
                         <MessageSquare className="mx-auto h-3.5 w-3.5" aria-label="Conversa" />
                       </th>
                       <SortableHeader label="Imóvel" field="property" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="w-[150px] max-w-[150px] px-2 text-left" />
-                      <th className="w-[124px] px-2 py-2 text-left font-medium" title="Estado do imóvel hoje e próximo check-out">Hoje · check-out</th>
+                      <SortableHeader label="Hoje" field="estado_hoje" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="w-[112px] px-2 text-left" />
+                      <SortableHeader label="Próx. check-out" field="proximo_checkout" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="w-[92px] text-center" />
                       <SortableHeader label="Valor" field="amount_cents" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="w-[92px] text-center" />
                       <SortableHeader label="Aporte" field="management_contribution_cents" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="w-[92px] text-center" />
                       <SortableHeader label="Data" field="created_at" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="w-[64px] text-center" />
@@ -2008,14 +2009,14 @@ export default function AdminManutencoesLista() {
                     {isLoading ? (
                       Array.from({ length: 6 }).map((_, i) => (
                         <tr key={i} className="border-b" aria-busy="true">
-                          <td colSpan={14} className="px-3 py-1.5">
+                          <td colSpan={15} className="px-3 py-1.5">
                             <Skeleton className="h-7 w-full rounded-md" />
                           </td>
                         </tr>
                       ))
                     ) : totalItens === 0 ? (
                       <tr>
-                        <td colSpan={14} className="p-0">
+                        <td colSpan={15} className="p-0">
                           <EmptyState
                             ilustracao={temFiltro ? "busca" : "manutencoes"}
                             title={temFiltro ? "Nada encontrado com esses filtros" : "Nenhuma manutenção"}
@@ -2117,7 +2118,8 @@ export default function AdminManutencoesLista() {
                                     </SelectContent>
                                   </Select>
                                 </td>
-                                <td className="w-[124px] p-0" />
+                                <td className="w-[112px] p-0" />
+                                <td className="w-[92px] p-0" />
                                 {isChargeGroup ? (
                                   <td className="w-[92px] p-0">
                                     <input
@@ -2133,7 +2135,7 @@ export default function AdminManutencoesLista() {
                                 ) : (
                                   <td className="w-[92px] p-0" />
                                 )}
-                                {/* Aporte, Data, Anexos, Responsável, Etiqueta, Quadro, Status: vazias, para somar 14 colunas */}
+                                {/* Aporte, Data, Anexos, Responsável, Etiqueta, Quadro, Status: vazias, para somar 15 colunas */}
                                 <td colSpan={7} className="p-0" />
                                 <td className="w-[128px] p-0">
                                   <div className="flex items-center justify-center gap-1 px-2">
@@ -2164,7 +2166,7 @@ export default function AdminManutencoesLista() {
                             {/* "+ Adicionar item" */}
                             {isExpanded && !isInlineActive && (
                               <tr className="border-b border-border/60">
-                                <td colSpan={14} className="p-0">
+                                <td colSpan={15} className="p-0">
                                   <button
                                     type="button"
                                     className="group sticky left-0 flex items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"

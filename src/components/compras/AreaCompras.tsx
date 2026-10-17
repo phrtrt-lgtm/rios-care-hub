@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { Suspense, lazy, useMemo, useState } from "react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertTriangle, CheckCheck, Inbox, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,9 @@ import { useImoveisAjuste } from "@/hooks/useAjustes";
 import { useApagarCompra, useCompras, useMudarStatusCompra, type Compra } from "@/hooks/useCompras";
 import { cn } from "@/lib/utils";
 import { CANAL_COMPRA, type CanalCompra } from "@/lib/compraMeta";
+
+// A Nova cobrança só carrega quando alguém conclui uma compra do proprietário.
+const NovaCobranca = lazy(() => import("@/pages/NovaCobranca"));
 
 export type AbaCompras = "pendentes" | "resolvidos";
 
@@ -103,6 +107,8 @@ export function AreaCompras({
   const [ocupados, setOcupados] = useState<Set<string>>(new Set());
   const [resposta, setResposta] = useState<{ compra: Compra; status: "comprado" | "descartado" } | null>(null);
   const [paraApagar, setParaApagar] = useState<Compra | null>(null);
+  // Compra do proprietário sendo concluída: abre a cobrança preenchida.
+  const [cobrar, setCobrar] = useState<Compra | null>(null);
 
   const comOcupado = async (id: string, acao: () => Promise<void>) => {
     setOcupados((s) => new Set(s).add(id));
@@ -127,8 +133,12 @@ export function AreaCompras({
       }
     });
 
-  const marcarComprado = (c: Compra) =>
-    comOcupado(c.id, async () => {
+  const marcarComprado = (c: Compra) => {
+    if (c.custo === "owner" && !c.charge_id && c.imovel?.owner_id) {
+      setCobrar(c);
+      return;
+    }
+    return comOcupado(c.id, async () => {
       try {
         await mudarStatus.mutateAsync({ id: c.id, status: "comprado" });
         toast.success("Marcado como comprado", {
@@ -136,6 +146,17 @@ export function AreaCompras({
         });
       } catch (erro) {
         toast.error(textoDoErro(erro));
+      }
+    });
+  };
+
+  const cobrancaCriada = (c: Compra, chargeId: string) =>
+    void comOcupado(c.id, async () => {
+      try {
+        await mudarStatus.mutateAsync({ id: c.id, status: "comprado", chargeId });
+        toast.success("Comprado e cobrança lançada ao proprietário");
+      } catch (erro) {
+        toast.error(`A cobrança foi criada, mas a compra não foi marcada: ${textoDoErro(erro)}`);
       }
     });
 
@@ -324,6 +345,39 @@ export function AreaCompras({
         variante={feitoAgora ? "success" : "default"}
         onConfirmar={(texto) => void confirmarResposta(texto)}
       />
+
+      <Dialog open={!!cobrar} onOpenChange={(aberto) => !aberto && setCobrar(null)}>
+        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto p-0">
+          <DialogHeader className="px-6 pb-2 pt-6">
+            <DialogTitle>Cobrança da compra ao proprietário</DialogTitle>
+            <DialogDescription>
+              Confira o valor e anexe a nota. Ao salvar (rascunho ou envio), a compra fica marcada como comprada.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="px-2 pb-4">
+            {cobrar && (
+              <Suspense fallback={<Skeleton className="mx-4 h-64 rounded-xl" />}>
+                <NovaCobranca
+                  inicial={{
+                    owner_id: cobrar.imovel?.owner_id ?? undefined,
+                    property_id: cobrar.property_id ?? undefined,
+                    title: `Compra: ${cobrar.item}${cobrar.quantidade > 1 ? ` (× ${cobrar.quantidade})` : ""}`,
+                    description: [
+                      cobrar.autor_nome ? `Pedido por ${cobrar.autor_nome}.` : "",
+                      cobrar.link ? `Produto: ${cobrar.link}` : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" "),
+                    category: "itens",
+                  }}
+                  onCriada={(chargeId) => cobrancaCriada(cobrar, chargeId)}
+                  onClose={() => setCobrar(null)}
+                />
+              </Suspense>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmationDialog
         open={!!paraApagar}

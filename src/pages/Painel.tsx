@@ -13,6 +13,7 @@ import { GuestChargeReminders } from "@/components/GuestChargeReminders";
 import { LembreteAjustes } from "@/components/ajustes/LembreteAjustes";
 import { LembreteCompras } from "@/components/compras/LembreteCompras";
 import { LembreteTarefas } from "@/components/tarefas/LembreteTarefas";
+import { LembreteAvisos } from "@/components/avisos/LembreteAvisos";
 import { TeamChatWidget } from "@/components/TeamChatWidget";
 import { GlobalSearch, useGlobalSearch } from "@/components/GlobalSearch";
 import { EnablePushNative } from "@/components/EnablePushNative";
@@ -125,7 +126,7 @@ export default function Painel() {
         <PainelHero nome={profile?.name} subtitulo="O que precisa de atenção hoje, em um lugar só." />
 
         {/* 1. Lembretes do topo: cobrança de hóspede (uma linha fechado, lista
-            completa aberto), ajustes avisados, lista de compras e tarefas de rua */}
+            completa aberto), ajustes avisados, lista de compras, tarefas de rua e conversas com proprietários */}
         {isTeam && (
           <div className="flex min-w-0 flex-col gap-2">
             <GuestChargeReminders
@@ -136,6 +137,7 @@ export default function Painel() {
             <LembreteAjustes />
             <LembreteCompras />
             <LembreteTarefas />
+            <LembreteAvisos />
           </div>
         )}
 

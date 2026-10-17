@@ -11,7 +11,16 @@ export type TicketStatus = "novo" | "em_analise" | "aguardando_info" | "em_execu
 export type ListStatus = "em_progresso" | "feito" | "enviar_proprietario";
 
 export type SortDirection = "asc" | "desc" | null;
-export type SortField = "subject" | "property" | "amount_cents" | "management_contribution_cents" | "created_at" | "service_type" | "list_status";
+export type SortField =
+  | "subject"
+  | "property"
+  | "estado_hoje"
+  | "proximo_checkout"
+  | "amount_cents"
+  | "management_contribution_cents"
+  | "created_at"
+  | "service_type"
+  | "list_status";
 
 export interface MaintenanceItem {
   id: string;

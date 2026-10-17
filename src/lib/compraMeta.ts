@@ -7,6 +7,15 @@ import type { Tom } from "@/components/painel/tons";
 
 export type StatusCompra = "pendente" | "comprado" | "descartado";
 
+/** Quem paga: mesmos valores de tickets.cost_responsible. Do proprietário vira cobrança. */
+export type CustoCompra = "owner" | "pm" | "guest";
+
+export const CUSTO_COMPRA: Record<CustoCompra, { rotulo: string; curto: string }> = {
+  owner: { rotulo: "Proprietário", curto: "Do proprietário" },
+  pm: { rotulo: "Gestão", curto: "Da gestão" },
+  guest: { rotulo: "Hóspede", curto: "Do hóspede" },
+};
+
 /** Onde se compra: muda quem recebe o WhatsApp (system_config 'listas_whatsapp'). */
 export type CanalCompra = "rua" | "online";
 

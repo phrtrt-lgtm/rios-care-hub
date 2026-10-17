@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import type { CanalCompra, StatusCompra } from "@/lib/compraMeta";
+import type { CanalCompra, CustoCompra, StatusCompra } from "@/lib/compraMeta";
 
 /**
  * Lista de compras (tabela `compras`, página /compras). Mesmo modelo dos
@@ -20,6 +20,9 @@ export interface Compra {
   quantidade: number;
   link: string | null;
   canal: CanalCompra;
+  custo: CustoCompra;
+  /** Cobrança lançada ao proprietário ao concluir (custo = owner). */
+  charge_id: string | null;
   status: StatusCompra;
   autor_id: string | null;
   autor_nome: string | null;
@@ -31,7 +34,7 @@ export interface Compra {
   notificacao_status: string | null;
   notificacao_erro: string | null;
   /** Nulo quando é geral ou o imóvel não é visível para quem lê. */
-  imovel: { name: string } | null;
+  imovel: { name: string; owner_id: string | null } | null;
 }
 
 /**
@@ -42,8 +45,8 @@ export interface Compra {
 export type VisaoCompras = "pendentes" | "resolvidos" | "meus";
 
 const CAMPOS =
-  "id, property_id, item, quantidade, link, canal, status, autor_id, autor_nome, notificacao_status, notificacao_erro, " +
-  "resolvido_por_nome, resolvido_em, resposta, created_at, imovel:properties(name)";
+  "id, property_id, item, quantidade, link, canal, custo, charge_id, status, autor_id, autor_nome, notificacao_status, notificacao_erro, " +
+  "resolvido_por_nome, resolvido_em, resposta, created_at, imovel:properties(name, owner_id)";
 
 const LIMITE_RESOLVIDOS = 80;
 const LIMITE_MEUS = 40;
@@ -93,6 +96,7 @@ export interface NovaCompra {
   quantidade: number;
   link: string | null;
   canal: CanalCompra;
+  custo: CustoCompra;
 }
 
 export function useCriarCompra() {
@@ -106,6 +110,7 @@ export function useCriarCompra() {
         quantidade: nova.quantidade,
         link: nova.link,
         canal: nova.canal,
+        custo: nova.custo,
       });
       if (error) throw error;
     },
@@ -116,8 +121,19 @@ export function useCriarCompra() {
 export function useMudarStatusCompra() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, status, resposta }: { id: string; status: StatusCompra; resposta?: string }) => {
+    mutationFn: async ({
+      id,
+      status,
+      resposta,
+      chargeId,
+    }: {
+      id: string;
+      status: StatusCompra;
+      resposta?: string;
+      chargeId?: string;
+    }) => {
       const mudanca: Record<string, unknown> = { status };
+      if (chargeId) mudanca.charge_id = chargeId;
       if (resposta !== undefined) mudanca.resposta = resposta.trim() || null;
       const { data, error } = await tabelaCompras().update(mudanca).eq("id", id).select("id");
       if (error) throw error;

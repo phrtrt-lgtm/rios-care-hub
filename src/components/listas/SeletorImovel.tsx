@@ -29,6 +29,8 @@ interface Props {
   rotuloGeralEquipe?: string;
   /** Onde a faxineira diz qual é o imóvel fora da lista ("na descrição", "no item"). */
   ondeDizerOutro?: string;
+  /** Esconde a opção "Geral" (quando o item precisa de um imóvel de verdade). */
+  semGeral?: boolean;
 }
 
 /**
@@ -46,6 +48,7 @@ export function SeletorImovel({
   erro = false,
   rotuloGeralEquipe = "Geral (vale para todos)",
   ondeDizerOutro = "na descrição",
+  semGeral = false,
 }: Props) {
   const [aberto, setAberto] = useState(false);
   const rotuloGeral = ehFaxineira ? "Outro imóvel ou geral" : rotuloGeralEquipe;
@@ -91,7 +94,9 @@ export function SeletorImovel({
           <DialogHeader className="p-4 pb-2">
             <DialogTitle>Qual imóvel?</DialogTitle>
             <DialogDescription>
-              {ehFaxineira
+              {semGeral
+                ? "Escolha o imóvel; o aviso vai para o proprietário dele."
+                : ehFaxineira
                 ? `Estes são os seus imóveis. Se não estiver aqui, escolha “Outro imóvel ou geral” e diga qual ${ondeDizerOutro}.`
                 : `Escolha “${rotuloGeralEquipe.split(" (")[0]}” quando não é de um imóvel só.`}
             </DialogDescription>
@@ -100,6 +105,7 @@ export function SeletorImovel({
             {imoveis.length > 6 && <CommandInput placeholder="Buscar imóvel..." />}
             <CommandList className="max-h-80">
               <CommandEmpty>Nenhum imóvel encontrado.</CommandEmpty>
+              {!semGeral && (
               <CommandGroup>
                 <CommandItem value={rotuloGeral} onSelect={() => escolher(IMOVEL_GERAL)} className="gap-2">
                   <Globe2 className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
@@ -107,7 +113,8 @@ export function SeletorImovel({
                   {valor === IMOVEL_GERAL && <Check className="ml-auto h-4 w-4 text-primary" aria-hidden="true" />}
                 </CommandItem>
               </CommandGroup>
-              {imoveis.length > 0 && <CommandSeparator />}
+              )}
+              {!semGeral && imoveis.length > 0 && <CommandSeparator />}
               {imoveis.length > 0 && (
                 <CommandGroup heading="Imóveis">
                   {imoveis.map((i) => (

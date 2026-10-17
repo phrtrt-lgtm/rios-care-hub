@@ -21,6 +21,42 @@ function frase(j: JanelaImovel): string {
   return j.proximaEntrada ? `Livre até ${dia(j.proximaEntrada)}; próximo ${co}.` : "Livre, sem reserva à frente.";
 }
 
+/** Só o estado de hoje (coluna "Hoje" da lista de manutenções). */
+export function CelulaEstadoHoje({ janela }: { janela?: JanelaImovel }) {
+  if (!janela) return <span className="text-xs text-muted-foreground">—</span>;
+  const meta = ESTADO_HOJE[janela.estado];
+  const complemento =
+    janela.estado === "livre"
+      ? janela.proximaEntrada
+        ? `até ${dia(janela.proximaEntrada)}`
+        : "sem reserva"
+      : janela.estado === "sai_hoje"
+        ? janela.proximaEntrada
+          ? `entra ${dia(janela.proximaEntrada)}`
+          : "livre depois"
+        : null;
+  return (
+    <div className="flex min-w-0 flex-col items-start gap-0.5" title={frase(janela)}>
+      <Etiqueta tom={meta.tom} ponto>
+        {meta.rotulo}
+      </Etiqueta>
+      {complemento && <span className="truncate text-[11px] text-muted-foreground">{complemento}</span>}
+    </div>
+  );
+}
+
+/** Só o próximo check-out (coluna "Próx. check-out"). */
+export function CelulaCheckout({ janela }: { janela?: JanelaImovel }) {
+  return (
+    <span
+      className="text-xs tabular-nums text-foreground/80"
+      title={janela ? frase(janela) : undefined}
+    >
+      {janela?.proximoCheckout ? dia(janela.proximoCheckout) : <span className="text-muted-foreground">—</span>}
+    </span>
+  );
+}
+
 interface Props {
   janela?: JanelaImovel;
   /** "celula" = duas linhas compactas (tabela); "linha" = uma linha (cabeçalho de grupo, cartão). */

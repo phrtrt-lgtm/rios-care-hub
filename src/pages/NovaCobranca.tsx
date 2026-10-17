@@ -47,6 +47,10 @@ interface NovaCobrancaProps {
   editId?: string;
   onClose?: () => void;
   onSaved?: () => void;
+  /** Valores iniciais quando aberta por outra tela (ex.: compra do proprietário). */
+  inicial?: { owner_id?: string; property_id?: string; title?: string; description?: string; category?: string };
+  /** Cobrança nova gravada (rascunho ou enviada); recebe o id. */
+  onCriada?: (chargeId: string) => void;
 }
 
 const DESTINO_PADRAO = "/gerenciar-cobrancas";
@@ -54,7 +58,7 @@ const DESTINO_PADRAO = "/gerenciar-cobrancas";
 /** Reais digitados ("1.234,56") em centavos. */
 const paraCentavos = (valor: string) => (valor ? Math.round(parseBRNumber(valor) * 100) : 0);
 
-export default function NovaCobranca({ editId, onClose, onSaved }: NovaCobrancaProps = {}) {
+export default function NovaCobranca({ editId, onClose, onSaved, inicial, onCriada }: NovaCobrancaProps = {}) {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -114,11 +118,11 @@ export default function NovaCobranca({ editId, onClose, onSaved }: NovaCobrancaP
   }, [isEditMode, editChargeId]);
 
   const [formData, setFormData] = useState({
-    owner_id: searchParams.get("owner_id") || "",
-    property_id: searchParams.get("property_id") || "",
-    title: searchParams.get("title") || (isReposicao ? "Reposição de item" : ""),
-    description: searchParams.get("description") || "",
-    category: isReposicao ? "itens" : "",
+    owner_id: inicial?.owner_id || searchParams.get("owner_id") || "",
+    property_id: inicial?.property_id || searchParams.get("property_id") || "",
+    title: inicial?.title || searchParams.get("title") || (isReposicao ? "Reposição de item" : ""),
+    description: inicial?.description || searchParams.get("description") || "",
+    category: inicial?.category || (isReposicao ? "itens" : ""),
     amount_cents: "",
     management_contribution_cents: "",
     due_date: "",
@@ -346,6 +350,7 @@ export default function NovaCobranca({ editId, onClose, onSaved }: NovaCobrancaP
 
         if (chargeError) throw chargeError;
         chargeId = charge.id;
+        onCriada?.(chargeId);
       }
 
       // Upload new attachments (if any)
