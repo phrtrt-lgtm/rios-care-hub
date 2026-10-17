@@ -10,7 +10,8 @@ import {
 import { Etiqueta } from "@/components/painel/Etiqueta";
 import { TOM } from "@/components/painel/tons";
 import { cn } from "@/lib/utils";
-import { STATUS_COMPRA, lojaDoLink } from "@/lib/compraMeta";
+import { CANAL_COMPRA, STATUS_COMPRA, lojaDoLink } from "@/lib/compraMeta";
+import { SeloWhatsapp } from "@/components/listas/SeloWhatsapp";
 import { nomeCurto, quando } from "@/components/listas/formato";
 import type { Compra } from "@/hooks/useCompras";
 
@@ -62,6 +63,7 @@ export function CartaoCompra({
           </span>
         )}
         {mostrarImovel && <span className="text-xs text-muted-foreground">{nomeImovel}</span>}
+        <Etiqueta tom={compra.canal === "online" ? "info" : "neutral"}>{CANAL_COMPRA[compra.canal]?.rotulo ?? "Na rua"}</Etiqueta>
         {(!pendente || mostrarStatusPendente) && (
           <Etiqueta tom={status.tom} ponto>
             {status.rotulo}
@@ -96,6 +98,9 @@ export function CartaoCompra({
         <p className="min-w-0 truncate text-xs text-muted-foreground" title={criado.completo}>
           {mostrarAutor && compra.autor_nome ? `${nomeCurto(compra.autor_nome)} · ` : ""}
           {criado.relativo}
+          {mostrarAutor && pendente && (
+            <SeloWhatsapp status={compra.notificacao_status} erro={compra.notificacao_erro} className="ml-1.5" />
+          )}
         </p>
 
         <div className="flex shrink-0 items-center gap-1">

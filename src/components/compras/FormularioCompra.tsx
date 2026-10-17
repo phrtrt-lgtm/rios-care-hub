@@ -1,5 +1,5 @@
 import { useRef, useState, type FormEvent } from "react";
-import { Link2, Loader2, Minus, Plus, ShoppingCart, X } from "lucide-react";
+import { Globe, Link2, Loader2, Minus, Plus, ShoppingCart, Store, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { SeletorImovel } from "@/components/listas/SeletorImovel";
 import { IMOVEL_GERAL, imovelEhValido, type ImovelOpcao } from "@/components/listas/imovel";
-import { ITEM_MAX, ITEM_MIN, QUANTIDADE_MAX, lojaDoLink, normalizarLink } from "@/lib/compraMeta";
+import { CANAL_COMPRA, ITEM_MAX, ITEM_MIN, QUANTIDADE_MAX, lojaDoLink, normalizarLink, type CanalCompra } from "@/lib/compraMeta";
 import { useCriarCompra } from "@/hooks/useCompras";
 
 interface Props {
@@ -41,6 +41,9 @@ export function FormularioCompra({
   const [item, setItem] = useState("");
   const [quantidade, setQuantidade] = useState(1);
   const [link, setLink] = useState("");
+  const [canal, setCanal] = useState<CanalCompra>("rua");
+  // Colar um link sugere "Online", até a pessoa escolher por conta própria.
+  const [canalEscolhido, setCanalEscolhido] = useState(false);
   const [tentouEnviar, setTentouEnviar] = useState(false);
   const campoItem = useRef<HTMLInputElement>(null);
 
@@ -67,11 +70,14 @@ export function FormularioCompra({
         item,
         quantidade,
         link: linkNormalizado ?? null,
+        canal,
       });
       toast.success("Adicionado à lista de compras");
       setItem("");
       setQuantidade(1);
       setLink("");
+      setCanal("rua");
+      setCanalEscolhido(false);
       setTentouEnviar(false);
       campoItem.current?.focus();
       onEnviado?.();
@@ -174,7 +180,10 @@ export function FormularioCompra({
           <Input
             id="compra-link"
             value={link}
-            onChange={(e) => setLink(e.target.value)}
+            onChange={(e) => {
+              setLink(e.target.value);
+              if (!canalEscolhido) setCanal(normalizarLink(e.target.value) ? "online" : "rua");
+            }}
             inputMode="url"
             autoComplete="off"
             placeholder="Cole aqui o link da loja"
@@ -190,6 +199,39 @@ export function FormularioCompra({
               : "Amazon, Mercado Livre, Shopee… Pode colar a mensagem inteira de compartilhar."}
         </p>
       </div>
+
+      <fieldset className="space-y-1.5">
+        <legend className="mb-1.5 text-sm font-medium leading-none">Onde comprar</legend>
+        <div className="grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="Onde comprar">
+          {(Object.keys(CANAL_COMPRA) as CanalCompra[]).map((c) => {
+            const ativo = canal === c;
+            const Icone = c === "rua" ? Store : Globe;
+            return (
+              <button
+                key={c}
+                type="button"
+                role="radio"
+                aria-checked={ativo}
+                onClick={() => {
+                  setCanal(c);
+                  setCanalEscolhido(true);
+                }}
+                className={cn(
+                  "inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border text-sm transition-colors",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  ativo
+                    ? "border-primary bg-primary/10 font-medium text-primary"
+                    : "border-border/70 bg-background text-foreground/80 hover:bg-muted",
+                )}
+              >
+                <Icone className="h-4 w-4" aria-hidden="true" />
+                {CANAL_COMPRA[c].rotulo}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-xs text-muted-foreground">{CANAL_COMPRA[canal].dica}. Quem compra recebe aviso no WhatsApp.</p>
+      </fieldset>
 
       <Button type="submit" size="lg" className="w-full gap-2 px-4" disabled={criar.isPending}>
         {criar.isPending ? (

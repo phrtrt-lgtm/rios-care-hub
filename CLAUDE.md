@@ -66,7 +66,7 @@ Redirecionamento de entrada: `src/pages/Index.tsx`.
 ### Grupos de rota
 
 - **Proprietário:** `/minha-caixa`, `/resultados` (também admin e agent, ver §3.12), `/minhas-cobrancas`, `/novo-ticket`, `/meus-chamados`, `/vistorias`, `/minha-curadoria`, `/minhas-comissoes-booking`, `/relatorio-financeiro`, `/contrato/:id`, `/bem-vindo`
-- **Equipe:** `/painel`, `/todos-tickets`, `/propriedades`, `/gerenciar-cobrancas`, `/admin/vistorias*`, `/admin/chamados`, `/admin/manutencoes*`, `/booking-comissoes`, `/admin/central-hostex`, `/admin/contratos*`, `/admin/curadorias`, `/ajustes` (§3.13) e `/compras` (§3.14), as duas também para `cleaner`
+- **Equipe:** `/painel`, `/todos-tickets`, `/propriedades`, `/gerenciar-cobrancas`, `/admin/vistorias*`, `/admin/chamados`, `/admin/manutencoes*`, `/booking-comissoes`, `/admin/central-hostex`, `/admin/contratos*`, `/admin/curadorias`, `/ajustes` (§3.13) e `/compras` (§3.14), as duas também para `cleaner`, `/tarefas-rua` (§3.15)
 - **Só admin:** `/configuracao-email`, `/configuracao-ia`, `/admin/gerenciar-usuarios`, `/admin/cadastrar-equipe`, `/admin/vistorias/configuracoes`
 - **`cleaner`:** `/faxineira`, `/rotina-profissional`, `/protocolo-trabalho`, `/ajustes`, `/compras`
 
@@ -108,6 +108,8 @@ Os dois botões existem no desktop (`GroupRow`) e no celular (`MobileMaintenance
 - Download em `.zip` por `src/lib/baixarAnexos.ts` (`baixarAnexosEmZip`): uma pasta por item, nomeada `Check-out aaaa-mm-dd - Imóvel - Dano`, com os arquivos `anexo-01.jpg`… (regra nº 4). Usado no botão da coluna Anexos, no "Baixar anexos (N)" da barra de seleção, no celular e no aviso de hóspede do painel. O navegador não gera `.rar`; o WinRAR abre o `.zip`.
 - Manutenção com `cost_responsible = "guest"` marcada como **Feito** ganha `archived_at`: sai da lista (vai para `/admin/manutencoes-arquivo`) e continua no aviso do painel, porque `useGuestCharges` não olha `archived_at`. Só sai do painel pelo botão "Cobrada" (`guest_charge_dismissed_at`). Não filtre `archived_at` naquele hook.
 - A consulta da lista é uma só: cobranças embutidas no ticket e anti-join `reais:charges(id)` para não trazer as concluídas já cobradas (eram 420 tickets e 370 KB; ficaram ~36 linhas). Índice `idx_charges_ticket_id`.
+
+**Coluna "Hoje · check-out" (desde 2026-10-17, pedido do gestor)**, logo depois de Imóvel: estado do imóvel hoje e próximo check-out (`EstadoImovel`, §3.15), para saber quando dá para ir resolver. No celular vira uma linha embaixo do nome do imóvel. A tabela tem **14 colunas**; ao mexer, confira os `colSpan`. A aba **Compras** espelha `/compras` (§3.14).
 
 **Estrutura da lista (desde 2026-09-28).** `AdminManutencoesLista.tsx` ficou só com o componente principal (~2.000 linhas). O resto está em `src/components/maintenance/`: `listaTipos.ts` (tipos, `GROUPS` com tom/ponto/`cobranca`, constantes), `EditableCell.tsx` (`SortableHeader` + célula editável), `GroupRow.tsx` (cabeçalho do grupo com contagem e total + linhas), `LoteDialogs.tsx` (envio e lembrete em lote), `VistoriasTable.tsx`. Na tela:
 - três abas no cabeçalho — Manutenções · Vistorias · Débitos em reserva — em vez de três tabelas empilhadas;
@@ -299,7 +301,34 @@ Pedido do gestor: lista de compras no mesmo molde dos ajustes. Cada pedido tem i
 - **Tabela `compras`** (migration `20261017120000_compras.sql`, **aplicada em 2026-10-17**, 12 casos de RLS testados antes em transação desfeita): `property_id` (nulo = geral/estoque), `item` (2–200), `quantidade` (1–999), `link` (só `http(s)`, checado no banco), `status` (`pendente` · `comprado` · `descartado`), `resposta`. Trigger `compras_preencher` grava autor e resolução. RLS igual à de `ajustes`. Sem fotos.
 - **Link:** `normalizarLink` (`src/lib/compraMeta.ts`) pega a primeira URL do que foi colado (o "compartilhar" das lojas cola texto junto), aceita `www.` sem `https://` e recusa o resto. O cartão mostra "Ver na loja · amazon.com.br" e abre em nova aba (`noopener`). É link externo de loja, não anexo, então a regra de §3.10 não vale aqui.
 - **Entradas:** linha `LembreteCompras` no topo do painel, abaixo da de ajustes ("N a comprar"); atalho "Adicionar compra" no grupo Criar; ação no "+" do celular; cartão "Precisa comprar algo?" ao lado do de ajustes em `/faxineira`. Link direto: `/compras?novo=1&imovel=<id|geral>`.
-- **Peças:** `src/pages/Compras.tsx`, `src/components/compras/` (`FormularioCompra`, `CartaoCompra`, `LembreteCompras`), `src/hooks/useCompras.ts` (cliente sem tipos até o `types.ts` ter a tabela). A lista de imóveis do formulário reaproveita `useImoveisAjuste`.
+- **Espelhada em `/admin/manutencoes-lista`** (desde 2026-10-17, pedido do gestor): aba **Compras**, só no desktop, com o número de pendentes. As duas telas usam o mesmo `AreaCompras` (formulário + lista + diálogos); a página só põe o cabeçalho com as pílulas. Cada grupo de imóvel mostra `EstadoImovel` (§3.15).
+- **Peças:** `src/pages/Compras.tsx`, `src/components/compras/` (`AreaCompras`, `FormularioCompra`, `CartaoCompra`, `LembreteCompras`), `src/hooks/useCompras.ts` (cliente sem tipos até o `types.ts` ter a tabela). A lista de imóveis do formulário reaproveita `useImoveisAjuste`.
+
+### 3.15 Tarefas de rua (`/tarefas-rua`) e estado do imóvel (desde 2026-10-17)
+Pedido do gestor: lugar para o que a equipe de rua precisa ir fazer, com o imóvel e o que é.
+
+- **Tabela `tarefas_rua`** (migration `20261017150000_tarefas_rua_janela.sql`, **aplicada**): imóvel (nulo = geral), `descricao`, `status` (`pendente` · `feita` · `descartada` = "Não precisa"), `resposta`, autoria e resolução pelo trigger `tarefas_rua_preencher`. **Só equipe** (admin, agent, maintenance) vê, cria e resolve; apaga o admin ou quem criou enquanto pendente. Faxineira e anônimo barrados (testado).
+- **Página:** mesmo molde de Compras: formulário (imóvel + o que fazer) e "A fazer" agrupado por imóvel, com o estado do imóvel no cabeçalho do grupo; "Feitas" com as 80 mais recentes. Peças em `src/components/tarefas/` e `src/hooks/useTarefasRua.ts`. Entradas: linha `LembreteTarefas` no topo do painel, atalho "Tarefa de rua", "+" do celular. Link `/tarefas-rua?novo=1&imovel=<id|geral>`.
+- **Estado do imóvel: `janela_imoveis()`** (mesma migration). SECURITY DEFINER, só devolve linhas para a equipe; **só datas, nada de hóspede**. Por imóvel ativo: `saida` (fim da estadia que inclui hoje; igual a hoje = sai hoje; nula = livre), `proxima_entrada` e `proximo_checkout` (o do hóspede atual, ou o da próxima reserva se está livre). Só reservas `accepted` da Hostex; "hoje" é o dia em Brasília. Conferido em 2026-10-17: 61 imóveis, 35 ocupados, 6 saindo, 11 sem reserva à frente.
+- **No front:** `useJanelaImoveis()` (`src/hooks/useJanelaImoveis.ts`, chave `["janela-imoveis"]`, cache de 10 min) devolve um `Map` por imóvel. `EstadoImovel` (`src/components/listas/EstadoImovel.tsx`) mostra "Ocupado · Check-out seg 19/10", "Sai hoje · entra amanhã" ou "Livre até qua 21/10 · Check-out seg 26/10"; `variante="celula"` (duas linhas, tabela) ou `"linha"`. Datas lidas como dia local. Usado na lista de manutenções, nas compras e nas tarefas.
+- **Depende da coleta da Hostex** (§3.6): coleta parada = estado errado. Não há aviso de coleta velha nessas telas.
+
+### 3.16 WhatsApp das listas (desde 2026-10-17)
+Item novo em Ajustes, Compras ou Tarefas de rua avisa o responsável por WhatsApp (pedido do gestor):
+
+| Lista | Quem recebe |
+|---|---|
+| Ajustes | gestor (Paulo) |
+| Compras **na rua** | Kaique |
+| Compras **online** | gestor |
+| Tarefas de rua | quem vai cuidar (`tarefas_rua.responsavel_id`; padrão Kaique), com o estado do imóvel hoje e o próximo check-out |
+
+- **Configuração** em `system_config` chave `listas_whatsapp` (a equipe lê e altera; ainda sem tela): `ativo`, listas `ajustes` / `compras_rua` / `compras_online` de `{ perfil, telefone? }` e `tarefas_rua_padrao` (id do perfil). O telefone do item vale mais que o do perfil: **o gestor não tem telefone no perfil**, e o número usado (5522988014013) é o mesmo que já recebia os avisos de lead (`leads_whatsapp.avisar_equipe`). Quem criou o item nunca recebe o aviso dele.
+- **Disparo:** trigger `trg_notificar_lista_whatsapp` (AFTER INSERT nas três tabelas) → `pg_net` → edge function **`notificar-listas`** com `x-internal-token` (o token `notificar_cobranca_token` do Vault, conferido por `verificar_token_interno`). Falha nunca bloqueia a gravação. Migration `20261017180000_notificar_listas.sql`, **aplicada**.
+- **Mensagem:** modelo genérico `notificacao_rios` da central de WhatsApp (projeto Lovable "Sistema de Roupas de Cama", function `notificar`, parâmetros nome · referência · texto). **Nada novo no Meta.** A Meta recusa parâmetro com quebra de linha: a function junta os espaços.
+- **Resultado** em `<tabela>.notificacao_status` (`enviado`, `parcial`, `falhou`, `sem_destino`, `proprio_autor`, `desativado`) + `_em` + `_erro`; os cartões mostram o `SeloWhatsapp` para a equipe.
+- **Compras** ganharam `canal` (`rua` | `online`, padrão rua; colar link sugere online) e filtro por canal na lista. **Tarefas** ganharam "Quem vai cuidar" (`responsavel_id` + `responsavel_nome`, gravado pelo trigger). `janela_imoveis()` agora também responde à service role (a function usa).
+- **`notificar-listas` precisa de deploy pelo agente do Lovable, com `verify_jwt = false`** em `supabase/config.toml` (o trigger não manda JWT). Até lá, os itens novos ficam sem aviso (`notificacao_status` nulo).
 
 ---
 

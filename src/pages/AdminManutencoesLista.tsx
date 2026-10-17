@@ -29,6 +29,9 @@ import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import { parseBRNumber } from "@/lib/parseBRNumber";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileMaintenanceList } from "@/components/maintenance/MobileMaintenanceList";
+import { AreaCompras } from "@/components/compras/AreaCompras";
+import { useContagemCompras } from "@/hooks/useCompras";
+import { useJanelaImoveis } from "@/hooks/useJanelaImoveis";
 import { boardChange, deriveBoard, type Board } from "@/lib/maintenanceBoard";
 import { estaVencida } from "@/lib/vencimento";
 import { LembreteAtrasoConfig } from "@/components/maintenance/LembreteAtrasoConfig";
@@ -57,7 +60,7 @@ import { DebateDialog } from "@/components/maintenance/DebateDialog";
 import { buscarCobrancaJaLancada } from "@/lib/cobrancaDuplicada";
 
 // ===== PREFERÊNCIAS LEMBRADAS =====
-type AbaLista = "manutencoes" | "vistorias" | "debitos";
+type AbaLista = "manutencoes" | "vistorias" | "debitos" | "compras";
 const CHAVE_ABA = "manutencoes-lista:aba";
 
 function lerGuardado<T>(chave: string, padrao: T): T {
@@ -92,6 +95,10 @@ export default function AdminManutencoesLista() {
   // gestor em 2026-10-01); o que a pessoa abre vale só para aquela visita.
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [abaAtiva, setAbaAtiva] = useState<AbaLista>(() => lerGuardado(CHAVE_ABA, "manutencoes"));
+  // Mesma lista de /compras, espelhada aqui como aba (pedido do gestor, 2026-10-17).
+  const { data: comprasPendentes } = useContagemCompras();
+  // Estado de hoje e próximo check-out de cada imóvel: quando dá para ir resolver.
+  const { data: janelas } = useJanelaImoveis();
   useEffect(() => guardar(CHAVE_ABA, abaAtiva), [abaAtiva]);
   const [filtroQuadro, setFiltroQuadro] = useState<GrupoId | "todos">("todos");
   const [filtroImovel, setFiltroImovel] = useState<string>("todos");
@@ -1704,6 +1711,7 @@ export default function AdminManutencoesLista() {
     return (
       <>
         <MobileMaintenanceList
+          janelas={janelas}
           groups={mobileGroups}
           groupedItems={enrichedGroupedItems}
           isLoading={isLoading}
@@ -1899,6 +1907,14 @@ export default function AdminManutencoesLista() {
             <AbaPilula ativa={abaAtiva === "debitos"} onClick={() => setAbaAtiva("debitos")}>
               Débitos em reserva
             </AbaPilula>
+            <AbaPilula
+              ativa={abaAtiva === "compras"}
+              quantidade={comprasPendentes}
+              tom="warning"
+              onClick={() => setAbaAtiva("compras")}
+            >
+              Compras
+            </AbaPilula>
           </BarraFiltros>
         }
       />
@@ -1976,6 +1992,7 @@ export default function AdminManutencoesLista() {
                         <MessageSquare className="mx-auto h-3.5 w-3.5" aria-label="Conversa" />
                       </th>
                       <SortableHeader label="Imóvel" field="property" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="w-[150px] max-w-[150px] px-2 text-left" />
+                      <th className="w-[124px] px-2 py-2 text-left font-medium" title="Estado do imóvel hoje e próximo check-out">Hoje · check-out</th>
                       <SortableHeader label="Valor" field="amount_cents" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="w-[92px] text-center" />
                       <SortableHeader label="Aporte" field="management_contribution_cents" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="w-[92px] text-center" />
                       <SortableHeader label="Data" field="created_at" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="w-[64px] text-center" />
@@ -1991,14 +2008,14 @@ export default function AdminManutencoesLista() {
                     {isLoading ? (
                       Array.from({ length: 6 }).map((_, i) => (
                         <tr key={i} className="border-b" aria-busy="true">
-                          <td colSpan={13} className="px-3 py-1.5">
+                          <td colSpan={14} className="px-3 py-1.5">
                             <Skeleton className="h-7 w-full rounded-md" />
                           </td>
                         </tr>
                       ))
                     ) : totalItens === 0 ? (
                       <tr>
-                        <td colSpan={13} className="p-0">
+                        <td colSpan={14} className="p-0">
                           <EmptyState
                             ilustracao={temFiltro ? "busca" : "manutencoes"}
                             title={temFiltro ? "Nada encontrado com esses filtros" : "Nenhuma manutenção"}
@@ -2036,6 +2053,7 @@ export default function AdminManutencoesLista() {
                             <GroupRow
                               group={group}
                               items={groupedItems[group.id] || []}
+                              janelas={janelas}
                               isExpanded={isExpanded}
                               onToggle={() => toggleGroup(group.id)}
                               onUpdateItem={handleUpdateItem}
@@ -2099,6 +2117,7 @@ export default function AdminManutencoesLista() {
                                     </SelectContent>
                                   </Select>
                                 </td>
+                                <td className="w-[124px] p-0" />
                                 {isChargeGroup ? (
                                   <td className="w-[92px] p-0">
                                     <input
@@ -2114,7 +2133,7 @@ export default function AdminManutencoesLista() {
                                 ) : (
                                   <td className="w-[92px] p-0" />
                                 )}
-                                {/* Aporte, Data, Anexos, Responsável, Etiqueta, Quadro, Status: vazias, para somar 13 colunas */}
+                                {/* Aporte, Data, Anexos, Responsável, Etiqueta, Quadro, Status: vazias, para somar 14 colunas */}
                                 <td colSpan={7} className="p-0" />
                                 <td className="w-[128px] p-0">
                                   <div className="flex items-center justify-center gap-1 px-2">
@@ -2145,7 +2164,7 @@ export default function AdminManutencoesLista() {
                             {/* "+ Adicionar item" */}
                             {isExpanded && !isInlineActive && (
                               <tr className="border-b border-border/60">
-                                <td colSpan={13} className="p-0">
+                                <td colSpan={14} className="p-0">
                                   <button
                                     type="button"
                                     className="group sticky left-0 flex items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
@@ -2259,6 +2278,10 @@ export default function AdminManutencoesLista() {
               </Card>
             }
           />
+        )}
+
+        {abaAtiva === "compras" && (
+          <AreaCompras userId={user?.id} ehEquipe ehAdmin={profile?.role === "admin"} />
         )}
 
         {/* Diálogos de lote (a barra de ações abre; ficam montados em qualquer aba) */}

@@ -35,6 +35,9 @@ export interface Ajuste {
   resolvido_em: string | null;
   resposta: string | null;
   created_at: string;
+  /** Resultado do WhatsApp ao gestor (notificar-listas). */
+  notificacao_status: string | null;
+  notificacao_erro: string | null;
   /** Nulo quando o aviso é geral ou o imóvel não é visível para quem lê. */
   imovel: { name: string } | null;
 }
@@ -48,7 +51,7 @@ export type VisaoAjustes = "abertos" | "resolvidos" | "meus";
 
 const CAMPOS =
   "id, property_id, categoria, descricao, urgente, fotos, status, autor_id, autor_nome, " +
-  "resolvido_por_nome, resolvido_em, resposta, created_at, imovel:properties(name)";
+  "resolvido_por_nome, resolvido_em, resposta, created_at, notificacao_status, notificacao_erro, imovel:properties(name)";
 
 const LIMITE_RESOLVIDOS = 60;
 const LIMITE_MEUS = 40;

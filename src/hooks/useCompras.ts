@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import type { StatusCompra } from "@/lib/compraMeta";
+import type { CanalCompra, StatusCompra } from "@/lib/compraMeta";
 
 /**
  * Lista de compras (tabela `compras`, página /compras). Mesmo modelo dos
@@ -19,6 +19,7 @@ export interface Compra {
   item: string;
   quantidade: number;
   link: string | null;
+  canal: CanalCompra;
   status: StatusCompra;
   autor_id: string | null;
   autor_nome: string | null;
@@ -26,6 +27,9 @@ export interface Compra {
   resolvido_em: string | null;
   resposta: string | null;
   created_at: string;
+  /** Resultado do WhatsApp ao responsável (notificar-listas). */
+  notificacao_status: string | null;
+  notificacao_erro: string | null;
   /** Nulo quando é geral ou o imóvel não é visível para quem lê. */
   imovel: { name: string } | null;
 }
@@ -38,7 +42,7 @@ export interface Compra {
 export type VisaoCompras = "pendentes" | "resolvidos" | "meus";
 
 const CAMPOS =
-  "id, property_id, item, quantidade, link, status, autor_id, autor_nome, " +
+  "id, property_id, item, quantidade, link, canal, status, autor_id, autor_nome, notificacao_status, notificacao_erro, " +
   "resolvido_por_nome, resolvido_em, resposta, created_at, imovel:properties(name)";
 
 const LIMITE_RESOLVIDOS = 80;
@@ -88,6 +92,7 @@ export interface NovaCompra {
   item: string;
   quantidade: number;
   link: string | null;
+  canal: CanalCompra;
 }
 
 export function useCriarCompra() {
@@ -100,6 +105,7 @@ export function useCriarCompra() {
         item: nova.item.trim(),
         quantidade: nova.quantidade,
         link: nova.link,
+        canal: nova.canal,
       });
       if (error) throw error;
     },

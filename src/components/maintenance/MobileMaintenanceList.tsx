@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { EstadoImovel } from "@/components/listas/EstadoImovel";
+import type { JanelaImovel } from "@/hooks/useJanelaImoveis";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -126,6 +128,8 @@ interface Props {
   /** Quadro escolhido nas pílulas: "todos" ou o id de um grupo. */
   filtroQuadro: string;
   onFiltroQuadro: (id: string) => void;
+  /** Estado de hoje e próximo check-out por imóvel (janela_imoveis). */
+  janelas?: Map<string, JanelaImovel>;
 }
 
 const STATUS_OPTIONS = (Object.keys(LIST_STATUS_LABELS) as Array<keyof typeof LIST_STATUS_LABELS>).map((value) => ({
@@ -200,6 +204,7 @@ function InlineCurrency({ value, onSave, label }: InlineCurrencyProps) {
 }
 
 export function MobileMaintenanceList({
+  janelas,
   groups,
   groupedItems,
   isLoading,
@@ -362,6 +367,9 @@ export function MobileMaintenanceList({
                                   <p className="text-xs text-muted-foreground mt-0.5 truncate">
                                     {item.property.name}
                                   </p>
+                                )}
+                                {item.property && janelas?.get(item.property.id) && (
+                                  <EstadoImovel janela={janelas.get(item.property.id)} variante="linha" className="mt-1" />
                                 )}
                               </div>
                               {/* Status: editável apenas para tickets (manutenção) */}

@@ -7,6 +7,14 @@ import type { Tom } from "@/components/painel/tons";
 
 export type StatusCompra = "pendente" | "comprado" | "descartado";
 
+/** Onde se compra: muda quem recebe o WhatsApp (system_config 'listas_whatsapp'). */
+export type CanalCompra = "rua" | "online";
+
+export const CANAL_COMPRA: Record<CanalCompra, { rotulo: string; dica: string }> = {
+  rua: { rotulo: "Na rua", dica: "Comprado em loja física pela equipe de rua" },
+  online: { rotulo: "Online", dica: "Comprado pela internet pela gestão" },
+};
+
 export const STATUS_COMPRA: Record<StatusCompra, { rotulo: string; tom: Tom }> = {
   pendente: { rotulo: "A comprar", tom: "warning" },
   comprado: { rotulo: "Comprado", tom: "success" },

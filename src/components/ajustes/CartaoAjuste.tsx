@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { CATEGORIA_AJUSTE, STATUS_AJUSTE } from "@/lib/ajusteMeta";
 import type { Ajuste } from "@/hooks/useAjustes";
 import { nomeCurto, quando } from "@/components/listas/formato";
+import { SeloWhatsapp } from "@/components/listas/SeloWhatsapp";
 
 interface Props {
   ajuste: Ajuste;
@@ -134,6 +135,9 @@ export function CartaoAjuste({
             <p className="min-w-0 truncate text-xs text-muted-foreground" title={criado.completo}>
               {mostrarAutor && ajuste.autor_nome ? `${nomeCurto(ajuste.autor_nome)} · ` : ""}
               {criado.relativo}
+              {mostrarAutor && aberto && (
+                <SeloWhatsapp status={ajuste.notificacao_status} erro={ajuste.notificacao_erro} className="ml-1.5" />
+              )}
             </p>
 
             <div className="flex shrink-0 items-center gap-1">
