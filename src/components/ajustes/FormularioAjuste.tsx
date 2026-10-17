@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Camera, ImageIcon, Loader2, Send, X } from "lucide-react";
+import { useRef, useState, type FormEvent } from "react";
+import { Loader2, Send, X } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -11,11 +11,12 @@ import {
   CATEGORIA_AJUSTE,
   DESCRICAO_MAX,
   DESCRICAO_MIN,
-  FOTOS_MAX,
   ORDEM_CATEGORIA_AJUSTE,
   type CategoriaAjuste,
 } from "@/lib/ajusteMeta";
 import { enviarAjuste } from "@/lib/enviarAjuste";
+import { erroDeAnexo } from "@/lib/anexosListas";
+import { EscolherAnexos } from "@/components/listas/EscolherAnexos";
 import type { ImovelAjuste } from "@/hooks/useAjustes";
 import { SeletorImovel } from "@/components/listas/SeletorImovel";
 import { IMOVEL_GERAL, imovelEhValido } from "@/components/listas/imovel";
@@ -32,31 +33,6 @@ interface Props {
   /** Botão de fechar no celular (a equipe abre o formulário só quando precisa). */
   onFechar?: () => void;
   className?: string;
-}
-
-interface FotoEscolhida {
-  arquivo: File;
-  url: string;
-}
-
-function mensagemDeErro(erro: unknown): string {
-  const texto = erro instanceof Error ? erro.message : String(erro ?? "");
-  if (/mime|type .* not supported/i.test(texto)) return "Esse formato de imagem não é aceito. Envie JPG, PNG ou um print.";
-  if (/size|too large|exceed/i.test(texto)) return "Uma das fotos é grande demais. Tente com outra.";
-  return "Não foi possível enviar o aviso. Confira a internet e tente de novo.";
-}
-
-/** Miniatura da foto escolhida; HEIC não abre no navegador e vira ícone. */
-function MiniaturaLocal({ url }: { url: string }) {
-  const [falhou, setFalhou] = useState(false);
-  if (falhou) {
-    return (
-      <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-        <ImageIcon className="h-5 w-5" aria-hidden="true" />
-      </div>
-    );
-  }
-  return <img src={url} alt="" className="h-full w-full object-cover" onError={() => setFalhou(true)} />;
 }
 
 /**
@@ -82,44 +58,16 @@ export function FormularioAjuste({
   const [categoria, setCategoria] = useState<CategoriaAjuste | null>(categoriaInicial);
   const [descricao, setDescricao] = useState("");
   const [urgente, setUrgente] = useState(false);
-  const [fotos, setFotos] = useState<FotoEscolhida[]>([]);
+  const [fotos, setFotos] = useState<File[]>([]);
   const [enviando, setEnviando] = useState(false);
   const [tentouEnviar, setTentouEnviar] = useState(false);
-  const inputFotos = useRef<HTMLInputElement>(null);
   const campoDescricao = useRef<HTMLTextAreaElement>(null);
 
   const imovelValido = imovelEhValido(imovel, imoveis);
 
-  // As miniaturas usam URL local; libera ao sair da página.
-  const fotosAtuais = useRef(fotos);
-  fotosAtuais.current = fotos;
-  useEffect(() => () => fotosAtuais.current.forEach((f) => URL.revokeObjectURL(f.url)), []);
-
   const erroImovel = tentouEnviar && !imovelValido;
   const erroCategoria = tentouEnviar && !categoria;
   const erroDescricao = tentouEnviar && descricao.trim().length < DESCRICAO_MIN;
-
-  const escolherFotos = (lista: FileList | null) => {
-    if (!lista || lista.length === 0) return;
-    const novas = Array.from(lista).filter(
-      (f) => (f.type || "").startsWith("image/") || /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(f.name || ""),
-    );
-    const vagas = FOTOS_MAX - fotos.length;
-    if (novas.length > vagas) toast.info(`Até ${FOTOS_MAX} fotos por aviso.`);
-    setFotos((atuais) => [
-      ...atuais,
-      ...novas.slice(0, Math.max(0, vagas)).map((arquivo) => ({ arquivo, url: URL.createObjectURL(arquivo) })),
-    ]);
-    if (inputFotos.current) inputFotos.current.value = "";
-  };
-
-  const tirarFoto = (indice: number) => {
-    setFotos((atuais) => {
-      const saindo = atuais[indice];
-      if (saindo) URL.revokeObjectURL(saindo.url);
-      return atuais.filter((_, i) => i !== indice);
-    });
-  };
 
   const enviar = async (e: FormEvent) => {
     e.preventDefault();
@@ -137,10 +85,9 @@ export function FormularioAjuste({
         categoria,
         descricao,
         urgente,
-        fotos: fotos.map((f) => f.arquivo),
+        fotos,
       });
       toast.success(urgente ? "Aviso urgente enviado. Obrigado!" : "Aviso enviado. Obrigado!");
-      fotos.forEach((f) => URL.revokeObjectURL(f.url));
       setFotos([]);
       setDescricao("");
       setUrgente(false);
@@ -150,7 +97,7 @@ export function FormularioAjuste({
       onEnviado?.();
     } catch (erro) {
       console.error("[ajustes] erro ao enviar:", erro);
-      toast.error(mensagemDeErro(erro));
+      toast.error(erroDeAnexo(erro));
     } finally {
       setEnviando(false);
     }
@@ -260,46 +207,8 @@ export function FormularioAjuste({
         </div>
       </div>
 
-      {/* Fotos */}
-      <div className="space-y-1.5">
-        <p className="text-sm font-medium leading-none">
-          Foto ou print <span className="font-normal text-muted-foreground">(se tiver)</span>
-        </p>
-        <div className="flex flex-wrap items-center gap-2">
-          {fotos.map((foto, i) => (
-            <div key={foto.url} className="relative h-16 w-16 overflow-hidden rounded-lg border border-border/70 bg-muted">
-              <MiniaturaLocal url={foto.url} />
-              <button
-                type="button"
-                onClick={() => tirarFoto(i)}
-                aria-label={`Tirar a foto ${i + 1}`}
-                className="absolute right-0.5 top-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-foreground/75 text-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <X className="h-3.5 w-3.5" aria-hidden="true" />
-              </button>
-            </div>
-          ))}
-          {fotos.length < FOTOS_MAX && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => inputFotos.current?.click()}
-              className="h-16 gap-1.5 border-dashed px-3 text-xs"
-            >
-              <Camera className="h-4 w-4" aria-hidden="true" />
-              {fotos.length === 0 ? "Adicionar" : "Mais uma"}
-            </Button>
-          )}
-        </div>
-        <input
-          ref={inputFotos}
-          type="file"
-          accept="image/*"
-          multiple
-          className="hidden"
-          onChange={(e) => escolherFotos(e.target.files)}
-        />
-      </div>
+      {/* Fotos e vídeos */}
+      <EscolherAnexos arquivos={fotos} onChange={setFotos} rotulo="Foto, print ou vídeo" />
 
       {/* Urgência */}
       <div

@@ -9,6 +9,9 @@ import { SeletorImovel } from "@/components/listas/SeletorImovel";
 import { IMOVEL_GERAL, imovelEhValido, type ImovelOpcao } from "@/components/listas/imovel";
 import { CANAL_COMPRA, CUSTO_COMPRA, ITEM_MAX, ITEM_MIN, QUANTIDADE_MAX, lojaDoLink, normalizarLink, type CanalCompra, type CustoCompra } from "@/lib/compraMeta";
 import { useCriarCompra } from "@/hooks/useCompras";
+import { useAuth } from "@/hooks/useAuth";
+import { erroDeAnexo } from "@/lib/anexosListas";
+import { EscolherAnexos } from "@/components/listas/EscolherAnexos";
 
 interface Props {
   imoveis: ImovelOpcao[];
@@ -37,6 +40,8 @@ export function FormularioCompra({
   className,
 }: Props) {
   const criar = useCriarCompra();
+  const { user } = useAuth();
+  const [arquivos, setArquivos] = useState<File[]>([]);
   const [imovel, setImovel] = useState<string | null>(imovelInicial);
   const [item, setItem] = useState("");
   const [quantidade, setQuantidade] = useState(1);
@@ -63,7 +68,7 @@ export function FormularioCompra({
   const enviar = async (e: FormEvent) => {
     e.preventDefault();
     setTentouEnviar(true);
-    if (!imovelValido || item.trim().length < ITEM_MIN || erroLink) {
+    if (!user || !imovelValido || item.trim().length < ITEM_MIN || erroLink) {
       if (imovelValido) campoItem.current?.focus();
       return;
     }
@@ -75,11 +80,14 @@ export function FormularioCompra({
         link: linkNormalizado ?? null,
         canal,
         custo,
+        autorId: user.id,
+        arquivos,
       });
       toast.success("Adicionado à lista de compras");
       setItem("");
       setQuantidade(1);
       setLink("");
+      setArquivos([]);
       setCanal("rua");
       setCanalEscolhido(false);
       setCustoEscolhido(null);
@@ -88,7 +96,7 @@ export function FormularioCompra({
       onEnviado?.();
     } catch (erro) {
       console.error("[compras] erro ao adicionar:", erro);
-      toast.error("Não foi possível adicionar. Confira a internet e tente de novo.");
+      toast.error(erroDeAnexo(erro));
     }
   };
 
@@ -205,6 +213,8 @@ export function FormularioCompra({
         </p>
       </div>
 
+      <EscolherAnexos arquivos={arquivos} onChange={setArquivos} rotulo="Foto ou vídeo do objeto ou do problema" />
+
       <fieldset className="space-y-1.5">
         <legend className="mb-1.5 text-sm font-medium leading-none">Onde comprar</legend>
         <div className="grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="Onde comprar">
@@ -276,7 +286,7 @@ export function FormularioCompra({
         {criar.isPending ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-            Adicionando…
+            {arquivos.length > 0 ? "Enviando arquivos…" : "Adicionando…"}
           </>
         ) : (
           <>

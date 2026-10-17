@@ -17,6 +17,7 @@ import { FormularioTarefa } from "@/components/tarefas/FormularioTarefa";
 import { CartaoTarefa } from "@/components/tarefas/CartaoTarefa";
 import { useImoveisAjuste } from "@/hooks/useAjustes";
 import { useJanelaImoveis } from "@/hooks/useJanelaImoveis";
+import { useAnexarDepois, useGaleriaAnexos } from "@/hooks/useAnexosLista";
 import {
   useApagarTarefaRua,
   useMudarStatusTarefaRua,
@@ -76,6 +77,8 @@ export default function TarefasRua() {
 
   const imoveis = useImoveisAjuste();
   const janelas = useJanelaImoveis();
+  const galeria = useGaleriaAnexos();
+  const anexar = useAnexarDepois("tarefas_rua", "anexos", user?.id);
   const pendentes = useTarefasRua("pendentes");
   const resolvidas = useTarefasRua("resolvidas", aba === "resolvidas");
   const consulta = aba === "pendentes" ? pendentes : resolvidas;
@@ -162,6 +165,9 @@ export default function TarefasRua() {
       onResolverComNota={(status) => setResposta({ tarefa: t, status })}
       onReabrir={() => void reabrir(t)}
       onApagar={() => setParaApagar(t)}
+      onAbrirAnexo={(i) => galeria.abrir(t.anexos, t.anexosUrls, i)}
+      onAnexar={() => anexar.escolher({ id: t.id, atuais: t.anexos })}
+      anexando={anexar.enviando === t.id}
     />
   );
 
@@ -292,6 +298,9 @@ export default function TarefasRua() {
         variante={feitaAgora ? "success" : "default"}
         onConfirmar={(texto) => void confirmarResposta(texto)}
       />
+
+      {galeria.elemento}
+      {anexar.elemento}
 
       <ConfirmationDialog
         open={!!paraApagar}

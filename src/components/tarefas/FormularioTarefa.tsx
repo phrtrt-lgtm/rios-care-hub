@@ -6,6 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useConfigListas, useEquipe } from "@/hooks/useConfigListas";
+import { useAuth } from "@/hooks/useAuth";
+import { erroDeAnexo } from "@/lib/anexosListas";
+import { EscolherAnexos } from "@/components/listas/EscolherAnexos";
 import { cn } from "@/lib/utils";
 import { SeletorImovel } from "@/components/listas/SeletorImovel";
 import { EstadoImovel } from "@/components/listas/EstadoImovel";
@@ -34,6 +37,8 @@ export function FormularioTarefa({
   className,
 }: Props) {
   const criar = useCriarTarefaRua();
+  const { user } = useAuth();
+  const [arquivos, setArquivos] = useState<File[]>([]);
   const [imovel, setImovel] = useState<string | null>(imovelInicial);
   const [descricao, setDescricao] = useState("");
   const [tentouEnviar, setTentouEnviar] = useState(false);
@@ -55,20 +60,21 @@ export function FormularioTarefa({
   const enviar = async (e: FormEvent) => {
     e.preventDefault();
     setTentouEnviar(true);
-    if (!imovelValido || descricao.trim().length < DESCRICAO_TAREFA_MIN) {
+    if (!user || !imovelValido || descricao.trim().length < DESCRICAO_TAREFA_MIN) {
       if (imovelValido) campo.current?.focus();
       return;
     }
     try {
-      await criar.mutateAsync({ propertyId: imovel === IMOVEL_GERAL ? null : imovel, descricao, responsavelId: responsavel });
+      await criar.mutateAsync({ propertyId: imovel === IMOVEL_GERAL ? null : imovel, descricao, responsavelId: responsavel, autorId: user.id, arquivos });
       toast.success("Tarefa adicionada");
       setDescricao("");
+      setArquivos([]);
       setTentouEnviar(false);
       campo.current?.focus();
       onEnviado?.();
     } catch (erro) {
       console.error("[tarefas-rua] erro ao adicionar:", erro);
-      toast.error("Não foi possível adicionar. Confira a internet e tente de novo.");
+      toast.error(erroDeAnexo(erro));
     }
   };
 
@@ -129,6 +135,8 @@ export function FormularioTarefa({
         />
         {erroDescricao && <p className="text-xs text-destructive">Escreva o que precisa ser feito.</p>}
       </div>
+
+      <EscolherAnexos arquivos={arquivos} onChange={setArquivos} rotulo="Foto ou vídeo do problema" />
 
       <div className="space-y-1.5">
         <Label htmlFor="tarefa-responsavel">Quem vai cuidar</Label>

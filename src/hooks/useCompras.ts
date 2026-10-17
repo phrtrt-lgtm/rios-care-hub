@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import type { CanalCompra, CustoCompra, StatusCompra } from "@/lib/compraMeta";
+import { assinarAnexos, enviarAnexos, novoId, removerAnexos } from "@/lib/anexosListas";
 
 /**
  * Lista de compras (tabela `compras`, página /compras). Mesmo modelo dos
@@ -23,6 +24,9 @@ export interface Compra {
   custo: CustoCompra;
   /** Cobrança lançada ao proprietário ao concluir (custo = owner). */
   charge_id: string | null;
+  /** Fotos e vídeos (caminhos no bucket) e as URLs assinadas na mesma ordem. */
+  anexos: string[];
+  anexosUrls: (string | null)[];
   status: StatusCompra;
   autor_id: string | null;
   autor_nome: string | null;
@@ -45,7 +49,7 @@ export interface Compra {
 export type VisaoCompras = "pendentes" | "resolvidos" | "meus";
 
 const CAMPOS =
-  "id, property_id, item, quantidade, link, canal, custo, charge_id, status, autor_id, autor_nome, notificacao_status, notificacao_erro, " +
+  "id, property_id, item, quantidade, link, canal, custo, charge_id, anexos, status, autor_id, autor_nome, notificacao_status, notificacao_erro, " +
   "resolvido_por_nome, resolvido_em, resposta, created_at, imovel:properties(name, owner_id)";
 
 const LIMITE_RESOLVIDOS = 80;
@@ -62,7 +66,12 @@ async function buscarCompras(visao: VisaoCompras, autorId?: string): Promise<Com
   }
   const { data, error } = await consulta;
   if (error) throw error;
-  return (data ?? []) as unknown as Compra[];
+  const linhas = (data ?? []) as unknown as Omit<Compra, "anexosUrls">[];
+  const urls = await assinarAnexos(linhas.flatMap((l) => l.anexos ?? []));
+  return linhas.map((l) => {
+    const anexos = l.anexos ?? [];
+    return { ...l, anexos, anexosUrls: anexos.map((c) => urls.get(c) ?? null) };
+  });
 }
 
 export function useCompras(visao: VisaoCompras, autorId?: string, ativo = true) {
@@ -97,14 +106,21 @@ export interface NovaCompra {
   link: string | null;
   canal: CanalCompra;
   custo: CustoCompra;
+  autorId: string;
+  arquivos: File[];
 }
 
 export function useCriarCompra() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (nova: NovaCompra) => {
+      // O id nasce aqui para os anexos irem direto para a pasta do item.
+      const id = novoId();
+      const anexos = await enviarAnexos(nova.autorId, id, nova.arquivos);
       // Autor e situação são gravados pelo trigger compras_preencher.
       const { error } = await tabelaCompras().insert({
+        id,
+        anexos,
         property_id: nova.propertyId,
         item: nova.item.trim(),
         quantidade: nova.quantidade,
@@ -112,7 +128,10 @@ export function useCriarCompra() {
         canal: nova.canal,
         custo: nova.custo,
       });
-      if (error) throw error;
+      if (error) {
+        await removerAnexos(anexos);
+        throw error;
+      }
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["compras"] }),
   });

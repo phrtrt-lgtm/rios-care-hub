@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { MediaGallery } from "@/components/MediaGallery";
 import { AbaPilula, BarraFiltros, CabecalhoPagina, PaginaInterna } from "@/components/painel/PaginaInterna";
 import { TituloSecao } from "@/components/painel/TituloSecao";
 import { FormularioAjuste } from "@/components/ajustes/FormularioAjuste";
@@ -28,6 +27,7 @@ import {
   type CategoriaAjuste,
 } from "@/lib/ajusteMeta";
 import { cn } from "@/lib/utils";
+import { useAnexarDepois, useGaleriaAnexos } from "@/hooks/useAnexosLista";
 
 type Aba = "abertos" | "resolvidos";
 
@@ -95,7 +95,8 @@ export default function Ajustes() {
   const [ocupados, setOcupados] = useState<Set<string>>(new Set());
   const [resposta, setResposta] = useState<{ ajuste: Ajuste; status: "feito" | "descartado" } | null>(null);
   const [paraApagar, setParaApagar] = useState<Ajuste | null>(null);
-  const [galeria, setGaleria] = useState<{ ajuste: Ajuste; indice: number } | null>(null);
+  const galeria = useGaleriaAnexos();
+  const anexar = useAnexarDepois("ajustes", "fotos", user?.id);
 
   const comOcupado = async (id: string, acao: () => Promise<void>) => {
     setOcupados((s) => new Set(s).add(id));
@@ -162,15 +163,6 @@ export default function Ajustes() {
     });
   };
 
-  const fotosDaGaleria = useMemo(() => {
-    if (!galeria) return [];
-    return galeria.ajuste.fotosUrls.flatMap((url, i) =>
-      url ? [{ id: galeria.ajuste.fotos[i], file_url: url, file_name: `Imagem ${i + 1}`, file_type: "image/jpeg" }] : [],
-    );
-  }, [galeria]);
-  const indiceNaGaleria = galeria
-    ? galeria.ajuste.fotosUrls.slice(0, galeria.indice).filter(Boolean).length
-    : 0;
 
   const titulo = ehFaxineira
     ? { texto: "Seus avisos", sub: "Aqui você vê quando for resolvido" }
@@ -311,7 +303,9 @@ export default function Ajustes() {
                   onResolverComNota={(status) => setResposta({ ajuste: a, status })}
                   onReabrir={() => void reabrir(a)}
                   onApagar={() => setParaApagar(a)}
-                  onAbrirFoto={(indice) => setGaleria({ ajuste: a, indice })}
+                  onAbrirFoto={(indice) => galeria.abrir(a.fotos, a.fotosUrls, indice)}
+                  onAnexar={ehEquipe ? () => anexar.escolher({ id: a.id, atuais: a.fotos }) : undefined}
+                  anexando={anexar.enviando === a.id}
                 />
               ))}
             </div>
@@ -339,15 +333,8 @@ export default function Ajustes() {
         onConfirm={confirmarApagar}
       />
 
-      {galeria && fotosDaGaleria.length > 0 && (
-        <MediaGallery
-          key={`${galeria.ajuste.id}-${galeria.indice}`}
-          items={fotosDaGaleria}
-          initialIndex={indiceNaGaleria}
-          open
-          onOpenChange={(aberto) => !aberto && setGaleria(null)}
-        />
-      )}
+      {galeria.elemento}
+      {anexar.elemento}
     </PaginaInterna>
   );
 }

@@ -1,4 +1,4 @@
-import { Check, ExternalLink, Loader2, MessageSquarePlus, MoreHorizontal, RotateCcw, Trash2, XCircle } from "lucide-react";
+import { Camera, Check, ExternalLink, Loader2, MessageSquarePlus, MoreHorizontal, RotateCcw, Trash2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -14,6 +14,7 @@ import { CANAL_COMPRA, CUSTO_COMPRA, STATUS_COMPRA, lojaDoLink } from "@/lib/com
 import { Link } from "react-router-dom";
 import { SeloWhatsapp } from "@/components/listas/SeloWhatsapp";
 import { nomeCurto, quando } from "@/components/listas/formato";
+import { MiniaturasAnexos } from "@/components/listas/MiniaturasAnexos";
 import type { Compra } from "@/hooks/useCompras";
 
 interface Props {
@@ -29,6 +30,11 @@ interface Props {
   onResolverComNota: (status: "comprado" | "descartado") => void;
   onReabrir: () => void;
   onApagar: () => void;
+  onAbrirAnexo?: (indice: number) => void;
+  /** "Adicionar foto ou vídeo" no menu (equipe). */
+  onAnexar?: () => void;
+  /** Arquivos subindo para este item. */
+  anexando?: boolean;
 }
 
 /** Um item da lista: o que comprar, quantos, onde comprar e quem pediu. */
@@ -44,6 +50,9 @@ export function CartaoCompra({
   onResolverComNota,
   onReabrir,
   onApagar,
+  onAbrirAnexo,
+  onAnexar,
+  anexando = false,
 }: Props) {
   const status = STATUS_COMPRA[compra.status] ?? STATUS_COMPRA.pendente;
   const pendente = compra.status === "pendente";
@@ -85,6 +94,8 @@ export function CartaoCompra({
         </a>
       )}
 
+      <MiniaturasAnexos caminhos={compra.anexos} urls={compra.anexosUrls} onAbrir={(i) => onAbrirAnexo?.(i)} />
+
       {compra.charge_id && mostrarAutor && (
         <Link
           to={`/cobranca/${compra.charge_id}`}
@@ -115,7 +126,7 @@ export function CartaoCompra({
         </p>
 
         <div className="flex shrink-0 items-center gap-1">
-          {ocupado && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-label="Salvando" />}
+          {(ocupado || anexando) && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-label="Salvando" />}
 
           {pendente && podeResolver && (
             <Button
@@ -174,6 +185,12 @@ export function CartaoCompra({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
+                {onAnexar && podeResolver && (
+                  <DropdownMenuItem onSelect={onAnexar}>
+                    <Camera className="mr-2 h-4 w-4" aria-hidden="true" />
+                    Adicionar foto ou vídeo
+                  </DropdownMenuItem>
+                )}
                 {pendente && podeResolver && (
                   <>
                     <DropdownMenuItem onSelect={() => onResolverComNota("comprado")}>

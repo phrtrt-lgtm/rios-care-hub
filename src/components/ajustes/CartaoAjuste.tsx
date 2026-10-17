@@ -1,4 +1,4 @@
-import { Check, ImageIcon, Loader2, MessageSquarePlus, MoreHorizontal, RotateCcw, Trash2, XCircle } from "lucide-react";
+import { Camera, Check, Loader2, MessageSquarePlus, MoreHorizontal, RotateCcw, Trash2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -14,6 +14,7 @@ import { CATEGORIA_AJUSTE, STATUS_AJUSTE } from "@/lib/ajusteMeta";
 import type { Ajuste } from "@/hooks/useAjustes";
 import { nomeCurto, quando } from "@/components/listas/formato";
 import { SeloWhatsapp } from "@/components/listas/SeloWhatsapp";
+import { MiniaturasAnexos } from "@/components/listas/MiniaturasAnexos";
 
 interface Props {
   ajuste: Ajuste;
@@ -31,6 +32,9 @@ interface Props {
   onReabrir: () => void;
   onApagar: () => void;
   onAbrirFoto: (indice: number) => void;
+  /** "Adicionar foto ou vídeo" no menu (equipe). */
+  onAnexar?: () => void;
+  anexando?: boolean;
 }
 
 /** Um aviso: imóvel, tipo, o que mudar, fotos, quem avisou e o que foi feito. */
@@ -46,6 +50,8 @@ export function CartaoAjuste({
   onReabrir,
   onApagar,
   onAbrirFoto,
+  onAnexar,
+  anexando = false,
 }: Props) {
   const meta = CATEGORIA_AJUSTE[ajuste.categoria] ?? CATEGORIA_AJUSTE.outro;
   const Icone = meta.icone;
@@ -92,31 +98,7 @@ export function CartaoAjuste({
             {ajuste.descricao}
           </p>
 
-          {ajuste.fotos.length > 0 && (
-            <div className="mt-2.5 flex flex-wrap gap-1.5">
-              {ajuste.fotosUrls.map((url, i) =>
-                url ? (
-                  <button
-                    key={ajuste.fotos[i]}
-                    type="button"
-                    onClick={() => onAbrirFoto(i)}
-                    aria-label={`Ver foto ${i + 1}`}
-                    className="h-14 w-14 overflow-hidden rounded-lg border border-border/70 bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <img src={url} alt="" loading="lazy" className="h-full w-full object-cover" />
-                  </button>
-                ) : (
-                  <span
-                    key={ajuste.fotos[i]}
-                    title="Foto indisponível"
-                    className="flex h-14 w-14 items-center justify-center rounded-lg border border-dashed border-border bg-muted/50 text-muted-foreground"
-                  >
-                    <ImageIcon className="h-4 w-4" aria-hidden="true" />
-                  </span>
-                ),
-              )}
-            </div>
-          )}
+          <MiniaturasAnexos caminhos={ajuste.fotos} urls={ajuste.fotosUrls} onAbrir={onAbrirFoto} />
 
           {!aberto && (
             <div className={cn("mt-2.5 rounded-lg border px-3 py-2 text-xs", TOM[status.tom].fundo, TOM[status.tom].borda)}>
@@ -141,7 +123,7 @@ export function CartaoAjuste({
             </p>
 
             <div className="flex shrink-0 items-center gap-1">
-              {ocupado && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-label="Salvando" />}
+              {(ocupado || anexando) && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-label="Salvando" />}
 
               {aberto && podeResolver && (
                 <Button
@@ -200,6 +182,12 @@ export function CartaoAjuste({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
+                    {onAnexar && podeResolver && (
+                      <DropdownMenuItem onSelect={onAnexar}>
+                        <Camera className="mr-2 h-4 w-4" aria-hidden="true" />
+                        Adicionar foto ou vídeo
+                      </DropdownMenuItem>
+                    )}
                     {aberto && podeResolver && (
                       <>
                         <DropdownMenuItem onSelect={() => onResolverComNota("feito")}>

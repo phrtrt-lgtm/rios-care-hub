@@ -15,6 +15,7 @@ import { FormularioCompra } from "@/components/compras/FormularioCompra";
 import { CartaoCompra } from "@/components/compras/CartaoCompra";
 import { EstadoImovel } from "@/components/listas/EstadoImovel";
 import { useJanelaImoveis } from "@/hooks/useJanelaImoveis";
+import { useAnexarDepois, useGaleriaAnexos } from "@/hooks/useAnexosLista";
 import { useImoveisAjuste } from "@/hooks/useAjustes";
 import { useApagarCompra, useCompras, useMudarStatusCompra, type Compra } from "@/hooks/useCompras";
 import { cn } from "@/lib/utils";
@@ -82,6 +83,8 @@ export function AreaCompras({
   const setAba = (a: AbaCompras) => (onAbaChange ? onAbaChange(a) : setAbaInterna(a));
   const [formAberto, setFormAberto] = useState(ehFaxineira || formAbertoInicial);
   const janelas = useJanelaImoveis(ehEquipe);
+  const galeria = useGaleriaAnexos();
+  const anexar = useAnexarDepois("compras", "anexos", userId);
 
   const imoveis = useImoveisAjuste();
   const pendentes = useCompras("pendentes", undefined, ehEquipe);
@@ -210,6 +213,9 @@ export function AreaCompras({
       onResolverComNota={(status) => setResposta({ compra: c, status })}
       onReabrir={() => void reabrir(c)}
       onApagar={() => setParaApagar(c)}
+      onAbrirAnexo={(i) => galeria.abrir(c.anexos, c.anexosUrls, i)}
+      onAnexar={ehEquipe ? () => anexar.escolher({ id: c.id, atuais: c.anexos }) : undefined}
+      anexando={anexar.enviando === c.id}
     />
   );
 
@@ -378,6 +384,9 @@ export function AreaCompras({
           </div>
         </DialogContent>
       </Dialog>
+
+      {galeria.elemento}
+      {anexar.elemento}
 
       <ConfirmationDialog
         open={!!paraApagar}

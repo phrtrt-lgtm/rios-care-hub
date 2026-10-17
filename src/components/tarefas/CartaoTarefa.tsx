@@ -1,4 +1,4 @@
-import { Check, Loader2, MessageSquarePlus, MoreHorizontal, RotateCcw, Trash2, XCircle } from "lucide-react";
+import { Camera, Check, Loader2, MessageSquarePlus, MoreHorizontal, RotateCcw, Trash2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,6 +11,7 @@ import { Etiqueta } from "@/components/painel/Etiqueta";
 import { TOM } from "@/components/painel/tons";
 import { cn } from "@/lib/utils";
 import { nomeCurto, quando } from "@/components/listas/formato";
+import { MiniaturasAnexos } from "@/components/listas/MiniaturasAnexos";
 import { STATUS_TAREFA, type TarefaRua } from "@/hooks/useTarefasRua";
 import { EstadoImovel } from "@/components/listas/EstadoImovel";
 import { SeloWhatsapp } from "@/components/listas/SeloWhatsapp";
@@ -30,6 +31,11 @@ interface Props {
   onResolverComNota: (status: "feita" | "descartada") => void;
   onReabrir: () => void;
   onApagar: () => void;
+  onAbrirAnexo?: (indice: number) => void;
+  /** "Adicionar foto ou vídeo" no menu (equipe). */
+  onAnexar?: () => void;
+  /** Arquivos subindo para este item. */
+  anexando?: boolean;
 }
 
 /** Uma tarefa de rua: o que fazer, onde, quem pediu e quem fez. */
@@ -45,6 +51,9 @@ export function CartaoTarefa({
   onResolverComNota,
   onReabrir,
   onApagar,
+  onAbrirAnexo,
+  onAnexar,
+  anexando = false,
 }: Props) {
   const status = STATUS_TAREFA[tarefa.status] ?? STATUS_TAREFA.pendente;
   const pendente = tarefa.status === "pendente";
@@ -75,6 +84,8 @@ export function CartaoTarefa({
         {tarefa.descricao}
       </p>
 
+      <MiniaturasAnexos caminhos={tarefa.anexos} urls={tarefa.anexosUrls} onAbrir={(i) => onAbrirAnexo?.(i)} />
+
       {!pendente && (
         <div className={cn("mt-2 rounded-lg border px-3 py-2 text-xs", TOM[status.tom].fundo, TOM[status.tom].borda)}>
           <p className="font-medium">
@@ -95,7 +106,7 @@ export function CartaoTarefa({
         </p>
 
         <div className="flex shrink-0 items-center gap-1">
-          {ocupado && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-label="Salvando" />}
+          {(ocupado || anexando) && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-label="Salvando" />}
 
           {pendente && podeResolver && (
             <Button
@@ -154,6 +165,12 @@ export function CartaoTarefa({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
+                {onAnexar && podeResolver && (
+                  <DropdownMenuItem onSelect={onAnexar}>
+                    <Camera className="mr-2 h-4 w-4" aria-hidden="true" />
+                    Adicionar foto ou vídeo
+                  </DropdownMenuItem>
+                )}
                 {pendente && podeResolver && (
                   <>
                     <DropdownMenuItem onSelect={() => onResolverComNota("feita")}>

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import type { CategoriaAjuste, StatusAjuste } from "@/lib/ajusteMeta";
+import { BUCKET_LISTAS, assinarAnexos } from "@/lib/anexosListas";
 
 /**
  * Ajustes avisados pela equipe (tabela `ajustes`, página /ajustes).
@@ -11,7 +12,8 @@ import type { CategoriaAjuste, StatusAjuste } from "@/lib/ajusteMeta";
  * aqui como URL assinada.
  */
 
-export const BUCKET_AJUSTES = "ajustes";
+/** O bucket é compartilhado com compras e tarefas (src/lib/anexosListas.ts). */
+export const BUCKET_AJUSTES = BUCKET_LISTAS;
 
 // A tabela é de 2026-10-16 e o types.ts (gerado pelo Lovable) ainda não a
 // conhece: até ele ser regenerado, ela passa pelo cliente sem tipos.
@@ -55,22 +57,6 @@ const CAMPOS =
 
 const LIMITE_RESOLVIDOS = 60;
 const LIMITE_MEUS = 40;
-/** As URLs vencem em 1 h; o React Query refaz a busca ao voltar para a aba. */
-const VALIDADE_URL_S = 60 * 60;
-
-async function assinarFotos(caminhos: string[]): Promise<Map<string, string>> {
-  const mapa = new Map<string, string>();
-  if (caminhos.length === 0) return mapa;
-  const { data, error } = await supabase.storage.from(BUCKET_AJUSTES).createSignedUrls(caminhos, VALIDADE_URL_S);
-  if (error) {
-    console.warn("[ajustes] não foi possível assinar as fotos:", error.message);
-    return mapa;
-  }
-  for (const item of data ?? []) {
-    if (item.path && item.signedUrl) mapa.set(item.path, item.signedUrl);
-  }
-  return mapa;
-}
 
 async function buscarAjustes(visao: VisaoAjustes, autorId?: string): Promise<Ajuste[]> {
   let consulta = tabelaAjustes().select(CAMPOS);
@@ -89,7 +75,7 @@ async function buscarAjustes(visao: VisaoAjustes, autorId?: string): Promise<Aju
   if (error) throw error;
 
   const linhas = (data ?? []) as unknown as Omit<Ajuste, "fotosUrls">[];
-  const urls = await assinarFotos(linhas.flatMap((l) => l.fotos ?? []));
+  const urls = await assinarAnexos(linhas.flatMap((l) => l.fotos ?? []));
   return linhas.map((l) => {
     const fotos = l.fotos ?? [];
     return { ...l, fotos, fotosUrls: fotos.map((c) => urls.get(c) ?? null) };

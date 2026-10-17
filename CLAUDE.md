@@ -337,6 +337,13 @@ O que a equipe precisa passar ao proprietário e o que ele mandou, com conversa 
 - **Lista** (`useAvisosProprietario`): chamados abertos de informação criados pela equipe + chamados de conversa abertos pelo próprio proprietário (informação, dúvida, hóspedes, bloqueio, outros), fora manutenção em debate. A vez é de quem não escreveu a última mensagem pública: abas **Para responder** / **Aguardando proprietário** / **Encerrados** (60). "Encerrar" conclui o chamado; "Reabrir" volta para `em_analise`.
 - **Entradas:** linha `LembreteAvisos` no topo do painel ("N para responder"), atalho "Avisar proprietário", "+" do celular. Só equipe.
 
+### 3.18 Fotos e vídeos nas listas (desde 2026-10-17)
+Ajustes, Compras e Tarefas de rua aceitam **foto e vídeo**, na criação e depois (menu "⋯" → "Adicionar foto ou vídeo", só equipe), e abrem na `MediaGallery` (toca vídeo).
+- **Um bucket só:** o privado `ajustes` serve às três listas, pasta `<quem subiu>/<id do item>/<n>-<sufixo>.<ext>`; aceita imagem e vídeo (mp4, mov, webm, 3gp, mkv) até **100 MB** (no navegador o vídeo sobe sem compressão). Colunas: `ajustes.fotos`, `compras.anexos`, `tarefas_rua.anexos` (até 10 por item). Migration `20261017220000_anexos_listas.sql`, aplicada.
+- **Peças:** `src/lib/anexosListas.ts` (`enviarAnexos`, `assinarAnexos`, `itensGaleria`, `erroDeAnexo`, `novoId`), `EscolherAnexos` (formulário, com prévia), `MiniaturasAnexos` (cartão) e `useAnexosLista.tsx` (`useGaleriaAnexos`, `useAnexarDepois`). Lista nova com anexo usa essas peças.
+- O item nasce com id gerado no navegador para os arquivos irem direto para a pasta dele; se a gravação falha, os arquivos que subiram são apagados.
+- Leitura por URL assinada (1 h). A faxineira só lê o que ela mesma subiu (policy do bucket por pasta).
+
 ---
 
 ## 4. Regras invioláveis — e o status real de cada uma
