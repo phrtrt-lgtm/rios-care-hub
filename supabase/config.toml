@@ -115,3 +115,6 @@ verify_jwt = false
 
 [functions.notificar-lead]
 verify_jwt = false
+
+[functions.notificar-listas]
+verify_jwt = false
