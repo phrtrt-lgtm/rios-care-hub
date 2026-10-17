@@ -196,6 +196,91 @@ export type Database = {
           },
         ]
       }
+      ajustes: {
+        Row: {
+          autor_id: string | null
+          autor_nome: string | null
+          categoria: string
+          created_at: string
+          descricao: string
+          fotos: string[]
+          id: string
+          notificacao_em: string | null
+          notificacao_erro: string | null
+          notificacao_status: string | null
+          property_id: string | null
+          resolvido_em: string | null
+          resolvido_por: string | null
+          resolvido_por_nome: string | null
+          resposta: string | null
+          status: string
+          updated_at: string
+          urgente: boolean
+        }
+        Insert: {
+          autor_id?: string | null
+          autor_nome?: string | null
+          categoria: string
+          created_at?: string
+          descricao: string
+          fotos?: string[]
+          id?: string
+          notificacao_em?: string | null
+          notificacao_erro?: string | null
+          notificacao_status?: string | null
+          property_id?: string | null
+          resolvido_em?: string | null
+          resolvido_por?: string | null
+          resolvido_por_nome?: string | null
+          resposta?: string | null
+          status?: string
+          updated_at?: string
+          urgente?: boolean
+        }
+        Update: {
+          autor_id?: string | null
+          autor_nome?: string | null
+          categoria?: string
+          created_at?: string
+          descricao?: string
+          fotos?: string[]
+          id?: string
+          notificacao_em?: string | null
+          notificacao_erro?: string | null
+          notificacao_status?: string | null
+          property_id?: string | null
+          resolvido_em?: string | null
+          resolvido_por?: string | null
+          resolvido_por_nome?: string | null
+          resposta?: string | null
+          status?: string
+          updated_at?: string
+          urgente?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ajustes_autor_id_fkey"
+            columns: ["autor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ajustes_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ajustes_resolvido_por_fkey"
+            columns: ["resolvido_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       alert_attachments: {
         Row: {
           alert_id: string
@@ -1105,6 +1190,91 @@ export type Database = {
             columns: ["property_id"]
             isOneToOne: false
             referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compras: {
+        Row: {
+          autor_id: string | null
+          autor_nome: string | null
+          canal: string
+          created_at: string
+          id: string
+          item: string
+          link: string | null
+          notificacao_em: string | null
+          notificacao_erro: string | null
+          notificacao_status: string | null
+          property_id: string | null
+          quantidade: number
+          resolvido_em: string | null
+          resolvido_por: string | null
+          resolvido_por_nome: string | null
+          resposta: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          autor_id?: string | null
+          autor_nome?: string | null
+          canal?: string
+          created_at?: string
+          id?: string
+          item: string
+          link?: string | null
+          notificacao_em?: string | null
+          notificacao_erro?: string | null
+          notificacao_status?: string | null
+          property_id?: string | null
+          quantidade?: number
+          resolvido_em?: string | null
+          resolvido_por?: string | null
+          resolvido_por_nome?: string | null
+          resposta?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          autor_id?: string | null
+          autor_nome?: string | null
+          canal?: string
+          created_at?: string
+          id?: string
+          item?: string
+          link?: string | null
+          notificacao_em?: string | null
+          notificacao_erro?: string | null
+          notificacao_status?: string | null
+          property_id?: string | null
+          quantidade?: number
+          resolvido_em?: string | null
+          resolvido_por?: string | null
+          resolvido_por_nome?: string | null
+          resposta?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compras_autor_id_fkey"
+            columns: ["autor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_resolvido_por_fkey"
+            columns: ["resolvido_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -3697,6 +3867,95 @@ export type Database = {
           },
         ]
       }
+      tarefas_rua: {
+        Row: {
+          autor_id: string | null
+          autor_nome: string | null
+          created_at: string
+          descricao: string
+          id: string
+          notificacao_em: string | null
+          notificacao_erro: string | null
+          notificacao_status: string | null
+          property_id: string | null
+          resolvido_em: string | null
+          resolvido_por: string | null
+          resolvido_por_nome: string | null
+          responsavel_id: string | null
+          responsavel_nome: string | null
+          resposta: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          autor_id?: string | null
+          autor_nome?: string | null
+          created_at?: string
+          descricao: string
+          id?: string
+          notificacao_em?: string | null
+          notificacao_erro?: string | null
+          notificacao_status?: string | null
+          property_id?: string | null
+          resolvido_em?: string | null
+          resolvido_por?: string | null
+          resolvido_por_nome?: string | null
+          responsavel_id?: string | null
+          responsavel_nome?: string | null
+          resposta?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          autor_id?: string | null
+          autor_nome?: string | null
+          created_at?: string
+          descricao?: string
+          id?: string
+          notificacao_em?: string | null
+          notificacao_erro?: string | null
+          notificacao_status?: string | null
+          property_id?: string | null
+          resolvido_em?: string | null
+          resolvido_por?: string | null
+          resolvido_por_nome?: string | null
+          responsavel_id?: string | null
+          responsavel_nome?: string | null
+          resposta?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tarefas_rua_autor_id_fkey"
+            columns: ["autor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tarefas_rua_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tarefas_rua_resolvido_por_fkey"
+            columns: ["resolvido_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tarefas_rua_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_chat_messages: {
         Row: {
           author_id: string
@@ -4089,6 +4348,15 @@ export type Database = {
       invoke_charge_cron: { Args: never; Returns: undefined }
       is_admin_or_maintenance: { Args: { _user_id: string }; Returns: boolean }
       is_team_member: { Args: { _user_id: string }; Returns: boolean }
+      janela_imoveis: {
+        Args: never
+        Returns: {
+          property_id: string
+          proxima_entrada: string
+          proximo_checkout: string
+          saida: string
+        }[]
+      }
       proprietarios_para_lembrete_atraso: {
         Args: { p_limite?: number }
         Returns: {
