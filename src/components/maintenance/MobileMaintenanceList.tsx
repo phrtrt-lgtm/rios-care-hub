@@ -15,7 +15,7 @@ import {
   Trash2,
   Wrench,
   Search,
-  ArrowLeft, MessagesSquare, Undo2 } from "lucide-react";
+  ArrowLeft, MessagesSquare, ShoppingCart, Undo2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -122,6 +122,7 @@ interface Props {
   onDebater?: (item: MobileMaintenanceItem) => void;
   /** Devolve à lista de manutenções um item em debate. */
   onVoltarManutencao?: (item: MobileMaintenanceItem) => void;
+  onComprar?: (item: MobileMaintenanceItem) => void;
   /** Grupos abertos, compartilhados com o desktop (lembrados entre visitas). */
   expanded: Record<string, boolean>;
   onToggleGroup: (id: string) => void;
@@ -225,6 +226,7 @@ export function MobileMaintenanceList({
   onNew,
   onDebater,
   onVoltarManutencao,
+  onComprar,
   expanded,
   onToggleGroup,
   filtroQuadro,

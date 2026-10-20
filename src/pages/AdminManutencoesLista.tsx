@@ -22,6 +22,7 @@ import EditInspectionDialog from "@/components/EditInspectionDialog";
 import { EditMaintenanceDialog } from "@/components/EditMaintenanceDialog";
 import { ReserveDebitsTable } from "@/components/ReserveDebitsTable";
 import { AlarmClock, Download, Send } from "lucide-react";
+import { CompraManutencaoDialog } from "@/components/maintenance/CompraManutencaoDialog";
 import { baixarAnexosEmZip, resumoDownloadAnexos } from "@/lib/baixarAnexos";
 import { useDetailSheet } from "@/hooks/useDetailSheet";
 import { DetailSheet } from "@/components/detail-sheet/DetailSheet";
@@ -1748,6 +1749,7 @@ export default function AdminManutencoesLista() {
           onFiltroQuadro={(id) => setFiltroQuadro(id as GrupoId | "todos")}
           onDebater={(item) => setItemDebate(item as MaintenanceItem)}
           onVoltarManutencao={(item) => setItemVoltar(item as MaintenanceItem)}
+          onComprar={(item) => setItemCompra(item as MaintenanceItem)}
         />
 
         {dialogosDebate}
@@ -2084,6 +2086,7 @@ export default function AdminManutencoesLista() {
                               }}
                               onDebater={setItemDebate}
                               onVoltarManutencao={setItemVoltar}
+                              onComprar={setItemCompra}
                             />
 
                             {/* Linha de inclusão rápida */}
