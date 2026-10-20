@@ -1216,6 +1216,7 @@ export type Database = {
           resolvido_por_nome: string | null
           resposta: string | null
           status: string
+          ticket_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1239,6 +1240,7 @@ export type Database = {
           resolvido_por_nome?: string | null
           resposta?: string | null
           status?: string
+          ticket_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1262,6 +1264,7 @@ export type Database = {
           resolvido_por_nome?: string | null
           resposta?: string | null
           status?: string
+          ticket_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1291,6 +1294,13 @@ export type Database = {
             columns: ["resolvido_por"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
             referencedColumns: ["id"]
           },
         ]
