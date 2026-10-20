@@ -3,7 +3,7 @@ import { CelulaCheckout, CelulaEstadoHoje } from "@/components/listas/EstadoImov
 import { ordemCheckout, ordemEstado, type JanelaImovel } from "@/hooks/useJanelaImoveis";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, ChevronRight, Download, Loader2, MessageSquare, MessagesSquare, Paperclip, Pencil, Plus, Trash2, Undo2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Download, Loader2, MessageSquare, MessagesSquare, Paperclip, Pencil, Plus, ShoppingCart, Trash2, Undo2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -56,6 +56,8 @@ interface GroupRowProps {
   onDebater?: (item: MaintenanceItem) => void;
   /** Devolve à lista de manutenções um item em debate. */
   onVoltarManutencao?: (item: MaintenanceItem) => void;
+  /** Pede uma compra ligada à manutenção. */
+  onComprar?: (item: MaintenanceItem) => void;
   /** Estado de hoje e próximo check-out por imóvel (janela_imoveis). */
   janelas?: Map<string, JanelaImovel>;
 }
@@ -84,6 +86,7 @@ export function GroupRow({
   onDelete,
   onDebater,
   onVoltarManutencao,
+  onComprar,
   janelas,
 }: GroupRowProps) {
   const navigate = useNavigate();
@@ -462,7 +465,7 @@ export function GroupRow({
             </td>
 
             {/* WhatsApp / Editar / Excluir */}
-            <td className="p-0 w-[128px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
+            <td className={cn("sticky right-0 z-[1] p-0 w-[150px] border-l border-border/60", fundoFixo)} data-no-sheet onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-end gap-1 px-1 py-2">
                 {onDebater && ["em_progresso", "infiltracao", "stand_by"].includes(group.id) && (
                   <button
@@ -514,6 +517,20 @@ export function GroupRow({
                     whatsappEnviadoEm={item.whatsapp_enviado_em}
                     onAtualizado={recarregarWhatsapp}
                   />
+                )}
+                {onComprar && !isCharge && (
+                  <button
+                    type="button"
+                    className="p-1.5 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onComprar(item);
+                    }}
+                    title="Adicionar compra"
+                    aria-label="Adicionar compra"
+                  >
+                    <ShoppingCart className="h-3.5 w-3.5" />
+                  </button>
                 )}
                 <button
                   type="button"

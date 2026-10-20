@@ -1196,10 +1196,13 @@ export type Database = {
       }
       compras: {
         Row: {
+          anexos: string[]
           autor_id: string | null
           autor_nome: string | null
           canal: string
+          charge_id: string | null
           created_at: string
+          custo: string
           id: string
           item: string
           link: string | null
@@ -1213,13 +1216,17 @@ export type Database = {
           resolvido_por_nome: string | null
           resposta: string | null
           status: string
+          ticket_id: string | null
           updated_at: string
         }
         Insert: {
+          anexos?: string[]
           autor_id?: string | null
           autor_nome?: string | null
           canal?: string
+          charge_id?: string | null
           created_at?: string
+          custo?: string
           id?: string
           item: string
           link?: string | null
@@ -1233,13 +1240,17 @@ export type Database = {
           resolvido_por_nome?: string | null
           resposta?: string | null
           status?: string
+          ticket_id?: string | null
           updated_at?: string
         }
         Update: {
+          anexos?: string[]
           autor_id?: string | null
           autor_nome?: string | null
           canal?: string
+          charge_id?: string | null
           created_at?: string
+          custo?: string
           id?: string
           item?: string
           link?: string | null
@@ -1253,6 +1264,7 @@ export type Database = {
           resolvido_por_nome?: string | null
           resposta?: string | null
           status?: string
+          ticket_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1261,6 +1273,13 @@ export type Database = {
             columns: ["autor_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_charge_id_fkey"
+            columns: ["charge_id"]
+            isOneToOne: false
+            referencedRelation: "charges"
             referencedColumns: ["id"]
           },
           {
@@ -1275,6 +1294,13 @@ export type Database = {
             columns: ["resolvido_por"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
             referencedColumns: ["id"]
           },
         ]
@@ -3869,6 +3895,7 @@ export type Database = {
       }
       tarefas_rua: {
         Row: {
+          anexos: string[]
           autor_id: string | null
           autor_nome: string | null
           created_at: string
@@ -3888,6 +3915,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          anexos?: string[]
           autor_id?: string | null
           autor_nome?: string | null
           created_at?: string
@@ -3907,6 +3935,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          anexos?: string[]
           autor_id?: string | null
           autor_nome?: string | null
           created_at?: string

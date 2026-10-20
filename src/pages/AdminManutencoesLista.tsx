@@ -22,6 +22,7 @@ import EditInspectionDialog from "@/components/EditInspectionDialog";
 import { EditMaintenanceDialog } from "@/components/EditMaintenanceDialog";
 import { ReserveDebitsTable } from "@/components/ReserveDebitsTable";
 import { AlarmClock, Download, Send } from "lucide-react";
+import { CompraManutencaoDialog } from "@/components/maintenance/CompraManutencaoDialog";
 import { baixarAnexosEmZip, resumoDownloadAnexos } from "@/lib/baixarAnexos";
 import { useDetailSheet } from "@/hooks/useDetailSheet";
 import { DetailSheet } from "@/components/detail-sheet/DetailSheet";
@@ -1091,6 +1092,7 @@ export default function AdminManutencoesLista() {
   // Conversa e anexos são os mesmos; kind = "maintenance" marca a origem.
   const [itemDebate, setItemDebate] = useState<MaintenanceItem | null>(null);
   const [itemVoltar, setItemVoltar] = useState<MaintenanceItem | null>(null);
+  const [itemCompra, setItemCompra] = useState<MaintenanceItem | null>(null);
   const recarregarListas = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["maintenance-list-view"] });
     queryClient.invalidateQueries({ queryKey: ["pending-charges-list"] });
@@ -1748,6 +1750,7 @@ export default function AdminManutencoesLista() {
           onFiltroQuadro={(id) => setFiltroQuadro(id as GrupoId | "todos")}
           onDebater={(item) => setItemDebate(item as MaintenanceItem)}
           onVoltarManutencao={(item) => setItemVoltar(item as MaintenanceItem)}
+          onComprar={(item) => setItemCompra(item as MaintenanceItem)}
         />
 
         {dialogosDebate}
@@ -1772,6 +1775,7 @@ export default function AdminManutencoesLista() {
           }}
         />
 
+        <CompraManutencaoDialog item={itemCompra} onOpenChange={(a) => !a && setItemCompra(null)} />
         <ConfirmationDialog
           open={deleteDialog.open}
           onOpenChange={(open) => setDeleteDialog((prev) => ({ ...prev, open }))}
@@ -2002,7 +2006,7 @@ export default function AdminManutencoesLista() {
                       <SortableHeader label="Etiqueta" field="service_type" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="w-[112px] text-center" />
                       <th className="w-[112px] px-1 py-2 text-center font-medium">Quadro</th>
                       <SortableHeader label="Status" field="list_status" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="w-[124px] text-center" />
-                      <th className="w-[128px] px-1 py-2 text-center font-medium">Ações</th>
+                      <th className="sticky right-0 z-[2] w-[150px] border-l border-border/60 bg-muted px-1 py-2 text-center font-medium">Ações</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2084,6 +2088,7 @@ export default function AdminManutencoesLista() {
                               }}
                               onDebater={setItemDebate}
                               onVoltarManutencao={setItemVoltar}
+                              onComprar={setItemCompra}
                             />
 
                             {/* Linha de inclusão rápida */}
@@ -2387,6 +2392,7 @@ export default function AdminManutencoesLista() {
         />
 
         {/* Delete Confirmation Dialog */}
+        <CompraManutencaoDialog item={itemCompra} onOpenChange={(a) => !a && setItemCompra(null)} />
         <ConfirmationDialog
           open={deleteDialog.open}
           onOpenChange={(open) => setDeleteDialog((prev) => ({ ...prev, open }))}
