@@ -2002,7 +2002,7 @@ export default function AdminManutencoesLista() {
                       <SortableHeader label="Etiqueta" field="service_type" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="w-[112px] text-center" />
                       <th className="w-[112px] px-1 py-2 text-center font-medium">Quadro</th>
                       <SortableHeader label="Status" field="list_status" currentSort={sortField} direction={sortDirection} onSort={handleSort} className="w-[124px] text-center" />
-                      <th className="w-[128px] px-1 py-2 text-center font-medium">Ações</th>
+                      <th className="sticky right-0 z-[2] w-[150px] border-l border-border/60 bg-muted px-1 py-2 text-center font-medium">Ações</th>
                     </tr>
                   </thead>
                   <tbody>

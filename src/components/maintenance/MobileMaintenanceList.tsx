@@ -530,7 +530,7 @@ export function MobileMaintenanceList({
 
                             {/* Ações rápidas */}
                             <div
-                              className="flex items-center justify-end gap-1 mt-2 -mb-1"
+                              className="flex flex-wrap items-center justify-end gap-1 mt-2 -mb-1"
                               onClick={(e) => e.stopPropagation()}
                             >
                               <button
@@ -648,6 +648,20 @@ export function MobileMaintenanceList({
                                   whatsappEnviadoEm={item.whatsapp_enviado_em}
                                   onAtualizado={() => onWhatsappAtualizado?.()}
                                 />
+                              )}
+                              {onComprar && !isCharge && (
+                                <button
+                                  type="button"
+                                  className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-primary/10 hover:text-primary text-muted-foreground active:scale-95 transition-all"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onComprar(item);
+                                  }}
+                                  aria-label="Adicionar compra"
+                                  title="Adicionar compra"
+                                >
+                                  <ShoppingCart className="h-4 w-4" />
+                                </button>
                               )}
                               <button
                                 type="button"
