@@ -22,6 +22,9 @@ interface Props {
   /** Botão de fechar no celular (a equipe abre o formulário só quando precisa). */
   onFechar?: () => void;
   className?: string;
+  /** Liga o pedido a uma manutenção. */
+  ticketId?: string | null;
+  custoInicial?: CustoCompra | null;
 }
 
 /**
@@ -38,6 +41,8 @@ export function FormularioCompra({
   onEnviado,
   onFechar,
   className,
+  ticketId = null,
+  custoInicial = null,
 }: Props) {
   const criar = useCriarCompra();
   const { user } = useAuth();
@@ -50,7 +55,7 @@ export function FormularioCompra({
   // Colar um link sugere "Online", até a pessoa escolher por conta própria.
   const [canalEscolhido, setCanalEscolhido] = useState(false);
   // Quem paga: imóvel escolhido sugere o proprietário; "geral" sugere a gestão.
-  const [custoEscolhido, setCustoEscolhido] = useState<CustoCompra | null>(null);
+  const [custoEscolhido, setCustoEscolhido] = useState<CustoCompra | null>(custoInicial);
   const custo: CustoCompra = custoEscolhido ?? (imovel && imovel !== IMOVEL_GERAL ? "owner" : "pm");
   const [tentouEnviar, setTentouEnviar] = useState(false);
   const campoItem = useRef<HTMLInputElement>(null);
@@ -82,6 +87,7 @@ export function FormularioCompra({
         custo,
         autorId: user.id,
         arquivos,
+        ticketId,
       });
       toast.success("Adicionado à lista de compras");
       setItem("");
@@ -90,7 +96,7 @@ export function FormularioCompra({
       setArquivos([]);
       setCanal("rua");
       setCanalEscolhido(false);
-      setCustoEscolhido(null);
+      setCustoEscolhido(custoInicial);
       setTentouEnviar(false);
       campoItem.current?.focus();
       onEnviado?.();

@@ -108,6 +108,8 @@ export interface NovaCompra {
   custo: CustoCompra;
   autorId: string;
   arquivos: File[];
+  /** Manutenção de origem (compra pedida dentro da lista de manutenções). */
+  ticketId?: string | null;
 }
 
 export function useCriarCompra() {
@@ -127,6 +129,7 @@ export function useCriarCompra() {
         link: nova.link,
         canal: nova.canal,
         custo: nova.custo,
+        ...(nova.ticketId ? { ticket_id: nova.ticketId } : {}),
       });
       if (error) {
         await removerAnexos(anexos);
