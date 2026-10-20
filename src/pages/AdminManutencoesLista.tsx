@@ -1092,6 +1092,7 @@ export default function AdminManutencoesLista() {
   // Conversa e anexos são os mesmos; kind = "maintenance" marca a origem.
   const [itemDebate, setItemDebate] = useState<MaintenanceItem | null>(null);
   const [itemVoltar, setItemVoltar] = useState<MaintenanceItem | null>(null);
+  const [itemCompra, setItemCompra] = useState<MaintenanceItem | null>(null);
   const recarregarListas = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["maintenance-list-view"] });
     queryClient.invalidateQueries({ queryKey: ["pending-charges-list"] });
@@ -1774,6 +1775,7 @@ export default function AdminManutencoesLista() {
           }}
         />
 
+        <CompraManutencaoDialog item={itemCompra} onOpenChange={(a) => !a && setItemCompra(null)} />
         <ConfirmationDialog
           open={deleteDialog.open}
           onOpenChange={(open) => setDeleteDialog((prev) => ({ ...prev, open }))}
@@ -2390,6 +2392,7 @@ export default function AdminManutencoesLista() {
         />
 
         {/* Delete Confirmation Dialog */}
+        <CompraManutencaoDialog item={itemCompra} onOpenChange={(a) => !a && setItemCompra(null)} />
         <ConfirmationDialog
           open={deleteDialog.open}
           onOpenChange={(open) => setDeleteDialog((prev) => ({ ...prev, open }))}
