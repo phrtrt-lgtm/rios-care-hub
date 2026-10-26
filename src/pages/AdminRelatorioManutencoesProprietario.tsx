@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useMaintenances, useMaintenanceCharts } from "@/hooks/useMaintenances";
 import { MaintenanceCharts } from "@/components/MaintenanceCharts";
+import { DebitosReserva } from "@/components/maintenance/DebitosReserva";
 import { MaintenanceSummaryCards } from "@/components/MaintenanceSummaryCards";
 import { MaintenanceDetailsDialog } from "@/components/MaintenanceDetailsDialog";
 import { MediaGallery } from "@/components/MediaGallery";
@@ -382,6 +383,7 @@ export default function AdminRelatorioManutencoesProprietario() {
 
         {/* Summary + Charts */}
         <MaintenanceSummaryCards summary={summary} />
+        <DebitosReserva cobrancas={(maintenances || []) as any} />
         <MaintenanceCharts charts={charts} serviceTypeData={serviceTypeData} />
 
         {/* List - mesmo layout do proprietário */}
