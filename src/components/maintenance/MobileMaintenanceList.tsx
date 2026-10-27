@@ -463,7 +463,7 @@ export function MobileMaintenanceList({
                               </div>
                             )}
 
-                            {!isCharge && onUpdateItem && item.list_status !== "feito" && !emDebate && (
+                            {!isCharge && onUpdateItem && item.list_status !== "feito" && !emDebate && group.id !== "novos_imoveis" && (
                               <div
                                 className="flex items-center gap-2 mt-2"
                                 onClick={(e) => e.stopPropagation()}
@@ -593,7 +593,7 @@ export function MobileMaintenanceList({
                                   </span>
                                 )}
                               </button>
-                              {onDebater && ["em_progresso", "infiltracao", "stand_by"].includes(group.id) && (
+                              {onDebater && item.list_status !== "feito" && ["em_progresso", "novos_imoveis", "infiltracao", "stand_by"].includes(group.id) && (
                                 <button
                                   type="button"
                                   className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-secondary/10 hover:text-secondary text-muted-foreground active:scale-95 transition-all"
@@ -621,7 +621,7 @@ export function MobileMaintenanceList({
                                   <Undo2 className="h-4 w-4" />
                                 </button>
                               )}
-                              {group.id === "concluidas" && (
+                              {(group.id === "concluidas" || (group.id === "novos_imoveis" && item.list_status === "feito")) && (
                                 <WhatsappAcaoLinha
                                   modo="switch"
                                   variante="card"

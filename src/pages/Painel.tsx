@@ -14,6 +14,7 @@ import { LembreteAjustes } from "@/components/ajustes/LembreteAjustes";
 import { LembreteCompras } from "@/components/compras/LembreteCompras";
 import { LembreteTarefas } from "@/components/tarefas/LembreteTarefas";
 import { LembreteAvisos } from "@/components/avisos/LembreteAvisos";
+import { LembreteNovosImoveis } from "@/components/viabilizacao/LembreteNovosImoveis";
 import { TeamChatWidget } from "@/components/TeamChatWidget";
 import { GlobalSearch, useGlobalSearch } from "@/components/GlobalSearch";
 import { EnablePushNative } from "@/components/EnablePushNative";
@@ -138,6 +139,7 @@ export default function Painel() {
             <LembreteCompras />
             <LembreteTarefas />
             <LembreteAvisos />
+            <LembreteNovosImoveis />
           </div>
         )}
 

@@ -49,7 +49,7 @@ interface AlvoAnexo {
  * pasta de quem está anexando e acrescenta à coluna do item. Só a equipe
  * consegue (o UPDATE das três tabelas é da equipe).
  */
-export function useAnexarDepois(tabela: "ajustes" | "compras" | "tarefas_rua", coluna: "fotos" | "anexos", userId?: string) {
+export function useAnexarDepois(tabela: "ajustes" | "compras" | "tarefas_rua" | "viabilizacoes", coluna: "fotos" | "anexos", userId?: string) {
   const queryClient = useQueryClient();
   const input = useRef<HTMLInputElement>(null);
   const alvo = useRef<AlvoAnexo | null>(null);

@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { Home, Ticket, DollarSign, Wrench, Plus, X, BarChart3, ClipboardCheck, Package, SlidersHorizontal, ShoppingCart, Truck, Megaphone } from "lucide-react";
+import { Home, Ticket, DollarSign, Wrench, Plus, X, BarChart3, ClipboardCheck, Package, SlidersHorizontal, ShoppingCart, Truck, Megaphone, HousePlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useMemo, useState } from "react";
@@ -35,6 +35,7 @@ const quickActions: NavItem[] = [
   { icon: ShoppingCart, label: "Adicionar compra", path: "/compras?novo=1", roles: ["admin", "maintenance", "agent"] },
   { icon: Truck, label: "Tarefa de rua", path: "/tarefas-rua?novo=1", roles: ["admin", "maintenance", "agent"] },
   { icon: Megaphone, label: "Avisar proprietário", path: "/avisos-proprietarios", roles: ["admin", "maintenance", "agent"] },
+  { icon: HousePlus, label: "Registrar imóvel novo", path: "/novos-imoveis?novo=1", roles: ["admin", "maintenance", "agent"] },
   { icon: BarChart3, label: "Relatório Manutenções", path: "/manutencoes", roles: ["admin", "maintenance", "agent"] },
   { icon: Wrench, label: "Relatório Manutenções", path: "/manutencoes", roles: ["owner"] },
   { icon: BarChart3, label: "Resumo Propriedades", path: "/resumo-propriedades", roles: ["owner"] },

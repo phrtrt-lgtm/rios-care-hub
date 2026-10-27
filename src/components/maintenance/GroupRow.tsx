@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { BotaoLinha, SeloContagem } from "@/components/painel/CaixaOperacao";
+import { Etiqueta } from "@/components/painel/Etiqueta";
 import { WhatsappAcaoLinha } from "@/components/maintenance/WhatsappAcaoLinha";
 import { EditableCell } from "@/components/maintenance/EditableCell";
 import { format } from "date-fns";
@@ -427,7 +428,14 @@ export function GroupRow({
 
             {/* Quadro: Em Progresso / Stand-by / Infiltração — só manutenção aberta */}
             <td className="p-0 w-[112px]" data-no-sheet onClick={(e) => e.stopPropagation()}>
-              {isCharge || item.status === "concluido" || group.id === "em_debate" ? (
+              {group.id === "novos_imoveis" ? (
+                // O quadro vem do imóvel (viabilização aberta), não de campo do ticket.
+                <div className="flex justify-center px-1 py-2">
+                  <Etiqueta tom="secondary" ponto title="Imóvel em viabilização: sai deste quadro quando o imóvel entrar no ar">
+                    Novo imóvel
+                  </Etiqueta>
+                </div>
+              ) : isCharge || item.status === "concluido" || group.id === "em_debate" ? (
                 <div className="px-1 py-2 text-sm text-center text-muted-foreground">—</div>
               ) : (
                 <div className="flex items-center justify-center gap-1">
@@ -467,7 +475,7 @@ export function GroupRow({
             {/* WhatsApp / Editar / Excluir */}
             <td className={cn("sticky right-0 z-[1] p-0 w-[150px] border-l border-border/60", fundoFixo)} data-no-sheet onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-end gap-1 px-1 py-2">
-                {onDebater && ["em_progresso", "infiltracao", "stand_by"].includes(group.id) && (
+                {onDebater && item.status !== "concluido" && ["em_progresso", "novos_imoveis", "infiltracao", "stand_by"].includes(group.id) && (
                   <button
                     type="button"
                     className="p-1.5 rounded hover:bg-secondary/10 text-muted-foreground hover:text-secondary transition-colors"
@@ -495,7 +503,7 @@ export function GroupRow({
                     <Undo2 className="h-3.5 w-3.5" />
                   </button>
                 )}
-                {group.id === "concluidas" && (
+                {(group.id === "concluidas" || (group.id === "novos_imoveis" && item.status === "concluido")) && (
                   <WhatsappAcaoLinha modo="switch" owner={item.owner} onAtualizado={recarregarWhatsapp} />
                 )}
                 {isCharge && group.id === "cobrancas_vencidas" && (

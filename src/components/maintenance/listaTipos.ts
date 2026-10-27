@@ -98,8 +98,9 @@ export const COST_RESPONSIBLE_OPTIONS = [
 
 // Ordem dos quadros na tela. Infiltração e Stand-by são derivados de dois
 // campos do ticket (label `infiltracao` e `on_hold`) — ver src/lib/maintenanceBoard.ts.
+// Novos imóveis vem do imóvel (useImoveisEmViabilizacao) e vence os outros quadros de manutenção.
 export interface GrupoLista {
-  id: "em_progresso" | "infiltracao" | "stand_by" | "em_debate" | "concluidas" | "cobrancas_vencidas" | "cobrancas";
+  id: "em_progresso" | "novos_imoveis" | "infiltracao" | "stand_by" | "em_debate" | "concluidas" | "cobrancas_vencidas" | "cobrancas";
   label: string;
   /** Borda esquerda (celular). */
   color: string;
@@ -112,6 +113,10 @@ export interface GrupoLista {
 
 export const GROUPS: GrupoLista[] = [
   { id: "em_progresso", label: "Em progresso", color: "border-l-warning", ponto: "bg-warning", tom: "warning", cobranca: false },
+  // Manutenções (abertas ou feitas e ainda não enviadas) de imóvel em
+  // viabilização (viabilizacoes.etapa aberta): a página /novos-imoveis mostra
+  // as mesmas, agrupadas por imóvel. Não é coluna do ticket: é o imóvel.
+  { id: "novos_imoveis", label: "Novos imóveis", color: "border-l-secondary", ponto: "bg-secondary", tom: "secondary", cobranca: false },
   { id: "infiltracao", label: "Infiltração", color: "border-l-info", ponto: "bg-info", tom: "info", cobranca: false },
   { id: "stand_by", label: "Stand-by", color: "border-l-muted-foreground", ponto: "bg-muted-foreground/60", tom: "neutral", cobranca: false },
   // Manutenção aberta como chamado para o proprietário opinar (ticket_type

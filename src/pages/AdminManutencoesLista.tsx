@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Search, Plus, MessageSquare, Archive, Loader2, Wrench, BarChart3, Check, X, Kanban, MoreHorizontal, ChevronsDownUp, ChevronsUpDown } from "lucide-react";
+import { Search, Plus, MessageSquare, Archive, Loader2, Wrench, BarChart3, Check, X, Kanban, MoreHorizontal, ChevronsDownUp, ChevronsUpDown, HousePlus } from "lucide-react";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
 import { MediaGallery } from "@/components/MediaGallery";
@@ -33,6 +33,7 @@ import { MobileMaintenanceList } from "@/components/maintenance/MobileMaintenanc
 import { AreaCompras } from "@/components/compras/AreaCompras";
 import { useContagemCompras } from "@/hooks/useCompras";
 import { useJanelaImoveis } from "@/hooks/useJanelaImoveis";
+import { useImoveisEmViabilizacao } from "@/hooks/useViabilizacoes";
 import { boardChange, deriveBoard, type Board } from "@/lib/maintenanceBoard";
 import { estaVencida } from "@/lib/vencimento";
 import { LembreteAtrasoConfig } from "@/components/maintenance/LembreteAtrasoConfig";
@@ -58,7 +59,7 @@ import { GroupRow } from "@/components/maintenance/GroupRow";
 import { EnvioLoteDialog, LembreteLoteDialog } from "@/components/maintenance/LoteDialogs";
 import { VistoriasTable } from "@/components/maintenance/VistoriasTable";
 import { DebateDialog } from "@/components/maintenance/DebateDialog";
-import { buscarCobrancaJaLancada } from "@/lib/cobrancaDuplicada";
+import { avisarResultadoEnvio, enviarAoProprietario, salvarCampoManutencao } from "@/lib/manutencaoLista";
 
 // ===== PREFERÊNCIAS LEMBRADAS =====
 type AbaLista = "manutencoes" | "vistorias" | "debitos" | "compras";
@@ -100,6 +101,8 @@ export default function AdminManutencoesLista() {
   const { data: comprasPendentes } = useContagemCompras();
   // Estado de hoje e próximo check-out de cada imóvel: quando dá para ir resolver.
   const { data: janelas } = useJanelaImoveis();
+  // Imóveis em viabilização: as manutenções deles vão para o quadro "Novos imóveis".
+  const { data: imoveisNovos } = useImoveisEmViabilizacao();
   useEffect(() => guardar(CHAVE_ABA, abaAtiva), [abaAtiva]);
   const [filtroQuadro, setFiltroQuadro] = useState<GrupoId | "todos">("todos");
   const [filtroImovel, setFiltroImovel] = useState<string>("todos");
@@ -199,7 +202,7 @@ export default function AdminManutencoesLista() {
       const ownerId = prop?.owner_id;
       if (!ownerId) throw new Error("Imóvel sem proprietário associado");
 
-      const isTicketGroup = ["em_progresso", "infiltracao", "stand_by", "concluidas"].includes(inlineAdd.groupId);
+      const isTicketGroup = ["em_progresso", "novos_imoveis", "infiltracao", "stand_by", "concluidas"].includes(inlineAdd.groupId);
 
       if (isTicketGroup) {
         const { error } = await supabase.from("tickets").insert({
@@ -496,127 +499,8 @@ export default function AdminManutencoesLista() {
     },
   });
 
-  /**
-   * Envia uma manutenção ao proprietário: cria (ou reaproveita a aberta) a
-   * cobrança como "sent", copia os anexos, conclui o ticket e manda o e-mail.
-   * O WhatsApp sai pelo trigger do banco. Usado pelo envio de um item e pelo
-   * envio em lote — os dois têm que fazer exatamente a mesma coisa.
-   */
-  const enviarAoProprietario = async (
-    ticket: MaintenanceItem,
-  ): Promise<"enviada" | "gratuita" | "sem_valor" | "ja_cobrada"> => {
-    if (!ticket.owner) throw new Error("Proprietário não encontrado para este ticket");
-
-    // Buscar cobranças vinculadas que ainda estejam ABERTAS (não pagas).
-    // Cobranças já pagas não devem ser reabertas — geramos uma nova.
-    const { data: existingCharges, error: chargeQueryError } = await supabase
-      .from("charges")
-      .select("id, amount_cents, paid_at, status")
-      .eq("ticket_id", ticket.id)
-      .is("archived_at", null)
-      .is("paid_at", null)
-      .order("created_at", { ascending: false });
-
-    if (chargeQueryError) throw chargeQueryError;
-
-    let chargeId: string;
-    // Já existe cobrança (paga) deste ticket com o mesmo valor: não cria outra.
-    const jaLancada =
-      existingCharges && existingCharges.length > 0
-        ? null
-        : await buscarCobrancaJaLancada(ticket.id, ticket.amount_cents || 0);
-
-    if (jaLancada) {
-      chargeId = jaLancada.id;
-    } else if (existingCharges && existingCharges.length > 0) {
-      // Atualizar a cobrança aberta existente para "sent" (envia ao proprietário)
-      const openCharge = existingCharges[0];
-      const { error: updateError } = await supabase
-        .from("charges")
-        .update({
-          status: "sent",
-          amount_cents: ticket.amount_cents || openCharge.amount_cents || 0,
-          management_contribution_cents: ticket.management_contribution_cents ?? 0,
-          service_type: ticket.service_type || null,
-          cost_responsible: ticket.cost_responsible || "owner",
-        })
-        .eq("id", openCharge.id);
-      if (updateError) throw updateError;
-      chargeId = openCharge.id;
-    } else {
-      // Criar nova cobrança já enviada ao proprietário
-      const { data: newCharge, error: chargeError } = await supabase
-        .from("charges")
-        .insert({
-          owner_id: ticket.owner.id,
-          property_id: ticket.property?.id || null,
-          ticket_id: ticket.id,
-          title: ticket.subject,
-          amount_cents: ticket.amount_cents || 0,
-          management_contribution_cents: ticket.management_contribution_cents || 0,
-          service_type: ticket.service_type || null,
-          cost_responsible: ticket.cost_responsible || "owner",
-          status: "sent",
-        })
-        .select("id")
-        .single();
-      if (chargeError) throw chargeError;
-      chargeId = newCharge.id;
-    }
-
-    // Copy ticket attachments to the charge (a cobrança que já existia fica como está)
-    const { data: ticketAttachments } = jaLancada
-      ? { data: null }
-      : await supabase
-          .from("ticket_attachments")
-          .select("path, file_name, file_type, file_url, mime_type, file_size, size_bytes")
-          .eq("ticket_id", ticket.id);
-
-    if (ticketAttachments && ticketAttachments.length > 0) {
-      const chargeAttachmentsToInsert = ticketAttachments.map(a => ({
-        charge_id: chargeId,
-        file_path: a.path,
-        file_name: a.file_name || a.path.split("/").pop() || "anexo",
-        mime_type: a.mime_type || a.file_type || null,
-        file_size: a.file_size || a.size_bytes || null,
-      }));
-      await supabase.from("charge_attachments").insert(chargeAttachmentsToInsert);
-    }
-
-    // Only update ticket to concluido if not already (RLS blocks updates on concluido tickets)
-    if (ticket.status !== "concluido") {
-      const { error: ticketError } = await supabase
-        .from("tickets")
-        .update({ status: "concluido" })
-        .eq("id", ticket.id);
-      if (ticketError) throw ticketError;
-    }
-
-    // Nada novo foi criado: o proprietário já recebeu esta cobrança antes.
-    if (jaLancada) return "ja_cobrada";
-
-    // Detect if the trigger auto-paid the charge because management covers 100%.
-    const fullyCoveredByManagement =
-      (ticket.management_contribution_cents ?? 0) >= (ticket.amount_cents ?? 0) &&
-      (ticket.amount_cents ?? 0) > 0;
-
-    // Notificar o proprietário (email + push + notificação interna)
-    // Pulamos quando o aporte da gestão cobre 100% (não há cobrança a pagar).
-    if (!fullyCoveredByManagement) {
-      try {
-        await supabase.functions.invoke("send-charge-email", {
-          body: { type: "charge_created", chargeId },
-        });
-      } catch (notifyErr) {
-        console.warn("Falha ao notificar proprietário (não crítico):", notifyErr);
-      }
-    }
-
-
-    if (fullyCoveredByManagement) return "gratuita";
-    if ((ticket.amount_cents ?? 0) === 0) return "sem_valor";
-    return "enviada";
-  };
+  // O envio ao proprietário (um item e lote) está em src/lib/manutencaoLista.ts,
+  // junto com a edição em linha: a página de imóveis novos usa as mesmas funções.
 
   const avisarHospedeArquivada = () => {
     queryClient.invalidateQueries({ queryKey: ["painel", "guest-charges"] });
@@ -628,162 +512,17 @@ export default function AdminManutencoesLista() {
   // Update mutation with optimistic updates
   const updateMutation = useMutation({
     mutationFn: async ({ id, field, value, isCharge }: { id: string; field: string; value: any; isCharge?: boolean }) => {
-      if (isCharge) {
-        const { error } = await supabase
-          .from("charges")
-          .update({ [field]: value })
-          .eq("id", id);
-        if (error) throw error;
-      } else {
-        // If updating status to "enviar_proprietario", create/update charge AND close ticket
-        if (field === "list_status" && value === "enviar_proprietario") {
-          const ticket = tickets?.find(t => t.id === id);
-          if (!ticket || !ticket.owner) {
-            throw new Error("Proprietário não encontrado para este ticket");
-          }
-          const resultado = await enviarAoProprietario(ticket);
-          if (resultado === "gratuita") {
-            toast.success("Manutenção finalizada — aporte da gestão cobriu 100% do custo.");
-          } else if (resultado === "ja_cobrada") {
-            toast.info("Esta manutenção já tinha cobrança lançada com esse valor. Foi só concluída, sem criar outra.");
-          } else if (resultado === "sem_valor") {
-            toast.success("Manutenção enviada ao proprietário sem valor de cobrança.");
-          } else {
-            toast.success("Cobrança criada e enviada ao proprietário!");
-          }
-          return;
-        }
-
-        // Regular update - check if it's a charge field or ticket field
-        if (["amount_cents", "management_contribution_cents", "service_type"].includes(field)) {
-          const ticketDraftFieldMap: Record<string, string> = {
-            amount_cents: "charge_draft_amount_cents",
-            management_contribution_cents: "charge_draft_management_contribution_cents",
-            service_type: "charge_draft_category",
-          };
-          const ticketDraftField = ticketDraftFieldMap[field];
-
-          // Use limit to avoid maybeSingle error on multiple rows
-          const { data: existingCharges } = await supabase
-            .from("charges")
-            .select("id")
-            .eq("ticket_id", id)
-            .is("archived_at", null)
-            .order("created_at", { ascending: false })
-            .limit(1);
-
-          const existingCharge = existingCharges?.[0] ?? null;
-
-          if (existingCharge) {
-            const { error } = await supabase
-              .from("charges")
-              .update({ [field]: value })
-              .eq("id", existingCharge.id);
-            if (error) throw error;
-
-            if (ticketDraftField) {
-              const { error: ticketDraftError } = await supabase
-                .from("tickets")
-                .update({ [ticketDraftField]: value })
-                .eq("id", id);
-              if (ticketDraftError) throw ticketDraftError;
-            }
-          } else {
-            // Create draft charge
-            const ticket = tickets?.find(t => t.id === id);
-            if (ticket && ticket.owner) {
-              const { error } = await supabase
-                .from("charges")
-                .insert({
-                  owner_id: ticket.owner.id,
-                  property_id: ticket.property?.id || null,
-                  ticket_id: id,
-                  title: ticket.subject,
-                  [field]: value,
-                  amount_cents: field === "amount_cents" ? value : 0,
-                  management_contribution_cents: field === "management_contribution_cents" ? value : 0,
-                  service_type: field === "service_type" ? value : null,
-                  status: "draft",
-                });
-              if (error) throw error;
-
-              if (ticketDraftField) {
-                const { error: ticketDraftError } = await supabase
-                  .from("tickets")
-                  .update({ [ticketDraftField]: value })
-                  .eq("id", id);
-                if (ticketDraftError) throw ticketDraftError;
-              }
-            }
-          }
-        } else if (field === "scheduled_at") {
-          const { error } = await supabase
-            .from("tickets")
-            .update({ scheduled_at: value })
-            .eq("id", id);
-          if (error) throw error;
-        } else if (field === "on_hold") {
-          // Stand-by da lista: coluna própria, sem tocar no status (que o
-          // proprietário vê).
-          const { error } = await supabase
-            .from("tickets")
-            .update({ on_hold: !!value })
-            .eq("id", id);
-          if (error) throw error;
-        } else if (field === "cost_responsible") {
-          // Persist on the ticket. Já feita e passou a ser do hóspede: mesma
-          // regra do "feito" — sai da lista e fica no aviso do painel.
-          const hospedeFeito =
-            value === "guest" && tickets?.find((t) => t.id === id)?.status === "concluido";
-          const { error } = await supabase
-            .from("tickets")
-            .update(
-              hospedeFeito
-                ? { cost_responsible: value, archived_at: new Date().toISOString() }
-                : { cost_responsible: value },
-            )
-            .eq("id", id);
-          if (error) throw error;
-          if (hospedeFeito) avisarHospedeArquivada();
-
-          // Mirror to the latest open linked charge, if any
-          const { data: linkedCharges } = await supabase
-            .from("charges")
-            .select("id")
-            .eq("ticket_id", id)
-            .is("archived_at", null)
-            .order("created_at", { ascending: false })
-            .limit(1);
-          const linked = linkedCharges?.[0];
-          if (linked) {
-            await supabase
-              .from("charges")
-              .update({ cost_responsible: value })
-              .eq("id", linked.id);
-          }
-        } else if (field === "list_status") {
-          // Persist the list-status change to the underlying ticket.
-          // - "feito"        -> ticket.status = "concluido"
-          // - "em_progresso" -> reopen the ticket as "em_execucao"
-          const newTicketStatus =
-            value === "feito" ? "concluido" : "em_execucao";
-          // Cobrança de hóspede feita não tem o que enviar ao proprietário: sai
-          // da lista (vai para o Arquivo) e continua no aviso do painel até
-          // alguém marcar como "Cobrada".
-          const hospedeFeito =
-            value === "feito" && tickets?.find((t) => t.id === id)?.cost_responsible === "guest";
-          const { error } = await supabase
-            .from("tickets")
-            .update(
-              hospedeFeito
-                ? { status: newTicketStatus, archived_at: new Date().toISOString() }
-                : { status: newTicketStatus },
-            )
-            .eq("id", id);
-          if (error) throw error;
-          if (hospedeFeito) avisarHospedeArquivada();
-        }
-      }
+      // Tudo o que grava está em src/lib/manutencaoLista.ts (também usado
+      // pela página de imóveis novos); aqui ficam só os avisos.
+      const resultado = await salvarCampoManutencao({
+        id,
+        field,
+        value,
+        isCharge,
+        ticket: tickets?.find((t) => t.id === id) ?? null,
+      });
+      if (resultado.hospedeArquivada) avisarHospedeArquivada();
+      if (resultado.envio) avisarResultadoEnvio(resultado.envio);
     },
     onMutate: async ({ id, field, value }) => {
       // Cancel outgoing refetches
@@ -1356,6 +1095,9 @@ export default function AdminManutencoesLista() {
     const searchLower = debouncedSearch.toLowerCase();
     const bateImovel = (p?: { id: string } | null) => filtroImovel === "todos" || p?.id === filtroImovel;
     const emDebate = (t: MaintenanceItem) => !!t.ticket_type && t.ticket_type !== "manutencao";
+    // Imóvel em viabilização: a manutenção (aberta ou feita e não enviada) vai
+    // para "Novos imóveis", agrupada por imóvel. Em debate continua em debate.
+    const emNovoImovel = (t: MaintenanceItem) => !!t.property && !!imoveisNovos?.has(t.property.id);
 
     const debate = (tickets || []).filter(t =>
       emDebate(t) &&
@@ -1364,8 +1106,23 @@ export default function AdminManutencoesLista() {
        t.property?.name.toLowerCase().includes(searchLower))
     );
 
+    const novosImoveis = (tickets || [])
+      .filter(t =>
+        !emDebate(t) &&
+        emNovoImovel(t) &&
+        bateImovel(t.property) &&
+        (t.subject.toLowerCase().includes(searchLower) ||
+         t.property?.name.toLowerCase().includes(searchLower))
+      )
+      // Por imóvel e, dentro dele, na ordem em que os itens foram anotados.
+      .sort((a, b) =>
+        (a.property?.name ?? "").localeCompare(b.property?.name ?? "", "pt-BR") ||
+        a.created_at.localeCompare(b.created_at),
+      );
+
     const abertos = (tickets || []).filter(t =>
       !emDebate(t) &&
+      !emNovoImovel(t) &&
       t.status !== "concluido" &&
       bateImovel(t.property) &&
       (t.subject.toLowerCase().includes(searchLower) ||
@@ -1380,6 +1137,7 @@ export default function AdminManutencoesLista() {
 
     const concluidas = (tickets || []).filter(t =>
       !emDebate(t) &&
+      !emNovoImovel(t) &&
       t.status === "concluido" &&
       bateImovel(t.property) &&
       (t.subject.toLowerCase().includes(searchLower) ||
@@ -1424,6 +1182,7 @@ export default function AdminManutencoesLista() {
 
     return {
       em_progresso: emProgresso,
+      novos_imoveis: novosImoveis,
       infiltracao,
       stand_by: standBy,
       em_debate: debate,
@@ -1431,7 +1190,7 @@ export default function AdminManutencoesLista() {
       cobrancas_vencidas: cobrancasVencidas,
       cobrancas: cobrancasPendentes,
     };
-  }, [tickets, charges, debouncedSearch, filtroImovel]);
+  }, [tickets, charges, debouncedSearch, filtroImovel, imoveisNovos]);
 
   const totalItens = useMemo(
     () => Object.values(groupedItems).reduce((soma, itens) => soma + itens.length, 0),
@@ -1702,6 +1461,7 @@ export default function AdminManutencoesLista() {
     // Enrich items with itemType so mobile knows ticket vs charge
     const enrichedGroupedItems: Record<string, any[]> = {
       em_progresso: (groupedItems.em_progresso || []).map((t) => ({ ...t, itemType: "ticket" as const })),
+      novos_imoveis: (groupedItems.novos_imoveis || []).map((t) => ({ ...t, itemType: "ticket" as const })),
       infiltracao: (groupedItems.infiltracao || []).map((t) => ({ ...t, itemType: "ticket" as const })),
       stand_by: (groupedItems.stand_by || []).map((t) => ({ ...t, itemType: "ticket" as const })),
       em_debate: (groupedItems.em_debate || []).map((t) => ({ ...t, itemType: "ticket" as const })),
@@ -1885,6 +1645,10 @@ export default function AdminManutencoesLista() {
                 <DropdownMenuItem onClick={() => navigate("/admin/manutencoes")}>
                   <Kanban className="mr-2 h-4 w-4" />
                   Quadro
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/novos-imoveis")}>
+                  <HousePlus className="mr-2 h-4 w-4" />
+                  Novos imóveis
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -2117,7 +1881,11 @@ export default function AdminManutencoesLista() {
                                       <SelectValue placeholder="Imóvel…" />
                                     </SelectTrigger>
                                     <SelectContent className="z-50 max-h-72 bg-popover">
-                                      {propertiesList?.map((p) => (
+                                      {/* No quadro Novos imóveis só entram os imóveis em viabilização. */}
+                                      {(inlineAdd!.groupId === "novos_imoveis"
+                                        ? (propertiesList ?? []).filter((p) => imoveisNovos?.has(p.id))
+                                        : propertiesList ?? []
+                                      ).map((p) => (
                                         <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                                       ))}
                                     </SelectContent>
