@@ -4266,6 +4266,153 @@ export type Database = {
           },
         ]
       }
+      viabilizacao_avisos: {
+        Row: {
+          created_at: string
+          disparado_em: string | null
+          enviado_em: string | null
+          erro: string | null
+          id: string
+          lote_id: string | null
+          referencia: string | null
+          status: string
+          telefone: string | null
+          tentativas: number
+          ticket_id: string | null
+          tipo: string
+          valor_cents: number | null
+          viabilizacao_id: string
+        }
+        Insert: {
+          created_at?: string
+          disparado_em?: string | null
+          enviado_em?: string | null
+          erro?: string | null
+          id?: string
+          lote_id?: string | null
+          referencia?: string | null
+          status?: string
+          telefone?: string | null
+          tentativas?: number
+          ticket_id?: string | null
+          tipo: string
+          valor_cents?: number | null
+          viabilizacao_id: string
+        }
+        Update: {
+          created_at?: string
+          disparado_em?: string | null
+          enviado_em?: string | null
+          erro?: string | null
+          id?: string
+          lote_id?: string | null
+          referencia?: string | null
+          status?: string
+          telefone?: string | null
+          tentativas?: number
+          ticket_id?: string | null
+          tipo?: string
+          valor_cents?: number | null
+          viabilizacao_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "viabilizacao_avisos_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "viabilizacao_avisos_viabilizacao_id_fkey"
+            columns: ["viabilizacao_id"]
+            isOneToOne: false
+            referencedRelation: "viabilizacoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      viabilizacoes: {
+        Row: {
+          anexos: string[]
+          autor_id: string | null
+          autor_nome: string | null
+          avisar_proprietario: boolean
+          concluida_em: string | null
+          concluida_por_nome: string | null
+          created_at: string
+          endereco: string | null
+          estreia_prevista: string | null
+          etapa: string
+          id: string
+          nome: string
+          observacoes: string | null
+          property_id: string | null
+          proprietario_email: string | null
+          proprietario_nome: string | null
+          proprietario_telefone: string | null
+          updated_at: string
+          visita_em: string | null
+        }
+        Insert: {
+          anexos?: string[]
+          autor_id?: string | null
+          autor_nome?: string | null
+          avisar_proprietario?: boolean
+          concluida_em?: string | null
+          concluida_por_nome?: string | null
+          created_at?: string
+          endereco?: string | null
+          estreia_prevista?: string | null
+          etapa?: string
+          id?: string
+          nome: string
+          observacoes?: string | null
+          property_id?: string | null
+          proprietario_email?: string | null
+          proprietario_nome?: string | null
+          proprietario_telefone?: string | null
+          updated_at?: string
+          visita_em?: string | null
+        }
+        Update: {
+          anexos?: string[]
+          autor_id?: string | null
+          autor_nome?: string | null
+          avisar_proprietario?: boolean
+          concluida_em?: string | null
+          concluida_por_nome?: string | null
+          created_at?: string
+          endereco?: string | null
+          estreia_prevista?: string | null
+          etapa?: string
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          property_id?: string | null
+          proprietario_email?: string | null
+          proprietario_nome?: string | null
+          proprietario_telefone?: string | null
+          updated_at?: string
+          visita_em?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "viabilizacoes_autor_id_fkey"
+            columns: ["autor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "viabilizacoes_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: true
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_lembrete_config: {
         Row: {
           ativo: boolean
@@ -4327,6 +4474,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      disparar_avisos_viabilizacao: { Args: never; Returns: string }
       disparar_lembretes_atraso_whatsapp: { Args: never; Returns: string }
       find_property_by_name_unaccent: {
         Args: { _name: string }
@@ -4418,6 +4566,15 @@ export type Database = {
       }
       unaccent: { Args: { "": string }; Returns: string }
       verificar_token_interno: { Args: { p_token: string }; Returns: boolean }
+      viabilizacao_destino: {
+        Args: { p_id: string }
+        Returns: {
+          imovel: string
+          nome: string
+          telefone: string
+          tem_conta: boolean
+        }[]
+      }
     }
     Enums: {
       app_role:
