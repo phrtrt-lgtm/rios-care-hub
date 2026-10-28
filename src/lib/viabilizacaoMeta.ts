@@ -69,3 +69,60 @@ export function diaLocal(valor: string | null | undefined): Date | null {
   if (!a || !m || !d) return null;
   return new Date(a, m - 1, d);
 }
+
+/* ------------------------------------------------------------------------ */
+/* Avisos ao proprietário por WhatsApp (tabela viabilizacao_avisos)           */
+/* ------------------------------------------------------------------------ */
+
+export type TipoAviso = "etapa" | "visita" | "estreia" | "item_novo" | "item_feito" | "item_enviado";
+export type StatusAviso = "pendente" | "disparado" | "enviado" | "falhou" | "sem_destino" | "desligado";
+
+export interface AvisoProprietario {
+  id: string;
+  tipo: TipoAviso;
+  status: StatusAviso;
+  created_at: string;
+  enviado_em: string | null;
+  erro: string | null;
+}
+
+export interface SituacaoAvisos {
+  rotulo: string;
+  tom: Tom;
+  /** Complemento para o tooltip. */
+  detalhe: string | null;
+  /** Instante do último envio ou falha, quando é o caso. */
+  em: string | null;
+}
+
+/**
+ * Resume os últimos avisos para a linha do cartão: o que está na fila manda,
+ * depois o resultado mais recente. `avisos` vem do mais novo para o mais velho.
+ */
+export function situacaoAvisos(avisos: AvisoProprietario[], ligado: boolean, temTelefone: boolean): SituacaoAvisos {
+  if (!ligado) {
+    return { rotulo: "Avisos ao proprietário desligados", tom: "neutral", detalhe: "Ligue no menu do imóvel para ele receber WhatsApp a cada avanço", em: null };
+  }
+  const naFila = avisos.filter((a) => a.status === "pendente" || a.status === "disparado").length;
+  if (!temTelefone) {
+    return {
+      rotulo: naFila > 0 ? `${naFila} ${naFila === 1 ? "novidade espera" : "novidades esperam"} um WhatsApp` : "Sem WhatsApp do proprietário",
+      tom: "warning",
+      detalhe: "Informe o número em Editar dados para os avisos saírem",
+      em: null,
+    };
+  }
+  if (naFila > 0) {
+    return {
+      rotulo: `${naFila} ${naFila === 1 ? "novidade a enviar" : "novidades a enviar"} ao proprietário`,
+      tom: "info",
+      detalhe: "Itens juntam por 10 minutos e saem numa mensagem só; etapa sai em até 5",
+      em: null,
+    };
+  }
+  const ultimo = avisos.find((a) => a.status === "enviado" || a.status === "falhou" || a.status === "sem_destino");
+  if (ultimo?.status === "enviado") return { rotulo: "Proprietário avisado", tom: "success", detalhe: null, em: ultimo.enviado_em ?? ultimo.created_at };
+  if (ultimo?.status === "falhou") return { rotulo: "WhatsApp ao proprietário falhou", tom: "destructive", detalhe: ultimo.erro, em: ultimo.created_at };
+  if (ultimo?.status === "sem_destino") return { rotulo: "WhatsApp não saiu: sem número", tom: "warning", detalhe: ultimo.erro, em: ultimo.created_at };
+  return { rotulo: "Avisos ao proprietário ligados", tom: "neutral", detalhe: "Ele recebe WhatsApp a cada avanço: visita, preparação, itens feitos e cobranças", em: null };
+}

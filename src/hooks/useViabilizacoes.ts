@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { assinarAnexos, enviarAnexos, novoId, removerAnexos } from "@/lib/anexosListas";
-import { ETAPAS_ABERTAS, ETAPAS_FINAIS, type EtapaViabilizacao } from "@/lib/viabilizacaoMeta";
+import { ETAPAS_ABERTAS, ETAPAS_FINAIS, type AvisoProprietario, type EtapaViabilizacao } from "@/lib/viabilizacaoMeta";
 import { salvarCampoManutencao, type ManutencaoDaLista, type ResultadoCampo } from "@/lib/manutencaoLista";
 import type { DonoWhatsapp } from "@/components/maintenance/WhatsappAcaoLinha";
 import type { ListStatus, TicketStatus } from "@/components/maintenance/listaTipos";
@@ -65,12 +65,20 @@ export interface Viabilizacao {
   updated_at: string;
   /** Nulo enquanto o proprietário não tem conta (o imóvel ainda não existe no portal). */
   imovel: ImovelViabilizacao | null;
+  /** O proprietário recebe WhatsApp a cada avanço (§3.19). Nasce ligado. */
+  avisar_proprietario: boolean;
+  /** Últimos avisos ao proprietário, do mais novo para o mais velho. */
+  avisos: AvisoProprietario[];
 }
 
+const LIMITE_AVISOS = 30;
 const CAMPOS =
   "id, property_id, nome, endereco, proprietario_nome, proprietario_telefone, proprietario_email, etapa, visita_em, " +
   "estreia_prevista, observacoes, anexos, autor_id, autor_nome, concluida_em, concluida_por_nome, created_at, updated_at, " +
+  "avisar_proprietario, viabilizacao_avisos(id, tipo, status, created_at, enviado_em, erro), " +
   "imovel:properties(id, name, address, owner_id, owner:profiles!properties_owner_id_fkey(id, name, phone, email, role, notificar_whatsapp))";
+
+type LinhaViabilizacao = Omit<Viabilizacao, "anexosUrls" | "avisos"> & { viabilizacao_avisos?: AvisoProprietario[] | null };
 
 export type VisaoViabilizacoes = "abertas" | "concluidas";
 const LIMITE_CONCLUIDAS = 60;
@@ -89,18 +97,22 @@ export function useViabilizacoes(visao: VisaoViabilizacoes, ativo = true) {
     enabled: ativo,
     staleTime: 30_000,
     queryFn: async (): Promise<Viabilizacao[]> => {
-      let consulta = tabelaViabilizacoes().select(CAMPOS);
+      let consulta = tabelaViabilizacoes()
+        .select(CAMPOS)
+        .order("created_at", { referencedTable: "viabilizacao_avisos", ascending: false })
+        .limit(LIMITE_AVISOS, { referencedTable: "viabilizacao_avisos" });
       consulta =
         visao === "abertas"
           ? consulta.in("etapa", ETAPAS_ABERTAS).order("created_at", { ascending: true })
           : consulta.in("etapa", ETAPAS_FINAIS).order("concluida_em", { ascending: false }).limit(LIMITE_CONCLUIDAS);
       const { data, error } = await consulta;
       if (error) throw error;
-      const linhas = (data ?? []) as unknown as Omit<Viabilizacao, "anexosUrls">[];
+      const linhas = (data ?? []) as unknown as LinhaViabilizacao[];
       const urls = await assinarAnexos(linhas.flatMap((l) => l.anexos ?? []));
       return linhas.map((l) => {
+        const { viabilizacao_avisos, ...resto } = l;
         const anexos = l.anexos ?? [];
-        return { ...l, anexos, anexosUrls: anexos.map((c) => urls.get(c) ?? null) };
+        return { ...resto, anexos, anexosUrls: anexos.map((c) => urls.get(c) ?? null), avisos: viabilizacao_avisos ?? [] };
       });
     },
   });
@@ -446,6 +458,8 @@ export interface DadosViabilizacao {
   visitaEm: string | null;
   estreiaPrevista: string | null;
   observacoes: string | null;
+  /** WhatsApp ao proprietário a cada avanço; omitido = não mexe (nasce ligado). */
+  avisarProprietario?: boolean;
 }
 
 export interface NovaViabilizacao extends DadosViabilizacao {
@@ -485,6 +499,7 @@ function colunasDe(d: Partial<DadosViabilizacao>): Record<string, unknown> {
   if (d.visitaEm !== undefined) c.visita_em = d.visitaEm || null;
   if (d.estreiaPrevista !== undefined) c.estreia_prevista = d.estreiaPrevista || null;
   if (d.observacoes !== undefined) c.observacoes = d.observacoes?.trim() || null;
+  if (d.avisarProprietario !== undefined) c.avisar_proprietario = d.avisarProprietario;
   return c;
 }
 

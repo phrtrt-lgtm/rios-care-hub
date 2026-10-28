@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -130,6 +131,7 @@ export function FormularioViabilizacao({ open, onOpenChange, editar = null, imov
   const [visitaEm, setVisitaEm] = useState("");
   const [estreia, setEstreia] = useState("");
   const [observacoes, setObservacoes] = useState("");
+  const [avisar, setAvisar] = useState(true);
   const [arquivos, setArquivos] = useState<File[]>([]);
   const [tentouEnviar, setTentouEnviar] = useState(false);
   const [fichaAberta, setFichaAberta] = useState(false);
@@ -153,6 +155,7 @@ export function FormularioViabilizacao({ open, onOpenChange, editar = null, imov
       setVisitaEm(editar.visita_em ?? "");
       setEstreia(editar.estreia_prevista ?? "");
       setObservacoes(editar.observacoes ?? "");
+      setAvisar(editar.avisar_proprietario);
     } else {
       setOrigem(imovelInicial ? "portal" : "novo");
       setPropertyId(imovelInicial);
@@ -166,6 +169,7 @@ export function FormularioViabilizacao({ open, onOpenChange, editar = null, imov
       setVisitaEm("");
       setEstreia("");
       setObservacoes("");
+      setAvisar(true);
     }
   }, [open, editar, imovelInicial]);
 
@@ -232,6 +236,7 @@ export function FormularioViabilizacao({ open, onOpenChange, editar = null, imov
             visitaEm: visitaEm || null,
             estreiaPrevista: estreia || null,
             observacoes: observacoes || null,
+            avisarProprietario: avisar,
           },
         });
         toast.success("Registro atualizado");
@@ -250,6 +255,7 @@ export function FormularioViabilizacao({ open, onOpenChange, editar = null, imov
         visitaEm: visitaEm || null,
         estreiaPrevista: estreia || null,
         observacoes: observacoes || null,
+        avisarProprietario: avisar,
         propertyId: usaPortal ? imovelEscolhido!.id : null,
         ownerId: usaPortal ? null : (contaEscolhida?.id ?? null),
         autorId: user.id,
@@ -422,6 +428,23 @@ export function FormularioViabilizacao({ open, onOpenChange, editar = null, imov
               </div>
             </div>
           )}
+
+          <div className="flex items-start justify-between gap-3 rounded-lg border border-border/70 bg-muted/30 px-3 py-2.5">
+            <div className="space-y-0.5">
+              <Label htmlFor="viab-avisar" className="text-sm">
+                Avisar o proprietário por WhatsApp
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                A cada avanço: visita marcada, preparação, itens feitos e cobranças enviadas. Itens juntam numa mensagem só.
+                {usaPortal
+                  ? " Vai para o WhatsApp do perfil dele."
+                  : propTelefone.trim()
+                    ? ` Vai para ${propTelefone.trim()}.`
+                    : " Sem número, nada sai."}
+              </p>
+            </div>
+            <Switch id="viab-avisar" checked={avisar} onCheckedChange={setAvisar} aria-label="Avisar o proprietário por WhatsApp" />
+          </div>
 
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="space-y-1.5">

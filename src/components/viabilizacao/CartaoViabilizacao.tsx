@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
+  BellOff,
+  BellRing,
   CalendarDays,
   Camera,
   ChevronDown,
@@ -36,7 +38,16 @@ import { nomeCurto, quando } from "@/components/listas/formato";
 import { formatBRL } from "@/lib/format";
 import { resumirItens } from "@/lib/viabilizacaoResumo";
 import { cn } from "@/lib/utils";
-import { ETAPAS, ORDEM_ETAPAS, OBSERVACOES_MAX, diaLocal, linkMapa, linkWhatsapp, type EtapaViabilizacao } from "@/lib/viabilizacaoMeta";
+import {
+  ETAPAS,
+  ORDEM_ETAPAS,
+  OBSERVACOES_MAX,
+  diaLocal,
+  linkMapa,
+  linkWhatsapp,
+  situacaoAvisos,
+  type EtapaViabilizacao,
+} from "@/lib/viabilizacaoMeta";
 import {
   enderecoViabilizacao,
   nomeViabilizacao,
@@ -109,6 +120,22 @@ export function CartaoViabilizacao({
   const hoje = new Date();
   const visitaData = diaLocal(v.visita_em);
   const visitaPassou = !!visitaData && visitaData < new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+  // Mesma precedência do banco (viabilizacao_destino): o número do registro, senão o do perfil.
+  const aviso = situacaoAvisos(v.avisos, v.avisar_proprietario, !!(v.proprietario_telefone?.trim() || conta?.phone?.trim()));
+  const avisoQuando = aviso.em ? quando(aviso.em) : null;
+
+  const alternarAvisos = async () => {
+    try {
+      await atualizar.mutateAsync({ id: v.id, propertyId: v.property_id, mudanca: { avisarProprietario: !v.avisar_proprietario } });
+      toast.success(
+        v.avisar_proprietario
+          ? "O proprietário não recebe mais WhatsApp deste imóvel"
+          : "O proprietário volta a receber WhatsApp a cada avanço",
+      );
+    } catch (erro) {
+      toast.error(erro instanceof Error ? erro.message : "Não foi possível salvar");
+    }
+  };
 
   // Observações editadas no próprio cartão; gravam ao sair do campo.
   const [obs, setObs] = useState<string | null>(null);
@@ -208,6 +235,18 @@ export function CartaoViabilizacao({
               {v.autor_nome ? `por ${nomeCurto(v.autor_nome)} · ` : ""}
               {criado.relativo}
             </span>
+            <span
+              className={cn("inline-flex items-center gap-1", TOM[aviso.tom].texto)}
+              title={[aviso.detalhe, avisoQuando?.completo].filter(Boolean).join(" · ") || undefined}
+            >
+              {v.avisar_proprietario ? (
+                <BellRing className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              ) : (
+                <BellOff className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              )}
+              {aviso.rotulo}
+              {avisoQuando ? ` ${avisoQuando.relativo}` : ""}
+            </span>
           </div>
         </div>
 
@@ -255,6 +294,10 @@ export function CartaoViabilizacao({
               <DropdownMenuItem onClick={() => onAnexar(v)} disabled={anexando}>
                 <Camera className="h-4 w-4" aria-hidden="true" />
                 Adicionar foto ou vídeo da visita
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => void alternarAvisos()} disabled={atualizar.isPending}>
+                {v.avisar_proprietario ? <BellOff className="h-4 w-4" aria-hidden="true" /> : <BellRing className="h-4 w-4" aria-hidden="true" />}
+                {v.avisar_proprietario ? "Desligar avisos ao proprietário" : "Ligar avisos ao proprietário"}
               </DropdownMenuItem>
               {v.imovel && (
                 <>
