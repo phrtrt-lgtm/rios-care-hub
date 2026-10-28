@@ -269,7 +269,47 @@ export async function salvarCampoManutencao({
     return {};
   }
 
+  if (field === "subject") {
+    // Renomear o item (clique no nome). O nome vira o título da cobrança, então
+    // a descrição e o rascunho ainda não visto pelo proprietário acompanham.
+    const novo = String(value ?? "").trim();
+    if (novo.length < 2) throw new Error("O nome do item precisa ter pelo menos 2 caracteres.");
+
+    const { data: atual, error: erroLeitura } = await supabase
+      .from("tickets")
+      .select("subject, description")
+      .eq("id", id)
+      .maybeSingle();
+    if (erroLeitura) throw erroLeitura;
+
+    // A descrição nasce igual ao nome (inclusão rápida e imóveis novos). Se
+    // alguém escreveu uma descrição própria, ela fica como está.
+    const colunas: Record<string, unknown> = { subject: novo, charge_draft_title: novo };
+    if (!atual?.description || atual.description === atual.subject) colunas.description = novo;
+
+    const { error } = await supabase.from("tickets").update(colunas).eq("id", id);
+    if (error) throw error;
+
+    // Rascunho ainda não enviado acompanha o nome. Cobrança já lançada mantém o
+    // título que o proprietário recebeu.
+    const { data: rascunhos } = await supabase
+      .from("charges")
+      .select("id")
+      .eq("ticket_id", id)
+      .eq("status", "draft")
+      .is("archived_at", null)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    const rascunho = rascunhos?.[0];
+    if (rascunho) {
+      const { error: erroRascunho } = await supabase.from("charges").update({ title: novo }).eq("id", rascunho.id);
+      if (erroRascunho) throw erroRascunho;
+    }
+    return {};
+  }
+
   if (field === "scheduled_at") {
+
     const { error } = await supabase
       .from("tickets")
       .update({ scheduled_at: value as string | null })

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ClipboardEvent, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ClipboardEvent, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { Check, Circle, ExternalLink, Loader2, MessageSquare, MoreHorizontal, Paperclip, Pencil, Plus, Send, Trash2, Undo2 } from "lucide-react";
 import { toast } from "sonner";
@@ -52,9 +52,95 @@ function textoDoErro(erro: unknown): string {
   return erro instanceof Error && erro.message ? erro.message : "Não foi possível salvar. Tente de novo.";
 }
 
+/**
+ * Nome do item, editável no clique (pedido do gestor, 2026-10-28). Enter ou
+ * sair do campo grava; Esc desiste. Vazio ou sem mudança não grava nada.
+ */
+function TituloItem({
+  titulo,
+  suave,
+  ocupado,
+  onSalvar,
+}: {
+  titulo: string;
+  /** Item já feito: o nome fica no tom apagado da lista. */
+  suave: boolean;
+  ocupado: boolean;
+  onSalvar: (novo: string) => void;
+}) {
+  const [editando, setEditando] = useState(false);
+  const [texto, setTexto] = useState(titulo);
+  const campo = useRef<HTMLInputElement>(null);
+  // Esc cancela: o blur que vem em seguida não pode gravar.
+  const cancelado = useRef(false);
+
+  useEffect(() => {
+    if (editando) campo.current?.select();
+  }, [editando]);
+
+  const gravar = () => {
+    setEditando(false);
+    if (cancelado.current) {
+      cancelado.current = false;
+      return;
+    }
+    const novo = texto.trim();
+    if (novo.length < 2 || novo === titulo.trim()) return;
+    onSalvar(novo);
+  };
+
+  if (editando) {
+    return (
+      <Input
+        ref={campo}
+        value={texto}
+        maxLength={200}
+        aria-label="Nome do item"
+        data-no-sheet
+        className="h-7 w-full min-w-0 px-1.5 text-sm"
+        onChange={(e) => setTexto(e.target.value)}
+        onClick={(e) => e.stopPropagation()}
+        onBlur={gravar}
+        onKeyDown={(e) => {
+          e.stopPropagation();
+          if (e.key === "Enter") campo.current?.blur();
+          if (e.key === "Escape") {
+            cancelado.current = true;
+            campo.current?.blur();
+          }
+        }}
+      />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      disabled={ocupado}
+      data-no-sheet
+      onClick={(e) => {
+        e.stopPropagation();
+        setTexto(titulo);
+        setEditando(true);
+      }}
+      title="Clique para renomear"
+      aria-label={`Renomear item: ${titulo}`}
+      className={cn(
+        "-mx-1 inline-flex max-w-full items-center rounded px-1 py-0.5 text-left text-sm font-medium transition-colors",
+        "hover:underline hover:decoration-dashed hover:decoration-muted-foreground/60 hover:underline-offset-4",
+        "hover:bg-muted/70 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        suave && "text-muted-foreground",
+      )}
+    >
+      <span className="min-w-0 truncate">{titulo}</span>
+    </button>
+  );
+}
+
 /* ------------------------------------------------------------------------ */
 /* Linha de item                                                             */
 /* ------------------------------------------------------------------------ */
+
 
 function LinhaItem({
   item,
@@ -106,10 +192,9 @@ function LinhaItem({
         </button>
 
         <div className="min-w-0 flex-1">
-          <p className={cn("truncate text-sm font-medium", feito && "text-muted-foreground")} title={item.subject}>
-            {item.subject}
-          </p>
+          <TituloItem titulo={item.subject} suave={feito} ocupado={ocupado} onSalvar={(novo) => onCampo("subject", novo)} />
         </div>
+
 
         <div className="shrink-0 md:order-last">
           <DropdownMenu>
