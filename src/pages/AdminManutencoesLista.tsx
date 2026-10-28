@@ -378,6 +378,10 @@ export default function AdminManutencoesLista() {
         // Manutenções + as que estão em debate com o proprietário (viraram
         // chamado, mas kind continua "maintenance").
         .or("ticket_type.eq.manutencao,kind.eq.maintenance")
+        // Compra de imóvel novo (tickets.natureza = compra) não entra: fica em
+        // /novos-imoveis, para a equipe de manutenção ver só manutenção (§3.19).
+        // `.filter` porque o types.ts ainda não tem `natureza` (trocar por `.eq` depois).
+        .filter("natureza", "eq", "manutencao")
         // `reais` = cobranças de verdade do ticket (nem rascunho nem arquivada).
         // Concluída que já tem cobrança real não entra na lista: o filtro é feito
         // no banco. Antes vinham as 420 manutenções (250 KB) para mostrar ~35.

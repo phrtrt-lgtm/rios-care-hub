@@ -180,7 +180,11 @@ export function CartaoViabilizacao({
             )}
             {v.imovel && (
               <span className="text-xs text-muted-foreground">
-                {resumo.total === 0 ? "nenhum item ainda" : `${resumo.total} ${resumo.total === 1 ? "item" : "itens"}`}
+                {resumo.total === 0
+                  ? "nenhum item ainda"
+                  : `${resumo.total} ${resumo.total === 1 ? "item" : "itens"}${
+                      resumo.compras > 0 ? ` · ${resumo.compras} ${resumo.compras === 1 ? "compra" : "compras"}` : ""
+                    }`}
               </span>
             )}
           </div>

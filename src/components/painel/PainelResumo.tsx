@@ -45,6 +45,9 @@ async function buscarResumo(): Promise<Resumo> {
       .from("tickets")
       .select("status, scheduled_at")
       .eq("ticket_type", "manutencao")
+      // Mesma definição da caixa Manutenções: compra de imóvel novo não conta.
+      // `.filter` porque o types.ts ainda não tem `natureza` (trocar por `.eq` depois).
+      .filter("natureza", "eq", "manutencao")
       .in("status", STATUS_ABERTOS)
       .is("archived_at", null),
     supabase

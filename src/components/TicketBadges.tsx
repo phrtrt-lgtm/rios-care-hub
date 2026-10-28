@@ -1,8 +1,10 @@
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Clock, Wrench } from "lucide-react";
+import { AlertCircle, Clock, ShoppingCart, Wrench } from "lucide-react";
 
 interface Ticket {
   kind?: string;
+  /** "compra" = item que a RIOS compra para imóvel novo (tickets.natureza). */
+  natureza?: string | null;
   essential?: boolean;
   owner_decision?: string | null;
   owner_action_due_at?: string | null;
@@ -15,12 +17,17 @@ export function TicketBadges({ ticket }: { ticket: Ticket }) {
 
   return (
     <div className="flex gap-2 flex-wrap">
-      {ticket.kind === 'maintenance' && (
+      {ticket.kind === 'maintenance' && ticket.natureza === 'compra' ? (
+        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
+          <ShoppingCart className="h-3 w-3 mr-1" />
+          Compra
+        </Badge>
+      ) : ticket.kind === 'maintenance' ? (
         <Badge variant="outline" className="bg-info/10 text-info border-info/30">
           <Wrench className="h-3 w-3 mr-1" />
           Manutenção
         </Badge>
-      )}
+      ) : null}
       
       {ticket.essential && (
         <Badge variant="destructive" className="bg-destructive/10 text-destructive border-destructive/30">

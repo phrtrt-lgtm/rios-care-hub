@@ -30,6 +30,25 @@ export interface MetaStatus {
   aberto: boolean;
 }
 
+/**
+ * Natureza de um item de manutenção (`tickets.natureza`, desde 2026-10-28):
+ * serviço da equipe de manutenção ou compra feita pela gestão. A compra vira
+ * cobrança ao proprietário como qualquer manutenção, mas fica fora da lista
+ * de manutenções da equipe (só em /novos-imoveis e no painel do dono).
+ */
+export type NaturezaItem = "manutencao" | "compra";
+
+export const NATUREZA_ITEM: Record<NaturezaItem, { rotulo: string; tom: Tom; descricao: string }> = {
+  manutencao: { rotulo: "Manutenção", tom: "info", descricao: "Serviço da equipe de manutenção: aparece na lista de manutenções." },
+  compra: {
+    rotulo: "Compra",
+    tom: "primary",
+    descricao: "Item que a gestão compra e cobra do proprietário: fica só em Novos imóveis, fora da lista de manutenções.",
+  },
+};
+
+export const naturezaDe = (valor: unknown): NaturezaItem => (valor === "compra" ? "compra" : "manutencao");
+
 export const STATUS_TICKET: Record<StatusTicket, MetaStatus> = {
   novo: { rotulo: "Novo", tom: "info", aberto: true },
   em_analise: { rotulo: "Em análise", tom: "warning", aberto: true },

@@ -6,6 +6,7 @@ import { ETAPAS_ABERTAS, ETAPAS_FINAIS, type AvisoProprietario, type EtapaViabil
 import { salvarCampoManutencao, type ManutencaoDaLista, type ResultadoCampo } from "@/lib/manutencaoLista";
 import type { DonoWhatsapp } from "@/components/maintenance/WhatsappAcaoLinha";
 import type { ListStatus, TicketStatus } from "@/components/maintenance/listaTipos";
+import { naturezaDe, type NaturezaItem } from "@/lib/ticketMeta";
 
 /**
  * Viabilização de imóveis novos (tabela `viabilizacoes`, página /novos-imoveis).
@@ -193,6 +194,8 @@ export interface ItemViabilizacao extends ManutencaoDaLista {
   on_hold: boolean;
   ticket_type: string;
   kind: string | null;
+  /** Compra (só aqui e no painel do dono) ou manutenção (também na lista da equipe). */
+  natureza: NaturezaItem;
   list_status: ListStatus;
   /** Última cobrança de verdade do item (nem rascunho nem arquivada); nula = ainda não enviada. */
   cobranca: CobrancaDoItem | null;
@@ -247,7 +250,7 @@ export function useItensViabilizacao(propertyIds: string[], ativo = true) {
           .from("tickets")
           .select(
             `
-            id, subject, status, created_at, cost_responsible, on_hold, ticket_type, kind,
+            id, subject, status, created_at, cost_responsible, on_hold, ticket_type, kind, natureza,
             charge_draft_amount_cents, charge_draft_management_contribution_cents, charge_draft_category,
             ticket_attachments(count),
             charges(id, ticket_id, amount_cents, management_contribution_cents, service_type, status, created_at, archived_at, paid_at, due_date),
@@ -298,6 +301,7 @@ export function useItensViabilizacao(propertyIds: string[], ativo = true) {
           on_hold: t.on_hold === true,
           ticket_type: t.ticket_type as string,
           kind: (t.kind as string | null) ?? null,
+          natureza: naturezaDe(t.natureza),
           list_status: t.status === "concluido" ? "feito" : "em_progresso",
           cobranca: real
             ? {
@@ -626,6 +630,7 @@ export interface NovoItem {
   subject: string;
   amountCents: number | null;
   costResponsible: "owner" | "pm" | "guest" | "pending";
+  natureza: NaturezaItem;
 }
 
 function invalidarItens(queryClient: ReturnType<typeof useQueryClient>) {
@@ -639,28 +644,32 @@ function invalidarItens(queryClient: ReturnType<typeof useQueryClient>) {
  * Item novo = manutenção do imóvel, igual à inclusão rápida da lista.
  * `essential` fica marcado: é trabalho da RIOS para o imóvel entrar no ar,
  * sem a decisão "quem conserta" que o proprietário veria numa estrutural.
+ * `natureza` separa compra de manutenção: a compra nasce com a categoria
+ * "Itens" na cobrança e não entra na lista de manutenções.
  */
 export function useCriarItemViabilizacao() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (itens: NovoItem[]): Promise<number> => {
       if (itens.length === 0) return 0;
-      const { error } = await supabase.from("tickets").insert(
-        itens.map((i) => ({
-          subject: i.subject.trim(),
-          description: i.subject.trim(),
-          property_id: i.propertyId,
-          owner_id: i.ownerId,
-          created_by: i.autorId,
-          ticket_type: "manutencao" as const,
-          kind: "maintenance",
-          status: "novo" as const,
-          cost_responsible: i.costResponsible,
-          essential: true,
-          charge_draft_amount_cents: i.amountCents && i.amountCents > 0 ? i.amountCents : null,
-          charge_draft_title: i.subject.trim(),
-        })),
-      );
+      // `natureza` é de 2026-10-28; o types.ts ainda não a conhece.
+      const linhas: Record<string, unknown>[] = itens.map((i) => ({
+        subject: i.subject.trim(),
+        description: i.subject.trim(),
+        property_id: i.propertyId,
+        owner_id: i.ownerId,
+        created_by: i.autorId,
+        ticket_type: "manutencao",
+        kind: "maintenance",
+        status: "novo",
+        cost_responsible: i.costResponsible,
+        essential: true,
+        natureza: i.natureza,
+        charge_draft_amount_cents: i.amountCents && i.amountCents > 0 ? i.amountCents : null,
+        charge_draft_title: i.subject.trim(),
+        charge_draft_category: i.natureza === "compra" ? "itens" : null,
+      }));
+      const { error } = await clienteSemTipos.from("tickets").insert(linhas);
       if (error) throw error;
       return itens.length;
     },

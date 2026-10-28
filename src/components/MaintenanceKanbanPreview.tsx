@@ -108,6 +108,9 @@ export function MaintenanceKanbanPreview() {
           service_provider:service_providers(id, name, phone)
         `)
         .eq("ticket_type", "manutencao")
+        // Compra de imóvel novo fica em /novos-imoveis (§3.19); aqui, só manutenção.
+        // `.filter` porque o types.ts ainda não tem `natureza` (trocar por `.eq` depois).
+        .filter("natureza", "eq", "manutencao")
         .neq("status", "cancelado")
         .neq("status", "concluido")
         .is("archived_at", null)

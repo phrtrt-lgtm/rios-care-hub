@@ -10,7 +10,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useNavigate, useLocation } from "react-router-dom";
 import { saveScrollPosition } from "@/lib/navigation";
-import { Wrench, Calendar, Clock, CheckCircle2, Building2, MessageSquare, ChevronRight, Users } from "lucide-react";
+import { Wrench, Calendar, Clock, CheckCircle2, Building2, MessageSquare, ChevronRight, ShoppingCart, Users } from "lucide-react";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useChatPreloader } from "@/hooks/useChatPreloader";
 import { MaintenanceDetailsDialog } from "@/components/MaintenanceDetailsDialog";
@@ -28,6 +28,8 @@ interface MaintenanceTicket {
   owner_decision?: string | null;
   owner_action_due_at?: string | null;
   cost_responsible?: string | null;
+  /** "compra" = a RIOS compra e cobra (imóvel novo); o resto é manutenção. */
+  natureza?: string | null;
   property: {
     id: string;
     name: string;
@@ -71,6 +73,7 @@ export function OwnerMaintenanceProgress() {
           essential,
           owner_decision,
           owner_action_due_at,
+          natureza,
           property:properties(id, name, cover_photo_url)
         `)
         .or(await ownerScopeFilter(user.id))
@@ -224,7 +227,14 @@ export function OwnerMaintenanceProgress() {
                       <p className="text-xs text-muted-foreground">
                         {ticket.property?.name}
                       </p>
-                      
+
+                      {ticket.natureza === "compra" && (
+                        <Badge variant="outline" className="mt-1 text-[10px] border-primary/30 text-primary bg-primary/10">
+                          <ShoppingCart className="h-3 w-3 mr-1" />
+                          Compra
+                        </Badge>
+                      )}
+
                       {/* Decision Made Badge */}
                       {ticket.owner_decision && (
                         <Badge 

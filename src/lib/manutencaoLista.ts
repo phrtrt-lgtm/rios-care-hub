@@ -318,6 +318,25 @@ export async function salvarCampoManutencao({
     return {};
   }
 
+  if (field === "natureza") {
+    // Compra ou manutenção (imóvel novo, CLAUDE.md §3.19). A compra sai da
+    // lista de manutenções e entra como categoria "Itens" na cobrança, se
+    // ninguém escolheu outra; voltar a manutenção desfaz só esse "Itens".
+    const natureza = value === "compra" ? "compra" : "manutencao";
+    const { data: atual, error: erroLeitura } = await supabase
+      .from("tickets")
+      .select("charge_draft_category")
+      .eq("id", id)
+      .maybeSingle();
+    if (erroLeitura) throw erroLeitura;
+    const colunas: Record<string, unknown> = { natureza };
+    if (natureza === "compra" && !atual?.charge_draft_category) colunas.charge_draft_category = "itens";
+    if (natureza === "manutencao" && atual?.charge_draft_category === "itens") colunas.charge_draft_category = null;
+    const { error } = await supabase.from("tickets").update(colunas).eq("id", id);
+    if (error) throw error;
+    return {};
+  }
+
   if (field === "on_hold") {
     // Stand-by da lista: coluna própria, sem tocar no status (que o
     // proprietário vê).

@@ -136,6 +136,9 @@ const AdminManutencoesKanban = () => {
           service_provider:service_providers(id, name, phone)
         `)
         .eq("ticket_type", "manutencao")
+        // Compra de imóvel novo fica em /novos-imoveis (§3.19). `.filter` porque o
+        // types.ts ainda não tem `natureza` (trocar por `.eq` depois).
+        .filter("natureza", "eq", "manutencao")
         .neq("status", "cancelado")
         .neq("status", "concluido")
         .order("created_at", { ascending: false });

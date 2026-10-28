@@ -22,6 +22,8 @@ export interface ResumoItens {
   pago: number;
   emAberto: number;
   total: number;
+  /** Itens classificados como compra (dentro do total). */
+  compras: number;
 }
 
 export function resumirItens(itens: ItemViabilizacao[], avulsas: CobrancaAvulsa[]): ResumoItens {
@@ -34,5 +36,6 @@ export function resumirItens(itens: ItemViabilizacao[], avulsas: CobrancaAvulsa[
   const cobrancas = [...itens.flatMap((i) => (i.cobranca ? [i.cobranca] : [])), ...avulsas];
   const cobrado = cobrancas.reduce((s, c) => s + devido(c.amount_cents, c.management_contribution_cents), 0);
   const pago = cobrancas.filter((c) => estaPaga(c.status)).reduce((s, c) => s + devido(c.amount_cents, c.management_contribution_cents), 0);
-  return { aFazer, feitos, enviados, previsto, cobrado, pago, emAberto: cobrado - pago, total: aFazer + feitos + enviados };
+  const compras = itens.filter((i) => i.natureza === "compra").length;
+  return { aFazer, feitos, enviados, previsto, cobrado, pago, emAberto: cobrado - pago, total: aFazer + feitos + enviados, compras };
 }

@@ -91,6 +91,9 @@ const AdminManutencoesConluidas = () => {
           charges(id, title, status, amount_cents)
         `)
         .eq("ticket_type", "manutencao")
+        // Compra de imóvel novo fica em /novos-imoveis (§3.19). `.filter` porque o
+        // types.ts ainda não tem `natureza` (trocar por `.eq` depois).
+        .filter("natureza", "eq", "manutencao")
         .eq("status", "concluido")
         .order("updated_at", { ascending: false });
 

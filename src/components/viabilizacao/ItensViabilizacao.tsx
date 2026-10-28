@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ClipboardEvent, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { Check, Circle, ExternalLink, Loader2, MessageSquare, MoreHorizontal, Paperclip, Pencil, Plus, Send, Trash2, Undo2 } from "lucide-react";
+import { Check, Circle, ExternalLink, Loader2, MessageSquare, MoreHorizontal, Paperclip, Pencil, Plus, Send, ShoppingCart, Trash2, Undo2, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { Etiqueta } from "@/components/painel/Etiqueta";
+import { AbaPilula } from "@/components/painel/PaginaInterna";
 import { BotaoLinha, SeloContagem } from "@/components/painel/CaixaOperacao";
 import { EditableCell } from "@/components/maintenance/EditableCell";
 import { QuickAttachUploader } from "@/components/maintenance/QuickAttachUploader";
@@ -16,6 +17,7 @@ import { EtiquetaStatusCobranca } from "@/components/cobrancas/EtiquetaStatusCob
 import { formatBRL } from "@/lib/format";
 import { parseBRNumber } from "@/lib/parseBRNumber";
 import { estaPaga, formatarData } from "@/lib/cobrancaMeta";
+import { NATUREZA_ITEM, type NaturezaItem } from "@/lib/ticketMeta";
 import { devido } from "@/lib/viabilizacaoResumo";
 import { avisarResultadoEnvio, enviarAoProprietario, type ResultadoEnvio } from "@/lib/manutencaoLista";
 import { cn } from "@/lib/utils";
@@ -30,6 +32,20 @@ import {
 } from "@/hooks/useViabilizacoes";
 
 type Custo = "owner" | "pm" | "guest" | "pending";
+type FiltroNatureza = "todos" | NaturezaItem;
+
+const NATUREZAS = Object.keys(NATUREZA_ITEM) as NaturezaItem[];
+const ICONE_NATUREZA: Record<NaturezaItem, React.ReactNode> = { manutencao: <Wrench />, compra: <ShoppingCart /> };
+
+/** Compra ou manutenção, como etiqueta (pedido do gestor, 2026-10-28). */
+function EtiquetaNatureza({ natureza, solida }: { natureza: NaturezaItem; solida?: boolean }) {
+  const meta = NATUREZA_ITEM[natureza];
+  return (
+    <Etiqueta tom={meta.tom} icone={ICONE_NATUREZA[natureza]} solida={solida} title={meta.descricao}>
+      {meta.rotulo}
+    </Etiqueta>
+  );
+}
 
 export interface AcoesItem {
   onAbrirChat: (item: ItemViabilizacao) => void;
@@ -235,6 +251,25 @@ function LinhaItem({
       </div>
 
       <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1.5 pl-9 md:contents">
+        {/* Compra ou manutenção: a compra fica fora da lista de manutenções da equipe */}
+        <Select value={item.natureza} onValueChange={(v) => onCampo("natureza", v)} disabled={ocupado}>
+          <SelectTrigger
+            className="h-7 w-auto gap-1 border-0 bg-transparent px-1.5 py-0 text-xs hover:bg-muted/60"
+            aria-label="Compra ou manutenção"
+          >
+            <SelectValue>
+              <EtiquetaNatureza natureza={item.natureza} />
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent className="z-50 bg-popover">
+            {NATUREZAS.map((n) => (
+              <SelectItem key={n} value={n}>
+                <EtiquetaNatureza natureza={n} solida />
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
         {/* Quem paga */}
         <Select value={custo} onValueChange={(v) => onCampo("cost_responsible", v)} disabled={ocupado}>
           <SelectTrigger
@@ -355,6 +390,7 @@ function NovoItem({ viabilizacao, userId }: { viabilizacao: Viabilizacao; userId
   const [texto, setTexto] = useState("");
   const [valor, setValor] = useState("");
   const [custo, setCusto] = useState<Custo>("owner");
+  const [natureza, setNatureza] = useState<NaturezaItem>("manutencao");
   const campo = useRef<HTMLInputElement>(null);
   const imovel = viabilizacao.imovel;
 
@@ -371,6 +407,7 @@ function NovoItem({ viabilizacao, userId }: { viabilizacao: Viabilizacao; userId
           subject,
           amountCents: limpas.length === 1 ? valorCents : null,
           costResponsible: custo,
+          natureza,
         })),
       );
       toast.success(n === 1 ? "Item adicionado" : `${n} itens adicionados`);
@@ -404,7 +441,7 @@ function NovoItem({ viabilizacao, userId }: { viabilizacao: Viabilizacao; userId
         value={texto}
         onChange={(e) => setTexto(e.target.value)}
         onPaste={colar}
-        placeholder="O que precisa ser feito? (cole uma lista para criar vários)"
+        placeholder="O que precisa ser feito ou comprado? (cole uma lista para criar vários)"
         aria-label="Novo item"
         maxLength={200}
         className="h-9 min-w-0 flex-1 basis-[14rem] border-0 bg-card text-sm"
@@ -419,6 +456,18 @@ function NovoItem({ viabilizacao, userId }: { viabilizacao: Viabilizacao; userId
         className="h-9 w-[104px] border-0 bg-card text-right text-sm tabular-nums"
         disabled={criar.isPending}
       />
+      <Select value={natureza} onValueChange={(v) => setNatureza(v as NaturezaItem)}>
+        <SelectTrigger className="h-9 w-[128px] border-0 bg-card text-xs" aria-label="Compra ou manutenção">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent className="z-50 bg-popover">
+          {NATUREZAS.map((n) => (
+            <SelectItem key={n} value={n}>
+              {NATUREZA_ITEM[n].rotulo}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       <Select value={custo} onValueChange={(v) => setCusto(v as Custo)}>
         <SelectTrigger className="h-9 w-[132px] border-0 bg-card text-xs" aria-label="Quem paga">
           <SelectValue />
@@ -456,10 +505,17 @@ export function ItensViabilizacao({ viabilizacao, itens, avulsas, userId, ...aco
   const [paraApagar, setParaApagar] = useState<ItemViabilizacao | null>(null);
   const [confirmarLote, setConfirmarLote] = useState(false);
   const [progresso, setProgresso] = useState<{ feitos: number; total: number } | null>(null);
+  // Compra ou manutenção: o gestor filtra para comprar o que falta; a equipe
+  // de manutenção, pela lista dela, só vê manutenção.
+  const [filtro, setFiltro] = useState<FiltroNatureza>("todos");
 
-  const aFazer = useMemo(() => itens.filter((i) => i.status !== "concluido"), [itens]);
-  const feitos = useMemo(() => itens.filter((i) => i.status === "concluido" && !i.cobranca), [itens]);
-  const enviados = useMemo(() => itens.filter((i) => !!i.cobranca), [itens]);
+  const nCompras = useMemo(() => itens.filter((i) => i.natureza === "compra").length, [itens]);
+  const temOsDois = nCompras > 0 && nCompras < itens.length;
+  const visiveis = useMemo(() => (filtro === "todos" || !temOsDois ? itens : itens.filter((i) => i.natureza === filtro)), [itens, filtro, temOsDois]);
+  const aFazer = useMemo(() => visiveis.filter((i) => i.status !== "concluido"), [visiveis]);
+  const feitos = useMemo(() => visiveis.filter((i) => i.status === "concluido" && !i.cobranca), [visiveis]);
+  const enviados = useMemo(() => visiveis.filter((i) => !!i.cobranca), [visiveis]);
+  const avulsasVisiveis = filtro === "todos" || !temOsDois ? avulsas : [];
   const paraEnviar = useMemo(() => feitos.filter((i) => i.owner && i.cost_responsible !== "guest"), [feitos]);
 
   const comOcupado = async (id: string, acao: () => Promise<void>) => {
@@ -548,6 +604,22 @@ export function ItensViabilizacao({ viabilizacao, itens, avulsas, userId, ...aco
 
   return (
     <div className="space-y-4">
+      {temOsDois && (
+        <div role="tablist" aria-label="Mostrar" className="flex flex-wrap gap-1.5 px-1">
+          <AbaPilula ativa={filtro === "todos"} quantidade={itens.length} onClick={() => setFiltro("todos")}>
+            Todos
+          </AbaPilula>
+          <AbaPilula ativa={filtro === "manutencao"} quantidade={itens.length - nCompras} tom="info" onClick={() => setFiltro("manutencao")}>
+            <Wrench className="h-3.5 w-3.5" aria-hidden="true" />
+            Manutenções
+          </AbaPilula>
+          <AbaPilula ativa={filtro === "compra"} quantidade={nCompras} tom="primary" onClick={() => setFiltro("compra")}>
+            <ShoppingCart className="h-3.5 w-3.5" aria-hidden="true" />
+            Compras
+          </AbaPilula>
+        </div>
+      )}
+
       <div>
         {secao("A fazer", aFazer.length, "warning")}
         {aFazer.length > 0 && (
@@ -600,9 +672,9 @@ export function ItensViabilizacao({ viabilizacao, itens, avulsas, userId, ...aco
         </div>
       )}
 
-      {(enviados.length > 0 || avulsas.length > 0) && (
+      {(enviados.length > 0 || avulsasVisiveis.length > 0) && (
         <div>
-          {secao("Enviados ao proprietário", enviados.length + avulsas.length, "primary")}
+          {secao("Enviados ao proprietário", enviados.length + avulsasVisiveis.length, "primary")}
           <ul className="divide-y divide-border/50">
             {enviados.map((item) => (
               <LinhaCobranca
@@ -615,7 +687,7 @@ export function ItensViabilizacao({ viabilizacao, itens, avulsas, userId, ...aco
                 aporte={item.cobranca!.management_contribution_cents}
               />
             ))}
-            {avulsas.map((c) => (
+            {avulsasVisiveis.map((c) => (
               <LinhaCobranca key={c.id} id={c.id} titulo={c.title} status={c.status} dueDate={c.due_date} valor={c.amount_cents} aporte={c.management_contribution_cents} />
             ))}
           </ul>

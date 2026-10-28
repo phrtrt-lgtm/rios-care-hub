@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarDays, CheckCircle2, HousePlus, MessageSquare, Receipt, Rocket } from "lucide-react";
+import { CalendarDays, CheckCircle2, HousePlus, MessageSquare, Receipt, Rocket, ShoppingCart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
@@ -14,6 +14,7 @@ import { TOM, type Tom } from "@/components/painel/tons";
 import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
 import { MaintenanceDetailsDialog } from "@/components/MaintenanceDetailsDialog";
 import { diaLocal } from "@/lib/viabilizacaoMeta";
+import { NATUREZA_ITEM } from "@/lib/ticketMeta";
 import { cn } from "@/lib/utils";
 
 /**
@@ -48,6 +49,8 @@ interface ItemPreparacao {
   status: string;
   created_at: string;
   property_id: string;
+  /** "compra" = a RIOS compra e cobra; o resto é manutenção. */
+  natureza?: string | null;
   charges: CobrancaDoItem[] | null;
 }
 
@@ -106,7 +109,7 @@ export function OwnerPreparacao() {
     queryFn: async (): Promise<ItemPreparacao[]> => {
       const { data, error } = await supabase
         .from("tickets")
-        .select("id, subject, status, created_at, property_id, charges(id, status, archived_at)")
+        .select("id, subject, status, created_at, property_id, natureza, charges(id, status, archived_at)")
         .in("property_id", propertyIds)
         .eq("ticket_type", "manutencao")
         .is("archived_at", null)
@@ -285,7 +288,16 @@ function LinhaItem({
   const feito = item.status === "concluido";
   return (
     <LinhaCaixa
-      titulo={<span className={cn(feito && "text-muted-foreground")}>{item.subject}</span>}
+      titulo={
+        <span className="inline-flex max-w-full items-center gap-1.5">
+          <span className={cn("min-w-0 truncate", feito && "text-muted-foreground")}>{item.subject}</span>
+          {item.natureza === "compra" && (
+            <Etiqueta tom={NATUREZA_ITEM.compra.tom} icone={<ShoppingCart />} title="Item que a RIOS compra para o imóvel">
+              Compra
+            </Etiqueta>
+          )}
+        </span>
+      }
       subtitulo={STATUS_ITEM[item.status] ?? item.status}
       tom={feito ? "success" : "neutral"}
       onClick={() => onAbrir(item.id)}
