@@ -4531,6 +4531,18 @@ export type Database = {
           saida: string
         }[]
       }
+      minhas_viabilizacoes: {
+        Args: never
+        Returns: {
+          created_at: string
+          estreia_prevista: string
+          etapa: string
+          id: string
+          nome: string
+          property_id: string
+          visita_em: string
+        }[]
+      }
       proprietarios_para_lembrete_atraso: {
         Args: { p_limite?: number }
         Returns: {
