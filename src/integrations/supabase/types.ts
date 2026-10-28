@@ -4269,6 +4269,7 @@ export type Database = {
       viabilizacao_avisos: {
         Row: {
           created_at: string
+          destino: string | null
           disparado_em: string | null
           enviado_em: string | null
           erro: string | null
@@ -4276,15 +4277,14 @@ export type Database = {
           lote_id: string | null
           referencia: string | null
           status: string
-          telefone: string | null
           tentativas: number
           ticket_id: string | null
           tipo: string
-          valor_cents: number | null
           viabilizacao_id: string
         }
         Insert: {
           created_at?: string
+          destino?: string | null
           disparado_em?: string | null
           enviado_em?: string | null
           erro?: string | null
@@ -4292,15 +4292,14 @@ export type Database = {
           lote_id?: string | null
           referencia?: string | null
           status?: string
-          telefone?: string | null
           tentativas?: number
           ticket_id?: string | null
           tipo: string
-          valor_cents?: number | null
           viabilizacao_id: string
         }
         Update: {
           created_at?: string
+          destino?: string | null
           disparado_em?: string | null
           enviado_em?: string | null
           erro?: string | null
@@ -4308,11 +4307,9 @@ export type Database = {
           lote_id?: string | null
           referencia?: string | null
           status?: string
-          telefone?: string | null
           tentativas?: number
           ticket_id?: string | null
           tipo?: string
-          valor_cents?: number | null
           viabilizacao_id?: string
         }
         Relationships: [
@@ -4569,10 +4566,9 @@ export type Database = {
       viabilizacao_destino: {
         Args: { p_id: string }
         Returns: {
+          email: string
           imovel: string
           nome: string
-          telefone: string
-          tem_conta: boolean
         }[]
       }
     }
