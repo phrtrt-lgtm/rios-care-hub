@@ -432,18 +432,18 @@ export function FormularioViabilizacao({ open, onOpenChange, editar = null, imov
           <div className="flex items-start justify-between gap-3 rounded-lg border border-border/70 bg-muted/30 px-3 py-2.5">
             <div className="space-y-0.5">
               <Label htmlFor="viab-avisar" className="text-sm">
-                Avisar o proprietário por WhatsApp
+                Avisar o proprietário por e-mail quando um item for concluído
               </Label>
               <p className="text-xs text-muted-foreground">
-                A cada avanço: visita marcada, preparação, itens feitos e cobranças enviadas. Itens juntam numa mensagem só.
+                Itens concluídos em sequência juntam num e-mail só; item já cobrado não entra. A cobrança avisa como sempre.
                 {usaPortal
-                  ? " Vai para o WhatsApp do perfil dele."
-                  : propTelefone.trim()
-                    ? ` Vai para ${propTelefone.trim()}.`
-                    : " Sem número, nada sai."}
+                  ? " Vai para o e-mail da conta dele."
+                  : propEmail.trim()
+                    ? ` Vai para ${propEmail.trim()}.`
+                    : " Sem e-mail, nada sai."}
               </p>
             </div>
-            <Switch id="viab-avisar" checked={avisar} onCheckedChange={setAvisar} aria-label="Avisar o proprietário por WhatsApp" />
+            <Switch id="viab-avisar" checked={avisar} onCheckedChange={setAvisar} aria-label="Avisar o proprietário por e-mail quando um item for concluído" />
           </div>
 
           <div className="grid gap-3 sm:grid-cols-3">

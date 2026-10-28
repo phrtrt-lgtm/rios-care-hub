@@ -150,6 +150,17 @@ export default function ConfiguracaoEmail() {
     const baseUrl = window.location.origin;
     
     const examples: Record<string, Record<string, any>> = {
+      manutencao_concluida: {
+        owner_name: "Ana Souza",
+        owner_first_name: "Ana",
+        property_name: "Apto 301 - Edifício Vista Mar",
+        quantidade: 3,
+        titulo: "3 manutenções concluídas",
+        itens_html:
+          '<li style="margin:0 0 8px 0;">Trocar o chuveiro</li><li style="margin:0 0 8px 0;">Pintar o quarto</li><li style="margin:0 0 8px 0;">Instalar as cortinas</li>',
+        itens_texto: "Trocar o chuveiro, Pintar o quarto, Instalar as cortinas",
+        portal_url: `${baseUrl}/minha-caixa`,
+      },
       inspection_created: {
         property_name: "Apto 301 - Edifício Vista Mar",
         cleaner_name: "Maria Silva",

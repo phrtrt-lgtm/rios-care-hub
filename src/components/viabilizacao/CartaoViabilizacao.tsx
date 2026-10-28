@@ -3,8 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
-  BellOff,
-  BellRing,
   CalendarDays,
   Camera,
   ChevronDown,
@@ -13,6 +11,8 @@ import {
   Link2,
   List,
   Loader2,
+  Mail,
+  MailX,
   MapPin,
   MessageCircle,
   MoreHorizontal,
@@ -120,8 +120,8 @@ export function CartaoViabilizacao({
   const hoje = new Date();
   const visitaData = diaLocal(v.visita_em);
   const visitaPassou = !!visitaData && visitaData < new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
-  // Mesma precedência do banco (viabilizacao_destino): o número do registro, senão o do perfil.
-  const aviso = situacaoAvisos(v.avisos, v.avisar_proprietario, !!(v.proprietario_telefone?.trim() || conta?.phone?.trim()));
+  // Mesma precedência do banco (viabilizacao_destino): o e-mail da conta, senão o do registro.
+  const aviso = situacaoAvisos(v.avisos, v.avisar_proprietario, !!(conta?.email?.trim() || v.proprietario_email?.trim()));
   const avisoQuando = aviso.em ? quando(aviso.em) : null;
 
   const alternarAvisos = async () => {
@@ -129,8 +129,8 @@ export function CartaoViabilizacao({
       await atualizar.mutateAsync({ id: v.id, propertyId: v.property_id, mudanca: { avisarProprietario: !v.avisar_proprietario } });
       toast.success(
         v.avisar_proprietario
-          ? "O proprietário não recebe mais WhatsApp deste imóvel"
-          : "O proprietário volta a receber WhatsApp a cada avanço",
+          ? "O proprietário não recebe mais e-mail de conclusão deste imóvel"
+          : "O proprietário volta a receber e-mail quando um item for concluído",
       );
     } catch (erro) {
       toast.error(erro instanceof Error ? erro.message : "Não foi possível salvar");
@@ -240,9 +240,9 @@ export function CartaoViabilizacao({
               title={[aviso.detalhe, avisoQuando?.completo].filter(Boolean).join(" · ") || undefined}
             >
               {v.avisar_proprietario ? (
-                <BellRing className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                <Mail className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               ) : (
-                <BellOff className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                <MailX className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               )}
               {aviso.rotulo}
               {avisoQuando ? ` ${avisoQuando.relativo}` : ""}
@@ -296,8 +296,8 @@ export function CartaoViabilizacao({
                 Adicionar foto ou vídeo da visita
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => void alternarAvisos()} disabled={atualizar.isPending}>
-                {v.avisar_proprietario ? <BellOff className="h-4 w-4" aria-hidden="true" /> : <BellRing className="h-4 w-4" aria-hidden="true" />}
-                {v.avisar_proprietario ? "Desligar avisos ao proprietário" : "Ligar avisos ao proprietário"}
+                {v.avisar_proprietario ? <MailX className="h-4 w-4" aria-hidden="true" /> : <Mail className="h-4 w-4" aria-hidden="true" />}
+                {v.avisar_proprietario ? "Desligar e-mail de conclusão" : "Ligar e-mail de conclusão"}
               </DropdownMenuItem>
               {v.imovel && (
                 <>

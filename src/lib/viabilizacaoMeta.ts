@@ -71,11 +71,13 @@ export function diaLocal(valor: string | null | undefined): Date | null {
 }
 
 /* ------------------------------------------------------------------------ */
-/* Avisos ao proprietário por WhatsApp (tabela viabilizacao_avisos)           */
+/* E-mail de conclusão ao proprietário (tabela viabilizacao_avisos)          */
 /* ------------------------------------------------------------------------ */
 
-export type TipoAviso = "etapa" | "visita" | "estreia" | "item_novo" | "item_feito" | "item_enviado";
-export type StatusAviso = "pendente" | "disparado" | "enviado" | "falhou" | "sem_destino" | "desligado";
+/** Só a conclusão de item avisa; o gestor não quer aviso de movimentação (2026-10-28). */
+export type TipoAviso = "item_feito";
+/** `cobrado` = não foi enviado porque a cobrança do item já avisou. */
+export type StatusAviso = "pendente" | "disparado" | "enviado" | "falhou" | "sem_destino" | "desligado" | "cobrado";
 
 export interface AvisoProprietario {
   id: string;
@@ -99,30 +101,30 @@ export interface SituacaoAvisos {
  * Resume os últimos avisos para a linha do cartão: o que está na fila manda,
  * depois o resultado mais recente. `avisos` vem do mais novo para o mais velho.
  */
-export function situacaoAvisos(avisos: AvisoProprietario[], ligado: boolean, temTelefone: boolean): SituacaoAvisos {
+export function situacaoAvisos(avisos: AvisoProprietario[], ligado: boolean, temEmail: boolean): SituacaoAvisos {
   if (!ligado) {
-    return { rotulo: "Avisos ao proprietário desligados", tom: "neutral", detalhe: "Ligue no menu do imóvel para ele receber WhatsApp a cada avanço", em: null };
+    return { rotulo: "E-mail de conclusão desligado", tom: "neutral", detalhe: "Ligue no menu do imóvel para o proprietário receber e-mail quando um item for concluído", em: null };
   }
   const naFila = avisos.filter((a) => a.status === "pendente" || a.status === "disparado").length;
-  if (!temTelefone) {
+  if (!temEmail) {
     return {
-      rotulo: naFila > 0 ? `${naFila} ${naFila === 1 ? "novidade espera" : "novidades esperam"} um WhatsApp` : "Sem WhatsApp do proprietário",
+      rotulo: naFila > 0 ? `${naFila} ${naFila === 1 ? "conclusão espera" : "conclusões esperam"} um e-mail` : "Sem e-mail do proprietário",
       tom: "warning",
-      detalhe: "Informe o número em Editar dados para os avisos saírem",
+      detalhe: "Informe o e-mail em Editar dados para o aviso de conclusão sair",
       em: null,
     };
   }
   if (naFila > 0) {
     return {
-      rotulo: `${naFila} ${naFila === 1 ? "novidade a enviar" : "novidades a enviar"} ao proprietário`,
+      rotulo: `${naFila} ${naFila === 1 ? "conclusão a enviar" : "conclusões a enviar"} por e-mail`,
       tom: "info",
-      detalhe: "Itens juntam por 10 minutos e saem numa mensagem só; etapa sai em até 5",
+      detalhe: "Itens concluídos juntam por 10 minutos e saem num e-mail só; item já cobrado não entra",
       em: null,
     };
   }
   const ultimo = avisos.find((a) => a.status === "enviado" || a.status === "falhou" || a.status === "sem_destino");
-  if (ultimo?.status === "enviado") return { rotulo: "Proprietário avisado", tom: "success", detalhe: null, em: ultimo.enviado_em ?? ultimo.created_at };
-  if (ultimo?.status === "falhou") return { rotulo: "WhatsApp ao proprietário falhou", tom: "destructive", detalhe: ultimo.erro, em: ultimo.created_at };
-  if (ultimo?.status === "sem_destino") return { rotulo: "WhatsApp não saiu: sem número", tom: "warning", detalhe: ultimo.erro, em: ultimo.created_at };
-  return { rotulo: "Avisos ao proprietário ligados", tom: "neutral", detalhe: "Ele recebe WhatsApp a cada avanço: visita, preparação, itens feitos e cobranças", em: null };
+  if (ultimo?.status === "enviado") return { rotulo: "Proprietário avisado por e-mail", tom: "success", detalhe: null, em: ultimo.enviado_em ?? ultimo.created_at };
+  if (ultimo?.status === "falhou") return { rotulo: "E-mail de conclusão falhou", tom: "destructive", detalhe: ultimo.erro, em: ultimo.created_at };
+  if (ultimo?.status === "sem_destino") return { rotulo: "E-mail não saiu: sem endereço", tom: "warning", detalhe: ultimo.erro, em: ultimo.created_at };
+  return { rotulo: "E-mail de conclusão ligado", tom: "neutral", detalhe: "O proprietário recebe um e-mail quando itens são concluídos; a cobrança avisa pelo caminho de sempre", em: null };
 }

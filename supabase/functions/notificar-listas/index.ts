@@ -17,11 +17,16 @@
 // O resultado fica em <tabela>.notificacao_status / _em / _erro.
 //
 // Novo imóvel (CLAUDE.md §3.19, desde 2026-10-28): o cron
-// disparar_avisos_viabilizacao manda { lote_viabilizacao } com o mesmo token.
-// A function junta os avisos do lote (etapa, visita, estreia, itens novos e
-// feitos, cobranças enviadas) numa mensagem só ao PROPRIETÁRIO, com o telefone
-// de viabilizacao_destino(), e grava o resultado em viabilizacao_avisos.status.
+// disparar_avisos_viabilizacao manda { lote_email } com o mesmo token. A
+// function junta os itens CONCLUÍDOS do lote num E-MAIL só ao proprietário
+// (modelo `manutencao_concluida` de email_templates, endereço de
+// viabilizacao_destino()), pula os que já viraram cobrança (a cobrança já
+// avisou) e grava o resultado em viabilizacao_avisos.status. Nada de WhatsApp
+// para o proprietário aqui: o gestor pediu só cobrança (como sempre) e o
+// e-mail de conclusão, sem spam.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.1";
+import { Resend } from "https://esm.sh/resend@2.0.0";
+import { getTemplate, renderTemplate } from "../_shared/template-renderer.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -87,178 +92,149 @@ async function enviarCentral(chave: string, para: string, params: string[]) {
 }
 
 /* ------------------------------------------------------------------------ */
-/* Novo imóvel: lote de avisos ao proprietário (CLAUDE.md §3.19)              */
+/* Novo imóvel: e-mail de conclusão ao proprietário (CLAUDE.md §3.19)         */
 /* ------------------------------------------------------------------------ */
 
-type TipoAviso = "etapa" | "visita" | "estreia" | "item_novo" | "item_feito" | "item_enviado";
-
-interface AvisoViabilizacao {
+interface AvisoConclusao {
   id: string;
   viabilizacao_id: string;
-  tipo: TipoAviso;
+  tipo: string;
   referencia: string | null;
   ticket_id: string | null;
-  valor_cents: number | null;
 }
 
-interface ViabilizacaoParaAviso {
-  id: string;
-  nome: string;
-  etapa: string;
-  visita_em: string | null;
-  estreia_prevista: string | null;
-  avisar_proprietario: boolean;
-}
-
-interface DestinoViabilizacao {
+interface DestinoEmail {
   nome: string | null;
-  telefone: string | null;
+  email: string | null;
   imovel: string | null;
-  tem_conta: boolean;
 }
 
-const PESO_ITEM: Record<string, number> = { item_novo: 1, item_feito: 2, item_enviado: 3 };
+const PORTAL_URL = `https://${PORTAL}/minha-caixa`;
+const TEMPLATE_CONCLUSAO = "manutencao_concluida";
 
-const brl = (cents: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
-
-/** Até `max` nomes; o resto vira "e mais N". */
-function listar(nomes: string[], max = 4): string {
-  const limpos = nomes.map((n) => limpar(n, 80)).filter(Boolean);
-  const inicio = limpos.slice(0, max).join(", ");
-  return limpos.length > max ? `${inicio} e mais ${limpos.length - max}` : inicio;
-}
-
-/** A frase da etapa já leva a visita e a estreia do registro. */
-function fraseEtapa(etapa: string, v: ViabilizacaoParaAviso): string | null {
-  const estreia = v.estreia_prevista ? `, com estreia prevista para ${dia(v.estreia_prevista)}` : "";
-  switch (etapa) {
-    case "visita":
-      return v.visita_em
-        ? `Visita marcada para ${dia(v.visita_em)}, para levantar o que precisa ser feito`
-        : "Vamos marcar a visita em breve, para levantar o que precisa ser feito";
-    case "preparacao":
-      return `O imóvel entrou em preparação (consertos, compras e montagem)${estreia}`;
-    case "pronto":
-      return `Tudo pronto no imóvel! Agora é fotografar e publicar o anúncio${estreia}`;
-    case "no_ar":
-      return "O anúncio foi publicado: o imóvel está no ar e já pode receber reservas";
-    default:
-      return null;
-  }
-}
+const escaparHtml = (t: string) =>
+  t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 /**
- * Uma mensagem para o lote inteiro: a última etapa (ou visita/estreia soltas),
- * depois os itens, cada item uma vez no estado mais adiantado
- * (enviado > feito > novo).
+ * Um e-mail para o lote: os itens concluídos do imóvel, cada ticket uma vez,
+ * sem os que já têm cobrança lançada (o e-mail da cobrança já contou).
  */
-function montarTextoViabilizacao(v: ViabilizacaoParaAviso, avisos: AvisoViabilizacao[], temConta: boolean): string {
-  const frases: string[] = [];
-  const etapas = avisos.filter((a) => a.tipo === "etapa");
-  const ultimaEtapa = etapas[etapas.length - 1];
-  if (ultimaEtapa?.referencia) {
-    const f = fraseEtapa(ultimaEtapa.referencia, v);
-    if (f) frases.push(f);
-  } else {
-    const visita = avisos.filter((a) => a.tipo === "visita").pop();
-    if (visita?.referencia) frases.push(`Visita marcada para ${dia(visita.referencia)}`);
-    const estreia = avisos.filter((a) => a.tipo === "estreia").pop();
-    if (estreia?.referencia) frases.push(`Estreia prevista para ${dia(estreia.referencia)}`);
-  }
-
-  const porItem = new Map<string, AvisoViabilizacao>();
-  for (const a of avisos) {
-    if (!(a.tipo in PESO_ITEM)) continue;
-    const chave = a.ticket_id ?? a.id;
-    const atual = porItem.get(chave);
-    if (!atual || PESO_ITEM[a.tipo] >= PESO_ITEM[atual.tipo]) porItem.set(chave, a);
-  }
-  const itens = [...porItem.values()];
-  const novos = itens.filter((a) => a.tipo === "item_novo").map((a) => a.referencia || "item");
-  const feitos = itens.filter((a) => a.tipo === "item_feito").map((a) => a.referencia || "item");
-  const enviados = itens.filter((a) => a.tipo === "item_enviado");
-  if (novos.length > 0) {
-    frases.push(`${novos.length === 1 ? "Entrou na lista do que fazer" : `Entraram na lista do que fazer (${novos.length})`}: ${listar(novos)}`);
-  }
-  if (feitos.length > 0) {
-    frases.push(`${feitos.length === 1 ? "Concluído" : `Concluídos (${feitos.length})`}: ${listar(feitos)}`);
-  }
-  if (enviados.length > 0) {
-    const nomes = enviados.map((a) => {
-      const ref = a.referencia || "item";
-      if (a.valor_cents === null || a.valor_cents === undefined) return ref;
-      return a.valor_cents > 0 ? `${ref} (${brl(a.valor_cents)})` : `${ref} (por conta da RIOS)`;
-    });
-    frases.push(`${enviados.length === 1 ? "Cobrança enviada" : `Cobranças enviadas (${enviados.length})`}: ${listar(nomes)}`);
-  }
-  if (frases.length === 0) return "";
-  let texto = `${frases.join(". ")}.`;
-  if (temConta) texto += ` Acompanhe em ${PORTAL}.`;
-  return texto;
-}
-
-async function enviarLoteViabilizacao(supabase: ReturnType<typeof createClient>, lote: string) {
-  if (!UUID_RE.test(lote)) return json({ error: "lote_viabilizacao inválido." }, 400);
+async function enviarLoteEmail(supabase: ReturnType<typeof createClient>, lote: string) {
+  if (!UUID_RE.test(lote)) return json({ error: "lote_email inválido." }, 400);
 
   const { data: avisosData, error: erroAvisos } = await supabase
     .from("viabilizacao_avisos")
-    .select("id, viabilizacao_id, tipo, referencia, ticket_id, valor_cents")
+    .select("id, viabilizacao_id, tipo, referencia, ticket_id")
     .eq("lote_id", lote)
     .eq("status", "disparado")
     .order("created_at", { ascending: true });
   if (erroAvisos) return json({ error: erroAvisos.message }, 500);
-  const avisos = (avisosData ?? []) as AvisoViabilizacao[];
+  const avisos = (avisosData ?? []) as AvisoConclusao[];
   if (avisos.length === 0) return json({ status: "vazio", lote });
 
-  const gravar = (status: string, erro: string | null = null, telefone: string | null = null) =>
+  const gravar = (status: string, erro: string | null = null, destino: string | null = null) =>
     supabase
       .from("viabilizacao_avisos")
-      .update({ status, erro, telefone, enviado_em: status === "enviado" ? new Date().toISOString() : null })
+      .update({ status, erro, destino, enviado_em: status === "enviado" ? new Date().toISOString() : null })
       .eq("lote_id", lote)
       .eq("status", "disparado");
 
   const { data: v } = await supabase
     .from("viabilizacoes")
-    .select("id, nome, etapa, visita_em, estreia_prevista, avisar_proprietario")
+    .select("id, nome, avisar_proprietario")
     .eq("id", avisos[0].viabilizacao_id)
     .maybeSingle();
   if (!v) {
     await gravar("falhou", "Registro do imóvel não encontrado.");
     return json({ status: "falhou", lote });
   }
-  const viab = v as ViabilizacaoParaAviso;
-  if (!viab.avisar_proprietario) {
+  if (!v.avisar_proprietario) {
     await gravar("desligado");
     return json({ status: "desligado", lote });
   }
 
-  const { data: destinoData } = await supabase.rpc("viabilizacao_destino", { p_id: viab.id });
-  const destino = (Array.isArray(destinoData) ? destinoData[0] : destinoData) as DestinoViabilizacao | undefined;
-  if (!destino?.telefone) {
-    await gravar("sem_destino", "Sem WhatsApp do proprietário.");
+  // Item que já virou cobrança não entra: o e-mail da cobrança já avisou.
+  const ticketIds = [...new Set(avisos.map((a) => a.ticket_id).filter((t): t is string => !!t))];
+  const jaCobrados = new Set<string>();
+  if (ticketIds.length > 0) {
+    const { data: cobradas } = await supabase
+      .from("charges")
+      .select("ticket_id")
+      .in("ticket_id", ticketIds)
+      .neq("status", "draft")
+      .is("archived_at", null);
+    for (const c of cobradas ?? []) if (c.ticket_id) jaCobrados.add(c.ticket_id);
+  }
+  if (jaCobrados.size > 0) {
+    await supabase
+      .from("viabilizacao_avisos")
+      .update({ status: "cobrado" })
+      .eq("lote_id", lote)
+      .eq("status", "disparado")
+      .in("ticket_id", [...jaCobrados]);
+  }
+  const porTicket = new Map<string, AvisoConclusao>();
+  for (const a of avisos) {
+    if (a.ticket_id && jaCobrados.has(a.ticket_id)) continue;
+    porTicket.set(a.ticket_id ?? a.id, a);
+  }
+  const itens = [...porTicket.values()].map((a) => (a.referencia || "Manutenção").trim());
+  if (itens.length === 0) return json({ status: "cobrado", lote });
+
+  const { data: destinoData } = await supabase.rpc("viabilizacao_destino", { p_id: v.id });
+  const destino = (Array.isArray(destinoData) ? destinoData[0] : destinoData) as DestinoEmail | undefined;
+  const email = (destino?.email || "").trim().toLowerCase();
+  if (!email || !email.includes("@")) {
+    await gravar("sem_destino", "Sem e-mail do proprietário.");
     return json({ status: "sem_destino", lote });
   }
 
-  const texto = montarTextoViabilizacao(viab, avisos, !!destino.tem_conta);
-  if (!texto) {
-    await gravar("falhou", "Nada a enviar.");
+  const template = await getTemplate(supabase, TEMPLATE_CONCLUSAO);
+  if (!template) {
+    await gravar("falhou", `Modelo de e-mail "${TEMPLATE_CONCLUSAO}" não encontrado.`);
+    return json({ status: "falhou", lote });
+  }
+  const chave = Deno.env.get("RESEND_API_KEY");
+  if (!chave) {
+    await gravar("falhou", "RESEND_API_KEY não configurada.");
     return json({ status: "falhou", lote });
   }
 
-  const chave = Deno.env.get("NOTIFICAR_KEY");
-  if (!chave) {
-    await gravar("falhou", "NOTIFICAR_KEY não configurada.");
-    return json({ status: "falhou", erro: "NOTIFICAR_KEY não configurada.", lote });
-  }
+  const nome = (destino?.nome || "").trim() || "Proprietário";
+  const imovel = (destino?.imovel || v.nome || "seu imóvel").trim();
+  const quantidade = itens.length;
+  const variables = {
+    owner_name: nome,
+    owner_first_name: nome.split(/\s+/)[0],
+    property_name: imovel,
+    quantidade,
+    titulo: quantidade === 1 ? "Manutenção concluída" : `${quantidade} manutenções concluídas`,
+    itens_html: itens.map((i) => `<li style="margin:0 0 8px 0;">${escaparHtml(i)}</li>`).join(""),
+    itens_texto: itens.join(", "),
+    portal_url: PORTAL_URL,
+  };
 
-  const nome = (destino.nome || "").trim().split(/\s+/)[0] || "Proprietário";
-  const r = await enviarCentral(chave, destino.telefone, [
-    limpar(nome, 60),
-    limpar(`Imóvel ${destino.imovel || viab.nome}`, 200),
-    limpar(texto),
-  ]);
-  await gravar(r.ok ? "enviado" : "falhou", r.erro, destino.telefone);
-  return json({ status: r.ok ? "enviado" : "falhou", erro: r.erro, lote });
+  try {
+    const resend = new Resend(chave);
+    const { error } = await resend.emails.send({
+      from: "RIOS <sistema@rioshospedagens.com.br>",
+      reply_to: "rioslagoon@gmail.com",
+      to: [email],
+      subject: renderTemplate(template.subject, variables),
+      html: renderTemplate(template.body_html, variables),
+    });
+    if (error) {
+      const texto = typeof error === "string" ? error : (error as { message?: string }).message || JSON.stringify(error);
+      await gravar("falhou", texto.slice(0, 500), email);
+      return json({ status: "falhou", erro: texto, lote });
+    }
+  } catch (e) {
+    const texto = `Falha ao enviar: ${(e as Error).message}`;
+    await gravar("falhou", texto.slice(0, 500), email);
+    return json({ status: "falhou", erro: texto, lote });
+  }
+  await gravar("enviado", null, email);
+  return json({ status: "enviado", itens: quantidade, lote });
 }
 
 Deno.serve(async (req) => {
@@ -272,10 +248,10 @@ Deno.serve(async (req) => {
   const { data: valido, error: erroToken } = await supabase.rpc("verificar_token_interno", { p_token: token });
   if (erroToken || valido !== true) return json({ error: "Não autorizado." }, 401);
 
-  let body: { tabela?: string; id?: string; lote_viabilizacao?: string } = {};
+  let body: { tabela?: string; id?: string; lote_email?: string } = {};
   try { body = await req.json(); } catch { return json({ error: "Corpo inválido." }, 400); }
-  if (body.lote_viabilizacao !== undefined) {
-    return await enviarLoteViabilizacao(supabase, String(body.lote_viabilizacao));
+  if (body.lote_email !== undefined) {
+    return await enviarLoteEmail(supabase, String(body.lote_email));
   }
   const tabela = body.tabela as Tabela;
   const id = String(body.id ?? "");
