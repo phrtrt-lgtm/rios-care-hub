@@ -21,6 +21,7 @@ import { PainelHero } from "@/components/painel/PainelHero";
 import { OwnerResumo } from "@/components/painel/OwnerResumo";
 import { ResultadosMini } from "@/components/resultados/ResultadosMini";
 import { OwnerAjuda } from "@/components/painel/OwnerAjuda";
+import { OwnerPreparacao } from "@/components/painel/OwnerPreparacao";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 
 export default function MinhaCaixa() {
@@ -113,6 +114,9 @@ export default function MinhaCaixa() {
 
       <main className="container relative mx-auto flex flex-col gap-7 px-4 py-6 md:gap-8 md:py-8">
         <PainelHero nome={profile?.name} subtitulo="Seus imóveis, cobranças e chamados em um lugar só." />
+
+        {/* 0. Imóvel novo em preparação: só enquanto a viabilização está aberta (§3.19) */}
+        {isOwner && <OwnerPreparacao />}
 
         {/* 1. Resultados dos imóveis, em versão mini (só com a coleta da Hostex em dia) */}
         {isOwner && <ResultadosMini />}
