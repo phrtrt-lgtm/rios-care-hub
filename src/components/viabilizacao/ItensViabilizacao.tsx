@@ -106,10 +106,9 @@ function LinhaItem({
         </button>
 
         <div className="min-w-0 flex-1">
-          <p className={cn("truncate text-sm font-medium", feito && "text-muted-foreground")} title={item.subject}>
-            {item.subject}
-          </p>
+          <TituloItem titulo={item.subject} suave={feito} ocupado={ocupado} onSalvar={(novo) => onCampo("subject", novo)} />
         </div>
+
 
         <div className="shrink-0 md:order-last">
           <DropdownMenu>
