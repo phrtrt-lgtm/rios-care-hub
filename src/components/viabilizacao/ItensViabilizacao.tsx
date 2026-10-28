@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ClipboardEvent, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ClipboardEvent, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { Check, Circle, ExternalLink, Loader2, MessageSquare, MoreHorizontal, Paperclip, Pencil, Plus, Send, Trash2, Undo2 } from "lucide-react";
 import { toast } from "sonner";
