@@ -16,8 +16,9 @@ import type { ListStatus, TicketStatus } from "@/components/maintenance/listaTip
  * `src/lib/manutencaoLista.ts`, para as duas telas serem uma coisa só.
  */
 
-// A tabela é de 2026-10-27 e o types.ts (gerado pelo Lovable) ainda não a
-// conhece: até ele ser regenerado, ela passa pelo cliente sem tipos.
+// O types.ts ganhou `viabilizacoes` e `viabilizacao_avisos` em 2026-10-28
+// (regenerado pelo Lovable). O hook ainda passa pelo cliente sem tipos; trocar
+// para o cliente tipado quando mexer aqui.
 const clienteSemTipos = supabase as unknown as SupabaseClient;
 export const tabelaViabilizacoes = () => clienteSemTipos.from("viabilizacoes");
 
