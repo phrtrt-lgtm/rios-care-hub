@@ -173,8 +173,6 @@ const GerenciarCobrancas = () => {
 
   const fetchDebitoCharges = async () => {
     try {
-      // Dia local: toISOString() daria o dia UTC, que vira o dia seguinte a partir das 21h.
-      const todayStr = format(new Date(), "yyyy-MM-dd");
       const { data: chargesData, error } = await supabase
         .from('charges')
         .select('*')
