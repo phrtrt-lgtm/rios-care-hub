@@ -173,13 +173,11 @@ const GerenciarCobrancas = () => {
 
   const fetchDebitoCharges = async () => {
     try {
-      // Dia local: toISOString() daria o dia UTC, que vira o dia seguinte a partir das 21h.
-      const todayStr = format(new Date(), "yyyy-MM-dd");
       const { data: chargesData, error } = await supabase
         .from('charges')
         .select('*')
+        // Todas as cobranças em aberto do imóvel entram no débito, não só as vencidas.
         .in('status', ['overdue', 'sent', 'pendente', 'under_review', 'debit_notice_sent'])
-        .lt('due_date', todayStr)
         .is('archived_at', null)
         .is('paid_at', null)
         .or('cost_responsible.is.null,cost_responsible.neq.guest')
@@ -562,8 +560,8 @@ const GerenciarCobrancas = () => {
             <Card className="rounded-xl border-border/70">
               <EmptyState
                 icon={<Receipt className="h-6 w-6" />}
-                title="Nenhuma cobrança vencida para debitar"
-                description="Cobranças vencidas e ainda não pagas aparecem aqui para o débito em reserva."
+                title="Nenhuma cobrança em aberto para debitar"
+                description="Cobranças em aberto (vencidas ou não) aparecem aqui para o débito em reserva."
               />
             </Card>
           ) : (
