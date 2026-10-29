@@ -36,7 +36,8 @@ export function DebitosReserva({ cobrancas, ano }: { cobrancas: CobrancaDebitada
   const grupos = useMemo(() => {
     const mapa = new Map<string, CobrancaDebitada[]>();
     for (const c of cobrancas) {
-      if (c.status !== "debited") continue;
+      // Débitos antigos gravaram a data mas deixaram outro status (paga, vencida).
+      if (c.status !== "debited" && !c.reserve_debit_date) continue;
       const dia = dataDoDebito(c);
       if (!dia) continue;
       if (ano && Number(dia.slice(0, 4)) !== ano) continue;
