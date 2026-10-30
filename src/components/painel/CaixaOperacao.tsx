@@ -1,6 +1,8 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { ChevronDown, ChevronRight, ChevronUp } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
@@ -25,6 +27,11 @@ interface CaixaProps {
   className?: string;
   /** Sem padding interno: o conteúdo cuida do próprio espaçamento. */
   semPadding?: boolean;
+  /** Mostra o botão de abrir/fechar a caixa inteira (só o cabeçalho fica fechado). */
+  recolhivel?: boolean;
+  /** Estado do corpo. Só tem efeito com `recolhivel`. */
+  aberto?: boolean;
+  onAbrirChange?: (aberto: boolean) => void;
 }
 
 /**
