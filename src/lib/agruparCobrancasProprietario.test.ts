@@ -1,4 +1,5 @@
-import { test, expect } from "bun:test";
+import { test } from "node:test";
+import { strict as assert } from "node:assert";
 import { agruparCobrancasProprietario } from "./agruparCobrancasProprietario";
 
 test("Patricia reúne PATPERO e PATPERO2 para um débito, sem incluir outro proprietário", () => {
@@ -12,8 +13,8 @@ test("Patricia reúne PATPERO e PATPERO2 para um débito, sem incluir outro prop
     charge("3", "outra-pessoa", "OUTRO", 50000),
   ]);
   const patricia = groups.find(g => g.id === "patricia");
-  expect(groups).toHaveLength(2);
-  expect(patricia?.charges.map(c => c.id)).toEqual(["1", "2"]);
-  expect(patricia?.name).toBe("PATPERO · PATPERO2");
-  expect(patricia?.totalDueCents).toBe(30000);
+  assert.equal(groups.length, 2);
+  assert.deepEqual(patricia?.charges.map(c => c.id), ["1", "2"]);
+  assert.equal(patricia?.name, "PATPERO · PATPERO2");
+  assert.equal(patricia?.totalDueCents, 30000);
 });
