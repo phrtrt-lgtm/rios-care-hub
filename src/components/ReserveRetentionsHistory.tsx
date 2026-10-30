@@ -11,6 +11,8 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ChevronDown, ChevronRight, Wallet, Receipt } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { saldoRetencao, type CobrancaRetida } from "@/lib/saldoRetencao";
 
 interface ReservationSnapshot {
   date: string;
@@ -27,7 +29,8 @@ interface CreditApplication {
   id: string;
   amount_applied_cents: number;
   applied_at: string;
-  charge: { id: string; title: string | null } | null;
+  charge: ({ id: string; title: string | null; property_id: string | null;
+    property: { name: string } | null } & CobrancaRetida) | null;
 }
 
 interface CreditRow {
@@ -53,6 +56,8 @@ interface Props {
   emptyDescription?: string;
   /** Render nothing instead of an empty state when there are no retentions */
   hideWhenEmpty?: boolean;
+  reserveOnly?: boolean;
+  propertyId?: string;
 }
 
 export function ReserveRetentionsHistory({
@@ -60,11 +65,13 @@ export function ReserveRetentionsHistory({
   title = "Débitos e créditos registrados",
   emptyDescription = "Nenhum débito retroativo ou registro avulso até o momento.",
   hideWhenEmpty = false,
+  reserveOnly = false,
+  propertyId,
 }: Props) {
   const [openIds, setOpenIds] = useState<Set<string>>(new Set());
 
   const { data: credits, isLoading } = useQuery({
-    queryKey: ["reserve-retentions", ownerId ?? "all"],
+    queryKey: ["reserve-retentions", ownerId ?? "all", reserveOnly],
     queryFn: async () => {
       let query = supabase
         .from("owner_credits")
@@ -74,10 +81,13 @@ export function ReserveRetentionsHistory({
            owner:profiles!owner_credits_owner_id_fkey(name),
            applications:owner_credit_applications(
              id, amount_applied_cents, applied_at,
-             charge:charges!owner_credit_applications_charge_id_fkey(id, title)
+             charge:charges!owner_credit_applications_charge_id_fkey(
+               id, title, property_id, amount_cents, management_contribution_cents, credit_applied_cents,
+               property:properties(name), payments:charge_payments(amount_cents)
+             )
            )`
         )
-        .in("origin_type", ["reserve_retention", "manual_adjustment"])
+        .in("origin_type", reserveOnly ? ["reserve_retention"] : ["reserve_retention", "manual_adjustment"])
         .order("created_at", { ascending: false });
 
       if (ownerId) query = query.eq("owner_id", ownerId);
@@ -97,7 +107,10 @@ export function ReserveRetentionsHistory({
 
   if (isLoading) return hideWhenEmpty ? null : <SectionSkeleton />;
 
-  if (!credits || credits.length === 0) {
+  const visibleCredits = (credits ?? []).filter((credit) => !propertyId ||
+    credit.applications.some((app) => app.charge?.property_id === propertyId));
+
+  if (visibleCredits.length === 0) {
     if (hideWhenEmpty) return null;
     return (
       <EmptyState
@@ -113,10 +126,10 @@ export function ReserveRetentionsHistory({
       <div className="flex items-center gap-2">
         <Wallet className="h-4 w-4 text-primary" />
         <h3 className="font-semibold text-sm">{title}</h3>
-        <Badge variant="secondary">{credits.length}</Badge>
+        <Badge variant="secondary">{visibleCredits.length}</Badge>
       </div>
 
-      {credits.map((credit) => {
+      {visibleCredits.map((credit) => {
         const isOpen = openIds.has(credit.id);
         const reservations = credit.origin_reservations ?? [];
         const applied = credit.initial_amount_cents - (credit.remaining_amount_cents ?? 0);
@@ -126,10 +139,12 @@ export function ReserveRetentionsHistory({
 
         return (
           <Card key={credit.id} className="overflow-hidden">
-            <button
+            <Button
               type="button"
+                variant="ghost"
+                aria-expanded={isOpen}
               onClick={() => toggle(credit.id)}
-              className="w-full text-left p-3 flex items-start gap-3 hover:bg-muted/40 transition-colors"
+                className="h-auto w-full whitespace-normal rounded-none text-left p-3 flex items-start gap-3 hover:bg-muted/40 transition-colors"
             >
               {isOpen ? (
                 <ChevronDown className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
@@ -165,7 +180,7 @@ export function ReserveRetentionsHistory({
                 <p className="font-semibold">{formatBRL(credit.initial_amount_cents)}</p>
                 <p className="text-xs text-muted-foreground">{isManual ? "registrado" : "retido"}</p>
               </div>
-            </button>
+            </Button>
 
             {isOpen && (
               <div className="border-t px-3 py-3 space-y-4 bg-muted/20">
@@ -238,9 +253,17 @@ export function ReserveRetentionsHistory({
                           <li key={app.id} className="flex justify-between gap-2 text-xs">
                             <span className="truncate text-foreground">
                               {app.charge?.title ?? "Cobrança"}
+                              {app.charge?.property?.name && (
+                                <span className="block text-muted-foreground">{app.charge.property.name}</span>
+                              )}
                             </span>
-                            <span className="shrink-0 font-medium text-success">
+                            <span className="shrink-0 text-right font-medium text-success">
                               - {formatBRL(app.amount_applied_cents)}
+                              {app.charge && (
+                                <span className={cn("block", saldoRetencao(app.charge) === 0 ? "text-success" : "text-warning")}>
+                                  {saldoRetencao(app.charge) === 0 ? "Zerada" : `Saldo atual ${formatBRL(saldoRetencao(app.charge))}`}
+                                </span>
+                              )}
                             </span>
                           </li>
                         ))}
