@@ -48,6 +48,8 @@ export function ChargesKanbanPreview() {
   const [chatCharge, setChatCharge] = useState<Charge | null>(null);
   const [vencidasExpanded, setVencidasExpanded] = useState(false);
   const [pendentesExpanded, setPendentesExpanded] = useState(false);
+  // A caixa começa recolhida: só o cabeçalho com as contagens (pedido do gestor).
+  const [caixaAberta, setCaixaAberta] = useState(false);
 
   const isOwner = profile?.role === "owner";
 
@@ -146,6 +148,9 @@ export function ChargesKanbanPreview() {
       icone={<DollarSign />}
       titulo="Cobranças"
       tom="success"
+      recolhivel
+      aberto={caixaAberta}
+      onAbrirChange={setCaixaAberta}
       selos={
         <>
           {charges.length > 0 && <SeloContagem>{charges.length}</SeloContagem>}
