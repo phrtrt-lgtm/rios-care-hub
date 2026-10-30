@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useMaintenances, useMaintenanceCharts } from "@/hooks/useMaintenances";
 import { MaintenanceCharts } from "@/components/MaintenanceCharts";
 import { DebitosReserva } from "@/components/maintenance/DebitosReserva";
+import { ReserveRetentionsHistory } from "@/components/ReserveRetentionsHistory";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -563,6 +564,8 @@ export default function Manutencoes() {
       )}
 
       <DebitosReserva cobrancas={maintenances as any} />
+      <ReserveRetentionsHistory ownerId={ownerId} propertyId={propertyId} reserveOnly hideWhenEmpty
+        title="Débitos em reserva — retenções registradas" />
 
       {/* Gráficos no final */}
       <MaintenanceCharts charts={charts ?? null} serviceTypeData={serviceTypeData} />
