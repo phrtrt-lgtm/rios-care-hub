@@ -93,7 +93,7 @@ export function OpenChargesTable({
   const [sortField, setSortField] = useState<SortField | null>("due_date");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [calculatorOpen, setCalculatorOpen] = useState(false);
-  const [calculatorCharge, setCalculatorCharge] = useState<Charge | null>(null);
+  const [calculatorGroup, setCalculatorGroup] = useState<PropertyGroup | null>(null);
 
   // Retenções retroativas em reserva, agrupadas por proprietário (exibidas dentro do imóvel)
   const { data: retentionsByOwner } = useQuery({
@@ -184,7 +184,9 @@ export function OpenChargesTable({
   };
 
   const handleOpenCalculator = (charge: Charge) => {
-    setCalculatorCharge(charge);
+    const group = propertyGroups.find(g => g.id === charge.owner_id);
+    if (!group) return;
+    setCalculatorGroup(group);
     setCalculatorOpen(true);
   };
 
@@ -279,8 +281,8 @@ export function OpenChargesTable({
                 <th scope="col" className="w-[40px] px-2">
                   <span className="sr-only">Expandir ou selecionar</span>
                 </th>
-                {renderSortableHeader("Imóvel", "property", "text-left")}
                 {renderSortableHeader("Proprietário", "owner", "text-left")}
+                {renderSortableHeader("Imóveis", "property", "text-left")}
                 {renderSortableHeader("Vencimento", "due_date", "text-center w-[100px]")}
                 <th scope="col" className="text-right px-2 py-2 font-medium w-[100px]">Total</th>
                 <th scope="col" className="text-right px-2 py-2 font-medium w-[100px]">Aporte</th>
@@ -295,7 +297,7 @@ export function OpenChargesTable({
               <tr className="bg-primary/5 border-b font-medium">
                 <td className="px-2 py-3"></td>
                 <td className="px-2 py-3">
-                  {sortedGroups.length} {sortedGroups.length === 1 ? "imóvel" : "imóveis"}
+                  {sortedGroups.length} {sortedGroups.length === 1 ? "proprietário" : "proprietários"}
                   <span className="ml-2 text-xs font-normal text-muted-foreground">
                     {todasCobrancas.length} {todasCobrancas.length === 1 ? "cobrança" : "cobranças"}
                   </span>
@@ -350,12 +352,12 @@ export function OpenChargesTable({
                       <td className="px-2 py-2">
                         <div className="flex items-center gap-2">
                           <MiniaturaImovel url={group.cover_photo_url} fallback={<Building2 />} tamanho="h-8 w-8" />
-                          <span className="font-medium truncate max-w-[180px] block" title={group.name}>{group.name}</span>
-                          <SeloContagem title="Cobranças neste imóvel">{group.charges.length}</SeloContagem>
+                          <span className="font-medium truncate max-w-[180px] block" title={group.ownerName}>{group.ownerName}</span>
+                          <SeloContagem title="Cobranças deste proprietário">{group.charges.length}</SeloContagem>
                         </div>
                       </td>
                       <td className="px-2 py-2">
-                        <span className="text-muted-foreground truncate max-w-[150px] block">{group.ownerName}</span>
+                        <span className="text-muted-foreground block max-w-[240px] break-words">{group.name}</span>
                       </td>
                       <td className="px-2 py-2 text-center">
                         {earliestDueDate ? (
@@ -457,7 +459,7 @@ export function OpenChargesTable({
                             </div>
                           </td>
                           <td className="px-2 py-2 text-muted-foreground text-sm">
-                            {charge.owner.name}
+                            {charge.property?.name || "Sem imóvel"}
                           </td>
                           <td className="px-2 py-2 text-center">
                             {charge.due_date ? (
@@ -487,7 +489,7 @@ export function OpenChargesTable({
                           </td>
                           <td className="px-2 py-2 text-center" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-center gap-0.5">
-                              {vencida && (
+                              {(
                                 <BotaoLinha rotulo="Calcular débito em reserva" tom="warning" onClick={() => handleOpenCalculator(charge)}>
                                   <Calculator />
                                 </BotaoLinha>
@@ -512,7 +514,7 @@ export function OpenChargesTable({
       <Card className="space-y-4 rounded-xl border-border/70 p-3 md:hidden">
         <div className="flex items-center justify-between gap-2 px-1 text-xs text-muted-foreground">
           <span>
-            {sortedGroups.length} {sortedGroups.length === 1 ? "imóvel" : "imóveis"} · {todasCobrancas.length}{" "}
+            {sortedGroups.length} {sortedGroups.length === 1 ? "proprietário" : "proprietários"} · {todasCobrancas.length}{" "}
             {todasCobrancas.length === 1 ? "cobrança" : "cobranças"}
           </span>
           <span className="font-semibold tabular-nums text-primary">{formatarBRL(totalAmount)}</span>
@@ -522,7 +524,7 @@ export function OpenChargesTable({
           return (
             <GrupoCaixa
               key={group.id}
-              titulo={group.name}
+              titulo={`${group.ownerName} · ${group.name}`}
               quantidade={group.charges.length}
               tom={group.overdueCount > 0 ? "destructive" : "neutral"}
             >
@@ -544,7 +546,7 @@ export function OpenChargesTable({
                     titulo={charge.title}
                     subtitulo={
                       <>
-                        {charge.owner.name}
+                        {charge.property?.name || "Sem imóvel"}
                         {charge.due_date && <> · Vence {formatarData(charge.due_date, "dd/MM/yy")}</>}
                       </>
                     }
@@ -556,7 +558,7 @@ export function OpenChargesTable({
                     }
                     acoes={
                       <>
-                        {vencida && (
+                        {(
                           <BotaoLinha rotulo="Calcular débito em reserva" tom="warning" onClick={() => handleOpenCalculator(charge)}>
                             <Calculator />
                           </BotaoLinha>
@@ -606,16 +608,16 @@ export function OpenChargesTable({
       </Card>
 
       {/* Calculadora de débito em reserva */}
-      {calculatorCharge && (
+      {calculatorGroup && (
         <DebitoReservaCalculator
           open={calculatorOpen}
           onOpenChange={setCalculatorOpen}
-          propertyName={calculatorCharge.property?.name || "Sem imóvel"}
-          totalDebtCents={valorDevido(calculatorCharge)}
-          chargeIds={[calculatorCharge.id]}
+          propertyName={`${calculatorGroup.ownerName} — ${calculatorGroup.name}`}
+          totalDebtCents={calculatorGroup.totalDueCents}
+          chargeIds={calculatorGroup.charges.map(c => c.id)}
           onDebitConfirmed={() => {
             setCalculatorOpen(false);
-            setCalculatorCharge(null);
+            setCalculatorGroup(null);
           }}
         />
       )}

@@ -22,7 +22,7 @@ import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import { AbaPilula, BarraFiltros, CabecalhoPagina, PaginaInterna } from "@/components/painel/PaginaInterna";
 import { CaixaOperacao, MiniaturaImovel, SeloContagem } from "@/components/painel/CaixaOperacao";
 import { formatarBRL, valorDevido } from "@/lib/cobrancaMeta";
-import { cobrancaVencida } from "@/lib/vencimento";
+import { agruparCobrancasProprietario } from "@/lib/agruparCobrancasProprietario";
 
 interface Charge {
   id: string;
@@ -213,32 +213,8 @@ const GerenciarCobrancas = () => {
   };
 
   const groupDebitoChargesByProperty = () => {
-    const groups: Record<string, PropertyGroup> = {};
-
-    debitoCharges.forEach(charge => {
-      const propertyId = charge.property?.id || 'sem-imovel';
-      const propertyName = charge.property?.name || 'Sem imóvel';
-
-      if (!groups[propertyId]) {
-        groups[propertyId] = {
-          id: propertyId,
-          name: propertyName,
-          cover_photo_url: charge.property?.cover_photo_url || null,
-          ownerName: charge.owner.name,
-          charges: [],
-          openCount: 0,
-          overdueCount: 0,
-          totalDueCents: 0
-        };
-      }
-
-      groups[propertyId].charges.push(charge);
-      groups[propertyId].totalDueCents += valorDevido(charge);
-      groups[propertyId].overdueCount++;
-    });
-
-    const sortedGroups = Object.values(groups).sort((a, b) => b.totalDueCents - a.totalDueCents);
-    setDebitoPropertyGroups(sortedGroups);
+    const groups = agruparCobrancasProprietario(debitoCharges);
+    setDebitoPropertyGroups(groups.sort((a, b) => b.totalDueCents - a.totalDueCents));
   };
 
   const openCalculator = (group: PropertyGroup) => {
@@ -256,55 +232,11 @@ const GerenciarCobrancas = () => {
   };
 
   const groupChargesByProperty = () => {
-    const groups: Record<string, PropertyGroup> = {};
-
-    charges.forEach(charge => {
-      // Aguardando débito em reserva aparece na ReserveDebitsTable, não aqui.
-      if (charge.status === 'aguardando_reserva') return;
-
-      const propertyId = charge.property?.id || 'sem-imovel';
-      const propertyName = charge.property?.name || 'Sem imóvel';
-
-      // Apply search filter
-      if (searchTerm) {
-        const search = searchTerm.toLowerCase();
-        const matchesProperty = propertyName.toLowerCase().includes(search);
-        const matchesOwner = charge.owner.name.toLowerCase().includes(search);
-        const matchesTitle = charge.title.toLowerCase().includes(search);
-        if (!matchesProperty && !matchesOwner && !matchesTitle) return;
-      }
-
-      if (!groups[propertyId]) {
-        groups[propertyId] = {
-          id: propertyId,
-          name: propertyName,
-          cover_photo_url: charge.property?.cover_photo_url || null,
-          ownerName: charge.owner.name,
-          charges: [],
-          openCount: 0,
-          overdueCount: 0,
-          totalDueCents: 0
-        };
-      }
-
-      groups[propertyId].charges.push(charge);
-      groups[propertyId].totalDueCents += valorDevido(charge);
-
-      // Mesma regra de "vencida" da OpenChargesTable: passou do dia e não foi paga.
-      if (cobrancaVencida(charge)) {
-        groups[propertyId].overdueCount++;
-      } else {
-        groups[propertyId].openCount++;
-      }
-    });
-
-    // Sort by overdue count (most urgent first), then by open count
-    const sortedGroups = Object.values(groups).sort((a, b) => {
-      if (b.overdueCount !== a.overdueCount) return b.overdueCount - a.overdueCount;
-      return b.openCount - a.openCount;
-    });
-
-    setPropertyGroups(sortedGroups);
+    const groups = agruparCobrancasProprietario(charges.filter(c => c.status !== 'aguardando_reserva'));
+    const search = searchTerm.trim().toLocaleLowerCase('pt-BR');
+    const visible = groups.filter(g => !search ||
+      [g.ownerName, g.name, ...g.charges.map(c => c.title)].some(v => v.toLocaleLowerCase('pt-BR').includes(search)));
+    setPropertyGroups(visible.sort((a, b) => b.overdueCount - a.overdueCount || b.openCount - a.openCount));
   };
 
   const handleEdit = (charge: Charge) => {
@@ -549,7 +481,7 @@ const GerenciarCobrancas = () => {
                   </div>
                   <div className="text-right text-sm text-muted-foreground">
                     <p>{debitoCharges.length} {debitoCharges.length === 1 ? "cobrança" : "cobranças"}</p>
-                    <p>{debitoPropertyGroups.length} {debitoPropertyGroups.length === 1 ? "imóvel" : "imóveis"}</p>
+                    <p>{debitoPropertyGroups.length} {debitoPropertyGroups.length === 1 ? "proprietário" : "proprietários"}</p>
                   </div>
                 </div>
               </CardContent>
@@ -585,8 +517,8 @@ const GerenciarCobrancas = () => {
                       <MiniaturaImovel url={group.cover_photo_url} alt={group.name} fallback={<Building2 />} tamanho="h-14 w-14" />
 
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-semibold">{group.name}</p>
-                        <p className="truncate text-sm text-muted-foreground">{group.ownerName}</p>
+                        <p className="font-semibold break-words">{group.ownerName}</p>
+                        <p className="text-sm text-muted-foreground break-words">{group.name}</p>
                         <div className="mt-1 flex items-center gap-2">
                           <SeloContagem tom="destructive">
                             {group.charges.length} cobrança{group.charges.length > 1 ? 's' : ''}
@@ -603,7 +535,7 @@ const GerenciarCobrancas = () => {
                           variant="outline"
                           size="icon"
                           className="border-destructive/30 hover:bg-destructive/10"
-                          aria-label={`Calcular débito em reserva de ${group.name}`}
+                          aria-label={`Calcular débito em reserva de ${group.ownerName}`}
                           onClick={(e) => {
                             e.stopPropagation();
                             openCalculator(group);
@@ -617,7 +549,7 @@ const GerenciarCobrancas = () => {
                     <div className="mt-3 space-y-1 border-t border-destructive/30 pt-3">
                       {group.charges.slice(0, 3).map((charge) => (
                         <div key={charge.id} className="flex justify-between gap-2 text-sm">
-                          <span className="min-w-0 flex-1 truncate text-muted-foreground">{charge.title}</span>
+                          <span className="min-w-0 flex-1 truncate text-muted-foreground">{charge.property?.name || "Sem imóvel"} · {charge.title}</span>
                           <span className="font-medium tabular-nums">{formatarBRL(valorDevido(charge))}</span>
                         </div>
                       ))}
@@ -673,7 +605,7 @@ const GerenciarCobrancas = () => {
       <DebitoReservaCalculator
         open={calculatorOpen}
         onOpenChange={setCalculatorOpen}
-        propertyName={selectedPropertyForCalc?.name || ""}
+        propertyName={selectedPropertyForCalc ? `${selectedPropertyForCalc.ownerName} — ${selectedPropertyForCalc.name}` : ""}
         totalDebtCents={selectedPropertyForCalc?.totalDueCents || 0}
         chargeIds={selectedChargeIdsForCalc}
         onDebitConfirmed={handleDebitConfirmed}
