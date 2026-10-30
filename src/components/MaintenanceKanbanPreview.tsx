@@ -8,8 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Wrench, ArrowRight, Calendar, MessageSquare, ChevronDown, ChevronUp, CheckCircle } from "lucide-react";
+import { CollapsibleContent } from "@/components/ui/collapsible";
+import { Wrench, ArrowRight, Calendar, MessageSquare, CheckCircle } from "lucide-react";
 import { QuickAttachmentButton } from "./QuickAttachmentButton";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -256,7 +256,6 @@ export function MaintenanceKanbanPreview() {
 
   const pendentes = tickets.filter(t => ["novo", "em_analise", "aguardando_info"].includes(t.status) && !t.scheduled_at);
   const agendados = tickets.filter(t => t.scheduled_at && t.status !== "em_execucao");
-  const hasMoreItems = pendentes.length > COLLAPSED_LIMIT || agendados.length > COLLAPSED_LIMIT;
 
   const renderRow = (ticket: MaintenanceTicket, agendado: boolean) => (
     <LinhaCaixa
@@ -302,22 +301,16 @@ export function MaintenanceKanbanPreview() {
   }
 
   return (
-    <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-      <CaixaOperacao
+    <CaixaOperacao
         icone={<Wrench />}
         titulo="Manutenções"
         tom="primary"
+        recolhivel
+        aberto={isExpanded}
+        onAbrirChange={setIsExpanded}
         selos={tickets.length > 0 && <SeloContagem tom="primary">{tickets.length}</SeloContagem>}
         acoes={
           <>
-            {hasMoreItems && (
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-7 gap-1 px-2 text-xs">
-                  {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                  {isExpanded ? "Recolher" : "Expandir"}
-                </Button>
-              </CollapsibleTrigger>
-            )}
             {podeAbrirQuadro && (
               <>
                 <Button
@@ -516,6 +509,5 @@ export function MaintenanceKanbanPreview() {
         onTicketUpdated={fetchMaintenanceTickets}
       />
       </CaixaOperacao>
-    </Collapsible>
   );
 }

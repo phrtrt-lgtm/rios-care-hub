@@ -43,6 +43,8 @@ export function ChamadosKanbanPreview() {
   const [chatTicket, setChatTicket] = useState<OwnerTicket | null>(null);
   const [novosExpanded, setNovosExpanded] = useState(false);
   const [emAndamentoExpanded, setEmAndamentoExpanded] = useState(false);
+  // A caixa começa recolhida: só o cabeçalho com a contagem (pedido do gestor).
+  const [caixaAberta, setCaixaAberta] = useState(false);
 
   const ticketIds = useMemo(() => tickets.map((t) => t.id), [tickets]);
   const { unreadCounts, markAsRead } = useUnreadMessages(ticketIds);
@@ -117,6 +119,9 @@ export function ChamadosKanbanPreview() {
       icone={<Ticket />}
       titulo="Chamados"
       tom="info"
+      recolhivel
+      aberto={caixaAberta}
+      onAbrirChange={setCaixaAberta}
       selos={tickets.length > 0 && <SeloContagem>{tickets.length}</SeloContagem>}
       acoes={
         <Button

@@ -1,6 +1,8 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { ChevronDown, ChevronRight, ChevronUp } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
@@ -25,6 +27,11 @@ interface CaixaProps {
   className?: string;
   /** Sem padding interno: o conteúdo cuida do próprio espaçamento. */
   semPadding?: boolean;
+  /** Mostra o botão de abrir/fechar a caixa inteira (só o cabeçalho fica fechado). */
+  recolhivel?: boolean;
+  /** Estado do corpo. Só tem efeito com `recolhivel`. */
+  aberto?: boolean;
+  onAbrirChange?: (aberto: boolean) => void;
 }
 
 /**
@@ -45,26 +52,63 @@ export function CaixaOperacao({
   children,
   className,
   semPadding = false,
+  recolhivel = false,
+  aberto = true,
+  onAbrirChange,
 }: CaixaProps) {
+  const cabecalho = (
+    <div className="border-b border-border/60 px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <span
+            className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg [&>svg]:h-4 [&>svg]:w-4", TOM[tom].caixa)}
+            aria-hidden="true"
+          >
+            {icone}
+          </span>
+          <h3 className="text-sm font-semibold leading-none tracking-tight md:text-[15px]">{titulo}</h3>
+          {selos}
+        </div>
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+          {acoes}
+          {recolhivel && (
+            <CollapsibleTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                aria-label={aberto ? "Recolher" : "Expandir"}
+                title={aberto ? "Recolher" : "Expandir"}
+                className="h-7 w-7 shrink-0 p-0 text-muted-foreground hover:text-foreground"
+              >
+                <ChevronDown
+                  className={cn("h-4 w-4 transition-transform duration-200", !aberto && "-rotate-90")}
+                  aria-hidden="true"
+                />
+              </Button>
+            </CollapsibleTrigger>
+          )}
+        </div>
+      </div>
+      {subcabecalho && <div className="mt-2">{subcabecalho}</div>}
+    </div>
+  );
+
+  const corpo = <div className={cn(!semPadding && "px-3 py-3")}>{children}</div>;
+
   return (
     <Card id={id} className={cn("w-full min-w-0 overflow-hidden rounded-xl border-border/70", className)}>
-      <div className="border-b border-border/60 px-4 py-3">
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <span
-              className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg [&>svg]:h-4 [&>svg]:w-4", TOM[tom].caixa)}
-              aria-hidden="true"
-            >
-              {icone}
-            </span>
-            <h3 className="text-sm font-semibold leading-none tracking-tight md:text-[15px]">{titulo}</h3>
-            {selos}
-          </div>
-          {acoes && <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">{acoes}</div>}
-        </div>
-        {subcabecalho && <div className="mt-2">{subcabecalho}</div>}
-      </div>
-      <div className={cn(!semPadding && "px-3 py-3")}>{children}</div>
+      {recolhivel ? (
+        <Collapsible open={aberto} onOpenChange={onAbrirChange}>
+          {cabecalho}
+          <CollapsibleContent>{corpo}</CollapsibleContent>
+        </Collapsible>
+      ) : (
+        <>
+          {cabecalho}
+          {corpo}
+        </>
+      )}
     </Card>
   );
 }
