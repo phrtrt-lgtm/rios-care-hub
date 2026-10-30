@@ -75,7 +75,7 @@ export function CaixaOperacao({
             <CollapsibleTrigger asChild>
               <Button
                 type="button"
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 aria-label={aberto ? "Recolher" : "Expandir"}
                 title={aberto ? "Recolher" : "Expandir"}
