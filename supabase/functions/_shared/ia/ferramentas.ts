@@ -19,6 +19,7 @@ import {
   textoCurto,
   ErroFerramenta,
 } from "./politica.ts";
+import { CATALOGO_ESCRITA } from "./ferramentas-escrita.ts";
 
 const TODOS = [...PAPEIS_EQUIPE, "owner" as const];
 
@@ -850,4 +851,5 @@ export const CATALOGO: FerramentaIA[] = [
   buscarProprietario,
   pendenciasDasListas,
   vistoriasDoImovel,
+  ...CATALOGO_ESCRITA,
 ];

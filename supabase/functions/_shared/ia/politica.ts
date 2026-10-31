@@ -72,6 +72,8 @@ export interface Contexto {
   userClient: SupabaseClient;
   /** Service role: só log e o que a RLS nega de propósito. */
   adminClient: SupabaseClient;
+  /** JWT do usuário, para chamar outras functions em nome dele (create-ticket-message, notify-ticket). */
+  token: string;
   /** Dia de hoje em Brasília, YYYY-MM-DD. */
   hoje: string;
   /** Data e hora legível, para o prompt. */
@@ -98,8 +100,38 @@ export interface FerramentaIA {
   /** Nome do campo da entrada que traz o imóvel, para a checagem de acesso e o log. */
   imovelParam?: string;
   executar(ctx: Contexto, entrada: Record<string, unknown>): Promise<unknown>;
-  /** Frase para o cartão de confirmação (escrita). */
-  resumo?(entrada: Record<string, unknown>): string;
+  /** Frase para o cartão de confirmação (escrita); pode consultar o banco para pôr nomes. */
+  resumo?(entrada: Record<string, unknown>, ctx: Contexto): Promise<string> | string;
+}
+
+/**
+ * Chama outra edge function do projeto em nome do usuário (mesmo JWT), para
+ * reaproveitar o caminho das telas: create-ticket-message, notify-ticket.
+ */
+export async function chamarFunction(
+  ctx: Contexto,
+  nome: string,
+  corpo: Record<string, unknown>,
+  caminhoExtra = "",
+): Promise<{ ok: boolean; status: number; dados: unknown }> {
+  const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/${nome}${caminhoExtra}`;
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${ctx.token}`,
+      apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(corpo),
+  });
+  const texto = await resp.text();
+  let dados: unknown = texto;
+  try {
+    dados = JSON.parse(texto);
+  } catch {
+    /* corpo não é JSON */
+  }
+  return { ok: resp.ok, status: resp.status, dados };
 }
 
 export class ErroFerramenta extends Error {}

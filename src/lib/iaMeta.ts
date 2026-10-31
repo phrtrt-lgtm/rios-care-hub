@@ -19,6 +19,14 @@ export const FERRAMENTA_ROTULO: Record<string, string> = {
   buscar_proprietario: "Proprietário",
   pendencias_das_listas: "Pendências",
   vistorias_do_imovel: "Vistorias",
+  hostex_bloquear_datas: "Bloquear datas na Hostex",
+  hostex_liberar_datas: "Liberar datas na Hostex",
+  abrir_chamado: "Abrir chamado",
+  responder_chamado: "Responder chamado",
+  mudar_status_chamado: "Mudar status do chamado",
+  registrar_ajuste: "Registrar ajuste",
+  registrar_compra: "Registrar compra",
+  registrar_tarefa_rua: "Criar tarefa de rua",
 };
 
 export const rotuloFerramenta = (nome: string) => FERRAMENTA_ROTULO[nome] ?? nome.replace(/_/g, " ");

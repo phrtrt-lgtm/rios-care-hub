@@ -108,6 +108,7 @@ Deno.serve(async (req) => {
     equipe: PAPEIS_EQUIPE.includes(autor.role as Papel),
     userClient,
     adminClient,
+    token: (req.headers.get("authorization") ?? "").replace("Bearer ", "").trim(),
     hoje: hojeBrasilia(),
     agora: agoraBrasilia(),
     pagina: typeof corpo.pagina?.rota === "string" ? { rota: corpo.pagina.rota.slice(0, 200) } : undefined,
@@ -421,7 +422,12 @@ async function tratarToolUse(
       await ctx.adminClient.from("ia_acoes").insert({ ...base, nivel: "escrita", status: "negada", motivo_negada: motivo });
       return { bloco: { type: "tool_result", tool_use_id: u.id, content: motivo, is_error: true } };
     }
-    const resumo = f.resumo?.(entrada) ?? f.nome;
+    let resumo = f.nome;
+    try {
+      resumo = (await f.resumo?.(entrada, ctx)) ?? f.nome;
+    } catch (e) {
+      console.warn(`[ia-agente] resumo de ${f.nome}:`, e);
+    }
     const { data, error } = await ctx.adminClient
       .from("ia_acoes")
       .insert({ ...base, nivel: "escrita", status: "aguardando_confirmacao", resumo })

@@ -30,7 +30,10 @@ const valorLegivel = (v: unknown): string => {
  * (PLANO_IA_AGENTE.md §2.4). Nada roda até a pessoa confirmar aqui.
  */
 export function CartaoAcao({ acao, decisao, ocupado, onConfirmar, onCancelar }: Props) {
-  const campos = Object.entries(acao.entrada ?? {}).slice(0, 8);
+  // Ids ficam fora do cartão: o resumo já diz o imóvel e o chamado pelo nome.
+  const campos = Object.entries(acao.entrada ?? {})
+    .filter(([k]) => k !== "id" && !k.endsWith("_id"))
+    .slice(0, 8);
   return (
     <div className="mt-2 w-full rounded-2xl border border-warning/40 bg-warning/10 p-3 text-[13px]">
       <div className="flex items-center gap-2 text-warning">

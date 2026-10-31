@@ -71,3 +71,31 @@ export function linhaReserva(r: any, propertyIdDe: (hxPid: string) => string | n
     synced_at: new Date().toISOString(),
   };
 }
+
+/**
+ * POST na API da Hostex (escrita: disponibilidade, reserva direta, preço).
+ * HTTP fora de 2xx vira erro com o corpo; erro dentro do JSON passa por
+ * `conferirRespostaHostex`. Timeout de 15 s: a Hostex é assíncrona e responde
+ * rápido mesmo quando a propagação aos canais demora.
+ */
+export async function hostexPost(path: string, body: Record<string, unknown>, apiKey: string) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 15_000);
+  try {
+    const resp = await fetch(`${HOSTEX_BASE}${path}`, {
+      method: "POST",
+      headers: { "Hostex-Access-Token": apiKey, "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(body),
+      signal: ctrl.signal,
+    });
+    const txt = await resp.text();
+    let json: any = null;
+    try { json = JSON.parse(txt); } catch { /* corpo não é JSON */ }
+    if (!resp.ok) {
+      throw new Error(`hostex_${resp.status} POST ${path}: ${String(json?.error_msg ?? txt).slice(0, 300)}`);
+    }
+    return conferirRespostaHostex(json, path);
+  } finally {
+    clearTimeout(t);
+  }
+}
