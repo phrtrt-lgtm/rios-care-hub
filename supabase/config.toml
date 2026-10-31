@@ -118,3 +118,6 @@ verify_jwt = false
 
 [functions.notificar-listas]
 verify_jwt = false
+
+[functions.ia-agente]
+verify_jwt = true
