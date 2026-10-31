@@ -121,3 +121,6 @@ verify_jwt = false
 
 [functions.ia-agente]
 verify_jwt = true
+
+[functions.create-bloqueio-pix]
+verify_jwt = true
