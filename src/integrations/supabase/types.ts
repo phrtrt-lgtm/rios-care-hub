@@ -2228,6 +2228,7 @@ export type Database = {
       ia_conversas: {
         Row: {
           atualizada_em: string
+          contexto: string | null
           criada_em: string
           encerrada_em: string | null
           id: string
@@ -2238,6 +2239,7 @@ export type Database = {
         }
         Insert: {
           atualizada_em?: string
+          contexto?: string | null
           criada_em?: string
           encerrada_em?: string | null
           id?: string
@@ -2248,6 +2250,7 @@ export type Database = {
         }
         Update: {
           atualizada_em?: string
+          contexto?: string | null
           criada_em?: string
           encerrada_em?: string | null
           id?: string
