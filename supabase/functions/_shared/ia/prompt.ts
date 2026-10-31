@@ -60,18 +60,30 @@ const PAPEL_ROTULO: Record<Papel, string> = {
   pending_owner: "proprietário aguardando aprovação",
 };
 
-export function systemVariavel(ctx: Contexto, imoveis: Array<{ id: string; name: string }>): string {
+/**
+ * Contexto estável da conversa (usuário, papel, imóveis). Montado uma vez,
+ * guardado em `ia_conversas.contexto` e reenviado igual em toda chamada: a
+ * assinatura dos blocos de thinking grava o system prompt, e qualquer mudança
+ * nele invalida a conversa. Nada de data, hora ou página aqui.
+ */
+export function contextoDaConversa(ctx: Contexto, imoveis: Array<{ id: string; name: string }>): string {
   const linhas = [
     `## Contexto desta conversa`,
     `- Usuário: ${ctx.nome || "sem nome"} (${PAPEL_ROTULO[ctx.papel] ?? ctx.papel}).`,
-    `- Agora: ${ctx.agora} (Brasília). Hoje é ${ctx.hoje}.`,
   ];
-  if (ctx.pagina?.rota) linhas.push(`- Página aberta no portal: ${ctx.pagina.rota}`);
   if (imoveis.length > 0) {
     linhas.push(`- Imóveis acessíveis (id · nome), use o id nas ferramentas:`);
     for (const i of imoveis) linhas.push(`  - ${i.id} · ${i.name}`);
   } else {
     linhas.push(`- Nenhum imóvel acessível para este usuário.`);
   }
+  linhas.push(`- A data, a hora e a página atual chegam numa mensagem de sistema a cada pergunta; use a mais recente.`);
   return linhas.join("\n");
+}
+
+/** O que muda a cada pergunta: vai como mensagem `system` dentro do histórico (só anexa). */
+export function contextoDoTurno(ctx: Contexto): string {
+  const partes = [`Agora: ${ctx.agora} (Brasília). Hoje é ${ctx.hoje}.`];
+  if (ctx.pagina?.rota) partes.push(`Página aberta no portal: ${ctx.pagina.rota}.`);
+  return partes.join(" ");
 }

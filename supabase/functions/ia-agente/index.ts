@@ -38,7 +38,7 @@ import {
   paraClaude,
 } from "../_shared/ia/politica.ts";
 import { CATALOGO } from "../_shared/ia/ferramentas.ts";
-import { systemFixo, systemVariavel } from "../_shared/ia/prompt.ts";
+import { contextoDaConversa, contextoDoTurno, systemFixo } from "../_shared/ia/prompt.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -164,6 +164,21 @@ async function conferirCotas(ctx: Contexto): Promise<void> {
 
 interface Conversa {
   id: string;
+  /** Bloco estável do system (usuário, imóveis): o mesmo em toda chamada da conversa. */
+  contexto: string;
+}
+
+/**
+ * Contexto estável da conversa. Nasce com ela e nunca muda: a assinatura dos
+ * blocos de thinking grava o system prompt, e uma mudança invalidaria a
+ * retomada. Conversas antigas (antes da coluna) ganham o contexto na primeira
+ * chamada; se algum bloco antigo não bater, o `drop_block` do claude.ts segura.
+ */
+async function contextoDaConversaGuardado(ctx: Contexto, conversaId: string, atual: unknown): Promise<string> {
+  if (typeof atual === "string" && atual) return atual;
+  const contexto = contextoDaConversa(ctx, await imoveisDoContexto(ctx));
+  await ctx.adminClient.from("ia_conversas").update({ contexto }).eq("id", conversaId);
+  return contexto;
 }
 
 async function conversar(ctx: Contexto, corpo: Corpo): Promise<RespostaAgente> {
@@ -174,13 +189,14 @@ async function conversar(ctx: Contexto, corpo: Corpo): Promise<RespostaAgente> {
   if (ehUuid(corpo.conversa_id)) {
     const { data } = await ctx.adminClient
       .from("ia_conversas")
-      .select("id, encerrada_em")
+      .select("id, encerrada_em, contexto")
       .eq("id", corpo.conversa_id)
       .eq("usuario_id", ctx.uid)
       .maybeSingle();
     if (!data) throw new ErroIA(404, "Conversa não encontrada.");
-    conversa = { id: data.id as string };
+    conversa = { id: data.id as string, contexto: await contextoDaConversaGuardado(ctx, data.id as string, data.contexto) };
   } else {
+    const contexto = contextoDaConversa(ctx, await imoveisDoContexto(ctx));
     const { data, error } = await ctx.adminClient
       .from("ia_conversas")
       .insert({
@@ -188,11 +204,12 @@ async function conversar(ctx: Contexto, corpo: Corpo): Promise<RespostaAgente> {
         papel: ctx.papel,
         pagina_inicial: ctx.pagina?.rota ?? null,
         titulo: texto.slice(0, 80),
+        contexto,
       })
       .select("id")
       .single();
     if (error || !data) throw new ErroIA(500, "Não consegui abrir a conversa.");
-    conversa = { id: data.id as string };
+    conversa = { id: data.id as string, contexto };
   }
 
   const { data: pendentes } = await ctx.adminClient
@@ -215,6 +232,13 @@ async function conversar(ctx: Contexto, corpo: Corpo): Promise<RespostaAgente> {
   let proximaOrdem = ordem + 1;
   await gravarMensagem(ctx, conversa.id, proximaOrdem, "user", blocoUsuario.content, texto);
 
+  // Data, hora e página vão como mensagem `system` dentro do histórico, logo
+  // depois da pergunta: forma que o Claude aceita sem invalidar a conversa.
+  const blocoTurno = { role: "system", content: contextoDoTurno(ctx) } as unknown as Mensagem;
+  messages.push(blocoTurno);
+  proximaOrdem += 1;
+  await gravarMensagem(ctx, conversa.id, proximaOrdem, "system", blocoTurno.content, null);
+
   return laco(ctx, conversa, messages, proximaOrdem);
 }
 
@@ -227,10 +251,9 @@ async function carregarHistorico(ctx: Contexto, conversaId: string): Promise<{ m
     .limit(LIMITES.historicoMax + 5);
   if (error) throw new ErroIA(500, "Não consegui ler a conversa.");
   const linhas = (data ?? []) as Linha[];
-  const messages: Mensagem[] = linhas.map((m) => ({
-    role: m.role as "user" | "assistant",
-    content: m.blocos as Mensagem["content"],
-  }));
+  const messages: Mensagem[] = linhas.map((m) =>
+    ({ role: m.role as "user" | "assistant" | "system", content: m.blocos as Mensagem["content"] }) as unknown as Mensagem
+  );
   const ordem = linhas.length ? Number(linhas[linhas.length - 1].ordem) : 0;
   return { messages, ordem };
 }
@@ -251,7 +274,7 @@ async function gravarMensagem(
   ctx: Contexto,
   conversaId: string,
   ordem: number,
-  role: "user" | "assistant",
+  role: "user" | "assistant" | "system",
   blocos: unknown,
   texto: string | null,
   uso: UsoGravado = {},
@@ -284,7 +307,6 @@ async function imoveisDoContexto(ctx: Contexto): Promise<Array<{ id: string; nam
 async function laco(ctx: Contexto, conversa: Conversa, messages: Mensagem[], ordem: number): Promise<RespostaAgente> {
   const ferramentas = ferramentasPara(ctx.papel, ctx.config, CATALOGO);
   const tools = ferramentas.map(paraClaude);
-  const imoveis = await imoveisDoContexto(ctx);
   const modelo = normalizarModelo(ctx.config.modelo);
   const effort = normalizarEffort(ctx.config.effort);
   let ultimaMensagemId: string | null = null;
@@ -294,7 +316,7 @@ async function laco(ctx: Contexto, conversa: Conversa, messages: Mensagem[], ord
     const t0 = Date.now();
     const r = await chamarClaude({
       systemFixo: systemFixo(ctx.papel),
-      systemVariavel: systemVariavel(ctx, imoveis),
+      systemConversa: conversa.contexto,
       tools,
       messages,
       modelo,
@@ -541,11 +563,31 @@ async function retomar(ctx: Contexto, acaoId: string, decisao: "confirmar" | "ca
       return { type: "tool_result", tool_use_id: a.tool_use_id, content, ...(ok ? {} : { is_error: true }) };
     });
 
-  const conversa: Conversa = { id: acao.conversa_id as string };
+  const { data: linhaConversa } = await ctx.adminClient
+    .from("ia_conversas")
+    .select("id, contexto")
+    .eq("id", acao.conversa_id)
+    .maybeSingle();
+  const conversa: Conversa = {
+    id: acao.conversa_id as string,
+    contexto: await contextoDaConversaGuardado(ctx, acao.conversa_id as string, linhaConversa?.contexto),
+  };
   const { messages, ordem } = await carregarHistorico(ctx, conversa.id);
   const proxima = ordem + 1;
   await gravarMensagem(ctx, conversa.id, proxima, "user", resultados, null);
   messages.push({ role: "user", content: resultados as unknown as Mensagem["content"] });
-  return laco(ctx, conversa, messages, proxima);
+  try {
+    return await laco(ctx, conversa, messages, proxima);
+  } catch (e) {
+    // A ação já aconteceu (ou já falhou e está no log). Se o comentário final
+    // do modelo não vier, a tela recebe o resultado cru em vez de um erro que
+    // faria parecer que nada foi feito.
+    if (!(e instanceof ErroIA)) throw e;
+    console.error("[ia-agente] comentário final após ação:", e.message);
+    const texto = erro
+      ? `A ação não foi executada: ${conteudo}`
+      : `Ação executada. Resultado: ${conteudo.slice(0, 1500)}\n\n(Não consegui gerar o comentário final: ${e.message})`;
+    return { conversa_id: conversa.id, mensagem_id: null, texto, ferramentas_usadas: [], fim: true };
+  }
 }
 

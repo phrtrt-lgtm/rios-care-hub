@@ -68,8 +68,12 @@ export type Bloco = Anthropic.Messages.ContentBlock;
 export interface Chamada {
   /** Parte fixa do system prompt, cacheada (mínimo de 512 tokens para o cache pegar). */
   systemFixo: string;
-  /** Parte que muda por chamada (usuário, data, página); fica fora do cache. */
-  systemVariavel?: string;
+  /**
+   * Contexto estável da conversa (usuário, imóveis), também cacheado. Precisa
+   * ser idêntico em todas as chamadas da mesma conversa: a assinatura dos
+   * blocos de thinking grava o system inteiro (ver prompt.ts).
+   */
+  systemConversa?: string;
   tools?: Ferramenta[];
   messages: Mensagem[];
   modelo?: string;
@@ -87,12 +91,21 @@ export async function chamarClaude(p: Chamada): Promise<Resposta> {
   const system: Anthropic.Messages.TextBlockParam[] = [
     { type: "text", text: p.systemFixo, cache_control: { type: "ephemeral" } },
   ];
-  if (p.systemVariavel) system.push({ type: "text", text: p.systemVariavel });
+  if (p.systemConversa) system.push({ type: "text", text: p.systemConversa, cache_control: { type: "ephemeral" } });
+
+  // block_binding: se o histórico reenviado não bate com a assinatura de um
+  // bloco de thinking (system, ferramentas ou mensagem anterior mudaram), a
+  // API descarta o bloco em vez de recusar com 400. Rede de segurança; a
+  // regra continua sendo manter o histórico só anexando.
+  const thinking = {
+    type: "adaptive",
+    block_binding: { prefix_mismatch_behavior: "drop_block" },
+  } as unknown as Anthropic.Messages.ThinkingConfigParam;
 
   const params: Anthropic.Messages.MessageCreateParamsNonStreaming = {
     model: modelo,
     max_tokens: p.maxTokens ?? 4000,
-    thinking: { type: "adaptive" },
+    thinking,
     output_config: p.formatoJson
       ? { effort, format: { type: "json_schema", schema: p.formatoJson } }
       : { effort },
@@ -102,7 +115,14 @@ export async function chamarClaude(p: Chamada): Promise<Resposta> {
   if (p.tools && p.tools.length > 0) params.tools = p.tools;
 
   try {
-    return await client.messages.create(params);
+    const r = await client.messages.create(params, {
+      headers: { "anthropic-beta": "thinking-binding-controls-2026-08-01" },
+    });
+    const transformacoes = (r as unknown as { input_transformations?: unknown[] }).input_transformations;
+    if (Array.isArray(transformacoes) && transformacoes.length > 0) {
+      console.warn("[claude] blocos de thinking descartados:", JSON.stringify(transformacoes).slice(0, 500));
+    }
+    return r;
   } catch (e) {
     throw traduzirErro(e);
   }
