@@ -18,7 +18,6 @@ import { LembreteNovosImoveis } from "@/components/viabilizacao/LembreteNovosImo
 import { TeamChatWidget } from "@/components/TeamChatWidget";
 import { GlobalSearch, useGlobalSearch } from "@/components/GlobalSearch";
 import { EnablePushNative } from "@/components/EnablePushNative";
-import { AIConsultaWidget } from "@/components/AIConsultaWidget";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { PainelHeader, type AcaoHeader } from "@/components/painel/PainelHeader";
 import { PainelHero } from "@/components/painel/PainelHero";
@@ -104,7 +103,6 @@ export default function Painel() {
       />
 
       <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
-      {isTeam && <AIConsultaWidget />}
 
       <PainelHeader
         inicio="/painel"

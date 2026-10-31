@@ -1,507 +1,321 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+// ai-generate-response — sugestões de texto para a equipe (resposta em
+// chamado e cobrança, descrição de proposta/alerta/chamado/manutenção,
+// título curto) e o "Testar prompt" de /configuracao-ia.
+//
+// Desde 2026-10-30 roda no Claude pelo módulo comum (_shared/ia/claude.ts):
+// modelo e effort vêm de ai_settings (padrão claude-sonnet-5-5 / medium).
+// `ai_settings` e `ai_templates` são lidos com a service role depois de
+// conferir o papel: antes eram lidos com o JWT do usuário e a RLS (só admin)
+// fazia agent/maintenance receberem "AI settings not configured".
+// O contexto do chamado/cobrança continua lido com o JWT do usuário (RLS).
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.1";
+import { exigirPapel } from "../_shared/auth-guard.ts";
+import { ErroIA, gerarTexto, normalizarEffort, normalizarModelo } from "../_shared/ia/claude.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface GenerateRequest {
+const json = (b: unknown, status = 200) =>
+  new Response(JSON.stringify(b), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+interface Pedido {
   templateKey?: string;
   action?: string;
+  // deno-lint-ignore no-explicit-any
   context?: any;
   ticketId?: string;
   chargeId?: string;
   customInstructions?: string;
 }
 
-const handler = async (req: Request): Promise<Response> => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+const CONTEXTO_RIOS = `A RIOS é uma empresa de Operação e Gestão de Hospedagens que administra imóveis de aluguel por temporada. Oferecemos gestão completa de propriedades, incluindo:
+- Gestão de reservas e check-in/check-out
+- Manutenção e limpeza profissional
+- Suporte aos proprietários
+- Gestão financeira e repasses
+- Marketing e divulgação dos imóveis`;
+
+const dataBR = (iso: string) => new Intl.DateTimeFormat("pt-BR").format(new Date(iso));
+
+function promptsDaAcao(action: string, context: Record<string, unknown> = {}): { system: string; pedido: string; effort?: "low" | "medium" } {
+  const prompt = String(context.prompt ?? "");
+  switch (action) {
+    case "generate_proposal":
+      return {
+        system: `Você escreve descrições profissionais e claras para votações e propostas de melhoria em imóveis de hospedagem.
+
+Contexto do projeto: ${context.projectContext ?? ""}
+
+Diretrizes: português do Brasil; claro, objetivo e profissional; foque nos benefícios e nas justificativas; 2 a 4 parágrafos; sem jargão técnico desnecessário. Devolva só o texto.`,
+        pedido: prompt,
+      };
+    case "generate_alert":
+      return {
+        system: `Você escreve mensagens profissionais e claras para avisos e comunicações da RIOS com proprietários de imóveis de hospedagem.
+
+Diretrizes: português do Brasil; claro, objetivo e profissional; tom adequado ao tipo de aviso; 2 a 4 parágrafos; direto, sem prolixidade; termine com a orientação prática quando houver. Devolva só o texto.`,
+        pedido: prompt,
+      };
+    case "generate_ticket":
+      return {
+        system: `Você escreve descrições profissionais e claras para chamados (tickets) da RIOS a proprietários sobre manutenção, dúvidas, informações e outros assuntos.
+
+Diretrizes: português do Brasil; claro, objetivo e profissional; foque no assunto e na ação esperada; 2 a 4 parágrafos; sem jargão técnico desnecessário; seja específico sobre o que está sendo comunicado. Devolva só o texto.`,
+        pedido: prompt,
+      };
+    case "generate_maintenance":
+      return {
+        system: `Você escreve descrições técnicas e detalhadas para chamados de manutenção em imóveis de hospedagem.
+
+${context.propertyContext ? `${context.propertyContext}\n` : ""}${
+          context.projectContext ??
+            "Sistema de gestão de hospedagens RIOS - registro de manutenção preventiva ou corretiva em unidades de aluguel por temporada."
+        }
+
+Diretrizes: português do Brasil; técnico mas acessível; descreva o problema de forma clara; inclua a localização exata quando possível; mencione os sintomas observados; indique urgência se houver; 2 a 3 parágrafos; foque no que precisa ser resolvido. Devolva só o texto.`,
+        pedido: prompt,
+      };
+    case "generate_title": {
+      const descricao = String(context.description ?? "");
+      const problemas = descricao.split("\n").filter((l) => l.trim()).length;
+      return {
+        effort: "low",
+        system: `Você cria títulos CURTOS para chamados de manutenção.
+
+Regras obrigatórias:
+1. Máximo de 40 caracteres.
+2. ${
+          problemas > 1
+            ? `A descrição tem ${problemas} problemas diferentes: use um título genérico como "Múltiplos reparos", "Diversos ajustes" ou "Reparos gerais".`
+            : "Resuma o problema principal."
+        }
+3. Nunca concatene nem liste vários problemas.
+4. Não comece com "Manutenção", "Reparo" ou "Conserto".
+5. Sem aspas e sem pontuação final.
+6. Responda apenas o título, nada mais.
+
+Exemplos para um problema: "Torneira vazando no banheiro", "Ar-condicionado não funciona".
+Exemplos para vários: "Múltiplos reparos necessários", "Diversos ajustes na unidade".`,
+        pedido: `${problemas > 1 ? `Atenção: são ${problemas} problemas diferentes. Gere um título genérico.` : "Gere um título curto."}\n\n${descricao}`,
+      };
+    }
+    default:
+      throw new ErroIA(400, "Ação inválida.");
   }
+}
 
-  const startTime = Date.now();
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method !== "POST") return json({ error: "Método não permitido." }, 405);
 
+  const inicio = Date.now();
+  const { autor, resposta } = await exigirPapel(req, ["admin", "agent", "maintenance"], corsHeaders);
+  if (resposta) return resposta;
+  if (!autor) return json({ error: "Não autenticado." }, 401);
+
+  const url = Deno.env.get("SUPABASE_URL")!;
+  const admin = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  const userClient = createClient(url, Deno.env.get("SUPABASE_ANON_KEY")!, {
+    global: { headers: { Authorization: req.headers.get("authorization")! } },
+  });
+
+  let templateKey: string | undefined;
   try {
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      {
-        global: {
-          headers: { Authorization: req.headers.get("Authorization")! },
-        },
-      }
-    );
+    const pedido = (await req.json().catch(() => ({}))) as Pedido;
+    templateKey = pedido.templateKey;
 
-    // Verify user is team member
-    const {
-      data: { user },
-    } = await supabaseClient.auth.getUser();
-    if (!user) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const { data: aiSettings } = await admin.from("ai_settings").select("*").limit(1).maybeSingle();
+    const modelo = normalizarModelo(aiSettings?.model);
+    const effortPadrao = normalizarEffort(aiSettings?.effort);
+    const maxTokens = Math.max(Number(aiSettings?.max_tokens ?? 800), 1500);
 
-    const { data: profile } = await supabaseClient
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
+    // "Testar prompt" da tela de configuração: só admin, não grava nada.
+    if (pedido.action === "test_prompt") {
+      if (autor.role !== "admin") return json({ error: "Só admin testa o prompt." }, 403);
+      const c = pedido.context ?? {};
+      const system = `${c.systemPrompt ?? ""}
 
-    console.log("User profile:", { userId: user.id, profile });
-
-    if (!profile || !["admin", "agent", "maintenance"].includes(profile.role)) {
-      return new Response(
-        JSON.stringify({ error: "Forbidden" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const { templateKey, action, context, ticketId, chargeId, customInstructions }: GenerateRequest = await req.json();
-
-    // Handle new action-based requests
-    if (action) {
-      const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-      
-      if (!LOVABLE_API_KEY) {
-        throw new Error('LOVABLE_API_KEY not configured');
-      }
-
-      let systemPrompt = '';
-      let userPrompt = '';
-
-      switch (action) {
-        case 'generate_proposal':
-          systemPrompt = `Você é um assistente especializado em criar descrições profissionais e claras para votações e propostas relacionadas a melhorias em imóveis de hospedagem.
-          
-O contexto do projeto: ${context.projectContext}
-
-Diretrizes:
-- Escreva em português brasileiro
-- Seja claro, objetivo e profissional
-- Foque nos benefícios e justificativas
-- Use 2-4 parágrafos
-- Não use jargão técnico desnecessário`;
-          userPrompt = context.prompt;
-          break;
-        
-        case 'generate_alert':
-          systemPrompt = `Você é um assistente especializado em criar mensagens profissionais e claras para alertas e comunicações com proprietários de imóveis de hospedagem.
-          
-O contexto do projeto: Sistema de gestão de hospedagens RIOS - comunicação com proprietários e equipe sobre avisos, informações e alertas importantes.
-
-Diretrizes:
-- Escreva em português brasileiro
-- Seja claro, objetivo e profissional
-- Use tom apropriado ao tipo de alerta
-- Use 2-4 parágrafos
-- Seja direto e não prolixo
-- Termine com orientações claras quando necessário`;
-          userPrompt = context.prompt;
-          break;
-        
-        case 'generate_ticket':
-          systemPrompt = `Você é um assistente especializado em criar descrições profissionais e claras para chamados/tickets relacionados a imóveis de hospedagem.
-          
-O contexto do projeto: Sistema de gestão de hospedagens RIOS - criação de tickets para proprietários sobre manutenção, dúvidas, informações e outros assuntos.
-
-Diretrizes:
-- Escreva em português brasileiro
-- Seja claro, objetivo e profissional
-- Foque no problema/assunto e na solução/ação esperada
-- Use 2-4 parágrafos
-- Não use jargão técnico desnecessário
-- Seja específico sobre o que está sendo comunicado`;
-          userPrompt = context.prompt;
-          break;
-
-        case 'generate_maintenance':
-          systemPrompt = `Você é um assistente especializado em criar descrições técnicas e detalhadas para chamados de manutenção em imóveis de hospedagem.
-
-${context.propertyContext ? `${context.propertyContext}\n` : ''}
-${context.projectContext || 'Sistema de gestão de hospedagens RIOS - registro de manutenção preventiva ou corretiva em unidades de aluguel por temporada.'}
-
-Diretrizes:
-- Escreva em português brasileiro
-- Seja técnico mas acessível
-- Descreva o problema de forma clara e objetiva
-- Inclua localização exata quando possível
-- Mencione sintomas observados
-- Indique urgência se aplicável
-- Use 2-3 parágrafos
-- Foque no que precisa ser resolvido`;
-          userPrompt = context.prompt;
-          break;
-
-        case 'generate_title':
-          // Count how many problems are in the description (each line with emoji is a problem)
-          const descriptionLines = (context.description || '').split('\n').filter((line: string) => line.trim());
-          const problemCount = descriptionLines.length;
-          
-          systemPrompt = `Você cria títulos CURTOS para chamados de manutenção.
-
-REGRAS OBRIGATÓRIAS:
-1. MÁXIMO 40 caracteres
-2. ${problemCount > 1 ? `A descrição tem ${problemCount} PROBLEMAS DIFERENTES. Use um título GENÉRICO como: "Múltiplos reparos", "Diversos ajustes", "Reparos gerais"` : 'Resuma o problema principal'}
-3. NUNCA concatene ou liste múltiplos problemas
-4. NÃO comece com "Manutenção", "Reparo", "Conserto"
-5. SEM aspas, SEM pontuação final
-6. Responda APENAS o título, nada mais
-
-Exemplos para UM problema:
-- Torneira vazando no banheiro
-- Ar-condicionado não funciona
-
-Exemplos para MÚLTIPLOS problemas:
-- Múltiplos reparos necessários
-- Diversos ajustes na unidade
-- Reparos gerais`;
-          userPrompt = `${problemCount > 1 ? `ATENÇÃO: São ${problemCount} problemas diferentes. Gere um título GENÉRICO (não liste todos).` : 'Gere um título curto.'}\n\n${context.description}`;
-          break;
-        
-        default:
-          throw new Error('Invalid action');
-      }
-
-      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
-          ],
-        }),
+${c.styleGuide ? `GUIA DE ESTILO:\n${c.styleGuide}\n` : ""}
+${c.guardrails ? `REGRAS DE SEGURANÇA:\n${c.guardrails}\n` : ""}`;
+      const { texto } = await gerarTexto({
+        system,
+        pedido: String(c.userPrompt ?? "Olá"),
+        modelo: normalizarModelo(c.model),
+        effort: normalizarEffort(c.effort ?? effortPadrao),
+        maxTokens: Math.max(Number(c.maxTokens ?? maxTokens), 1500),
       });
-
-      if (!response.ok) {
-        if (response.status === 429) {
-          return new Response(
-            JSON.stringify({ error: 'Limite de requisições excedido. Tente novamente em alguns instantes.' }),
-            { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-        if (response.status === 402) {
-          return new Response(
-            JSON.stringify({ error: 'Créditos insuficientes. Por favor, adicione créditos ao workspace.' }),
-            { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-        const errorText = await response.text();
-        console.error('AI gateway error:', response.status, errorText);
-        throw new Error('AI gateway error');
-      }
-
-      const data = await response.json();
-      const generatedText = data.choices?.[0]?.message?.content;
-
-      return new Response(
-        JSON.stringify({ generatedText }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return json({ text: texto });
     }
 
-    // Original template-based logic
-    if (!templateKey) {
-      throw new Error('templateKey or action required');
+    if (pedido.action) {
+      const p = promptsDaAcao(pedido.action, pedido.context ?? {});
+      const { texto } = await gerarTexto({
+        system: p.system,
+        pedido: p.pedido,
+        modelo,
+        effort: p.effort ?? effortPadrao,
+        maxTokens,
+      });
+      return json({ generatedText: texto });
     }
 
-    // Get AI settings
-    const { data: aiSettings } = await supabaseClient
-      .from("ai_settings")
-      .select("*")
-      .single();
+    if (!templateKey) return json({ error: "templateKey ou action é obrigatório." }, 400);
+    if (!aiSettings) return json({ error: "Configuração da IA não encontrada (ai_settings)." }, 400);
 
-    if (!aiSettings) {
-      return new Response(
-        JSON.stringify({ error: "AI settings not configured" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Get template
-    console.log("Fetching template with key:", templateKey);
-    const { data: template, error: templateError } = await supabaseClient
+    const { data: template } = await admin
       .from("ai_templates")
       .select("*")
       .eq("key", templateKey)
       .eq("enabled", true)
-      .single();
+      .maybeSingle();
+    if (!template) return json({ error: "Modelo de resposta não encontrado ou desligado.", templateKey }, 404);
 
-    console.log("Template query result:", { template, templateError });
+    let contexto = "";
 
-    if (templateError || !template) {
-      console.error("Template error:", templateError);
-      return new Response(
-        JSON.stringify({ 
-          error: "Template not found or disabled",
-          details: templateError?.message,
-          templateKey 
-        }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Build context
-    let contextStr = "";
-
-    if (ticketId) {
-      const { data: ticket } = await supabaseClient
+    if (pedido.ticketId) {
+      const { data: ticket } = await userClient
         .from("tickets")
-        .select(`
-          *,
-          owner:profiles!tickets_owner_id_fkey(name, email, phone),
-          property:properties(name, address)
-        `)
-        .eq("id", ticketId)
-        .single();
-
-      // Buscar mensagens do ticket
-      const { data: ticketMessages } = await supabaseClient
+        .select(`*, owner:profiles!tickets_owner_id_fkey(name, email, phone), property:properties(name, address)`)
+        .eq("id", pedido.ticketId)
+        .maybeSingle();
+      const { data: mensagens } = await userClient
         .from("ticket_messages")
-        .select(`
-          *,
-          profiles(name, role)
-        `)
-        .eq("ticket_id", ticketId)
-        .order("created_at", { ascending: true });
-
-      const messagesHistory = ticketMessages?.map(m => 
-        `${m.profiles.name} (${m.profiles.role === 'owner' ? 'Proprietário' : 'Equipe'}): ${m.body}`
-      ).join('\n') || '';
-
+        .select("body, created_at, profiles(name, role)")
+        .eq("ticket_id", pedido.ticketId)
+        .order("created_at", { ascending: true })
+        .limit(60);
+      // deno-lint-ignore no-explicit-any
+      const historico = (mensagens ?? []).map((m: any) =>
+        `${m.profiles?.name ?? "?"} (${m.profiles?.role === "owner" ? "Proprietário" : "Equipe"}): ${m.body}`
+      ).join("\n");
       if (ticket) {
-        contextStr = `
+        contexto = `
 CONTEXTO DA EMPRESA:
-A RIOS é uma empresa de Operação e Gestão de Hospedagens que administra imóveis de aluguel por temporada. Oferecemos gestão completa de propriedades, incluindo:
-- Gestão de reservas e check-in/check-out
-- Manutenção e limpeza profissional
-- Suporte 24/7 aos proprietários
-- Gestão financeira e repasses
-- Marketing e divulgação dos imóveis
+${CONTEXTO_RIOS}
 
-CONTEXTO DO TICKET:
-- ID: ${ticket.id}
+CONTEXTO DO CHAMADO:
 - Assunto: ${ticket.subject}
 - Descrição: ${ticket.description}
 - Status: ${ticket.status}
 - Prioridade: ${ticket.priority}
 - Tipo: ${ticket.ticket_type}
-- Criado em: ${new Intl.DateTimeFormat("pt-BR").format(new Date(ticket.created_at))}
-- Proprietário: ${ticket.owner?.name} (${ticket.owner?.email})${ticket.owner?.phone ? ` - Tel: ${ticket.owner.phone}` : ''}
-- Propriedade: ${ticket.property?.name}${ticket.property?.address ? ` - ${ticket.property.address}` : ''}
-${ticket.blocked_dates_start ? `- Período de bloqueio solicitado: ${new Intl.DateTimeFormat("pt-BR").format(new Date(ticket.blocked_dates_start))} a ${new Intl.DateTimeFormat("pt-BR").format(new Date(ticket.blocked_dates_end!))}` : ''}
+- Criado em: ${dataBR(ticket.created_at)}
+- Proprietário: ${ticket.owner?.name} (${ticket.owner?.email})${ticket.owner?.phone ? ` - Tel: ${ticket.owner.phone}` : ""}
+- Imóvel: ${ticket.property?.name ?? "—"}${ticket.property?.address ? ` - ${ticket.property.address}` : ""}
+${ticket.blocked_dates_start ? `- Período de bloqueio pedido: ${dataBR(ticket.blocked_dates_start)} a ${dataBR(ticket.blocked_dates_end)}` : ""}
 
 HISTÓRICO DA CONVERSA:
-${messagesHistory}
+${historico}
 `;
       }
     }
 
-    if (chargeId) {
-      const { data: charge } = await supabaseClient
+    if (pedido.chargeId) {
+      const { data: charge } = await userClient
         .from("charges")
-        .select(`
-          *,
-          owner:profiles!charges_owner_id_fkey(name, email),
-          ticket:tickets(subject, property:properties(name))
-        `)
-        .eq("id", chargeId)
-        .single();
-
-      // Buscar mensagens da cobrança
-      const { data: chargeMessages } = await supabaseClient
+        .select(`*, owner:profiles!charges_owner_id_fkey(name, email), ticket:tickets(subject, property:properties(name))`)
+        .eq("id", pedido.chargeId)
+        .maybeSingle();
+      const { data: mensagens } = await userClient
         .from("charge_messages")
-        .select(`
-          *,
-          profiles(name, role)
-        `)
-        .eq("charge_id", chargeId)
-        .order("created_at", { ascending: true });
-
-      const messagesHistory = chargeMessages?.map(m => 
-        `${m.profiles.name} (${m.profiles.role === 'owner' ? 'Proprietário' : 'Equipe'}): ${m.body}`
-      ).join('\n') || '';
-
+        .select("body, created_at, profiles(name, role)")
+        .eq("charge_id", pedido.chargeId)
+        .order("created_at", { ascending: true })
+        .limit(60);
+      // deno-lint-ignore no-explicit-any
+      const historico = (mensagens ?? []).map((m: any) =>
+        `${m.profiles?.name ?? "?"} (${m.profiles?.role === "owner" ? "Proprietário" : "Equipe"}): ${m.body}`
+      ).join("\n");
       if (charge) {
-        const amountBRL = new Intl.NumberFormat("pt-BR", {
-          style: "currency",
-          currency: charge.currency || "BRL",
-        }).format(charge.amount_cents / 100);
-
-        contextStr = `
+        const valor = new Intl.NumberFormat("pt-BR", { style: "currency", currency: charge.currency || "BRL" })
+          .format(charge.amount_cents / 100);
+        contexto = `
 CONTEXTO DA EMPRESA:
-A RIOS é uma empresa de Operação e Gestão de Hospedagens que administra imóveis de aluguel por temporada. Oferecemos gestão completa de propriedades.
+${CONTEXTO_RIOS}
 
 IMPORTANTE SOBRE COBRANÇAS:
-- TODAS as cobranças são criadas PELA EQUIPE RIOS, NUNCA pelo proprietário
-- O proprietário está recebendo esta cobrança da RIOS por serviços prestados, manutenções realizadas, ou despesas relacionadas ao seu imóvel
-- Não trate como se o proprietário estivesse cobrando algo da RIOS
-- A RIOS está cobrando o proprietário, não o contrário
+- Toda cobrança é criada pela equipe RIOS, nunca pelo proprietário.
+- O proprietário está recebendo esta cobrança da RIOS por serviços, manutenções ou despesas do imóvel dele.
+- A RIOS cobra o proprietário, não o contrário.
 
 CONTEXTO DA COBRANÇA:
-- ID: ${charge.id}
 - Título: ${charge.title}
-- Descrição: ${charge.description || "N/A"}
-- Valor: ${amountBRL}
-- Vencimento: ${charge.due_date ? new Intl.DateTimeFormat("pt-BR").format(new Date(charge.due_date)) : "N/A"}
+- Descrição: ${charge.description || "—"}
+- Valor: ${valor}
+- Vencimento: ${charge.due_date ? dataBR(charge.due_date) : "—"}
 - Status: ${charge.status}
 - Proprietário: ${charge.owner?.name} (${charge.owner?.email})
-${charge.ticket ? `- Relacionado ao ticket: ${charge.ticket.subject}` : ""}
-${charge.ticket?.property ? `- Propriedade: ${charge.ticket.property.name}` : ""}
+${charge.ticket ? `- Chamado relacionado: ${charge.ticket.subject}` : ""}
+${charge.ticket?.property ? `- Imóvel: ${charge.ticket.property.name}` : ""}
 ${charge.payment_link_url ? `- Link de pagamento: ${charge.payment_link_url}` : ""}
 
 HISTÓRICO DA CONVERSA:
-${messagesHistory}
+${historico}
 
 ORIENTAÇÕES PARA RESPOSTA:
-- Lembre-se: você está respondendo EM NOME DA RIOS para o proprietário
-- Seja claro sobre o motivo da cobrança
-- Se houver dúvidas sobre a cobrança, explique detalhadamente
-- Mencione prazos de contestação se relevante (7 dias corridos após recebimento)
-- Seja cordial mas profissional
+- Você responde em nome da RIOS para o proprietário.
+- Seja claro sobre o motivo da cobrança; se houver dúvida, explique.
+- Mencione o prazo de contestação quando fizer sentido (7 dias corridos após o recebimento).
+- Cordial e profissional.
 `;
       }
     }
 
-    // Build final prompt
-    const systemPrompt = `${aiSettings.system_prompt}
+    const system = `${aiSettings.system_prompt}
 
 ${aiSettings.style_guide ? `GUIA DE ESTILO:\n${aiSettings.style_guide}\n` : ""}
-
 ${aiSettings.guardrails ? `REGRAS DE SEGURANÇA:\n${aiSettings.guardrails}\n` : ""}
+${
+      pedido.chargeId
+        ? `
+CONTEXTO CRÍTICO SOBRE COBRANÇAS:
+Você responde em nome da RIOS, que está cobrando o proprietário. Você já sabe o motivo da cobrança: nunca pergunte "qual o motivo da sua cobrança".`
+        : ""
+    }`;
 
-${chargeId ? `
-⚠️ CONTEXTO CRÍTICO SOBRE COBRANÇAS:
-Você está respondendo EM NOME DA RIOS (a empresa de gestão).
-A RIOS está COBRANDO o proprietário por serviços/despesas.
-O proprietário NÃO está cobrando a RIOS.
-NÃO pergunte "qual o motivo da sua cobrança?" - você JÁ SABE o motivo.
-NÃO trate o proprietário como se ele estivesse nos cobrando.
-LEMBRE-SE: Nós (RIOS) estamos cobrando ELE (proprietário).
-` : ''}`;
+    const pedidoTexto = `${contexto}
 
-    const userPrompt = `${contextStr}
+${pedido.customInstructions ? `INSTRUÇÕES DO ATENDENTE:\n${pedido.customInstructions}\n\n` : ""}${template.template_prompt}
 
-${customInstructions ? `INSTRUÇÕES DO ATENDENTE:\n${customInstructions}\n\n` : ''}${template.template_prompt}
+IMPORTANTE:
+- Responda sempre em português do Brasil, de forma direta e profissional.
+- Use o contexto da RIOS e o histórico da conversa.
+- Mantenha 2 a 4 parágrafos no máximo.
+- Não invente informações que não estão no contexto.
+- Assine como "— Equipe RIOS".
+- Devolva só o texto da resposta.`;
 
-IMPORTANTE: 
-- Responda sempre em PT-BR, de forma direta e profissional
-- Use o contexto da RIOS e do histórico da conversa
-- Mantenha 2-4 parágrafos no máximo
-- Não invente informações que não estão no contexto
-${chargeId ? '- NUNCA pergunte "qual o motivo da sua cobrança" - você está respondendo pela RIOS que está cobrando o proprietário\n- Explique o motivo DA NOSSA cobrança se for questionado' : ''}
-- Assine como "— Equipe RIOS"`;
+    const { texto, uso, resposta: r } = await gerarTexto({ system, pedido: pedidoTexto, modelo, effort: effortPadrao, maxTokens });
 
-
-    // Call Lovable AI
-    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!lovableApiKey) {
-      return new Response(
-        JSON.stringify({ error: "Lovable AI not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${lovableApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: aiSettings.model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        temperature: aiSettings.temperature,
-        max_tokens: aiSettings.max_tokens,
-      }),
-    });
-
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error("Lovable AI error:", aiResponse.status, errorText);
-      
-      if (aiResponse.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      
-      if (aiResponse.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "AI credits exhausted. Please add funds to your workspace." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      throw new Error(`AI API error: ${aiResponse.status} - ${errorText}`);
-    }
-
-    const aiData = await aiResponse.json();
-    const generatedText = aiData.choices?.[0]?.message?.content || "";
-
-    const latency = Date.now() - startTime;
-
-    // Log usage
-    await supabaseClient.from("ai_usage_logs").insert({
-      ticket_id: ticketId || null,
-      charge_id: chargeId || null,
+    await admin.from("ai_usage_logs").insert({
+      ticket_id: pedido.ticketId || null,
+      charge_id: pedido.chargeId || null,
       template_key: templateKey,
-      request_tokens: aiData.usage?.prompt_tokens || 0,
-      response_tokens: aiData.usage?.completion_tokens || 0,
-      model: aiSettings.model,
-      latency_ms: latency,
-      created_by: user.id,
+      request_tokens: uso.tokens_entrada + uso.tokens_cache_lidos + uso.tokens_cache_gravados,
+      response_tokens: uso.tokens_saida,
+      model: r.model,
+      latency_ms: Date.now() - inicio,
+      created_by: autor.id,
       success: true,
     });
 
-    return new Response(
-      JSON.stringify({ text: generatedText }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  } catch (error: any) {
-    console.error("Error in ai-generate-response:", error);
-
-    // Try to log error
-    try {
-      const supabaseClient = createClient(
-        Deno.env.get("SUPABASE_URL") ?? "",
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-      );
-
-      const {
-        data: { user },
-      } = await supabaseClient.auth.getUser();
-
-      if (user) {
-        await supabaseClient.from("ai_usage_logs").insert({
-          created_by: user.id,
-          success: false,
-          error: error.message,
-          model: "unknown",
-          latency_ms: Date.now() - startTime,
-        });
-      }
-    } catch (logError) {
-      console.error("Failed to log error:", logError);
-    }
-
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return json({ text: texto });
+  } catch (e) {
+    const status = e instanceof ErroIA ? e.status : 500;
+    const mensagem = e instanceof ErroIA ? e.message : "Erro ao gerar o texto.";
+    if (!(e instanceof ErroIA)) console.error("[ai-generate-response]", e);
+    await admin.from("ai_usage_logs").insert({
+      template_key: templateKey ?? null,
+      created_by: autor.id,
+      success: false,
+      error: mensagem.slice(0, 500),
+      model: "claude",
+      latency_ms: Date.now() - inicio,
+    }).then(({ error }: { error: { message: string } | null }) => {
+      if (error) console.error("[ai-generate-response] log:", error.message);
+    });
+    return json({ error: mensagem }, status);
   }
-};
-
-serve(handler);
+});

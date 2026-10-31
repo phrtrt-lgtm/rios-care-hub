@@ -40,14 +40,9 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Loader2, ArrowLeft, Save, History, TestTube } from "lucide-react";
-
-const AVAILABLE_MODELS = [
-  { value: "google/gemini-2.5-flash", label: "Google Gemini 2.5 Flash (Padrão)" },
-  { value: "google/gemini-2.5-pro", label: "Google Gemini 2.5 Pro" },
-  { value: "google/gemini-2.5-flash-lite", label: "Google Gemini 2.5 Flash Lite" },
-  { value: "openai/gpt-5-mini", label: "OpenAI GPT-5 Mini" },
-  { value: "openai/gpt-5", label: "OpenAI GPT-5" },
-];
+import { ConfigAgenteIA } from "@/components/ia/ConfigAgenteIA";
+import { EFFORTS_IA, MODELOS_IA } from "@/lib/iaMeta";
+import { descreverErroDaFunction } from "@/lib/erroFunction";
 
 export default function ConfiguracaoIA() {
   const navigate = useNavigate();
@@ -61,8 +56,8 @@ export default function ConfiguracaoIA() {
   const [systemPrompt, setSystemPrompt] = useState("");
   const [styleGuide, setStyleGuide] = useState("");
   const [guardrails, setGuardrails] = useState("");
-  const [model, setModel] = useState("google/gemini-2.5-flash");
-  const [temperature, setTemperature] = useState(0.2);
+  const [model, setModel] = useState("claude-sonnet-5-5");
+  const [effort, setEffort] = useState("medium");
   const [maxTokens, setMaxTokens] = useState(800);
 
   // Templates
@@ -101,8 +96,8 @@ export default function ConfiguracaoIA() {
         setSystemPrompt(settingsData.system_prompt || "");
         setStyleGuide(settingsData.style_guide || "");
         setGuardrails(settingsData.guardrails || "");
-        setModel(settingsData.model || "google/gemini-2.5-flash");
-        setTemperature(settingsData.temperature || 0.2);
+        setModel(settingsData.model || "claude-sonnet-5-5");
+        setEffort(settingsData.effort || "medium");
         setMaxTokens(settingsData.max_tokens || 800);
       }
 
@@ -142,7 +137,7 @@ export default function ConfiguracaoIA() {
         style_guide: styleGuide,
         guardrails: guardrails,
         model,
-        temperature,
+        effort,
         max_tokens: maxTokens,
         updated_at: new Date().toISOString(),
       };
@@ -168,7 +163,7 @@ export default function ConfiguracaoIA() {
             style_guide: styleGuide,
             guardrails: guardrails,
             model,
-            temperature,
+            effort,
             max_tokens: maxTokens,
             changelog,
             created_by: user?.id,
@@ -194,7 +189,7 @@ export default function ConfiguracaoIA() {
     setStyleGuide(version.style_guide || "");
     setGuardrails(version.guardrails || "");
     setModel(version.model);
-    setTemperature(version.temperature);
+    setEffort(version.effort || "medium");
     setMaxTokens(version.max_tokens);
 
     toast.success("Versão restaurada. Clique em Salvar para aplicar.");
@@ -205,40 +200,19 @@ export default function ConfiguracaoIA() {
       setTesting(true);
       setTestResult("");
 
-      const testSystemPrompt = `${systemPrompt}
-
-${styleGuide ? `GUIA DE ESTILO:\n${styleGuide}\n` : ""}
-
-${guardrails ? `REGRAS DE SEGURANÇA:\n${guardrails}\n` : ""}`;
-
-      const lovableApiKey = import.meta.env.VITE_LOVABLE_API_KEY;
-      
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${lovableApiKey}`,
-          "Content-Type": "application/json",
+      // O teste passa pela function (a chave fica no servidor): antes chamava o
+      // gateway direto do navegador com uma variável que não existe no .env.
+      const { data, error } = await supabase.functions.invoke("ai-generate-response", {
+        body: {
+          action: "test_prompt",
+          context: { systemPrompt, styleGuide, guardrails, userPrompt: testContext, model, effort, maxTokens },
         },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: "system", content: testSystemPrompt },
-            { role: "user", content: testContext },
-          ],
-          temperature,
-          max_tokens: maxTokens,
-        }),
       });
-
-      if (!response.ok) {
-        throw new Error(`AI API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      setTestResult(data.choices?.[0]?.message?.content || "Sem resposta");
-    } catch (error: any) {
+      if (error) throw error;
+      setTestResult(data?.text || "Sem resposta");
+    } catch (error: unknown) {
       console.error("Test error:", error);
-      toast.error("Erro ao testar: " + error.message);
+      toast.error(await descreverErroDaFunction(error, "Erro ao testar o prompt."));
     } finally {
       setTesting(false);
     }
@@ -301,7 +275,12 @@ ${guardrails ? `REGRAS DE SEGURANÇA:\n${guardrails}\n` : ""}`;
             <TabsTrigger value="prompt">Prompt Geral</TabsTrigger>
             <TabsTrigger value="templates">Templates & Atalhos</TabsTrigger>
             <TabsTrigger value="versions">Versões</TabsTrigger>
+            <TabsTrigger value="agente">Agente</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="agente" className="space-y-6">
+            <ConfigAgenteIA />
+          </TabsContent>
 
           <TabsContent value="prompt" className="space-y-6">
             <Card>
@@ -355,7 +334,7 @@ ${guardrails ? `REGRAS DE SEGURANÇA:\n${guardrails}\n` : ""}`;
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {AVAILABLE_MODELS.map((m) => (
+                        {MODELOS_IA.map((m) => (
                           <SelectItem key={m.value} value={m.value}>
                             {m.label}
                           </SelectItem>
@@ -365,16 +344,19 @@ ${guardrails ? `REGRAS DE SEGURANÇA:\n${guardrails}\n` : ""}`;
                   </div>
 
                   <div>
-                    <Label htmlFor="temperature">Temperature (0-1)</Label>
-                    <Input
-                      id="temperature"
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      max="1"
-                      value={temperature}
-                      onChange={(e) => setTemperature(parseFloat(e.target.value))}
-                    />
+                    <Label htmlFor="effort">Effort (quanto pensa)</Label>
+                    <Select value={effort} onValueChange={setEffort}>
+                      <SelectTrigger id="effort">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {EFFORTS_IA.map((e) => (
+                          <SelectItem key={e.value} value={e.value}>
+                            {e.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div>
@@ -602,7 +584,7 @@ ${guardrails ? `REGRAS DE SEGURANÇA:\n${guardrails}\n` : ""}`;
                         </summary>
                         <div className="mt-2 space-y-2 rounded-md bg-muted p-3">
                           <p><strong>Modelo:</strong> {version.model}</p>
-                          <p><strong>Temperature:</strong> {version.temperature}</p>
+                          <p><strong>Effort:</strong> {version.effort ?? "—"}</p>
                           <p><strong>Max Tokens:</strong> {version.max_tokens}</p>
                         </div>
                       </details>

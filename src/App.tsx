@@ -9,6 +9,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { lazyPage } from "@/lib/lazyPage";
 import { SessionHandlerWrapper } from "@/components/SessionHandlerWrapper";
+const AssistenteIA = lazyPage(() => import("@/components/ia/AssistenteIA"));
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 const Cadastro = lazyPage(() => import("./pages/Cadastro"));
@@ -723,6 +724,9 @@ const App = () => (
             <Route path="/contrato/:id" element={<ProtectedRoute allowedRoles={['owner']}><ContratoProprietario /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
+          <Suspense fallback={null}>
+            <AssistenteIA />
           </Suspense>
           </SessionHandlerWrapper>
         </AuthProvider>
