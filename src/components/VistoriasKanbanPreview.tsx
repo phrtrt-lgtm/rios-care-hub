@@ -4,12 +4,13 @@ import { saveScrollPosition } from "@/lib/navigation";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ClipboardCheck, Wrench, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
+import { ClipboardCheck, Wrench, ChevronRight } from "lucide-react";
 import { QuickInspectionAttachmentButton } from "./QuickInspectionAttachmentButton";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CreateMaintenanceFromInspectionDialog } from "./CreateMaintenanceFromInspectionDialog";
 import {
+  BotaoExpandir,
   BotaoLinha,
   CaixaCarregando,
   CaixaOperacao,
@@ -54,7 +55,9 @@ export function VistoriasKanbanPreview() {
   const [loading, setLoading] = useState(true);
   const [maintenanceDialogOpen, setMaintenanceDialogOpen] = useState(false);
   const [selectedInspection, setSelectedInspection] = useState<Inspection | null>(null);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [caixaAberta, setCaixaAberta] = useState(false);
+  const [problemasExpandidos, setProblemasExpandidos] = useState(false);
+  const [okExpandidos, setOkExpandidos] = useState(false);
 
   useEffect(() => {
     fetchInspections();
@@ -146,71 +149,88 @@ export function VistoriasKanbanPreview() {
     return <CaixaCarregando icone={<ClipboardCheck />} titulo="Vistorias" tom="secondary" />;
   }
 
-  const hasMoreItems =
-    problemInspections.length > COLLAPSED_PROBLEM_LIMIT || okInspections.length > COLLAPSED_OK_LIMIT;
-
   return (
     <>
-      <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-        <CaixaOperacao
-          icone={<ClipboardCheck />}
-          titulo="Vistorias"
-          tom="secondary"
-          selos={
-            inspections.length > 0 && (
-              <SeloContagem title="As vistorias mais recentes, não o total">{inspections.length} recentes</SeloContagem>
-            )
-          }
-          acoes={
-            <>
-              {hasMoreItems && (
-                <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-7 gap-1 px-2 text-xs">
-                    {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                    {isExpanded ? "Recolher" : "Expandir"}
-                  </Button>
-                </CollapsibleTrigger>
-              )}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate("/admin/vistorias")}
-                className="h-7 gap-1 px-2 text-xs text-secondary hover:text-secondary"
-              >
-                <span className="hidden sm:inline">Ver todas</span>
-                <span className="sm:hidden">Ver</span>
-                <ChevronRight className="h-3.5 w-3.5" />
-              </Button>
-            </>
-          }
-        >
-          {inspections.length === 0 ? (
-            <CaixaVazia icone={<ClipboardCheck className="h-5 w-5" />} titulo="Nenhuma vistoria recente" />
-          ) : (
-            <div className="space-y-3">
-              {/* Problemas primeiro - sempre visíveis (colapsado) */}
-              {problemInspections.length > 0 && (
-                <GrupoCaixa titulo="Problemas" quantidade={problemInspections.length} tom="destructive">
+      <CaixaOperacao
+        icone={<ClipboardCheck />}
+        titulo="Vistorias"
+        tom="secondary"
+        recolhivel
+        aberto={caixaAberta}
+        onAbrirChange={setCaixaAberta}
+        selos={
+          inspections.length > 0 && (
+            <SeloContagem title="As vistorias mais recentes, não o total">{inspections.length} recentes</SeloContagem>
+          )
+        }
+        acoes={
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate("/admin/vistorias")}
+            className="h-7 gap-1 px-2 text-xs text-secondary hover:text-secondary"
+          >
+            <span className="hidden sm:inline">Ver todas</span>
+            <span className="sm:hidden">Ver</span>
+            <ChevronRight className="h-3.5 w-3.5" />
+          </Button>
+        }
+      >
+        {inspections.length === 0 ? (
+          <CaixaVazia icone={<ClipboardCheck className="h-5 w-5" />} titulo="Nenhuma vistoria recente" />
+        ) : (
+          <div className="space-y-3">
+            {/* Problemas primeiro */}
+            {problemInspections.length > 0 && (
+              <Collapsible open={problemasExpandidos} onOpenChange={setProblemasExpandidos}>
+                <GrupoCaixa
+                  titulo="Problemas"
+                  quantidade={problemInspections.length}
+                  tom="destructive"
+                  acao={
+                    problemInspections.length > COLLAPSED_PROBLEM_LIMIT && (
+                      <CollapsibleTrigger asChild>
+                        <BotaoExpandir
+                          aberto={problemasExpandidos}
+                          restantes={problemInspections.length - COLLAPSED_PROBLEM_LIMIT}
+                        />
+                      </CollapsibleTrigger>
+                    )
+                  }
+                >
                   {problemInspections.slice(0, COLLAPSED_PROBLEM_LIMIT).map((i) => renderRow(i, true))}
                   <CollapsibleContent className="max-h-72 space-y-1 overflow-y-auto pr-1">
                     {problemInspections.slice(COLLAPSED_PROBLEM_LIMIT, EXPANDED_LIMIT).map((i) => renderRow(i, true))}
                   </CollapsibleContent>
                 </GrupoCaixa>
-              )}
+              </Collapsible>
+            )}
 
-              {/* OK - sempre visíveis (colapsado) */}
-              {okInspections.length > 0 && (
-                <GrupoCaixa titulo="OK" quantidade={okInspections.length} tom="success">
+            {/* OK */}
+            {okInspections.length > 0 && (
+              <Collapsible open={okExpandidos} onOpenChange={setOkExpandidos}>
+                <GrupoCaixa
+                  titulo="OK"
+                  quantidade={okInspections.length}
+                  tom="success"
+                  acao={
+                    okInspections.length > COLLAPSED_OK_LIMIT && (
+                      <CollapsibleTrigger asChild>
+                        <BotaoExpandir aberto={okExpandidos} restantes={okInspections.length - COLLAPSED_OK_LIMIT} />
+                      </CollapsibleTrigger>
+                    )
+                  }
+                >
                   {okInspections.slice(0, COLLAPSED_OK_LIMIT).map((i) => renderRow(i, false))}
                   <CollapsibleContent className="max-h-72 space-y-1 overflow-y-auto pr-1">
                     {okInspections.slice(COLLAPSED_OK_LIMIT, EXPANDED_LIMIT).map((i) => renderRow(i, false))}
                   </CollapsibleContent>
                 </GrupoCaixa>
-              )}
-            </div>
-          )}
-        </CaixaOperacao>
-      </Collapsible>
+              </Collapsible>
+            )}
+          </div>
+        )}
+      </CaixaOperacao>
 
       {selectedInspection && selectedInspection.property && (
         <CreateMaintenanceFromInspectionDialog
