@@ -1669,9 +1669,17 @@ export type Database = {
           cleaning_fee_proof_path: string | null
           created_at: string
           end_date: string
+          erro_hostex: string | null
+          hostex_bloqueado_em: string | null
+          hostex_request_id: string | null
           id: string
+          mercadopago_payment_id: string | null
           notes: string | null
           owner_id: string
+          pago_em: string | null
+          pix_expira_em: string | null
+          pix_qr_code: string | null
+          pix_qr_code_base64: string | null
           processed_at: string | null
           processed_by: string | null
           property_id: string
@@ -1680,14 +1688,23 @@ export type Database = {
           start_date: string
           status: string
           updated_at: string
+          valor_cents: number | null
         }
         Insert: {
           cleaning_fee_proof_path?: string | null
           created_at?: string
           end_date: string
+          erro_hostex?: string | null
+          hostex_bloqueado_em?: string | null
+          hostex_request_id?: string | null
           id?: string
+          mercadopago_payment_id?: string | null
           notes?: string | null
           owner_id: string
+          pago_em?: string | null
+          pix_expira_em?: string | null
+          pix_qr_code?: string | null
+          pix_qr_code_base64?: string | null
           processed_at?: string | null
           processed_by?: string | null
           property_id: string
@@ -1696,14 +1713,23 @@ export type Database = {
           start_date: string
           status?: string
           updated_at?: string
+          valor_cents?: number | null
         }
         Update: {
           cleaning_fee_proof_path?: string | null
           created_at?: string
           end_date?: string
+          erro_hostex?: string | null
+          hostex_bloqueado_em?: string | null
+          hostex_request_id?: string | null
           id?: string
+          mercadopago_payment_id?: string | null
           notes?: string | null
           owner_id?: string
+          pago_em?: string | null
+          pix_expira_em?: string | null
+          pix_qr_code?: string | null
+          pix_qr_code_base64?: string | null
           processed_at?: string | null
           processed_by?: string | null
           property_id?: string
@@ -1712,6 +1738,7 @@ export type Database = {
           start_date?: string
           status?: string
           updated_at?: string
+          valor_cents?: number | null
         }
         Relationships: [
           {
@@ -3098,6 +3125,7 @@ export type Database = {
           notificar_reservas_whatsapp: boolean
           owner_id: string
           owner_phone: string | null
+          taxa_limpeza_cents: number | null
           updated_at: string
         }
         Insert: {
@@ -3115,6 +3143,7 @@ export type Database = {
           notificar_reservas_whatsapp?: boolean
           owner_id: string
           owner_phone?: string | null
+          taxa_limpeza_cents?: number | null
           updated_at?: string
         }
         Update: {
@@ -3132,6 +3161,7 @@ export type Database = {
           notificar_reservas_whatsapp?: boolean
           owner_id?: string
           owner_phone?: string | null
+          taxa_limpeza_cents?: number | null
           updated_at?: string
         }
         Relationships: [
