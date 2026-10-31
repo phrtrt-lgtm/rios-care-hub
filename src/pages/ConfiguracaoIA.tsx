@@ -165,6 +165,8 @@ export default function ConfiguracaoIA() {
             model,
             effort,
             max_tokens: maxTokens,
+            // Coluna legada obrigatória no banco; o agente usa `effort`.
+            temperature: settings.temperature,
             changelog,
             created_by: user?.id,
           });
