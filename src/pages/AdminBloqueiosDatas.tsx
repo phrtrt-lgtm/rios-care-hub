@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { EmptyState } from "@/components/ui/empty-state";
+import { formatarBRL } from "@/lib/cobrancaMeta";
 
 interface BlockRequest {
   id: string;
@@ -23,7 +24,11 @@ interface BlockRequest {
   reason: "maintenance" | "family_visit";
   notes: string | null;
   cleaning_fee_proof_path: string | null;
-  status: "pending" | "processed" | "rejected";
+  status: "pending" | "processed" | "rejected" | "aguardando_pagamento" | "pago_pendente_hostex" | "expirado";
+  valor_cents?: number | null;
+  pago_em?: string | null;
+  erro_hostex?: string | null;
+  hostex_bloqueado_em?: string | null;
   created_at: string;
   processed_at: string | null;
   rejection_reason: string | null;
@@ -35,6 +40,9 @@ const statusConfig = {
   pending: { label: "Pendente", color: "bg-warning/10 text-warning border-warning/30" },
   processed: { label: "Processado", color: "bg-success/10 text-success border-success/30" },
   rejected: { label: "Rejeitado", color: "bg-destructive/10 text-destructive border-destructive/30" },
+  aguardando_pagamento: { label: "Aguardando PIX", color: "bg-info/10 text-info border-info/30" },
+  pago_pendente_hostex: { label: "Pago · Hostex pendente", color: "bg-warning/10 text-warning border-warning/30" },
+  expirado: { label: "PIX expirado", color: "bg-muted text-muted-foreground border-border" },
 };
 
 const reasonConfig = {
@@ -137,7 +145,7 @@ export default function AdminBloqueiosDatas() {
     return data.publicUrl;
   };
 
-  const pendingCount = requests.filter((r) => r.status === "pending").length;
+  const pendingCount = requests.filter((r) => r.status === "pending" || r.status === "pago_pendente_hostex").length;
 
   return (
     <div className="min-h-screen bg-background">
@@ -170,6 +178,8 @@ export default function AdminBloqueiosDatas() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="pending">Pendentes</SelectItem>
+                <SelectItem value="pago_pendente_hostex">Pagos, Hostex pendente</SelectItem>
+                <SelectItem value="aguardando_pagamento">Aguardando PIX</SelectItem>
                 <SelectItem value="processed">Processados</SelectItem>
                 <SelectItem value="rejected">Rejeitados</SelectItem>
                 <SelectItem value="all">Todos</SelectItem>
@@ -207,7 +217,7 @@ export default function AdminBloqueiosDatas() {
                   <CardContent className="p-0">
                     <div className="flex gap-0">
                       {/* Color bar */}
-                      <div className={`w-1.5 shrink-0 ${req.status === "pending" ? "bg-warning" : req.status === "processed" ? "bg-success" : "bg-destructive"}`} />
+                      <div className={`w-1.5 shrink-0 ${req.status === "pending" || req.status === "pago_pendente_hostex" ? "bg-warning" : req.status === "processed" ? "bg-success" : req.status === "rejected" ? "bg-destructive" : "bg-info"}`} />
 
                       <div className="flex-1 p-4 space-y-3">
                         {/* Header: Property name + Status */}
@@ -296,6 +306,18 @@ export default function AdminBloqueiosDatas() {
                                 Ver comprovante de limpeza
                               </a>
                             )}
+                            {typeof req.valor_cents === "number" && (
+                              <p className="text-xs font-medium text-foreground">
+                                Taxa de limpeza {formatarBRL(req.valor_cents)}
+                                {req.pago_em
+                                  ? ` · paga em ${format(new Date(req.pago_em), "dd/MM 'às' HH:mm", { locale: ptBR })}`
+                                  : " · PIX não pago"}
+                                {req.hostex_bloqueado_em && " · bloqueado na Hostex"}
+                              </p>
+                            )}
+                            {req.erro_hostex && (
+                              <p className="text-xs text-destructive">Hostex: {req.erro_hostex}</p>
+                            )}
                             <p className="text-xs text-muted-foreground">
                               Solicitado em {format(new Date(req.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                               {req.processed_at && ` · Processado em ${format(new Date(req.processed_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`}
@@ -303,7 +325,7 @@ export default function AdminBloqueiosDatas() {
                           </div>
 
                           {/* Actions */}
-                          {req.status === "pending" && (
+                          {(req.status === "pending" || req.status === "pago_pendente_hostex") && (
                             <div className="flex items-center gap-2 shrink-0">
                               <Button
                                 size="sm"

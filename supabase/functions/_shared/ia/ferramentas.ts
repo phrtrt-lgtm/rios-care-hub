@@ -20,6 +20,7 @@ import {
   ErroFerramenta,
 } from "./politica.ts";
 import { CATALOGO_ESCRITA } from "./ferramentas-escrita.ts";
+import { hostexGet } from "../hostexReserva.ts";
 
 const TODOS = [...PAPEIS_EQUIPE, "owner" as const];
 
@@ -159,8 +160,8 @@ const reservasDoImovel: FerramentaIA = {
         ...(ctx.equipe ? { hospede: r.guest_name } : {}),
       })),
       bloqueios_do_proprietario: bloqueios.map((b) => ({
-        de: b.start_date,
-        ate: b.end_date,
+        entrada: b.start_date,
+        saida: b.end_date,
         motivo: b.reason === "family_visit" ? "uso pessoal" : "manutenção",
         status: b.status === "processed" ? "bloqueado" : "pedido pendente",
       })),
@@ -202,8 +203,32 @@ const disponibilidade: FerramentaIA = {
     for (const r of reservas) {
       if (RESERVA_OCUPA.includes(String(r.status))) marcar(String(r.check_in_date), String(r.check_out_date));
     }
+    // end_date do pedido é a saída (manhã livre): a última noite é a véspera.
     for (const b of bloqueios) {
-      if (b.status === "processed") marcar(String(b.start_date), somarDias(String(b.end_date), 1));
+      if (b.status === "processed") marcar(String(b.start_date), String(b.end_date));
+    }
+    // Equipe: o calendário mestre ao vivo da Hostex manda sobre o cache (bloqueios
+    // feitos pela Central Hostex ou pela IA não existem no banco).
+    let fonte = fonteCache(reservas);
+    if (ctx.equipe) {
+      const apiKey = Deno.env.get("HOSTEX_API_KEY");
+      const { data: hx } = await ctx.userClient.from("hostex_properties").select("id_hostex").eq("property_id", imovel.id).limit(1).maybeSingle();
+      if (apiKey && hx?.id_hostex && dias <= 366) {
+        try {
+          const resp = await hostexGet("/availabilities", { property_ids: hx.id_hostex, start_date: de, end_date: dataDe(fim - 1) }, apiKey);
+          const diasHx: Linha[] = resp?.data?.properties?.[0]?.availabilities ?? [];
+          if (diasHx.length > 0) {
+            ocupada.fill(false);
+            for (const d of diasHx) {
+              const n = diaNum(String(d.date));
+              if (d.available === false && n >= ini && n < fim) ocupada[n - ini] = true;
+            }
+            fonte = "calendário mestre da Hostex, ao vivo";
+          }
+        } catch (e) {
+          console.warn("[ia] availabilities da Hostex:", e);
+        }
+      }
     }
     const janelas: Array<{ de: string; ate: string; noites: number }> = [];
     let aberta: number | null = null;
@@ -219,7 +244,7 @@ const disponibilidade: FerramentaIA = {
     return {
       imovel: imovel.name,
       periodo: { de, ate, noites: dias },
-      fonte: fonteCache(reservas),
+      fonte,
       noites_ocupadas: noitesOcupadas,
       noites_livres: dias - noitesOcupadas,
       janelas_livres: janelas.slice(0, 30),

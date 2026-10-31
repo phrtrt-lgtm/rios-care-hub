@@ -12,6 +12,7 @@ import { ChargesKanbanPreview } from "@/components/ChargesKanbanPreview";
 import { GuestChargeReminders } from "@/components/GuestChargeReminders";
 import { LembreteAjustes } from "@/components/ajustes/LembreteAjustes";
 import { LembreteCompras } from "@/components/compras/LembreteCompras";
+import { LembreteBloqueios } from "@/components/bloqueios/LembreteBloqueios";
 import { LembreteTarefas } from "@/components/tarefas/LembreteTarefas";
 import { LembreteAvisos } from "@/components/avisos/LembreteAvisos";
 import { LembreteNovosImoveis } from "@/components/viabilizacao/LembreteNovosImoveis";
@@ -135,6 +136,7 @@ export default function Painel() {
             />
             <LembreteAjustes />
             <LembreteCompras />
+            <LembreteBloqueios />
             <LembreteTarefas />
             <LembreteAvisos />
             <LembreteNovosImoveis />

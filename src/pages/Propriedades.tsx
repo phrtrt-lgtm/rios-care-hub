@@ -20,6 +20,7 @@ interface Property {
   id: string;
   name: string;
   address: string | null;
+  taxa_limpeza_cents?: number | null;
   owner_id: string;
   cover_photo_url: string | null;
   assigned_cleaner_id: string | null;
@@ -65,7 +66,8 @@ const Propriedades = () => {
     name: "",
     address: "",
     owner_id: "",
-    assigned_cleaner_id: ""
+    assigned_cleaner_id: "",
+    taxa_limpeza: ""
   });
 
   const visibleProperties = properties.filter((p) =>
@@ -153,6 +155,9 @@ const Propriedades = () => {
       // Buscar telefone do proprietário selecionado
       const selectedOwner = owners.find(o => o.id === formData.owner_id);
       const ownerPhone = selectedOwner?.phone || null;
+      // Taxa de limpeza do bloqueio para uso pessoal (R$ com vírgula) -> centavos; vazio = sem taxa.
+      const taxaNumero = Number(formData.taxa_limpeza.replace(/\./g, "").replace(",", "."));
+      const taxaCents = formData.taxa_limpeza.trim() && Number.isFinite(taxaNumero) && taxaNumero > 0 ? Math.round(taxaNumero * 100) : null;
 
       if (editingProperty) {
         // Update existing property
@@ -161,7 +166,8 @@ const Propriedades = () => {
           address: formData.address || null,
           owner_id: formData.owner_id,
           assigned_cleaner_id: formData.assigned_cleaner_id || null,
-          owner_phone: ownerPhone
+          owner_phone: ownerPhone,
+          taxa_limpeza_cents: taxaCents
         };
         
         const { error } = await supabase
@@ -184,7 +190,8 @@ const Propriedades = () => {
             address: formData.address || null,
             owner_id: formData.owner_id,
             assigned_cleaner_id: formData.assigned_cleaner_id || null,
-            owner_phone: ownerPhone
+            owner_phone: ownerPhone,
+            taxa_limpeza_cents: taxaCents
           });
 
         if (error) throw error;
@@ -246,7 +253,8 @@ const Propriedades = () => {
       name: property.name,
       address: property.address || "",
       owner_id: property.owner_id,
-      assigned_cleaner_id: property.assigned_cleaner_id || ""
+      assigned_cleaner_id: property.assigned_cleaner_id || "",
+      taxa_limpeza: property.taxa_limpeza_cents != null ? (property.taxa_limpeza_cents / 100).toFixed(2).replace(".", ",") : ""
     });
     setDialogOpen(true);
   };
@@ -340,7 +348,7 @@ const Propriedades = () => {
   };
 
   const resetForm = () => {
-    setFormData({ name: "", address: "", owner_id: "", assigned_cleaner_id: "" });
+    setFormData({ name: "", address: "", owner_id: "", assigned_cleaner_id: "", taxa_limpeza: "" });
     setEditingProperty(null);
   };
 
@@ -405,6 +413,19 @@ const Propriedades = () => {
                       onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                       placeholder="Endereço completo (opcional)"
                     />
+                  </div>
+                  <div>
+                    <Label htmlFor="taxa_limpeza">Taxa de limpeza (R$)</Label>
+                    <Input
+                      id="taxa_limpeza"
+                      inputMode="decimal"
+                      value={formData.taxa_limpeza}
+                      onChange={(e) => setFormData({ ...formData, taxa_limpeza: e.target.value })}
+                      placeholder="Ex.: 180,00"
+                    />
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Cobrada por PIX quando o proprietário bloqueia datas para uso pessoal. Vazia, o pedido fica travado até cadastrar.
+                    </p>
                   </div>
                   <div>
                     <Label htmlFor="owner_id">Proprietário *</Label>

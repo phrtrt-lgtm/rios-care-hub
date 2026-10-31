@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.1";
+import { hostexPost } from "../_shared/hostexReserva.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -100,6 +101,90 @@ async function updateOwnerScore(
   console.log(`Score updated: ${currentScore} -> ${newScore} (${reason})`);
 }
 
+// ============================================================
+// BLOQUEIO DE DATAS PAGO — proprietário pagou a taxa de limpeza por PIX
+// (create-bloqueio-pix). external_reference: "bloqueio:<date_block_requests.id>".
+// Confere o valor, marca pago e bloqueia as noites na Hostex; se a Hostex
+// falhar, fica `pago_pendente_hostex` para a equipe concluir na fila.
+// ============================================================
+async function tratarBloqueioPago(supabase: any, bloqueioId: string, payment: any): Promise<Response> {
+  const { data: pedido } = await supabase
+    .from('date_block_requests')
+    .select('id, property_id, start_date, end_date, status, valor_cents, pago_em')
+    .eq('id', bloqueioId)
+    .maybeSingle();
+  if (!pedido) {
+    console.log('Bloqueio não encontrado:', bloqueioId);
+    return new Response('OK', { status: 200 });
+  }
+  const status = payment.status;
+  console.log('Processing BLOQUEIO payment:', bloqueioId, 'Status:', status, 'Pedido:', pedido.status);
+
+  if (status === 'approved') {
+    if (pedido.pago_em && (pedido.status === 'processed' || pedido.status === 'pago_pendente_hostex')) {
+      console.log('Bloqueio já tratado, ignorando reentrega');
+      return new Response('OK', { status: 200 });
+    }
+    const pagoCents = Math.round(Number(payment.transaction_amount) * 100);
+    const pagoEm = payment.date_approved ?? new Date().toISOString();
+    const base = { pago_em: pagoEm, mercadopago_payment_id: String(payment.id) };
+    if (typeof pedido.valor_cents === 'number' && Math.abs(pagoCents - pedido.valor_cents) > 1) {
+      await supabase.from('date_block_requests').update({
+        ...base,
+        status: 'pago_pendente_hostex',
+        erro_hostex: `Valor pago (R$ ${(pagoCents / 100).toFixed(2)}) difere do esperado (R$ ${(pedido.valor_cents / 100).toFixed(2)}); bloqueio não aplicado automaticamente.`,
+      }).eq('id', bloqueioId);
+      return new Response('OK', { status: 200 });
+    }
+    await supabase.from('date_block_requests').update({ ...base, status: 'pago_pendente_hostex' }).eq('id', bloqueioId);
+
+    try {
+      const hostexKey = Deno.env.get('HOSTEX_API_KEY');
+      if (!hostexKey) throw new Error('HOSTEX_API_KEY não configurada');
+      const { data: hx } = await supabase
+        .from('hostex_properties')
+        .select('id_hostex')
+        .eq('property_id', pedido.property_id)
+        .limit(1)
+        .maybeSingle();
+      const idHostex = Number(hx?.id_hostex);
+      if (!Number.isInteger(idHostex)) throw new Error('imóvel sem propriedade vinculada na Hostex');
+      // end_date é a saída: a última noite bloqueada é a véspera.
+      const [a, m, d] = String(pedido.end_date).split('-').map(Number);
+      const ultimaNoite = new Date(Date.UTC(a, m - 1, d) - 86400000).toISOString().slice(0, 10);
+      const resp = await hostexPost(
+        '/availabilities',
+        { property_ids: [idHostex], start_date: pedido.start_date, end_date: ultimaNoite, available: false },
+        hostexKey,
+      );
+      await supabase.from('date_block_requests').update({
+        status: 'processed',
+        processed_at: new Date().toISOString(),
+        hostex_request_id: resp?.request_id ?? null,
+        hostex_bloqueado_em: new Date().toISOString(),
+        erro_hostex: null,
+      }).eq('id', bloqueioId);
+      console.log('Bloqueio aplicado na Hostex:', bloqueioId);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error('Bloqueio pago, Hostex falhou:', msg);
+      await supabase.from('date_block_requests').update({ erro_hostex: msg.slice(0, 500) }).eq('id', bloqueioId);
+    }
+    return new Response('OK', { status: 200 });
+  }
+
+  const expirou = status === 'cancelled' || status === 'rejected' || status === 'expired' || payment.status_detail === 'expired';
+  if (expirou && pedido.status === 'aguardando_pagamento') {
+    await supabase.from('date_block_requests').update({
+      status: 'expirado',
+      pix_qr_code: null,
+      pix_qr_code_base64: null,
+    }).eq('id', bloqueioId);
+    console.log('PIX do bloqueio expirou/cancelado:', bloqueioId);
+  }
+  return new Response('OK', { status: 200 });
+}
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -154,6 +239,10 @@ const handler = async (req: Request): Promise<Response> => {
       if (!externalRef) {
         console.log('No external_reference in payment');
         return new Response('OK', { status: 200 });
+      }
+
+      if (typeof externalRef === 'string' && externalRef.startsWith('bloqueio:')) {
+        return await tratarBloqueioPago(supabase, externalRef.slice('bloqueio:'.length), payment);
       }
 
       // ============================================================
