@@ -24,7 +24,7 @@
 // avisou) e grava o resultado em viabilizacao_avisos.status. Nada de WhatsApp
 // para o proprietário aqui: o gestor pediu só cobrança (como sempre) e o
 // e-mail de conclusão, sem spam.
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.1";
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.76.1";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 import { getTemplate, renderTemplate } from "../_shared/template-renderer.ts";
 
@@ -119,7 +119,11 @@ const escaparHtml = (t: string) =>
  * Um e-mail para o lote: os itens concluídos do imóvel, cada ticket uma vez,
  * sem os que já têm cobrança lançada (o e-mail da cobrança já contou).
  */
-async function enviarLoteEmail(supabase: ReturnType<typeof createClient>, lote: string) {
+// Cliente sem tipos de propósito: viabilizacoes/viabilizacao_avisos e a rpc
+// viabilizacao_destino ainda não estão no types.ts gerado.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ClienteDB = SupabaseClient<any, any, any>;
+async function enviarLoteEmail(supabase: ClienteDB, lote: string) {
   if (!UUID_RE.test(lote)) return json({ error: "lote_email inválido." }, 400);
 
   const { data: avisosData, error: erroAvisos } = await supabase
