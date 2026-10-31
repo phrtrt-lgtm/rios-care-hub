@@ -20,6 +20,7 @@ export type Database = {
           changelog: string | null
           created_at: string
           created_by: string | null
+          effort: string | null
           guardrails: string | null
           id: string
           max_tokens: number
@@ -33,6 +34,7 @@ export type Database = {
           changelog?: string | null
           created_at?: string
           created_by?: string | null
+          effort?: string | null
           guardrails?: string | null
           id?: string
           max_tokens: number
@@ -46,6 +48,7 @@ export type Database = {
           changelog?: string | null
           created_at?: string
           created_by?: string | null
+          effort?: string | null
           guardrails?: string | null
           id?: string
           max_tokens?: number
@@ -67,6 +70,7 @@ export type Database = {
       ai_settings: {
         Row: {
           created_at: string
+          effort: string
           guardrails: string | null
           id: string
           max_tokens: number
@@ -79,6 +83,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          effort?: string
           guardrails?: string | null
           id?: string
           max_tokens?: number
@@ -91,6 +96,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          effort?: string
           guardrails?: string | null
           id?: string
           max_tokens?: number
@@ -2123,6 +2129,217 @@ export type Database = {
           received_at?: string
         }
         Relationships: []
+      }
+      ia_acoes: {
+        Row: {
+          confirmada_em: string | null
+          conversa_id: string | null
+          criada_em: string
+          duracao_ms: number | null
+          entrada: Json
+          erro: string | null
+          executada_em: string | null
+          ferramenta: string
+          id: string
+          mensagem_id: string | null
+          motivo_negada: string | null
+          nivel: string
+          papel: string
+          property_id: string | null
+          resultado: Json | null
+          resumo: string | null
+          status: string
+          tool_use_id: string | null
+          usuario_id: string
+        }
+        Insert: {
+          confirmada_em?: string | null
+          conversa_id?: string | null
+          criada_em?: string
+          duracao_ms?: number | null
+          entrada?: Json
+          erro?: string | null
+          executada_em?: string | null
+          ferramenta: string
+          id?: string
+          mensagem_id?: string | null
+          motivo_negada?: string | null
+          nivel: string
+          papel: string
+          property_id?: string | null
+          resultado?: Json | null
+          resumo?: string | null
+          status: string
+          tool_use_id?: string | null
+          usuario_id: string
+        }
+        Update: {
+          confirmada_em?: string | null
+          conversa_id?: string | null
+          criada_em?: string
+          duracao_ms?: number | null
+          entrada?: Json
+          erro?: string | null
+          executada_em?: string | null
+          ferramenta?: string
+          id?: string
+          mensagem_id?: string | null
+          motivo_negada?: string | null
+          nivel?: string
+          papel?: string
+          property_id?: string | null
+          resultado?: Json | null
+          resumo?: string | null
+          status?: string
+          tool_use_id?: string | null
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ia_acoes_conversa_id_fkey"
+            columns: ["conversa_id"]
+            isOneToOne: false
+            referencedRelation: "ia_conversas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_acoes_mensagem_id_fkey"
+            columns: ["mensagem_id"]
+            isOneToOne: false
+            referencedRelation: "ia_mensagens"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_acoes_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_acoes_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ia_conversas: {
+        Row: {
+          atualizada_em: string
+          criada_em: string
+          encerrada_em: string | null
+          id: string
+          pagina_inicial: string | null
+          papel: string
+          titulo: string | null
+          usuario_id: string
+        }
+        Insert: {
+          atualizada_em?: string
+          criada_em?: string
+          encerrada_em?: string | null
+          id?: string
+          pagina_inicial?: string | null
+          papel: string
+          titulo?: string | null
+          usuario_id: string
+        }
+        Update: {
+          atualizada_em?: string
+          criada_em?: string
+          encerrada_em?: string | null
+          id?: string
+          pagina_inicial?: string | null
+          papel?: string
+          titulo?: string | null
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ia_conversas_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ia_mensagens: {
+        Row: {
+          blocos: Json
+          conversa_id: string
+          criada_em: string
+          custo_estimado_microusd: number | null
+          effort: string | null
+          id: string
+          latencia_ms: number | null
+          modelo: string | null
+          ordem: number
+          role: string
+          stop_reason: string | null
+          texto: string | null
+          tokens_cache_gravados: number | null
+          tokens_cache_lidos: number | null
+          tokens_entrada: number | null
+          tokens_saida: number | null
+          usuario_id: string
+        }
+        Insert: {
+          blocos: Json
+          conversa_id: string
+          criada_em?: string
+          custo_estimado_microusd?: number | null
+          effort?: string | null
+          id?: string
+          latencia_ms?: number | null
+          modelo?: string | null
+          ordem: number
+          role: string
+          stop_reason?: string | null
+          texto?: string | null
+          tokens_cache_gravados?: number | null
+          tokens_cache_lidos?: number | null
+          tokens_entrada?: number | null
+          tokens_saida?: number | null
+          usuario_id: string
+        }
+        Update: {
+          blocos?: Json
+          conversa_id?: string
+          criada_em?: string
+          custo_estimado_microusd?: number | null
+          effort?: string | null
+          id?: string
+          latencia_ms?: number | null
+          modelo?: string | null
+          ordem?: number
+          role?: string
+          stop_reason?: string | null
+          texto?: string | null
+          tokens_cache_gravados?: number | null
+          tokens_cache_lidos?: number | null
+          tokens_entrada?: number | null
+          tokens_saida?: number | null
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ia_mensagens_conversa_id_fkey"
+            columns: ["conversa_id"]
+            isOneToOne: false
+            referencedRelation: "ia_conversas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_mensagens_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       inspection_comments: {
         Row: {
