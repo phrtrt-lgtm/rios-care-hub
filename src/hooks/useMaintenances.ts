@@ -215,7 +215,7 @@ export const useMaintenance = (id?: string) => {
         .from("charges")
         .select(`
           *,
-          property:properties(id, name),
+          property:properties(id, name, cover_photo_url),
           owner:profiles!charges_owner_id_fkey(id, name, email)
         `)
         .eq("id", id)
@@ -290,7 +290,7 @@ export const useMaintenance = (id?: string) => {
           ticket_type,
           scheduled_at,
           cost_responsible,
-          property:properties(id, name),
+          property:properties(id, name, cover_photo_url),
           owner:profiles!tickets_owner_id_fkey(id, name, email)
         `)
         .eq("id", id)
@@ -374,6 +374,7 @@ export const useMaintenance = (id?: string) => {
         owner: ticket.owner,
         ticket_id: ticket.id,
         charge_id: linkedCharge?.id ?? null,
+        charge_status: linkedCharge?.status ?? null,
         amount_cents: linkedCharge?.amount_cents ?? 0,
         management_contribution_cents: linkedCharge?.management_contribution_cents ?? 0,
         due_date: linkedCharge?.due_date ?? null,

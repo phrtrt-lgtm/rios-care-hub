@@ -10,10 +10,12 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useNavigate, useLocation } from "react-router-dom";
 import { saveScrollPosition } from "@/lib/navigation";
-import { Wrench, Calendar, Clock, CheckCircle2, Building2, MessageSquare, ChevronRight, ShoppingCart, Users } from "lucide-react";
+import { Wrench, Calendar, Building2, MessageCircle, ChevronRight, ShoppingCart, Users } from "lucide-react";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useChatPreloader } from "@/hooks/useChatPreloader";
 import { MaintenanceDetailsDialog } from "@/components/MaintenanceDetailsDialog";
+import { MaintenanceChatDialog } from "@/components/MaintenanceChatDialog";
+import { EtapasManutencao, etapaManutencao } from "@/components/maintenance/ResumoManutencao";
 import { toast } from "sonner";
 import { ownerScopeFilter } from "@/lib/ownerScope";
 
@@ -37,22 +39,15 @@ interface MaintenanceTicket {
   } | null;
 }
 
-const STATUS_CONFIG = {
-  novo: { label: "Pendente", color: "bg-warning", step: 1 },
-  em_analise: { label: "Em Análise", color: "bg-warning", step: 1 },
-  aguardando_info: { label: "Aguardando Info", color: "bg-warning", step: 1 },
-  em_execucao: { label: "Em Execução", color: "bg-primary", step: 3 },
-  concluido: { label: "Concluído", color: "bg-success", step: 4 },
-  cancelado: { label: "Cancelado", color: "bg-muted-foreground", step: 0 },
-};
-
 export function OwnerMaintenanceProgress() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const queryClient = useQueryClient();
+  // A linha abre o popup de acompanhamento; o balão abre direto a conversa.
   const [selectedTicket, setSelectedTicket] = useState<MaintenanceTicket | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
+  const [chatTicket, setChatTicket] = useState<MaintenanceTicket | null>(null);
   const [decidingTicketId, setDecidingTicketId] = useState<string | null>(null);
 
   const { data: maintenances, isLoading, refetch } = useQuery({
@@ -94,8 +89,7 @@ export function OwnerMaintenanceProgress() {
 
   const handleOpenChat = (ticket: MaintenanceTicket, e: React.MouseEvent) => {
     e.stopPropagation();
-    setSelectedTicket(ticket);
-    setChatOpen(true);
+    setChatTicket(ticket);
     markAsRead(ticket.id);
   };
 
@@ -165,21 +159,6 @@ export function OwnerMaintenanceProgress() {
     return null;
   }
 
-  const getStep = (ticket: MaintenanceTicket) => {
-    // If has scheduled_at and not in execution, it's step 2 (Agendado)
-    if (ticket.scheduled_at && !["em_execucao", "concluido"].includes(ticket.status)) {
-      return 2;
-    }
-    return STATUS_CONFIG[ticket.status as keyof typeof STATUS_CONFIG]?.step || 1;
-  };
-
-  const steps = [
-    { label: "Pendente", icon: Clock },
-    { label: "Agendado", icon: Calendar },
-    { label: "Em Execução", icon: Wrench },
-    { label: "Concluído", icon: CheckCircle2 },
-  ];
-
   return (
     <>
       <CaixaOperacao
@@ -190,7 +169,7 @@ export function OwnerMaintenanceProgress() {
       >
           <div className="max-h-[480px] space-y-4 overflow-y-auto pr-1">
             {maintenances.map((ticket) => {
-              const currentStep = getStep(ticket);
+              const currentStep = etapaManutencao(ticket.status, ticket.scheduled_at);
               const unreadCount = unreadCounts[ticket.id] || 0;
               const showDecisionButtons = needsDecision(ticket);
               const isDeciding = decidingTicketId === ticket.id;
@@ -257,18 +236,19 @@ export function OwnerMaintenanceProgress() {
                       )}
                     </div>
 
-                    {/* Chat button */}
-                    <div className="flex items-center gap-1">
+                    {/* Balão de conversa: abre o chat direto, sem passar pelo popup */}
+                    <div className="flex items-center gap-1.5">
                       <Button
                         variant="outline"
-                        size="sm"
-                        className="h-6 px-2 text-[10px] relative gap-1"
+                        size="icon"
+                        className="relative h-9 w-9 rounded-full border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
                         onClick={(e) => handleOpenChat(ticket, e)}
+                        aria-label={unreadCount > 0 ? `Conversar com a equipe (${unreadCount} não lidas)` : "Conversar com a equipe"}
+                        title="Conversar com a equipe"
                       >
-                        <MessageSquare className="h-3 w-3" />
-                        <span>Msgs</span>
+                        <MessageCircle className="h-4 w-4" aria-hidden="true" />
                         {unreadCount > 0 && (
-                          <span className="absolute -top-1 -right-1 bg-destructive text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+                          <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground ring-2 ring-background">
                             {unreadCount > 9 ? "9+" : unreadCount}
                           </span>
                         )}
@@ -308,47 +288,8 @@ export function OwnerMaintenanceProgress() {
                     </div>
                   )}
 
-                  {/* Progress Steps - Only show if no decision needed or decision made */}
-                  {!showDecisionButtons && (
-                    <div className="flex items-center justify-between relative">
-                      {/* Progress line */}
-                      <div className="absolute top-4 left-0 right-0 h-0.5 bg-border" />
-                      <div 
-                        className="absolute top-4 left-0 h-0.5 bg-primary transition-all"
-                        style={{ width: `${((currentStep - 1) / 3) * 100}%` }}
-                      />
-
-                      {steps.map((step, index) => {
-                        const stepNumber = index + 1;
-                        const isActive = currentStep === stepNumber;
-                        const isComplete = currentStep > stepNumber;
-                        const Icon = step.icon;
-
-                        return (
-                          <div key={step.label} className="flex flex-col items-center relative z-10">
-                            <div
-                              className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                                isActive
-                                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
-                                  : isComplete
-                                  ? "bg-primary/20 text-primary"
-                                  : "bg-background text-muted-foreground ring-1 ring-border"
-                              }`}
-                            >
-                              <Icon className="h-4 w-4" />
-                            </div>
-                            <span
-                              className={`text-[10px] mt-1 ${
-                                isActive ? "text-primary font-medium" : "text-muted-foreground"
-                              }`}
-                            >
-                              {step.label}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                  {/* Etapas (a mesma linha do popup); some enquanto a decisão está pendente */}
+                  {!showDecisionButtons && <EtapasManutencao etapa={currentStep} />}
                 </div>
               );
             })}
@@ -362,6 +303,17 @@ export function OwnerMaintenanceProgress() {
           if (!open) setSelectedTicket(null);
         }}
         maintenanceId={selectedTicket?.id || null}
+      />
+
+      <MaintenanceChatDialog
+        open={!!chatTicket}
+        onOpenChange={(aberto) => {
+          if (!aberto) setChatTicket(null);
+        }}
+        ticketId={chatTicket?.id ?? null}
+        ticketSubject={chatTicket?.subject}
+        propertyName={chatTicket?.property?.name}
+        onTicketUpdated={() => void refetch()}
       />
     </>
   );
