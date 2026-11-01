@@ -103,7 +103,7 @@ export function ConfigAgenteIA() {
             ))}
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Proprietário e faxineira ainda não têm ferramentas próprias (Fases 2 e seguintes do plano); ligar agora só expõe as consultas da equipe com a RLS deles.
+            Proprietário: só os imóveis dele e sem dado de hóspede; consulta reservas, resultados, chamados, cobranças e manutenções, abre e responde chamado e pede ou libera bloqueio de datas pago por PIX. Faxineira ainda não tem ferramentas próprias; ligar só expõe o que a RLS dela deixa ler.
           </p>
         </div>
 
