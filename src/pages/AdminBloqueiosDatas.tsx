@@ -24,11 +24,12 @@ interface BlockRequest {
   reason: "maintenance" | "family_visit";
   notes: string | null;
   cleaning_fee_proof_path: string | null;
-  status: "pending" | "processed" | "rejected" | "aguardando_pagamento" | "pago_pendente_hostex" | "expirado";
+  status: "pending" | "processed" | "rejected" | "aguardando_pagamento" | "pago_pendente_hostex" | "expirado" | "liberado" | "cancelado";
   valor_cents?: number | null;
   pago_em?: string | null;
   erro_hostex?: string | null;
   hostex_bloqueado_em?: string | null;
+  liberado_em?: string | null;
   created_at: string;
   processed_at: string | null;
   rejection_reason: string | null;
@@ -43,6 +44,8 @@ const statusConfig = {
   aguardando_pagamento: { label: "Aguardando PIX", color: "bg-info/10 text-info border-info/30" },
   pago_pendente_hostex: { label: "Pago · Hostex pendente", color: "bg-warning/10 text-warning border-warning/30" },
   expirado: { label: "PIX expirado", color: "bg-muted text-muted-foreground border-border" },
+  liberado: { label: "Liberado pelo proprietário", color: "bg-info/10 text-info border-info/30" },
+  cancelado: { label: "Cancelado pelo proprietário", color: "bg-muted text-muted-foreground border-border" },
 };
 
 const reasonConfig = {
@@ -181,6 +184,8 @@ export default function AdminBloqueiosDatas() {
                 <SelectItem value="pago_pendente_hostex">Pagos, Hostex pendente</SelectItem>
                 <SelectItem value="aguardando_pagamento">Aguardando PIX</SelectItem>
                 <SelectItem value="processed">Processados</SelectItem>
+                <SelectItem value="liberado">Liberados</SelectItem>
+                <SelectItem value="cancelado">Cancelados</SelectItem>
                 <SelectItem value="rejected">Rejeitados</SelectItem>
                 <SelectItem value="all">Todos</SelectItem>
               </SelectContent>
@@ -313,6 +318,13 @@ export default function AdminBloqueiosDatas() {
                                   ? ` · paga em ${format(new Date(req.pago_em), "dd/MM 'às' HH:mm", { locale: ptBR })}`
                                   : " · PIX não pago"}
                                 {req.hostex_bloqueado_em && " · bloqueado na Hostex"}
+                              </p>
+                            )}
+                            {req.liberado_em && (
+                              <p className="text-xs text-info">
+                                {req.status === "cancelado" ? "Pedido cancelado" : "Noites liberadas na Hostex"} pelo proprietário em{" "}
+                                {format(new Date(req.liberado_em), "dd/MM 'às' HH:mm", { locale: ptBR })}
+                                {req.pago_em && req.status === "liberado" && " · taxa paga sem devolução automática"}
                               </p>
                             )}
                             {req.erro_hostex && (

@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
-import { type ConversaResumo, useConfigIA, useConversaIA, useConversasIA } from "@/hooks/useAssistenteIA";
-import { SUGESTOES_EQUIPE, rotuloFerramenta } from "@/lib/iaMeta";
+import { type ConversaResumo, useConversaIA, useConversasIA, useIaLiberada } from "@/hooks/useAssistenteIA";
+import { SUGESTOES_EQUIPE, SUGESTOES_PROPRIETARIO, rotuloFerramenta } from "@/lib/iaMeta";
 import { ChatMessageBubble } from "@/components/chat/ChatMessageBubble";
 import { ChatTypingIndicator } from "@/components/chat/ChatTypingIndicator";
 import { renderizarCorpo } from "@/components/chat/CorpoMensagem";
@@ -20,7 +20,9 @@ const quando = (iso: string) =>
 
 /**
  * Assistente de IA do portal, montado uma vez em App.tsx (PLANO_IA_AGENTE.md §6).
- * Fase 1: só a equipe, e só quando `system_config.ia_agente.ativo` estiver ligado.
+ * Aparece quando `ia_agente_liberado()` diz que o assistente está ligado para
+ * o papel do usuário (equipe desde a Fase 1; proprietário desde a Fase 2, em
+ * 2026-10-31, com as ferramentas dele e sem dado de hóspede).
  * O estado da conversa fica aqui, então ela sobrevive à navegação entre páginas.
  */
 export default function AssistenteIA() {
@@ -28,15 +30,16 @@ export default function AssistenteIA() {
   const { pathname } = useLocation();
   const papel = (profile?.role as string | undefined) ?? "";
   const equipe = EQUIPE.includes(papel);
-  const config = useConfigIA(!!user && equipe);
+  const curadoriaApenas = (profile as { curation_only?: boolean | null } | null)?.curation_only === true;
+  const liberada = useIaLiberada(!!user && !!profile && !curadoriaApenas);
   const [aberto, setAberto] = useState(false);
   const [verHistorico, setVerHistorico] = useState(false);
   const conversa = useConversaIA(pathname);
   const historico = useConversasIA(user?.id, aberto && verHistorico);
 
-  if (!user || !profile || !equipe) return null;
+  if (!user || !profile || curadoriaApenas) return null;
   if (ROTAS_SEM_WIDGET.some((r) => pathname.startsWith(r))) return null;
-  if (!config.data?.ativo || !config.data.papeis?.[papel]) return null;
+  if (liberada.data !== true) return null;
 
   const abrirConversa = async (c: ConversaResumo) => {
     await conversa.abrirConversa(c.id);
@@ -90,7 +93,9 @@ export default function AssistenteIA() {
               </div>
             </div>
             <DialogDescription className="text-xs">
-              Consulta imóveis, reservas, chamados, cobranças e manutenções. Ações só com a sua confirmação.
+              {equipe
+                ? "Consulta imóveis, reservas, chamados, cobranças e manutenções. Ações só com a sua confirmação."
+                : "Consulta seus imóveis, reservas, cobranças e chamados, e pede bloqueio de datas. Ações só com a sua confirmação."}
             </DialogDescription>
           </DialogHeader>
 
@@ -102,7 +107,7 @@ export default function AssistenteIA() {
               onAbrir={abrirConversa}
             />
           ) : (
-            <Conversa conversa={conversa} />
+            <Conversa conversa={conversa} sugestoes={equipe ? SUGESTOES_EQUIPE : SUGESTOES_PROPRIETARIO} />
           )}
         </DialogContent>
       </Dialog>
@@ -157,7 +162,7 @@ function ListaConversas({
   );
 }
 
-function Conversa({ conversa }: { conversa: ReturnType<typeof useConversaIA> }) {
+function Conversa({ conversa, sugestoes }: { conversa: ReturnType<typeof useConversaIA>; sugestoes: string[] }) {
   const [texto, setTexto] = useState("");
   const fimRef = useRef<HTMLDivElement>(null);
   const { itens, ocupado, carregando, enviar, decidir } = conversa;
@@ -195,7 +200,7 @@ function Conversa({ conversa }: { conversa: ReturnType<typeof useConversaIA> }) 
               Pergunte em linguagem natural. Eu consulto o portal e respondo com a fonte.
             </p>
             <div className="space-y-2">
-              {SUGESTOES_EQUIPE.map((s) => (
+              {sugestoes.map((s) => (
                 <button
                   key={s}
                   type="button"
@@ -234,6 +239,7 @@ function Conversa({ conversa }: { conversa: ReturnType<typeof useConversaIA> }) 
                       <CartaoAcao
                         acao={item.pendente}
                         decisao={item.decisao}
+                        resultado={item.resultado}
                         ocupado={ocupado}
                         onConfirmar={() => void decidir(item.pendente!.id, "confirmar")}
                         onCancelar={() => void decidir(item.pendente!.id, "cancelar")}

@@ -70,6 +70,8 @@ interface RespostaAgente {
   mensagem_id: string | null;
   texto: string;
   acao_pendente?: AcaoPendente;
+  /** Na retomada: o que a ação confirmada devolveu (o cartão mostra, por exemplo, o PIX do bloqueio). */
+  acao_resultado?: { id: string; ferramenta: string; resultado: unknown };
   /** Ferramentas de leitura executadas nesta resposta (para o widget mostrar "Consultou: …"). */
   ferramentas_usadas: string[];
   fim: boolean;
@@ -576,8 +578,11 @@ async function retomar(ctx: Contexto, acaoId: string, decisao: "confirmar" | "ca
   const proxima = ordem + 1;
   await gravarMensagem(ctx, conversa.id, proxima, "user", resultados, null);
   messages.push({ role: "user", content: resultados as unknown as Mensagem["content"] });
+  const acaoResultado = erro
+    ? {}
+    : { acao_resultado: { id: acao.id as string, ferramenta: acao.ferramenta as string, resultado: resultadoParaLog(conteudo) } };
   try {
-    return await laco(ctx, conversa, messages, proxima);
+    return { ...(await laco(ctx, conversa, messages, proxima)), ...acaoResultado };
   } catch (e) {
     // A ação já aconteceu (ou já falhou e está no log). Se o comentário final
     // do modelo não vier, a tela recebe o resultado cru em vez de um erro que
@@ -587,7 +592,7 @@ async function retomar(ctx: Contexto, acaoId: string, decisao: "confirmar" | "ca
     const texto = erro
       ? `A ação não foi executada: ${conteudo}`
       : `Ação executada. Resultado: ${conteudo.slice(0, 1500)}\n\n(Não consegui gerar o comentário final: ${e.message})`;
-    return { conversa_id: conversa.id, mensagem_id: null, texto, ferramentas_usadas: [], fim: true };
+    return { conversa_id: conversa.id, mensagem_id: null, texto, ferramentas_usadas: [], fim: true, ...acaoResultado };
   }
 }
 

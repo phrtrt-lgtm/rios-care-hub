@@ -11,6 +11,7 @@ import {
   type Papel,
   ErroFerramenta,
   PAPEIS_EQUIPE,
+  brl,
   chamarFunction,
   ehUuid,
   exigirAcessoImovel,
@@ -419,9 +420,118 @@ const registrarTarefaRua: FerramentaIA = {
   },
 };
 
+// ----------------------------------------------- bloqueio do proprietário
+// Fluxo de CLAUDE.md §3.21: o proprietário não bloqueia direto. O pedido gera
+// um PIX da taxa de limpeza (create-bloqueio-pix) e o webhook bloqueia na
+// Hostex quando o pagamento entra. Liberar passa por liberar-bloqueio.
+
+const pedirBloqueioDeDatas: FerramentaIA = {
+  nome: "pedir_bloqueio_de_datas",
+  descricao:
+    "Pede o bloqueio de datas de um imóvel para uso pessoal do proprietário, pelo mesmo caminho do botão 'Bloqueio' do painel: gera um PIX no valor da taxa de limpeza do imóvel e, quando o pagamento entra, as noites são bloqueadas na Hostex sozinhas (Airbnb e Booking). `entrada` é o dia de chegada e `saida` o dia de saída (a última noite é a véspera); de hoje em diante, 1 a 30 noites, e as noites precisam estar livres (a function confere reservas, outros pedidos e o calendário ao vivo da Hostex). Antes de pedir, confira disponibilidade e repita entrada e saída para a pessoa. Só executa depois da confirmação. O cartão na tela mostra o QR Code e o botão de copiar o código: na resposta diga só o valor, o prazo de 30 minutos e que o QR está no cartão; não repita o código. Bloqueio por manutenção (sem pagamento) é pelo botão 'Bloqueio' do painel.",
+  schema: {
+    type: "object",
+    properties: {
+      property_id: { type: "string", description: "Id do imóvel." },
+      entrada: { type: "string", description: "Dia de chegada, AAAA-MM-DD (hoje ou depois)." },
+      saida: { type: "string", description: "Dia de saída, AAAA-MM-DD (a última noite bloqueada é a véspera)." },
+      observacao: { type: "string", description: "Observação curta para a equipe (opcional)." },
+    },
+    required: ["property_id", "entrada", "saida"],
+    additionalProperties: false,
+  },
+  nivel: "escrita",
+  papeis: EQUIPE_E_DONO,
+  imovelParam: "property_id",
+  async resumo(entrada, ctx) {
+    let nome = "imóvel";
+    let taxa = "";
+    if (ehUuid(entrada.property_id)) {
+      const { data } = await ctx.userClient
+        .from("properties")
+        .select("name, taxa_limpeza_cents")
+        .eq("id", entrada.property_id)
+        .maybeSingle();
+      nome = (data?.name as string | undefined) ?? nome;
+      const cents = data?.taxa_limpeza_cents as number | null | undefined;
+      taxa = typeof cents === "number" && cents > 0 ? ` de ${brl(cents)}` : "";
+    }
+    const de = typeof entrada.entrada === "string" ? dataBR(entrada.entrada) : "?";
+    const ate = typeof entrada.saida === "string" ? dataBR(entrada.saida) : "?";
+    return `Pedir bloqueio para uso pessoal do imóvel ${nome}, entrada ${de} e saída ${ate}. Gera um PIX da taxa de limpeza${taxa}; as datas só são bloqueadas depois do pagamento.`;
+  },
+  async executar(ctx, entrada) {
+    const imovel = await exigirAcessoImovel(ctx, entrada.property_id);
+    const j = janela(entrada.entrada, entrada.saida);
+    if (j.de < ctx.hoje) throw new ErroFerramenta("A entrada precisa ser hoje ou depois.");
+    if (j.dias < 1) throw new ErroFerramenta("A saída precisa ser depois da entrada.");
+    if (j.dias > 30) throw new ErroFerramenta("No máximo 30 noites por pedido.");
+    const r = await chamarFunction(ctx, "create-bloqueio-pix", {
+      property_id: imovel.id,
+      start_date: j.de,
+      end_date: j.ate,
+      notes: textoCurto(entrada.observacao, "observacao", 500) ?? null,
+    });
+    const dados = (r.dados && typeof r.dados === "object" ? r.dados : {}) as Record<string, unknown>;
+    if (!r.ok) throw new ErroFerramenta(String(dados.error ?? `Não consegui gerar o pedido (HTTP ${r.status}).`));
+    return {
+      pedido_id: dados.id,
+      imovel: imovel.name,
+      entrada: j.de,
+      saida: j.ate,
+      noites: dados.noites ?? j.dias,
+      taxa_de_limpeza: brl(dados.valor_cents as number | null),
+      pix_expira_em: dados.pix_expira_em,
+      pix_copia_e_cola: dados.pix_qr_code,
+      instrucao:
+        "O QR Code e o botão de copiar estão no cartão da ação, na tela. Depois do pagamento o portal bloqueia as datas na Hostex sozinho e a tela acompanha.",
+    };
+  },
+};
+
+const liberarBloqueioDeDatas: FerramentaIA = {
+  nome: "liberar_bloqueio_de_datas",
+  descricao:
+    "Libera um bloqueio de datas que o proprietário pediu (status 'bloqueado'): reabre na Hostex as noites que ainda não passaram, e elas voltam à venda no Airbnb e no Booking em minutos. Também retira um pedido ainda pendente ou aguardando PIX (vira cancelado; nada tinha sido bloqueado). Use bloqueios_de_datas antes para achar o pedido_id e confirme com a pessoa qual bloqueio é. A taxa de limpeza paga não é devolvida automaticamente. Só executa depois da confirmação.",
+  schema: {
+    type: "object",
+    properties: {
+      pedido_id: { type: "string", description: "Id do pedido de bloqueio (de bloqueios_de_datas ou reservas_do_imovel)." },
+    },
+    required: ["pedido_id"],
+    additionalProperties: false,
+  },
+  nivel: "escrita",
+  papeis: EQUIPE_E_DONO,
+  async resumo(entrada, ctx) {
+    if (!ehUuid(entrada.pedido_id)) return "Liberar bloqueio de datas.";
+    const { data } = await ctx.userClient
+      .from("date_block_requests")
+      .select("start_date, end_date, status, pago_em, property:properties(name)")
+      .eq("id", entrada.pedido_id)
+      .maybeSingle();
+    if (!data) return "Liberar bloqueio de datas (pedido não encontrado).";
+    const nome = ((Array.isArray(data.property) ? data.property[0] : data.property) as { name?: string } | null)?.name ?? "imóvel";
+    const periodo = `entrada ${dataBR(String(data.start_date))} e saída ${dataBR(String(data.end_date))}`;
+    if (data.status !== "processed") return `Retirar o pedido de bloqueio do imóvel ${nome} (${periodo}), que ainda não foi processado.`;
+    return `Liberar na Hostex o bloqueio do imóvel ${nome} (${periodo}): as noites voltam à venda.${
+      data.pago_em ? " A taxa de limpeza paga não é devolvida automaticamente." : ""
+    }`;
+  },
+  async executar(ctx, entrada) {
+    if (!ehUuid(entrada.pedido_id)) throw new ErroFerramenta("Informe o id do pedido de bloqueio.");
+    const r = await chamarFunction(ctx, "liberar-bloqueio", { id: entrada.pedido_id });
+    const dados = (r.dados && typeof r.dados === "object" ? r.dados : {}) as Record<string, unknown>;
+    if (!r.ok) throw new ErroFerramenta(String(dados.error ?? `Não consegui liberar (HTTP ${r.status}).`));
+    return dados;
+  },
+};
+
 export const CATALOGO_ESCRITA: FerramentaIA[] = [
   hostexBloquearDatas,
   hostexLiberarDatas,
+  pedirBloqueioDeDatas,
+  liberarBloqueioDeDatas,
   abrirChamado,
   responderChamado,
   mudarStatusChamado,

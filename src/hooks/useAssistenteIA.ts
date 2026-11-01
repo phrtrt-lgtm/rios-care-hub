@@ -11,7 +11,26 @@ import { type AcaoPendente, type ConfigIA, type RespostaAgente, lerConfigIA } fr
 const db = supabase as unknown as SupabaseClient;
 
 const CHAVE_CONFIG = ["ia", "config"] as const;
+const CHAVE_LIBERADA = ["ia", "liberada"] as const;
 const CHAVE_CONVERSAS = ["ia", "conversas"] as const;
+
+/**
+ * O assistente está ligado para o papel do usuário logado? RPC
+ * `ia_agente_liberado()` (SECURITY DEFINER): o proprietário não lê
+ * `system_config`, então o widget pergunta ao banco em vez de ler a configuração.
+ */
+export function useIaLiberada(habilitado = true) {
+  return useQuery({
+    queryKey: CHAVE_LIBERADA,
+    enabled: habilitado,
+    staleTime: 5 * 60_000,
+    queryFn: async (): Promise<boolean> => {
+      const { data, error } = await db.rpc("ia_agente_liberado");
+      if (error) throw error;
+      return data === true;
+    },
+  });
+}
 
 /** Configuração do agente (`system_config.ia_agente`). Só a equipe lê. */
 export function useConfigIA(habilitado = true) {
@@ -40,6 +59,7 @@ export function useSalvarConfigIA() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: CHAVE_CONFIG });
+      qc.invalidateQueries({ queryKey: CHAVE_LIBERADA });
       toast.success("Configuração do assistente salva.");
     },
     onError: () => toast.error("Não consegui salvar a configuração."),
@@ -81,6 +101,8 @@ export interface ItemChat {
   consultas?: string[];
   pendente?: AcaoPendente | null;
   decisao?: DecisaoAcao;
+  /** O que a ação confirmada devolveu (PIX do bloqueio, link do chamado…). */
+  resultado?: Record<string, unknown> | null;
   erro?: boolean;
 }
 
@@ -99,7 +121,11 @@ interface LinhaAcao {
   status: string;
   resumo: string | null;
   entrada: Record<string, unknown> | null;
+  resultado: unknown;
 }
+
+const comoObjeto = (v: unknown): Record<string, unknown> | null =>
+  v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
 
 function montarItens(mensagens: LinhaMensagem[], acoes: LinhaAcao[]): ItemChat[] {
   const porMensagem = new Map<string, LinhaAcao[]>();
@@ -141,6 +167,7 @@ function montarItens(mensagens: LinhaMensagem[], acoes: LinhaAcao[]): ItemChat[]
         ? { id: escrita.id, ferramenta: escrita.ferramenta, resumo: escrita.resumo ?? escrita.ferramenta, entrada: escrita.entrada ?? {} }
         : null,
       decisao,
+      resultado: escrita && decisao === "confirmada" ? comoObjeto(escrita.resultado) : null,
     });
     consultasAcumuladas = [];
   }
@@ -161,8 +188,11 @@ export function useConversaIA(rota: string) {
 
   const anexarResposta = useCallback((data: RespostaAgente) => {
     setConversaId(data.conversa_id);
+    const feita = data.acao_resultado;
     setItens((prev) => [
-      ...prev,
+      ...(feita
+        ? prev.map((i) => (i.pendente?.id === feita.id ? { ...i, decisao: "confirmada" as const, resultado: comoObjeto(feita.resultado) } : i))
+        : prev),
       {
         id: data.mensagem_id ?? crypto.randomUUID(),
         role: "assistant",
@@ -246,7 +276,7 @@ export function useConversaIA(rota: string) {
         db.from("ia_mensagens").select("id, role, texto, criada_em").eq("conversa_id", id).order("ordem"),
         db
           .from("ia_acoes")
-          .select("id, mensagem_id, ferramenta, nivel, status, resumo, entrada")
+          .select("id, mensagem_id, ferramenta, nivel, status, resumo, entrada, resultado")
           .eq("conversa_id", id)
           .order("criada_em"),
       ]);

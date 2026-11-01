@@ -19,8 +19,11 @@ export const FERRAMENTA_ROTULO: Record<string, string> = {
   buscar_proprietario: "Proprietário",
   pendencias_das_listas: "Pendências",
   vistorias_do_imovel: "Vistorias",
+  bloqueios_de_datas: "Bloqueios de datas",
   hostex_bloquear_datas: "Bloquear datas na Hostex",
   hostex_liberar_datas: "Liberar datas na Hostex",
+  pedir_bloqueio_de_datas: "Bloquear datas para uso pessoal (PIX)",
+  liberar_bloqueio_de_datas: "Liberar bloqueio de datas",
   abrir_chamado: "Abrir chamado",
   responder_chamado: "Responder chamado",
   mudar_status_chamado: "Mudar status do chamado",
@@ -43,6 +46,8 @@ export interface RespostaAgente {
   mensagem_id: string | null;
   texto: string;
   acao_pendente?: AcaoPendente;
+  /** Na retomada: o que a ação confirmada devolveu (o cartão mostra o PIX do bloqueio, o link do chamado). */
+  acao_resultado?: { id: string; ferramenta: string; resultado: unknown };
   ferramentas_usadas?: string[];
   fim: boolean;
 }
@@ -100,6 +105,15 @@ export const PAPEIS_IA = [
   { valor: "maintenance", rotulo: "Manutenção" },
   { valor: "owner", rotulo: "Proprietário" },
   { valor: "cleaner", rotulo: "Faxineira" },
+];
+
+export const SUGESTOES_PROPRIETARIO = [
+  "Como está a ocupação do meu imóvel este mês?",
+  "Quais são as próximas reservas?",
+  "Tenho alguma cobrança em aberto?",
+  "Quero bloquear datas para uso pessoal",
+  "Quais bloqueios de datas eu tenho?",
+  "Como estão meus chamados?",
 ];
 
 export const SUGESTOES_EQUIPE = [

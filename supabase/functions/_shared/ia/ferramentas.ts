@@ -83,11 +83,18 @@ const listarImoveis: FerramentaIA = {
 
 // --------------------------------------------------------------- reservas
 
+// Equipe lê a tabela (com nome do hóspede). Proprietário lê a view
+// hostex_reservations_proprietario, sem guest_name nem raw (CLAUDE.md §8.16):
+// desde 2026-10-31 ele não tem policy na tabela.
+const fonteReservas = (ctx: Contexto) => (ctx.equipe ? "hostex_reservations" : "hostex_reservations_proprietario");
+
 async function reservasNoPeriodo(ctx: Contexto, propertyId: string, de: string, ate: string) {
   const { data, error } = await ctx.userClient
-    .from("hostex_reservations")
+    .from(fonteReservas(ctx))
     .select(
-      "reservation_code, channel_type, check_in_date, check_out_date, nights, guests, status, stay_status, total_rate_cents, guest_name, synced_at, booked_at",
+      `reservation_code, channel_type, check_in_date, check_out_date, nights, guests, status, stay_status, total_rate_cents, synced_at, booked_at${
+        ctx.equipe ? ", guest_name" : ""
+      }`,
     )
     .eq("property_id", propertyId)
     .lte("check_in_date", ate)
@@ -95,13 +102,15 @@ async function reservasNoPeriodo(ctx: Contexto, propertyId: string, de: string, 
     .order("check_in_date")
     .limit(LIMITES.linhas);
   falhou(error, "as reservas");
-  return (data ?? []) as Linha[];
+  // A lista de colunas é montada em tempo de execução; o parser de tipos do
+  // supabase-js não a lê, então o cast passa por unknown.
+  return (data ?? []) as unknown as Linha[];
 }
 
 async function bloqueiosNoPeriodo(ctx: Contexto, propertyId: string, de: string, ate: string) {
   const { data, error } = await ctx.userClient
     .from("date_block_requests")
-    .select("start_date, end_date, reason, status, created_at")
+    .select("id, start_date, end_date, reason, status, valor_cents, pago_em, created_at")
     .eq("property_id", propertyId)
     .in("status", ["pending", "processed"])
     .lte("start_date", ate)
@@ -160,10 +169,13 @@ const reservasDoImovel: FerramentaIA = {
         ...(ctx.equipe ? { hospede: r.guest_name } : {}),
       })),
       bloqueios_do_proprietario: bloqueios.map((b) => ({
+        pedido_id: b.id,
         entrada: b.start_date,
         saida: b.end_date,
         motivo: b.reason === "family_visit" ? "uso pessoal" : "manutenção",
         status: b.status === "processed" ? "bloqueado" : "pedido pendente",
+        taxa_de_limpeza: brl(b.valor_cents as number | null),
+        paga: !!b.pago_em,
       })),
     };
   },
@@ -207,10 +219,12 @@ const disponibilidade: FerramentaIA = {
     for (const b of bloqueios) {
       if (b.status === "processed") marcar(String(b.start_date), String(b.end_date));
     }
-    // Equipe: o calendário mestre ao vivo da Hostex manda sobre o cache (bloqueios
-    // feitos pela Central Hostex ou pela IA não existem no banco).
+    // O calendário mestre ao vivo da Hostex manda sobre o cache (bloqueios
+    // feitos pela Central Hostex ou pela IA não existem no banco). Vale para o
+    // proprietário também: só booleanos por dia, do imóvel dele (a policy de
+    // hostex_properties só deixa ler o vínculo dos imóveis que ele acessa).
     let fonte = fonteCache(reservas);
-    if (ctx.equipe) {
+    {
       const apiKey = Deno.env.get("HOSTEX_API_KEY");
       const { data: hx } = await ctx.userClient.from("hostex_properties").select("id_hostex").eq("property_id", imovel.id).limit(1).maybeSingle();
       if (apiKey && hx?.id_hostex && dias <= 366) {
@@ -278,7 +292,7 @@ const resultadosDoImovel: FerramentaIA = {
     const inicio = new Date(Date.UTC(anoHoje, mesHoje - meses, 1)).toISOString().slice(0, 10);
     const { de, ate } = janela(inicio, ateExclusivo);
     const { data, error } = await ctx.userClient
-      .from("hostex_reservations")
+      .from(fonteReservas(ctx))
       .select("check_in_date, check_out_date, nights, total_rate_cents, status, channel_type, synced_at")
       .eq("property_id", imovel.id)
       .in("status", RESERVA_OCUPA)
@@ -330,6 +344,73 @@ const resultadosDoImovel: FerramentaIA = {
       aviso: "Diárias = valor das reservas sem taxa de limpeza, rateado por noite. Comissão e líquido: só no relatório financeiro.",
       meses: linhas,
       total: { noites_reservadas: totalNoites, diarias: brl(Math.round(totalCents)) },
+    };
+  },
+};
+
+const STATUS_BLOQUEIO: Record<string, string> = {
+  pending: "pedido pendente (equipe avalia)",
+  aguardando_pagamento: "aguardando PIX",
+  pago_pendente_hostex: "pago; equipe conclui na Hostex",
+  processed: "bloqueado",
+  liberado: "liberado",
+  cancelado: "cancelado",
+  rejected: "recusado",
+  expirado: "PIX expirado",
+};
+
+const bloqueiosDeDatas: FerramentaIA = {
+  nome: "bloqueios_de_datas",
+  descricao:
+    "Pedidos de bloqueio de datas do proprietário (uso pessoal pago por PIX, ou manutenção para a equipe avaliar): pedido_id, imóvel, entrada, saída, motivo, status (pedido pendente, aguardando PIX, bloqueado, liberado, cancelado, recusado), taxa de limpeza e se foi paga. Proprietário vê os dos imóveis dele; equipe vê todos. Use antes de liberar_bloqueio_de_datas, para achar o pedido_id, e para 'quais bloqueios eu tenho'.",
+  schema: {
+    type: "object",
+    properties: {
+      property_id: { type: "string", description: "Id do imóvel (opcional)." },
+      status: {
+        type: "string",
+        description: "'ativos' (padrão: pendentes, aguardando PIX e bloqueados com saída de hoje em diante), 'bloqueados', 'pendentes' ou 'todos'.",
+      },
+      limite: { type: "integer", description: "Máximo de linhas (padrão 50)." },
+    },
+    additionalProperties: false,
+  },
+  nivel: "leitura",
+  papeis: TODOS,
+  imovelParam: "property_id",
+  async executar(ctx, entrada) {
+    let q = ctx.userClient
+      .from("date_block_requests")
+      .select("id, start_date, end_date, reason, status, notes, valor_cents, pago_em, created_at, liberado_em, erro_hostex, property:properties(name)")
+      .order("start_date", { ascending: false })
+      .limit(limitar(entrada.limite));
+    if (entrada.property_id !== undefined && entrada.property_id !== null && entrada.property_id !== "") {
+      const imovel = await exigirAcessoImovel(ctx, entrada.property_id);
+      q = q.eq("property_id", imovel.id);
+    }
+    const filtro = String(entrada.status ?? "ativos");
+    if (filtro === "ativos") {
+      q = q.in("status", ["pending", "aguardando_pagamento", "pago_pendente_hostex", "processed"]).gte("end_date", ctx.hoje);
+    } else if (filtro === "bloqueados") q = q.eq("status", "processed");
+    else if (filtro === "pendentes") q = q.in("status", ["pending", "aguardando_pagamento", "pago_pendente_hostex"]);
+    const { data, error } = await q;
+    falhou(error, "os pedidos de bloqueio");
+    return {
+      hoje: ctx.hoje,
+      pedidos: ((data ?? []) as Linha[]).map((b) => ({
+        pedido_id: b.id,
+        imovel: nomeDe(b.property),
+        entrada: b.start_date,
+        saida: b.end_date,
+        noites: diaNum(String(b.end_date)) - diaNum(String(b.start_date)),
+        motivo: b.reason === "family_visit" ? "uso pessoal" : "manutenção",
+        status: STATUS_BLOQUEIO[String(b.status)] ?? b.status,
+        taxa_de_limpeza: brl(b.valor_cents as number | null),
+        paga: !!b.pago_em,
+        pode_liberar: b.status === "processed" && String(b.end_date) > ctx.hoje,
+        observacao: b.notes ? String(b.notes).slice(0, 200) : null,
+        ...(ctx.equipe && b.erro_hostex ? { erro_hostex: b.erro_hostex } : {}),
+      })),
     };
   },
 };
@@ -866,6 +947,7 @@ export const CATALOGO: FerramentaIA[] = [
   reservasDoImovel,
   disponibilidade,
   resultadosDoImovel,
+  bloqueiosDeDatas,
   estadoDosImoveisHoje,
   chamados,
   detalheChamado,

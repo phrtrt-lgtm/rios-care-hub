@@ -16,6 +16,7 @@ import { CalendarIcon, CheckCircle2, Clock, Copy, Loader2, QrCode, Users, Wrench
 import { toast } from "@/hooks/use-toast";
 import { descreverErroDaFunction } from "@/lib/erroFunction";
 import { formatarBRL } from "@/lib/cobrancaMeta";
+import { MeusBloqueios } from "@/components/bloqueios/MeusBloqueios";
 
 interface DateBlockRequestDialogProps {
   open: boolean;
@@ -200,7 +201,7 @@ export const DateBlockRequestDialog = ({ open, onOpenChange, propertyId, propert
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
             <CalendarIcon className="h-4 w-4 text-primary" />
-            Bloquear datas
+            Bloqueio de datas
           </DialogTitle>
           <p className="text-xs font-normal text-muted-foreground">{propertyName}</p>
         </DialogHeader>
@@ -268,6 +269,8 @@ export const DateBlockRequestDialog = ({ open, onOpenChange, propertyId, propert
             <Button onClick={handleNext} className="w-full" size="sm">
               Continuar
             </Button>
+            {/* Bloqueios futuros deste imóvel, com "Liberar datas" / "Cancelar pedido" (liberar-bloqueio). */}
+            <MeusBloqueios propertyId={propertyId} />
           </div>
         )}
 
