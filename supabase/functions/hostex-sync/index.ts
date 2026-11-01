@@ -217,12 +217,14 @@ Deno.serve(async (req) => {
     }
 
     // Carrega map de properties locais para casar por nome
-    const { data: localProps } = await supabase.from("properties").select("id, name");
+    const { data: localProps } = await supabase.from("properties").select("id, name, cover_photo_url");
     const norm = (s: string) =>
       s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
     const localByName = new Map<string, string>();
+    const capaLocal = new Map<string, string | null>();
     for (const p of localProps || []) {
       if (p.name) localByName.set(norm(p.name), p.id);
+      capaLocal.set(p.id, p.cover_photo_url ?? null);
     }
 
     // Vínculo já gravado (id_hostex -> imóvel local). Se o nome mudar na Hostex e
@@ -239,7 +241,7 @@ Deno.serve(async (req) => {
       const name = p.name ?? p.title ?? "";
       const address = p.address ?? p.full_address ?? null;
       const matchedLocal =
-        (name ? localByName.get(norm(name)) ?? null : null) ?? vinculoAnterior.get(id_hostex) ?? null;
+        (name ? localByName.get(norm(name)) : undefined) ?? vinculoAnterior.get(id_hostex) ?? null;
       hxPropertyMap.set(id_hostex, matchedLocal);
 
       await supabase.from("hostex_properties").upsert(
@@ -255,15 +257,18 @@ Deno.serve(async (req) => {
       );
       propsUpserted++;
 
-      // Preenche cover_photo_url da propriedade local se ainda não tiver
+      // Capa do imóvel segue a do anúncio (pedido do gestor em 2026-11-01) enquanto a
+      // capa local for a da Hostex (CDN da Airbnb) ou estiver vazia. Capa subida à mão
+      // no portal (bucket property-photos) fica como está.
       const coverUrl =
         p?.cover?.large_url ?? p?.cover?.extra_large_url ?? p?.cover?.original_url ?? p?.cover?.small_url ?? null;
-      if (matchedLocal && coverUrl) {
+      const capaAtual = matchedLocal ? capaLocal.get(matchedLocal) ?? null : null;
+      const capaSegueAnuncio = capaAtual === null || capaAtual.includes("muscache.c");
+      if (matchedLocal && coverUrl && capaSegueAnuncio && capaAtual !== coverUrl) {
         await supabase
           .from("properties")
           .update({ cover_photo_url: coverUrl, updated_at: new Date().toISOString() })
-          .eq("id", matchedLocal)
-          .is("cover_photo_url", null);
+          .eq("id", matchedLocal);
       }
 
       // Coleta listings (channel_type + listing_id) para o passo de calendário

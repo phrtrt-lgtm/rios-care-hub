@@ -4,11 +4,14 @@ import { DollarSign, Hotel, MessageSquare, Star, Wrench } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useOwnerScore } from "@/hooks/useOwnerScore";
+import { SCORE_VISIVEL } from "@/lib/score";
 import { ownerScopeFilter } from "@/lib/ownerScope";
 import { formatBRL } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Indicador, IndicadorSkeleton } from "./Indicador";
 import { valorDevido } from "@/lib/cobrancaMeta";
+
+const COLUNAS: Record<number, string> = { 3: "lg:grid-cols-3", 4: "lg:grid-cols-4", 5: "lg:grid-cols-5" };
 
 interface Resumo {
   cobrancas: number;
@@ -87,15 +90,19 @@ export function OwnerResumo() {
     enabled: !!user?.id,
     staleTime: 60_000,
   });
-  const { data: score } = useOwnerScore(user?.id);
+  const { data: score } = useOwnerScore(SCORE_VISIVEL ? user?.id : undefined);
 
   const temComissoes = false;
-  const grade = cn("grid grid-cols-2 gap-3", temComissoes ? "lg:grid-cols-5" : "lg:grid-cols-4");
+  // 3 números fixos + comissões + score. As classes ficam por extenso para o Tailwind gerá-las.
+  const total = 3 + (temComissoes ? 1 : 0) + (SCORE_VISIVEL ? 1 : 0);
+  const grade = cn("grid grid-cols-2 gap-3", COLUNAS[total]);
+  // Com número ímpar, o último ocupa a linha inteira no celular em vez de ficar sozinho à esquerda.
+  const ultimoLargo = total % 2 === 1 ? "col-span-2 lg:col-span-1" : undefined;
 
   if (isLoading || !data) {
     return (
       <div className={grade}>
-        {Array.from({ length: 4 }).map((_, i) => (
+        {Array.from({ length: total }).map((_, i) => (
           <IndicadorSkeleton key={i} />
         ))}
       </div>
@@ -115,7 +122,7 @@ export function OwnerResumo() {
         realcarValor={data.cobrancas > 0}
         onClick={() => navigate("/minhas-cobrancas")}
       />
-      {false && (
+      {temComissoes && (
         <Indicador
           rotulo="Comissões Booking"
           valor={data.comissoes}
@@ -141,15 +148,19 @@ export function OwnerResumo() {
         icone={<MessageSquare className="h-4 w-4" aria-hidden="true" />}
         tom={data.chamados > 0 ? "info" : "neutral"}
         onClick={() => navigate("/meus-chamados")}
+        className={SCORE_VISIVEL ? undefined : ultimoLargo}
       />
-      <Indicador
-        rotulo="Score de pagamentos"
-        valor={scoreAtivo ? (score?.currentScore ?? "—") : "—"}
-        detalhe={scoreAtivo ? score?.starLabel : "Ativa após 3 cobranças"}
-        icone={<Star className="h-4 w-4" aria-hidden="true" />}
-        tom={scoreAtivo ? "primary" : "neutral"}
-        onClick={() => document.getElementById("score-pagamentos")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-      />
+      {SCORE_VISIVEL && (
+        <Indicador
+          rotulo="Score de pagamentos"
+          valor={scoreAtivo ? (score?.currentScore ?? "—") : "—"}
+          detalhe={scoreAtivo ? score?.starLabel : "Ativa após 3 cobranças"}
+          icone={<Star className="h-4 w-4" aria-hidden="true" />}
+          tom={scoreAtivo ? "primary" : "neutral"}
+          onClick={() => document.getElementById("score-pagamentos")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+          className={ultimoLargo}
+        />
+      )}
     </div>
   );
 }

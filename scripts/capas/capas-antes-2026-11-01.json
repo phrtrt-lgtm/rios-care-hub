@@ -1,0 +1,26 @@
+{
+  "_nota": "Backup de properties.cover_photo_url antes da troca pela capa do anúncio (hostex_properties.raw.cover.large_url) em 2026-11-01. 21 imóveis; os outros 36 com Hostex já tinham a capa igual à do anúncio.",
+  "capas": [
+    {"id": "c230700c-ea5f-49ce-abd6-821f159c770a", "name": "ANDREA", "capa_antes": "https://z1.muscache.cn/im/pictures/hosting/Hosting-1048193215716212959/original/0d25aeb3-3817-4b7e-9b36-abd6f047ac79.jpeg?aki_policy=x_medium"},
+    {"id": "a8534d95-5265-4a56-8f1f-f9a1722f5c18", "name": "AROLDO", "capa_antes": "https://z1.muscache.cn/im/pictures/hosting/Hosting-1525695637873206960/original/51147035-8b6d-4ee0-9f2c-762256acc3a0.jpeg?aki_policy=x_medium"},
+    {"id": "ad3679ac-864b-48b6-9430-55aea76e51b3", "name": "AROLDOPERÓ", "capa_antes": "https://z1.muscache.cn/im/pictures/hosting/Hosting-1538686448669896826/original/2185c853-6d43-40bf-b89e-e78d887214f7.jpeg?aki_policy=x_medium"},
+    {"id": "0fece0a8-e420-417e-84d0-21fecf30c5e0", "name": "CLAUDIA", "capa_antes": "https://z1.muscache.cn/im/pictures/hosting/Hosting-1486936284262415305/original/053fb72a-47ef-44b5-88d4-98c6daae748d.jpeg?aki_policy=x_medium"},
+    {"id": "87022bf8-3bff-45da-b067-59bdd550569e", "name": "CLAUDIO", "capa_antes": "https://ktzfovzwayfqczytmhno.supabase.co/storage/v1/object/public/property-photos/87022bf8-3bff-45da-b067-59bdd550569e/1763828171233.jpg"},
+    {"id": "fc34acb1-8c16-41ad-9775-585b6c8535b0", "name": "CLAUDIO2", "capa_antes": "https://ktzfovzwayfqczytmhno.supabase.co/storage/v1/object/public/property-photos/fc34acb1-8c16-41ad-9775-585b6c8535b0/1763828773044.jpg"},
+    {"id": "3faa6f0b-6d10-4c98-ade6-bf2967c33b54", "name": "DIONE", "capa_antes": "https://ktzfovzwayfqczytmhno.supabase.co/storage/v1/object/public/property-photos/3faa6f0b-6d10-4c98-ade6-bf2967c33b54/1771507807306.jpg"},
+    {"id": "42148c75-3331-472c-98e8-1b53e3e8939e", "name": "ELOAR", "capa_antes": "https://ktzfovzwayfqczytmhno.supabase.co/storage/v1/object/public/property-photos/42148c75-3331-472c-98e8-1b53e3e8939e/1765077691133.jpg"},
+    {"id": "e36b88b9-f2ca-4bde-9a18-25b2445dbeb2", "name": "JORGE", "capa_antes": "https://ktzfovzwayfqczytmhno.supabase.co/storage/v1/object/public/property-photos/e36b88b9-f2ca-4bde-9a18-25b2445dbeb2/1762961369873.jpg"},
+    {"id": "8a3d9151-61da-4159-a97d-902e9ecda1b0", "name": "JULIANA", "capa_antes": "https://ktzfovzwayfqczytmhno.supabase.co/storage/v1/object/public/property-photos/8a3d9151-61da-4159-a97d-902e9ecda1b0/1771433700559.jpg"},
+    {"id": "d31795c4-108f-4896-8c78-48185cc8038c", "name": "MARIAH", "capa_antes": "https://ktzfovzwayfqczytmhno.supabase.co/storage/v1/object/public/property-photos/d31795c4-108f-4896-8c78-48185cc8038c/1765655475531.jpg"},
+    {"id": "8ddbe2b1-04a8-4148-b68c-179caa79f5db", "name": "MARLON", "capa_antes": "https://ktzfovzwayfqczytmhno.supabase.co/storage/v1/object/public/property-photos/8ddbe2b1-04a8-4148-b68c-179caa79f5db/1764001992235.jpg"},
+    {"id": "a6563571-9a37-49b6-8d97-1983d0a998a1", "name": "MARLON PERÓ", "capa_antes": "https://ktzfovzwayfqczytmhno.supabase.co/storage/v1/object/public/property-photos/a6563571-9a37-49b6-8d97-1983d0a998a1/1764002024620.jpg"},
+    {"id": "98d96310-c082-493a-ae8a-6fcc53dc2f7f", "name": "OSMAR", "capa_antes": "https://ktzfovzwayfqczytmhno.supabase.co/storage/v1/object/public/property-photos/98d96310-c082-493a-ae8a-6fcc53dc2f7f/1766096134555.jpg"},
+    {"id": "a15c01fe-33ff-47b6-8e77-c25563af4fd6", "name": "OSMAR2", "capa_antes": "https://ktzfovzwayfqczytmhno.supabase.co/storage/v1/object/public/property-photos/a15c01fe-33ff-47b6-8e77-c25563af4fd6/1766096151669.jpg"},
+    {"id": "c45745c4-7432-4f44-a97e-904b5ed5a2f2", "name": "REGINA", "capa_antes": "https://z1.muscache.cn/im/pictures/hosting/Hosting-U3RheVN1cHBseUxpc3Rpbmc6MTA2ODkzNjQxODk1ODI2MDYyNw%3D%3D/original/8983db1f-3198-4771-8fd4-13a1e6b46f7c.jpeg?aki_policy=x_medium"},
+    {"id": "7e7656fa-e0db-4124-84c1-183745de18ab", "name": "RODRIGO", "capa_antes": "https://ktzfovzwayfqczytmhno.supabase.co/storage/v1/object/public/property-photos/7e7656fa-e0db-4124-84c1-183745de18ab/1765048350765.jpg"},
+    {"id": "4c810397-8b18-48e4-bad6-231da1607599", "name": "ROGÉRIA", "capa_antes": "https://ktzfovzwayfqczytmhno.supabase.co/storage/v1/object/public/property-photos/4c810397-8b18-48e4-bad6-231da1607599/1765074470248.jpg"},
+    {"id": "32881793-324d-4702-8c4b-8c520822ca18", "name": "ROGÉRIO", "capa_antes": "https://z1.muscache.cn/im/pictures/miso/Hosting-1320646968241227553/original/c3e30424-def0-4bf3-9114-598f6db64520.jpeg?aki_policy=x_medium"},
+    {"id": "56474c19-489e-4f97-8a05-ae0a478e45a0", "name": "ROGÉRIO2", "capa_antes": "https://z1.muscache.cn/im/pictures/hosting/Hosting-1615664389599906066/original/a9c9fed6-6282-48b7-9037-7ddd60ac4dab.jpeg?aki_policy=x_medium"},
+    {"id": "220fc57b-6265-4b7b-9c4a-c57a9d79d262", "name": "ROSANA", "capa_antes": "https://ktzfovzwayfqczytmhno.supabase.co/storage/v1/object/public/property-photos/220fc57b-6265-4b7b-9c4a-c57a9d79d262/1765073579907.jpg"}
+  ]
+}

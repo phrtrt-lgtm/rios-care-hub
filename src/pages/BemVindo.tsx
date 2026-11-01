@@ -83,7 +83,7 @@ const STAGES = [
 
 const PILLARS = [
   { icon: Brain, title: "Curadoria com IA", desc: "Análise de dados das principais OTAs para precificar e posicionar seu imóvel." },
-  { icon: LineChart, title: "Performance real", desc: "Painel com receita, ocupação, score e indicadores ao vivo." },
+  { icon: LineChart, title: "Performance real", desc: "Painel com receita, ocupação e indicadores ao vivo." },
   { icon: Zap, title: "Operação tech", desc: "App nativo, vistorias, manutenções e financeiro em um só lugar." },
 ];
 

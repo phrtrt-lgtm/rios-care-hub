@@ -8,6 +8,7 @@ import { PropostasPendentesCompletas } from "@/components/PropostasPendentesComp
 import { supabase } from "@/integrations/supabase/client";
 import { OwnerPropertiesSection } from "@/components/OwnerPropertiesSection";
 import { OwnerScoreDisplay } from "@/components/OwnerScoreDisplay";
+import { SCORE_VISIVEL } from "@/lib/score";
 import { MaintenanceKanbanPreview } from "@/components/MaintenanceKanbanPreview";
 import { OwnerMaintenanceProgress } from "@/components/OwnerMaintenanceProgress";
 import { OwnerTicketsPreview } from "@/components/OwnerTicketsPreview";
@@ -135,7 +136,7 @@ export default function MinhaCaixa() {
         {/* 4. Imóveis — o ponto de partida para resultados, chamado, vistoria e relatório por unidade (o título vem junto) */}
         {isOwner && <OwnerPropertiesSection />}
 
-        {/* 5. Acompanhamento: cobranças e chamados à esquerda; score e guias à direita */}
+        {/* 5. Acompanhamento: cobranças e chamados à esquerda; guias (e o score, quando visível) à direita */}
         {isOwner && (
           <div className="grid min-w-0 items-start gap-6 lg:grid-cols-3">
             <div className="flex min-w-0 flex-col gap-6 lg:col-span-2">
@@ -144,9 +145,11 @@ export default function MinhaCaixa() {
               <OwnerTicketsPreview />
             </div>
             <div className="flex min-w-0 flex-col gap-6">
-              <div id="score-pagamentos" className="scroll-mt-20">
-                <OwnerScoreDisplay />
-              </div>
+              {SCORE_VISIVEL && (
+                <div id="score-pagamentos" className="scroll-mt-20">
+                  <OwnerScoreDisplay />
+                </div>
+              )}
               <OwnerAjuda />
             </div>
           </div>

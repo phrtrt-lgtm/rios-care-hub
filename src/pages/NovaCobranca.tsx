@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { CHARGE_CATEGORY_OPTIONS } from "@/constants/chargeCategories";
 import { parseBRNumber } from "@/lib/parseBRNumber";
 import { OwnerScoreCard } from "@/components/OwnerScoreCard";
+import { SCORE_VISIVEL } from "@/lib/score";
 import { processFileForUpload } from "@/lib/processVideoForUpload";
 import { emParaleloOuFalha } from "@/lib/fileUpload";
 import { deleteAttachmentRow } from "@/lib/deleteAttachment";
@@ -454,8 +455,8 @@ export default function NovaCobranca({ editId, onClose, onSaved, inicial, onCria
         </Select>
       </div>
 
-      {/* Score do proprietário, quando escolhido */}
-      {formData.owner_id && (
+      {/* Score do proprietário, quando escolhido (área escondida desde 2026-11-01, src/lib/score.ts) */}
+      {SCORE_VISIVEL && formData.owner_id && (
         <OwnerScoreCard
           ownerId={formData.owner_id}
           ownerName={owners.find(o => o.id === formData.owner_id)?.name}

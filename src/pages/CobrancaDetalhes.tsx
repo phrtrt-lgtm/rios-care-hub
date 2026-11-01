@@ -84,6 +84,7 @@ import {
   valorDevido,
   type StatusCobranca,
 } from "@/lib/cobrancaMeta";
+import { SCORE_VISIVEL } from "@/lib/score";
 import { estaVencida } from "@/lib/vencimento";
 import { cn } from "@/lib/utils";
 import { nomeAnonimoAnexo } from "@/lib/zipFileName";
@@ -1171,7 +1172,7 @@ export default function CobrancaDetalhes() {
                 {opcoesStatus.map((s) => (
                   <SelectItem key={s} value={s}>
                     {STATUS_COBRANCA[s]?.rotulo ?? s}
-                    {rotuloScore(s)}
+                    {SCORE_VISIVEL && rotuloScore(s)}
                   </SelectItem>
                 ))}
               </SelectContent>

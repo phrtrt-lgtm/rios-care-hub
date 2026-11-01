@@ -1,7 +1,7 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueries } from "@tanstack/react-query";
-import { ArrowRight, Building2 } from "lucide-react";
+import { ArrowRight, Building2, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -31,6 +31,11 @@ import {
  * um cartão por imóvel com o mês atual, o que já está reservado, os próximos
  * 14 dias e os últimos meses. O botão leva à página completa (/resultados).
  *
+ * Com mais de um imóvel, os cartões ficam lado a lado num trilho com rolagem
+ * horizontal (pedido do gestor em 2026-11-01: empilhados, a página ficava
+ * extensa demais). No celular, um cartão por vez com a borda do próximo à
+ * mostra; no desktop, dois por vez e setas ao lado do título.
+ *
  * Usa a mesma consulta da página (mesma chave de cache). Só aparece com a
  * coleta da Hostex em dia — número velho é pior que número nenhum.
  */
@@ -44,14 +49,37 @@ export function ResultadosMini() {
     queries: (noAr ? imoveis ?? [] : []).map((i) => consultaResultadosImovel(i.id)),
   });
 
-  if (!noAr || !imoveis || imoveis.length === 0) return null;
-
   const carregando = consultas.some((c) => c.isLoading);
   const prontos = consultas.map((c) => c.data).filter((d): d is ResultadoImovel => !!d && d.reservas.length > 0);
+
+  // Setas do trilho: habilitadas conforme a posição da rolagem.
+  const trilho = useRef<HTMLDivElement>(null);
+  const [bordas, setBordas] = useState({ inicio: true, fim: true });
+  useEffect(() => {
+    const el = trilho.current;
+    if (!el) return;
+    const medir = () => setBordas({ inicio: el.scrollLeft <= 4, fim: el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 });
+    medir();
+    el.addEventListener("scroll", medir, { passive: true });
+    const observador = new ResizeObserver(medir);
+    observador.observe(el);
+    return () => {
+      el.removeEventListener("scroll", medir);
+      observador.disconnect();
+    };
+  }, [prontos.length]);
+
+  if (!noAr || !imoveis || imoveis.length === 0) return null;
   // Nenhum imóvel com reserva registrada: a seção não tem o que mostrar.
   if (!carregando && prontos.length === 0) return null;
 
   const unico = imoveis.length === 1;
+  const rolar = (direcao: 1 | -1) => {
+    const el = trilho.current;
+    if (!el) return;
+    const passo = (el.firstElementChild as HTMLElement | null)?.offsetWidth ?? el.clientWidth;
+    el.scrollBy({ left: direcao * (passo + 16), behavior: "smooth" });
+  };
 
   return (
     <section aria-labelledby="titulo-resultados-mini" className="flex min-w-0 flex-col gap-4">
@@ -59,15 +87,47 @@ export function ResultadosMini() {
         id="titulo-resultados-mini"
         titulo={unico ? "Resultados do seu imóvel" : "Resultados dos seus imóveis"}
         subtitulo="Reservas, ocupação e diárias, atualizadas todo dia"
+        acao={
+          !unico && (
+            <div className="hidden items-center gap-1.5 md:flex">
+              <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" aria-label="Imóveis anteriores" disabled={bordas.inicio} onClick={() => rolar(-1)}>
+                <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+              </Button>
+              <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" aria-label="Próximos imóveis" disabled={bordas.fim} onClick={() => rolar(1)}>
+                <ChevronRight className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            </div>
+          )
+        }
       />
-      <div className={cn("grid min-w-0 gap-4", !unico && "lg:grid-cols-2")}>
-        {carregando && prontos.length === 0
-          ? imoveis.slice(0, 2).map((i) => <Skeleton key={i.id} className="h-56 w-full rounded-2xl" />)
-          : prontos.map((d) => <CartaoMini key={d.imovel.id} dados={d} largo={unico} />)}
-      </div>
+      {unico ? (
+        carregando && prontos.length === 0 ? (
+          <Skeleton className="h-56 w-full rounded-2xl" />
+        ) : (
+          prontos.map((d) => <CartaoMini key={d.imovel.id} dados={d} largo />)
+        )
+      ) : (
+        <div
+          ref={trilho}
+          role="region"
+          aria-label="Resultados por imóvel, com rolagem horizontal"
+          className="custom-scrollbar -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-px-4 px-4 pb-2 md:mx-0 md:scroll-px-0 md:px-0"
+        >
+          {carregando && prontos.length === 0
+            ? imoveis.slice(0, 2).map((i) => <Skeleton key={i.id} className={cn(CLASSE_CARTAO_TRILHO, "h-56 rounded-2xl")} />)
+            : prontos.map((d) => (
+                <div key={d.imovel.id} className={CLASSE_CARTAO_TRILHO}>
+                  <CartaoMini dados={d} largo={false} />
+                </div>
+              ))}
+        </div>
+      )}
     </section>
   );
 }
+
+/** Largura de cada cartão no trilho: um por vez no celular (com a borda do próximo à mostra), dois no desktop. */
+const CLASSE_CARTAO_TRILHO = "w-[86%] shrink-0 snap-start sm:w-[70%] lg:w-[calc(50%-0.5rem)]";
 
 const DIAS_ADIANTE = 14;
 const MESES_ATRAS = 5;
