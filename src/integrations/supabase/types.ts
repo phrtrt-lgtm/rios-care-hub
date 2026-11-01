@@ -1671,8 +1671,12 @@ export type Database = {
           end_date: string
           erro_hostex: string | null
           hostex_bloqueado_em: string | null
+          hostex_liberacao_request_id: string | null
+          hostex_liberado_em: string | null
           hostex_request_id: string | null
           id: string
+          liberado_em: string | null
+          liberado_por: string | null
           mercadopago_payment_id: string | null
           notes: string | null
           owner_id: string
@@ -1696,8 +1700,12 @@ export type Database = {
           end_date: string
           erro_hostex?: string | null
           hostex_bloqueado_em?: string | null
+          hostex_liberacao_request_id?: string | null
+          hostex_liberado_em?: string | null
           hostex_request_id?: string | null
           id?: string
+          liberado_em?: string | null
+          liberado_por?: string | null
           mercadopago_payment_id?: string | null
           notes?: string | null
           owner_id: string
@@ -1721,8 +1729,12 @@ export type Database = {
           end_date?: string
           erro_hostex?: string | null
           hostex_bloqueado_em?: string | null
+          hostex_liberacao_request_id?: string | null
+          hostex_liberado_em?: string | null
           hostex_request_id?: string | null
           id?: string
+          liberado_em?: string | null
+          liberado_por?: string | null
           mercadopago_payment_id?: string | null
           notes?: string | null
           owner_id?: string
@@ -4695,7 +4707,62 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      hostex_reservations_proprietario: {
+        Row: {
+          booked_at: string | null
+          channel_type: string | null
+          check_in_date: string | null
+          check_out_date: string | null
+          currency: string | null
+          guests: number | null
+          nights: number | null
+          property_id: string | null
+          reservation_code: string | null
+          status: string | null
+          stay_status: string | null
+          synced_at: string | null
+          total_rate_cents: number | null
+        }
+        Insert: {
+          booked_at?: string | null
+          channel_type?: string | null
+          check_in_date?: string | null
+          check_out_date?: string | null
+          currency?: string | null
+          guests?: number | null
+          nights?: number | null
+          property_id?: string | null
+          reservation_code?: string | null
+          status?: string | null
+          stay_status?: string | null
+          synced_at?: string | null
+          total_rate_cents?: number | null
+        }
+        Update: {
+          booked_at?: string | null
+          channel_type?: string | null
+          check_in_date?: string | null
+          check_out_date?: string | null
+          currency?: string | null
+          guests?: number | null
+          nights?: number | null
+          property_id?: string | null
+          reservation_code?: string | null
+          status?: string | null
+          stay_status?: string | null
+          synced_at?: string | null
+          total_rate_cents?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hostex_reservations_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       can_view_ticket_type: {
@@ -4772,6 +4839,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      ia_agente_liberado: { Args: never; Returns: boolean }
       invoke_charge_cron: { Args: never; Returns: undefined }
       is_admin_or_maintenance: { Args: { _user_id: string }; Returns: boolean }
       is_team_member: { Args: { _user_id: string }; Returns: boolean }
