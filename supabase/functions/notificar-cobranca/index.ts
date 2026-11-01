@@ -89,7 +89,7 @@ async function enviarCentral(template: string, params: string[], telefone: strin
   }
 }
 
-type Supa = ReturnType<typeof createClient>;
+type Supa = ReturnType<typeof createClient<any>>;
 
 /**
  * Lembrete de atraso para UM proprietário, resumindo todas as cobranças dele em
