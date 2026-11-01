@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { differenceInCalendarDays, format } from "date-fns";
 import { CalendarX, Loader2, Users, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { descreverErroDaFunction } from "@/lib/erroFunction";
@@ -42,6 +43,8 @@ const hojeIso = () => format(new Date(), "yyyy-MM-dd");
  * botão de liberar (bloqueio feito) ou cancelar (pedido ainda não processado).
  * Chama `liberar-bloqueio`: reabre as noites na Hostex e marca `liberado`.
  * Pedido do gestor em 2026-10-31 (CLAUDE.md §3.21). A taxa paga não volta sozinha.
+ * A área fica sempre visível, com estado vazio, para o proprietário saber que
+ * é aqui que se libera (pedido do gestor em 2026-11-01); antes sumia sem bloqueio.
  */
 export function MeusBloqueios({ propertyId }: { propertyId: string }) {
   const qc = useQueryClient();
@@ -86,14 +89,25 @@ export function MeusBloqueios({ propertyId }: { propertyId: string }) {
     }
   };
 
-  if (isLoading || bloqueios.length === 0) return null;
-
   return (
     <div className="space-y-2 border-t pt-3">
-      <p className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-        <CalendarX className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
-        Seus bloqueios neste imóvel
-      </p>
+      <div>
+        <p className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+          <CalendarX className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+          Seus bloqueios neste imóvel
+        </p>
+        <p className="mt-0.5 text-xs text-muted-foreground">Para liberar datas já bloqueadas ou cancelar um pedido.</p>
+      </div>
+      {isLoading ? (
+        <div className="space-y-1.5" aria-busy="true" aria-label="Carregando bloqueios">
+          <Skeleton className="h-12 w-full rounded-lg" />
+          <Skeleton className="h-12 w-full rounded-lg" />
+        </div>
+      ) : bloqueios.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-border/70 px-3 py-2.5 text-xs text-muted-foreground">
+          Nenhuma data bloqueada daqui para frente. Quando você bloquear, as datas aparecem aqui com o botão de liberar.
+        </p>
+      ) : (
       <ul className="space-y-1.5">
         {bloqueios.map((b) => {
           const entrada = lerDiaLocal(b.start_date);
@@ -144,6 +158,7 @@ export function MeusBloqueios({ propertyId }: { propertyId: string }) {
           );
         })}
       </ul>
+      )}
     </div>
   );
 }
