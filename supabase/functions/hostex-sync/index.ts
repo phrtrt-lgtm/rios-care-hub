@@ -216,6 +216,43 @@ Deno.serve(async (req) => {
       console.log(`[hostex-sync] total properties fetched: ${propsList.length}`);
     }
 
+    // 1b) Capa viva de cada anúncio do Airbnb. O `cover` da propriedade
+    // (/properties) é o da importação e envelhece: em 2026-11-01 estava
+    // defasado em 35 dos 57 imóveis. O `cover` da listagem (/listings) é o
+    // que o anúncio mostra hoje. Falhou? Segue com a capa da propriedade.
+    const capaListagem = new Map<string, string>(); // listing_id -> large_url
+    try {
+      let offsetL = 0;
+      let safetyL = 0;
+      while (safetyL++ < 20) {
+        const payload = await hostexGet(
+          "/listings",
+          { channel_type: "airbnb", offset: offsetL, limit: PAGE_SIZE },
+          apiKey,
+        );
+        const list = extractList(payload, "listings");
+        if (!list.length) break;
+        for (const l of list) {
+          const lid = String(l?.listing_id ?? "");
+          let cover = l?.cover;
+          if (typeof cover === "string") {
+            try {
+              cover = JSON.parse(cover);
+            } catch {
+              cover = null;
+            }
+          }
+          const url = cover?.large_url ?? cover?.extra_large_url ?? cover?.original_url ?? cover?.small_url;
+          if (lid && typeof url === "string" && url) capaListagem.set(lid, url);
+        }
+        if (list.length < PAGE_SIZE) break;
+        offsetL += PAGE_SIZE;
+      }
+      console.log(`[hostex-sync] capas de listagem airbnb: ${capaListagem.size}`);
+    } catch (e) {
+      console.warn("[hostex-sync] /listings falhou; capa segue a da propriedade:", String(e));
+    }
+
     // Carrega map de properties locais para casar por nome
     const { data: localProps } = await supabase.from("properties").select("id, name, cover_photo_url");
     const norm = (s: string) =>
@@ -259,8 +296,20 @@ Deno.serve(async (req) => {
 
       // Capa do imóvel segue a do anúncio (pedido do gestor em 2026-11-01) enquanto a
       // capa local for a da Hostex (CDN da Airbnb) ou estiver vazia. Capa subida à mão
-      // no portal (bucket property-photos) fica como está.
+      // no portal (bucket property-photos) fica como está. Fonte: a listagem do
+      // Airbnb (capa viva); sem listagem conhecida, a capa da propriedade.
+      const channelsCapa = Array.isArray(p.channels) ? p.channels : [];
+      let capaAnuncio: string | null = null;
+      for (const ch of channelsCapa) {
+        if (String(ch?.channel_type ?? "") !== "airbnb") continue;
+        const achou = capaListagem.get(String(ch?.listing_id ?? ""));
+        if (achou) {
+          capaAnuncio = achou;
+          break;
+        }
+      }
       const coverUrl =
+        capaAnuncio ??
         p?.cover?.large_url ?? p?.cover?.extra_large_url ?? p?.cover?.original_url ?? p?.cover?.small_url ?? null;
       const capaAtual = matchedLocal ? capaLocal.get(matchedLocal) ?? null : null;
       const capaSegueAnuncio = capaAtual === null || capaAtual.includes("muscache.c");
