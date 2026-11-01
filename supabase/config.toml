@@ -124,3 +124,6 @@ verify_jwt = true
 
 [functions.create-bloqueio-pix]
 verify_jwt = true
+
+[functions.liberar-bloqueio]
+verify_jwt = true
