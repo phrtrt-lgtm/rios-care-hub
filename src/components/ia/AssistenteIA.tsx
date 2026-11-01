@@ -1,16 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useLocation } from "react-router-dom";
-import { BrainCircuit, Clock, Loader2, Plus, Send } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import type { LucideIcon } from "lucide-react";
+import { ChevronRight, History, MessageSquare, Plus, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { type ConversaResumo, useConversaIA, useConversasIA, useIaLiberada } from "@/hooks/useAssistenteIA";
-import { SUGESTOES_EQUIPE, SUGESTOES_PROPRIETARIO, rotuloFerramenta } from "@/lib/iaMeta";
-import { ChatMessageBubble } from "@/components/chat/ChatMessageBubble";
-import { ChatTypingIndicator } from "@/components/chat/ChatTypingIndicator";
-import { renderizarCorpo } from "@/components/chat/CorpoMensagem";
-import { CartaoAcao } from "./CartaoAcao";
+import { SUGESTOES_EQUIPE, SUGESTOES_PROPRIETARIO } from "@/lib/iaMeta";
+import { primeiroNome } from "@/components/painel/tons";
+import { cn } from "@/lib/utils";
+import { ConversaAssistente } from "./ConversaAssistente";
+import { CLASSE_BOTAO_CABECALHO, CLASSES_PAINEL } from "./estilos";
+import { OrbeAssistente } from "./OrbeAssistente";
 
 const EQUIPE = ["admin", "agent", "maintenance"];
 const ROTAS_SEM_WIDGET = ["/login", "/cadastro", "/cadastro-imovel", "/debug-app", "/definir-senha", "/aguardando-aprovacao", "/curadoria/p"];
@@ -19,25 +20,31 @@ const quando = (iso: string) =>
   new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
 
 /**
- * Assistente de IA do portal, montado uma vez em App.tsx (PLANO_IA_AGENTE.md §6).
- * Aparece quando `ia_agente_liberado()` diz que o assistente está ligado para
- * o papel do usuário (equipe desde a Fase 1; proprietário desde a Fase 2, em
- * 2026-10-31, com as ferramentas dele e sem dado de hóspede).
- * O estado da conversa fica aqui, então ela sobrevive à navegação entre páginas.
+ * Assistente de IA do portal, montado uma vez em App.tsx (PLANO_IA_AGENTE.md §6),
+ * fora das rotas: por isso o balão está em toda página logada, e a conversa
+ * sobrevive à navegação. Aparece quando `ia_agente_liberado()` diz que o
+ * assistente está ligado para o papel de quem está logado (equipe desde a
+ * Fase 1; proprietário desde a Fase 2, com as ferramentas dele e sem dado de
+ * hóspede). Usuário só de curadoria nunca vê.
+ *
+ * No desktop o painel é um cartão ancorado no canto do balão, não modal: a
+ * pessoa continua usando a página com ele aberto. No celular é uma folha de
+ * baixo, quase tela cheia.
  */
 export default function AssistenteIA() {
   const { user, profile } = useAuth();
   const { pathname } = useLocation();
+  const celular = useIsMobile();
   const papel = (profile?.role as string | undefined) ?? "";
   const equipe = EQUIPE.includes(papel);
   const curadoriaApenas = (profile as { curation_only?: boolean | null } | null)?.curation_only === true;
-  const liberada = useIaLiberada(!!user && !!profile && !curadoriaApenas);
+  const liberada = useIaLiberada(!!user && !curadoriaApenas);
   const [aberto, setAberto] = useState(false);
   const [verHistorico, setVerHistorico] = useState(false);
   const conversa = useConversaIA(pathname);
   const historico = useConversasIA(user?.id, aberto && verHistorico);
 
-  if (!user || !profile || curadoriaApenas) return null;
+  if (!user || curadoriaApenas) return null;
   if (ROTAS_SEM_WIDGET.some((r) => pathname.startsWith(r))) return null;
   if (liberada.data !== true) return null;
 
@@ -47,71 +54,162 @@ export default function AssistenteIA() {
   };
 
   return (
-    <>
-      <button
-        type="button"
-        onClick={() => setAberto(true)}
-        aria-label="Abrir o assistente de IA"
-        className="fixed bottom-20 right-4 z-40 flex items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg transition-all hover:bg-primary/90 active:scale-95 md:bottom-6 md:right-6"
-      >
-        <BrainCircuit className="h-4 w-4" aria-hidden="true" />
-        I.A
-      </button>
+    <DialogPrimitive.Root open={aberto} onOpenChange={setAberto} modal={celular}>
+      <Balao oculto={aberto} onClick={() => setAberto(true)} />
 
-      <Dialog open={aberto} onOpenChange={setAberto}>
-        <DialogContent className="flex h-[85vh] max-h-[700px] w-full flex-col gap-0 p-0 sm:max-w-lg">
-          <DialogHeader className="flex-shrink-0 border-b px-4 pb-3 pt-4">
-            <div className="flex items-center justify-between gap-2 pr-6">
-              <DialogTitle className="flex items-center gap-2 text-base">
-                <BrainCircuit className="h-4 w-4 text-primary" aria-hidden="true" />
-                Assistente RIOS
-              </DialogTitle>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  aria-label="Conversas anteriores"
-                  aria-pressed={verHistorico}
-                  onClick={() => setVerHistorico((v) => !v)}
-                >
-                  <Clock className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  aria-label="Nova conversa"
-                  onClick={() => {
-                    conversa.novaConversa();
-                    setVerHistorico(false);
-                  }}
-                  disabled={conversa.ocupado}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            <DialogDescription className="text-xs">
-              {equipe
+      <DialogPrimitive.Portal>
+        {celular && (
+          <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-secondary/40 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 motion-reduce:animate-none" />
+        )}
+        <DialogPrimitive.Content
+          // No desktop o painel fica aberto enquanto a pessoa mexe na página;
+          // fecha pelo X, pelo Esc ou pelo próprio balão.
+          onInteractOutside={(e) => {
+            if (!celular) e.preventDefault();
+          }}
+          // O foco vai para o campo de texto (ConversaAssistente), não para o
+          // primeiro botão do cabeçalho.
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          className={CLASSES_PAINEL}
+        >
+          <Cabecalho
+            ocupado={conversa.ocupado}
+            verHistorico={verHistorico}
+            onHistorico={() => setVerHistorico((v) => !v)}
+            onNova={() => {
+              conversa.novaConversa();
+              setVerHistorico(false);
+            }}
+            descricao={
+              equipe
                 ? "Consulta imóveis, reservas, chamados, cobranças e manutenções. Ações só com a sua confirmação."
-                : "Consulta seus imóveis, reservas, cobranças e chamados, e pede bloqueio de datas. Ações só com a sua confirmação."}
-            </DialogDescription>
-          </DialogHeader>
+                : "Consulta seus imóveis, reservas, cobranças e chamados, e pede bloqueio de datas. Ações só com a sua confirmação."
+            }
+          />
 
-          {verHistorico ? (
-            <ListaConversas
-              conversas={historico.data ?? []}
-              carregando={historico.isLoading}
-              atual={conversa.conversaId}
-              onAbrir={abrirConversa}
-            />
-          ) : (
-            <Conversa conversa={conversa} sugestoes={equipe ? SUGESTOES_EQUIPE : SUGESTOES_PROPRIETARIO} />
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
+          <div className="flex min-h-0 flex-1 flex-col bg-gradient-to-b from-muted/40 to-background">
+            {verHistorico ? (
+              <ListaConversas
+                conversas={historico.data ?? []}
+                carregando={historico.isLoading}
+                atual={conversa.conversaId}
+                onAbrir={abrirConversa}
+              />
+            ) : (
+              <ConversaAssistente
+                conversa={conversa}
+                sugestoes={equipe ? SUGESTOES_EQUIPE : SUGESTOES_PROPRIETARIO}
+                nome={primeiroNome((profile as { full_name?: string | null } | null)?.full_name)}
+                equipe={equipe}
+              />
+            )}
+          </div>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
+  );
+}
+
+/** O balão flutuante: gradiente da marca, orbe pulsando e selo de "online". */
+export function Balao({ oculto, onClick }: { oculto: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="Abrir o assistente de IA"
+      tabIndex={oculto ? -1 : 0}
+      className={cn(
+        "group fixed right-4 z-40 flex items-center gap-2.5 rounded-full p-1.5 pr-1.5 text-sm font-semibold text-secondary-foreground sm:pr-4",
+        "bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] md:bottom-6 md:right-6",
+        "bg-gradient-to-r from-secondary via-[hsl(var(--rios-blue))] to-primary",
+        "shadow-[0_12px_32px_-10px_hsl(var(--secondary)/0.6)] ring-1 ring-secondary-foreground/20",
+        "transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-12px_hsl(var(--secondary)/0.65)] active:scale-95",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        "animate-fade-in-scale motion-reduce:animate-none",
+        oculto && "pointer-events-none scale-90 opacity-0",
+      )}
+    >
+      <OrbeAssistente className="h-9 w-9 bg-none bg-secondary-foreground/15 shadow-none backdrop-blur-sm" iconeClassName="h-[18px] w-[18px]" pulsar />
+      <span className="hidden sm:inline">Assistente</span>
+      <span
+        className="absolute right-0 top-0 h-3 w-3 rounded-full border-2 border-background bg-success"
+        aria-hidden="true"
+      />
+    </button>
+  );
+}
+
+/** Cabeçalho do painel (precisa estar dentro de um `DialogPrimitive.Root`). */
+export function Cabecalho({
+  ocupado,
+  verHistorico,
+  descricao,
+  onHistorico,
+  onNova,
+}: {
+  ocupado: boolean;
+  verHistorico: boolean;
+  descricao: string;
+  onHistorico: () => void;
+  onNova: () => void;
+}) {
+  return (
+    <header className="relative shrink-0 overflow-hidden bg-gradient-to-br from-secondary via-[hsl(var(--rios-blue-deep))] to-[hsl(var(--rios-blue))] px-4 pb-4 pt-4 text-secondary-foreground md:pt-5">
+      <div aria-hidden="true" className="pointer-events-none absolute -right-12 -top-20 h-44 w-44 rounded-full bg-primary/35 blur-3xl" />
+      <div aria-hidden="true" className="pointer-events-none absolute -bottom-24 left-6 h-44 w-44 rounded-full bg-[hsl(var(--rios-blue-light)/0.35)] blur-3xl" />
+
+      <div className="relative flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <OrbeAssistente className="h-11 w-11 ring-2 ring-secondary-foreground/25" iconeClassName="h-5 w-5" />
+          <div>
+            <DialogPrimitive.Title className="text-base font-semibold leading-tight">Assistente RIOS</DialogPrimitive.Title>
+            <p className="mt-1 flex items-center gap-1.5 text-[11px] text-secondary-foreground/75">
+              <span className="relative flex h-1.5 w-1.5" aria-hidden="true">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75 motion-reduce:hidden" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-success" />
+              </span>
+              {ocupado ? "Consultando o portal…" : "Conectado ao portal"}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-0.5">
+          <BotaoCabecalho icone={History} rotulo="Conversas anteriores" pressionado={verHistorico} onClick={onHistorico} />
+          <BotaoCabecalho icone={Plus} rotulo="Nova conversa" onClick={onNova} disabled={ocupado} />
+          <DialogPrimitive.Close className={CLASSE_BOTAO_CABECALHO} aria-label="Fechar o assistente">
+            <X className="h-4 w-4" aria-hidden="true" />
+          </DialogPrimitive.Close>
+        </div>
+      </div>
+      <DialogPrimitive.Description className="sr-only">{descricao}</DialogPrimitive.Description>
+    </header>
+  );
+}
+
+function BotaoCabecalho({
+  icone: Icone,
+  rotulo,
+  pressionado,
+  disabled,
+  onClick,
+}: {
+  icone: LucideIcon;
+  rotulo: string;
+  pressionado?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={rotulo}
+      title={rotulo}
+      aria-pressed={pressionado}
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(CLASSE_BOTAO_CABECALHO, pressionado && "bg-secondary-foreground/20 text-secondary-foreground")}
+    >
+      <Icone className="h-4 w-4" aria-hidden="true" />
+    </button>
   );
 }
 
@@ -128,159 +226,59 @@ function ListaConversas({
 }) {
   if (carregando) {
     return (
-      <div className="flex flex-1 items-center justify-center">
-        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+      <div className="space-y-2 px-4 py-4" aria-busy="true" aria-label="Carregando as conversas">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="h-14 animate-pulse rounded-2xl bg-muted" />
+        ))}
       </div>
     );
   }
   if (conversas.length === 0) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
-        <p className="text-sm font-semibold text-foreground">Nenhuma conversa anterior</p>
+        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
+          <History className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <p className="mt-3 text-sm font-semibold text-foreground">Nenhuma conversa anterior</p>
         <p className="mt-1 text-xs text-muted-foreground">As conversas ficam guardadas e você pode voltar a elas.</p>
       </div>
     );
   }
   return (
-    <ul className="flex-1 overflow-y-auto px-3 py-3">
-      {conversas.map((c) => (
-        <li key={c.id}>
-          <button
-            type="button"
-            onClick={() => onAbrir(c)}
-            aria-current={c.id === atual ? "true" : undefined}
-            className={`mb-1.5 w-full rounded-xl border px-3 py-2 text-left transition-colors hover:bg-muted ${
-              c.id === atual ? "border-primary/40 bg-primary/5" : "border-border/60"
-            }`}
-          >
-            <p className="truncate text-sm text-foreground">{c.titulo || "Conversa"}</p>
-            <p className="text-[11px] text-muted-foreground">{quando(c.atualizada_em)}</p>
-          </button>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function Conversa({ conversa, sugestoes }: { conversa: ReturnType<typeof useConversaIA>; sugestoes: string[] }) {
-  const [texto, setTexto] = useState("");
-  const fimRef = useRef<HTMLDivElement>(null);
-  const { itens, ocupado, carregando, enviar, decidir } = conversa;
-
-  useEffect(() => {
-    fimRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [itens, ocupado]);
-
-  const mandar = (t?: string) => {
-    const conteudo = (t ?? texto).trim();
-    if (!conteudo || ocupado) return;
-    setTexto("");
-    void enviar(conteudo);
-  };
-
-  const aoTeclar = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      mandar();
-    }
-  };
-
-  return (
-    <>
-      <div className="flex-1 overflow-y-auto px-4 py-3">
-        {carregando && (
-          <div className="flex justify-center py-6">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          </div>
-        )}
-
-        {!carregando && itens.length === 0 && (
-          <div className="space-y-3 pt-2">
-            <p className="text-center text-xs text-muted-foreground">
-              Pergunte em linguagem natural. Eu consulto o portal e respondo com a fonte.
-            </p>
-            <div className="space-y-2">
-              {sugestoes.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => mandar(s)}
-                  className="w-full rounded-xl border border-border bg-muted/40 px-3 py-2 text-left text-xs text-foreground/80 transition-colors hover:bg-muted"
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {itens.map((item, i) => {
-          const anterior = itens[i - 1];
-          const agrupada = !!anterior && anterior.role === item.role && !anterior.pendente;
+    <div className="custom-scrollbar flex-1 overflow-y-auto px-4 py-4">
+      <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Conversas anteriores</p>
+      <ul className="space-y-2">
+        {conversas.map((c) => {
+          const ativa = c.id === atual;
           return (
-            <ChatMessageBubble
-              key={item.id}
-              authorName={item.role === "user" ? "Você" : "Assistente"}
-              authorRole={item.role === "user" ? null : "assistente"}
-              createdAt={item.criadaEm}
-              isOwn={item.role === "user"}
-              grouped={agrupada}
-              isInternal={item.erro}
-              body={item.texto ? renderizarCorpo(item.texto) : undefined}
-              attachments={
-                item.role === "assistant" && ((item.consultas && item.consultas.length > 0) || item.pendente) ? (
-                  <div className="w-full">
-                    {item.consultas && item.consultas.length > 0 && (
-                      <p className="px-1 text-[11px] text-muted-foreground">
-                        Consultou: {item.consultas.map(rotuloFerramenta).join(", ")}
-                      </p>
-                    )}
-                    {item.pendente && (
-                      <CartaoAcao
-                        acao={item.pendente}
-                        decisao={item.decisao}
-                        resultado={item.resultado}
-                        ocupado={ocupado}
-                        onConfirmar={() => void decidir(item.pendente!.id, "confirmar")}
-                        onCancelar={() => void decidir(item.pendente!.id, "cancelar")}
-                      />
-                    )}
-                  </div>
-                ) : undefined
-              }
-            />
+            <li key={c.id}>
+              <button
+                type="button"
+                onClick={() => onAbrir(c)}
+                aria-current={ativa ? "true" : undefined}
+                className={cn(
+                  "group flex w-full items-center gap-3 rounded-2xl border bg-card px-3 py-2.5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md",
+                  ativa ? "border-primary/50 bg-primary/5" : "border-border/70",
+                )}
+              >
+                <span
+                  className={cn(
+                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-colors",
+                    ativa ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary",
+                  )}
+                >
+                  <MessageSquare className="h-4 w-4" aria-hidden="true" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium text-foreground">{c.titulo || "Conversa"}</span>
+                  <span className="block text-[11px] text-muted-foreground">{quando(c.atualizada_em)}</span>
+                </span>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60 transition-colors group-hover:text-primary" aria-hidden="true" />
+              </button>
+            </li>
           );
         })}
-
-        {ocupado && (
-          <div className="mt-3">
-            <ChatTypingIndicator names={["Assistente"]} />
-          </div>
-        )}
-        <div ref={fimRef} />
-      </div>
-
-      <div className="flex flex-shrink-0 items-end gap-2 border-t px-3 py-3">
-        <Textarea
-          value={texto}
-          onChange={(e) => setTexto(e.target.value)}
-          onKeyDown={aoTeclar}
-          placeholder="Pergunte algo…"
-          rows={1}
-          aria-label="Mensagem para o assistente"
-          className="max-h-[120px] min-h-[38px] flex-1 resize-none text-sm"
-          disabled={carregando}
-        />
-        <Button
-          size="icon"
-          onClick={() => mandar()}
-          disabled={!texto.trim() || ocupado || carregando}
-          aria-label="Enviar"
-          className="h-9 w-9 flex-shrink-0"
-        >
-          {ocupado ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-        </Button>
-      </div>
-    </>
+      </ul>
+    </div>
   );
 }
