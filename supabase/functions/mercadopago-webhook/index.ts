@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.1";
 import { hostexPost } from "../_shared/hostexReserva.ts";
+import { chaveIdempotente, criarReservaInterna } from "../_shared/reservaInterna.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -104,13 +105,16 @@ async function updateOwnerScore(
 // ============================================================
 // BLOQUEIO DE DATAS PAGO — proprietário pagou a taxa de limpeza por PIX
 // (create-bloqueio-pix). external_reference: "bloqueio:<date_block_requests.id>".
-// Confere o valor, marca pago e bloqueia as noites na Hostex; se a Hostex
-// falhar, fica `pago_pendente_hostex` para a equipe concluir na fila.
+// Confere o valor, marca pago e cria na Hostex uma RESERVA DIRETA em nome de
+// "Proprietário" (desde 2026-11-01: a equipe de limpeza lê as reservas, não o
+// calendário). Se a reserva direta falhar (canal personalizado inexistente,
+// por exemplo), bloqueia por disponibilidade como antes e anota em
+// `erro_hostex`; se nem isso der, fica `pago_pendente_hostex` para a fila.
 // ============================================================
 async function tratarBloqueioPago(supabase: any, bloqueioId: string, payment: any): Promise<Response> {
   const { data: pedido } = await supabase
     .from('date_block_requests')
-    .select('id, property_id, start_date, end_date, status, valor_cents, pago_em')
+    .select('id, property_id, start_date, end_date, status, valor_cents, pago_em, notes')
     .eq('id', bloqueioId)
     .maybeSingle();
   if (!pedido) {
@@ -149,22 +153,55 @@ async function tratarBloqueioPago(supabase: any, bloqueioId: string, payment: an
         .maybeSingle();
       const idHostex = Number(hx?.id_hostex);
       if (!Number.isInteger(idHostex)) throw new Error('imóvel sem propriedade vinculada na Hostex');
-      // end_date é a saída: a última noite bloqueada é a véspera.
-      const [a, m, d] = String(pedido.end_date).split('-').map(Number);
-      const ultimaNoite = new Date(Date.UTC(a, m - 1, d) - 86400000).toISOString().slice(0, 10);
-      const resp = await hostexPost(
-        '/availabilities',
-        { property_ids: [idHostex], start_date: pedido.start_date, end_date: ultimaNoite, available: false },
-        hostexKey,
-      );
-      await supabase.from('date_block_requests').update({
-        status: 'processed',
-        processed_at: new Date().toISOString(),
-        hostex_request_id: resp?.request_id ?? null,
-        hostex_bloqueado_em: new Date().toISOString(),
-        erro_hostex: null,
-      }).eq('id', bloqueioId);
-      console.log('Bloqueio aplicado na Hostex:', bloqueioId);
+      const taxa = typeof pedido.valor_cents === 'number' ? `R$ ${(pedido.valor_cents / 100).toFixed(2).replace('.', ',')}` : 'taxa de limpeza';
+      const remarks = [
+        `Bloqueio para uso do proprietário, pedido pelo portal RIOS (${bloqueioId}).`,
+        `Taxa de limpeza ${taxa} paga por PIX (Mercado Pago ${payment.id}).`,
+        pedido.notes ? `Obs.: ${String(pedido.notes).slice(0, 400)}` : '',
+      ].filter(Boolean).join(' ');
+      try {
+        // Reserva direta "Proprietário": é o que o app de limpeza vê.
+        const r = await criarReservaInterna({
+          apiKey: hostexKey,
+          idHostex,
+          checkIn: String(pedido.start_date),
+          checkOut: String(pedido.end_date),
+          tipo: 'proprietario',
+          remarks,
+          chave: chaveIdempotente(bloqueioId),
+        });
+        await supabase.from('date_block_requests').update({
+          status: 'processed',
+          processed_at: new Date().toISOString(),
+          hostex_request_id: r.request_id,
+          hostex_reservation_code: r.reservation_code,
+          hostex_guest_name: r.guest_name,
+          hostex_bloqueado_em: new Date().toISOString(),
+          erro_hostex: null,
+        }).eq('id', bloqueioId);
+        console.log('Bloqueio virou reserva na Hostex:', bloqueioId, r.reservation_code);
+      } catch (eReserva) {
+        // Sem a reserva direta, fecha o calendário como antes (vale para Airbnb e
+        // Booking) e deixa anotado para a equipe criar o canal / a reserva à mão.
+        const motivo = eReserva instanceof Error ? eReserva.message : String(eReserva);
+        console.error('Reserva direta falhou, bloqueando por disponibilidade:', motivo);
+        // end_date é a saída: a última noite bloqueada é a véspera.
+        const [a, m, d] = String(pedido.end_date).split('-').map(Number);
+        const ultimaNoite = new Date(Date.UTC(a, m - 1, d) - 86400000).toISOString().slice(0, 10);
+        const resp = await hostexPost(
+          '/availabilities',
+          { property_ids: [idHostex], start_date: pedido.start_date, end_date: ultimaNoite, available: false },
+          hostexKey,
+        );
+        await supabase.from('date_block_requests').update({
+          status: 'processed',
+          processed_at: new Date().toISOString(),
+          hostex_request_id: resp?.request_id ?? null,
+          hostex_bloqueado_em: new Date().toISOString(),
+          erro_hostex: `Reserva "Proprietário" não criada (${motivo.slice(0, 300)}); datas fechadas por disponibilidade, sem reserva para a limpeza.`,
+        }).eq('id', bloqueioId);
+        console.log('Bloqueio aplicado por disponibilidade na Hostex:', bloqueioId);
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       console.error('Bloqueio pago, Hostex falhou:', msg);

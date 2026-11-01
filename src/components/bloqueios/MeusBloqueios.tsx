@@ -35,6 +35,10 @@ const STATUS: Record<Bloqueio["status"], string> = {
   pago_pendente_hostex: "Pago · equipe conclui",
   processed: "Bloqueado",
 };
+const STATUS_MANUTENCAO: Partial<Record<Bloqueio["status"], string>> = {
+  pending: "Equipe avalia",
+  processed: "Bloqueado pela RIOS",
+};
 
 const hojeIso = () => format(new Date(), "yyyy-MM-dd");
 
@@ -45,6 +49,8 @@ const hojeIso = () => format(new Date(), "yyyy-MM-dd");
  * Pedido do gestor em 2026-10-31 (CLAUDE.md §3.21). A taxa paga não volta sozinha.
  * A área fica sempre visível, com estado vazio, para o proprietário saber que
  * é aqui que se libera (pedido do gestor em 2026-11-01); antes sumia sem bloqueio.
+ * Bloqueio de manutenção (feito pela equipe, reserva "MANUTENÇÃO · tipo")
+ * aparece só para informar: não tem botão, só a RIOS libera.
  */
 export function MeusBloqueios({ propertyId }: { propertyId: string }) {
   const qc = useQueryClient();
@@ -96,7 +102,7 @@ export function MeusBloqueios({ propertyId }: { propertyId: string }) {
           <CalendarX className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
           Seus bloqueios neste imóvel
         </p>
-        <p className="mt-0.5 text-xs text-muted-foreground">Para liberar datas já bloqueadas ou cancelar um pedido.</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">Para liberar datas já bloqueadas ou cancelar um pedido. Bloqueios de manutenção são da equipe RIOS.</p>
       </div>
       {isLoading ? (
         <div className="space-y-1.5" aria-busy="true" aria-label="Carregando bloqueios">
@@ -114,7 +120,8 @@ export function MeusBloqueios({ propertyId }: { propertyId: string }) {
           const saida = lerDiaLocal(b.end_date);
           const noites = differenceInCalendarDays(saida, entrada);
           const feito = b.status === "processed";
-          const podeMexer = feito || b.status === "pending" || b.status === "aguardando_pagamento";
+          const manutencao = b.reason !== "family_visit";
+          const podeMexer = !manutencao && (feito || b.status === "pending" || b.status === "aguardando_pagamento");
           const Icone = b.reason === "family_visit" ? Users : Wrench;
           return (
             <li key={b.id} className="rounded-lg border border-border/70 px-3 py-2 text-xs">
@@ -123,8 +130,9 @@ export function MeusBloqueios({ propertyId }: { propertyId: string }) {
                   <Icone className={b.reason === "family_visit" ? "h-3.5 w-3.5 text-info" : "h-3.5 w-3.5 text-warning"} aria-hidden="true" />
                   {format(entrada, "dd/MM")} a {format(saida, "dd/MM")} · {noites} {noites === 1 ? "noite" : "noites"}
                 </span>
-                <span className="text-muted-foreground">{STATUS[b.status]}</span>
+                <span className="text-muted-foreground">{manutencao ? (STATUS_MANUTENCAO[b.status] ?? STATUS[b.status]) : STATUS[b.status]}</span>
               </div>
+              {manutencao && <p className="mt-0.5 text-muted-foreground">Manutenção · a RIOS libera quando o serviço terminar.</p>}
               {typeof b.valor_cents === "number" && (
                 <p className="mt-0.5 text-muted-foreground">
                   Taxa de limpeza {formatarBRL(b.valor_cents)}
@@ -137,7 +145,7 @@ export function MeusBloqueios({ propertyId }: { propertyId: string }) {
                     <>
                       <span className="flex-1 text-muted-foreground">
                         {feito
-                          ? `As noites voltam à venda. ${b.pago_em ? "A taxa paga não é devolvida automaticamente." : ""}`
+                          ? `A reserva em seu nome é cancelada na Hostex e as noites voltam à venda. ${b.pago_em ? "A taxa paga não é devolvida automaticamente." : ""}`
                           : "O pedido é retirado; nada foi bloqueado."}
                       </span>
                       <Button size="sm" variant="destructive" className="h-7 px-2 text-xs" onClick={() => void liberar(b)} disabled={liberando === b.id}>

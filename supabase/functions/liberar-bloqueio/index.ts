@@ -3,16 +3,23 @@
 // Pedido do gestor em 2026-10-31 (CLAUDE.md §3.21).
 //
 // Corpo: { id } (id do pedido em date_block_requests)
-//   - status `processed` (bloqueio feito na Hostex, pago ou pela equipe):
-//     reabre as noites que ainda não passaram no calendário mestre da Hostex
-//     (POST /availabilities, available = true) e marca `liberado`.
+//   - status `processed` com `hostex_reservation_code` (desde 2026-11-01 o
+//     bloqueio é uma reserva direta "Proprietário" / "MANUTENÇÃO · tipo"):
+//     cancela a reserva na Hostex (DELETE /reservations/{code}) e marca
+//     `liberado`. A reserva é cancelada inteira, mesmo se já começou.
+//   - status `processed` sem código (bloqueios antigos, por disponibilidade):
+//     reabre as noites que ainda não passaram (POST /availabilities,
+//     available = true) e marca `liberado`.
 //   - status `pending` ou `aguardando_pagamento`: só marca `cancelado`
 //     (nada foi bloqueado ainda) e limpa o QR.
+// Bloqueio de manutenção (reason = maintenance) só a equipe libera; o
+// proprietário recebe 403.
 // A taxa de limpeza paga não é devolvida automaticamente: a equipe vê o
 // pedido como "Liberado" em /admin/bloqueios-datas e decide.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.1";
 import { exigirPapel } from "../_shared/auth-guard.ts";
 import { hostexPost } from "../_shared/hostexReserva.ts";
+import { cancelarReservaHostex } from "../_shared/reservaInterna.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -46,7 +53,7 @@ Deno.serve(async (req) => {
 
   const { data: pedido } = await supabase
     .from("date_block_requests")
-    .select("id, property_id, owner_id, start_date, end_date, status, reason, valor_cents, pago_em, property:properties(name)")
+    .select("id, property_id, owner_id, start_date, end_date, status, reason, valor_cents, pago_em, hostex_reservation_code, hostex_guest_name, property:properties(name)")
     .eq("id", id)
     .maybeSingle();
   if (!pedido) return json({ error: "Pedido não encontrado." }, 404);
@@ -55,6 +62,9 @@ Deno.serve(async (req) => {
   if (!equipe) {
     const { data: ok } = await supabase.rpc("has_property_access", { _user_id: autor.id, _property_id: pedido.property_id });
     if (ok !== true && pedido.owner_id !== autor.id) return json({ error: "Você não tem acesso a esse pedido." }, 403);
+  }
+  if (!equipe && pedido.reason === "maintenance") {
+    return json({ error: "Esse bloqueio é de manutenção da RIOS; só a equipe libera. Fale com a equipe pelo chat ou abra um chamado.", codigo: "manutencao" }, 403);
   }
   const nomeImovel = (Array.isArray(pedido.property) ? pedido.property[0] : pedido.property)?.name ?? "imóvel";
   const hoje = hojeBrasilia();
@@ -90,6 +100,52 @@ Deno.serve(async (req) => {
 
   const hostexKey = Deno.env.get("HOSTEX_API_KEY");
   if (!hostexKey) return json({ error: "A Hostex não está configurada. Avise a equipe." }, 503);
+
+  // 3a. bloqueio feito como reserva direta: cancela a reserva (inteira).
+  const codigoReserva = typeof pedido.hostex_reservation_code === "string" ? pedido.hostex_reservation_code.trim() : "";
+  if (codigoReserva) {
+    let requestIdCancel: string | null = null;
+    try {
+      requestIdCancel = (await cancelarReservaHostex(hostexKey, codigoReserva)).request_id;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error("[liberar-bloqueio] cancelar reserva:", msg);
+      await supabase.from("date_block_requests").update({ erro_hostex: `Cancelamento da reserva ${codigoReserva} falhou: ${msg}`.slice(0, 500) }).eq("id", id);
+      return json({ error: "A Hostex não aceitou cancelar a reserva agora. Tente de novo em instantes ou avise a equipe." }, 502);
+    }
+    const { error } = await supabase
+      .from("date_block_requests")
+      .update({
+        status: "liberado",
+        liberado_em: agora,
+        liberado_por: autor.id,
+        hostex_liberado_em: agora,
+        hostex_liberacao_request_id: requestIdCancel,
+        erro_hostex: null,
+      })
+      .eq("id", id)
+      .eq("status", "processed");
+    if (error) {
+      console.error("[liberar-bloqueio] update:", error.message);
+      return json({ error: "A reserva foi cancelada na Hostex, mas não consegui gravar. Avise a equipe." }, 500);
+    }
+    const rotulo = typeof pedido.hostex_guest_name === "string" && pedido.hostex_guest_name ? `"${pedido.hostex_guest_name}"` : "do bloqueio";
+    return json({
+      id,
+      imovel: nomeImovel,
+      status: "liberado",
+      de: String(pedido.start_date),
+      ate: ultimaNoite,
+      saida: String(pedido.end_date),
+      noites_liberadas: diaNum(ultimaNoite) - diaNum(String(pedido.start_date)) + 1,
+      reserva_cancelada: codigoReserva,
+      taxa_paga_cents: pedido.pago_em ? pedido.valor_cents ?? null : null,
+      resultado: `Reserva ${rotulo} (${codigoReserva}) cancelada na Hostex; as noites de ${String(pedido.start_date)} a ${ultimaNoite} voltam a ficar à venda no Airbnb e no Booking em alguns minutos.`,
+      aviso: pedido.pago_em ? "A taxa de limpeza paga não é devolvida automaticamente; fale com a equipe se precisar." : null,
+    });
+  }
+
+  // 3b. bloqueio antigo, por disponibilidade: reabre as noites que faltam.
   const { data: hx } = await supabase
     .from("hostex_properties")
     .select("id_hostex")

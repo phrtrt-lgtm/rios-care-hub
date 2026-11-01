@@ -29,6 +29,8 @@ interface BlockRequest {
   pago_em?: string | null;
   erro_hostex?: string | null;
   hostex_bloqueado_em?: string | null;
+  hostex_reservation_code?: string | null;
+  hostex_guest_name?: string | null;
   liberado_em?: string | null;
   created_at: string;
   processed_at: string | null;
@@ -49,8 +51,8 @@ const statusConfig = {
 };
 
 const reasonConfig = {
-  maintenance: { label: "Manutenção", icon: Wrench, color: "text-warning" },
-  family_visit: { label: "Visita familiar", icon: Users, color: "text-info" },
+  maintenance: { label: "Manutenção (equipe)", icon: Wrench, color: "text-warning" },
+  family_visit: { label: "Uso pessoal", icon: Users, color: "text-info" },
 };
 
 export default function AdminBloqueiosDatas() {
@@ -317,7 +319,13 @@ export default function AdminBloqueiosDatas() {
                                 {req.pago_em
                                   ? ` · paga em ${format(new Date(req.pago_em), "dd/MM 'às' HH:mm", { locale: ptBR })}`
                                   : " · PIX não pago"}
-                                {req.hostex_bloqueado_em && " · bloqueado na Hostex"}
+                                {req.hostex_bloqueado_em && !req.hostex_reservation_code && " · bloqueado na Hostex"}
+                              </p>
+                            )}
+                            {req.hostex_reservation_code && (
+                              <p className="text-xs font-medium text-foreground">
+                                Reserva "{req.hostex_guest_name ?? "—"}" na Hostex · {req.hostex_reservation_code}
+                                {req.status === "liberado" && " · cancelada"}
                               </p>
                             )}
                             {req.liberado_em && (

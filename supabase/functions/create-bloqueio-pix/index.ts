@@ -11,7 +11,9 @@
 //      cleaning_fee do anúncio na Hostex (quando > 0; guardado no imóvel);
 //   5. grava o pedido como `aguardando_pagamento` e cria o PIX no Mercado
 //      Pago (external_reference "bloqueio:<id>", expira em 30 min).
-// Quem bloqueia na Hostex é o mercadopago-webhook, depois de conferir o valor.
+// Quem bloqueia na Hostex é o mercadopago-webhook, depois de conferir o valor:
+// cria uma reserva direta em nome de "Proprietário" (desde 2026-11-01), que a
+// equipe de limpeza vê no app; se não der, fecha por disponibilidade.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.1";
 import { exigirPapel } from "../_shared/auth-guard.ts";
 import { hostexGet } from "../_shared/hostexReserva.ts";

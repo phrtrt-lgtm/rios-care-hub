@@ -1,18 +1,16 @@
 import { useEffect, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { differenceInCalendarDays, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarIcon, CheckCircle2, Clock, Copy, Loader2, QrCode, Users, Wrench } from "lucide-react";
+import { CalendarIcon, CheckCircle2, Copy, Loader2, QrCode } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { descreverErroDaFunction } from "@/lib/erroFunction";
 import { formatarBRL } from "@/lib/cobrancaMeta";
@@ -25,8 +23,7 @@ interface DateBlockRequestDialogProps {
   propertyName: string;
 }
 
-type Step = "dates" | "reason" | "pagamento" | "confirm" | "success";
-type Motivo = "maintenance" | "family_visit";
+type Step = "dates" | "pagamento" | "success";
 
 interface PedidoPix {
   id: string;
@@ -44,19 +41,19 @@ type StatusPedido = "aguardando_pagamento" | "pago_pendente_hostex" | "processed
 const db = supabase as unknown as SupabaseClient;
 
 /**
- * Pedido de bloqueio de datas pelo proprietário (PLANO_IA_AGENTE.md §4).
- * Manutenção: vai para a fila da equipe, como sempre. Uso pessoal: gera um
- * PIX no valor da taxa de limpeza do imóvel; pago, o webhook bloqueia as
- * noites na Hostex e este diálogo acompanha até confirmar.
+ * Bloqueio de datas pelo proprietário (PLANO_IA_AGENTE.md §4, CLAUDE.md §3.21).
+ * Só uso pessoal, desde 2026-11-01 (pedido do gestor): gera um PIX no valor da
+ * taxa de limpeza do imóvel; pago, o webhook cria na Hostex uma reserva direta
+ * em nome de "Proprietário" (a equipe de limpeza vê no app) e este diálogo
+ * acompanha até confirmar. O motivo "Manutenção" saiu: obra é com a RIOS, pelo
+ * chamado, e a equipe bloqueia (reserva "MANUTENÇÃO · tipo").
  */
 export const DateBlockRequestDialog = ({ open, onOpenChange, propertyId, propertyName }: DateBlockRequestDialogProps) => {
-  const { user } = useAuth();
   const [step, setStep] = useState<Step>("dates");
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
   const [startOpen, setStartOpen] = useState(false);
   const [endOpen, setEndOpen] = useState(false);
-  const [reason, setReason] = useState<Motivo>("maintenance");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [pedido, setPedido] = useState<PedidoPix | null>(null);
@@ -70,7 +67,6 @@ export const DateBlockRequestDialog = ({ open, onOpenChange, propertyId, propert
     setStep("dates");
     setStartDate(undefined);
     setEndDate(undefined);
-    setReason("maintenance");
     setNotes("");
     setPedido(null);
     setStatusPedido("aguardando_pagamento");
@@ -148,37 +144,7 @@ export const DateBlockRequestDialog = ({ open, onOpenChange, propertyId, propert
   };
 
   const handleNext = () => {
-    if (step === "dates") {
-      if (validarDatas()) setStep("reason");
-    } else if (step === "reason") {
-      if (reason === "family_visit") void gerarPix();
-      else setStep("confirm");
-    }
-  };
-
-  // Manutenção: pedido para a equipe avaliar, como antes (sem pagamento).
-  const handleSubmitManutencao = async () => {
-    if (!user || !startDate || !endDate) return;
-    setSubmitting(true);
-    try {
-      const { error } = await supabase.from("date_block_requests").insert({
-        property_id: propertyId,
-        owner_id: user.id,
-        start_date: format(startDate, "yyyy-MM-dd"),
-        end_date: format(endDate, "yyyy-MM-dd"),
-        reason: "maintenance",
-        notes: notes || null,
-        status: "pending",
-      });
-      if (error) throw error;
-      setStatusPedido("pending");
-      setStep("success");
-    } catch (err) {
-      console.error(err);
-      toast({ title: "Erro ao enviar solicitação", variant: "destructive" });
-    } finally {
-      setSubmitting(false);
-    }
+    if (validarDatas()) void gerarPix();
   };
 
   const copiarPix = async () => {
@@ -266,63 +232,18 @@ export const DateBlockRequestDialog = ({ open, onOpenChange, propertyId, propert
                 {noites} {noites === 1 ? "noite" : "noites"}, saída na manhã de {endDate && format(endDate, "dd/MM")}.
               </p>
             )}
-            <Button onClick={handleNext} className="w-full" size="sm">
-              Continuar
+            <div className="space-y-1.5">
+              <Label className="text-xs">Observações (opcional)</Label>
+              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Quem vai usar, horário de chegada…" className="h-16 resize-none text-sm" />
+            </div>
+            <p className="rounded-lg border border-info/30 bg-info/10 p-3 text-xs text-info">
+              Uso pessoal: você paga a taxa de limpeza por PIX e as datas ficam fechadas na hora, como uma reserva em seu nome. Precisa de obra ou reparo? Abra um chamado: a RIOS bloqueia sem custo.
+            </p>
+            <Button onClick={handleNext} className="w-full" size="sm" disabled={submitting}>
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Gerar PIX da taxa de limpeza"}
             </Button>
             {/* Bloqueios futuros deste imóvel, com "Liberar datas" / "Cancelar pedido" (liberar-bloqueio). */}
             <MeusBloqueios propertyId={propertyId} />
-          </div>
-        )}
-
-        {step === "reason" && (
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">Qual é o motivo do bloqueio?</p>
-            <RadioGroup value={reason} onValueChange={(v) => setReason(v as Motivo)} className="space-y-2">
-              <label
-                className={cn(
-                  "flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors",
-                  reason === "maintenance" ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50",
-                )}
-              >
-                <RadioGroupItem value="maintenance" className="mt-0.5" />
-                <div>
-                  <div className="flex items-center gap-1.5 text-sm font-medium">
-                    <Wrench className="h-3.5 w-3.5 text-warning" />
-                    Manutenção
-                  </div>
-                  <p className="mt-0.5 text-xs text-muted-foreground">Reparos, obras ou serviços na unidade. A equipe avalia e bloqueia.</p>
-                </div>
-              </label>
-              <label
-                className={cn(
-                  "flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors",
-                  reason === "family_visit" ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50",
-                )}
-              >
-                <RadioGroupItem value="family_visit" className="mt-0.5" />
-                <div>
-                  <div className="flex items-center gap-1.5 text-sm font-medium">
-                    <Users className="h-3.5 w-3.5 text-info" />
-                    Uso pessoal
-                  </div>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    Você ou familiares na unidade. Paga a taxa de limpeza por PIX e as datas são bloqueadas na hora.
-                  </p>
-                </div>
-              </label>
-            </RadioGroup>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Observações (opcional)</Label>
-              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Detalhes adicionais…" className="h-20 resize-none text-sm" />
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setStep("dates")} className="flex-1" disabled={submitting}>
-                Voltar
-              </Button>
-              <Button size="sm" onClick={handleNext} className="flex-1" disabled={submitting}>
-                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : reason === "family_visit" ? "Gerar PIX" : "Continuar"}
-              </Button>
-            </div>
           </div>
         )}
 
@@ -367,54 +288,13 @@ export const DateBlockRequestDialog = ({ open, onOpenChange, propertyId, propert
                   Aguardando o pagamento · expira em {mmss}
                 </div>
                 <p className="text-center text-xs text-muted-foreground">
-                  Assim que o Mercado Pago confirmar, as datas são bloqueadas na Hostex e esta tela avisa.
+                  Assim que o Mercado Pago confirmar, a Hostex ganha uma reserva em seu nome e esta tela avisa.
                 </p>
               </>
             )}
             <Button variant="ghost" size="sm" onClick={handleClose} className="w-full">
               Fechar e pagar depois
             </Button>
-          </div>
-        )}
-
-        {step === "confirm" && (
-          <div className="space-y-4">
-            <div className="space-y-2.5 rounded-lg border bg-muted/30 p-4 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Unidade</span>
-                <span className="max-w-[55%] truncate text-right font-medium">{propertyName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Entrada</span>
-                <span className="font-medium">{startDate ? format(startDate, "dd/MM/yyyy") : "—"}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Saída</span>
-                <span className="font-medium">{endDate ? format(endDate, "dd/MM/yyyy") : "—"}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Motivo</span>
-                <span className="font-medium">Manutenção</span>
-              </div>
-              {notes && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Obs.</span>
-                  <span className="max-w-[55%] text-right font-medium">{notes}</span>
-                </div>
-              )}
-            </div>
-            <div className="flex items-center gap-2 rounded-lg border border-info/30 bg-info/10 p-3 text-xs text-info">
-              <Clock className="h-4 w-4 shrink-0" />
-              <span>A equipe RIOS avalia o pedido e bloqueia as datas.</span>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setStep("reason")} className="flex-1">
-                Voltar
-              </Button>
-              <Button size="sm" onClick={handleSubmitManutencao} disabled={submitting} className="flex-1">
-                {submitting ? "Enviando…" : "Confirmar pedido"}
-              </Button>
-            </div>
           </div>
         )}
 
@@ -428,7 +308,7 @@ export const DateBlockRequestDialog = ({ open, onOpenChange, propertyId, propert
                 <>
                   <p className="font-semibold text-foreground">Pagamento confirmado e datas bloqueadas</p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {startDate && format(startDate, "dd/MM")} a {endDate && format(endDate, "dd/MM")} ficaram fechadas no Airbnb e no Booking. Bom descanso!
+                    {startDate && format(startDate, "dd/MM")} a {endDate && format(endDate, "dd/MM")} ficaram fechadas no Airbnb e no Booking, como reserva em seu nome. Bom descanso!
                   </p>
                 </>
               )}
@@ -438,12 +318,6 @@ export const DateBlockRequestDialog = ({ open, onOpenChange, propertyId, propert
                   <p className="mt-1 text-sm text-muted-foreground">
                     A equipe RIOS conclui o bloqueio no calendário em instantes{erroHostex ? "." : "."}
                   </p>
-                </>
-              )}
-              {statusPedido === "pending" && (
-                <>
-                  <p className="font-semibold text-foreground">Pedido enviado</p>
-                  <p className="mt-1 text-sm text-muted-foreground">A equipe RIOS avalia e bloqueia as datas em até <strong>1h 30min</strong>.</p>
                 </>
               )}
             </div>

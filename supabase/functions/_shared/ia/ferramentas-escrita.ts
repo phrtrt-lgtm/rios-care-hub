@@ -5,6 +5,7 @@
 // Toda gravação no portal usa o JWT do usuário (RLS e triggers de autoria
 // valem como na tela). Hostex: só equipe, pela API, com a chave do projeto.
 import { HOSTEX_BASE, hostexPost } from "../hostexReserva.ts";
+import { chaveIdempotente, criarReservaInterna, nomeReservaInterna } from "../reservaInterna.ts";
 import {
   type Contexto,
   type FerramentaIA,
@@ -16,6 +17,7 @@ import {
   ehUuid,
   exigirAcessoImovel,
   janela,
+  somarDias,
   textoCurto,
 } from "./politica.ts";
 
@@ -60,72 +62,232 @@ function janelaHostex(ctx: Contexto, de: unknown, ate: unknown): { de: string; a
   return { de: j.de, ate: j.ate, noites: j.dias + 1 };
 }
 
-async function mudarDisponibilidade(ctx: Contexto, entrada: Record<string, unknown>, disponivel: boolean) {
-  const imovel = await exigirAcessoImovel(ctx, entrada.property_id);
-  const { de, ate, noites } = janelaHostex(ctx, entrada.de, entrada.ate);
-  const apiKey = Deno.env.get("HOSTEX_API_KEY");
-  if (!apiKey) throw new ErroFerramenta("A chave da Hostex não está configurada (HOSTEX_API_KEY).");
-  const idHostex = await idHostexDoImovel(ctx, imovel.id);
-  const resposta = await hostexPost(
+/** POST /availabilities: fecha ou reabre noites no calendário mestre (datas inclusivas). */
+async function mudarDisponibilidadeHostex(apiKey: string, idHostex: number, de: string, ate: string, disponivel: boolean) {
+  return await hostexPost(
     "/availabilities",
     { property_ids: [idHostex], start_date: de, end_date: ate, available: disponivel },
     apiKey,
   );
-  return {
-    imovel: imovel.name,
-    id_hostex: idHostex,
-    de,
-    ate,
-    noites,
-    resultado: disponivel ? "datas liberadas" : "datas bloqueadas",
-    hostex: resposta?.data ?? resposta ?? null,
-    aviso: "A Hostex aplica em segundo plano e replica ao Airbnb e ao Booking em alguns minutos. O cache do portal não mostra bloqueios.",
-    endpoint: `${HOSTEX_BASE}/availabilities`,
-  };
 }
 
-const schemaDatasHostex = {
-  type: "object" as const,
-  properties: {
-    property_id: { type: "string", description: "Id do imóvel (uuid do portal)." },
-    de: { type: "string", description: "Primeira noite, AAAA-MM-DD (hoje ou depois)." },
-    ate: { type: "string", description: "Última noite, AAAA-MM-DD, inclusive. 'De 18 a 24' = de 2026-11-18 até 2026-11-24." },
-    motivo: { type: "string", description: "Motivo curto, só para o registro (opcional)." },
-  },
-  required: ["property_id", "de", "ate"],
-  additionalProperties: false as const,
-};
+function chaveHostex(_ctx: Contexto): string {
+  const apiKey = Deno.env.get("HOSTEX_API_KEY");
+  if (!apiKey) throw new ErroFerramenta("A chave da Hostex não está configurada (HOSTEX_API_KEY).");
+  return apiKey;
+}
 
 async function resumoDatas(ctx: Contexto, entrada: Record<string, unknown>, verbo: string): Promise<string> {
   const nome = await nomeImovel(ctx, entrada.property_id);
   const de = typeof entrada.de === "string" ? dataBR(entrada.de) : "?";
   const ate = typeof entrada.ate === "string" ? dataBR(entrada.ate) : "?";
-  const motivo = textoCurto(entrada.motivo, "motivo", 80);
-  return `${verbo} as noites de ${de} a ${ate} (inclusive) do imóvel ${nome} na Hostex${motivo ? ` — ${motivo}` : ""}. Vale para Airbnb e Booking.`;
+  return `${verbo} as noites de ${de} a ${ate} (inclusive) do imóvel ${nome} na Hostex. Vale para Airbnb e Booking.`;
 }
 
+// Bloqueio da equipe = RESERVA DIRETA "MANUTENÇÃO · <tipo>" na Hostex (desde
+// 2026-11-01, pedido do gestor): a equipe de limpeza lê as reservas no app de
+// limpeza, e um bloqueio por disponibilidade não aparece lá. O registro fica em
+// date_block_requests (reason = maintenance, status = processed), que é de onde
+// hostex_liberar_datas e liberar-bloqueio cancelam a reserva depois.
 const hostexBloquearDatas: FerramentaIA = {
   nome: "hostex_bloquear_datas",
   descricao:
-    "Bloqueia noites de um imóvel no calendário mestre da Hostex (fecha a venda no Airbnb, Booking e site). Datas inclusivas: 'de' é a primeira noite e 'ate' a última. Antes de pedir, confira a disponibilidade do período e avise se houver reserva aceita dentro dele: a Hostex não cancela reserva, mas o bloqueio por cima gera conflito. Só executa depois que a pessoa confirmar o cartão. Para pedido de proprietário em /admin/bloqueios-datas, use esta ferramenta depois de aprovar.",
-  schema: schemaDatasHostex,
+    "Bloqueia noites de um imóvel para MANUTENÇÃO criando na Hostex uma reserva direta em nome de 'MANUTENÇÃO · <tipo>' (ex.: 'MANUTENÇÃO · Pintura'): fecha a venda no Airbnb, Booking e site, e a equipe de limpeza vê a reserva no app de limpeza com o tipo do serviço, para planejar a limpeza pesada. 'tipo' é obrigatório (Pintura, Elétrica, Hidráulica, Dedetização, Limpeza pesada, Decoração…): se a pessoa não disse, pergunte antes de chamar. Datas inclusivas: 'de' é a primeira noite e 'ate' a última. Antes de pedir, confira a disponibilidade do período e avise se houver reserva aceita dentro dele (a Hostex recusa reserva por cima de outra). O registro fica em /admin/bloqueios-datas como bloqueio de manutenção; para desfazer, hostex_liberar_datas. Só executa depois que a pessoa confirmar o cartão.",
+  schema: {
+    type: "object" as const,
+    properties: {
+      property_id: { type: "string", description: "Id do imóvel (uuid do portal)." },
+      de: { type: "string", description: "Primeira noite, AAAA-MM-DD (hoje ou depois)." },
+      ate: { type: "string", description: "Última noite, AAAA-MM-DD, inclusive. 'De 18 a 24' = de 2026-11-18 até 2026-11-24." },
+      tipo: { type: "string", description: "Tipo da manutenção, curto, como vai aparecer para a limpeza: 'Pintura', 'Elétrica', 'Hidráulica', 'Dedetização'…" },
+      motivo: { type: "string", description: "Detalhe do serviço, opcional (vai nas observações da reserva)." },
+    },
+    required: ["property_id", "de", "ate", "tipo"],
+    additionalProperties: false as const,
+  },
   nivel: "escrita",
   papeis: HOSTEX_ESCRITA,
   imovelParam: "property_id",
-  resumo: (entrada, ctx) => resumoDatas(ctx, entrada, "Bloquear"),
-  executar: (ctx, entrada) => mudarDisponibilidade(ctx, entrada, false),
+  async resumo(entrada, ctx) {
+    const nome = await nomeImovel(ctx, entrada.property_id);
+    const de = typeof entrada.de === "string" ? dataBR(entrada.de) : "?";
+    const ate = typeof entrada.ate === "string" ? dataBR(entrada.ate) : "?";
+    const tipo = textoCurto(entrada.tipo, "tipo", 60) ?? "?";
+    const motivo = textoCurto(entrada.motivo, "motivo", 80);
+    return `Bloquear as noites de ${de} a ${ate} (inclusive) do imóvel ${nome} na Hostex como reserva "${nomeReservaInterna("manutencao", tipo)}"${motivo ? ` — ${motivo}` : ""}. Fecha Airbnb e Booking; a limpeza vê no app.`;
+  },
+  async executar(ctx, entrada) {
+    const imovel = await exigirAcessoImovel(ctx, entrada.property_id);
+    const { de, ate, noites } = janelaHostex(ctx, entrada.de, entrada.ate);
+    const tipo = textoCurto(entrada.tipo, "tipo", 60);
+    if (!tipo || tipo.length < 2) throw new ErroFerramenta("Informe o tipo da manutenção (ex.: Pintura).");
+    const motivo = textoCurto(entrada.motivo, "motivo", 400) ?? null;
+    const apiKey = chaveHostex(ctx);
+    const idHostex = await idHostexDoImovel(ctx, imovel.id);
+    const saida = somarDias(ate, 1);
+    const { data: prop } = await ctx.userClient.from("properties").select("owner_id").eq("id", imovel.id).maybeSingle();
+    const ownerId = (prop as Linha | null)?.owner_id;
+    if (!ehUuid(ownerId)) throw new ErroFerramenta("Esse imóvel não tem proprietário cadastrado; registre o bloqueio pela Central Hostex.");
+
+    const id = crypto.randomUUID();
+    const agora = new Date().toISOString();
+    const guestName = nomeReservaInterna("manutencao", tipo);
+    const { error } = await ctx.userClient.from("date_block_requests").insert({
+      id,
+      property_id: imovel.id,
+      owner_id: ownerId,
+      start_date: de,
+      end_date: saida,
+      reason: "maintenance",
+      notes: `${tipo}${motivo ? ` — ${motivo}` : ""} (registrado pelo assistente, por ${ctx.nome})`,
+      status: "processed",
+      processed_at: agora,
+      processed_by: ctx.uid,
+      criado_por: ctx.uid,
+      hostex_guest_name: guestName,
+    });
+    if (error) throw new ErroFerramenta(`Não consegui registrar o bloqueio: ${error.message}`);
+
+    const remarks = `Manutenção: ${tipo}.${motivo ? ` ${motivo}.` : ""} Registrado pelo assistente do portal RIOS por ${ctx.nome} (pedido ${id}).`;
+    const base = { pedido_id: id, imovel: imovel.name, id_hostex: idHostex, de, ate, saida, noites, tipo };
+    try {
+      const r = await criarReservaInterna({ apiKey, idHostex, checkIn: de, checkOut: saida, tipo: "manutencao", titulo: tipo, remarks, chave: chaveIdempotente(id) });
+      await ctx.userClient
+        .from("date_block_requests")
+        .update({ hostex_reservation_code: r.reservation_code, hostex_request_id: r.request_id, hostex_bloqueado_em: agora, erro_hostex: null })
+        .eq("id", id);
+      return {
+        ...base,
+        reserva: r.reservation_code,
+        nome_na_hostex: r.guest_name,
+        canal: r.custom_channel.name,
+        resultado: "reserva de manutenção criada na Hostex",
+        aviso: "A Hostex replica ao Airbnb e ao Booking em alguns minutos. A equipe de limpeza vê a reserva no app; o cache do portal mostra na próxima coleta. Para desfazer: hostex_liberar_datas com este pedido_id.",
+      };
+    } catch (eReserva) {
+      // Sem a reserva direta (canal inexistente, conflito…), fecha o calendário
+      // como antes e avisa: a limpeza NÃO vê bloqueio por disponibilidade.
+      const problema = eReserva instanceof Error ? eReserva.message : String(eReserva);
+      const resposta = await mudarDisponibilidadeHostex(apiKey, idHostex, de, ate, false);
+      await ctx.userClient
+        .from("date_block_requests")
+        .update({
+          hostex_request_id: resposta?.request_id ?? null,
+          hostex_bloqueado_em: agora,
+          erro_hostex: `Reserva "${guestName}" não criada (${problema.slice(0, 300)}); datas fechadas por disponibilidade, sem reserva para a limpeza.`,
+        })
+        .eq("id", id);
+      return {
+        ...base,
+        resultado: "datas fechadas por disponibilidade; a reserva de manutenção NÃO foi criada",
+        problema,
+        aviso: "A equipe de limpeza não vê bloqueio por disponibilidade no app. Diga o problema à pessoa (em geral falta o canal personalizado 'Manutenção' na Hostex) para ela criar a reserva à mão ou corrigir e tentar de novo.",
+      };
+    }
+  },
 };
 
 const hostexLiberarDatas: FerramentaIA = {
   nome: "hostex_liberar_datas",
   descricao:
-    "Libera (desbloqueia) noites de um imóvel no calendário mestre da Hostex, reabrindo a venda nos canais. Datas inclusivas. Não mexe em reservas: se houver reserva no período, ela continua. Só executa depois que a pessoa confirmar o cartão.",
-  schema: schemaDatasHostex,
+    "Libera (desbloqueia) noites de um imóvel: cancela na Hostex a reserva de bloqueio ('MANUTENÇÃO · …' da equipe ou 'Proprietário' de um pedido pago) e as noites voltam à venda nos canais em minutos. Informe pedido_id (de bloqueios_de_datas ou reservas_do_imovel) ou as datas 'de' e 'ate' (inclusivas): por datas, libera todos os bloqueios registrados do imóvel que cruzam o período, cada um inteiro. Se não houver bloqueio registrado no período, reabre as noites no calendário mestre por disponibilidade (bloqueios antigos ou feitos à mão na Hostex). Nunca mexe em reserva de hóspede. A taxa paga pelo proprietário não é devolvida sozinha. Só executa depois que a pessoa confirmar o cartão.",
+  schema: {
+    type: "object" as const,
+    properties: {
+      property_id: { type: "string", description: "Id do imóvel (uuid do portal)." },
+      pedido_id: { type: "string", description: "Id do pedido de bloqueio a liberar (opcional; senão use de/ate)." },
+      de: { type: "string", description: "Primeira noite, AAAA-MM-DD (opcional com pedido_id)." },
+      ate: { type: "string", description: "Última noite, AAAA-MM-DD, inclusive (opcional com pedido_id)." },
+    },
+    required: ["property_id"],
+    additionalProperties: false as const,
+  },
   nivel: "escrita",
   papeis: HOSTEX_ESCRITA,
   imovelParam: "property_id",
-  resumo: (entrada, ctx) => resumoDatas(ctx, entrada, "Liberar"),
-  executar: (ctx, entrada) => mudarDisponibilidade(ctx, entrada, true),
+  async resumo(entrada, ctx) {
+    const nome = await nomeImovel(ctx, entrada.property_id);
+    if (ehUuid(entrada.pedido_id)) {
+      const { data } = await ctx.userClient
+        .from("date_block_requests")
+        .select("start_date, end_date, hostex_guest_name")
+        .eq("id", entrada.pedido_id)
+        .maybeSingle();
+      const b = data as Linha | null;
+      if (b) {
+        return `Liberar na Hostex o bloqueio "${b.hostex_guest_name ?? "—"}" do imóvel ${nome} (entrada ${dataBR(String(b.start_date))}, saída ${dataBR(String(b.end_date))}): a reserva é cancelada e as noites voltam à venda.`;
+      }
+    }
+    return resumoDatas(ctx, entrada, "Liberar");
+  },
+  async executar(ctx, entrada) {
+    const imovel = await exigirAcessoImovel(ctx, entrada.property_id);
+    const apiKey = chaveHostex(ctx);
+    let pedidos: Linha[] = [];
+    let periodo: { de: string; ate: string; noites: number } | null = null;
+    if (ehUuid(entrada.pedido_id)) {
+      const { data, error } = await ctx.userClient
+        .from("date_block_requests")
+        .select("id, start_date, end_date, status, hostex_guest_name, hostex_reservation_code")
+        .eq("id", entrada.pedido_id)
+        .eq("property_id", imovel.id)
+        .limit(1);
+      if (error) throw new ErroFerramenta(`Não consegui ler o pedido: ${error.message}`);
+      pedidos = (data ?? []) as Linha[];
+      if (pedidos.length === 0) throw new ErroFerramenta("Pedido de bloqueio não encontrado para esse imóvel.");
+      if (pedidos[0].status !== "processed") throw new ErroFerramenta(`Esse pedido está "${pedidos[0].status}"; só bloqueio feito (processed) se libera.`);
+    } else {
+      const j = janela(entrada.de, entrada.ate);
+      periodo = { de: j.de, ate: j.ate, noites: j.dias + 1 };
+      const { data, error } = await ctx.userClient
+        .from("date_block_requests")
+        .select("id, start_date, end_date, status, hostex_guest_name, hostex_reservation_code")
+        .eq("property_id", imovel.id)
+        .eq("status", "processed")
+        .not("hostex_reservation_code", "is", null)
+        .lte("start_date", periodo.ate)
+        .gt("end_date", periodo.de)
+        .order("start_date")
+        .limit(20);
+      if (error) throw new ErroFerramenta(`Não consegui ler os bloqueios: ${error.message}`);
+      pedidos = (data ?? []) as Linha[];
+    }
+
+    if (pedidos.length > 0) {
+      const liberados: Linha[] = [];
+      const falhas: Linha[] = [];
+      for (const p of pedidos) {
+        const r = await chamarFunction(ctx, "liberar-bloqueio", { id: p.id });
+        const dados = (r.dados && typeof r.dados === "object" ? r.dados : {}) as Linha;
+        if (r.ok) liberados.push({ pedido_id: p.id, nome_na_hostex: p.hostex_guest_name, reserva: p.hostex_reservation_code, de: p.start_date, saida: p.end_date, resultado: dados.resultado });
+        else falhas.push({ pedido_id: p.id, nome_na_hostex: p.hostex_guest_name, erro: dados.error ?? `HTTP ${r.status}` });
+      }
+      if (liberados.length === 0) throw new ErroFerramenta(String(falhas[0]?.erro ?? "Não consegui liberar."));
+      return {
+        imovel: imovel.name,
+        liberados,
+        ...(falhas.length ? { falhas } : {}),
+        aviso: "As reservas de bloqueio foram canceladas na Hostex; as noites voltam ao Airbnb e ao Booking em alguns minutos.",
+      };
+    }
+
+    // Nada registrado no período: bloqueio antigo ou feito à mão → reabre por disponibilidade.
+    if (!periodo) throw new ErroFerramenta("Informe de/ate para liberar por datas.");
+    const de = periodo.de < ctx.hoje ? ctx.hoje : periodo.de;
+    if (periodo.ate < ctx.hoje) throw new ErroFerramenta("O período já passou; não há noites para liberar.");
+    const idHostex = await idHostexDoImovel(ctx, imovel.id);
+    const resposta = await mudarDisponibilidadeHostex(apiKey, idHostex, de, periodo.ate, true);
+    return {
+      imovel: imovel.name,
+      id_hostex: idHostex,
+      de,
+      ate: periodo.ate,
+      resultado: "datas reabertas no calendário mestre (não havia bloqueio registrado no portal nesse período)",
+      hostex: resposta?.data ?? resposta ?? null,
+      aviso: "Se o período estava fechado por uma reserva direta feita à mão na Hostex, ela continua: cancele pela Central Hostex. A Hostex replica aos canais em alguns minutos.",
+      endpoint: `${HOSTEX_BASE}/availabilities`,
+    };
+  },
 };
 
 // --------------------------------------------------------------- chamados
@@ -428,7 +590,7 @@ const registrarTarefaRua: FerramentaIA = {
 const pedirBloqueioDeDatas: FerramentaIA = {
   nome: "pedir_bloqueio_de_datas",
   descricao:
-    "Pede o bloqueio de datas de um imóvel para uso pessoal do proprietário, pelo mesmo caminho do botão 'Bloqueio' do painel: gera um PIX no valor da taxa de limpeza do imóvel e, quando o pagamento entra, as noites são bloqueadas na Hostex sozinhas (Airbnb e Booking). `entrada` é o dia de chegada e `saida` o dia de saída (a última noite é a véspera); de hoje em diante, 1 a 30 noites, e as noites precisam estar livres (a function confere reservas, outros pedidos e o calendário ao vivo da Hostex). Antes de pedir, confira disponibilidade e repita entrada e saída para a pessoa. Só executa depois da confirmação. O cartão na tela mostra o QR Code e o botão de copiar o código: na resposta diga só o valor, o prazo de 30 minutos e que o QR está no cartão; não repita o código. Bloqueio por manutenção (sem pagamento) é pelo botão 'Bloqueio' do painel.",
+    "Pede o bloqueio de datas de um imóvel para uso pessoal do proprietário, pelo mesmo caminho do botão 'Bloqueio' do painel: gera um PIX no valor da taxa de limpeza do imóvel e, quando o pagamento entra, as noites são bloqueadas na Hostex sozinhas (Airbnb e Booking). `entrada` é o dia de chegada e `saida` o dia de saída (a última noite é a véspera); de hoje em diante, 1 a 30 noites, e as noites precisam estar livres (a function confere reservas, outros pedidos e o calendário ao vivo da Hostex). Antes de pedir, confira disponibilidade e repita entrada e saída para a pessoa. Só executa depois da confirmação. O cartão na tela mostra o QR Code e o botão de copiar o código: na resposta diga só o valor, o prazo de 30 minutos e que o QR está no cartão; não repita o código. Pago, a Hostex ganha uma reserva direta em nome de 'Proprietário', que a equipe de limpeza vê no app. Não existe bloqueio por manutenção pelo proprietário: obra ou reparo é com a RIOS (abrir_chamado).",
   schema: {
     type: "object",
     properties: {
@@ -492,7 +654,7 @@ const pedirBloqueioDeDatas: FerramentaIA = {
 const liberarBloqueioDeDatas: FerramentaIA = {
   nome: "liberar_bloqueio_de_datas",
   descricao:
-    "Libera um bloqueio de datas que o proprietário pediu (status 'bloqueado'): reabre na Hostex as noites que ainda não passaram, e elas voltam à venda no Airbnb e no Booking em minutos. Também retira um pedido ainda pendente ou aguardando PIX (vira cancelado; nada tinha sido bloqueado). Use bloqueios_de_datas antes para achar o pedido_id e confirme com a pessoa qual bloqueio é. A taxa de limpeza paga não é devolvida automaticamente. Só executa depois da confirmação.",
+    "Libera um bloqueio de datas que o proprietário pediu (status 'bloqueado'): cancela na Hostex a reserva 'Proprietário' daquele pedido (bloqueios antigos: reabre as noites por disponibilidade), e as noites voltam à venda no Airbnb e no Booking em minutos. Também retira um pedido ainda pendente ou aguardando PIX (vira cancelado; nada tinha sido bloqueado). Bloqueio de manutenção da equipe o proprietário não libera (403): oriente a falar com a RIOS. Use bloqueios_de_datas antes para achar o pedido_id e confirme com a pessoa qual bloqueio é. A taxa de limpeza paga não é devolvida automaticamente. Só executa depois da confirmação.",
   schema: {
     type: "object",
     properties: {

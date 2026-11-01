@@ -92,7 +92,7 @@ async function reservasNoPeriodo(ctx: Contexto, propertyId: string, de: string, 
   const { data, error } = await ctx.userClient
     .from(fonteReservas(ctx))
     .select(
-      `reservation_code, channel_type, check_in_date, check_out_date, nights, guests, status, stay_status, total_rate_cents, synced_at, booked_at${
+      `reservation_code, channel_type, check_in_date, check_out_date, nights, guests, status, stay_status, total_rate_cents, synced_at, booked_at, interna${
         ctx.equipe ? ", guest_name" : ""
       }`,
     )
@@ -110,7 +110,7 @@ async function reservasNoPeriodo(ctx: Contexto, propertyId: string, de: string, 
 async function bloqueiosNoPeriodo(ctx: Contexto, propertyId: string, de: string, ate: string) {
   const { data, error } = await ctx.userClient
     .from("date_block_requests")
-    .select("id, start_date, end_date, reason, status, valor_cents, pago_em, created_at")
+    .select("id, start_date, end_date, reason, status, valor_cents, pago_em, created_at, hostex_guest_name")
     .eq("property_id", propertyId)
     .in("status", ["pending", "processed"])
     .lte("start_date", ate)
@@ -129,7 +129,7 @@ const fonteCache = (linhas: Linha[]): string => {
 const reservasDoImovel: FerramentaIA = {
   nome: "reservas_do_imovel",
   descricao:
-    "Reservas de um imóvel num período (padrão: de hoje a 90 dias), pelo cache da Hostex, mais os pedidos de bloqueio de datas do proprietário. Devolve código, canal, check-in, check-out, noites, hóspedes, status e valor. Para a equipe inclui o nome do hóspede; para o proprietário, não. Não serve para saber se está livre: use disponibilidade.",
+    "Reservas de um imóvel num período (padrão: de hoje a 90 dias), pelo cache da Hostex, mais os bloqueios de datas registrados no portal. Devolve código, canal, tipo (hóspede, bloqueio do proprietário ou manutenção RIOS: bloqueios são reservas diretas em nome de 'Proprietário' / 'MANUTENÇÃO · tipo', sem receita), check-in, check-out, noites, hóspedes, status e valor. Para a equipe inclui o nome do hóspede; para o proprietário, não. Não serve para saber se está livre: use disponibilidade.",
   schema: {
     type: "object",
     properties: {
@@ -158,6 +158,7 @@ const reservasDoImovel: FerramentaIA = {
       reservas: reservas.map((r) => ({
         codigo: r.reservation_code,
         canal: r.channel_type,
+        tipo: r.interna === "proprietario" ? "bloqueio do proprietário (uso pessoal)" : r.interna === "manutencao" ? "manutenção RIOS" : "hóspede",
         check_in: r.check_in_date,
         check_out: r.check_out_date,
         noites: r.nights,
@@ -172,8 +173,9 @@ const reservasDoImovel: FerramentaIA = {
         pedido_id: b.id,
         entrada: b.start_date,
         saida: b.end_date,
-        motivo: b.reason === "family_visit" ? "uso pessoal" : "manutenção",
+        motivo: b.reason === "family_visit" ? "uso pessoal" : "manutenção (equipe RIOS)",
         status: b.status === "processed" ? "bloqueado" : "pedido pendente",
+        na_hostex: b.hostex_guest_name ?? null,
         taxa_de_limpeza: brl(b.valor_cents as number | null),
         paga: !!b.pago_em,
       })),
@@ -362,7 +364,7 @@ const STATUS_BLOQUEIO: Record<string, string> = {
 const bloqueiosDeDatas: FerramentaIA = {
   nome: "bloqueios_de_datas",
   descricao:
-    "Pedidos de bloqueio de datas do proprietário (uso pessoal pago por PIX, ou manutenção para a equipe avaliar): pedido_id, imóvel, entrada, saída, motivo, status (pedido pendente, aguardando PIX, bloqueado, liberado, cancelado, recusado), taxa de limpeza e se foi paga. Proprietário vê os dos imóveis dele; equipe vê todos. Use antes de liberar_bloqueio_de_datas, para achar o pedido_id, e para 'quais bloqueios eu tenho'.",
+    "Bloqueios de datas registrados no portal: do proprietário (uso pessoal pago por PIX, reserva 'Proprietário' na Hostex) e da equipe (manutenção, reserva 'MANUTENÇÃO · tipo'): pedido_id, imóvel, entrada, saída, motivo, status (pedido pendente, aguardando PIX, bloqueado, liberado, cancelado, recusado), nome na Hostex, taxa de limpeza e se foi paga, e se quem pergunta pode liberar. Proprietário vê os dos imóveis dele; equipe vê todos. Use antes de liberar_bloqueio_de_datas / hostex_liberar_datas, para achar o pedido_id, e para 'quais bloqueios eu tenho'.",
   schema: {
     type: "object",
     properties: {
@@ -381,7 +383,7 @@ const bloqueiosDeDatas: FerramentaIA = {
   async executar(ctx, entrada) {
     let q = ctx.userClient
       .from("date_block_requests")
-      .select("id, start_date, end_date, reason, status, notes, valor_cents, pago_em, created_at, liberado_em, erro_hostex, property:properties(name)")
+      .select("id, start_date, end_date, reason, status, notes, valor_cents, pago_em, created_at, liberado_em, erro_hostex, hostex_guest_name, hostex_reservation_code, property:properties(name)")
       .order("start_date", { ascending: false })
       .limit(limitar(entrada.limite));
     if (entrada.property_id !== undefined && entrada.property_id !== null && entrada.property_id !== "") {
@@ -403,11 +405,12 @@ const bloqueiosDeDatas: FerramentaIA = {
         entrada: b.start_date,
         saida: b.end_date,
         noites: diaNum(String(b.end_date)) - diaNum(String(b.start_date)),
-        motivo: b.reason === "family_visit" ? "uso pessoal" : "manutenção",
+        motivo: b.reason === "family_visit" ? "uso pessoal" : "manutenção (equipe RIOS)",
         status: STATUS_BLOQUEIO[String(b.status)] ?? b.status,
+        na_hostex: b.hostex_guest_name ? `reserva "${b.hostex_guest_name}"${ctx.equipe && b.hostex_reservation_code ? ` ${b.hostex_reservation_code}` : ""}` : null,
         taxa_de_limpeza: brl(b.valor_cents as number | null),
         paga: !!b.pago_em,
-        pode_liberar: b.status === "processed" && String(b.end_date) > ctx.hoje,
+        pode_liberar: b.status === "processed" && String(b.end_date) > ctx.hoje && (ctx.equipe || b.reason === "family_visit"),
         observacao: b.notes ? String(b.notes).slice(0, 200) : null,
         ...(ctx.equipe && b.erro_hostex ? { erro_hostex: b.erro_hostex } : {}),
       })),
