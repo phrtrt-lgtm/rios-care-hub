@@ -1668,12 +1668,15 @@ export type Database = {
         Row: {
           cleaning_fee_proof_path: string | null
           created_at: string
+          criado_por: string | null
           end_date: string
           erro_hostex: string | null
           hostex_bloqueado_em: string | null
+          hostex_guest_name: string | null
           hostex_liberacao_request_id: string | null
           hostex_liberado_em: string | null
           hostex_request_id: string | null
+          hostex_reservation_code: string | null
           id: string
           liberado_em: string | null
           liberado_por: string | null
@@ -1697,12 +1700,15 @@ export type Database = {
         Insert: {
           cleaning_fee_proof_path?: string | null
           created_at?: string
+          criado_por?: string | null
           end_date: string
           erro_hostex?: string | null
           hostex_bloqueado_em?: string | null
+          hostex_guest_name?: string | null
           hostex_liberacao_request_id?: string | null
           hostex_liberado_em?: string | null
           hostex_request_id?: string | null
+          hostex_reservation_code?: string | null
           id?: string
           liberado_em?: string | null
           liberado_por?: string | null
@@ -1726,12 +1732,15 @@ export type Database = {
         Update: {
           cleaning_fee_proof_path?: string | null
           created_at?: string
+          criado_por?: string | null
           end_date?: string
           erro_hostex?: string | null
           hostex_bloqueado_em?: string | null
+          hostex_guest_name?: string | null
           hostex_liberacao_request_id?: string | null
           hostex_liberado_em?: string | null
           hostex_request_id?: string | null
+          hostex_reservation_code?: string | null
           id?: string
           liberado_em?: string | null
           liberado_por?: string | null
@@ -2021,6 +2030,7 @@ export type Database = {
           currency: string | null
           guest_name: string | null
           guests: number | null
+          interna: string | null
           nights: number | null
           property_id: string | null
           property_id_hostex: string | null
@@ -2047,6 +2057,7 @@ export type Database = {
           currency?: string | null
           guest_name?: string | null
           guests?: number | null
+          interna?: string | null
           nights?: number | null
           property_id?: string | null
           property_id_hostex?: string | null
@@ -2073,6 +2084,7 @@ export type Database = {
           currency?: string | null
           guest_name?: string | null
           guests?: number | null
+          interna?: string | null
           nights?: number | null
           property_id?: string | null
           property_id_hostex?: string | null
@@ -4715,6 +4727,7 @@ export type Database = {
           check_out_date: string | null
           currency: string | null
           guests: number | null
+          interna: string | null
           nights: number | null
           property_id: string | null
           reservation_code: string | null
@@ -4730,6 +4743,7 @@ export type Database = {
           check_out_date?: string | null
           currency?: string | null
           guests?: number | null
+          interna?: string | null
           nights?: number | null
           property_id?: string | null
           reservation_code?: string | null
@@ -4745,6 +4759,7 @@ export type Database = {
           check_out_date?: string | null
           currency?: string | null
           guests?: number | null
+          interna?: string | null
           nights?: number | null
           property_id?: string | null
           reservation_code?: string | null
