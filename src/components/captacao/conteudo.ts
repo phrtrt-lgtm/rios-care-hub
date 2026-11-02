@@ -121,8 +121,8 @@ export const VIDEO_PORTAL = {
   duracaoSegundos: 178,
   /** ID do vídeo 16:9 no YouTube (o `-youtube.mp4` do render). Vazio = cai no mp4 do bucket. */
   youtubeId: "",
-  /** Caminho no bucket `videos`: subir ali o `-youtube-site.mp4` do render com este nome. */
-  mp4DesktopNoBucket: "captacao/portal-proprietario-16x9.mp4",
+  /** Na raiz do bucket `videos` (o `-youtube-site.mp4` do render): pasta não dá, o Storage do Lovable cria um `.lovkeep` de texto que o bucket recusa. */
+  mp4DesktopNoBucket: "portal-proprietario-16x9.mp4",
   mp4Celular: "/videos/captacao/portal-celular.mp4",
   poster: {
     desktop: "/videos/captacao/portal-16x9.jpg",
