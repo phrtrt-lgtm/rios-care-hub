@@ -12,6 +12,11 @@ import {
   useTelaLarga,
 } from "@/components/captacao/LandingCaptacao";
 import { FormularioCaptacao } from "@/components/captacao/FormularioCaptacao";
+import {
+  ChamadaVideoPortal,
+  VideoPortal,
+  VideoPortalTelaCheia,
+} from "@/components/captacao/VideoPortal";
 
 const UTM_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "fbclid"];
 const UTM_STORAGE = "cadastro-imovel:utm";
@@ -32,13 +37,16 @@ const TITULO_PAGINA = "Cadastre seu imóvel · RIOS Hospedagens";
  * Sem rolagem de página: no desktop, painel da marca e formulário lado a
  * lado cabendo na tela; no celular, duas telas que deslizam (painel e
  * formulário; `?tela=cadastro` abre direto na segunda). O envio é o de
- * sempre: submit-property-intake + login automático.
+ * sempre: submit-property-intake + login automático. O vídeo do portal
+ * (VideoPortal.tsx) fica acima do formulário no desktop e, no celular, abre
+ * em tela cheia a partir da chamada no formulário ou do link no painel.
  */
 export default function CadastroImovel() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const larga = useTelaLarga();
   const [enviando, setEnviando] = useState(false);
+  const [videoAberto, setVideoAberto] = useState(false);
 
   useEffect(() => {
     const sp = new URLSearchParams(window.location.search);
@@ -109,9 +117,11 @@ export default function CadastroImovel() {
               <div className="flex min-h-0 flex-col">
                 <PainelMarca className="min-h-0 flex-1" />
               </div>
-              {/* `my-auto` em vez de `items-center`: centraliza sem cortar o topo quando o cartão é mais alto que a tela. */}
+              {/* `my-auto` em vez de `items-center`: centraliza sem cortar o topo quando vídeo + cartão passam da tela;
+                  aí a coluna inteira rola, e o vídeo sobe junto com o formulário. */}
               <div className="flex min-h-0 overflow-y-auto">
-                <div className="my-auto w-full py-1">
+                <div className="my-auto flex w-full flex-col gap-4 py-1">
+                  <VideoPortal />
                   <FormularioCaptacao onEnviar={enviar} enviando={enviando} />
                 </div>
               </div>
@@ -124,6 +134,7 @@ export default function CadastroImovel() {
                   <PainelMarca
                     className="min-h-full"
                     aoCadastrar={() => ir(1)}
+                    aoVerVideo={() => setVideoAberto(true)}
                   />
                 )}
                 renderFormulario={(ir) => (
@@ -131,6 +142,7 @@ export default function CadastroImovel() {
                     onEnviar={enviar}
                     enviando={enviando}
                     aoVoltarParaMarca={() => ir(0)}
+                    acima={<ChamadaVideoPortal onClick={() => setVideoAberto(true)} className="mb-3" />}
                   />
                 )}
               />
@@ -138,6 +150,7 @@ export default function CadastroImovel() {
           )}
         </main>
       </div>
+      {!larga && <VideoPortalTelaCheia aberto={videoAberto} aoFechar={() => setVideoAberto(false)} />}
     </>
   );
 }

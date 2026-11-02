@@ -19,7 +19,7 @@ import {
 import riosLogo from "@/assets/rios-logo.png";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { CIDADES, INCLUSOS, LINKS, NUMEROS, RESULTADOS } from "./conteudo";
+import { CIDADES, INCLUSOS, LINKS, NUMEROS, RESULTADOS, VIDEO_PORTAL } from "./conteudo";
 
 export const ID_FORMULARIO = "cadastro";
 const LARGURA_DESKTOP = 1024;
@@ -103,6 +103,8 @@ const PLATAFORMAS = ["Airbnb", "Booking", "Expedia", "Google"];
 interface PainelMarcaProps {
   /** No celular: botão que leva à tela do formulário. */
   aoCadastrar?: () => void;
+  /** No celular: abre o vídeo do portal em tela cheia (no desktop ele fica ao lado, acima do formulário). */
+  aoVerVideo?: () => void;
   className?: string;
 }
 
@@ -113,7 +115,7 @@ const REEL = {
   celular: "/videos/captacao/imoveis-432.mp4",
 };
 
-export function PainelMarca({ aoCadastrar, className }: PainelMarcaProps) {
+export function PainelMarca({ aoCadastrar, aoVerVideo, className }: PainelMarcaProps) {
   const reduzido = useReducedMotion();
   const larga = useTelaLarga();
   const video = larga ? REEL.desktop : REEL.celular;
@@ -206,6 +208,16 @@ export function PainelMarca({ aoCadastrar, className }: PainelMarcaProps) {
           )}
 
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs sm:mt-4 sm:text-sm">
+            {aoVerVideo && (
+              <button
+                type="button"
+                onClick={aoVerVideo}
+                className="inline-flex items-center gap-1.5 font-medium underline-offset-4 hover:underline"
+              >
+                <Play className="h-3.5 w-3.5 fill-current" aria-hidden="true" />
+                Ver o portal em {VIDEO_PORTAL.duracao}
+              </button>
+            )}
             <LinkExterno href={LINKS.simulador} className="inline-flex items-center gap-1 font-medium underline-offset-4 hover:underline">
               Simular a receita do meu imóvel
               <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />

@@ -107,3 +107,25 @@ export const CIDADES = [
   { nome: "Arraial do Cabo", comissao: "25%" },
   { nome: "Peró", comissao: "25%" },
 ];
+
+/**
+ * Vídeo "O portal do proprietário" (Remotion em C:/Users/pc/rios-video/sistema-proprietario, 2026-11-02).
+ * Desktop: 16:9 pelo YouTube quando há `youtubeId`; sem ID, o mp4 do bucket público `videos` (Lovable Cloud →
+ * Storage), se o arquivo existir. Celular: 9:16 em 720×1280 no próprio site, no player minimalista.
+ */
+export const VIDEO_PORTAL = {
+  titulo: "O portal do proprietário",
+  chamada: "Veja o portal do proprietário",
+  descricao: "Como você acompanha o seu imóvel",
+  duracao: "3 min",
+  duracaoSegundos: 178,
+  /** ID do vídeo 16:9 no YouTube (o `-youtube.mp4` do render). Vazio = cai no mp4 do bucket. */
+  youtubeId: "",
+  /** Caminho no bucket `videos`: subir ali o `-youtube-site.mp4` do render com este nome. */
+  mp4DesktopNoBucket: "captacao/portal-proprietario-16x9.mp4",
+  mp4Celular: "/videos/captacao/portal-celular.mp4",
+  poster: {
+    desktop: "/videos/captacao/portal-16x9.jpg",
+    celular: "/videos/captacao/portal-9x16.jpg",
+  },
+};

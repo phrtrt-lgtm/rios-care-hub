@@ -68,6 +68,8 @@ interface FormularioCaptacaoProps {
   enviando: boolean;
   /** No celular: volta para a tela do painel da marca. */
   aoVoltarParaMarca?: () => void;
+  /** Entre o link de voltar e o cartão (no celular, a chamada do vídeo do portal). */
+  acima?: React.ReactNode;
 }
 
 // `autoFocus` só no desktop: no celular o foco puxava o trilho de telas para o
@@ -76,6 +78,7 @@ export function FormularioCaptacao({
   onEnviar,
   enviando,
   aoVoltarParaMarca,
+  acima,
 }: FormularioCaptacaoProps) {
   const reduzido = useReducedMotion();
   const [form, setForm] = useState<IntakeFormData>(FORM_INICIAL);
@@ -154,6 +157,7 @@ export function FormularioCaptacao({
           Ver o que a RIOS inclui
         </button>
       )}
+      {acima}
       <form
         onSubmit={(e) => {
           e.preventDefault();
