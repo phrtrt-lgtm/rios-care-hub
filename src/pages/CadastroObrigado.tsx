@@ -6,10 +6,27 @@ import { Button } from "@/components/ui/button";
 import { MetaPixel, trackMetaEvent } from "@/components/MetaPixel";
 import riosLogo from "@/assets/rios-logo.png";
 import { LINKS } from "@/components/captacao/conteudo";
+import { useTelaLarga } from "@/components/captacao/LandingCaptacao";
+import {
+  ChamadaVideoPortal,
+  VideoPortal,
+  VideoPortalTelaCheia,
+} from "@/components/captacao/VideoPortal";
+
+/** Tempo até ir sozinho para o portal. Com o vídeo na página, 5 s era pouco para a pessoa decidir assistir. */
+const SEGUNDOS_ATE_O_PORTAL = 10;
 
 export default function CadastroObrigado() {
   const navigate = useNavigate();
-  const [secondsLeft, setSecondsLeft] = useState(5);
+  const larga = useTelaLarga();
+  const [secondsLeft, setSecondsLeft] = useState(SEGUNDOS_ATE_O_PORTAL);
+  // Dar o play no vídeo cancela o redirecionamento: a pessoa entra no portal quando quiser, pelo botão.
+  const [redirecionar, setRedirecionar] = useState(true);
+  const [videoAberto, setVideoAberto] = useState(false);
+  const verVideo = () => {
+    setRedirecionar(false);
+    if (!larga) setVideoAberto(true);
+  };
 
   useEffect(() => {
     // Dispara o evento de lead assim que a página é exibida.
@@ -22,13 +39,14 @@ export default function CadastroObrigado() {
   }, []);
 
   useEffect(() => {
+    if (!redirecionar) return;
     if (secondsLeft <= 0) {
       navigate("/bem-vindo", { replace: true });
       return;
     }
     const timer = setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
     return () => clearTimeout(timer);
-  }, [secondsLeft, navigate]);
+  }, [secondsLeft, navigate, redirecionar]);
 
   return (
     <>
@@ -66,13 +84,26 @@ export default function CadastroObrigado() {
               Em breve entraremos em contato.
             </p>
 
-            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-8">
-              <Loader2 className="h-4 w-4 animate-spin text-primary" />
-              Redirecionando para o seu portal em{" "}
-              <span className="font-semibold text-foreground tabular-nums">
-                {secondsLeft}s
-              </span>
-            </div>
+            {/* O vídeo do portal, para quem quiser ver de novo (desde 2026-11-02): 16:9 no desktop, tela cheia no celular */}
+            {larga ? (
+              <VideoPortal className="mb-6 w-full" aoAbrir={verVideo} />
+            ) : (
+              <ChamadaVideoPortal onClick={verVideo} className="mb-6" />
+            )}
+
+            {redirecionar ? (
+              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-8">
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                Redirecionando para o seu portal em{" "}
+                <span className="font-semibold text-foreground tabular-nums">
+                  {secondsLeft}s
+                </span>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground mb-8">
+                Quando terminar, é só entrar no portal.
+              </p>
+            )}
 
             <Button
               onClick={() => navigate("/bem-vindo", { replace: true })}
@@ -91,6 +122,7 @@ export default function CadastroObrigado() {
           </div>
         </motion.div>
       </div>
+      {!larga && <VideoPortalTelaCheia aberto={videoAberto} aoFechar={() => setVideoAberto(false)} />}
     </>
   );
 }

@@ -29,6 +29,14 @@ function avisarPixel() {
 const BOTAO =
   "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-secondary-foreground/90 transition hover:bg-background/15 hover:text-secondary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
+/** No iPhone e no iPad o volume é do aparelho (a API é só leitura): a barra não faria nada, então não aparece. */
+const SEM_VOLUME =
+  typeof navigator !== "undefined" &&
+  (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
+
+const BARRA_VOLUME =
+  "h-1 w-16 cursor-pointer appearance-none rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-primary [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary";
+
 /* ------------------------------------------------------------------------ */
 /* Player minimalista                                                        */
 /* ------------------------------------------------------------------------ */
@@ -50,6 +58,7 @@ export function PlayerMinimalista({ src, poster, autoPlay, telaCheia, className 
   const [tocando, setTocando] = useState(false);
   const [comecou, setComecou] = useState(false);
   const [mudo, setMudo] = useState(false);
+  const [volume, setVolume] = useState(1);
   const [tempo, setTempo] = useState(0);
   const [duracao, setDuracao] = useState(0);
   const [controles, setControles] = useState(true);
@@ -92,7 +101,7 @@ export function PlayerMinimalista({ src, poster, autoPlay, telaCheia, className 
 
   const aoTeclar = (e: React.KeyboardEvent) => {
     const v = videoRef.current;
-    if (!v) return;
+    if (!v || (e.target as HTMLElement).tagName === "INPUT") return; // as setas na barra de volume são dela
     const k = e.key.toLowerCase();
     if (k === " " || k === "k") {
       e.preventDefault();
@@ -121,7 +130,17 @@ export function PlayerMinimalista({ src, poster, autoPlay, telaCheia, className 
     const v = videoRef.current;
     if (!v) return;
     v.muted = !v.muted;
+    if (!v.muted && v.volume === 0) v.volume = 0.5; // ligar o som com a barra no zero
     setMudo(v.muted);
+    mostrarControles();
+  };
+
+  const mudarVolume = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = videoRef.current;
+    if (!v) return;
+    const x = Number(e.target.value);
+    v.volume = x;
+    v.muted = x === 0;
     mostrarControles();
   };
 
@@ -140,6 +159,7 @@ export function PlayerMinimalista({ src, poster, autoPlay, telaCheia, className 
   const progresso = duracao ? tempo / duracao : 0;
   const visiveis = controles || !tocando;
   const total = duracao || VIDEO_PORTAL.duracaoSegundos;
+  const nivel = Math.round((mudo ? 0 : volume) * 100);
 
   return (
     <div
@@ -173,6 +193,10 @@ export function PlayerMinimalista({ src, poster, autoPlay, telaCheia, className 
         onEnded={() => setTocando(false)}
         onTimeUpdate={(e) => setTempo(e.currentTarget.currentTime)}
         onLoadedMetadata={(e) => setDuracao(e.currentTarget.duration)}
+        onVolumeChange={(e) => {
+          setMudo(e.currentTarget.muted);
+          setVolume(e.currentTarget.volume);
+        }}
         className={cn("h-full w-full", telaCheia || cheio ? "object-contain" : "object-cover")}
       />
 
@@ -213,9 +237,25 @@ export function PlayerMinimalista({ src, poster, autoPlay, telaCheia, className 
             {formatar(tempo)} <span className="text-secondary-foreground/50">/ {formatar(total)}</span>
           </span>
           <span className="flex-1" />
-          <button type="button" onClick={alternarSom} aria-label={mudo ? "Ligar o som" : "Sem som"} aria-pressed={mudo} className={BOTAO}>
-            {mudo ? <VolumeX className="h-4 w-4" aria-hidden="true" /> : <Volume2 className="h-4 w-4" aria-hidden="true" />}
-          </button>
+          {/* Som: botão de mudo e a barra de volume (o clique aqui não pausa o vídeo) */}
+          <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+            <button type="button" onClick={alternarSom} aria-label={mudo ? "Ligar o som" : "Sem som"} aria-pressed={mudo} className={BOTAO}>
+              {mudo ? <VolumeX className="h-4 w-4" aria-hidden="true" /> : <Volume2 className="h-4 w-4" aria-hidden="true" />}
+            </button>
+            {!SEM_VOLUME && (
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={mudo ? 0 : volume}
+                onChange={mudarVolume}
+                aria-label="Volume"
+                className={BARRA_VOLUME}
+                style={{ background: `linear-gradient(to right, hsl(var(--primary)) ${nivel}%, hsl(var(--secondary-foreground) / 0.3) ${nivel}%)` }}
+              />
+            )}
+          </div>
           {!telaCheia && typeof document !== "undefined" && document.fullscreenEnabled && (
             <button type="button" onClick={alternarTelaCheia} aria-label={cheio ? "Sair da tela cheia" : "Tela cheia"} className={BOTAO}>
               {cheio ? <Minimize2 className="h-4 w-4" aria-hidden="true" /> : <Maximize2 className="h-4 w-4" aria-hidden="true" />}
@@ -250,7 +290,7 @@ type Fonte = "youtube" | "mp4" | "lendo" | "nada";
  * Cabe na coluna e nunca passa de 31,5 % da altura da janela (56dvh de largura em 16:9), para o cartão do
  * formulário continuar à vista em tela baixa (1366×768). Sem YouTube nem mp4 no bucket, não desenha nada.
  */
-export function VideoPortal({ className }: { className?: string }) {
+export function VideoPortal({ className, aoAbrir }: { className?: string; aoAbrir?: () => void }) {
   const [fonte, setFonte] = useState<Fonte>(VIDEO_PORTAL.youtubeId ? "youtube" : "lendo");
   const [aberto, setAberto] = useState(false);
   const mp4 = supabase.storage.from("videos").getPublicUrl(VIDEO_PORTAL.mp4DesktopNoBucket).data.publicUrl;
@@ -272,6 +312,7 @@ export function VideoPortal({ className }: { className?: string }) {
 
   const abrir = () => {
     setAberto(true);
+    aoAbrir?.();
     if (fonte === "youtube") avisarPixel();
   };
 
