@@ -698,6 +698,42 @@ export function useApagarItem() {
   });
 }
 
+export interface UnificacaoItens {
+  ids: string[];
+  subject: string;
+  natureza: NaturezaItem;
+  costResponsible: "owner" | "pm" | "guest" | "pending";
+  amountCents: number | null;
+  managementContributionCents: number | null;
+}
+
+/**
+ * Junta vários itens num só (pedido do gestor, 2026-11-02: "comprei vários
+ * itens em uma compra só e cobro em um lugar"). A função SQL
+ * `unificar_manutencoes` (SECURITY DEFINER, só equipe) cria o ticket novo,
+ * move anexos e conversas e arquiva os originais como cancelados, tudo numa
+ * transação. O envio ao proprietário continua sendo o de sempre, uma vez.
+ */
+export function useUnificarItens() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (u: UnificacaoItens): Promise<string> => {
+      // A função é de 2026-11-02; o types.ts ainda não a conhece.
+      const { data, error } = await clienteSemTipos.rpc("unificar_manutencoes", {
+        p_ids: u.ids,
+        p_subject: u.subject.trim(),
+        p_natureza: u.natureza,
+        p_cost_responsible: u.costResponsible,
+        p_amount_cents: u.amountCents,
+        p_management_contribution_cents: u.managementContributionCents,
+      });
+      if (error) throw error;
+      return data as string;
+    },
+    onSettled: () => invalidarItens(queryClient),
+  });
+}
+
 /** Recarrega os itens depois de uma ação feita fora dos hooks (anexo, chat, lote). */
 export function useRecarregarItens() {
   const queryClient = useQueryClient();

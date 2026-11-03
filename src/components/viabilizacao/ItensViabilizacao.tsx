@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type ClipboardEvent, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { Check, Circle, ExternalLink, Loader2, MessageSquare, MoreHorizontal, Paperclip, Pencil, Plus, Send, ShoppingCart, Trash2, Undo2, Wrench } from "lucide-react";
+import { Check, Circle, ExternalLink, Loader2, Merge, MessageSquare, MoreHorizontal, Paperclip, Pencil, Plus, Send, ShoppingCart, Trash2, Undo2, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -26,10 +27,13 @@ import {
   useCriarItemViabilizacao,
   useRecarregarItens,
   useSalvarCampoItem,
+  useUnificarItens,
   type CobrancaAvulsa,
   type ItemViabilizacao,
+  type UnificacaoItens,
   type Viabilizacao,
 } from "@/hooks/useViabilizacoes";
+import { DialogoUnificar } from "./DialogoUnificar";
 
 type Custo = "owner" | "pm" | "guest" | "pending";
 type FiltroNatureza = "todos" | NaturezaItem;
@@ -167,6 +171,7 @@ function LinhaItem({
   onEnviar,
   onApagar,
   acoes,
+  selecao,
 }: {
   item: ItemViabilizacao;
   feito: boolean;
@@ -176,6 +181,8 @@ function LinhaItem({
   onEnviar?: () => void;
   onApagar: () => void;
   acoes: AcoesItem;
+  /** Modo "unificar": caixa de seleção no começo da linha. */
+  selecao?: { marcado: boolean; onMarcar: (marcado: boolean) => void };
 }) {
   const recarregar = useRecarregarItens();
   const custo = (item.cost_responsible ?? "pending") as Custo;
@@ -189,9 +196,19 @@ function LinhaItem({
       className={cn(
         "group rounded-lg px-2 py-1.5 transition-colors hover:bg-muted/50 md:flex md:items-center md:gap-2",
         ocupado && "opacity-60",
+        selecao?.marcado && "bg-primary/5",
       )}
     >
       <div className="flex items-center gap-2 md:contents">
+        {selecao && (
+          <Checkbox
+            checked={selecao.marcado}
+            onCheckedChange={(v) => selecao.onMarcar(v === true)}
+            disabled={ocupado}
+            aria-label={`Selecionar ${item.subject} para unificar`}
+            className="h-5 w-5 shrink-0"
+          />
+        )}
         <button
           type="button"
           onClick={onToggleFeito}
@@ -508,6 +525,16 @@ export function ItensViabilizacao({ viabilizacao, itens, avulsas, userId, ...aco
   // Compra ou manutenção: o gestor filtra para comprar o que falta; a equipe
   // de manutenção, pela lista dela, só vê manutenção.
   const [filtro, setFiltro] = useState<FiltroNatureza>("todos");
+  // Unificar: itens comprados ou feitos juntos viram um só, para uma cobrança
+  // única (pedido do gestor, 2026-11-02). A seleção vale para a fazer e feitos;
+  // item já enviado ao proprietário fica de fora.
+  const unificar = useUnificarItens();
+  const [selecionando, setSelecionando] = useState(false);
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
+  // Os itens ficam guardados depois de fechar, para a animação de saída do
+  // diálogo não mostrar "0 itens".
+  const [paraUnificar, setParaUnificar] = useState<ItemViabilizacao[]>([]);
+  const [dialogoUnificar, setDialogoUnificar] = useState(false);
 
   const nCompras = useMemo(() => itens.filter((i) => i.natureza === "compra").length, [itens]);
   const temOsDois = nCompras > 0 && nCompras < itens.length;
@@ -517,6 +544,36 @@ export function ItensViabilizacao({ viabilizacao, itens, avulsas, userId, ...aco
   const enviados = useMemo(() => visiveis.filter((i) => !!i.cobranca), [visiveis]);
   const avulsasVisiveis = filtro === "todos" || !temOsDois ? avulsas : [];
   const paraEnviar = useMemo(() => feitos.filter((i) => i.owner && i.cost_responsible !== "guest"), [feitos]);
+  const unificaveis = useMemo(() => itens.filter((i) => !i.cobranca), [itens]);
+  const itensSelecionados = useMemo(() => unificaveis.filter((i) => selecionados.has(i.id)), [unificaveis, selecionados]);
+  const totalSelecionado = itensSelecionados.reduce((s, i) => s + devido(i.amount_cents, i.management_contribution_cents), 0);
+
+  const sairSelecao = () => {
+    setSelecionando(false);
+    setSelecionados(new Set());
+  };
+  const marcar = (id: string, marcado: boolean) =>
+    setSelecionados((s) => {
+      const novo = new Set(s);
+      if (marcado) novo.add(id);
+      else novo.delete(id);
+      return novo;
+    });
+  const selecaoDe = (item: ItemViabilizacao) =>
+    selecionando ? { marcado: selecionados.has(item.id), onMarcar: (m: boolean) => marcar(item.id, m) } : undefined;
+
+  const confirmarUnificar = async (dados: Omit<UnificacaoItens, "ids">) => {
+    const ids = paraUnificar.map((i) => i.id);
+    if (ids.length < 2) return;
+    try {
+      await unificar.mutateAsync({ ids, ...dados });
+      toast.success(`${ids.length} itens unificados em “${dados.subject}”`);
+      setDialogoUnificar(false);
+      sairSelecao();
+    } catch (erro) {
+      toast.error(textoDoErro(erro));
+    }
+  };
 
   const comOcupado = async (id: string, acao: () => Promise<void>) => {
     setOcupados((s) => new Set(s).add(id));
@@ -604,19 +661,73 @@ export function ItensViabilizacao({ viabilizacao, itens, avulsas, userId, ...aco
 
   return (
     <div className="space-y-4">
-      {temOsDois && (
-        <div role="tablist" aria-label="Mostrar" className="flex flex-wrap gap-1.5 px-1">
-          <AbaPilula ativa={filtro === "todos"} quantidade={itens.length} onClick={() => setFiltro("todos")}>
-            Todos
-          </AbaPilula>
-          <AbaPilula ativa={filtro === "manutencao"} quantidade={itens.length - nCompras} tom="info" onClick={() => setFiltro("manutencao")}>
-            <Wrench className="h-3.5 w-3.5" aria-hidden="true" />
-            Manutenções
-          </AbaPilula>
-          <AbaPilula ativa={filtro === "compra"} quantidade={nCompras} tom="primary" onClick={() => setFiltro("compra")}>
-            <ShoppingCart className="h-3.5 w-3.5" aria-hidden="true" />
-            Compras
-          </AbaPilula>
+      {(temOsDois || unificaveis.length > 1) && (
+        <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+          {temOsDois ? (
+            <div role="tablist" aria-label="Mostrar" className="flex flex-wrap gap-1.5">
+              <AbaPilula ativa={filtro === "todos"} quantidade={itens.length} onClick={() => setFiltro("todos")}>
+                Todos
+              </AbaPilula>
+              <AbaPilula ativa={filtro === "manutencao"} quantidade={itens.length - nCompras} tom="info" onClick={() => setFiltro("manutencao")}>
+                <Wrench className="h-3.5 w-3.5" aria-hidden="true" />
+                Manutenções
+              </AbaPilula>
+              <AbaPilula ativa={filtro === "compra"} quantidade={nCompras} tom="primary" onClick={() => setFiltro("compra")}>
+                <ShoppingCart className="h-3.5 w-3.5" aria-hidden="true" />
+                Compras
+              </AbaPilula>
+            </div>
+          ) : (
+            <span />
+          )}
+          {unificaveis.length > 1 && !selecionando && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 gap-1 text-xs"
+              onClick={() => setSelecionando(true)}
+              title="Juntar itens comprados ou feitos juntos numa cobrança só"
+            >
+              <Merge className="h-3.5 w-3.5" aria-hidden="true" />
+              Unificar itens
+            </Button>
+          )}
+        </div>
+      )}
+
+      {selecionando && (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-primary/40 bg-primary/5 px-3 py-2" role="status">
+          <Merge className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+          <p className="min-w-0 flex-1 basis-[12rem] text-xs text-muted-foreground">
+            {itensSelecionados.length === 0 ? (
+              "Marque os itens comprados ou feitos juntos: eles viram um item só, com uma cobrança."
+            ) : (
+              <>
+                <strong className="text-foreground">
+                  {itensSelecionados.length} {itensSelecionados.length === 1 ? "selecionado" : "selecionados"}
+                </strong>
+                {" · a pagar "}
+                <strong className="tabular-nums text-foreground">{formatBRL(totalSelecionado)}</strong>
+              </>
+            )}
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            className="h-7 gap-1 text-xs"
+            disabled={itensSelecionados.length < 2}
+            onClick={() => {
+              setParaUnificar(itensSelecionados);
+              setDialogoUnificar(true);
+            }}
+          >
+            <Merge className="h-3.5 w-3.5" aria-hidden="true" />
+            Unificar em um item
+          </Button>
+          <Button type="button" size="sm" variant="ghost" className="h-7 text-xs" onClick={sairSelecao}>
+            Cancelar
+          </Button>
         </div>
       )}
 
@@ -634,6 +745,7 @@ export function ItensViabilizacao({ viabilizacao, itens, avulsas, userId, ...aco
                 onCampo={(f, v) => campo(item, f, v)}
                 onApagar={() => setParaApagar(item)}
                 acoes={acoes}
+                selecao={selecaoDe(item)}
               />
             ))}
           </ul>
@@ -666,6 +778,7 @@ export function ItensViabilizacao({ viabilizacao, itens, avulsas, userId, ...aco
                 onEnviar={item.owner && item.cost_responsible !== "guest" ? () => campo(item, "list_status", "enviar_proprietario") : undefined}
                 onApagar={() => setParaApagar(item)}
                 acoes={acoes}
+                selecao={selecaoDe(item)}
               />
             ))}
           </ul>
@@ -711,6 +824,14 @@ export function ItensViabilizacao({ viabilizacao, itens, avulsas, userId, ...aco
         variant="destructive"
         loading={!!paraApagar && ocupados.has(paraApagar.id)}
         onConfirm={confirmarApagar}
+      />
+
+      <DialogoUnificar
+        open={dialogoUnificar}
+        onOpenChange={(aberto) => !aberto && !unificar.isPending && setDialogoUnificar(false)}
+        itens={paraUnificar}
+        salvando={unificar.isPending}
+        onConfirmar={confirmarUnificar}
       />
 
       <ConfirmationDialog
