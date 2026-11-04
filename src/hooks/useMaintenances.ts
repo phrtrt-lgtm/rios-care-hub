@@ -162,6 +162,7 @@ async function fetchTicketContext(ticketId: string): Promise<{
   description: string | null;
   subject: string | null;
   scheduled_at: string | null;
+  product_link: string | null;
   service_provider: { name: string } | null;
   notes: MaintenanceNote[];
 }> {

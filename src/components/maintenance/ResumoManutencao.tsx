@@ -10,6 +10,7 @@ import {
   Clock,
   FileText,
   HandCoins,
+  Link2,
   Receipt,
   Tag,
   User,
