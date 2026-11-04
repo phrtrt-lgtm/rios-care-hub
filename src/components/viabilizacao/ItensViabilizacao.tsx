@@ -266,6 +266,7 @@ function LinhaItem({
   const custo = (item.cost_responsible ?? "pending") as Custo;
   const opcaoCusto = COST_RESPONSIBLE_OPTIONS.find((o) => o.value === custo);
   const naoLidas = acoes.unreadCounts?.[item.id] ?? 0;
+  const [dialogoLink, setDialogoLink] = useState(false);
 
   // No celular são duas linhas (título em cima, controles embaixo); no
   // desktop os dois blocos se desfazem (`md:contents`) numa linha só.
@@ -323,6 +324,12 @@ function LinhaItem({
                 <Pencil className="h-4 w-4" aria-hidden="true" />
                 Editar
               </DropdownMenuItem>
+              {item.natureza === "compra" && (
+                <DropdownMenuItem onClick={() => setDialogoLink(true)}>
+                  <Link2 className="h-4 w-4" aria-hidden="true" />
+                  {item.product_link ? "Editar link da loja" : "Adicionar link da loja"}
+                </DropdownMenuItem>
+              )}
               {!onEnviar && !feito && custo !== "guest" && (
                 <DropdownMenuItem onClick={() => onCampo("list_status", "enviar_proprietario")}>
                   <Send className="h-4 w-4" aria-hidden="true" />
