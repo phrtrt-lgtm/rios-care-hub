@@ -398,6 +398,7 @@ export const useMaintenance = (id?: string) => {
         cost_responsible: (ticket as any).cost_responsible ?? null,
         split_owner_percent: (ticket as any).split_owner_percent ?? null,
         service_type: (ticket as any).service_type ?? null,
+        product_link: (ticket as any).product_link ?? null,
       };
 
     },
