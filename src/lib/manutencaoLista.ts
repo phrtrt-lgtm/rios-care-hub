@@ -1,6 +1,7 @@
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { buscarCobrancaJaLancada } from "@/lib/cobrancaDuplicada";
+import { normalizarLink } from "@/lib/compraMeta";
 
 /**
  * Operações da lista de manutenções que precisam ser UMA só, onde quer que
@@ -305,6 +306,19 @@ export async function salvarCampoManutencao({
       const { error: erroRascunho } = await supabase.from("charges").update({ title: novo }).eq("id", rascunho.id);
       if (erroRascunho) throw erroRascunho;
     }
+    return {};
+  }
+
+  if (field === "product_link") {
+    // Link do produto (compra de imóvel novo): o proprietário clica e compra.
+    // Mesma validação da lista de compras; vazio limpa o campo.
+    const link = normalizarLink(String(value ?? ""));
+    if (link === undefined) throw new Error("Cole um link válido de loja (começando com http:// ou https://).");
+    const { error } = await supabase
+      .from("tickets")
+      .update({ product_link: link })
+      .eq("id", id);
+    if (error) throw error;
     return {};
   }
 
