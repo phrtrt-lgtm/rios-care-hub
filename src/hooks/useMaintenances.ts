@@ -264,7 +264,7 @@ export const useMaintenance = (id?: string) => {
         // Preserva o que a equipe escreveu no ticket de origem (descrição + comentários)
         const ticketContext = charge.ticket_id
           ? await fetchTicketContext(charge.ticket_id)
-          : { description: null, notes: [], subject: null, scheduled_at: null, service_provider: null };
+          : { description: null, notes: [], subject: null, scheduled_at: null, product_link: null, service_provider: null };
 
         return {
           ...charge,
