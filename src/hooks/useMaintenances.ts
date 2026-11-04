@@ -177,7 +177,7 @@ async function fetchTicketContext(ticketId: string): Promise<{
   const [{ data: ticket }, { data: messages }] = await Promise.all([
     supabase
       .from("tickets")
-      .select("subject, description, scheduled_at, service_provider:service_providers(name)")
+      .select("subject, description, scheduled_at, product_link, service_provider:service_providers(name)")
       .eq("id", ticketId)
       .maybeSingle(),
     supabase
@@ -193,6 +193,7 @@ async function fetchTicketContext(ticketId: string): Promise<{
     description: (ticket as any)?.description ?? null,
     subject: (ticket as any)?.subject ?? null,
     scheduled_at: (ticket as any)?.scheduled_at ?? null,
+    product_link: (ticket as any)?.product_link ?? null,
     service_provider: (ticket as any)?.service_provider ?? null,
     notes: ((messages as any[]) || []).map((m) => ({
       id: m.id,
