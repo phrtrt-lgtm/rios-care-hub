@@ -176,8 +176,10 @@ async function fetchTicketContext(ticketId: string): Promise<{
   };
   if (!ticketId) return empty;
 
+  // `product_link` é de 2026-11-04; o types.ts ainda não a conhece.
+  const clienteSemTipos = supabase as unknown as SupabaseClient;
   const [{ data: ticket }, { data: messages }] = await Promise.all([
-    supabase
+    clienteSemTipos
       .from("tickets")
       .select("subject, description, scheduled_at, product_link, service_provider:service_providers(name)")
       .eq("id", ticketId)
@@ -281,7 +283,8 @@ export const useMaintenance = (id?: string) => {
 
 
       // 2) Fallback to ticket (maintenance created by team without a charge yet)
-      const { data: ticket, error: ticketError } = await supabase
+      // `product_link` é de 2026-11-04; o types.ts ainda não a conhece.
+      const { data: ticket, error: ticketError } = await (supabase as unknown as SupabaseClient)
         .from("tickets")
         .select(`
           id,
