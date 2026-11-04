@@ -196,6 +196,8 @@ export interface ItemViabilizacao extends ManutencaoDaLista {
   kind: string | null;
   /** Compra (só aqui e no painel do dono) ou manutenção (também na lista da equipe). */
   natureza: NaturezaItem;
+  /** Link da loja para o proprietário comprar o item (só faz sentido em compra). */
+  product_link: string | null;
   list_status: ListStatus;
   /** Última cobrança de verdade do item (nem rascunho nem arquivada); nula = ainda não enviada. */
   cobranca: CobrancaDoItem | null;
@@ -250,7 +252,7 @@ export function useItensViabilizacao(propertyIds: string[], ativo = true) {
           .from("tickets")
           .select(
             `
-            id, subject, status, created_at, cost_responsible, on_hold, ticket_type, kind, natureza,
+            id, subject, status, created_at, cost_responsible, on_hold, ticket_type, kind, natureza, product_link,
             charge_draft_amount_cents, charge_draft_management_contribution_cents, charge_draft_category,
             ticket_attachments(count),
             charges(id, ticket_id, amount_cents, management_contribution_cents, service_type, status, created_at, archived_at, paid_at, due_date),
@@ -302,6 +304,7 @@ export function useItensViabilizacao(propertyIds: string[], ativo = true) {
           ticket_type: t.ticket_type as string,
           kind: (t.kind as string | null) ?? null,
           natureza: naturezaDe(t.natureza),
+          product_link: (t.product_link as string | null) ?? null,
           list_status: t.status === "concluido" ? "feito" : "em_progresso",
           cobranca: real
             ? {
@@ -631,6 +634,8 @@ export interface NovoItem {
   amountCents: number | null;
   costResponsible: "owner" | "pm" | "guest" | "pending";
   natureza: NaturezaItem;
+  /** Link da loja (compra); o proprietário clica e compra. */
+  productLink?: string | null;
 }
 
 function invalidarItens(queryClient: ReturnType<typeof useQueryClient>) {
@@ -668,6 +673,7 @@ export function useCriarItemViabilizacao() {
         charge_draft_amount_cents: i.amountCents && i.amountCents > 0 ? i.amountCents : null,
         charge_draft_title: i.subject.trim(),
         charge_draft_category: i.natureza === "compra" ? "itens" : null,
+        product_link: i.productLink ?? null,
       }));
       const { error } = await clienteSemTipos.from("tickets").insert(linhas);
       if (error) throw error;
