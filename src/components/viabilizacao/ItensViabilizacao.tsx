@@ -159,6 +159,82 @@ function TituloItem({
   );
 }
 
+/**
+ * Link da loja de um item de compra (pedido do gestor, 2026-11-04): o
+ * proprietário abre o link e compra ele mesmo. Vale a mesma validação da
+ * lista de compras; vazio remove o link.
+ */
+function DialogoLinkItem({
+  item,
+  aberto,
+  onFechar,
+  onSalvar,
+}: {
+  item: ItemViabilizacao;
+  aberto: boolean;
+  onFechar: () => void;
+  onSalvar: (link: string | null) => void;
+}) {
+  const [texto, setTexto] = useState(item.product_link ?? "");
+  useEffect(() => {
+    if (aberto) setTexto(item.product_link ?? "");
+  }, [aberto, item.product_link]);
+
+  const salvar = () => {
+    const link = normalizarLink(texto);
+    if (link === undefined) {
+      toast.error("Cole um link válido de loja (começando com http:// ou https://).");
+      return;
+    }
+    if (link !== (item.product_link ?? null)) onSalvar(link);
+    onFechar();
+  };
+
+  return (
+    <Dialog open={aberto} onOpenChange={(o) => !o && onFechar()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Link do produto</DialogTitle>
+          <DialogDescription>
+            Link da loja de “{item.subject}”. O proprietário vê o botão “Ver na loja” no painel dele e pode comprar clicando.
+          </DialogDescription>
+        </DialogHeader>
+        <Input
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          placeholder="https://www.loja.com.br/produto…"
+          aria-label="Link do produto"
+          inputMode="url"
+          autoFocus
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              salvar();
+            }
+          }}
+        />
+        <DialogFooter className="gap-2 sm:justify-between">
+          {item.product_link ? (
+            <Button type="button" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => { onSalvar(null); onFechar(); }}>
+              Remover link
+            </Button>
+          ) : (
+            <span />
+          )}
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" onClick={onFechar}>
+              Cancelar
+            </Button>
+            <Button type="button" onClick={salvar}>
+              Salvar
+            </Button>
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 /* ------------------------------------------------------------------------ */
 /* Linha de item                                                             */
 /* ------------------------------------------------------------------------ */
