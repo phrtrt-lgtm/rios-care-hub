@@ -4429,6 +4429,7 @@ export type Database = {
           status: Database["public"]["Enums"]["ticket_status"]
           subject: string
           ticket_type: Database["public"]["Enums"]["ticket_type"]
+          unificado_em: string | null
           updated_at: string
         }
         Insert: {
@@ -4466,6 +4467,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["ticket_status"]
           subject: string
           ticket_type: Database["public"]["Enums"]["ticket_type"]
+          unificado_em?: string | null
           updated_at?: string
         }
         Update: {
@@ -4503,6 +4505,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["ticket_status"]
           subject?: string
           ticket_type?: Database["public"]["Enums"]["ticket_type"]
+          unificado_em?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -4539,6 +4542,13 @@ export type Database = {
             columns: ["service_provider_id"]
             isOneToOne: false
             referencedRelation: "service_providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_unificado_em_fkey"
+            columns: ["unificado_em"]
+            isOneToOne: false
+            referencedRelation: "tickets"
             referencedColumns: ["id"]
           },
         ]
@@ -4910,6 +4920,17 @@ export type Database = {
         Returns: undefined
       }
       unaccent: { Args: { "": string }; Returns: string }
+      unificar_manutencoes: {
+        Args: {
+          p_amount_cents?: number
+          p_cost_responsible?: string
+          p_ids: string[]
+          p_management_contribution_cents?: number
+          p_natureza?: string
+          p_subject: string
+        }
+        Returns: string
+      }
       verificar_token_interno: { Args: { p_token: string }; Returns: boolean }
       viabilizacao_destino: {
         Args: { p_id: string }
