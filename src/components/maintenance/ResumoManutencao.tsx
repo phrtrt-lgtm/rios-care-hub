@@ -10,6 +10,7 @@ import {
   Clock,
   FileText,
   HandCoins,
+  Link2,
   Receipt,
   Tag,
   User,
@@ -28,6 +29,7 @@ import { CHARGE_CATEGORIES, rotuloResponsavelCusto, rotulosServico } from "@/con
 import { STATUS_TICKET, type StatusTicket } from "@/lib/ticketMeta";
 import { STATUS_COBRANCA, type StatusCobranca, formatarBRL, formatarData, valorDevido } from "@/lib/cobrancaMeta";
 import { formatDateTime } from "@/lib/format";
+import { lojaDoLink } from "@/lib/compraMeta";
 import { detectMediaKind } from "@/lib/mediaType";
 import { cn } from "@/lib/utils";
 
@@ -309,6 +311,25 @@ export function ResumoManutencao({ maintenance, onNavegar }: Props) {
                 )}
               </div>
             </div>
+          </section>
+        )}
+
+        {/* Link da loja (compra de imóvel novo): o proprietário clica e compra */}
+        {maintenance.product_link && (
+          <section>
+            <TituloBloco>Comprar o item</TituloBloco>
+            <a
+              href={maintenance.product_link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/5 px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
+            >
+              <Link2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+              Ver na loja · {lojaDoLink(maintenance.product_link)}
+            </a>
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              Se preferir comprar você mesmo, use o link e avise a equipe pela conversa.
+            </p>
           </section>
         )}
 

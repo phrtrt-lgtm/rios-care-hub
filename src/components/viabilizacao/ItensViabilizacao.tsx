@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type ClipboardEvent, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { Check, Circle, ExternalLink, Loader2, Merge, MessageSquare, MoreHorizontal, Paperclip, Pencil, Plus, Send, ShoppingCart, Trash2, Undo2, Wrench } from "lucide-react";
+import { Check, Circle, ExternalLink, Link2, Loader2, Merge, MessageSquare, MoreHorizontal, Paperclip, Pencil, Plus, Send, ShoppingCart, Trash2, Undo2, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -19,6 +20,7 @@ import { formatBRL } from "@/lib/format";
 import { parseBRNumber } from "@/lib/parseBRNumber";
 import { estaPaga, formatarData } from "@/lib/cobrancaMeta";
 import { NATUREZA_ITEM, type NaturezaItem } from "@/lib/ticketMeta";
+import { lojaDoLink, normalizarLink } from "@/lib/compraMeta";
 import { devido } from "@/lib/viabilizacaoResumo";
 import { avisarResultadoEnvio, enviarAoProprietario, type ResultadoEnvio } from "@/lib/manutencaoLista";
 import { cn } from "@/lib/utils";
@@ -157,6 +159,82 @@ function TituloItem({
   );
 }
 
+/**
+ * Link da loja de um item de compra (pedido do gestor, 2026-11-04): o
+ * proprietário abre o link e compra ele mesmo. Vale a mesma validação da
+ * lista de compras; vazio remove o link.
+ */
+function DialogoLinkItem({
+  item,
+  aberto,
+  onFechar,
+  onSalvar,
+}: {
+  item: ItemViabilizacao;
+  aberto: boolean;
+  onFechar: () => void;
+  onSalvar: (link: string | null) => void;
+}) {
+  const [texto, setTexto] = useState(item.product_link ?? "");
+  useEffect(() => {
+    if (aberto) setTexto(item.product_link ?? "");
+  }, [aberto, item.product_link]);
+
+  const salvar = () => {
+    const link = normalizarLink(texto);
+    if (link === undefined) {
+      toast.error("Cole um link válido de loja (começando com http:// ou https://).");
+      return;
+    }
+    if (link !== (item.product_link ?? null)) onSalvar(link);
+    onFechar();
+  };
+
+  return (
+    <Dialog open={aberto} onOpenChange={(o) => !o && onFechar()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Link do produto</DialogTitle>
+          <DialogDescription>
+            Link da loja de “{item.subject}”. O proprietário vê o botão “Ver na loja” no painel dele e pode comprar clicando.
+          </DialogDescription>
+        </DialogHeader>
+        <Input
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          placeholder="https://www.loja.com.br/produto…"
+          aria-label="Link do produto"
+          inputMode="url"
+          autoFocus
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              salvar();
+            }
+          }}
+        />
+        <DialogFooter className="gap-2 sm:justify-between">
+          {item.product_link ? (
+            <Button type="button" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => { onSalvar(null); onFechar(); }}>
+              Remover link
+            </Button>
+          ) : (
+            <span />
+          )}
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" onClick={onFechar}>
+              Cancelar
+            </Button>
+            <Button type="button" onClick={salvar}>
+              Salvar
+            </Button>
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 /* ------------------------------------------------------------------------ */
 /* Linha de item                                                             */
 /* ------------------------------------------------------------------------ */
@@ -188,6 +266,7 @@ function LinhaItem({
   const custo = (item.cost_responsible ?? "pending") as Custo;
   const opcaoCusto = COST_RESPONSIBLE_OPTIONS.find((o) => o.value === custo);
   const naoLidas = acoes.unreadCounts?.[item.id] ?? 0;
+  const [dialogoLink, setDialogoLink] = useState(false);
 
   // No celular são duas linhas (título em cima, controles embaixo); no
   // desktop os dois blocos se desfazem (`md:contents`) numa linha só.
@@ -245,6 +324,12 @@ function LinhaItem({
                 <Pencil className="h-4 w-4" aria-hidden="true" />
                 Editar
               </DropdownMenuItem>
+              {item.natureza === "compra" && (
+                <DropdownMenuItem onClick={() => setDialogoLink(true)}>
+                  <Link2 className="h-4 w-4" aria-hidden="true" />
+                  {item.product_link ? "Editar link da loja" : "Adicionar link da loja"}
+                </DropdownMenuItem>
+              )}
               {!onEnviar && !feito && custo !== "guest" && (
                 <DropdownMenuItem onClick={() => onCampo("list_status", "enviar_proprietario")}>
                   <Send className="h-4 w-4" aria-hidden="true" />
@@ -286,6 +371,37 @@ function LinhaItem({
             ))}
           </SelectContent>
         </Select>
+
+        {/* Link da loja: o proprietário clica e compra (lista de compras, §3.14) */}
+        {item.natureza === "compra" &&
+          (item.product_link ? (
+            <a
+              href={item.product_link}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-no-sheet
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-xs font-medium text-primary hover:bg-primary/10 hover:underline"
+              title={item.product_link}
+            >
+              <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
+              Ver na loja · {lojaDoLink(item.product_link)}
+            </a>
+          ) : (
+            <button
+              type="button"
+              data-no-sheet
+              onClick={(e) => {
+                e.stopPropagation();
+                setDialogoLink(true);
+              }}
+              className="inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-xs text-muted-foreground hover:bg-muted/60 hover:text-primary"
+              title="Adicionar link da loja para o proprietário comprar"
+            >
+              <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
+              Link da loja
+            </button>
+          ))}
 
         {/* Quem paga */}
         <Select value={custo} onValueChange={(v) => onCampo("cost_responsible", v)} disabled={ocupado}>
@@ -356,6 +472,7 @@ function LinhaItem({
           </Button>
         )}
       </div>
+      <DialogoLinkItem item={item} aberto={dialogoLink} onFechar={() => setDialogoLink(false)} onSalvar={(link) => onCampo("product_link", link)} />
     </li>
   );
 }
@@ -406,6 +523,7 @@ function NovoItem({ viabilizacao, userId }: { viabilizacao: Viabilizacao; userId
   const criar = useCriarItemViabilizacao();
   const [texto, setTexto] = useState("");
   const [valor, setValor] = useState("");
+  const [link, setLink] = useState("");
   const [custo, setCusto] = useState<Custo>("owner");
   const [natureza, setNatureza] = useState<NaturezaItem>("manutencao");
   const campo = useRef<HTMLInputElement>(null);
@@ -415,6 +533,12 @@ function NovoItem({ viabilizacao, userId }: { viabilizacao: Viabilizacao; userId
     if (!imovel || !userId) return;
     const limpas = linhas.map((l) => l.trim()).filter((l) => l.length >= 2);
     if (limpas.length === 0) return;
+    // O link vale para um item só; numa lista colada cada um ganha o seu depois.
+    const linkNormalizado = limpas.length === 1 ? normalizarLink(link) : null;
+    if (linkNormalizado === undefined) {
+      toast.error("Cole um link válido de loja (começando com http:// ou https://).");
+      return;
+    }
     try {
       const n = await criar.mutateAsync(
         limpas.map((subject) => ({
@@ -425,11 +549,13 @@ function NovoItem({ viabilizacao, userId }: { viabilizacao: Viabilizacao; userId
           amountCents: limpas.length === 1 ? valorCents : null,
           costResponsible: custo,
           natureza,
+          productLink: linkNormalizado ?? null,
         })),
       );
       toast.success(n === 1 ? "Item adicionado" : `${n} itens adicionados`);
       setTexto("");
       setValor("");
+      setLink("");
       campo.current?.focus();
     } catch (erro) {
       toast.error(textoDoErro(erro));
@@ -442,11 +568,21 @@ function NovoItem({ viabilizacao, userId }: { viabilizacao: Viabilizacao; userId
     void adicionar([texto], cents && cents > 0 ? cents : null);
   };
 
-  // Colar uma lista (uma linha por item) cria todos de uma vez.
+  // Colar uma lista (uma linha por item) cria todos de uma vez. Colar um
+  // link de loja sozinho vira o link do item e sugere "Compra".
   const colar = (e: ClipboardEvent<HTMLInputElement>) => {
     const colado = e.clipboardData.getData("text");
     const linhas = colado.split(/\r?\n/).map((l) => l.replace(/^[-*•\d.)\s]+/, "").trim()).filter(Boolean);
-    if (linhas.length < 2) return;
+    if (linhas.length < 2) {
+      const linkColado = normalizarLink(colado);
+      if (linkColado) {
+        e.preventDefault();
+        setLink(linkColado);
+        setNatureza("compra");
+        toast.info("Link da loja reconhecido: o item entra como compra.");
+      }
+      return;
+    }
     e.preventDefault();
     void adicionar(linhas, null);
   };
@@ -485,6 +621,17 @@ function NovoItem({ viabilizacao, userId }: { viabilizacao: Viabilizacao; userId
           ))}
         </SelectContent>
       </Select>
+      {natureza === "compra" && (
+        <Input
+          value={link}
+          onChange={(e) => setLink(e.target.value)}
+          placeholder="Link da loja (opcional)"
+          aria-label="Link da loja"
+          inputMode="url"
+          className="h-9 min-w-0 flex-1 basis-[12rem] border-0 bg-card text-sm"
+          disabled={criar.isPending}
+        />
+      )}
       <Select value={custo} onValueChange={(v) => setCusto(v as Custo)}>
         <SelectTrigger className="h-9 w-[132px] border-0 bg-card text-xs" aria-label="Quem paga">
           <SelectValue />

@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ownerScopeFilter } from "@/lib/ownerScope";
@@ -162,6 +163,7 @@ async function fetchTicketContext(ticketId: string): Promise<{
   description: string | null;
   subject: string | null;
   scheduled_at: string | null;
+  product_link: string | null;
   service_provider: { name: string } | null;
   notes: MaintenanceNote[];
 }> {
@@ -169,15 +171,18 @@ async function fetchTicketContext(ticketId: string): Promise<{
     description: null,
     subject: null,
     scheduled_at: null,
+    product_link: null,
     service_provider: null,
     notes: [] as MaintenanceNote[],
   };
   if (!ticketId) return empty;
 
+  // `product_link` é de 2026-11-04; o types.ts ainda não a conhece.
+  const clienteSemTipos = supabase as unknown as SupabaseClient;
   const [{ data: ticket }, { data: messages }] = await Promise.all([
-    supabase
+    clienteSemTipos
       .from("tickets")
-      .select("subject, description, scheduled_at, service_provider:service_providers(name)")
+      .select("subject, description, scheduled_at, product_link, service_provider:service_providers(name)")
       .eq("id", ticketId)
       .maybeSingle(),
     supabase
@@ -193,6 +198,7 @@ async function fetchTicketContext(ticketId: string): Promise<{
     description: (ticket as any)?.description ?? null,
     subject: (ticket as any)?.subject ?? null,
     scheduled_at: (ticket as any)?.scheduled_at ?? null,
+    product_link: (ticket as any)?.product_link ?? null,
     service_provider: (ticket as any)?.service_provider ?? null,
     notes: ((messages as any[]) || []).map((m) => ({
       id: m.id,
@@ -258,7 +264,7 @@ export const useMaintenance = (id?: string) => {
         // Preserva o que a equipe escreveu no ticket de origem (descrição + comentários)
         const ticketContext = charge.ticket_id
           ? await fetchTicketContext(charge.ticket_id)
-          : { description: null, notes: [], subject: null, scheduled_at: null, service_provider: null };
+          : { description: null, notes: [], subject: null, scheduled_at: null, product_link: null, service_provider: null };
 
         return {
           ...charge,
@@ -270,6 +276,7 @@ export const useMaintenance = (id?: string) => {
           ticket_description: ticketContext.description,
           ticket_notes: ticketContext.notes,
           scheduled_at: (charge as any).scheduled_at ?? ticketContext.scheduled_at,
+          product_link: ticketContext.product_link,
           service_provider: ticketContext.service_provider,
         };
       }
@@ -277,7 +284,8 @@ export const useMaintenance = (id?: string) => {
 
 
       // 2) Fallback to ticket (maintenance created by team without a charge yet)
-      const { data: ticket, error: ticketError } = await supabase
+      // `product_link` é de 2026-11-04; o types.ts ainda não a conhece.
+      const { data: ticket, error: ticketError } = await (supabase as unknown as SupabaseClient)
         .from("tickets")
         .select(`
           id,
@@ -290,6 +298,7 @@ export const useMaintenance = (id?: string) => {
           ticket_type,
           scheduled_at,
           cost_responsible,
+          product_link,
           property:properties(id, name, cover_photo_url),
           owner:profiles!tickets_owner_id_fkey(id, name, email)
         `)
@@ -393,6 +402,7 @@ export const useMaintenance = (id?: string) => {
         cost_responsible: (ticket as any).cost_responsible ?? null,
         split_owner_percent: (ticket as any).split_owner_percent ?? null,
         service_type: (ticket as any).service_type ?? null,
+        product_link: (ticket as any).product_link ?? null,
       };
 
     },

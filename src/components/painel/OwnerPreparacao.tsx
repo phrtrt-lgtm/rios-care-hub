@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarDays, CheckCircle2, HousePlus, MessageSquare, Receipt, Rocket, ShoppingCart } from "lucide-react";
+import { CalendarDays, CheckCircle2, HousePlus, Link2, MessageSquare, Receipt, Rocket, ShoppingCart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
@@ -51,6 +51,8 @@ interface ItemPreparacao {
   property_id: string;
   /** "compra" = a RIOS compra e cobra; o resto é manutenção. */
   natureza?: string | null;
+  /** Link da loja: o proprietário pode comprar o item clicando (2026-11-04). */
+  product_link?: string | null;
   charges: CobrancaDoItem[] | null;
 }
 
@@ -109,7 +111,7 @@ export function OwnerPreparacao() {
     queryFn: async (): Promise<ItemPreparacao[]> => {
       const { data, error } = await supabase
         .from("tickets")
-        .select("id, subject, status, created_at, property_id, natureza, charges(id, status, archived_at)")
+        .select("id, subject, status, created_at, property_id, natureza, product_link, charges(id, status, archived_at)")
         .in("property_id", propertyIds)
         .eq("ticket_type", "manutencao")
         .is("archived_at", null)
@@ -304,6 +306,19 @@ function LinhaItem({
       acoes={
         <>
           {extra}
+          {item.natureza === "compra" && item.product_link && (
+            <BotaoLinha
+              rotulo={`Abrir a loja para comprar: ${item.product_link}`}
+              texto="Ver na loja"
+              tom="primary"
+              onClick={(e) => {
+                e.stopPropagation();
+                window.open(item.product_link!, "_blank", "noopener,noreferrer");
+              }}
+            >
+              <Link2 />
+            </BotaoLinha>
+          )}
           <BotaoLinha
             rotulo="Conversar sobre este item"
             texto="Conversar"
