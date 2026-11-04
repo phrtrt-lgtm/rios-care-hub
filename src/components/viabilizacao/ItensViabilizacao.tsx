@@ -372,6 +372,37 @@ function LinhaItem({
           </SelectContent>
         </Select>
 
+        {/* Link da loja: o proprietário clica e compra (lista de compras, §3.14) */}
+        {item.natureza === "compra" &&
+          (item.product_link ? (
+            <a
+              href={item.product_link}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-no-sheet
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-xs font-medium text-primary hover:bg-primary/10 hover:underline"
+              title={item.product_link}
+            >
+              <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
+              Ver na loja · {lojaDoLink(item.product_link)}
+            </a>
+          ) : (
+            <button
+              type="button"
+              data-no-sheet
+              onClick={(e) => {
+                e.stopPropagation();
+                setDialogoLink(true);
+              }}
+              className="inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-xs text-muted-foreground hover:bg-muted/60 hover:text-primary"
+              title="Adicionar link da loja para o proprietário comprar"
+            >
+              <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
+              Link da loja
+            </button>
+          ))}
+
         {/* Quem paga */}
         <Select value={custo} onValueChange={(v) => onCampo("cost_responsible", v)} disabled={ocupado}>
           <SelectTrigger
@@ -441,6 +472,7 @@ function LinhaItem({
           </Button>
         )}
       </div>
+      <DialogoLinkItem item={item} aberto={dialogoLink} onFechar={() => setDialogoLink(false)} onSalvar={(link) => onCampo("product_link", link)} />
     </li>
   );
 }
