@@ -523,6 +523,7 @@ function NovoItem({ viabilizacao, userId }: { viabilizacao: Viabilizacao; userId
   const criar = useCriarItemViabilizacao();
   const [texto, setTexto] = useState("");
   const [valor, setValor] = useState("");
+  const [link, setLink] = useState("");
   const [custo, setCusto] = useState<Custo>("owner");
   const [natureza, setNatureza] = useState<NaturezaItem>("manutencao");
   const campo = useRef<HTMLInputElement>(null);
@@ -532,6 +533,12 @@ function NovoItem({ viabilizacao, userId }: { viabilizacao: Viabilizacao; userId
     if (!imovel || !userId) return;
     const limpas = linhas.map((l) => l.trim()).filter((l) => l.length >= 2);
     if (limpas.length === 0) return;
+    // O link vale para um item só; numa lista colada cada um ganha o seu depois.
+    const linkNormalizado = limpas.length === 1 ? normalizarLink(link) : null;
+    if (linkNormalizado === undefined) {
+      toast.error("Cole um link válido de loja (começando com http:// ou https://).");
+      return;
+    }
     try {
       const n = await criar.mutateAsync(
         limpas.map((subject) => ({
@@ -542,11 +549,13 @@ function NovoItem({ viabilizacao, userId }: { viabilizacao: Viabilizacao; userId
           amountCents: limpas.length === 1 ? valorCents : null,
           costResponsible: custo,
           natureza,
+          productLink: linkNormalizado ?? null,
         })),
       );
       toast.success(n === 1 ? "Item adicionado" : `${n} itens adicionados`);
       setTexto("");
       setValor("");
+      setLink("");
       campo.current?.focus();
     } catch (erro) {
       toast.error(textoDoErro(erro));
@@ -559,11 +568,21 @@ function NovoItem({ viabilizacao, userId }: { viabilizacao: Viabilizacao; userId
     void adicionar([texto], cents && cents > 0 ? cents : null);
   };
 
-  // Colar uma lista (uma linha por item) cria todos de uma vez.
+  // Colar uma lista (uma linha por item) cria todos de uma vez. Colar um
+  // link de loja sozinho vira o link do item e sugere "Compra".
   const colar = (e: ClipboardEvent<HTMLInputElement>) => {
     const colado = e.clipboardData.getData("text");
     const linhas = colado.split(/\r?\n/).map((l) => l.replace(/^[-*•\d.)\s]+/, "").trim()).filter(Boolean);
-    if (linhas.length < 2) return;
+    if (linhas.length < 2) {
+      const linkColado = normalizarLink(colado);
+      if (linkColado) {
+        e.preventDefault();
+        setLink(linkColado);
+        setNatureza("compra");
+        toast.info("Link da loja reconhecido: o item entra como compra.");
+      }
+      return;
+    }
     e.preventDefault();
     void adicionar(linhas, null);
   };
@@ -602,6 +621,17 @@ function NovoItem({ viabilizacao, userId }: { viabilizacao: Viabilizacao; userId
           ))}
         </SelectContent>
       </Select>
+      {natureza === "compra" && (
+        <Input
+          value={link}
+          onChange={(e) => setLink(e.target.value)}
+          placeholder="Link da loja (opcional)"
+          aria-label="Link da loja"
+          inputMode="url"
+          className="h-9 min-w-0 flex-1 basis-[12rem] border-0 bg-card text-sm"
+          disabled={criar.isPending}
+        />
+      )}
       <Select value={custo} onValueChange={(v) => setCusto(v as Custo)}>
         <SelectTrigger className="h-9 w-[132px] border-0 bg-card text-xs" aria-label="Quem paga">
           <SelectValue />
