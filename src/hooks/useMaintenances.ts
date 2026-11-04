@@ -169,6 +169,7 @@ async function fetchTicketContext(ticketId: string): Promise<{
     description: null,
     subject: null,
     scheduled_at: null,
+    product_link: null,
     service_provider: null,
     notes: [] as MaintenanceNote[],
   };
@@ -271,6 +272,7 @@ export const useMaintenance = (id?: string) => {
           ticket_description: ticketContext.description,
           ticket_notes: ticketContext.notes,
           scheduled_at: (charge as any).scheduled_at ?? ticketContext.scheduled_at,
+          product_link: ticketContext.product_link,
           service_provider: ticketContext.service_provider,
         };
       }
@@ -291,6 +293,7 @@ export const useMaintenance = (id?: string) => {
           ticket_type,
           scheduled_at,
           cost_responsible,
+          product_link,
           property:properties(id, name, cover_photo_url),
           owner:profiles!tickets_owner_id_fkey(id, name, email)
         `)
