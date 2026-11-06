@@ -57,7 +57,7 @@ Redirecionamento de entrada: `src/pages/Index.tsx`.
 
 ### Rotas públicas (sem `ProtectedRoute`)
 
-`/login` · `/cadastro` · `/cadastro-imovel` + `/cadastro-imovel/obrigado` (ficha pública de captação) · `/aguardando-aprovacao` · `/definir-senha` · `/curadoria/p/:id` · `/debug-app`
+`/login` · `/cadastro` · `/cadastro-imovel` + `/cadastro-imovel/obrigado` (ficha pública de captação) · `/aguardando-aprovacao` · `/definir-senha` · `/curadoria/p/:id` · `/curadoria/:token` (§3.22) · `/debug-app`
 
 > `/debug-app` (`src/pages/DebugApp.tsx`) é público mas **não expõe nada sensível** — só build, host, user-agent e flags de PWA/Capacitor. Não é falha.
 >
@@ -162,7 +162,7 @@ Proprietário só vê se `inspection_settings.owner_portal_enabled = true`.
 
 ### 3.4 Curadoria
 `owner_curations`, `curation_access_tokens`, `curadoria_messages`. Equipe monta em `/admin/curadoria/nova`, proprietário escolhe itens em `/minha-curadoria` e paga por PIX. Pago → vira ticket de compra.
-Functions: `create-curation-pix`, `save-curation-selection`, `curation-access`, `notify-curation-{ready,paid}`, `curadoria-ai`. **Todas com falhas graves — ver §8.2 e §8.3.**
+Functions: `create-curation-pix`, `save-curation-selection`, `curation-access`, `notify-curation-{ready,paid}`, `curadoria-ai`. **Todas com falhas graves — ver §8.2 e §8.3.** A proposta em HTML, sem PIX, é outro caminho na mesma tabela: §3.22.
 
 ### 3.5 Comissões de reserva (Booking)
 `booking_commissions` + `_messages` + `_attachments`. Importação em `/importar-comissoes-booking`, visão do proprietário em `/minhas-comissoes-booking`, relatório em `/admin/relatorio-booking`, comissão RIOS em `/admin/comissao-rios`. PIX próprio: `create-booking-pix`, `create-group-booking-payment`.
@@ -404,6 +404,17 @@ Pedido do gestor: trocar a skill agendada de "bloqueio de limpeza" por um fluxo 
 - **Log `cleaning_block_log`**, um por evento e imóvel: status (`simulado`, `sem_acao`, `ok`, `verificando`, `reenviado`, `abortado`, `erro`), datas fechadas e reabertas, `descartadas` com o motivo de cada uma, `so_registro`, divergências. A view `cleaning_block_alertas` mostra o que pede atenção. Reprocessar uma reserva: `select public.limpeza_reprocessar('<código>')` (modo interno do `hostex-webhook`, header `x-internal-token` com o token do Vault).
 - **Migration `20261106120000_cleaning_blocks.sql` aplicada em 2026-11-06** pelo `query_database` (RLS conferido em transação desfeita: autenticado fora da equipe e anônimo não leem nem gravam nas três tabelas e não executam `limpeza_reprocessar`; flag gravada desligada; cron `limpeza-verificacao` ativo, sem pendência não chama nada). **Pendente:** redeploy de `hostex-webhook` pelo Lovable (sem mudança no `config.toml`) e ligar a flag. Antes disso nada muda: a versão publicada não tem o fluxo, e com a flag desligada ele só registra "ignorado". **Nada foi testado contra a Hostex em escrita.**
 - **Não faz:** os bloqueios que a skill antiga já fez não estão no registro, então o cancelamento de uma reserva anterior à virada não reabre as 2 datas sozinho. Não há varredura para webhook perdido (a Hostex descarta a notificação depois de 3 tentativas; qualquer evento posterior da mesma reserva, ou o reprocesso manual, corrige). Evento cujo `property_id` está fora do escopo é ignorado mesmo se a reserva saiu de um imóvel do escopo. Erro final fica só no log, sem WhatsApp.
+
+### 3.22 Curadoria em HTML (`/curadoria/:token`, desde 2026-11-06)
+Pedido do gestor: hospedar no portal, ligada ao proprietário, a proposta decorativa gerada pela skill `proposta-decorativa` (`~/.claude/skills/proposta-decorativa`; os arquivos de cada imóvel ficam em `documentos/propostas-decorativas/NOME/`), para enviar por link.
+
+- **É a mesma `owner_curations`**, com `html_path` preenchido, mais `link_token`, `pecas`, `aberturas`, `primeira_abertura_em` e `ultima_abertura_em`. `categories` fica vazio, por isso `/bem-vindo` filtra `html_path is null`. Migration `20261106150000_curadoria_html.sql`, **aplicada em 2026-11-06** pelo `query_database`, 17 casos de acesso testados em transação desfeita.
+- **Arquivo:** bucket `curadorias`, público para quem tem o endereço e sem política de leitura para anônimo (o token de 128 bits está na pasta e ninguém de fora lista), só `text/html`, até 30 MB, escrita só admin/agent. Cada versão tem caminho próprio (`<token>/<data>.html`) por causa do cache. O Storage serve HTML como `text/plain`, então o endereço direto não abre a página.
+- **Abrir:** `/curadoria/:token`, sem login (`CuradoriaLink.tsx`). A RPC `curadoria_por_link` (SECURITY DEFINER) devolve o caminho; rascunho só volta para a equipe, e só quem não é da equipe conta como abertura. A página lê o texto do arquivo e mostra num **iframe sandbox sem `allow-same-origin`**: o HTML não enxerga a sessão do portal, `allow-popups` abre o WhatsApp e `allow-modals`, a impressão. **Não tirar o sandbox.** Sem armazenamento lá dentro, a seleção de peças não fica guardada entre visitas.
+- **Equipe:** `/admin/curadorias` → "Nova proposta em HTML" (`NovaCuradoriaHtml`). Ao escolher o arquivo, o portal lê o JSON `#dados` de dentro dele (nome, peças, total no Pix), acha o imóvel pelo nome e sugere o dono. Salva como rascunho ou publica. A linha (`LinhaCuradoriaHtml`) tem Abrir, Link, WhatsApp (abre a conversa do proprietário com o texto pronto; quem envia é a pessoa, nada sai sozinho), Trocar arquivo (o link continua o mesmo) e Publicar/Retirar, e mostra quantas vezes foi aberta e quando.
+- **Proprietário:** publicada, entra no `OwnerCuradoriaBanner` de `/minha-caixa` e em `/minha-curadoria`, em cartões (uma por imóvel). Nenhuma notificação automática. A curadoria antiga, sem `html_path`, segue com PIX como antes.
+- **Sem conta no portal não dá para hospedar:** `owner_id` é obrigatório. Para um interessado, peça a ficha em `/cadastro-imovel` (vira pré-cadastro, que aparece no seletor).
+- O `types.ts` ainda não tem as colunas nem a RPC: `tabelaCuradorias()` em `src/lib/curadoriaHtml.ts` usa o cliente sem tipos, e `/bem-vindo` usa `.filter()`. Trocar quando o Lovable regenerar.
 
 ---
 

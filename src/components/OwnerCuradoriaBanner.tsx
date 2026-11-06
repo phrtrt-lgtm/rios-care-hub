@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Sparkles, ArrowRight, ShoppingCart, CheckCircle2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { tabelaCuradorias } from "@/lib/curadoriaHtml";
 
 type CurationSummary = {
   id: string;
@@ -13,6 +13,9 @@ type CurationSummary = {
   paid_at: string | null;
   owner_purchase_choice: string | null;
   cart_url: string | null;
+  html_path: string | null;
+  link_token: string | null;
+  pecas: number | null;
 };
 
 /**
@@ -26,20 +29,21 @@ export function OwnerCuradoriaBanner() {
 
   useEffect(() => {
     if (!profile?.id) return;
-    supabase
-      .from("owner_curations")
-      .select("id, title, total_amount_cents, paid_at, owner_purchase_choice, cart_url")
+    tabelaCuradorias()
+      .select("id, title, total_amount_cents, paid_at, owner_purchase_choice, cart_url, html_path, link_token, pecas")
       .eq("owner_id", profile.id)
       .in("status", ["published", "paid"])
       .order("published_at", { ascending: false })
       .limit(1)
       .maybeSingle()
-      .then(({ data }) => setCuration((data as CurationSummary) ?? null));
+      .then(({ data }: { data: CurationSummary | null }) => setCuration(data ?? null));
   }, [profile?.id]);
 
   if (!curation) return null;
 
   const isPaid = !!curation.paid_at;
+  // Proposta em HTML hospedada no portal: abre em tela cheia e a escolha segue pelo WhatsApp, sem PIX aqui
+  const propostaHtml = curation.html_path && curation.link_token ? `/curadoria/${curation.link_token}` : null;
   const total = ((curation.total_amount_cents ?? 0) / 100).toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL",
@@ -62,15 +66,21 @@ export function OwnerCuradoriaBanner() {
           </div>
           <div>
             <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-primary">
-              {isPaid ? "Curadoria em execução" : "Novo · Curadoria RIOS pronta pra você"}
+              {propostaHtml ? "Novo · Proposta de decoração pronta pra você" : isPaid ? "Curadoria em execução" : "Novo · Curadoria RIOS pronta pra você"}
             </p>
             <h3 className="text-base font-bold leading-snug md:text-lg">
-              {isPaid
+              {propostaHtml
+                ? "Veja o seu imóvel ambiente por ambiente, com cada peça no lugar"
+                : isPaid
                 ? "Acompanhe sua curadoria e a lista de itens aprovados"
                 : "Seu plano de performance está pronto — veja o que vai destravar mais reservas"}
             </h3>
             <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground md:text-sm">
-              {isPaid
+              {propostaHtml
+                ? `${curation.pecas ? `${curation.pecas} peças escolhidas para o seu imóvel` : "Peças escolhidas para o seu imóvel"}${
+                    curation.total_amount_cents ? ` · investimento estimado ${total} no Pix` : ""
+                  }. Você escolhe o que quer, peça por peça.`
+                : isPaid
                 ? "Itens, observações e status da execução ficam sempre disponíveis aqui no seu portal."
                 : `Curadoria completa de decoração e equipamentos escolhida item por item pra elevar a diária e a avaliação do seu imóvel${
                     curation.total_amount_cents ? ` · investimento estimado ${total}` : ""
@@ -80,8 +90,13 @@ export function OwnerCuradoriaBanner() {
         </div>
 
         <div className="flex shrink-0 flex-col gap-2 sm:flex-row md:flex-col lg:flex-row">
-          <Button onClick={() => navigate("/minha-curadoria")} className="whitespace-nowrap">
-            {isPaid ? (
+          <Button onClick={() => navigate(propostaHtml ?? "/minha-curadoria")} className="whitespace-nowrap">
+            {propostaHtml ? (
+              <>
+                Ver a proposta
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </>
+            ) : isPaid ? (
               <>
                 <CheckCircle2 className="mr-2 h-4 w-4" />
                 Ver minha curadoria
@@ -93,7 +108,7 @@ export function OwnerCuradoriaBanner() {
               </>
             )}
           </Button>
-          {!isPaid && curation.cart_url && (
+          {!propostaHtml && !isPaid && curation.cart_url && (
             <Button variant="outline" asChild className="whitespace-nowrap">
               <a href={curation.cart_url} target="_blank" rel="noreferrer">
                 <ShoppingCart className="mr-2 h-4 w-4" />

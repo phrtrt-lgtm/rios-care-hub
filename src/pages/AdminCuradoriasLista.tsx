@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -12,6 +12,7 @@ import {
   FileText,
   Copy,
   ShoppingCart,
+  Upload,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,9 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { toast } from "sonner";
 import riosLogo from "@/assets/rios-logo.png";
 import { portalLink } from "@/lib/portalUrl";
+import { COLUNAS_HTML, tabelaCuradorias } from "@/lib/curadoriaHtml";
+import { LinhaCuradoriaHtml, type CuradoriaHtml } from "@/components/curadoria/LinhaCuradoriaHtml";
+import { NovaCuradoriaHtml } from "@/components/curadoria/NovaCuradoriaHtml";
 
 type CurationItem = {
   name?: string;
@@ -52,7 +56,15 @@ type Curation = {
   cart_url: string | null;
   categories: CurationCategory[] | null;
   selected_items: CurationItem[] | null;
-  owner: { name: string | null; email: string | null } | null;
+  owner: { name: string | null; email: string | null; phone?: string | null } | null;
+  property_id?: string | null;
+  html_path?: string | null;
+  link_token?: string | null;
+  pecas?: number | null;
+  aberturas?: number;
+  primeira_abertura_em?: string | null;
+  ultima_abertura_em?: string | null;
+  imovel?: string | null;
 };
 
 type OwnerGroup = {
@@ -84,7 +96,7 @@ function statusBadge(status: string) {
       );
     case "draft":
       return (
-        <Badge variant="outline" className="border-muted text-muted-foreground">
+        <Badge variant="outline" className="border-white/25 text-secondary-foreground/80">
           <Clock className="mr-1 h-3 w-3" /> Rascunho
         </Badge>
       );
@@ -99,34 +111,41 @@ export default function AdminCuradoriasLista() {
   const [curations, setCurations] = useState<Curation[]>([]);
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [novaHtml, setNovaHtml] = useState(false);
+
+  const carregar = useCallback(async () => {
+    const { data, error } = await tabelaCuradorias()
+      .select(
+        `id, owner_id, title, status, total_amount_cents, paid_at, published_at, created_at, cart_url, categories, selected_items, ${COLUNAS_HTML}`,
+      )
+      .order("created_at", { ascending: false });
+    if (error) {
+      toast.error("Não consegui carregar as curadorias");
+      setLoading(false);
+      return;
+    }
+    const linhas = (data ?? []) as Curation[];
+    const ids = Array.from(new Set(linhas.map((c) => c.owner_id)));
+    const idsImoveis = Array.from(new Set(linhas.map((c) => c.property_id).filter(Boolean))) as string[];
+    const [{ data: perfis }, { data: imoveis }] = await Promise.all([
+      supabase.from("profiles").select("id, name, email, phone").in("id", ids),
+      idsImoveis.length ? supabase.from("properties").select("id, name").in("id", idsImoveis) : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+    ]);
+    const donoPorId = new Map((perfis ?? []).map((p) => [p.id, p]));
+    const imovelPorId = new Map((imoveis ?? []).map((i) => [i.id, i.name]));
+    setCurations(
+      linhas.map((c) => ({
+        ...c,
+        owner: donoPorId.get(c.owner_id) ?? null,
+        imovel: c.property_id ? imovelPorId.get(c.property_id) ?? null : null,
+      })),
+    );
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
-    (async () => {
-      const { data, error } = await supabase
-        .from("owner_curations")
-        .select(
-          "id, owner_id, title, status, total_amount_cents, paid_at, published_at, created_at, cart_url, categories, selected_items, owner:profiles!owner_curations_owner_id_fkey(name, email)"
-        )
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        // Fallback sem o alias da FK caso não exista
-        const { data: data2 } = await supabase
-          .from("owner_curations")
-          .select("id, owner_id, title, status, total_amount_cents, paid_at, published_at, created_at, cart_url, categories, selected_items")
-          .order("created_at", { ascending: false });
-        const ids = Array.from(new Set((data2 ?? []).map((c: any) => c.owner_id)));
-        const { data: profs } = await supabase.from("profiles").select("id, name, email").in("id", ids);
-        const byId = new Map((profs ?? []).map((p: any) => [p.id, p]));
-        setCurations(
-          ((data2 ?? []) as any[]).map((c) => ({ ...c, owner: byId.get(c.owner_id) ?? null })) as Curation[]
-        );
-      } else {
-        setCurations((data ?? []) as any);
-      }
-      setLoading(false);
-    })();
-  }, []);
+    void carregar();
+  }, [carregar]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -237,8 +256,16 @@ export default function AdminCuradoriasLista() {
               Consulte tudo que foi enviado e comprado. Itens pagos aparecem com link para reposição.
             </p>
           </div>
-          <img src={riosLogo} alt="RIOS" className="h-8 brightness-0 invert md:h-10" />
+          <div className="flex items-center gap-4">
+            <Button onClick={() => setNovaHtml(true)}>
+              <Upload className="mr-2 h-4 w-4" />
+              Nova proposta em HTML
+            </Button>
+            <img src={riosLogo} alt="RIOS" className="hidden h-8 brightness-0 invert md:block md:h-10" />
+          </div>
         </div>
+
+        <NovaCuradoriaHtml aberto={novaHtml} onOpenChange={setNovaHtml} onCriada={() => void carregar()} />
 
         <div className="mb-6 flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3">
           <Search className="h-4 w-4 text-secondary-foreground/60" />
@@ -270,6 +297,16 @@ export default function AdminCuradoriasLista() {
 
                 <ul className="divide-y divide-white/10">
                   {g.curations.map((c) => {
+                    if (c.html_path && c.link_token) {
+                      return (
+                        <LinhaCuradoriaHtml
+                          key={c.id}
+                          curadoria={c as unknown as CuradoriaHtml}
+                          etiqueta={statusBadge(c.status)}
+                          onMudou={() => void carregar()}
+                        />
+                      );
+                    }
                     const isOpen = !!expanded[c.id];
                     const items = itemsOf(c);
                     const grouped = itemsByCategory(items);

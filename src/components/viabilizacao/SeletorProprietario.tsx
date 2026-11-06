@@ -26,6 +26,8 @@ interface Props {
   contas: ContaProprietario[];
   carregando: boolean;
   erro?: boolean;
+  /** Mostra a opção "Ainda não tem conta no portal". */
+  permitirSemConta?: boolean;
 }
 
 /** "Proprietário" ou "Pré-cadastro" (ficha enviada, conta ainda não aprovada). */
@@ -42,7 +44,7 @@ export function EtiquetaConta({ role }: { role: string }) {
  * /cadastro-imovel), com busca por nome, e-mail ou telefone. Com a conta
  * escolhida o imóvel já nasce no portal; sem ela, só dá para anotar.
  */
-export function SeletorProprietario({ id, valor, onChange, contas, carregando, erro = false }: Props) {
+export function SeletorProprietario({ id, valor, onChange, contas, carregando, erro = false, permitirSemConta = true }: Props) {
   const [aberto, setAberto] = useState(false);
   const escolher = (v: EscolhaProprietario) => {
     onChange(v);
@@ -75,7 +77,7 @@ export function SeletorProprietario({ id, valor, onChange, contas, carregando, e
         </span>
         <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" aria-hidden="true" />
       </Button>
-      {erro && <p className="text-xs text-destructive">Escolha a conta, ou diga que ainda não tem.</p>}
+      {erro && <p className="text-xs text-destructive">{permitirSemConta ? "Escolha a conta, ou diga que ainda não tem." : "Escolha a conta do proprietário."}</p>}
 
       <Dialog open={aberto} onOpenChange={setAberto}>
         <DialogContent className="max-w-md overflow-hidden p-0">
@@ -88,15 +90,17 @@ export function SeletorProprietario({ id, valor, onChange, contas, carregando, e
           <Command>
             <CommandInput placeholder="Buscar por nome, e-mail ou telefone…" />
             <CommandList className="max-h-80">
-              <CommandEmpty>Ninguém com esse nome. Sem conta, escolha a primeira opção.</CommandEmpty>
-              <CommandGroup>
-                <CommandItem value="ainda nao tem conta no portal" onSelect={() => escolher(SEM_CONTA)} className="gap-2">
-                  <UserRoundX className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                  <span className="truncate">Ainda não tem conta no portal</span>
-                  {valor === SEM_CONTA && <Check className="ml-auto h-4 w-4 text-primary" aria-hidden="true" />}
-                </CommandItem>
-              </CommandGroup>
-              {contas.length > 0 && <CommandSeparator />}
+              <CommandEmpty>{permitirSemConta ? "Ninguém com esse nome. Sem conta, escolha a primeira opção." : "Ninguém com esse nome."}</CommandEmpty>
+              {permitirSemConta && (
+                <CommandGroup>
+                  <CommandItem value="ainda nao tem conta no portal" onSelect={() => escolher(SEM_CONTA)} className="gap-2">
+                    <UserRoundX className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                    <span className="truncate">Ainda não tem conta no portal</span>
+                    {valor === SEM_CONTA && <Check className="ml-auto h-4 w-4 text-primary" aria-hidden="true" />}
+                  </CommandItem>
+                </CommandGroup>
+              )}
+              {permitirSemConta && contas.length > 0 && <CommandSeparator />}
               {contas.length > 0 && (
                 <CommandGroup heading="Contas">
                   {contas.map((c) => (

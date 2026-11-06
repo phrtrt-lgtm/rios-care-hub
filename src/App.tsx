@@ -97,6 +97,7 @@ const AdminCuradoriasLista = lazyPage(() => import("./pages/AdminCuradoriasLista
 const DefinirSenha = lazyPage(() => import("./pages/DefinirSenha"));
 const MinhaCuradoria = lazyPage(() => import("./pages/MinhaCuradoria"));
 const CuradoriaPublica = lazyPage(() => import("./pages/CuradoriaPublica"));
+const CuradoriaLink = lazyPage(() => import("./pages/CuradoriaLink"));
 const AdminContratos = lazyPage(() => import("./pages/AdminContratos"));
 const AdminContratoNovo = lazyPage(() => import("./pages/AdminContratoNovo"));
 const AdminContratoDetalhes = lazyPage(() => import("./pages/AdminContratoDetalhes"));
@@ -130,6 +131,7 @@ const App = () => (
             <Route path="/aguardando-aprovacao" element={<AguardandoAprovacao />} />
             <Route path="/bem-vindo" element={<BemVindo />} />
             <Route path="/curadoria/p/:id" element={<CuradoriaPublica />} />
+            <Route path="/curadoria/:token" element={<CuradoriaLink />} />
             <Route path="/definir-senha" element={<DefinirSenha />} />
             <Route
               path="/minha-caixa"

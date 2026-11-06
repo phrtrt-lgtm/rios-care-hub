@@ -128,6 +128,7 @@ export default function BemVindo() {
         .select("id, categories, observations, paid_at")
         .eq("owner_id", profile.id)
         .in("status", ["published", "paid"])
+        .filter("html_path", "is", null)
         .order("published_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -141,6 +142,7 @@ export default function BemVindo() {
         .from("owner_curations")
         .select("id, categories, observations, paid_at")
         .in("status", ["published", "paid"])
+        .filter("html_path", "is", null)
         .order("published_at", { ascending: false })
         .limit(1)
         .maybeSingle();

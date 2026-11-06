@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { ArrowLeft, LogOut, Sparkles } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { ArrowLeft, ArrowRight, LogOut, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { tabelaCuradorias } from "@/lib/curadoriaHtml";
 import { Button } from "@/components/ui/button";
 import { SectionSkeleton } from "@/components/ui/section-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -20,31 +20,36 @@ type Curation = {
   status: string;
   owner_purchase_choice: string | null;
   cart_url: string | null;
+  total_amount_cents: number | null;
+  html_path: string | null;
+  link_token: string | null;
+  pecas: number | null;
 };
 
 export default function MinhaCuradoria() {
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [curation, setCuration] = useState<Curation | null>(null);
+  const [linhas, setLinhas] = useState<Curation[]>([]);
 
   useEffect(() => {
     if (!profile?.id) return;
-    supabase
-      .from("owner_curations")
+    tabelaCuradorias()
       .select(
-        "id, categories, observations, selected_items, paid_at, published_at, title, status, owner_purchase_choice, cart_url",
+        "id, categories, observations, selected_items, paid_at, published_at, title, status, owner_purchase_choice, cart_url, total_amount_cents, html_path, link_token, pecas",
       )
       .eq("owner_id", profile.id)
       .in("status", ["published", "paid"])
       .order("published_at", { ascending: false })
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => {
-        setCuration(data as any);
+      .then(({ data }: { data: Curation[] | null }) => {
+        setLinhas(data ?? []);
         setLoading(false);
       });
   }, [profile?.id]);
+
+  // Propostas em HTML (uma por imóvel, em geral) e a curadoria antiga, com PIX, mais recente
+  const propostas = linhas.filter((l) => l.html_path && l.link_token);
+  const curation = linhas.find((l) => !l.html_path) ?? null;
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-secondary text-secondary-foreground">
@@ -83,7 +88,7 @@ export default function MinhaCuradoria() {
             Sua curadoria RIOS
           </p>
           <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
-            Plano de performance do seu imóvel
+            {curation || propostas.length === 0 ? "Plano de performance do seu imóvel" : "Sua proposta de decoração"}
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-secondary-foreground/70">
             Acesso permanente à curadoria que preparamos para o seu imóvel — itens, observações e
@@ -93,22 +98,50 @@ export default function MinhaCuradoria() {
 
         {loading ? (
           <SectionSkeleton />
-        ) : !curation ? (
+        ) : !curation && propostas.length === 0 ? (
           <EmptyState
             icon={<Sparkles className="h-8 w-8" />}
             title="Nenhuma curadoria publicada ainda"
             description="Assim que sua curadoria estiver pronta, ela aparecerá aqui para acesso permanente."
           />
         ) : (
-          <PlanoPerformanceSection
-            customCategories={curation.categories as any}
-            customObservations={curation.observations as any}
-            curationId={curation.id}
-            initialPaid={!!curation.paid_at}
-            initialSelectedItems={curation.selected_items ?? undefined}
-            initialPurchaseChoice={curation.owner_purchase_choice as any}
-            cartUrl={curation.cart_url}
-          />
+          <>
+            {propostas.length > 0 && (
+              <div className={`grid gap-4 md:grid-cols-2 ${curation ? "mb-10" : ""}`}>
+                {propostas.map((p) => (
+                  <Link
+                    key={p.id}
+                    to={`/curadoria/${p.link_token}`}
+                    className="group flex flex-col rounded-2xl border border-white/10 bg-white/[0.04] p-5 transition-colors hover:bg-white/[0.08] md:p-6"
+                  >
+                    <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">Proposta de decoração</span>
+                    <span className="mt-2 text-xl font-bold leading-snug">{p.title}</span>
+                    <span className="mt-1 text-sm text-secondary-foreground/70">
+                      {p.pecas ? `${p.pecas} peças` : "Peça por peça"}
+                      {p.total_amount_cents
+                        ? ` · ${(p.total_amount_cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })} no Pix`
+                        : ""}
+                    </span>
+                    <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-primary">
+                      Abrir a proposta
+                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
+            {curation && (
+              <PlanoPerformanceSection
+                customCategories={curation.categories as any}
+                customObservations={curation.observations as any}
+                curationId={curation.id}
+                initialPaid={!!curation.paid_at}
+                initialSelectedItems={curation.selected_items ?? undefined}
+                initialPurchaseChoice={curation.owner_purchase_choice as any}
+                cartUrl={curation.cart_url}
+              />
+            )}
+          </>
         )}
       </div>
     </div>

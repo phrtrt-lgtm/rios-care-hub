@@ -14,7 +14,7 @@ import { CLASSE_BOTAO_CABECALHO, CLASSES_PAINEL } from "./estilos";
 import { OrbeAssistente } from "./OrbeAssistente";
 
 const EQUIPE = ["admin", "agent", "maintenance"];
-const ROTAS_SEM_WIDGET = ["/login", "/cadastro", "/cadastro-imovel", "/debug-app", "/definir-senha", "/aguardando-aprovacao", "/curadoria/p"];
+const ROTAS_SEM_WIDGET = ["/login", "/cadastro", "/cadastro-imovel", "/debug-app", "/definir-senha", "/aguardando-aprovacao", "/curadoria/"];
 
 const quando = (iso: string) =>
   new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
