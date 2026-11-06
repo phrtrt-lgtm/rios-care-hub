@@ -3060,20 +3060,25 @@ export type Database = {
       }
       owner_curations: {
         Row: {
+          aberturas: number
           ai_history: Json
           cart_url: string | null
           categories: Json
           created_at: string
           created_by: string | null
+          html_path: string | null
           id: string
+          link_token: string | null
           mercadopago_payment_id: string | null
           observations: Json
           owner_id: string
           owner_purchase_choice: string | null
           owner_purchase_chosen_at: string | null
           paid_at: string | null
+          pecas: number | null
           pix_qr_code: string | null
           pix_qr_code_base64: string | null
+          primeira_abertura_em: string | null
           property_id: string | null
           published_at: string | null
           purchase_ticket_id: string | null
@@ -3082,23 +3087,29 @@ export type Database = {
           status: string
           title: string
           total_amount_cents: number | null
+          ultima_abertura_em: string | null
           updated_at: string
         }
         Insert: {
+          aberturas?: number
           ai_history?: Json
           cart_url?: string | null
           categories?: Json
           created_at?: string
           created_by?: string | null
+          html_path?: string | null
           id?: string
+          link_token?: string | null
           mercadopago_payment_id?: string | null
           observations?: Json
           owner_id: string
           owner_purchase_choice?: string | null
           owner_purchase_chosen_at?: string | null
           paid_at?: string | null
+          pecas?: number | null
           pix_qr_code?: string | null
           pix_qr_code_base64?: string | null
+          primeira_abertura_em?: string | null
           property_id?: string | null
           published_at?: string | null
           purchase_ticket_id?: string | null
@@ -3107,23 +3118,29 @@ export type Database = {
           status?: string
           title?: string
           total_amount_cents?: number | null
+          ultima_abertura_em?: string | null
           updated_at?: string
         }
         Update: {
+          aberturas?: number
           ai_history?: Json
           cart_url?: string | null
           categories?: Json
           created_at?: string
           created_by?: string | null
+          html_path?: string | null
           id?: string
+          link_token?: string | null
           mercadopago_payment_id?: string | null
           observations?: Json
           owner_id?: string
           owner_purchase_choice?: string | null
           owner_purchase_chosen_at?: string | null
           paid_at?: string | null
+          pecas?: number | null
           pix_qr_code?: string | null
           pix_qr_code_base64?: string | null
+          primeira_abertura_em?: string | null
           property_id?: string | null
           published_at?: string | null
           purchase_ticket_id?: string | null
@@ -3132,6 +3149,7 @@ export type Database = {
           status?: string
           title?: string
           total_amount_cents?: number | null
+          ultima_abertura_em?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -4986,6 +5004,14 @@ export type Database = {
           owner_id: string
           whatsapp_lembrete_enviado_em: string
           whatsapp_lembretes_enviados: number
+        }[]
+      }
+      curadoria_por_link: {
+        Args: { p_token: string }
+        Returns: {
+          html_path: string
+          imovel: string
+          titulo: string
         }[]
       }
       delete_financial_report: {
