@@ -1096,6 +1096,144 @@ export type Database = {
           },
         ]
       }
+      cleaning_block_locks: {
+        Row: {
+          holder: string
+          locked_until: string
+          property_id: number
+        }
+        Insert: {
+          holder: string
+          locked_until: string
+          property_id: number
+        }
+        Update: {
+          holder?: string
+          locked_until?: string
+          property_id?: number
+        }
+        Relationships: []
+      }
+      cleaning_block_log: {
+        Row: {
+          bloqueadas: string[]
+          check_in_date: string | null
+          check_out_date: string | null
+          created_at: string
+          descartadas: Json
+          divergencias: Json | null
+          erro: string | null
+          esperado: Json
+          event_id: string | null
+          evento: string | null
+          hostex_request_ids: string[]
+          id: string
+          liberadas: string[]
+          modo: string
+          origem: string
+          property_id: number
+          reservation_code: string
+          reservation_status: string | null
+          so_registro: Json
+          status: string
+          verificacao_tentativas: number
+          verificado_em: string | null
+          verificar_apos: string | null
+        }
+        Insert: {
+          bloqueadas?: string[]
+          check_in_date?: string | null
+          check_out_date?: string | null
+          created_at?: string
+          descartadas?: Json
+          divergencias?: Json | null
+          erro?: string | null
+          esperado?: Json
+          event_id?: string | null
+          evento?: string | null
+          hostex_request_ids?: string[]
+          id?: string
+          liberadas?: string[]
+          modo: string
+          origem: string
+          property_id: number
+          reservation_code: string
+          reservation_status?: string | null
+          so_registro?: Json
+          status: string
+          verificacao_tentativas?: number
+          verificado_em?: string | null
+          verificar_apos?: string | null
+        }
+        Update: {
+          bloqueadas?: string[]
+          check_in_date?: string | null
+          check_out_date?: string | null
+          created_at?: string
+          descartadas?: Json
+          divergencias?: Json | null
+          erro?: string | null
+          esperado?: Json
+          event_id?: string | null
+          evento?: string | null
+          hostex_request_ids?: string[]
+          id?: string
+          liberadas?: string[]
+          modo?: string
+          origem?: string
+          property_id?: number
+          reservation_code?: string
+          reservation_status?: string | null
+          so_registro?: Json
+          status?: string
+          verificacao_tentativas?: number
+          verificado_em?: string | null
+          verificar_apos?: string | null
+        }
+        Relationships: []
+      }
+      cleaning_blocks: {
+        Row: {
+          created_at: string
+          date: string
+          event_id: string | null
+          id: string
+          kind: string
+          property_id: number
+          release_reason: string | null
+          release_sent: boolean
+          released_at: string | null
+          released_event_id: string | null
+          reservation_code: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          event_id?: string | null
+          id?: string
+          kind: string
+          property_id: number
+          release_reason?: string | null
+          release_sent?: boolean
+          released_at?: string | null
+          released_event_id?: string | null
+          reservation_code: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          event_id?: string | null
+          id?: string
+          kind?: string
+          property_id?: number
+          release_reason?: string | null
+          release_sent?: boolean
+          released_at?: string | null
+          released_event_id?: string | null
+          reservation_code?: string
+        }
+        Relationships: []
+      }
       cleaning_inspection_attachments: {
         Row: {
           created_at: string
@@ -4422,6 +4560,7 @@ export type Database = {
           owner_decision: string | null
           owner_id: string
           priority: Database["public"]["Enums"]["ticket_priority"]
+          product_link: string | null
           property_id: string | null
           scheduled_at: string | null
           service_provider_id: string | null
@@ -4460,6 +4599,7 @@ export type Database = {
           owner_decision?: string | null
           owner_id: string
           priority?: Database["public"]["Enums"]["ticket_priority"]
+          product_link?: string | null
           property_id?: string | null
           scheduled_at?: string | null
           service_provider_id?: string | null
@@ -4498,6 +4638,7 @@ export type Database = {
           owner_decision?: string | null
           owner_id?: string
           priority?: Database["public"]["Enums"]["ticket_priority"]
+          product_link?: string | null
           property_id?: string | null
           scheduled_at?: string | null
           service_provider_id?: string | null
@@ -4729,6 +4870,45 @@ export type Database = {
       }
     }
     Views: {
+      cleaning_block_alertas: {
+        Row: {
+          bloqueadas: string[] | null
+          created_at: string | null
+          divergencias: Json | null
+          erro: string | null
+          evento: string | null
+          id: string | null
+          liberadas: string[] | null
+          property_id: number | null
+          reservation_code: string | null
+          status: string | null
+        }
+        Insert: {
+          bloqueadas?: string[] | null
+          created_at?: string | null
+          divergencias?: Json | null
+          erro?: string | null
+          evento?: string | null
+          id?: string | null
+          liberadas?: string[] | null
+          property_id?: number | null
+          reservation_code?: string | null
+          status?: string | null
+        }
+        Update: {
+          bloqueadas?: string[] | null
+          created_at?: string | null
+          divergencias?: Json | null
+          erro?: string | null
+          evento?: string | null
+          id?: string | null
+          liberadas?: string[] | null
+          property_id?: number | null
+          reservation_code?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
       hostex_reservations_proprietario: {
         Row: {
           booked_at: string | null
@@ -4818,6 +4998,7 @@ export type Database = {
       }
       disparar_avisos_viabilizacao: { Args: never; Returns: string }
       disparar_lembretes_atraso_whatsapp: { Args: never; Returns: string }
+      disparar_verificacoes_limpeza: { Args: never; Returns: string }
       find_property_by_name_unaccent: {
         Args: { _name: string }
         Returns: {
@@ -4876,6 +5057,10 @@ export type Database = {
           proximo_checkout: string
           saida: string
         }[]
+      }
+      limpeza_reprocessar: {
+        Args: { p_property_id?: number; p_reservation_code: string }
+        Returns: string
       }
       minhas_viabilizacoes: {
         Args: never
