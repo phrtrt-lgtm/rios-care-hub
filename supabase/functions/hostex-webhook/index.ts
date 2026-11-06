@@ -6,8 +6,17 @@
 // hostex_webhook_events (event_id único = não processa duas vezes), busca a
 // reserva completa na API e faz upsert em hostex_reservations como a sync.
 // O trigger da tabela cuida do WhatsApp.
+// Depois do cache, o mesmo evento passa pelo bloqueio de limpeza
+// (_shared/limpeza): fecha a véspera do check-in e o dia do check-out dos
+// imóveis do escopo, e reabre no cancelamento ou na troca de datas.
+// Modo interno (header x-internal-token, token do Vault conferido por
+// verificar_token_interno), usado pelo cron e pelo reprocesso manual:
+//   { "limpeza": "pendencias" }                          verificações órfãs
+//   { "limpeza": "reprocessar", "reservation_code": "…" } uma reserva
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { codigoDaReserva, extractList, hostexGet, linhaReserva } from "../_shared/hostexReserva.ts";
+import { idImovel } from "../_shared/limpeza/calculo.ts";
+import { processarEventoLimpeza, reprocessarReserva, verificarPendencias } from "../_shared/limpeza/fluxo.ts";
 
 declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void } | undefined;
 
@@ -61,6 +70,26 @@ async function processar(supabase: any, eventRowId: string, payload: any) {
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ ok: true });
   const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+  // Modo interno do bloqueio de limpeza: nunca passa pelo segredo da Hostex.
+  const interno = req.headers.get("x-internal-token");
+  if (interno) {
+    const { data: valido, error: erroToken } = await supabase.rpc("verificar_token_interno", { p_token: interno });
+    if (erroToken || valido !== true) return json({ error: "unauthorized" }, 401);
+    let corpo: any = null;
+    try { corpo = await req.json(); } catch { /* corpo vazio */ }
+    let trabalho: Promise<unknown>;
+    if (corpo?.limpeza === "pendencias") {
+      trabalho = verificarPendencias(supabase).catch((e) => console.error("[hostex-webhook] limpeza pendencias", (e as Error).message));
+    } else if (corpo?.limpeza === "reprocessar" && typeof corpo?.reservation_code === "string" && corpo.reservation_code.trim()) {
+      trabalho = reprocessarReserva(supabase, corpo.reservation_code.trim(), idImovel(corpo.property_id));
+    } else {
+      return json({ error: "modo interno desconhecido" }, 400);
+    }
+    if (typeof EdgeRuntime !== "undefined") EdgeRuntime.waitUntil(trabalho); else await trabalho;
+    return json({ ok: true, limpeza: corpo.limpeza });
+  }
+
   const recebido = req.headers.get("hostex-webhook-secret-token") ?? "";
   const { data: sec } = await supabase.from("integration_secrets").select("value").eq("name", "hostex_webhook_secret").maybeSingle();
   const validos = [sec?.value, Deno.env.get("HOSTEX_WEBHOOK_SECRET")].filter((v): v is string => !!v);
@@ -84,7 +113,12 @@ Deno.serve(async (req) => {
 
   if (evento !== "reservation_created" && evento !== "reservation_updated") return json({ ok: true, ignorado: evento });
 
-  const tarefa = processar(supabase, ins!.id, payload);
+  // Cache primeiro, bloqueio de limpeza depois; nenhum dos dois lança, e a
+  // falha de um não impede o outro.
+  const tarefa = (async () => {
+    await processar(supabase, ins!.id, payload);
+    await processarEventoLimpeza(supabase, payload);
+  })();
   if (typeof EdgeRuntime !== "undefined") EdgeRuntime.waitUntil(tarefa); else await tarefa;
   return json({ ok: true });
 });

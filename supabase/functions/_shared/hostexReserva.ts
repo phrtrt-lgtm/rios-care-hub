@@ -99,3 +99,70 @@ export async function hostexPost(path: string, body: Record<string, unknown>, ap
     clearTimeout(t);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Bloqueio de limpeza (_shared/limpeza): escrita por lista de datas, leitura do
+// calendário mestre e das reservas accepted de um imóvel. Os chamadores
+// antigos de /availabilities (por start_date/end_date) não passam por aqui.
+
+const DATA_ISO = /^\d{4}-\d{2}-\d{2}$/;
+const maisDias = (data: string, dias: number) => {
+  const [a, m, d] = data.split("-").map(Number);
+  return new Date(Date.UTC(a, m - 1, d + dias)).toISOString().slice(0, 10);
+};
+
+/**
+ * Fecha (`available = false`) ou reabre noites de UM imóvel por lista de datas.
+ * Nunca manda start_date/end_date: com os dois presentes a Hostex ignora
+ * `dates`. A resposta só confirma que a tarefa foi aceita: a mudança é
+ * assíncrona, confira depois com `hostexDisponibilidade`.
+ */
+export async function hostexMudarDatas(apiKey: string, propertyId: number, dates: string[], available: boolean) {
+  if (!Number.isSafeInteger(propertyId) || propertyId <= 0) throw new Error("hostexMudarDatas: property_id inválido");
+  const lista = [...new Set(dates)];
+  if (lista.length === 0 || lista.some((d) => !DATA_ISO.test(d))) throw new Error("hostexMudarDatas: lista de datas inválida");
+  return await hostexPost("/availabilities", { property_ids: [propertyId], dates: lista, available }, apiKey);
+}
+
+/** Calendário mestre de um imóvel entre duas datas (inclusivas): data -> available. */
+export async function hostexDisponibilidade(apiKey: string, propertyId: number, de: string, ate: string) {
+  const resp = await hostexGet("/availabilities", { property_ids: propertyId, start_date: de, end_date: ate }, apiKey);
+  const imovel = ((resp?.data?.properties ?? []) as any[]).find((p) => Number(p?.id) === propertyId);
+  const mapa = new Map<string, boolean>();
+  for (const dia of imovel?.availabilities ?? []) {
+    if (typeof dia?.date === "string" && typeof dia?.available === "boolean") mapa.set(dia.date, dia.available);
+  }
+  return mapa;
+}
+
+/**
+ * Reservas `accepted` de um imóvel com check-out entre `de` e `ate`
+ * (inclusivas). A API recusa janela de check-out acima de 180 dias
+ * ("The check-out range cannot exceed 180 days."), então consulta em janelas.
+ */
+export async function hostexReservasAceitas(apiKey: string, propertyId: number, de: string, ate: string): Promise<any[]> {
+  const JANELA = 180;
+  const PAGINA = 100;
+  const porCodigo = new Map<string, any>();
+  let inicio = de;
+  for (let janela = 0; janela < 12 && inicio <= ate; janela++) {
+    const ultimo = maisDias(inicio, JANELA - 1);
+    const fim = ultimo < ate ? ultimo : ate;
+    for (let offset = 0; offset < 50 * PAGINA; offset += PAGINA) {
+      const resp = await hostexGet("/reservations", {
+        property_id: propertyId,
+        status: "accepted",
+        start_check_out_date: inicio,
+        end_check_out_date: fim,
+        order_by: "check_in_date",
+        offset,
+        limit: PAGINA,
+      }, apiKey);
+      const lista = extractList(resp, "reservations");
+      for (const r of lista) porCodigo.set(`${codigoDaReserva(r)}|${r?.stay_code ?? ""}`, r);
+      if (lista.length < PAGINA) break;
+    }
+    inicio = maisDias(fim, 1);
+  }
+  return [...porCodigo.values()];
+}
