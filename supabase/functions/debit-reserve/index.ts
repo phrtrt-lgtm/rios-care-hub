@@ -97,6 +97,8 @@ const handler = async (req: Request): Promise<Response> => {
         title, 
         amount_cents,
         management_contribution_cents,
+        credit_applied_cents,
+        paid_at,
         property_id
       `)
       .in('id', chargeIds);
@@ -109,8 +111,9 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Filter out already debited charges
-    const chargesToProcess = charges.filter(c => !c.debited_at);
+    // Fora as já debitadas e as já pagas (o saldo credor pode ter quitado alguma
+    // logo antes: a calculadora chama aplicar_saldo_credor antes desta function).
+    const chargesToProcess = charges.filter(c => !c.debited_at && !c.paid_at);
     if (chargesToProcess.length === 0) {
       console.log('All charges already debited');
       return new Response(
@@ -178,10 +181,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`${chargeIdsToProcess.length} charges set to aguardando_reserva with check-in date: ${reserveDate}`);
 
-    // Calculate total debt amount: only owner's portion (amount minus management contribution)
+    // Dívida = parte do proprietário: valor − aporte da gestão − saldo credor já abatido.
     const totalDebtCents = chargesToProcess.reduce((sum, c) => {
       const managementContribution = (c as any).management_contribution_cents ?? 0;
-      return sum + Math.max(0, c.amount_cents - managementContribution);
+      const creditApplied = (c as any).credit_applied_cents ?? 0;
+      return sum + Math.max(0, c.amount_cents - managementContribution - creditApplied);
     }, 0);
 
     // Process scores for each charge

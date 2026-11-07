@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,6 +24,7 @@ import { AbaPilula, BarraFiltros, CabecalhoPagina, PaginaInterna } from "@/compo
 import { CaixaOperacao, MiniaturaImovel, SeloContagem } from "@/components/painel/CaixaOperacao";
 import { formatarBRL, valorDevido } from "@/lib/cobrancaMeta";
 import { agruparCobrancasProprietario } from "@/lib/agruparCobrancasProprietario";
+import { aplicarSaldoCredor } from "@/lib/saldoCredor";
 
 interface Charge {
   id: string;
@@ -87,6 +89,9 @@ const GerenciarCobrancas = () => {
   const [calculatorOpen, setCalculatorOpen] = useState(false);
   const [selectedPropertyForCalc, setSelectedPropertyForCalc] = useState<PropertyGroup | null>(null);
   const [selectedChargeIdsForCalc, setSelectedChargeIdsForCalc] = useState<string[]>([]);
+  const queryClient = useQueryClient();
+  const [abaterDe, setAbaterDe] = useState<{ owner_id: string; owner_name: string; total_cents: number } | null>(null);
+  const [abatendo, setAbatendo] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -226,6 +231,7 @@ const GerenciarCobrancas = () => {
   const handleDebitConfirmed = () => {
     fetchCharges();
     fetchDebitoCharges();
+    fetchOwnerCredits();
     setCalculatorOpen(false);
     setSelectedPropertyForCalc(null);
     setSelectedChargeIdsForCalc([]);
@@ -237,6 +243,36 @@ const GerenciarCobrancas = () => {
     const visible = groups.filter(g => !search ||
       [g.ownerName, g.name, ...g.charges.map(c => c.title)].some(v => v.toLocaleLowerCase('pt-BR').includes(search)));
     setPropertyGroups(visible.sort((a, b) => b.overdueCount - a.overdueCount || b.openCount - a.openCount));
+  };
+
+  /** Equipe usa o saldo credor do proprietário em todas as cobranças em aberto dele. */
+  const abaterSaldo = async () => {
+    if (!abaterDe) return;
+    setAbatendo(true);
+    try {
+      const r = await aplicarSaldoCredor({ proprietarioId: abaterDe.owner_id });
+      toast({
+        title: r.aplicado_cents > 0 ? "Saldo credor abatido" : "Nada para abater",
+        description: r.aplicado_cents > 0
+          ? `${formatarBRL(r.aplicado_cents)} em ${r.cobrancas.length} cobrança(s)${r.quitadas > 0 ? `, ${r.quitadas} quitada(s)` : ""}. ${r.saldo_restante_cents > 0 ? `Restam ${formatarBRL(r.saldo_restante_cents)} de saldo.` : "O saldo acabou."} O proprietário foi avisado no portal.`
+          : `${abaterDe.owner_name} não tem cobrança em aberto com valor a pagar.`,
+      });
+      setAbaterDe(null);
+      fetchCharges();
+      fetchDebitoCharges();
+      fetchOwnerCredits();
+      queryClient.invalidateQueries({ queryKey: ["reserve-debits-list"] });
+      queryClient.invalidateQueries({ queryKey: ["reserve-retentions-by-owner"] });
+      queryClient.invalidateQueries({ queryKey: ["reserve-retentions"] });
+    } catch (e) {
+      toast({
+        title: "Não foi possível abater o saldo",
+        description: e instanceof Error ? e.message : "Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setAbatendo(false);
+    }
   };
 
   const handleEdit = (charge: Charge) => {
@@ -361,13 +397,18 @@ const GerenciarCobrancas = () => {
           titulo="Saldo credor disponível"
           tom="success"
           selos={<SeloContagem tom="success">{ownerCredits.length}</SeloContagem>}
-          subcabecalho={<p className="text-xs text-muted-foreground">Valores a abater em cobranças futuras dos proprietários.</p>}
+          subcabecalho={<p className="text-xs text-muted-foreground">Entra sozinho no débito em reserva. O proprietário também pode usar pelo portal.</p>}
         >
           <div className="space-y-1.5">
             {ownerCredits.map((oc) => (
               <div key={oc.owner_id} className="flex items-center justify-between gap-3 px-1 text-sm">
                 <span className="truncate text-foreground">{oc.owner_name}</span>
-                <span className="shrink-0 font-semibold tabular-nums text-success">{formatarBRL(oc.total_cents)}</span>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="font-semibold tabular-nums text-success">{formatarBRL(oc.total_cents)}</span>
+                  <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setAbaterDe(oc)}>
+                    Abater
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
@@ -600,6 +641,16 @@ const GerenciarCobrancas = () => {
         variant="destructive"
         onConfirm={handleDeleteSelected}
         loading={deleting}
+      />
+
+      <ConfirmationDialog
+        open={!!abaterDe}
+        onOpenChange={(v) => !v && setAbaterDe(null)}
+        title="Abater o saldo credor?"
+        description={abaterDe ? `${formatarBRL(abaterDe.total_cents)} de ${abaterDe.owner_name} serão usados nas cobranças em aberto dele, do vencimento mais antigo para o mais novo. Cobrança coberta por inteiro fica paga. O proprietário é avisado no portal.` : ""}
+        confirmLabel="Abater"
+        onConfirm={abaterSaldo}
+        loading={abatendo}
       />
 
       <DebitoReservaCalculator

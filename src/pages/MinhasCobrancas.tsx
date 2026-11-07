@@ -311,7 +311,7 @@ const MinhasCobrancas = () => {
         />
       }
     >
-      <OwnerCreditBanner ownerId={user?.id} />
+      <OwnerCreditBanner ownerId={user?.id} onSaldoUsado={fetchCharges} />
 
       {/* Pagamento agrupado: só aparece com cobranças selecionadas */}
       {selectedCharges.length > 0 && (

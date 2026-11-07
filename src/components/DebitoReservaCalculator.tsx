@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -12,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Calculator, DollarSign, Copy, Check, Send, CalendarIcon, Loader2, Plus, Trash2, Zap, Clock, FileText } from "lucide-react";
+import { Calculator, DollarSign, Copy, Check, Send, CalendarIcon, Loader2, Plus, Trash2, Zap, Clock, FileText, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,6 +23,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { aplicarSaldoCredor, buscarSaldoCredor } from "@/lib/saldoCredor";
 
 interface DebitoReservaCalculatorProps {
   open: boolean;
@@ -66,6 +68,7 @@ export const DebitoReservaCalculator = ({
   onDebitConfirmed,
 }: DebitoReservaCalculatorProps) => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [mode, setMode] = useState<"schedule" | "retro" | "manual">("schedule");
   const [reservations, setReservations] = useState<ReservationInput[]>([newReservation()]);
   const [retroReservations, setRetroReservations] = useState<Array<{ id: string; date: Date | undefined; ownerValue: string; retained: string }>>([
@@ -80,8 +83,40 @@ export const DebitoReservaCalculator = ({
   const [isConfirming, setIsConfirming] = useState(false);
 
 
+  const idsToProcess = chargeIds || (chargeId ? [chargeId] : []);
+  const hasCharges = idsToProcess.length > 0;
+
+  // Saldo credor do proprietário: entra na conta antes do débito, não acumula.
+  const { data: saldoCredorCents = 0 } = useQuery({
+    queryKey: ["saldo-credor-calculadora", idsToProcess[0]],
+    enabled: open && hasCharges,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("charges").select("owner_id").eq("id", idsToProcess[0]).maybeSingle();
+      if (error) throw error;
+      return data?.owner_id ? buscarSaldoCredor(data.owner_id) : 0;
+    },
+  });
+  const abatimentoCents = Math.min(saldoCredorCents, totalDebtCents);
+
+  /**
+   * Abate o saldo credor nas cobranças antes de qualquer débito. Devolve as
+   * cobranças que ainda têm valor a pagar (as quitadas pelo saldo saem do débito).
+   */
+  const abaterSaldoAntes = async (): Promise<string[]> => {
+    if (saldoCredorCents <= 0) return idsToProcess;
+    const resultado = await aplicarSaldoCredor({ cobrancas: idsToProcess });
+    const quitadas = new Set(resultado.cobrancas.filter((c) => c.quitada).map((c) => c.id));
+    return idsToProcess.filter((id) => !quitadas.has(id));
+  };
+
+  const atualizarListas = () => {
+    queryClient.invalidateQueries({ queryKey: ["saldo-credor-calculadora"] });
+    queryClient.invalidateQueries({ queryKey: ["reserve-retentions-by-owner"] });
+    queryClient.invalidateQueries({ queryKey: ["owner-credits"] });
+  };
+
   const baseCommissionNum = parseValue(baseCommission);
-  const totalDebt = totalDebtCents / 100;
+  const totalDebt = (totalDebtCents - abatimentoCents) / 100;
 
   // Sum of gross reservation values across all reservations
   const reservationData = reservations.map((r) => {
@@ -128,11 +163,10 @@ export const DebitoReservaCalculator = ({
     }
   };
 
-  const idsToProcess = chargeIds || (chargeId ? [chargeId] : []);
-  const hasCharges = idsToProcess.length > 0;
   const allReservationsValid = perReservation.every((r) => r.ownerNum > 0 && r.date);
+  const saldoQuitaTudo = abatimentoCents > 0 && totalDebtCents - abatimentoCents <= 0;
   const canConfirm =
-    hasCharges && baseCommissionNum > 0 && allReservationsValid && perReservation.length > 0;
+    hasCharges && (saldoQuitaTudo || (baseCommissionNum > 0 && allReservationsValid && perReservation.length > 0));
 
   const handleConfirmDebit = async () => {
     if (!canConfirm) {
@@ -142,6 +176,14 @@ export const DebitoReservaCalculator = ({
 
     setIsConfirming(true);
     try {
+      const idsComDivida = await abaterSaldoAntes();
+      if (idsComDivida.length === 0) {
+        toast({ title: "Saldo credor quitou tudo", description: "Não sobrou nada para debitar em reserva." });
+        atualizarListas();
+        onDebitConfirmed?.();
+        onOpenChange(false);
+        return;
+      }
       const reservationsPayload = perReservation.map((r) => ({
         date: format(r.date!, "yyyy-MM-dd"),
         owner_value_cents: Math.round(r.ownerNum * 100),
@@ -151,7 +193,7 @@ export const DebitoReservaCalculator = ({
 
       const { error } = await supabase.functions.invoke("debit-reserve", {
         body: {
-          chargeIds: idsToProcess,
+          chargeIds: idsComDivida,
           reserveDate: reservationsPayload[0].date, // primary check-in for backward compat
           ownerValueCents: Math.round(totalOwner * 100),
           baseCommissionPercent: baseCommissionNum,
@@ -167,8 +209,9 @@ export const DebitoReservaCalculator = ({
 
       toast({
         title: "Débito confirmado!",
-        description: `${idsToProcess.length} cobrança(s) em ${reservationsPayload.length} reserva(s).`,
+        description: `${idsComDivida.length} cobrança(s) em ${reservationsPayload.length} reserva(s)${abatimentoCents > 0 ? `, com ${formatCurrency(abatimentoCents / 100)} de saldo credor abatido` : ""}.`,
       });
+      atualizarListas();
       onDebitConfirmed?.();
       onOpenChange(false);
       setReservations([newReservation()]);
@@ -208,6 +251,7 @@ export const DebitoReservaCalculator = ({
     }
     setIsConfirming(true);
     try {
+      await abaterSaldoAntes();
       const payload = {
         chargeIds: idsToProcess,
         reservations: retroRows.map((r) => ({
@@ -224,6 +268,7 @@ export const DebitoReservaCalculator = ({
         title: "Retenção aplicada nas cobranças",
         description: `${formatCurrency(applied / 100)} descontados das cobranças em aberto${surplus > 0 ? `. Sobra de ${formatCurrency(surplus / 100)} ficou como saldo credor.` : "."}`,
       });
+      atualizarListas();
       onDebitConfirmed?.();
       onOpenChange(false);
       setRetroReservations([{ id: crypto.randomUUID(), date: new Date(), ownerValue: "", retained: "" }]);
@@ -254,6 +299,7 @@ export const DebitoReservaCalculator = ({
     }
     setIsConfirming(true);
     try {
+      await abaterSaldoAntes();
       const { data: result, error } = await supabase.functions.invoke("credit-manual", {
         body: {
           chargeIds: idsToProcess,
@@ -270,6 +316,7 @@ export const DebitoReservaCalculator = ({
         title: "Crédito registrado",
         description: `${formatCurrency(applied / 100)} aplicados nas cobranças em aberto${surplus > 0 ? `. Sobra de ${formatCurrency(surplus / 100)} ficou como saldo credor.` : "."}`,
       });
+      atualizarListas();
       onDebitConfirmed?.();
       onOpenChange(false);
       setManualReason("");
@@ -319,8 +366,16 @@ export const DebitoReservaCalculator = ({
             <CardContent className="pt-4 pb-4 text-center">
               <p className="text-sm text-muted-foreground">Dívida Total a Cobrir</p>
               <p className="text-2xl font-bold text-destructive">{formatCurrency(totalDebt)}</p>
+              {abatimentoCents > 0 && <LinhaSaldoCredor abatimentoCents={abatimentoCents} brutoCents={totalDebtCents} />}
             </CardContent>
           </Card>
+
+          {saldoQuitaTudo && hasCharges && (
+            <Button onClick={handleConfirmDebit} disabled={isConfirming} className="w-full" size="lg">
+              {isConfirming ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wallet className="mr-2 h-4 w-4" />}
+              Quitar com o saldo credor
+            </Button>
+          )}
 
 
           <div className="space-y-2">
@@ -506,6 +561,7 @@ export const DebitoReservaCalculator = ({
               <CardContent className="pt-4 pb-4 text-center">
                 <p className="text-sm text-muted-foreground">Dívida Total das Cobranças</p>
                 <p className="text-2xl font-bold text-destructive">{formatCurrency(totalDebt)}</p>
+                {abatimentoCents > 0 && <LinhaSaldoCredor abatimentoCents={abatimentoCents} brutoCents={totalDebtCents} />}
               </CardContent>
             </Card>
 
@@ -687,6 +743,7 @@ export const DebitoReservaCalculator = ({
               <CardContent className="pt-4 pb-4 text-center">
                 <p className="text-sm text-muted-foreground">Dívida Total das Cobranças</p>
                 <p className="text-2xl font-bold text-destructive">{formatCurrency(totalDebt)}</p>
+                {abatimentoCents > 0 && <LinhaSaldoCredor abatimentoCents={abatimentoCents} brutoCents={totalDebtCents} />}
               </CardContent>
             </Card>
 
@@ -810,3 +867,14 @@ export const DebitoReservaCalculator = ({
     </Dialog>
   );
 };
+
+/** Mostra que o saldo credor já entrou na conta da dívida. */
+function LinhaSaldoCredor({ abatimentoCents, brutoCents }: { abatimentoCents: number; brutoCents: number }) {
+  return (
+    <p className="mt-2 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+      <Wallet className="h-3.5 w-3.5 text-success" aria-hidden="true" />
+      {formatCurrency(brutoCents / 100)} das cobranças −{" "}
+      <span className="font-medium text-success">{formatCurrency(abatimentoCents / 100)} de saldo credor</span>
+    </p>
+  );
+}
