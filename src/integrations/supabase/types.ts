@@ -4988,6 +4988,10 @@ export type Database = {
       }
     }
     Functions: {
+      aplicar_saldo_credor: {
+        Args: { p_charge_ids?: string[]; p_owner_id?: string }
+        Returns: Json
+      }
       can_view_ticket_type: {
         Args: {
           _ticket_type: Database["public"]["Enums"]["ticket_type"]
