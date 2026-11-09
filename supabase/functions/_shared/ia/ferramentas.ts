@@ -945,8 +945,92 @@ const vistoriasDoImovel: FerramentaIA = {
   },
 };
 
+// ----------------------------------------------------------------- fichas
+
+// A ficha .md do imóvel (property_files) é a fonte de endereço completo com
+// apartamento e bloco, Wi-Fi, entrada, garagem, camas, regras e problemas
+// conhecidos. RLS: equipe lê todas; proprietário lê as dos imóveis dele.
+
+const fichaDoImovel: FerramentaIA = {
+  nome: "ficha_do_imovel",
+  descricao:
+    "Ficha completa do imóvel (Markdown): endereço com número do apartamento, bloco e andar, Wi-Fi e senhas, método de entrada e fechadura, portaria, garagem e vagas, check-in e check-out, quartos e camas, cozinha, lavanderia, regras da casa, condomínio, roupa de cama, problemas conhecidos e orientações extras. Use sempre que perguntarem qualquer dado físico ou operacional de um imóvel.",
+  schema: {
+    type: "object",
+    properties: {
+      property_id: { type: "string", description: "Id do imóvel." },
+    },
+    required: ["property_id"],
+    additionalProperties: false,
+  },
+  nivel: "leitura",
+  papeis: TODOS,
+  imovelParam: "property_id",
+  async executar(ctx, entrada) {
+    const imovel = await exigirAcessoImovel(ctx, entrada.property_id);
+    const { data, error } = await ctx.userClient
+      .from("property_files")
+      .select("content_md, version, updated_at")
+      .eq("property_id", imovel.id)
+      .maybeSingle();
+    falhou(error, "a ficha do imóvel");
+    if (!data?.content_md?.trim()) {
+      return { imovel: imovel.name, ficha: null, aviso: "Este imóvel ainda não tem ficha cadastrada no portal." };
+    }
+    return {
+      imovel: imovel.name,
+      versao: data.version,
+      atualizada_em: String(data.updated_at).slice(0, 10),
+      ficha: data.content_md.slice(0, 14000),
+    };
+  },
+};
+
+const semAcento = (s: string) =>
+  s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+const buscarNasFichas: FerramentaIA = {
+  nome: "buscar_nas_fichas",
+  descricao:
+    "Procura um termo em todas as fichas dos imóveis e devolve as linhas onde ele aparece, por imóvel (até 4 linhas por imóvel). Use para perguntas que cruzam imóveis: \"qual imóvel aceita pet\", \"quais têm fechadura eletrônica\", \"de quem é o AP 105\", \"onde fica a caixa de disjuntores\". Para um imóvel só, prefira ficha_do_imovel.",
+  schema: {
+    type: "object",
+    properties: {
+      termo: { type: "string", description: "Palavra ou trecho a procurar (sem diferenciar acento ou maiúscula)." },
+    },
+    required: ["termo"],
+    additionalProperties: false,
+  },
+  nivel: "leitura",
+  papeis: PAPEIS_EQUIPE,
+  async executar(ctx, entrada) {
+    const termo = textoCurto(entrada.termo, "termo", 80);
+    if (!termo || termo.length < 2) throw new ErroFerramenta("Informe um termo com pelo menos 2 letras.");
+    const alvo = semAcento(termo);
+    const { data, error } = await ctx.userClient
+      .from("property_files")
+      .select("property_id, content_md, property:properties(name, archived_at)");
+    falhou(error, "as fichas");
+    const achados: Array<{ property_id: unknown; imovel: string | null; linhas: string[] }> = [];
+    for (const f of (data ?? []) as Linha[]) {
+      const prop = (Array.isArray(f.property) ? f.property[0] : f.property) as { name?: string; archived_at?: string } | null;
+      if (prop?.archived_at) continue;
+      const linhas = String(f.content_md ?? "")
+        .split("\n")
+        .filter((l) => semAcento(l).includes(alvo))
+        .slice(0, 4)
+        .map((l) => l.replace(/\s{2,}/g, " ").trim().slice(0, 300));
+      if (linhas.length > 0) achados.push({ property_id: f.property_id, imovel: prop?.name ?? null, linhas });
+    }
+    achados.sort((a, b) => String(a.imovel).localeCompare(String(b.imovel)));
+    return { termo, imoveis_com_o_termo: achados.length, resultados: achados.slice(0, 40) };
+  },
+};
+
 export const CATALOGO: FerramentaIA[] = [
   listarImoveis,
+  fichaDoImovel,
+  buscarNasFichas,
   reservasDoImovel,
   disponibilidade,
   resultadosDoImovel,

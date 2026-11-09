@@ -6,6 +6,8 @@
 
 export const FERRAMENTA_ROTULO: Record<string, string> = {
   listar_imoveis: "Imóveis",
+  ficha_do_imovel: "Ficha do imóvel",
+  buscar_nas_fichas: "Fichas",
   reservas_do_imovel: "Reservas",
   disponibilidade: "Disponibilidade",
   resultados_do_imovel: "Resultados",
