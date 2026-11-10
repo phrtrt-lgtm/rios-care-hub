@@ -6,6 +6,7 @@ import type { AcaoPendente } from "@/lib/iaMeta";
 import { rotuloFerramenta } from "@/lib/iaMeta";
 import type { DecisaoAcao } from "@/hooks/useAssistenteIA";
 import { PixBloqueio } from "@/components/bloqueios/PixBloqueio";
+import { MODO_LIMPEZA, modoLimpezaDe } from "@/lib/bloqueioLimpeza";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -25,8 +26,11 @@ const ESTADO: Record<DecisaoAcao, { rotulo: string; Icone: LucideIcon; borda: st
   erro: { rotulo: "Falhou", Icone: AlertTriangle, borda: "border-destructive/40", texto: "text-destructive" },
 };
 
-const valorLegivel = (v: unknown): string => {
+const valorLegivel = (v: unknown, campo?: string): string => {
   if (v === null || v === undefined || v === "") return "—";
+  if (typeof v === "boolean") return v ? "sim" : "não";
+  // Opção de limpeza do bloqueio: o nome da opção, não o código.
+  if (campo === "limpeza" && typeof v === "string") return MODO_LIMPEZA[modoLimpezaDe(v)].titulo;
   if (typeof v === "object") return JSON.stringify(v);
   return String(v);
 };
@@ -40,7 +44,12 @@ export function CartaoAcao({ acao, decisao, resultado, ocupado, onConfirmar, onC
   const campos = Object.entries(acao.entrada ?? {})
     .filter(([k]) => k !== "id" && !k.endsWith("_id"))
     .slice(0, 8);
-  const pedidoPix = acao.ferramenta === "pedir_bloqueio_de_datas" && typeof resultado?.pedido_id === "string" ? resultado.pedido_id : null;
+  // Bloqueio sem PIX ("entrega limpo" ou "sem limpeza"): o resultado já diz se bloqueou.
+  const modoBloqueio = acao.ferramenta === "pedir_bloqueio_de_datas" ? modoLimpezaDe(resultado?.limpeza ?? (acao.entrada ?? {}).limpeza) : "pix";
+  const semPix = modoBloqueio !== "pix";
+  const semPixBloqueado = typeof resultado?.status === "string" && resultado.status.startsWith("bloqueado");
+  const pedidoPix =
+    acao.ferramenta === "pedir_bloqueio_de_datas" && !semPix && typeof resultado?.pedido_id === "string" ? resultado.pedido_id : null;
   const link = typeof resultado?.link === "string" && resultado.link.startsWith("/") ? resultado.link : null;
   const estado = decisao ? ESTADO[decisao] : null;
 
@@ -77,7 +86,7 @@ export function CartaoAcao({ acao, decisao, resultado, ocupado, onConfirmar, onC
             {campos.map(([k, v]) => (
               <div key={k} className="contents">
                 <dt className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{k.replace(/_/g, " ")}</dt>
-                <dd className="truncate text-xs text-foreground">{valorLegivel(v)}</dd>
+                <dd className="truncate text-xs text-foreground">{valorLegivel(v, k)}</dd>
               </div>
             ))}
           </dl>
@@ -90,6 +99,20 @@ export function CartaoAcao({ acao, decisao, resultado, ocupado, onConfirmar, onC
               {estado.rotulo}
             </p>
             {decisao === "confirmada" && pedidoPix && <PixBloqueio pedidoId={pedidoPix} />}
+            {decisao === "confirmada" && semPix && resultado && (
+              <p className={cn("mt-2 flex items-start gap-1.5 text-xs font-medium", semPixBloqueado ? "text-success" : "text-warning")}>
+                {semPixBloqueado ? (
+                  <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                ) : (
+                  <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                )}
+                {!semPixBloqueado
+                  ? "Pedido registrado. A equipe RIOS conclui o bloqueio no calendário."
+                  : modoBloqueio === "sem_limpeza"
+                    ? "Datas bloqueadas no Airbnb e no Booking, sem taxa. O imóvel não é limpo antes da entrada; a limpeza é feita na saída."
+                    : "Datas bloqueadas no Airbnb e no Booking, sem taxa agora. A RIOS limpa antes da entrada; a taxa de limpeza só é cobrada se o imóvel não for devolvido adequado."}
+              </p>
+            )}
             {decisao === "confirmada" && link && (
               <Link to={link} className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
                 Abrir no portal <ArrowUpRight className="h-3 w-3" aria-hidden="true" />

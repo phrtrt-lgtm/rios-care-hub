@@ -24,7 +24,7 @@ export const FERRAMENTA_ROTULO: Record<string, string> = {
   bloqueios_de_datas: "Bloqueios de datas",
   hostex_bloquear_datas: "Bloquear datas na Hostex",
   hostex_liberar_datas: "Liberar datas na Hostex",
-  pedir_bloqueio_de_datas: "Bloquear datas para uso pessoal (PIX)",
+  pedir_bloqueio_de_datas: "Bloquear datas para uso pessoal",
   liberar_bloqueio_de_datas: "Liberar bloqueio de datas",
   abrir_chamado: "Abrir chamado",
   responder_chamado: "Responder chamado",

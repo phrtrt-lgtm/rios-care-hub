@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { descreverErroDaFunction } from "@/lib/erroFunction";
 import { formatarBRL } from "@/lib/cobrancaMeta";
+import { modoLimpezaDe } from "@/lib/bloqueioLimpeza";
 
 /** Coluna DATE lida como dia local (new Date("aaaa-mm-dd") leria meia-noite UTC e voltaria um dia). */
 const lerDiaLocal = (iso: string) => {
@@ -27,6 +28,8 @@ interface Bloqueio {
   status: "pending" | "aguardando_pagamento" | "pago_pendente_hostex" | "processed";
   valor_cents: number | null;
   pago_em: string | null;
+  /** Modo de limpeza do uso pessoal: pix, entrega_limpo ou sem_limpeza (src/lib/bloqueioLimpeza.ts). */
+  limpeza: string | null;
 }
 
 const STATUS: Record<Bloqueio["status"], string> = {
@@ -51,6 +54,8 @@ const hojeIso = () => format(new Date(), "yyyy-MM-dd");
  * é aqui que se libera (pedido do gestor em 2026-11-01); antes sumia sem bloqueio.
  * Bloqueio de manutenção (feito pela equipe, reserva "MANUTENÇÃO · tipo")
  * aparece só para informar: não tem botão, só a RIOS libera.
+ * Bloqueios sem PIX (desde 2026-11-10: "entrega limpo" e "sem limpeza") não
+ * têm taxa paga e trazem uma linha com o combinado; liberam igual aos outros.
  */
 export function MeusBloqueios({ propertyId }: { propertyId: string }) {
   const qc = useQueryClient();
@@ -64,7 +69,7 @@ export function MeusBloqueios({ propertyId }: { propertyId: string }) {
     queryFn: async (): Promise<Bloqueio[]> => {
       const { data, error } = await db
         .from("date_block_requests")
-        .select("id, start_date, end_date, reason, status, valor_cents, pago_em")
+        .select("id, start_date, end_date, reason, status, valor_cents, pago_em, limpeza")
         .eq("property_id", propertyId)
         .in("status", ["pending", "aguardando_pagamento", "pago_pendente_hostex", "processed"])
         .gte("end_date", hojeIso())
@@ -121,6 +126,7 @@ export function MeusBloqueios({ propertyId }: { propertyId: string }) {
           const noites = differenceInCalendarDays(saida, entrada);
           const feito = b.status === "processed";
           const manutencao = b.reason !== "family_visit";
+          const modo = modoLimpezaDe(b.limpeza);
           const podeMexer = !manutencao && (feito || b.status === "pending" || b.status === "aguardando_pagamento");
           const Icone = b.reason === "family_visit" ? Users : Wrench;
           return (
@@ -133,7 +139,16 @@ export function MeusBloqueios({ propertyId }: { propertyId: string }) {
                 <span className="text-muted-foreground">{manutencao ? (STATUS_MANUTENCAO[b.status] ?? STATUS[b.status]) : STATUS[b.status]}</span>
               </div>
               {manutencao && <p className="mt-0.5 text-muted-foreground">Manutenção · a RIOS libera quando o serviço terminar.</p>}
-              {typeof b.valor_cents === "number" && (
+              {!manutencao && modo === "sem_limpeza" && (
+                <p className="mt-0.5 text-muted-foreground">Sem taxa · sem limpeza antes da entrada, limpeza só na saída.</p>
+              )}
+              {!manutencao && modo === "entrega_limpo" && (
+                <p className="mt-0.5 text-muted-foreground">
+                  Sem taxa agora · a RIOS limpa antes e você entrega limpo. A taxa de limpeza
+                  {typeof b.valor_cents === "number" ? ` (${formatarBRL(b.valor_cents)})` : ""} só é cobrada se a RIOS avaliar que o imóvel não ficou adequado.
+                </p>
+              )}
+              {modo === "pix" && typeof b.valor_cents === "number" && (
                 <p className="mt-0.5 text-muted-foreground">
                   Taxa de limpeza {formatarBRL(b.valor_cents)}
                   {b.pago_em ? " · paga" : ""}

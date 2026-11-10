@@ -583,14 +583,29 @@ const registrarTarefaRua: FerramentaIA = {
 };
 
 // ----------------------------------------------- bloqueio do proprietário
-// Fluxo de CLAUDE.md §3.21: o proprietário não bloqueia direto. O pedido gera
-// um PIX da taxa de limpeza (create-bloqueio-pix) e o webhook bloqueia na
-// Hostex quando o pagamento entra. Liberar passa por liberar-bloqueio.
+// Fluxo de CLAUDE.md §3.21: o proprietário não bloqueia direto. São três modos
+// de limpeza (create-bloqueio-pix, campo `limpeza`):
+//   pix            paga a taxa de limpeza por PIX; o webhook bloqueia na Hostex
+//                  quando o pagamento entra;
+//   entrega_limpo  (desde 2026-11-10) não paga agora: a RIOS limpa antes, ele
+//                  devolve limpo e paga a taxa se a RIOS julgar o imóvel
+//                  inadequado;
+//   sem_limpeza    (desde 2026-11-10) não paga: recebe o imóvel sem limpeza
+//                  antes da entrada; limpeza só na saída.
+// Nos dois sem PIX a reserva nasce na hora, cada um no seu canal da Hostex.
+// Liberar passa por liberar-bloqueio.
+
+type ModoLimpeza = "pix" | "entrega_limpo" | "sem_limpeza";
+const modoLimpeza = (v: unknown): ModoLimpeza => {
+  if (v === undefined || v === null || v === "" || v === "pix") return "pix";
+  if (v === "entrega_limpo" || v === "sem_limpeza") return v;
+  throw new ErroFerramenta("Opção de limpeza inválida: use pix, entrega_limpo ou sem_limpeza.");
+};
 
 const pedirBloqueioDeDatas: FerramentaIA = {
   nome: "pedir_bloqueio_de_datas",
   descricao:
-    "Pede o bloqueio de datas de um imóvel para uso pessoal do proprietário, pelo mesmo caminho do botão 'Bloqueio' do painel: gera um PIX no valor da taxa de limpeza do imóvel e, quando o pagamento entra, as noites são bloqueadas na Hostex sozinhas (Airbnb e Booking). `entrada` é o dia de chegada e `saida` o dia de saída (a última noite é a véspera); de hoje em diante, 1 a 30 noites, e as noites precisam estar livres (a function confere reservas, outros pedidos e o calendário ao vivo da Hostex). Antes de pedir, confira disponibilidade e repita entrada e saída para a pessoa. Só executa depois da confirmação. O cartão na tela mostra o QR Code e o botão de copiar o código: na resposta diga só o valor, o prazo de 30 minutos e que o QR está no cartão; não repita o código. Pago, a Hostex ganha uma reserva direta em nome de 'Proprietário', que a equipe de limpeza vê no app. Não existe bloqueio por manutenção pelo proprietário: obra ou reparo é com a RIOS (abrir_chamado).",
+    "Pede o bloqueio de datas de um imóvel para uso pessoal do proprietário, pelo mesmo caminho do botão 'Bloqueio' do painel. Há três opções de limpeza (`limpeza`) e quem escolhe é o proprietário: se ele não disse qual quer, apresente as três e pergunte antes de chamar. 'pix' (padrão): gera um PIX no valor da taxa de limpeza do imóvel e, quando o pagamento entra, as noites são bloqueadas na Hostex sozinhas (Airbnb e Booking), como reserva direta em nome de 'Proprietário'; o cartão na tela mostra o QR Code e o botão de copiar o código: na resposta diga só o valor, o prazo de 30 minutos e que o QR está no cartão; não repita o código. 'entrega_limpo': ele não paga a taxa agora; a RIOS limpa o imóvel antes da entrada dele e ele se compromete a devolver o imóvel limpo, pronto para os próximos hóspedes; se a RIOS avaliar que o imóvel não voltou adequado, ele paga a taxa de limpeza (a equipe lança a cobrança depois); sem PIX, as noites são bloqueadas na hora, como reserva direta no canal 'PROPRIETÁRIO - PEDIU PRA LIMPAR E DISSE QUE IA ENTREGAR LIMPO(NÃO PAGOU TAXA)'. 'sem_limpeza': ele não paga a taxa e concorda em receber o imóvel no estado em que estiver, sem limpeza antes da chegada dele (pode ter acabado de sair um hóspede); a limpeza é feita só depois da saída dele; nada é cobrado e não há PIX: as noites são bloqueadas na hora, como reserva direta no canal 'PROPRIETÁRIO - NÃO PEDIU LIMPEZA/LIMPAR NA SAÍDA'. O canal avisa a equipe de limpeza do que foi combinado. Só use 'entrega_limpo' ou 'sem_limpeza' quando a pessoa disser com clareza que aceita as condições daquela opção; confirmar o cartão é o aceite dela. Nas três: `entrada` é o dia de chegada e `saida` o dia de saída (a última noite é a véspera); de hoje em diante, 1 a 30 noites, e as noites precisam estar livres (a function confere reservas, outros pedidos e o calendário ao vivo da Hostex). Antes de pedir, confira disponibilidade e repita entrada e saída para a pessoa. Só executa depois da confirmação. Não existe bloqueio por manutenção pelo proprietário: obra ou reparo é com a RIOS (abrir_chamado).",
   schema: {
     type: "object",
     properties: {
@@ -598,6 +613,12 @@ const pedirBloqueioDeDatas: FerramentaIA = {
       entrada: { type: "string", description: "Dia de chegada, AAAA-MM-DD (hoje ou depois)." },
       saida: { type: "string", description: "Dia de saída, AAAA-MM-DD (a última noite bloqueada é a véspera)." },
       observacao: { type: "string", description: "Observação curta para a equipe (opcional)." },
+      limpeza: {
+        type: "string",
+        enum: ["pix", "entrega_limpo", "sem_limpeza"],
+        description:
+          "Opção de limpeza escolhida pelo proprietário. 'pix' (padrão) = paga a taxa de limpeza por PIX. 'entrega_limpo' = não paga agora: a RIOS limpa antes da entrada, ele devolve o imóvel limpo e paga a taxa se a RIOS julgar o imóvel inadequado. 'sem_limpeza' = não paga e recebe o imóvel sem limpeza antes da entrada; limpeza só na saída. As duas últimas bloqueiam na hora, sem PIX.",
+      },
     },
     required: ["property_id", "entrada", "saida"],
     additionalProperties: false,
@@ -620,6 +641,12 @@ const pedirBloqueioDeDatas: FerramentaIA = {
     }
     const de = typeof entrada.entrada === "string" ? dataBR(entrada.entrada) : "?";
     const ate = typeof entrada.saida === "string" ? dataBR(entrada.saida) : "?";
+    if (entrada.limpeza === "sem_limpeza") {
+      return `Bloquear o imóvel ${nome} para uso pessoal, entrada ${de} e saída ${ate}, SEM limpeza antes da entrada. Ao confirmar, você concorda em receber o imóvel no estado em que estiver, sem limpeza antes da sua chegada; a limpeza é feita só depois da sua saída. Não há taxa nem PIX, e as datas são bloqueadas na hora.`;
+    }
+    if (entrada.limpeza === "entrega_limpo") {
+      return `Bloquear o imóvel ${nome} para uso pessoal, entrada ${de} e saída ${ate}, com a RIOS limpando antes da entrada e sem taxa agora. Ao confirmar, você se compromete a devolver o imóvel limpo, pronto para os próximos hóspedes, e a pagar a taxa de limpeza${taxa} se a RIOS avaliar que ele não ficou adequado. Não há PIX, e as datas são bloqueadas na hora.`;
+    }
     return `Pedir bloqueio para uso pessoal do imóvel ${nome}, entrada ${de} e saída ${ate}. Gera um PIX da taxa de limpeza${taxa}; as datas só são bloqueadas depois do pagamento.`;
   },
   async executar(ctx, entrada) {
@@ -628,20 +655,51 @@ const pedirBloqueioDeDatas: FerramentaIA = {
     if (j.de < ctx.hoje) throw new ErroFerramenta("A entrada precisa ser hoje ou depois.");
     if (j.dias < 1) throw new ErroFerramenta("A saída precisa ser depois da entrada.");
     if (j.dias > 30) throw new ErroFerramenta("No máximo 30 noites por pedido.");
+    const modo = modoLimpeza(entrada.limpeza);
     const r = await chamarFunction(ctx, "create-bloqueio-pix", {
       property_id: imovel.id,
       start_date: j.de,
       end_date: j.ate,
       notes: textoCurto(entrada.observacao, "observacao", 500) ?? null,
+      ...(modo !== "pix" ? { limpeza: modo } : {}),
     });
     const dados = (r.dados && typeof r.dados === "object" ? r.dados : {}) as Record<string, unknown>;
     if (!r.ok) throw new ErroFerramenta(String(dados.error ?? `Não consegui gerar o pedido (HTTP ${r.status}).`));
+    if (modo !== "pix") {
+      // Versão antiga da function no ar ignora `limpeza` e gera um PIX:
+      // retira o pedido e avisa, em vez de cobrar quem escolheu não pagar.
+      if (dados.limpeza !== modo) {
+        if (ehUuid(dados.id)) await chamarFunction(ctx, "liberar-bloqueio", { id: dados.id });
+        throw new ErroFerramenta("Essa opção de bloqueio sem PIX ainda não está disponível no portal. Nada foi bloqueado nem cobrado; tente de novo mais tarde ou fale com a equipe.");
+      }
+      const bloqueado = dados.status === "processed";
+      const compromisso = typeof dados.taxa_compromisso_cents === "number" ? brl(dados.taxa_compromisso_cents) : null;
+      return {
+        pedido_id: dados.id,
+        imovel: imovel.name,
+        entrada: j.de,
+        saida: j.ate,
+        noites: dados.noites ?? j.dias,
+        limpeza: modo,
+        combinado:
+          modo === "sem_limpeza"
+            ? "sem limpeza antes da entrada (o proprietário aceitou receber o imóvel como estiver); limpeza só na saída"
+            : `a RIOS limpa antes da entrada; o proprietário devolve o imóvel limpo para os próximos hóspedes e paga a taxa de limpeza${compromisso ? ` (${compromisso})` : ""} se a RIOS julgar o imóvel inadequado`,
+        cobrado_agora: "nada (sem PIX)",
+        status: bloqueado ? "bloqueado" : "pedido registrado; a equipe RIOS conclui o bloqueio no calendário",
+        ...(ctx.equipe ? { na_hostex: dados.nome_na_hostex ?? null, canal: dados.canal ?? null, reserva: dados.reserva ?? null, canal_generico: dados.canal_generico ?? false } : {}),
+        instrucao: bloqueado
+          ? `As noites já estão fechadas no Airbnb e no Booking (a Hostex replica em minutos). Diga que não há nada a pagar agora e relembre o combinado em uma frase${modo === "entrega_limpo" ? " (devolver limpo; a taxa só é cobrada se a RIOS avaliar que não ficou adequado)" : " (o imóvel não é limpo antes da entrada)"}. Para desfazer: liberar_bloqueio_de_datas.`
+          : "A Hostex não aceitou o bloqueio automático; o pedido ficou na fila da equipe RIOS, que conclui. Diga isso sem prometer horário.",
+      };
+    }
     return {
       pedido_id: dados.id,
       imovel: imovel.name,
       entrada: j.de,
       saida: j.ate,
       noites: dados.noites ?? j.dias,
+      limpeza: "pix",
       taxa_de_limpeza: brl(dados.valor_cents as number | null),
       pix_expira_em: dados.pix_expira_em,
       pix_copia_e_cola: dados.pix_qr_code,

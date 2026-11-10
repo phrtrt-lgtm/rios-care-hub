@@ -1,22 +1,41 @@
-// create-bloqueio-pix — bloqueio de datas para uso pessoal do proprietário,
-// pago com PIX (PLANO_IA_AGENTE.md §4, Fase 5).
+// create-bloqueio-pix — bloqueio de datas para uso pessoal do proprietário
+// (PLANO_IA_AGENTE.md §4, Fase 5). Três modos de limpeza (`limpeza` no corpo):
+//   - "pix" (padrão): paga a taxa de limpeza por PIX;
+//   - "entrega_limpo" (desde 2026-11-10, pedido do gestor): não paga agora. A
+//     RIOS limpa antes da entrada, ele devolve o imóvel limpo para os próximos
+//     hóspedes e se compromete a pagar a taxa de limpeza se a RIOS julgar o
+//     imóvel inadequado. Canal "PROPRIETÁRIO - PEDIU PRA LIMPAR E DISSE QUE IA
+//     ENTREGAR LIMPO(NÃO PAGOU TAXA)";
+//   - "sem_limpeza" (desde 2026-11-10, pedido do gestor): não paga nada,
+//     aceita receber o imóvel como estiver e a limpeza é feita só na saída.
+//     Canal "PROPRIETÁRIO - NÃO PEDIU LIMPEZA/LIMPAR NA SAÍDA".
+// Nos dois modos sem PIX a reserva direta nasce aqui mesmo, na hora.
 //
-// Corpo: { property_id, start_date (entrada), end_date (saída), notes? }
+// Corpo: { property_id, start_date (entrada), end_date (saída), notes?, limpeza? }
 // Faz, nesta ordem:
 //   1. confere acesso ao imóvel (dono/membro por has_property_access; equipe passa);
 //   2. valida as datas (de hoje em diante, 1 a 30 noites);
 //   3. confere que as noites estão livres: reservas aceitas no cache, pedidos
 //      de bloqueio abertos e o calendário ao vivo da Hostex;
-//   4. pega a taxa de limpeza: properties.taxa_limpeza_cents, senão o
-//      cleaning_fee do anúncio na Hostex (quando > 0; guardado no imóvel);
-//   5. grava o pedido como `aguardando_pagamento` e cria o PIX no Mercado
+//   4. modos sem PIX: grava o pedido como `pending` e cria a reserva direta na
+//      Hostex na hora → `processed`. Sem o canal próprio, usa o "PROPRIETÁRIO"
+//      comum (o aviso segue no nome do hóspede); sem reserva, fecha por
+//      disponibilidade; se nem isso der, o pedido fica `pending` na fila da
+//      equipe (/admin/bloqueios-datas) com o motivo em `erro_hostex`. Em
+//      "entrega_limpo", `valor_cents` guarda a taxa do imóvel (o valor do
+//      compromisso), sem pagamento;
+//   5. modo "pix": pega a taxa (properties.taxa_limpeza_cents, senão o
+//      cleaning_fee do anúncio na Hostex quando > 0; guardado no imóvel),
+//      grava o pedido como `aguardando_pagamento` e cria o PIX no Mercado
 //      Pago (external_reference "bloqueio:<id>", expira em 30 min).
-// Quem bloqueia na Hostex é o mercadopago-webhook, depois de conferir o valor:
-// cria uma reserva direta em nome de "Proprietário" (desde 2026-11-01), que a
-// equipe de limpeza vê no app; se não der, fecha por disponibilidade.
+// No caminho pago quem bloqueia na Hostex é o mercadopago-webhook, depois de
+// conferir o valor: cria uma reserva direta em nome de "Proprietário" (desde
+// 2026-11-01), que a equipe de limpeza vê no app; se não der, fecha por
+// disponibilidade.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.1";
 import { exigirPapel } from "../_shared/auth-guard.ts";
-import { hostexGet } from "../_shared/hostexReserva.ts";
+import { hostexGet, hostexPost } from "../_shared/hostexReserva.ts";
+import { CANAL_ESPERADO, type TipoInterno, chaveIdempotente, criarReservaInterna } from "../_shared/reservaInterna.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -41,6 +60,14 @@ const PIX_MINUTOS = 30;
 
 type Linha = Record<string, any>;
 
+type ModoLimpeza = "pix" | "entrega_limpo" | "sem_limpeza";
+const MODOS: ModoLimpeza[] = ["pix", "entrega_limpo", "sem_limpeza"];
+const TIPO_DA_RESERVA: Record<Exclude<ModoLimpeza, "pix">, TipoInterno> = {
+  entrega_limpo: "proprietario_entrega_limpo",
+  sem_limpeza: "proprietario_sem_limpeza",
+};
+const reais = (cents: number) => `R$ ${(cents / 100).toFixed(2).replace(".", ",")}`;
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Método não permitido." }, 405);
@@ -53,9 +80,12 @@ Deno.serve(async (req) => {
   const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const mpToken = Deno.env.get("MERCADOPAGO_ACCESS_TOKEN");
   const hostexKey = Deno.env.get("HOSTEX_API_KEY");
-  if (!mpToken) return json({ error: "Pagamento indisponível: Mercado Pago não configurado." }, 503);
 
   const corpo = (await req.json().catch(() => ({}))) as Linha;
+  const modoPedido = corpo.limpeza === undefined || corpo.limpeza === null ? "pix" : String(corpo.limpeza);
+  if (!MODOS.includes(modoPedido as ModoLimpeza)) return json({ error: "Opção de limpeza inválida." }, 400);
+  const modo = modoPedido as ModoLimpeza;
+  if (modo === "pix" && !mpToken) return json({ error: "Pagamento indisponível: Mercado Pago não configurado." }, 503);
   const propertyId = String(corpo.property_id ?? "");
   const inicio = String(corpo.start_date ?? "");
   const fim = String(corpo.end_date ?? "");
@@ -130,7 +160,115 @@ Deno.serve(async (req) => {
     }
   }
 
-  // 4. taxa de limpeza
+  const ownerId = equipe ? imovel.owner_id : autor.id;
+
+  // 4. modos sem PIX (entrega limpo / sem limpeza): a reserva nasce agora.
+  if (modo !== "pix") {
+    const agora = new Date().toISOString();
+    // Entrega limpo: a taxa do imóvel hoje é o valor do compromisso (pode não estar cadastrada).
+    const taxaCompromisso =
+      modo === "entrega_limpo" && typeof imovel.taxa_limpeza_cents === "number" && imovel.taxa_limpeza_cents > 0
+        ? Math.round(imovel.taxa_limpeza_cents)
+        : null;
+    const { data: pedidoSem, error: erroSem } = await supabase
+      .from("date_block_requests")
+      .insert({
+        property_id: propertyId,
+        owner_id: ownerId,
+        start_date: inicio,
+        end_date: fim,
+        reason: "family_visit",
+        notes,
+        status: "pending",
+        limpeza: modo,
+        limpeza_aceito_em: agora,
+        valor_cents: taxaCompromisso,
+        ...(equipe ? { criado_por: autor.id } : {}),
+      })
+      .select("id")
+      .single();
+    if (erroSem || !pedidoSem) {
+      console.error(`[create-bloqueio-pix] insert ${modo}:`, erroSem?.message);
+      return json({ error: "Não consegui registrar o pedido." }, 500);
+    }
+    const idPedido = String(pedidoSem.id);
+    const tipo = TIPO_DA_RESERVA[modo];
+    // valor_cents = o que foi cobrado agora (nada); taxa_compromisso_cents = o que ele paga se o imóvel não voltar adequado.
+    const base = { id: idPedido, imovel: imovel.name, noites, limpeza: modo, valor_cents: 0, taxa_compromisso_cents: taxaCompromisso };
+    const instrucao =
+      modo === "sem_limpeza"
+        ? "USO DO PROPRIETÁRIO SEM LIMPEZA ANTES DA ENTRADA: ele não pagou a taxa de limpeza e aceitou receber o imóvel como estiver. LIMPAR NA SAÍDA."
+        : `USO DO PROPRIETÁRIO, LIMPAR ANTES DA ENTRADA: ele pediu a limpeza, NÃO PAGOU A TAXA e disse que entrega o imóvel limpo para os próximos hóspedes. CONFERIR NA SAÍDA: se a RIOS julgar o imóvel inadequado, ele se comprometeu a pagar a taxa de limpeza${taxaCompromisso ? ` (${reais(taxaCompromisso)})` : ""}.`;
+    const remarks = [
+      instrucao,
+      `Pedido pelo portal RIOS (${idPedido})${equipe ? ", registrado pela equipe" : ""}.`,
+      notes ? `Obs.: ${notes.slice(0, 400)}` : "",
+    ].filter(Boolean).join(" ");
+
+    let problema: string | null = null;
+    if (!hostexKey) problema = "HOSTEX_API_KEY não configurada";
+    else if (!idHostex || !Number.isInteger(idHostex)) problema = "imóvel sem propriedade vinculada na Hostex";
+    if (!problema && hostexKey && idHostex) {
+      try {
+        const r = await criarReservaInterna({
+          apiKey: hostexKey,
+          idHostex,
+          checkIn: inicio,
+          checkOut: fim,
+          tipo,
+          remarks,
+          chave: chaveIdempotente(idPedido),
+        });
+        await supabase.from("date_block_requests").update({
+          status: "processed",
+          processed_at: agora,
+          hostex_request_id: r.request_id,
+          hostex_reservation_code: r.reservation_code,
+          hostex_guest_name: r.guest_name,
+          hostex_bloqueado_em: agora,
+          erro_hostex: r.canal_generico
+            ? `Falta o canal "${CANAL_ESPERADO[tipo]}" na Hostex; a reserva foi para o canal "${r.custom_channel.name}" (o aviso à limpeza está no nome do hóspede).`
+            : null,
+        }).eq("id", idPedido);
+        return json({
+          ...base,
+          status: "processed",
+          reserva: r.reservation_code,
+          nome_na_hostex: r.guest_name,
+          canal: r.custom_channel.name,
+          canal_generico: r.canal_generico,
+        });
+      } catch (eReserva) {
+        // Sem a reserva direta, fecha o calendário (vale para Airbnb e Booking)
+        // e deixa anotado: a limpeza não vê bloqueio por disponibilidade.
+        const motivo = eReserva instanceof Error ? eReserva.message : String(eReserva);
+        console.error(`[create-bloqueio-pix] reserva ${modo} falhou:`, motivo);
+        try {
+          const resp = await hostexPost(
+            "/availabilities",
+            { property_ids: [idHostex], start_date: inicio, end_date: ultimaNoite, available: false },
+            hostexKey,
+          );
+          await supabase.from("date_block_requests").update({
+            status: "processed",
+            processed_at: agora,
+            hostex_request_id: resp?.request_id ?? null,
+            hostex_bloqueado_em: agora,
+            erro_hostex: `Reserva de proprietário (${modo === "sem_limpeza" ? "sem limpeza" : "entrega limpo, não pagou taxa"}) não criada (${motivo.slice(0, 300)}); datas fechadas por disponibilidade, sem reserva para a limpeza.`,
+          }).eq("id", idPedido);
+          return json({ ...base, status: "processed", reserva: null, aviso: "Datas fechadas no calendário; a equipe RIOS registra a reserva para a limpeza." });
+        } catch (eDisp) {
+          problema = `${motivo.slice(0, 250)} | disponibilidade: ${(eDisp instanceof Error ? eDisp.message : String(eDisp)).slice(0, 200)}`;
+        }
+      }
+    }
+    // Nada foi bloqueado na Hostex: o pedido fica na fila da equipe.
+    console.error(`[create-bloqueio-pix] ${modo}, Hostex não bloqueou:`, problema);
+    await supabase.from("date_block_requests").update({ erro_hostex: String(problema).slice(0, 500) }).eq("id", idPedido);
+    return json({ ...base, status: "pending", reserva: null, aviso: "Pedido registrado; a equipe RIOS conclui o bloqueio no calendário." });
+  }
+
+  // 5. taxa de limpeza
   let taxa: number | null = typeof imovel.taxa_limpeza_cents === "number" ? imovel.taxa_limpeza_cents : null;
   if (!taxa && hostexKey) {
     const canais: Linha[] = Array.isArray(hx?.raw?.channels) ? hx.raw.channels : [];
@@ -156,8 +294,7 @@ Deno.serve(async (req) => {
     }, 422);
   }
 
-  // 5. pedido + PIX
-  const ownerId = equipe ? imovel.owner_id : autor.id;
+  // 6. pedido + PIX
   const { data: dono } = await supabase.from("profiles").select("name, email").eq("id", ownerId).maybeSingle();
   const { data: pedido, error: erroPedido } = await supabase
     .from("date_block_requests")
@@ -221,6 +358,7 @@ Deno.serve(async (req) => {
     id: pedido.id,
     imovel: imovel.name,
     noites,
+    limpeza: "pix",
     valor_cents: taxa,
     pix_qr_code: qr,
     pix_qr_code_base64: qrBase64 ? `data:image/png;base64,${qrBase64}` : null,

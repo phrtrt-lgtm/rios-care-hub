@@ -14,6 +14,7 @@ import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatarBRL } from "@/lib/cobrancaMeta";
+import { MODO_LIMPEZA, modoLimpezaDe } from "@/lib/bloqueioLimpeza";
 
 interface BlockRequest {
   id: string;
@@ -27,6 +28,9 @@ interface BlockRequest {
   status: "pending" | "processed" | "rejected" | "aguardando_pagamento" | "pago_pendente_hostex" | "expirado" | "liberado" | "cancelado";
   valor_cents?: number | null;
   pago_em?: string | null;
+  /** Modo de limpeza do uso pessoal: pix, entrega_limpo ou sem_limpeza (src/lib/bloqueioLimpeza.ts). */
+  limpeza?: string | null;
+  limpeza_aceito_em?: string | null;
   erro_hostex?: string | null;
   hostex_bloqueado_em?: string | null;
   hostex_reservation_code?: string | null;
@@ -219,6 +223,9 @@ export default function AdminBloqueiosDatas() {
             {requests.map((req) => {
               const ReasonIcon = reasonConfig[req.reason].icon;
               const status = statusConfig[req.status];
+              // Só uso pessoal tem modo de limpeza; em manutenção a coluna não quer dizer nada.
+              const modo = req.reason === "family_visit" ? modoLimpezaDe(req.limpeza) : "pix";
+              const aceitoEm = req.limpeza_aceito_em ? ` em ${format(new Date(req.limpeza_aceito_em), "dd/MM 'às' HH:mm", { locale: ptBR })}` : "";
               return (
                 <Card key={req.id} className="overflow-hidden">
                   <CardContent className="p-0">
@@ -259,6 +266,11 @@ export default function AdminBloqueiosDatas() {
                               <ReasonIcon className="h-3.5 w-3.5" />
                               <span>{reasonConfig[req.reason].label}</span>
                             </div>
+                            {MODO_LIMPEZA[modo].selo && (
+                              <span className="mt-1 inline-flex items-center rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning">
+                                {MODO_LIMPEZA[modo].selo}
+                              </span>
+                            )}
                           </div>
                           <div>
                             <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">Data Início</p>
@@ -313,13 +325,25 @@ export default function AdminBloqueiosDatas() {
                                 Ver comprovante de limpeza
                               </a>
                             )}
-                            {typeof req.valor_cents === "number" && (
+                            {modo === "pix" && typeof req.valor_cents === "number" && (
                               <p className="text-xs font-medium text-foreground">
                                 Taxa de limpeza {formatarBRL(req.valor_cents)}
                                 {req.pago_em
                                   ? ` · paga em ${format(new Date(req.pago_em), "dd/MM 'às' HH:mm", { locale: ptBR })}`
                                   : " · PIX não pago"}
                                 {req.hostex_bloqueado_em && !req.hostex_reservation_code && " · bloqueado na Hostex"}
+                              </p>
+                            )}
+                            {modo === "sem_limpeza" && (
+                              <p className="text-xs font-medium text-foreground">
+                                Sem taxa: aceitou receber o imóvel sem limpeza antes da entrada{aceitoEm} · limpar na saída
+                              </p>
+                            )}
+                            {modo === "entrega_limpo" && (
+                              <p className="text-xs font-medium text-foreground">
+                                Não pagou taxa: pediu limpeza antes da entrada e se comprometeu{aceitoEm} a devolver limpo · conferir na
+                                saída; se inadequado, cobrar a taxa de limpeza
+                                {typeof req.valor_cents === "number" ? ` (${formatarBRL(req.valor_cents)})` : ""}
                               </p>
                             )}
                             {req.hostex_reservation_code && (
