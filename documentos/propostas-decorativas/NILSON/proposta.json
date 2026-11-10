@@ -1,0 +1,113 @@
+{
+  "slug": "nilson",
+  "imovel": {"nome": "NILSON", "local": "Praia do Forte, Cabo Frio"},
+  "proprietario": "Nilson",
+  "data": "2026-11-06",
+  "contato": {"whatsapp": "5522988014013"},
+  "pasta_fotos": "C:/Users/pc/Downloads/imoveis/fotos/NILSON",
+  "pasta_itens": "fotos-itens",
+  "mostrar_links": false,
+  "heroi": {"foto": "Living room/02_edited.jpg"},
+  "fecho": {"foto": "Pool/09_edited.jpg"},
+  "textos": {
+    "titulo": ["O NILSON de frente", "para a praia, <em>pronto</em>", "para a primeira foto."],
+    "sub": "Peça por peça, ambiente por ambiente: o que a gente colocaria no seu apartamento em frente à Praia do Forte.",
+    "legenda_heroi": "O NILSON hoje: foto atual da sala",
+    "ideia": "O hóspede escolhe pela foto. O NILSON já tem a Praia do Forte em frente, piscina no condomínio e ar-condicionado nos três quartos. <em>Faltam as peças que fazem alguém parar de rolar a tela e reservar.</em>",
+    "conceito": {
+      "nome": "Verde, palha e areia",
+      "texto": "As paredes verde-claras e o painel de madeira que o apartamento já tem pedem fibra natural e tons de areia: quadros terrosos, macramê verde-oliva e uma composição de palha. Nada de obra nem de trocar móvel. É peça que chega, vai para a parede e muda a foto."
+    },
+    "titulo_indice": "Um passeio pelo apartamento",
+    "intro_indice": "Escolha um ambiente ou siga rolando. As fotos são do NILSON como ele está hoje, e os pontos mostram onde cada peça entra.",
+    "titulo_mural": "Tudo junto, <em>uma história só</em>",
+    "intro_mural": "Toque em uma peça para ver de perto.",
+    "titulo_conta": "O investimento",
+    "intro_conta": "Desligue o que não quiser e o total acompanha. A escolha é sua, peça por peça.",
+    "titulo_simulador": "Faça a conta com os números do NILSON",
+    "intro_simulador": "O NILSON vendeu 102 noites desde março, com diária média de R$ 425. Arraste e veja quanto volta para você se a diária subir. A conta olha só para a diária e não soma nenhuma reserva a mais.",
+    "nota_simulador": "Conta com os números reais do NILSON de março a novembro de 2026: 102 noites, diária média de R$ 425, taxa do canal de 20% e comissão RIOS de 22%. É uma simulação, não uma promessa de resultado.",
+    "titulo_passos": "Como funciona",
+    "intro_passos": "Você escolhe e a gente faz o resto. Nada interrompe as reservas que já estão marcadas.",
+    "fecho_titulo": ["A Praia do Forte em frente", "você já tem.", "<em>A gente cuida do resto.</em>"],
+    "botao_fecho": "Quero decorar o NILSON"
+  },
+  "paleta": [
+    {"nome": "Verde-oliva", "cor": "#6E7A5A"},
+    {"nome": "Palha", "cor": "#C49A5E"},
+    {"nome": "Areia", "cor": "#DCCDB4"},
+    {"nome": "Terracota", "cor": "#B66F48"},
+    {"nome": "Chumbo", "cor": "#5A5450"}
+  ],
+  "retorno": {"noites": 102, "dias": 241, "diaria_media": 425.00, "taxa_canal": 0.1995, "comissao": 0.22, "aumento_padrao": 30},
+  "passos": [
+    {"icone": "marcar", "titulo": "Você escolhe", "texto": "Deixe marcado o que quiser e mande pelo botão. Pode ser tudo ou só uma parte."},
+    {"icone": "carrinho", "titulo": "A RIOS compra", "texto": "Compramos nas lojas e acompanhamos cada entrega. Os valores entram como cobrança no Portal RIOS, com os comprovantes."},
+    {"icone": "ferramenta", "titulo": "A equipe monta", "texto": "Nossa equipe em Cabo Frio instala e posiciona cada peça, entre uma reserva e outra."},
+    {"icone": "camera", "titulo": "Foto nova no ar", "texto": "Fazemos as fotos novas e atualizamos o anúncio para o hóspede ver o NILSON de cara nova."}
+  ],
+  "numeros_rios": [
+    {"valor": "11 anos", "rotulo": "em Cabo Frio"},
+    {"valor": "60 imóveis", "rotulo": "sob gestão"},
+    {"valor": "+3.000", "rotulo": "avaliações no Airbnb"}
+  ],
+  "ambientes": [
+    {
+      "id": "sala", "nome": "Sala de estar e jantar", "curto": "Sala",
+      "frase": "O painel de madeira já dá presença à sala. As paredes verdes em volta ganham textura, e o canto da cortina ganha uma planta alta.",
+      "fotos": ["Living room/02_edited.jpg", "Living room/01_edited.jpg"],
+      "itens": [
+        {"id": "trio-terroso", "nome": "Trio de quadros abstratos", "detalhe": "Tons terrosos · moldura madeira · sem vidro · 43x63 cm", "porque": "Os tons terrosos conversam com a madeira do painel e dão cor à parede do jantar.", "pix": 301, "cartao": 317, "foto": "trio-terroso.jpg", "pin": [35, 33, 0], "destaque": true, "link": "https://shopee.com.br/Kit-3-Quadros-Abstrato-Tons-Terrosos-i.1718230612.58207070842?extraParams=%7B%22display_model_id%22%3A209187113569%2C%22model_selection_logic%22%3A3%7D&image_ids=br-11134207-820lq-mlxnt28wzny822"},
+        {"id": "palha", "nome": "Composição de palha", "detalhe": "6 peças em palha natural, com espelho · cerca de 80x55 cm", "porque": "Traz fibra natural para a parede acima do sofá, e o espelho ajuda a espalhar a luz.", "pix": 330, "cartao": 386, "foto": "palha.jpg", "pin": [47, 30, 0], "destaque": true, "link": "https://shopee.com.br/Kit-Completo-Aconchego-Transforme-Sua-Casa-Para-Uma-Decora%C3%A7%C3%A3o-Sofisticada-i.613463516.17120938034?extraParams=%7B%22display_model_id%22%3A134608776215%2C%22model_selection_logic%22%3A3%7D&image_ids=2d29f2060abc411b981c1dc8af9661e5"},
+        {"id": "macrame", "nome": "Trio de macramê com franjas", "detalhe": "Verde-oliva, cru e chumbo", "porque": "O verde-oliva combina com a parede e as franjas dão textura ao canto da mesa.", "pix": 180, "cartao": 190, "foto": "macrame.jpg", "pin": [14, 42, 0], "destaque": true, "link": "https://shopee.com.br/Trio-de-quadros-decorativos-com-franjas-estilo-boho-chic-Decora%C3%A7%C3%A3o-moderna-para-parede-i.789081654.58200405586?extraParams=%7B%22display_model_id%22%3A169724162507%2C%22model_selection_logic%22%3A3%7D&image_ids=br-11134207-81z1k-mgqxm9k7591hbc"},
+        {"id": "espelho", "nome": "Espelho oval de corpo inteiro", "detalhe": "Moldura de alumínio off white · 110x50 cm", "porque": "Ajuda a abrir o ambiente, e o hóspede usa antes de sair para a praia.", "pix": 274, "cartao": 320, "foto": "espelho.jpg", "recorte": [0.34, 0.0, 0.82, 0.48], "pin": [26, 42, 0], "link": "https://shopee.com.br/Espelho-Lopazzi-Oval-Corpo-Inteiro-110x50cm-Moldura-de-Alum%C3%ADnio-Decorativo-Quarto-Sala-Banheiro-i.1248180593.43010663174?extraParams=%7B%22display_model_id%22%3A265897276536%2C%22model_selection_logic%22%3A3%7D&image_ids=br-11134207-820l9-muj63i7apssg76"},
+        {"id": "ficus", "nome": "Ficus lyrata artificial", "detalhe": "125 cm", "porque": "Dá altura ao canto da cortina e aparece na foto. Artificial, não pede rega.", "pix": 285, "cartao": 300, "foto": "ficus.jpg", "pin": [72.5, 50, 1], "destaque": true, "link": "https://shopee.com.br/Planta-Artificial-Ficus-Lyrata-Grande-Alta-1-25M-Decora%C3%A7%C3%A3o-Elegante-Sala-Escrit%C3%B3rio-Toque-Real-Luxo-i.340618447.22894489822?extraParams=%7B%22display_model_id%22%3A302894071408%2C%22model_selection_logic%22%3A3%7D&image_ids=br-11134207-820lq-ms9qoc0p4z5waf"},
+        {"id": "vaso-areia", "nome": "Vaso coluna", "detalhe": "Areia, acabamento fosco · 59 cm · com prato coletor", "porque": "Eleva o ficus, e a cor areia acompanha o tom da cortina.", "pix": 68, "cartao": 69, "foto": "vaso-areia.jpg", "pin": [73, 70, 1], "link": "https://shopee.com.br/vaso-para-plantas-coluna-Ibiza-slim-59-cm-premium-linha-fosca-com-prato-coletor-i.1515808332.58216888182?extraParams=%7B%22display_model_id%22%3A189193516215%2C%22model_selection_logic%22%3A3%7D&image_ids=br-11134201-820ll-mu2vlie7wooz0d"},
+        {"id": "caixa-livro", "nome": "Caixas livro decorativas", "detalhe": "Home Design · 3 peças", "porque": "Enfeitam o rack ao lado da TV e ainda guardam o que fica solto.", "pix": 37, "cartao": 37, "foto": "caixa-livro.jpg", "pin": [41.5, 56, 1], "link": "https://shopee.com.br/Conjunto-de-Caixa-Livro-Decorativa-Organizadora-Para-Joias-e-Documentos-3pcs-Papel-i.400269328.22998937116?extraParams=%7B%22display_model_id%22%3A119870453749%2C%22model_selection_logic%22%3A3%7D&image_ids=br-11134207-81z1k-mf48599e6i9yf1"}
+      ]
+    },
+    {
+      "id": "suite", "nome": "Suíte", "curto": "Suíte",
+      "frase": "A cabeceira estofada já chama o olhar. Um trio de quadros completa a parede acima da cama.",
+      "fotos": ["Bedroom 1/1-RAF05851_hdr_edited.jpg"],
+      "itens": [
+        {"id": "quadros-suite", "nome": "Trio de quadros clean abstratos", "detalhe": "Moldura amadeirada · sem vidro", "porque": "Tons de areia que combinam com a cabeceira e a manta. Sem vidro, não refletem na foto.", "pix": 156, "cartao": 164, "foto": "quadros-suite.jpg", "pin": [62, 22], "link": "https://shopee.com.br/Kit-3-Quadros-Clean-Abstrato-Moderno-Moldura-e-Vidro-Quarto-Sala-Corredor-Hall-i.428478617.22098711346?extraParams=%7B%22display_model_id%22%3A229424435739%2C%22model_selection_logic%22%3A3%7D"}
+      ]
+    },
+    {
+      "id": "quarto2", "nome": "Segundo quarto", "curto": "Quarto 2",
+      "frase": "A parede clara acima da cabeceira é o melhor lugar desta foto. Um trio neutro preenche sem pesar.",
+      "fotos": ["Bedroom 2/01_edited.jpg"],
+      "itens": [
+        {"id": "quadros-ondas", "nome": "Trio de quadros em ondas", "detalhe": "Moldura amadeirada · sem vidro", "porque": "As ondas dão movimento à parede e, sem vidro, não refletem na foto.", "pix": 156, "cartao": 164, "foto": "quadros-ondas.jpg", "pin": [33, 28], "link": "https://shopee.com.br/Kit-3-Quadros-Abstrato-Clean-Neutro-Moldura-e-Vidro-Sala-Quarto-i.300577947.23398708735?extraParams=%7B%22display_model_id%22%3A189609324700%2C%22model_selection_logic%22%3A3%7D"}
+      ]
+    },
+    {
+      "id": "quarto3", "nome": "Terceiro quarto", "curto": "Quarto 3",
+      "frase": "O armário de madeira já dá o tom. Um quadro único e largo equilibra a parede da cama.",
+      "fotos": ["Bedroom 3/02_edited.jpg"],
+      "itens": [
+        {"id": "quadro-dourado", "nome": "Quadro abstrato de ondas", "detalhe": "Moldura madeira · sem acrílico · 90x60 cm", "porque": "Uma peça só preenche a parede acima da cabeceira e puxa a madeira do armário.", "pix": 267, "cartao": 296, "foto": "quadro-dourado.jpg", "pin": [22, 28], "link": "https://shopee.com.br/Quadro-Decorativo-com-Moldura-e-Acrilico-Cristal-Vidro-Ondas-De-Linhas-Douradas-Para-Sala-i.1905548671.58268782933?extraParams=%7B%22display_model_id%22%3A229450778583%2C%22model_selection_logic%22%3A3%7D"}
+      ]
+    },
+    {
+      "id": "cabeceiras", "nome": "Nos três quartos", "curto": "Abajures",
+      "frase": "Os criados-mudos já estão lá. Falta a luz baixa que faz o quarto parecer pronto para receber.",
+      "fotos": ["Bedroom 1/01_edited.jpg"],
+      "legenda": "Foto atual da suíte. Os abajures se repetem nos três quartos.",
+      "itens": [
+        {"id": "abajur", "nome": "Abajures de cerâmica", "detalhe": "Off white · cúpula de tecido · 5 unidades a R$ 58", "porque": "A mesma peça nos três quartos dá unidade, e o hóspede usa toda noite.", "pix": 290, "cartao": 290, "foto": "abajur.jpg", "pin": [10, 64], "destaque": true, "link": "https://shopee.com.br/Abajur-Lumin%C3%A1ria-Feito-de-Cer%C3%A2mica-Boj%C3%A3o-com-C%C3%BApula-de-Tecido-Cores-Lan%C3%A7amento-i.1044412229.22999433496?extraParams=%7B%22display_model_id%22%3A199187949174%2C%22model_selection_logic%22%3A3%7D&image_ids=br-11134207-820ma-mmrx34dl3hfkc5"}
+      ]
+    },
+    {
+      "id": "sacada", "nome": "Sacada", "curto": "Sacada",
+      "frase": "O piso claro está livre. Com mesa e cadeiras, a sacada vira lugar de café da manhã.",
+      "fotos": ["Living room/03_edited.jpg"],
+      "legenda": "Foto tirada da sala, com a sacada ao fundo. Os pontos mostram onde cada peça entra.",
+      "itens": [
+        {"id": "mesa-rattan", "nome": "Mesa com 4 poltronas", "detalhe": "Textura rattan, marrom · uso interno e externo", "porque": "Feita para ficar do lado de fora, com proteção UV e limpeza com pano úmido.", "pix": 546, "cartao": 594, "foto": "mesa-rattan.jpg", "pin": [90, 76], "destaque": true, "link": "https://shopee.com.br/Kit-Mesa-e-4-Cadeiras-Poltrona-Rattan-Refor%C3%A7ada-Suporta-158kg-%E2%80%93-Bistr%C3%B4-Jardim-Varanda-Piscina-e-%C3%81rea-Gourmet-i.674522863.58261637484?extraParams=%7B%22display_model_id%22%3A238807503761%2C%22model_selection_logic%22%3A3%7D&image_ids=br-11134207-820lo-mozhq5wa90cjac"},
+        {"id": "vasos-sacada", "nome": "Trio de vasos", "detalhe": "Cinza · polietileno · com prato · plantas à parte", "porque": "Leves e sem risco de cerâmica quebrada, prontos para receber plantas.", "pix": 84, "cartao": 89, "foto": "vasos-sacada.jpg", "pin": [80, 72], "link": "https://shopee.com.br/Kit-3-Vasos-de-Plantas-Decorativo-Polietileno-Coluna-Redonda-Cone-Texturizados-N%C2%BA1-Com-Prato-i.1040365702.18198031782?extraParams=%7B%22display_model_id%22%3A169712007646%2C%22model_selection_logic%22%3A3%7D&image_ids=br-11134207-7r98o-m1eij0hvkwv41c"}
+      ]
+    }
+  ]
+}

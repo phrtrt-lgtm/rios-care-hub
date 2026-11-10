@@ -1,0 +1,567 @@
+<!doctype html>
+<!--
+  Contrato de gestão RIOS — modelo.
+  Este arquivo é a fonte: texto e desenho. O montar.py troca as marcas entre chaves duplas (fontes, linhas, QR, capa do vídeo)
+  e grava o contrato.html, que abre sozinho no navegador, e os PDFs.
+  data-anexo no <html>: "nao" = só o contrato · "sim" = contrato + Anexo I · "so" = só o Anexo I.
+-->
+<html lang="pt-BR" data-anexo="nao">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contrato de Gestão · RIOS</title>
+<style>
+/*FONTES*/
+:root{
+  /* A paleta do vídeo "O portal do proprietário" */
+  --fundo-a:#0c1c2a; --fundo-b:#17334d; --fundo-c:#1d3d5a;
+  --azul:#1E507A; --azul-claro:#6fb1dc; --terra:#DE5E32; --terra-clara:#F2A27C;
+  --creme:#FAF8F5; --texto-claro:#F4F7FA; --suave:rgba(244,247,250,.76);
+  --vidro:rgba(255,255,255,.08); --linha-vidro:rgba(255,255,255,.17);
+  --tinta:#17293a; --tinta-suave:#55677a; --fio:#e6e1d9;
+  --tit:'Baloo 2','Trebuchet MS',sans-serif; --txt:'Mulish','Segoe UI',sans-serif;
+  --margem:17mm;
+}
+@page{size:A4;margin:0}
+*{box-sizing:border-box}
+html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{margin:0;background:#dde3e9;font-family:var(--txt);font-weight:500;color:var(--tinta);font-size:9.3pt;line-height:1.48}
+strong{font-weight:800;color:var(--fundo-b)}
+
+/* ---------- página ---------- */
+.pagina{position:relative;width:210mm;height:296.9mm;margin:9mm auto;background:#fff;overflow:hidden;box-shadow:0 8px 34px rgba(12,28,42,.2)}
+.pagina + .pagina{break-before:page}
+html[data-anexo="nao"] .pagina.anexo{display:none}
+html[data-anexo="so"] .pagina:not(.anexo){display:none}
+.escuro{background:linear-gradient(165deg,var(--fundo-a) 0%,var(--fundo-b) 58%,var(--fundo-c) 100%);color:var(--texto-claro)}
+svg.ondas{position:absolute;left:0;top:0;width:100%;height:100%;display:block}
+svg.ic{width:58%;height:58%;display:block;color:#fff}
+svg.ic,svg.fantasma{fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+svg.logo{display:block;height:100%;width:auto}
+
+.cab{position:absolute;left:var(--margem);right:var(--margem);top:11mm;height:6mm;display:flex;align-items:center;justify-content:space-between}
+.cab .marca{height:5.4mm;color:var(--azul)}
+.cab .titulo{font:800 6.6pt/1 var(--txt);letter-spacing:.2em;text-transform:uppercase;color:var(--tinta-suave)}
+.cab-onda{position:absolute;left:0;right:0;top:19mm;height:7mm}
+.conteudo{position:absolute;left:var(--margem);right:var(--margem);top:31mm}
+.rod-onda{position:absolute;left:0;right:0;bottom:17.5mm;height:6mm}
+.rod{position:absolute;left:var(--margem);right:var(--margem);bottom:9mm;height:7mm;display:flex;align-items:center;justify-content:space-between;font:600 7pt/1 var(--txt);color:var(--tinta-suave)}
+.rod .assina{font-weight:800;letter-spacing:.04em;color:var(--fundo-b)}
+.rubricas{display:flex;align-items:flex-end;gap:2.6mm}
+.rubricas i{display:block;width:17mm;height:4.4mm;border-bottom:1px solid #b6c0ca}
+.pag{font:800 7pt/1 var(--txt);color:var(--fundo-b);background:var(--creme);border:1px solid var(--fio);border-radius:99px;padding:1.2mm 2.8mm}
+
+/* ---------- capa ---------- */
+.heroi{position:relative;height:112mm;overflow:hidden}
+.heroi .topo{position:absolute;left:var(--margem);right:var(--margem);top:15mm;height:8.4mm;display:flex;align-items:center;justify-content:space-between}
+.heroi .topo .marca{height:8.4mm;color:#fff}
+.chip{display:inline-block;background:var(--terra);color:#fff;border-radius:99px;padding:1.7mm 4.2mm 1.6mm;font:800 7.2pt/1 var(--txt);letter-spacing:.17em;text-transform:uppercase;white-space:nowrap}
+.chip.vazado{background:rgba(255,255,255,.1);border:1px solid var(--linha-vidro);color:var(--texto-claro)}
+.heroi h1{position:absolute;left:var(--margem);top:35mm;width:146mm;margin:0;font:800 27pt/1.04 var(--tit);letter-spacing:-.012em}
+.heroi h1 em,.painel h3 em{font-style:normal;color:var(--terra-clara)}
+.heroi .sub{position:absolute;left:var(--margem);top:70.5mm;margin:0;font:600 10.5pt/1.2 var(--txt);color:var(--suave)}
+.fantasma{position:absolute;width:7mm;height:7mm;color:#fff;opacity:.13}
+.capa .corpo{position:relative;margin-top:-28mm;padding:0 var(--margem)}
+
+.partes{background:#fff;border:1px solid #ece7df;border-radius:5mm;box-shadow:0 10px 28px rgba(12,28,42,.17);padding:2mm 6mm}
+.parte{display:grid;grid-template-columns:9mm 1fr;column-gap:3.6mm;align-items:center;padding:3mm 0}
+.parte + .parte{border-top:1px solid var(--fio)}
+.bola{width:9mm;height:9mm;border-radius:50%;background:var(--terra);display:grid;place-items:center;flex:none}
+.rot{font:800 6.8pt/1 var(--txt);letter-spacing:.16em;text-transform:uppercase;color:var(--azul);margin-bottom:1.1mm}
+.dados{line-height:1.4}
+.abre{margin:4.6mm 1mm 0;font:italic 600 9.3pt/1.45 var(--txt);color:var(--tinta-suave)}
+
+/* ---------- campos a preencher ---------- */
+.campo{background:rgba(222,94,50,.1);border-bottom:1px dashed rgba(222,94,50,.6);border-radius:2px;padding:0 .9mm;color:#93401f;font-weight:700;outline:none}
+.campo.ok{background:none;border-bottom-color:transparent;color:var(--fundo-b);font-weight:800;padding:0}
+.campo.traco{display:inline-block;min-width:60mm;min-height:1.35em;vertical-align:bottom;background:none;border-bottom:1px dotted #9fabb8;border-radius:0;padding:0;color:var(--tinta);font-weight:700}
+.campo:focus{background:rgba(222,94,50,.18)}
+
+.escuro .campo{background:rgba(242,162,124,.17);border-bottom-color:rgba(242,162,124,.75);color:#ffdccb}
+.escuro .campo.ok{background:none;color:#fff}
+.escuro .rot{color:var(--terra-clara);white-space:nowrap}
+
+/* ---------- cláusulas ---------- */
+.clausula{margin-top:5.8mm}
+.clausula:first-child{margin-top:0}
+.clausula h2{display:flex;align-items:center;gap:3mm;margin:0 0 2.4mm;font:800 14.5pt/1 var(--tit);color:var(--fundo-b);letter-spacing:-.006em}
+.clausula h2 span.t{padding-top:.7mm}
+.clausula h2::after{content:"";flex:1;height:1px;margin-left:1mm;background:linear-gradient(90deg,var(--fio),rgba(230,225,217,0))}
+.num{flex:none;min-width:9mm;height:9mm;padding:.8mm 2mm 0;border-radius:99px;background:var(--terra);color:#fff;display:grid;place-items:center;font:800 10.6pt/1 var(--tit)}
+.item{display:grid;grid-template-columns:10.5mm 1fr;margin:0 0 1.7mm}
+.item > b{color:var(--terra);font-weight:800;font-variant-numeric:tabular-nums}
+.item:last-child{margin-bottom:0}
+
+/* ---------- quadros de resumo (claro) ---------- */
+.resumo{margin:.4mm 0 3.2mm}
+.resumo .etq{font:800 6.3pt/1 var(--txt);letter-spacing:.2em;text-transform:uppercase;color:var(--terra);margin:0 0 1.5mm 1mm}
+.passos{display:grid;grid-template-columns:repeat(3,1fr);background:var(--creme);border:1px solid var(--fio);border-radius:4mm}
+.passos.dois{grid-template-columns:1fr 1fr}
+.passo{position:relative;display:grid;grid-template-columns:7.4mm 1fr;column-gap:2.6mm;align-items:start;padding:3.1mm 3.6mm 3mm 3.8mm}
+.passo + .passo{border-left:1px solid var(--fio)}
+.passo + .passo::before{content:"›";position:absolute;left:-2.5mm;top:50%;width:5mm;height:5mm;margin-top:-2.5mm;border-radius:50%;background:#fff;border:1px solid var(--fio);color:var(--terra);font:800 10pt/4.2mm var(--txt);text-align:center}
+.passos.dois .passo + .passo::before,.passos.tipos .passo + .passo::before{content:none}
+.passo.dono .n{background:var(--terra)}
+.passo .n{width:7.4mm;height:7.4mm;padding-top:.6mm;border-radius:50%;background:var(--fundo-b);color:#fff;display:grid;place-items:center;font:800 9.4pt/1 var(--tit)}
+.passo .n.ic-n{padding-top:0}
+.passo.fim .n{background:var(--terra)}
+.passo b{display:block;font:800 9pt/1.2 var(--txt);color:var(--fundo-b);margin-top:.3mm}
+.passo span.d{display:block;font:600 7.7pt/1.32 var(--txt);color:var(--tinta-suave);margin-top:.5mm}
+
+/* ---------- painel do portal (a cara do vídeo) ---------- */
+.painel{position:relative;border-radius:6mm;overflow:hidden;padding:6.4mm 7mm 6.6mm;margin:.6mm 0 4.6mm}
+.painel .grade{position:relative;display:grid;grid-template-columns:1fr 45mm;column-gap:6.5mm;align-items:center}
+.painel h3{margin:3mm 0 .6mm;font:800 18pt/1.04 var(--tit);letter-spacing:-.01em}
+.painel .sub{margin:0 0 4mm;font:600 8.9pt/1.3 var(--txt);color:var(--suave)}
+.vidros{display:grid;grid-template-columns:1fr 1fr;gap:2.4mm}
+.vidro{background:var(--vidro);border:1px solid var(--linha-vidro);border-radius:3.6mm;padding:2.6mm 2.8mm;display:grid;grid-template-columns:8mm 1fr;column-gap:2.5mm;align-items:center}
+.vidro .bola{width:8mm;height:8mm}
+.vidro b{display:block;font:800 9.2pt/1.15 var(--txt)}
+.vidro span.d{display:block;font:600 7.4pt/1.28 var(--txt);color:var(--suave);margin-top:.4mm}
+.lado{display:flex;flex-direction:column;align-items:center;text-align:center}
+.video{position:relative;width:45mm;height:25.3mm;border-radius:3mm;overflow:hidden;border:1px solid var(--linha-vidro);background:var(--fundo-a)}
+.video img{display:block;width:100%;height:100%;object-fit:cover}
+.video .play{position:absolute;left:50%;top:50%;width:9mm;height:9mm;margin:-4.5mm 0 0 -4.5mm;border-radius:50%;background:var(--terra);display:grid;place-items:center;box-shadow:0 2px 10px rgba(0,0,0,.35)}
+.video .play svg{width:46%;height:46%;margin-left:6%}
+.lado .leg{font:800 8.2pt/1.2 var(--txt);margin:2mm 0 2.4mm}
+.qr{width:23mm;height:23mm;padding:1.7mm;border-radius:2.6mm;background:#fff}
+.qr svg{display:block;width:100%;height:100%;shape-rendering:crispEdges}
+.lado .dica{font:600 7pt/1.25 var(--txt);color:var(--suave);margin-top:1.6mm}
+.endereco{display:inline-block;margin-top:3.6mm;font:800 8.4pt/1 var(--txt);color:var(--texto-claro);background:rgba(255,255,255,.1);border:1px solid var(--linha-vidro);border-radius:99px;padding:1.6mm 3.6mm}
+
+/* ---------- assinaturas e fecho ---------- */
+.assinaturas{margin-top:7mm;background:var(--creme);border:1px solid var(--fio);border-radius:5mm;padding:6mm 8mm 6.4mm}
+.local{text-align:center;margin:0 0 10mm;color:var(--tinta)}
+.local .campo.traco{min-width:42mm}
+.local .campo.traco.curto{min-width:14mm}
+.duas{display:grid;grid-template-columns:1fr 1fr;column-gap:12mm}
+.ass .risco{border-bottom:1px solid var(--tinta)}
+.ass .quem{margin:1.8mm 0 2.6mm;font:800 7pt/1 var(--txt);letter-spacing:.16em;text-transform:uppercase;color:var(--azul)}
+.ass .linha{display:flex;align-items:flex-end;gap:1.6mm;font-size:8.6pt;color:var(--tinta-suave);margin-top:1.4mm}
+.ass .linha .campo.traco{flex:1;min-width:0}
+.fecho{position:absolute;left:var(--margem);right:var(--margem);bottom:29mm;height:25mm;border-radius:6mm;overflow:hidden}
+.fecho .dentro{position:absolute;inset:0;padding:0 8mm;display:flex;align-items:center;justify-content:space-between}
+.fecho .marca{height:8mm;color:#fff}
+.fecho .lema{margin-top:1.9mm;font:700 8pt/1 var(--txt);letter-spacing:.14em;text-transform:uppercase;color:var(--suave)}
+.fecho .endereco{margin-top:0;font-size:9pt;padding:2mm 4.2mm}
+
+/* ---------- anexo ---------- */
+.anexo .heroi{height:72mm}
+.anexo .heroi .topo{top:13mm}
+.anexo .heroi .chips{display:flex;gap:2mm}
+.anexo .heroi h1{top:28.5mm;width:176mm;font-size:23pt}
+.anexo .heroi .sub{top:40.5mm;font-size:9.4pt}
+.dados-vidro{position:absolute;left:var(--margem);right:var(--margem);top:49mm;display:grid;grid-template-columns:1.15fr 1.2fr 38mm;column-gap:5mm;padding:3.2mm 4.6mm 3.4mm;border-radius:4mm;background:var(--vidro);border:1px solid var(--linha-vidro)}
+.dados-vidro > div + div{border-left:1px solid var(--linha-vidro);padding-left:5mm}
+.anexo .corpo{position:relative;margin-top:6.5mm;padding:0 var(--margem)}
+.anexo .assinaturas{margin-top:5mm;padding:4.6mm 8mm 5mm}
+.anexo .local{margin-bottom:8mm}
+.faixas{display:grid;grid-template-columns:1.5fr .62fr 1fr;border-radius:4mm;overflow:hidden;border:1px solid var(--fio)}
+.faixa{padding:2.8mm 4mm 3mm}
+.faixa small{display:block;font:800 6.6pt/1 var(--txt);letter-spacing:.15em;text-transform:uppercase;opacity:.82}
+.faixa b{display:block;margin-top:1.1mm;font:800 13.5pt/1 var(--tit)}
+.faixa span.d{display:block;margin-top:.9mm;font:600 7.4pt/1.25 var(--txt);opacity:.86}
+.faixa.f1{background:var(--fundo-b);color:#fff}
+.faixa.f2{background:var(--azul);color:#fff}
+.faixa.f3{background:var(--creme);color:var(--fundo-b)}
+.faixa.f3 b{color:var(--terra)}
+.regua{display:grid;grid-template-columns:1.5fr .62fr 1fr;margin-top:1.3mm;font:800 6.8pt/1 var(--txt);color:var(--tinta-suave)}
+.regua span:nth-child(2),.regua span:nth-child(3){margin-left:-4mm}
+
+/* ---------- barra da tela (não sai na impressão) ---------- */
+.barra{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;justify-content:center;padding:10px 16px;background:var(--fundo-a);color:var(--texto-claro);font:600 13px/1.3 var(--txt)}
+.barra b{font-weight:800}
+.barra label{display:flex;gap:7px;align-items:center;cursor:pointer}
+.barra input{width:16px;height:16px;accent-color:var(--terra)}
+.barra button{font:800 13px/1 var(--txt);color:#fff;background:var(--terra);border:0;border-radius:99px;padding:9px 16px;cursor:pointer}
+@media print{
+  body{background:#fff}
+  .barra{display:none}
+  .pagina{margin:0;box-shadow:none}
+  .campo.ok{border-bottom-color:transparent}
+}
+@media screen and (max-width:820px){
+  body{zoom:.46}
+}
+</style>
+</head>
+<body>
+
+<!-- ícones e logo -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="logo" viewBox="0 0 1032 244"><path fill="currentColor" fill-rule="evenodd" d="M5 236C3 235 1 233 1 230C0 225 1 10 1 9C3 5 1 5 62 5C112 5 114 5 126 8C160 15 183 35 189 63C196 99 179 130 145 143C136 146 135 148 138 152C139 154 148 168 153 174C155 176 157 180 159 183C162 187 165 191 173 202C174 205 178 210 180 213C182 216 185 221 187 223C192 231 193 234 189 235C188 236 188 236 174 236C156 236 156 236 152 232C150 230 142 218 117 181C101 158 98 154 95 152C93 151 92 151 67 151C40 151 41 151 39 154C38 156 38 154 38 194C38 220 38 231 37 231C37 234 36 234 34 235C32 236 8 236 5 236ZM108 122C126 119 132 117 140 110C159 94 159 63 140 48C132 41 123 38 109 36C105 35 46 35 43 35C40 36 38 38 38 42C38 46 38 116 38 118C39 120 41 122 43 122C46 122 105 122 108 122ZM335 5H370V236H335ZM502.1 120.7A130.5 121.0 0 1 0 763.0 120.7A130.5 121.0 0 1 0 502.1 120.7ZM537.9 121.3A94.8 90.0 0 1 0 727.5 121.3A94.8 90.0 0 1 0 537.9 121.3ZM932 240C930 240 927 240 925 239C922 239 919 239 917 238C897 236 865 223 861 217C860 214 860 213 866 203C875 188 876 188 886 194C927 218 981 215 992 187C996 176 994 165 987 157C981 151 976 148 964 143C954 140 952 139 942 136C930 132 915 127 909 125C876 112 861 92 863 62C865 34 887 11 918 4C930 1 937 1 956 2C975 3 1002 11 1014 19C1021 23 1021 25 1015 36C1008 50 1007 50 997 45C983 38 970 34 954 33C921 29 899 42 899 65C899 83 912 93 948 103C991 115 1011 126 1022 143C1031 158 1033 180 1026 197C1017 220 993 235 957 240C954 240 936 241 932 240Z"/></symbol>
+  <g>
+    <symbol id="i-pessoa" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.7"/><path d="M4.6 20.2c.8-4 3.8-6.1 7.4-6.1s6.6 2.1 7.4 6.1"/></symbol>
+    <symbol id="i-chave" viewBox="0 0 24 24"><path d="M14.5 6.5a4 4 0 1 0 3 3l-9 9-2.8.3.3-2.8Z"/><circle cx="15.8" cy="8.2" r=".9" fill="currentColor"/></symbol>
+    <symbol id="i-casa" viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v10h13V10"/><path d="M10 20v-5h4v5"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+    <symbol id="i-recibo" viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2Z"/><path d="M9.5 8.5h5M9.5 12.5h5"/></symbol>
+    <symbol id="i-debito" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6"/><path d="M12 7.6v8.2M8.6 12.6l3.4 3.4 3.4-3.4"/></symbol>
+    <symbol id="i-ferramenta" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76Z"/></symbol>
+    <symbol id="i-bloqueio" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/><rect x="9.2" y="14.2" width="5.6" height="4" rx="1"/><path d="M10.4 14.2v-.9a1.6 1.6 0 0 1 3.2 0v.9"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M3 8h4l1.6-2.4h6.8L17 8h4v11H3Z"/><circle cx="12" cy="13.2" r="3.4"/></symbol>
+    <symbol id="i-sofa" viewBox="0 0 24 24"><path d="M5 11V8.500A2.5 2.5 0 0 1 7.500 6h9A2.5 2.5 0 0 1 19 8.500V11"/><path d="M3 12.500a2 2 0 0 1 4 0V15h10v-2.500a2 2 0 0 1 4 0V18H3ZM6 18v2M18 18v2"/></symbol>
+  </g>
+  <symbol id="i-play" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M6 3.6v16.8a1 1 0 0 0 1.5.86l14-8.4a1 1 0 0 0 0-1.72l-14-8.4A1 1 0 0 0 6 3.6Z"/></symbol>
+</svg>
+
+<div class="barra">
+  <span><b>Contrato de gestão RIOS</b> · clique nos campos destacados para preencher</span>
+  <label><input type="checkbox" id="temAnexo"> Incluir o Anexo I (imóvel decorado pela RIOS)</label>
+  <button type="button" onclick="window.print()">Imprimir ou salvar em PDF</button>
+</div>
+
+<!-- ============================== PÁGINA 1 ============================== -->
+<section class="pagina capa">
+  <header class="heroi escuro">
+    {{ONDAS:capa}}
+    <svg class="fantasma" style="left:171mm;top:44mm"><use href="#i-casa"/></svg>
+    <svg class="fantasma" style="left:187mm;top:66mm"><use href="#i-cal"/></svg>
+    <svg class="fantasma" style="left:150mm;top:57mm"><use href="#i-chave"/></svg>
+    <div class="topo">
+      <svg class="logo marca" viewBox="0 0 1032 244"><use href="#logo"/></svg>
+      <span class="chip">Contrato de gestão</span>
+    </div>
+    <h1>Contrato de Administração e Gestão de Imóvel para Locação <em>por Temporada</em></h1>
+    <p class="sub">Instrumento geral de parceria operacional</p>
+  </header>
+
+  <div class="corpo conteudo-capa">
+    <div class="partes">
+      <div class="parte">
+        <span class="bola"><svg class="ic"><use href="#i-pessoa"/></svg></span>
+        <div>
+          <div class="rot">Proprietário</div>
+          <div class="dados"><span class="campo" data-k="prop-nome">[Nome completo]</span>, CPF/CNPJ <span class="campo" data-k="prop-doc">[●]</span>, endereço <span class="campo">[●]</span>, contato <span class="campo">[●]</span>.</div>
+        </div>
+      </div>
+      <div class="parte">
+        <span class="bola"><svg class="ic"><use href="#i-chave"/></svg></span>
+        <div>
+          <div class="rot">RIOS (gestora)</div>
+          <div class="dados"><span class="campo" data-k="rios-nome">[Razão social]</span>, CNPJ <span class="campo" data-k="rios-doc">[●]</span>, endereço <span class="campo">[●]</span>, contato <span class="campo">[●]</span>.</div>
+        </div>
+      </div>
+      <div class="parte">
+        <span class="bola"><svg class="ic"><use href="#i-casa"/></svg></span>
+        <div>
+          <div class="rot">Imóvel</div>
+          <div class="dados"><span class="campo" data-k="imovel">[Endereço completo do imóvel]</span>.</div>
+        </div>
+      </div>
+    </div>
+    <p class="abre">As partes celebram este contrato para a administração do imóvel em regime de locação por temporada, mediante as condições abaixo.</p>
+
+    <section class="clausula">
+      <h2><span class="num">01</span><span class="t">Objeto da parceria</span></h2>
+      <p class="item"><b>1.1</b><span>A RIOS realizará a gestão comercial e operacional do imóvel, incluindo criação e administração de anúncios, atendimento aos hóspedes, organização de entradas e saídas, coordenação de limpeza e apoio às manutenções necessárias.</span></p>
+      <p class="item"><b>1.2</b><span>O PROPRIETÁRIO declara que possui legitimidade para disponibilizar o imóvel e que ele poderá ser utilizado para locações por temporada, observadas as normas aplicáveis.</span></p>
+      <p class="item"><b>1.3</b><span><strong>Exclusividade.</strong> Durante a vigência deste contrato, a locação do imóvel é feita com exclusividade pela RIOS. O PROPRIETÁRIO não anunciará nem alugará o imóvel por conta própria ou por meio de terceiros, em plataformas ou diretamente, e encaminhará à RIOS os interessados que o procurarem.</span></p>
+    </section>
+
+    <section class="clausula">
+      <h2><span class="num">02</span><span class="t">Responsabilidades das partes</span></h2>
+      <p class="item"><b>2.1</b><span>A RIOS manterá os anúncios ativos, administrará os calendários, prestará atendimento, coordenará a operação e apresentará demonstrativo mensal dos valores movimentados, também disponível no portal.</span></p>
+      <p class="item"><b>2.2</b><span>O PROPRIETÁRIO manterá o imóvel apto, seguro e com estrutura adequada, fornecerá os documentos e autorizações necessários à operação e registrará no Portal RIOS, com antecedência, as datas em que pretende usar o imóvel (cláusula 7).</span></p>
+      <p class="item"><b>2.3</b><span>As partes atuarão com transparência, boa-fé e cooperação, priorizando a conservação do imóvel, a experiência dos hóspedes e a continuidade das reservas.</span></p>
+    </section>
+  </div>
+  {{ROD:1}}
+</section>
+
+<!-- ============================== PÁGINA 2 ============================== -->
+<section class="pagina">
+  {{CAB}}
+  <div class="conteudo">
+    <section class="clausula">
+      <h2><span class="num">03</span><span class="t">Comissão e repasses</span></h2>
+      <p class="item"><b>3.1</b><span>Pela gestão, a RIOS receberá comissão de <span class="campo">[●]</span>% sobre as diárias, descontadas as taxas cobradas pelas plataformas.</span></p>
+      <p class="item"><b>3.2</b><span>A taxa de limpeza será destinada à operação de higienização e não integrará a base da comissão. O material de limpeza usado nas faxinas é por conta da RIOS e não é cobrado do PROPRIETÁRIO.</span></p>
+      <p class="item"><b>3.3</b><span><strong>Airbnb.</strong> A própria plataforma divide o pagamento e paga a cada parte a sua fração após o check-in do hóspede. O PROPRIETÁRIO recebe a parte dele diretamente do Airbnb, sem depender de repasse da RIOS.</span></p>
+      <p class="item"><b>3.4</b><span><strong>Booking.com.</strong> A plataforma paga no mês seguinte ao da hospedagem. A RIOS repassa a parte do PROPRIETÁRIO assim que recebe.</span></p>
+      <p class="item"><b>3.5</b><span><strong>Demais canais.</strong> Em qualquer outra plataforma ou canal de venda que vier a ser usado, vale a mesma regra: a parte que receber o valor repassa à outra a fração dela tão logo ele esteja disponível.</span></p>
+    </section>
+
+    <section class="clausula">
+      <h2><span class="num">04</span><span class="t">Portal RIOS</span></h2>
+
+      <div class="painel escuro">
+        {{ONDAS:painel}}
+        <div class="grade">
+          <div>
+            <span class="chip">Portal RIOS</span>
+            <h3>O portal do <em>proprietário</em></h3>
+            <p class="sub">Seus imóveis, cobranças e chamados em um lugar só.</p>
+            <div class="vidros">
+              <div class="vidro"><span class="bola"><svg class="ic"><use href="#i-recibo"/></svg></span><div><b>Cobranças</b><span class="d">7 dias para pagar ou contestar</span></div></div>
+              <div class="vidro"><span class="bola"><svg class="ic"><use href="#i-debito"/></svg></span><div><b>Débitos em reserva</b><span class="d">Depois do prazo, desconto no repasse</span></div></div>
+              <div class="vidro"><span class="bola"><svg class="ic"><use href="#i-ferramenta"/></svg></span><div><b>Manutenções</b><span class="d">Fotos, valores e conversa em cada item</span></div></div>
+              <div class="vidro"><span class="bola"><svg class="ic"><use href="#i-bloqueio"/></svg></span><div><b>Bloqueio de datas</b><span class="d">Feito por você, com a limpeza no PIX</span></div></div>
+            </div>
+            <span class="endereco">portal.rioshospedagens.com.br</span>
+          </div>
+          <div class="lado">
+            <div class="video"><img src="{{POSTER}}" alt=""><span class="play"><svg class="ic"><use href="#i-play"/></svg></span></div>
+            <div class="leg">Veja o portal em 3 minutos</div>
+            <div class="qr">{{QR}}</div>
+            <div class="dica">Aponte a câmera do celular</div>
+          </div>
+        </div>
+      </div>
+
+      <p class="item"><b>4.1</b><span>A RIOS mantém o Portal RIOS, em <strong>portal.rioshospedagens.com.br</strong>, com acesso individual por e-mail e senha. Nele o PROPRIETÁRIO acompanha os resultados e as reservas do imóvel, os relatórios financeiros, as cobranças, as manutenções e os chamados, e conversa com a equipe.</span></p>
+      <p class="item"><b>4.2</b><span>O Portal RIOS é o <strong>canal oficial</strong> entre as partes para cobranças, débitos em reserva, manutenções e bloqueio de datas. O que for registrado nele — avisos, mensagens, fotos, comprovantes, decisões e pagamentos — vale como comunicação escrita entre as partes.</span></p>
+      <p class="item"><b>4.3</b><span>Os avisos do portal seguem também para o e-mail cadastrado e, quando autorizado, para o WhatsApp. Cabe ao PROPRIETÁRIO manter esses contatos atualizados e acompanhar o portal.</span></p>
+      <p class="item"><b>4.4</b><span>O acesso é pessoal. O PROPRIETÁRIO responde pelo uso feito com o seu login e avisará a RIOS se suspeitar de acesso indevido.</span></p>
+      <p class="item"><b>4.5</b><span>Para proteger os hóspedes, o portal mostra as reservas do imóvel sem os dados pessoais de quem se hospeda.</span></p>
+    </section>
+  </div>
+  {{ROD:2}}
+</section>
+
+<!-- ============================== PÁGINA 3 ============================== -->
+<section class="pagina">
+  {{CAB}}
+  <div class="conteudo">
+    <section class="clausula">
+      <h2><span class="num">05</span><span class="t">Cobranças e débitos em reserva</span></h2>
+      <div class="resumo">
+        <div class="etq">Resumo</div>
+        <div class="passos">
+          <div class="passo"><span class="n">1</span><div><b>Cobrança no portal</b><span class="d">Com descrição, valor, fotos e comprovantes</span></div></div>
+          <div class="passo"><span class="n">2</span><div><b>7 dias</b><span class="d">Para pagar por PIX ou cartão, ou contestar</span></div></div>
+          <div class="passo fim"><span class="n">3</span><div><b>Débito em reserva</b><span class="d">Depois do prazo, desconto no repasse</span></div></div>
+        </div>
+      </div>
+      <p class="item"><b>5.1</b><span>As despesas do imóvel a cargo do PROPRIETÁRIO — manutenções, reposições, compras de itens e outros custos da operação — são lançadas como <strong>cobrança no Portal RIOS</strong>, com descrição, valor e, sempre que houver, fotos e comprovantes.</span></p>
+      <p class="item"><b>5.2</b><span>Enviada a cobrança, o PROPRIETÁRIO tem <strong>7 (sete) dias</strong> para pagar pelo portal, por PIX ou cartão, ou para contestar, na conversa da própria cobrança.</span></p>
+      <p class="item"><b>5.3</b><span>A contestação feita no prazo suspende o débito até a resposta da RIOS, que poderá manter, ajustar ou cancelar a cobrança.</span></p>
+      <p class="item"><b>5.4</b><span><strong>Débito em reserva.</strong> A cobrança que não for paga nem contestada no prazo poderá ser descontada pela RIOS da parte do PROPRIETÁRIO nas reservas seguintes do imóvel, até a quitação. O desconto é avisado antes ao PROPRIETÁRIO e fica registrado no portal e no demonstrativo.</span></p>
+      <p class="item"><b>5.5</b><span>O pagamento feito fora do portal deve ser informado à RIOS com o comprovante, para a baixa da cobrança.</span></p>
+      <p class="item"><b>5.6</b><span>Quando a RIOS assumir parte de um custo, o valor aparece na cobrança como <strong>aporte da gestão</strong> e o PROPRIETÁRIO paga só a diferença. O aporte é liberalidade e não gera obrigação futura.</span></p>
+    </section>
+
+    <section class="clausula">
+      <h2><span class="num">06</span><span class="t">Manutenções e despesas</span></h2>
+      <div class="resumo">
+        <div class="etq">Resumo</div>
+        <div class="passos tipos">
+          <div class="passo"><span class="n ic-n"><svg class="ic"><use href="#i-ferramenta"/></svg></span><div><b>Essencial</b><span class="d">Até o limite, a RIOS resolve e cobra depois</span></div></div>
+          <div class="passo dono"><span class="n ic-n"><svg class="ic"><use href="#i-pessoa"/></svg></span><div><b>Estrutural</b><span class="d">Decisão do proprietário em até 72 horas</span></div></div>
+          <div class="passo dono"><span class="n ic-n"><svg class="ic"><use href="#i-casa"/></svg></span><div><b>Avançada</b><span class="d">Planejados, itens pessoais e obra de risco</span></div></div>
+        </div>
+      </div>
+      <p class="item"><b>6.1</b><span>Toda manutenção é registrada no Portal RIOS, com descrição, fotos, valor e andamento. O PROPRIETÁRIO acompanha cada etapa e fala com a equipe na conversa do próprio item.</span></p>
+      <p class="item"><b>6.2</b><span><strong>Manutenção essencial.</strong> Reparos e reposições de até R$&nbsp;<span class="campo">[●]</span>, necessários para preservar a segurança, a continuidade das estadias e a receita, poderão ser providenciados de imediato pela RIOS, com cobrança posterior na forma da cláusula 5.</span></p>
+      <p class="item"><b>6.3</b><span><strong>Manutenção estrutural ou acima do limite.</strong> Depende de decisão do PROPRIETÁRIO, registrada no portal em até 72 (setenta e duas) horas do aviso: assumir a execução com profissional próprio, informando o prazo e avisando pelo portal quando terminar, ou delegar à RIOS, que executa e depois envia a cobrança.</span></p>
+      <p class="item"><b>6.4</b><span><strong>Manutenção avançada.</strong> Reparos em móveis planejados, em itens pessoais ou de valor particular do PROPRIETÁRIO e obras de maior risco ficam, em regra, a cargo do PROPRIETÁRIO, com profissional de sua confiança. A RIOS registra o item no portal e acompanha; só executa se as partes combinarem.</span></p>
+      <p class="item"><b>6.5</b><span><strong>Proteção da reserva seguinte.</strong> Se a falta do reparo puser em risco a próxima reserva ou a segurança de hóspedes e do imóvel, a RIOS poderá executar de imediato o serviço necessário, mesmo acima do limite e sem aguardar a decisão do PROPRIETÁRIO, para evitar cancelamentos e reembolsos que reduziriam a receita dele. A justificativa e os comprovantes ficam no portal.</span></p>
+      <p class="item"><b>6.6</b><span>Dano causado por hóspede segue a cláusula 9, com cobrança do hóspede ou da plataforma.</span></p>
+    </section>
+  </div>
+  {{ROD:3}}
+</section>
+
+<!-- ============================== PÁGINA 4 ============================== -->
+<section class="pagina">
+  {{CAB}}
+  <div class="conteudo">
+    <section class="clausula">
+      <h2><span class="num">07</span><span class="t">Bloqueio de datas e uso pelo proprietário</span></h2>
+      <div class="resumo">
+        <div class="etq">Resumo</div>
+        <div class="passos">
+          <div class="passo"><span class="n">1</span><div><b>Escolha as datas</b><span class="d">No portal, no cartão do imóvel, em datas livres</span></div></div>
+          <div class="passo"><span class="n">2</span><div><b>Pague a limpeza</b><span class="d">Taxa de limpeza por PIX, no próprio pedido</span></div></div>
+          <div class="passo fim"><span class="n">3</span><div><b>Datas bloqueadas</b><span class="d">Assim que o pagamento é confirmado</span></div></div>
+        </div>
+      </div>
+      <p class="item"><b>7.1</b><span>O bloqueio de datas para uso do imóvel pelo PROPRIETÁRIO, ou por pessoas por ele autorizadas, é feito <strong>pelo próprio PROPRIETÁRIO, no Portal RIOS</strong>, no cartão do imóvel, opção Bloqueio. Pedido feito por telefone, mensagem ou qualquer outro meio não bloqueia o calendário.</span></p>
+      <p class="item"><b>7.2</b><span>Só podem ser bloqueadas datas livres, sem reserva confirmada, dentro dos limites indicados no portal.</span></p>
+      <p class="item"><b>7.3</b><span>A cada bloqueio é devida a <strong>taxa de limpeza vigente</strong> do imóvel, paga por PIX no próprio pedido. O bloqueio só vale depois de confirmado o pagamento; até lá, as datas continuam abertas para reserva.</span></p>
+      <p class="item"><b>7.4</b><span>O PROPRIETÁRIO pode liberar pelo portal as datas que bloqueou. A taxa de limpeza já paga não é devolvida automaticamente: a RIOS avaliará o crédito ou a devolução conforme o caso.</span></p>
+      <p class="item"><b>7.5</b><span>O uso do imóvel pelo PROPRIETÁRIO, ou por pessoa autorizada por ele, sem bloqueio confirmado no portal não é permitido e gera <strong>multa de R$&nbsp;500,00 (quinhentos reais)</strong> por ocorrência, lançada como cobrança (cláusula 5). Se esse uso impedir uma reserva confirmada, aplica-se também a cláusula 8.</span></p>
+      <p class="item"><b>7.6</b><span>O bloqueio para obra ou reparo é combinado com a RIOS por chamado no portal e registrado pela equipe.</span></p>
+    </section>
+
+    <section class="clausula">
+      <h2><span class="num">08</span><span class="t">Reservas confirmadas</span></h2>
+      <p class="item"><b>8.1</b><span><strong>Toda reserva confirmada deve ser honrada</strong>, inclusive durante o aviso prévio e depois do encerramento do contrato, e continua sob a gestão da RIOS até a saída do último hóspede reservado.</span></p>
+      <p class="item"><b>8.2</b><span>A única exceção é a <strong>rescisão por motivo válido</strong>: descumprimento grave deste contrato pela outra parte, não corrigido depois de avisado, ou fato que impeça o uso do imóvel sem culpa de quem rescinde, como sinistro, ordem de autoridade ou força maior. Nesse caso, as partes combinam o destino de cada reserva.</span></p>
+      <p class="item"><b>8.3</b><span>Fora dessa exceção, se o PROPRIETÁRIO impedir o cumprimento de uma reserva confirmada, responderá pelas multas das plataformas, reacomodações, reembolsos e demais prejuízos comprovadamente decorrentes do cancelamento.</span></p>
+    </section>
+
+    <section class="clausula">
+      <h2><span class="num">09</span><span class="t">Danos e responsabilidade</span></h2>
+      <p class="item"><b>9.1</b><span>O dano causado por hóspede é registrado pela RIOS no portal, com fotos, relato e orçamento do reparo.</span></p>
+      <p class="item"><b>9.2</b><span><strong>Reservas pelo Airbnb.</strong> Cabe à RIOS cobrar o hóspede pela plataforma e acionar o AirCover, dentro dos prazos do Airbnb. Se a RIOS deixar de fazer o pedido no prazo, ela arca com o dano.</span></p>
+      <p class="item"><b>9.3</b><span><strong>Outras plataformas e reservas diretas.</strong> O PROPRIETÁRIO pode contratar, por conta própria, um seguro para aluguel por temporada. Havendo dano, a RIOS entrega o material necessário para a cobrança ou para o acionamento do seguro: fotos, vídeos, relato e orçamentos.</span></p>
+      <p class="item"><b>9.4</b><span>A RIOS não é seguradora. Feito o pedido no prazo, a aprovação e o pagamento da indenização dependem da plataforma, do hóspede ou da seguradora, sem garantia de ressarcimento pela RIOS.</span></p>
+    </section>
+  </div>
+  {{ROD:4}}
+</section>
+
+<!-- ============================== PÁGINA 5 ============================== -->
+<section class="pagina">
+  {{CAB}}
+  <div class="conteudo">
+    <section class="clausula">
+      <h2><span class="num">10</span><span class="t">Fotos, anúncios e materiais</span></h2>
+      <p class="item"><b>10.1</b><span>Fotos, vídeos, textos, identidade dos anúncios e demais materiais produzidos pela RIOS pertencem à gestora e não poderão ser reutilizados após o encerramento sem autorização escrita.</span></p>
+      <p class="item"><b>10.2</b><span>O uso não autorizado desses materiais sujeitará o responsável ao pagamento de <strong>R$&nbsp;5.000,00</strong>, sem prejuízo da apuração de perdas e danos.</span></p>
+      <p class="item"><b>10.3</b><span>Bens adquiridos pela RIOS com recursos próprios permanecem de sua propriedade e poderão ser retirados após o término da operação.</span></p>
+    </section>
+
+    <section class="clausula">
+      <h2><span class="num">11</span><span class="t">Prazo e encerramento</span></h2>
+      <p class="item"><b>11.1</b><span>O contrato vigorará por prazo indeterminado e poderá ser encerrado por qualquer parte mediante aviso escrito de <strong>30 (trinta) dias</strong>.</span></p>
+      <p class="item"><b>11.2</b><span>O aviso prévio não dispensa o cumprimento das reservas confirmadas, que prevalecerão até sua conclusão, ainda que ultrapassem o prazo de 30 dias, ressalvada a rescisão por motivo válido (cláusula 8.2).</span></p>
+    </section>
+
+    <section class="clausula">
+      <h2><span class="num">12</span><span class="t">Disposições finais e foro</span></h2>
+      <p class="item"><b>12.1</b><span>Alterações deste contrato somente terão validade quando registradas por escrito e aceitas pelas partes.</span></p>
+      <p class="item"><b>12.2</b><span>Eventuais tolerâncias não representarão renúncia de direitos nem alteração permanente das condições pactuadas.</span></p>
+      <p class="item"><b>12.3</b><span>Os anexos assinados pelas partes integram este contrato. Os quadros de resumo apenas facilitam a leitura: em caso de dúvida, vale o texto das cláusulas.</span></p>
+      <p class="item"><b>12.4</b><span>As partes buscarão solução amigável para eventuais divergências. Não sendo possível, fica eleito o Foro da Comarca de <span class="campo" data-k="foro">[●]</span>.</span></p>
+    </section>
+
+    <div class="assinaturas">
+      <p class="local"><span class="campo traco" data-k="cidade"></span>, <span class="campo traco curto" data-k="dia"></span> de <span class="campo traco" data-k="mes"></span> de 20<span class="campo traco curto" data-k="ano"></span>.</p>
+      <div class="duas">
+        <div class="ass">
+          <div class="risco" style="height:13mm"></div>
+          <div class="quem">Proprietário</div>
+          <div class="linha">Nome: <span class="campo traco" data-k="prop-nome"></span></div>
+          <div class="linha">CPF/CNPJ: <span class="campo traco" data-k="prop-doc"></span></div>
+        </div>
+        <div class="ass">
+          <div class="risco" style="height:13mm"></div>
+          <div class="quem">RIOS</div>
+          <div class="linha">Nome: <span class="campo traco" data-k="rios-nome"></span></div>
+          <div class="linha">CNPJ: <span class="campo traco" data-k="rios-doc"></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="fecho escuro">
+    {{ONDAS:fecho}}
+    <div class="dentro">
+      <div>
+        <svg class="logo marca" viewBox="0 0 1032 244"><use href="#logo"/></svg>
+        <div class="lema">Gestão de imóveis por temporada</div>
+      </div>
+      <span class="endereco">portal.rioshospedagens.com.br</span>
+    </div>
+  </div>
+  {{ROD:5}}
+</section>
+
+<!-- ============================== ANEXO I ============================== -->
+<section class="pagina capa anexo">
+  <header class="heroi escuro">
+    {{ONDAS:anexo}}
+    <div class="topo">
+      <svg class="logo marca" viewBox="0 0 1032 244"><use href="#logo"/></svg>
+      <span class="chips"><span class="chip">Anexo I</span><span class="chip vazado">Só para imóveis decorados pela RIOS</span></span>
+    </div>
+    <h1>Curadoria decorativa e <em>setup inicial</em></h1>
+    <p class="sub">Anexo ao contrato de gestão. Só acompanha o contrato dos imóveis que a RIOS decora ou prepara.</p>
+    <div class="dados-vidro">
+      <div>
+        <div class="rot">Proprietário</div>
+        <div class="dados"><span class="campo" data-k="prop-nome">[Nome completo]</span>, CPF/CNPJ <span class="campo" data-k="prop-doc">[●]</span></div>
+      </div>
+      <div>
+        <div class="rot">Imóvel</div>
+        <div class="dados"><span class="campo" data-k="imovel">[Endereço completo do imóvel]</span></div>
+      </div>
+      <div>
+        <div class="rot">Início da operação</div>
+        <div class="dados"><span class="campo">[dd/mm/aaaa]</span></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="corpo conteudo-capa">
+    <section class="clausula">
+      <h2><span class="num">A</span><span class="t">Curadoria e setup do imóvel</span></h2>
+      <p class="item"><b>A.1</b><span>Este anexo integra o Contrato de Administração e Gestão de Imóvel para Locação por Temporada firmado entre as partes e se aplica porque a RIOS realiza a curadoria decorativa ou o setup inicial do imóvel acima.</span></p>
+      <p class="item"><b>A.2</b><span>A curadoria decorativa e o setup inicial compreendem o planejamento, a seleção ou organização de itens, a ambientação, a fotografia, a criação dos anúncios e a estruturação operacional para preparar e implantar o imóvel nas plataformas. As partes reconhecem que existe trabalho relevante de implantação e um período necessário para avaliação dos resultados.</span></p>
+    </section>
+
+    <section class="clausula">
+      <h2><span class="num">B</span><span class="t">Encerramento antes de 24 meses</span></h2>
+      <div class="resumo">
+        <div class="etq">Resumo · encerramento pedido pelo proprietário, contado do início da operação</div>
+        <div class="faixas">
+          <div class="faixa f1"><small>Antes de 18 meses</small><b>R$&nbsp;3.000,00</b><span class="d">pelo setup inicial realizado</span></div>
+          <div class="faixa f2"><small>De 18 a 24 meses</small><b>R$&nbsp;2.000,00</b><span class="d">pelo setup inicial</span></div>
+          <div class="faixa f3"><small>A partir de 24 meses</small><b>Sem cobrança</b><span class="d">de setup inicial</span></div>
+        </div>
+      </div>
+      <p class="item"><b>B.1</b><span>Se o PROPRIETÁRIO encerrar a parceria <strong>antes de completar 18 (dezoito) meses</strong> do início da operação, será devido à RIOS o valor de <strong>R$&nbsp;3.000,00 (três mil reais)</strong> pelo setup inicial realizado.</span></p>
+      <p class="item"><b>B.2</b><span>Se o encerramento ocorrer <strong>a partir de 18 (dezoito) meses e antes de completar 24 (vinte e quatro) meses</strong> do início da operação, será devido à RIOS o valor de <strong>R$&nbsp;2.000,00 (dois mil reais)</strong> pelo setup inicial realizado.</span></p>
+      <p class="item"><b>B.3</b><span><strong>A partir de 24 (vinte e quatro) meses completos</strong> do início da operação, o contrato poderá ser encerrado sem qualquer pagamento referente ao setup inicial, observados o aviso prévio e as reservas já confirmadas.</span></p>
+      <p class="item"><b>B.4</b><span>Os valores deste anexo são devidos apenas no encerramento solicitado pelo PROPRIETÁRIO e correspondem ao trabalho efetivamente realizado pela RIOS na implantação do imóvel. Eles não dispensam o aviso prévio nem o cumprimento das reservas confirmadas (cláusulas 8 e 11 do contrato).</span></p>
+    </section>
+
+    <div class="assinaturas">
+      <p class="local"><span class="campo traco" data-k="cidade"></span>, <span class="campo traco curto" data-k="dia"></span> de <span class="campo traco" data-k="mes"></span> de 20<span class="campo traco curto" data-k="ano"></span>.</p>
+      <div class="duas">
+        <div class="ass">
+          <div class="risco" style="height:10mm"></div>
+          <div class="quem">Proprietário</div>
+          <div class="linha">Nome: <span class="campo traco" data-k="prop-nome"></span></div>
+        </div>
+        <div class="ass">
+          <div class="risco" style="height:10mm"></div>
+          <div class="quem">RIOS</div>
+          <div class="linha">Nome: <span class="campo traco" data-k="rios-nome"></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {{ROD:A}}
+</section>
+
+<script>
+/* Tela: campos que se preenchem com um clique, repetidos nos lugares onde o mesmo dado aparece, e a caixa do Anexo I. */
+(function () {
+  var raiz = document.documentElement;
+  var caixa = document.getElementById('temAnexo');
+  if (caixa) {
+    caixa.checked = raiz.getAttribute('data-anexo') === 'sim';
+    caixa.addEventListener('change', function () { raiz.setAttribute('data-anexo', caixa.checked ? 'sim' : 'nao'); });
+  }
+  var campos = [].slice.call(document.querySelectorAll('.campo'));
+  campos.forEach(function (c) {
+    c.setAttribute('contenteditable', 'plaintext-only');
+    c.setAttribute('spellcheck', 'false');
+    c.dataset.padrao = c.textContent;
+    c.addEventListener('focus', function () {
+      if (c.textContent === c.dataset.padrao && c.textContent !== '') {
+        var r = document.createRange(); r.selectNodeContents(c);
+        var s = getSelection(); s.removeAllRanges(); s.addRange(r);
+      }
+    });
+    c.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); c.blur(); } });
+    c.addEventListener('input', function () {
+      var v = c.textContent, cheio = v.trim() !== '' && v !== c.dataset.padrao;
+      c.classList.toggle('ok', cheio);
+      if (!c.dataset.k) return;
+      campos.forEach(function (o) {
+        if (o === c || o.dataset.k !== c.dataset.k) return;
+        o.textContent = cheio ? v : o.dataset.padrao;
+        o.classList.toggle('ok', cheio);
+      });
+    });
+    c.addEventListener('blur', function () {
+      if (c.textContent.trim() === '') { c.textContent = c.dataset.padrao; c.classList.remove('ok'); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

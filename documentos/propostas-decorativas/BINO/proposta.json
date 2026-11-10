@@ -1,0 +1,117 @@
+{
+  "slug": "bino",
+  "imovel": {"nome": "BINO", "local": "Algodoal, Cabo Frio"},
+  "proprietario": "Albino",
+  "data": "2026-11-06",
+  "contato": {"whatsapp": "5522988014013"},
+  "pasta_fotos": "C:/Users/pc/Downloads/imoveis/fotos/BINO",
+  "pasta_itens": "fotos-itens",
+  "mostrar_links": false,
+  "heroi": {"foto": "Living room/02_edited.jpg"},
+  "fecho": {"foto": "Balcony/02_edited.jpg"},
+  "textos": {
+    "titulo": ["O BINO pronto", "para <em>encantar</em>", "já na primeira foto."],
+    "sub": "Peça por peça, ambiente por ambiente: o que a gente colocaria no seu apartamento a 200 metros da Praia do Forte.",
+    "legenda_heroi": "O BINO hoje: foto atual da sala",
+    "ideia": "O hóspede escolhe pela foto. O BINO já tem espaço de sobra e a praia a 200 metros. <em>Faltam as peças que fazem alguém parar de rolar a tela e reservar.</em>",
+    "conceito": {
+      "nome": "Terra, fibra e verde",
+      "texto": "As paredes claras e a madeira avermelhada que o apartamento já tem pedem textura e cor natural: macramê, quadros em tons terrosos e plantas. Nada de obra nem de trocar móvel. É peça que chega, vai para a parede e muda a foto."
+    },
+    "titulo_indice": "Um passeio pelo apartamento",
+    "intro_indice": "Escolha um ambiente ou siga rolando. As fotos são do BINO como ele está hoje, e os pontos mostram onde cada peça entra.",
+    "titulo_mural": "Tudo junto, <em>uma história só</em>",
+    "intro_mural": "Toque em uma peça para ver de perto.",
+    "titulo_conta": "O investimento",
+    "intro_conta": "Desligue o que não quiser e o total acompanha. A escolha é sua, peça por peça.",
+    "titulo_simulador": "Faça a conta com os números do BINO",
+    "intro_simulador": "O BINO já tem procura: foram 182 noites vendidas desde março. Com a agenda assim, o espaço para crescer está na diária. Arraste e veja quanto volta para você.",
+    "nota_simulador": "Conta com os números reais do BINO de março a novembro de 2026: 182 noites, diária média de R$ 238, taxa do canal de 21% e comissão RIOS de 22%. É uma simulação, não uma promessa de resultado.",
+    "titulo_passos": "Como funciona",
+    "intro_passos": "Você escolhe e a gente faz o resto. Nada interrompe as reservas que já estão marcadas.",
+    "fecho_titulo": ["A praia a 200 metros", "você já tem.", "<em>A gente cuida do resto.</em>"],
+    "botao_fecho": "Quero decorar o BINO"
+  },
+  "paleta": [
+    {"nome": "Terracota", "cor": "#C2603A"},
+    {"nome": "Cru", "cor": "#E6D8C3"},
+    {"nome": "Verde-musgo", "cor": "#6B7A45"},
+    {"nome": "Freijó", "cor": "#A8743F"},
+    {"nome": "Café", "cor": "#4A3327"}
+  ],
+  "retorno": {"noites": 182, "dias": 251, "diaria_media": 238.03, "taxa_canal": 0.2095, "comissao": 0.22, "aumento_padrao": 30},
+  "passos": [
+    {"icone": "marcar", "titulo": "Você escolhe", "texto": "Deixe marcado o que quiser e mande pelo botão. Pode ser tudo ou só uma parte."},
+    {"icone": "carrinho", "titulo": "A RIOS compra", "texto": "Compramos nas lojas e acompanhamos cada entrega. Os valores entram como cobrança no Portal RIOS, com os comprovantes."},
+    {"icone": "ferramenta", "titulo": "A equipe monta", "texto": "Nossa equipe em Cabo Frio instala e posiciona cada peça, entre uma reserva e outra."},
+    {"icone": "camera", "titulo": "Foto nova no ar", "texto": "Fazemos as fotos novas e atualizamos o anúncio para o hóspede ver o BINO de cara nova."}
+  ],
+  "numeros_rios": [
+    {"valor": "11 anos", "rotulo": "em Cabo Frio"},
+    {"valor": "60 imóveis", "rotulo": "sob gestão"},
+    {"valor": "+3.000", "rotulo": "avaliações no Airbnb"}
+  ],
+  "ambientes": [
+    {
+      "id": "sala", "nome": "Sala de estar", "curto": "Sala",
+      "frase": "A parede grande ganha um ponto de interesse e as plantas trazem vida para os cantos. É aqui que a primeira foto do anúncio muda.",
+      "fotos": ["Living room/03_edited.jpg", "Living room/02_edited.jpg"],
+      "itens": [
+        {"id": "painel", "nome": "Painel de macramê", "detalhe": "Telha, verde e cru · 100x80 cm", "porque": "Preenche a parede acima do sofá e traz a cor que vai aparecer primeiro na foto.", "pix": 190, "cartao": 200, "foto": "painel.jpg", "pin": [31, 30, 0], "link": "https://shopee.com.br/Painel-Macram%C3%AA-Artesanal-Decorativo-ondulado-Barbante-e-Madeira-Macram%C3%AA-Parede-Grande-Boho-Chic-100x80cm-i.345575939.23298572861"},
+        {"id": "prateleira", "nome": "Prateleira flutuante", "detalhe": "Freijó · 40x15 cm", "porque": "Cria um cantinho de apoio na parede, sem ocupar o piso.", "pix": 28, "cartao": 28, "foto": "prateleira.jpg", "pin": [44, 33, 0], "link": "https://shopee.com.br/1-Prateleira-Freij%C3%B3-40X15-Com-Suporte-Flutuante-Mdf-Organizadora-Decora%C3%A7%C3%A3o-Cozinha-Quarto-Banheiro-i.366997941.23698636931"},
+        {"id": "caida", "nome": "Planta pendente", "detalhe": "Artificial, com vaso", "porque": "Cai da prateleira e quebra a linha reta da parede. Não pede rega nem cuidado.", "pix": 70, "cartao": 70, "foto": "caida.jpg", "pin": [48.5, 26, 0], "link": "https://shopee.com.br/Arranjo-Planta-Artificial-Pendente-Toque-Apar%C3%AAncia-Realista-Com-Vaso-i.301587626.58257383861"},
+        {"id": "espelho", "nome": "Espelho orgânico de corpo inteiro", "detalhe": "Moldura em couro caramelo · 120x50 cm", "porque": "Amplia a sala, e todo hóspede gosta de ter um espelho de corpo inteiro.", "pix": 149, "cartao": 157, "foto": "espelho.jpg", "recorte": [0.2, 0, 1, 1], "pin": [19.4, 36, 0], "link": "https://shopee.com.br/Espelho-Org%C3%A2nico-120x50-e-80x40-Com-Moldura-EM-COURO-Corpo-Inteiro-Moderno-Luxo-i.1579353989.58256293907"},
+        {"id": "jiboia", "nome": "Planta de folhas largas", "detalhe": "Jiboia artificial grande", "porque": "Enche o canto ao lado da TV com um verde que nunca precisa de cuidado.", "pix": 76, "cartao": 76, "foto": "jiboia.jpg", "pin": [47.5, 40, 0], "link": "https://shopee.com.br/Planta-Artificial-Jiboia-Follhas-Grande-Decoracao-Jardim-i.294743650.23196491530"},
+        {"id": "vaso-branco", "nome": "Vaso cone branco", "detalhe": "Com prato coletor", "porque": "O branco deixa o verde em destaque e acompanha o tom claro das paredes.", "pix": 38, "cartao": 38, "foto": "vaso-branco.jpg", "pin": [47.5, 49, 0], "link": "https://shopee.com.br/Vaso-para-Plantas-Cone-Bojo-Polido-N%C2%BA-1-com-Prato-Coletor-Decora%C3%A7%C3%A3o-Interna-e-Externa-i.1153309114.58212490448"},
+        {"id": "ficus", "nome": "Ficus lyrata artificial", "detalhe": "95 cm", "porque": "Dá altura e verde ao lado da janela, onde a luz é melhor para a foto.", "pix": 117, "cartao": 130, "foto": "ficus.jpg", "pin": [24.5, 43, 1], "link": "https://shopee.com.br/Ficus-Lyrata-Artificial-Grande-Planta-Decorativa-Realista-para-Vasos-e-Ambientes-i.1474606866.47315586408"},
+        {"id": "vaso-bege", "nome": "Vaso tailandês bege", "detalhe": "Polietileno com textura de fibra", "porque": "O par do ficus: a textura conversa com o tecido claro dos sofás.", "pix": 75, "cartao": 75, "foto": "vaso-bege.jpg", "pin": [24.5, 58, 1], "link": "https://shopee.com.br/Vaso-Tailand%C3%AAs-G-para-Plantas-em-Polietileno-Moderno-Resistente-para-Jardim-e-Decora%C3%A7%C3%A3o-i.1351723298.58265239833"},
+        {"id": "abajur", "nome": "Abajur de chão", "detalhe": "174 cm · soquete E27 · lâmpada à parte", "porque": "Luz quente para a noite, sem depender só da luz do teto.", "pix": 145, "cartao": 153, "foto": "abajur.jpg", "pin": [49.2, 42, 1], "link": "https://shopee.com.br/Lumin%C3%A1ria-de-Ch%C3%A3o-Abajur-de-Piso-Moderno-com-C%C3%BApula-E27-para-Sala-Quarto-Escrit%C3%B3rio-Decora%C3%A7%C3%A3o-Minimalista-i.1746526270.58214658905"},
+        {"id": "mandalas", "nome": "Kit de 6 mandalas de macramê", "detalhe": "Marrom · 6 peças", "porque": "Composição pronta para a parede da mesa, com a mesma fibra do painel.", "pix": 171, "cartao": 180, "foto": "mandalas.jpg", "pin": [76, 34, 1], "link": "https://shopee.com.br/kit-6-pe%C3%A7as-mandala-em-macram%C3%AA-enfeite-de-parede-boho-decora%C3%A7%C3%A3o-i.764389250.58269303889"}
+      ]
+    },
+    {
+      "id": "jantar", "nome": "Sala de jantar", "curto": "Jantar",
+      "frase": "A mesa já é bonita. Um arranjo no centro completa a cena, na foto e na hora do café.",
+      "fotos": ["Living room/04_edited.jpg"],
+      "itens": [
+        {"id": "arranjo", "nome": "Arranjo de eucalipto", "detalhe": "Artificial · vaso de cerâmica branco", "porque": "Fica no centro da mesa, baixo o bastante para não atrapalhar a conversa.", "pix": 95, "cartao": 100, "foto": "arranjo.jpg", "pin": [50, 68], "link": "https://shopee.com.br/Arranjo-De-Eucaliptos-Artificiais-Em-Vaso-Branco-Vidro-Mesa-i.356803852.21698148834"}
+      ]
+    },
+    {
+      "id": "quarto1", "nome": "Quarto 1", "curto": "Quarto 1",
+      "frase": "A parede da cabeceira é o que aparece primeiro na foto do quarto. Um quadro grande resolve.",
+      "fotos": ["Bedroom 1/01_edited.jpg"],
+      "itens": [
+        {"id": "quadro", "nome": "Quadro abstrato orgânico", "detalhe": "Canvas · moldura freijó · 70x100 cm", "porque": "Tons terrosos que puxam a madeira da cabeceira e dão assunto para a foto.", "pix": 232, "cartao": 257, "foto": "quadro.jpg", "pin": [91, 38], "link": "https://shopee.com.br/Quadro-Decorativo-Abstrato-Org%C3%A2nico-Tons-Terrosos-em-Canvas-com-ou-sem-Moldura-Premium-Molduralle-i.1235013825.58215373595"}
+      ]
+    },
+    {
+      "id": "quarto2", "nome": "Quarto 2", "curto": "Quarto 2",
+      "frase": "Na parede limpa acima da cabeceira, três quadros fazem o papel que hoje falta ao quarto: um ponto para o olho descansar.",
+      "fotos": ["Bedroom 2/04_edited.jpg"],
+      "itens": [
+        {"id": "trio", "nome": "Trio de quadros abstratos", "detalhe": "Moldura ypê · sem vidro · 40x60 cm", "porque": "Sem vidro, não faz reflexo na foto nem preocupa na limpeza.", "pix": 225, "cartao": 247, "foto": "trio.jpg", "pin": [50, 21], "link": "https://shopee.com.br/Quadro-Moldura-Vidro-Kit-3-Pe%C3%A7as-Grandes-Decora%C3%A7%C3%A3o-Textura-Abstrata-Moderna-Quarto-Sala-Escrit%C3%B3rio-i.1378900624.41572649152"}
+      ]
+    },
+    {
+      "id": "quartos", "nome": "Nos dois quartos", "curto": "Quartos",
+      "frase": "Detalhes nos criados-mudos: custam pouco e fazem o quarto parecer arrumado por alguém que se importa.",
+      "fotos": ["Bedroom 2/03_edited.jpg"],
+      "itens": [
+        {"id": "caixas", "nome": "Kit de 2 caixas-livro", "detalhe": "Linho bege", "porque": "Apoio para o abajur e um lugar para guardar controle e chaves.", "pix": 49, "cartao": 49, "foto": "caixas.jpg", "recorte": [0, 0.3, 1, 1], "pin": [9, 87], "link": "https://shopee.com.br/Kit-2-Livro-Caixa-Decorativo-Linho-Bege-Livros-Fake-Organizador-Porta-Objeto-Casa-Sala-Escrit%C3%B3rio-i.969367596.58220047314"},
+        {"id": "vasinhos", "nome": "Kit de 2 vasinhos de planta", "detalhe": "Artificiais · vaso branco", "porque": "Um verde pequeno em cada quarto, sem nada para regar.", "pix": 29, "cartao": 29, "foto": "vasinhos.jpg", "pin": [13, 66], "link": "https://shopee.com.br/Kit-2-Vasos-com-Plantas-Artificiais-Decorativas-Vaso-Branco-Mini-Arranjo-para-Sala-Banheiro-Escrit%C3%B3rio-i.367030469.18199075005"},
+        {"id": "musica", "nome": "Caixa de música fonógrafo", "detalhe": "Enfeite retrô", "porque": "Um toque retrô que conversa com a história do apartamento.", "pix": 55, "cartao": 55, "foto": "musica.jpg", "pin": [53, 54], "link": "https://shopee.com.br/Enfeite-decorativo-Caixa-de-m%C3%BAsica-retro-fon%C3%B3grafo-decora%C3%A7%C3%A3o-para-casa-presente-ornamento-criativo-cl%C3%A1ssico-vintage-arte-i.532298328.19299840114"}
+      ]
+    },
+    {
+      "id": "diversao", "nome": "Diversão", "curto": "Diversão",
+      "frase": "Dia de chuva na praia também pode virar boa lembrança, em volta da mesa.",
+      "fotos": ["Living room/01_edited.jpg"],
+      "legenda": "Foto atual da sala. Os jogos ficam à mão para a noite em família.",
+      "itens": [
+        {"id": "uno", "nome": "Jogo Uno", "detalhe": "112 cartas", "porque": "Custa pouco e ocupa a família inteira na mesa.", "pix": 29, "cartao": 29, "foto": "uno.jpg", "pin": [52, 86], "link": "https://shopee.com.br/UNO-JOGO-DE-CARTAS-FAMILIA-E-AMIGOS-112-CARTAS-i.1624912797.22094454990"},
+        {"id": "baralhos", "nome": "Kit de 2 baralhos", "detalhe": "54 cartas cada", "porque": "O clássico que agrada qualquer idade.", "pix": 11, "cartao": 11, "foto": "baralhos.jpg", "pin": [60, 76], "link": "https://shopee.com.br/2-Kit-Baralho-54-cartas-para-jogar-com-Fam%C3%ADlia-Amigos-Divers%C3%A3o-i.1252771078.22493662661"}
+      ]
+    }
+  ]
+}
