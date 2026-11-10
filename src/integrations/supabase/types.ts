@@ -1818,6 +1818,8 @@ export type Database = {
           id: string
           liberado_em: string | null
           liberado_por: string | null
+          limpeza: string
+          limpeza_aceito_em: string | null
           mercadopago_payment_id: string | null
           notes: string | null
           owner_id: string
@@ -1850,6 +1852,8 @@ export type Database = {
           id?: string
           liberado_em?: string | null
           liberado_por?: string | null
+          limpeza?: string
+          limpeza_aceito_em?: string | null
           mercadopago_payment_id?: string | null
           notes?: string | null
           owner_id: string
@@ -1882,6 +1886,8 @@ export type Database = {
           id?: string
           liberado_em?: string | null
           liberado_por?: string | null
+          limpeza?: string
+          limpeza_aceito_em?: string | null
           mercadopago_payment_id?: string | null
           notes?: string | null
           owner_id?: string
