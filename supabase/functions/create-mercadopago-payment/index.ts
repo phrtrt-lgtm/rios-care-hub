@@ -10,6 +10,28 @@ interface CreatePaymentRequest {
   chargeId: string;
 }
 
+/**
+ * Valor, em centavos, de um PIX copia-e-cola. O código é uma sequência de
+ * campos "id (2) + tamanho (2) + conteúdo" (padrão EMV); o valor é o campo 54.
+ * Devolve null quando não há código ou ele não segue o padrão.
+ */
+function valorDoPixCents(codigo: string | null | undefined): number | null {
+  if (!codigo) return null;
+  let i = 0;
+  while (i + 4 <= codigo.length) {
+    const id = codigo.slice(i, i + 2);
+    const tamanho = Number(codigo.slice(i + 2, i + 4));
+    if (!Number.isInteger(tamanho)) return null;
+    const conteudo = codigo.slice(i + 4, i + 4 + tamanho);
+    if (id === '54') {
+      const valor = Number(conteudo);
+      return Number.isFinite(valor) ? Math.round(valor * 100) : null;
+    }
+    i += 4 + tamanho;
+  }
+  return null;
+}
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -65,7 +87,42 @@ const handler = async (req: Request): Promise<Response> => {
     const dueDateObj = charge.due_date ? new Date(charge.due_date) : null;
     const isLinkExpired = dueDateObj ? now > dueDateObj : false;
     
-    if (charge.payment_link && !isRodrigoAzevedoEarly && !isLinkExpired) {
+    // Buscar pagamentos já feitos para calcular o valor devido
+    const { data: payments, error: paymentsError } = await supabase
+      .from('charge_payments')
+      .select('amount_cents')
+      .eq('charge_id', chargeId);
+
+    if (paymentsError) {
+      console.error('Error fetching payments:', paymentsError);
+    }
+
+    // A pagar = valor − aporte da gestão − saldo credor já abatido − pagamentos
+    // já feitos. O crédito (`credit_applied_cents`) ficava de fora e o PIX saía
+    // maior que o "A pagar" da tela (`valorDevido`, src/lib/cobrancaMeta.ts).
+    const totalPaidCents = payments?.reduce((sum, p) => sum + p.amount_cents, 0) || 0;
+    const creditAppliedCents = charge.credit_applied_cents || 0;
+    const dueAmountCents = charge.amount_cents
+      - (charge.management_contribution_cents || 0)
+      - creditAppliedCents
+      - totalPaidCents;
+    const dueAmount = dueAmountCents / 100;
+
+    // O link guardado só vale se foi gerado para o valor de hoje. Com PIX
+    // guardado, o valor é lido do próprio copia-e-cola; sem PIX não há como
+    // conferir, e cobrança com crédito abatido gera de novo por garantia.
+    const storedPixCents = valorDoPixCents(charge.pix_qr_code);
+    const linkNoValorCerto = storedPixCents !== null
+      ? storedPixCents === dueAmountCents
+      : creditAppliedCents === 0;
+
+    if (charge.payment_link && !linkNoValorCerto) {
+      console.log('Stored payment link is for another amount, regenerating:', {
+        chargeId, storedPixCents, dueAmountCents,
+      });
+    }
+
+    if (charge.payment_link && !isRodrigoAzevedoEarly && !isLinkExpired && linkNoValorCerto) {
       console.log('Payment link already exists and is still valid:', charge.payment_link);
       return new Response(
         JSON.stringify({ payment_link: charge.payment_link }),
@@ -88,24 +145,10 @@ const handler = async (req: Request): Promise<Response> => {
       : 'SemUnidade';
     const manutencaoLabel = `manutencao${unitSlug}`;
 
-    // Buscar pagamentos já feitos para calcular o valor devido
-    const { data: payments, error: paymentsError } = await supabase
-      .from('charge_payments')
-      .select('amount_cents')
-      .eq('charge_id', chargeId);
-
-    if (paymentsError) {
-      console.error('Error fetching payments:', paymentsError);
-    }
-
-    // Calcular valor devido (total - aporte - pagamentos já feitos)
-    const totalPaidCents = payments?.reduce((sum, p) => sum + p.amount_cents, 0) || 0;
-    const dueAmountCents = charge.amount_cents - charge.management_contribution_cents - totalPaidCents;
-    const dueAmount = dueAmountCents / 100;
-
     console.log('Charge amount calculation:', {
       totalAmountCents: charge.amount_cents,
       managementContributionCents: charge.management_contribution_cents,
+      creditAppliedCents,
       totalPaidCents,
       dueAmountCents,
       dueAmount

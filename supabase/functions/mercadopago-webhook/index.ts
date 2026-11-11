@@ -656,7 +656,7 @@ const handler = async (req: Request): Promise<Response> => {
           // Buscar informações da charge para calcular o valor correto
           const { data: charge, error: chargeError } = await supabase
             .from('charges')
-            .select('amount_cents, owner_id, management_contribution_cents, due_date')
+            .select('amount_cents, owner_id, management_contribution_cents, credit_applied_cents, due_date')
             .eq('id', chargeId)
             .single();
 
@@ -712,7 +712,10 @@ const handler = async (req: Request): Promise<Response> => {
             if (!existingPayment) {
               const paymentRecord = {
                 charge_id: chargeId,
-                amount_cents: charge.amount_cents - (charge.management_contribution_cents || 0),
+                // Pago pelo proprietário = valor − aporte − saldo credor já abatido
+                // (a mesma conta do PIX gerado; sem o crédito o registro ficava maior
+                // que o dinheiro recebido).
+                amount_cents: Math.max(0, charge.amount_cents - (charge.management_contribution_cents || 0) - (charge.credit_applied_cents || 0)),
                 payment_date: paidAt,
                 method: 'mercadopago',
                 applies_to: 'total',
@@ -782,7 +785,7 @@ const handler = async (req: Request): Promise<Response> => {
       // Buscar informações da charge
       const { data: charge, error: chargeError } = await supabase
         .from('charges')
-        .select('amount_cents, owner_id, management_contribution_cents, due_date')
+        .select('amount_cents, owner_id, management_contribution_cents, credit_applied_cents, due_date')
         .eq('id', chargeId)
         .single();
 
@@ -840,7 +843,8 @@ const handler = async (req: Request): Promise<Response> => {
         if (!existingSinglePayment) {
           const paymentRecord = {
             charge_id: chargeId,
-            amount_cents: charge.amount_cents - (charge.management_contribution_cents || 0),
+            // Mesma conta do pagamento em grupo: desconta o saldo credor já abatido.
+            amount_cents: Math.max(0, charge.amount_cents - (charge.management_contribution_cents || 0) - (charge.credit_applied_cents || 0)),
             payment_date: paidAt,
             method: 'mercadopago',
             applies_to: 'total',

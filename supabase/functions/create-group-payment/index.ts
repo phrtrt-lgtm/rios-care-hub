@@ -43,7 +43,7 @@ serve(async (req) => {
     // Fetch all selected charges
     const { data: charges, error: chargesError } = await supabase
       .from('charges')
-      .select('id, title, amount_cents, management_contribution_cents, status, owner_id')
+      .select('id, title, amount_cents, management_contribution_cents, credit_applied_cents, status, owner_id')
       .in('id', chargeIds)
       .eq('owner_id', user.id);
 
@@ -54,6 +54,15 @@ serve(async (req) => {
 
     if (!charges || charges.length === 0) {
       throw new Error('Cobranças não encontradas');
+    }
+
+    // O webhook dá como paga toda cobrança listada no pagamento. Por isso só
+    // entram as que foram conferidas aqui (do próprio usuário): id pedido que
+    // não voltou da consulta recusa o pagamento inteiro, em vez de sair de
+    // graça na lista.
+    const idsConferidos = charges.map((c) => c.id);
+    if (idsConferidos.length !== new Set(chargeIds).size) {
+      throw new Error('Algumas cobranças selecionadas não foram encontradas');
     }
 
     // Validate all charges are open
@@ -74,9 +83,14 @@ serve(async (req) => {
       throw ownerError;
     }
 
-    // Calculate total due amount for all charges
+    // A pagar de cada cobrança = valor − aporte da gestão − saldo credor já
+    // abatido. É a mesma conta de `valorDevido` (src/lib/cobrancaMeta.ts), que a
+    // tela mostra: sem o crédito, o PIX saía maior que o total exibido.
     const totalDueAmountCents = charges.reduce((sum, charge) => {
-      const dueAmount = charge.amount_cents - (charge.management_contribution_cents || 0);
+      const dueAmount = Math.max(
+        0,
+        charge.amount_cents - (charge.management_contribution_cents || 0) - (charge.credit_applied_cents || 0),
+      );
       return sum + dueAmount;
     }, 0);
 
@@ -91,7 +105,7 @@ serve(async (req) => {
     
     // Generate a short unique reference ID for MercadoPago (max ~64 chars for PIX)
     // Use first charge ID + timestamp to ensure uniqueness
-    const shortReference = `grp_${chargeIds[0].substring(0, 8)}_${Date.now()}`;
+    const shortReference = `grp_${idsConferidos[0].substring(0, 8)}_${Date.now()}`;
     
     const preferenceData = {
       items: [
@@ -117,7 +131,7 @@ serve(async (req) => {
         } : {}),
       },
       metadata: {
-        charge_ids: chargeIds,
+        charge_ids: idsConferidos,
         is_group_payment: true,
       },
       external_reference: shortReference,
@@ -159,7 +173,7 @@ serve(async (req) => {
           first_name: owner.name,
         },
         metadata: {
-          charge_ids: chargeIds,
+          charge_ids: idsConferidos,
           is_group_payment: true,
         },
         external_reference: shortReference,
@@ -203,7 +217,7 @@ serve(async (req) => {
         pix_qr_code: qrCode,
         pix_qr_code_base64: `data:image/png;base64,${qrCodeBase64}`,
         total_amount: totalDueAmountCents,
-        charge_ids: chargeIds,
+        charge_ids: idsConferidos,
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

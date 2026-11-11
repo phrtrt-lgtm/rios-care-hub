@@ -144,7 +144,10 @@ const handler = async (req: Request): Promise<Response> => {
     const dueAmountBRL = new Intl.NumberFormat("pt-BR", {
       style: "currency",
       currency: charge.currency || "BRL",
-    }).format((charge.amount_cents - (charge.management_contribution_cents || 0)) / 100);
+    }).format(
+      // A pagar = valor − aporte − saldo credor já abatido, como na tela e no PIX.
+      Math.max(0, charge.amount_cents - (charge.management_contribution_cents || 0) - (charge.credit_applied_cents || 0)) / 100,
+    );
 
     const formattedDueDate = charge.due_date
       ? new Intl.DateTimeFormat("pt-BR").format(new Date(charge.due_date))
