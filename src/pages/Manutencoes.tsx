@@ -498,7 +498,13 @@ export default function Manutencoes() {
                   meta={
                     <div className="flex flex-col items-end gap-1">
                       <EtiquetaStatusCobranca status={m.status} />
-                      <span className="text-[13px] font-semibold tabular-nums">{formatarBRL(valorDevido(m))}</span>
+                      <span className="text-[13px] font-semibold tabular-nums">{formatarBRL(m.amount_cents ?? 0)}</span>
+                      <span className="text-[11px] tabular-nums text-muted-foreground">
+                        {(m.management_contribution_cents ?? 0) > 0 && (
+                          <span className="text-success">aporte {formatarBRL(m.management_contribution_cents ?? 0)} · </span>
+                        )}
+                        a pagar {formatarBRL(valorDevido(m))}
+                      </span>
                       <span className="text-[11px] text-muted-foreground">
                         {rotuloResponsavelCusto(m.cost_responsible, m.split_owner_percent)}
                         {m.paid_cents > 0 ? ` · pago ${formatarBRL(m.paid_cents)}` : ""}
