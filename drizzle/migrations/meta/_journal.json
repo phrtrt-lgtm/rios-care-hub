@@ -22,6 +22,13 @@
       "when": 1792513231958,
       "tag": "0002_compras_ticket_id",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794682487333,
+      "tag": "0003_restrict_sync_log_and_charge_attachments",
+      "breakpoints": true
     }
   ]
 }
