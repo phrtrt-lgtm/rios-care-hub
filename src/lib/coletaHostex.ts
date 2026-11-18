@@ -1,5 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+
+// `hostex_ultima_coleta` ainda não está no types.ts; trocar pelo cliente tipado quando o Lovable regenerar.
+const clienteSemTipos = supabase as unknown as SupabaseClient;
 
 /**
  * Coleta da Hostex está em dia?
@@ -22,6 +26,10 @@ export function coletaEmDia(coletadoEm: string | null | undefined, agora = new D
  * Última coleta da Hostex que de fato trouxe reservas. O log marca "ok" mesmo
  * quando a Hostex recusa o token e não devolve nada, então "ok" sozinho não
  * prova que os dados estão em dia.
+ *
+ * Lê pela função `hostex_ultima_coleta()`, que devolve só a data: o
+ * proprietário não lê `hostex_sync_log` (só a equipe). Ler a tabela direto
+ * daqui devolve zero linhas para ele e esconde os resultados.
  */
 export function useColetaHostex(ativo = true) {
   return useQuery({
@@ -29,15 +37,9 @@ export function useColetaHostex(ativo = true) {
     enabled: ativo,
     staleTime: 10 * 60_000,
     queryFn: async (): Promise<string | null> => {
-      const { data, error } = await supabase
-        .from("hostex_sync_log")
-        .select("finished_at")
-        .eq("status", "ok")
-        .gt("reservations_upserted", 0)
-        .order("finished_at", { ascending: false })
-        .limit(1);
+      const { data, error } = await clienteSemTipos.rpc("hostex_ultima_coleta");
       if (error) throw error;
-      return data?.[0]?.finished_at ?? null;
+      return typeof data === "string" ? data : null;
     },
   });
 }
