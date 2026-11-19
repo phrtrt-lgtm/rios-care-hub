@@ -4,10 +4,12 @@ import { Button } from "@/components/ui/button";
 import { AbaPilula, BarraFiltros } from "@/components/painel/PaginaInterna";
 import { TituloSecao } from "@/components/painel/TituloSecao";
 import { useAuth } from "@/hooks/useAuth";
+import { cn } from "@/lib/utils";
 import { lazyPage } from "@/lib/lazyPage";
 import { mesesComResumo, resumoJaVisto } from "@/lib/resumoDoMes";
 import { Cartao, Cifra, Destaques, DivisaoDoValor, HeroResultados, ProximasChegadas, Revelar } from "./blocos";
 import { MapaBrasil } from "./MapaBrasil";
+import { suportaWebGL, ufDoEndereco } from "./cena3d/suporte";
 import {
   BarraDeCanais,
   BarrasHorizontais,
@@ -54,8 +56,14 @@ interface Props {
   onVerReservas?: () => void;
 }
 
+/** Caixa do mapa de origem em 3D. O mapa plano segura o mesmo lugar enquanto o pacote 3D carrega. */
+const CAIXA_DO_MAPA = "h-[250px] w-full";
+
 // A história do mês só baixa quando a pessoa abre (vídeos, Mini Paulo e o cartão de compartilhar).
 const ResumoDoMes = lazyPage(() => import("./resumo/ResumoDoMes"));
+// As peças em 3D trazem o three.js: ficam num pacote à parte, que só baixa nesta página e em aparelho que desenha WebGL.
+const RelevoDoAno = lazyPage(() => import("./cena3d/RelevoDoAno"));
+const MapaHospedes3D = lazyPage(() => import("./cena3d/MapaHospedes3D"));
 
 /**
  * Visão geral dos resultados de um imóvel.
@@ -73,6 +81,9 @@ export function VisaoGeral({ dados, reservas, hoje, primeira, onVerReservas }: P
   // "Este ano" é o retrato mais útil; em janeiro e fevereiro ele ainda é curto.
   const [periodo, setPeriodo] = useState<Periodo>(() => periodoPorId(deDia(hoje).getMonth() >= 2 ? "ano" : "12m", hoje));
   const [verTabela, setVerTabela] = useState(false);
+  const [ufEmFoco, setUfEmFoco] = useState<string | null>(null);
+  const [em3d] = useState(suportaWebGL);
+  const ufDoImovel = useMemo(() => ufDoEndereco(dados.imovel.endereco), [dados.imovel.endereco]);
 
   // Último mês fechado com reserva: é dele o resumo em história.
   const mesDoResumo = useMemo(() => mesesComResumo(reservas, hoje, primeira, 1)[0], [reservas, hoje, primeira]);
@@ -256,6 +267,24 @@ export function VisaoGeral({ dados, reservas, hoje, primeira, onVerReservas }: P
           <Destaques itens={destaques} />
         </Revelar>
 
+        {em3d && serie.some((m) => m.noites > 0) && (
+          <Revelar>
+            <Cartao titulo="O ano em relevo" subtitulo="Cada bloco é uma noite reservada. Quanto mais alto, maior a diária.">
+              <Suspense fallback={<div className="h-[290px] animate-pulse rounded-lg bg-muted/50 sm:h-[400px] lg:h-[430px]" aria-hidden="true" />}>
+                <RelevoDoAno
+                  reservas={reservas}
+                  meses={serie}
+                  hoje={hoje}
+                  primeira={primeira}
+                  selecao={periodo}
+                  calendario={dados.calendario}
+                  onSelecionarMes={(m) => setPeriodo(periodoDoMes(m.ano, m.mes0))}
+                />
+              </Suspense>
+            </Cartao>
+          </Revelar>
+        )}
+
         <Revelar className="grid min-w-0 items-start gap-4 lg:grid-cols-3">
           <Cartao
             className="lg:col-span-2"
@@ -409,12 +438,24 @@ export function VisaoGeral({ dados, reservas, hoje, primeira, onVerReservas }: P
             subtitulo={origens.conhecidas > 0 ? `Estado pelo DDD · ${origens.conhecidas} reservas com telefone informado` : "Estado ou país de quem reserva"}
           >
             {origens.lista.length > 0 && estados.length > 0 ? (
-              // mapa em blocos à esquerda; os números ficam na lista
-              <div className="flex items-start gap-4">
-                <MapaBrasil ufs={estados} className="w-[124px] shrink-0" />
-                <ul className="min-w-0 flex-1 space-y-2 pt-0.5">
+              // o mapa em blocos e, com ele, os números. Em 3D o mapa ocupa a largura do cartão e a lista vai embaixo;
+              // onde o aparelho não desenha 3D fica o mapa plano à esquerda, como antes.
+              <div className={cn(em3d ? "space-y-3" : "flex items-start gap-4")}>
+                {em3d ? (
+                  <Suspense fallback={<MapaBrasil ufs={estados} className={cn(CAIXA_DO_MAPA, "py-3")} />}>
+                    <MapaHospedes3D ufs={estados} destino={ufDoImovel} emFoco={ufEmFoco} className={CAIXA_DO_MAPA} />
+                  </Suspense>
+                ) : (
+                  <MapaBrasil ufs={estados} className="w-[124px] shrink-0" />
+                )}
+                <ul className={cn("min-w-0", em3d ? "grid grid-cols-2 gap-x-5 gap-y-2" : "flex-1 space-y-2 pt-0.5")}>
                   {origens.lista.map((o) => (
-                    <li key={o.rotulo} className="flex items-baseline justify-between gap-2 text-xs">
+                    <li
+                      key={o.rotulo}
+                      className="flex items-baseline justify-between gap-2 text-xs"
+                      onMouseEnter={() => setUfEmFoco(estados.find((e) => e.nome === o.rotulo)?.uf ?? null)}
+                      onMouseLeave={() => setUfEmFoco(null)}
+                    >
                       <span className="truncate text-muted-foreground">{o.rotulo}</span>
                       <span className="shrink-0 font-medium tabular-nums">
                         {o.reservas} · {pct(o.parte)}

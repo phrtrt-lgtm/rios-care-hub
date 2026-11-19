@@ -78,7 +78,7 @@ function Selo({ icone, children, tom = "neutro" }: { icone?: ReactNode; children
   );
 }
 
-type Pose = "oi" | "joinha" | "encantado";
+type Pose = "ola" | "joia" | "encantado";
 
 /**
  * O Mini Paulo de meio corpo, subindo da borda de baixo.
@@ -180,7 +180,7 @@ export function SlideCapa({ resumo, imovel, nomePessoa }: { resumo: ResumoMes; i
           {primeiroNome ? `Oi, ${primeiroNome}! ` : "Oi! "}
           Vem ver como foi {resumo.mes.nome} por aqui.
         </Balao>
-        <Paulo pose="oi" className="absolute -bottom-9 -right-3 h-full" />
+        <Paulo pose="ola" className="absolute -bottom-9 -right-3 h-full" />
       </div>
     </div>
   );
@@ -606,7 +606,7 @@ export function SlideFecho({ resumo, outrosMeses, onCompartilhar, onVerCompleto,
       )}
 
       {/* preso ao canto do cartão; o corte no pé e na lateral é feito dentro da caixa dele */}
-      <Paulo pose="joinha" className="absolute bottom-0 right-0 h-[46%] min-h-[260px]" imagemClassName="translate-x-5 translate-y-9" atraso={0.5} />
+      <Paulo pose="joia" className="absolute bottom-0 right-0 h-[46%] min-h-[260px]" imagemClassName="translate-x-5 translate-y-9" atraso={0.5} />
     </div>
   );
 }

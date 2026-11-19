@@ -10,8 +10,8 @@ import type { OrigemUf } from "@/lib/resultadosImovel";
  * na lista ao lado e na dica de cada bloco.
  */
 
-/** [coluna, linha] de cada estado numa grade de 6 × 9. */
-const POSICAO: Record<string, [number, number]> = {
+/** [coluna, linha] de cada estado numa grade de 6 × 9. O mapa em 3D usa a mesma grade. */
+export const POSICAO_UF: Record<string, [number, number]> = {
   RR: [2, 0], AP: [3, 0],
   AM: [1, 1], PA: [2, 1], MA: [3, 1], CE: [4, 1], RN: [5, 1],
   AC: [0, 2], RO: [1, 2], TO: [2, 2], PI: [3, 2], PE: [4, 2], PB: [5, 2],
@@ -58,7 +58,7 @@ export function MapaBrasil({ ufs, variante = "claro", animar = false, className 
       aria-label={`Mapa do Brasil com a origem dos hóspedes: ${resumo}`}
       className={cn("h-auto w-full", className)}
     >
-      {Object.entries(POSICAO).map(([uf, [col, lin]]) => {
+      {Object.entries(POSICAO_UF).map(([uf, [col, lin]]) => {
         const dado = porUf.get(uf);
         const x = col * (LADO + VAO);
         const y = lin * (LADO + VAO);

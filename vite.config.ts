@@ -25,6 +25,8 @@ export default defineConfig(({ mode }) => ({
           charts: ["recharts"],
           motion: ["framer-motion"],
           zip: ["jszip"],
+          // peças em 3D da página de resultados; só baixa lá
+          three: ["three"],
         },
       },
     },

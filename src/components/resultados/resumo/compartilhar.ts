@@ -86,7 +86,7 @@ export async function gerarCartaoDoResumo({ resumo, imovel, comValores }: Opcoes
   const [foto, logo, paulo] = await Promise.all([
     capa ? carregar(capa, true) : Promise.resolve(null),
     carregar("/logo.png"),
-    carregar("/resumo/paulo-joinha.webp"),
+    carregar("/resumo/paulo-joia.webp"),
   ]);
 
   // Fundo
