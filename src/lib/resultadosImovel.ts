@@ -696,6 +696,67 @@ export function nomeDaOrigem(origem: string): string {
   return PAISES[origem] ?? "Outros países";
 }
 
+/** Sigla do estado de uma origem "BR-31"; null para outro país ou DDD desconhecido. */
+export function ufDaOrigem(origem: string): string | null {
+  return origem.startsWith("BR-") ? (DDD_UF[origem.slice(3)] ?? null) : null;
+}
+
+export function nomeDaUf(uf: string): string {
+  return NOME_UF[uf] ?? uf;
+}
+
+export interface OrigemUf {
+  uf: string;
+  nome: string;
+  reservas: number;
+  parte: number;
+}
+
+export interface OrigensPorEstado {
+  /** Estados brasileiros, do maior para o menor */
+  ufs: OrigemUf[];
+  /** O que não cai num estado: outros países e DDD desconhecido */
+  fora: { nome: string; reservas: number; parte: number }[];
+  conhecidas: number;
+}
+
+/** Origem dos hóspedes por estado, para o mapa. Mesma base de `origensDosHospedes`. */
+export function origensPorEstado(reservas: ReservaCalculada[], inicio: number, fim: number): OrigensPorEstado {
+  const porUf = new Map<string, number>();
+  const fora = new Map<string, number>();
+  let conhecidas = 0;
+  for (const r of reservas) {
+    if (!r.origem) continue;
+    if (Math.min(r.co, fim) - Math.max(r.ci, inicio) <= 0) continue;
+    conhecidas += 1;
+    const uf = ufDaOrigem(r.origem);
+    if (uf) porUf.set(uf, (porUf.get(uf) ?? 0) + 1);
+    else {
+      const nome = nomeDaOrigem(r.origem);
+      fora.set(nome, (fora.get(nome) ?? 0) + 1);
+    }
+  }
+  const parte = (n: number) => (conhecidas > 0 ? n / conhecidas : 0);
+  return {
+    ufs: [...porUf.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([uf, n]) => ({ uf, nome: nomeDaUf(uf), reservas: n, parte: parte(n) })),
+    fora: [...fora.entries()].sort((a, b) => b[1] - a[1]).map(([nome, n]) => ({ nome, reservas: n, parte: parte(n) })),
+    conhecidas,
+  };
+}
+
+/**
+ * Capa do anúncio em tamanho maior. O portal guarda a versão pequena do CDN do
+ * Airbnb (450 px); o mesmo endereço entrega a largura pedida em `im_w`. Capa de
+ * outra origem (bucket do portal) fica como está.
+ */
+export function capaGrande(url: string | null | undefined, largura: 720 | 960 | 1200 = 960): string | null {
+  if (!url) return null;
+  if (!/muscache\.(com|cn)\//.test(url)) return url;
+  return `${url.split("?")[0]}?im_w=${largura}`;
+}
+
 export interface Origem {
   rotulo: string;
   reservas: number;

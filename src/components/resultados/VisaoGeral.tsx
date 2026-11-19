@@ -1,9 +1,13 @@
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { BedDouble, CalendarCheck, Percent, Table2, TrendingUp, Wallet, X, BarChart3, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AbaPilula, BarraFiltros } from "@/components/painel/PaginaInterna";
 import { TituloSecao } from "@/components/painel/TituloSecao";
-import { Cartao, Cifra, Destaques, DivisaoDoValor, HeroResultados } from "./blocos";
+import { useAuth } from "@/hooks/useAuth";
+import { lazyPage } from "@/lib/lazyPage";
+import { mesesComResumo, resumoJaVisto } from "@/lib/resumoDoMes";
+import { Cartao, Cifra, Destaques, DivisaoDoValor, HeroResultados, ProximasChegadas, Revelar } from "./blocos";
+import { MapaBrasil } from "./MapaBrasil";
 import {
   BarraDeCanais,
   BarrasHorizontais,
@@ -27,6 +31,7 @@ import {
   ocupacaoPorDiaDaSemana,
   olharAdiante,
   origensDosHospedes,
+  origensPorEstado,
   pct,
   periodoAnterior,
   periodoDoMes,
@@ -44,7 +49,12 @@ interface Props {
   reservas: ReservaCalculada[];
   hoje: number;
   primeira: number | null;
+  /** "Ver todas as reservas", nas próximas chegadas: a página troca para a aba Reservas. */
+  onVerReservas?: () => void;
 }
+
+// A história do mês só baixa quando a pessoa abre (vídeos, Mini Paulo e o cartão de compartilhar).
+const ResumoDoMes = lazyPage(() => import("./resumo/ResumoDoMes"));
 
 /**
  * Visão geral dos resultados de um imóvel.
@@ -54,11 +64,19 @@ interface Props {
  * escolhido na linha de filtros — os números, os destaques e os recortes. Os
  * dois gráficos de linha do tempo mostram sempre o ano inteiro e marcam o
  * período com uma faixa; clicar num mês filtra por ele.
+ *
+ * O botão "Resumo de <mês>" no topo abre a história do último mês fechado.
  */
-export function VisaoGeral({ dados, reservas, hoje, primeira }: Props) {
+export function VisaoGeral({ dados, reservas, hoje, primeira, onVerReservas }: Props) {
+  const { profile } = useAuth();
   // "Este ano" é o retrato mais útil; em janeiro e fevereiro ele ainda é curto.
   const [periodo, setPeriodo] = useState<Periodo>(() => periodoPorId(deDia(hoje).getMonth() >= 2 ? "ano" : "12m", hoje));
   const [verTabela, setVerTabela] = useState(false);
+
+  // Último mês fechado com reserva: é dele o resumo em história.
+  const mesDoResumo = useMemo(() => mesesComResumo(reservas, hoje, primeira, 1)[0], [reservas, hoje, primeira]);
+  const [resumoAberto, setResumoAberto] = useState(false);
+  const [resumoVisto, setResumoVisto] = useState(() => (mesDoResumo ? resumoJaVisto(dados.imovel.id, mesDoResumo.chave) : true));
 
   const adiante = useMemo(() => olharAdiante(reservas, hoje), [reservas, hoje]);
   const mercado = useMemo(() => dados.mercado ?? [], [dados.mercado]);
@@ -79,6 +97,7 @@ export function VisaoGeral({ dados, reservas, hoje, primeira }: Props) {
   const semana = useMemo(() => ocupacaoPorDiaDaSemana(reservas, periodo.inicio, periodo.fim, primeira), [reservas, periodo, primeira]);
   const antecedencia = useMemo(() => faixasDeAntecedencia(reservas, periodo.inicio, periodo.fim), [reservas, periodo]);
   const origens = useMemo(() => origensDosHospedes(reservas, periodo.inicio, periodo.fim), [reservas, periodo]);
+  const estados = useMemo(() => origensPorEstado(reservas, periodo.inicio, periodo.fim).ufs, [reservas, periodo]);
   const destaques = useMemo(
     () => gerarDestaques({ reservas, periodo, atual, serie, referencia: dados.referencia, mercado, adiante, primeira }),
     [reservas, periodo, atual, serie, dados.referencia, mercado, adiante, primeira],
@@ -92,11 +111,34 @@ export function VisaoGeral({ dados, reservas, hoje, primeira }: Props) {
 
   return (
     <div className="space-y-6 md:space-y-8">
-      <HeroResultados dados={dados} adiante={adiante} hoje={hoje} />
+      <HeroResultados
+        dados={dados}
+        adiante={adiante}
+        hoje={hoje}
+        resumo={
+          mesDoResumo
+            ? {
+                rotulo: `Resumo de ${nomeDoMes(mesDoResumo.ano, mesDoResumo.mes0, false)}`,
+                novo: !resumoVisto,
+                onAbrir: () => {
+                  setResumoAberto(true);
+                  setResumoVisto(true);
+                },
+              }
+            : undefined
+        }
+      />
+
+      {resumoAberto && (
+        <Suspense fallback={null}>
+          <ResumoDoMes dados={dados} nomePessoa={dados.visao_equipe ? null : profile?.name} onFechar={() => setResumoAberto(false)} />
+        </Suspense>
+      )}
 
       {/* ---------- O que já está reservado ---------- */}
       <section aria-labelledby="titulo-adiante" className="space-y-3">
         <TituloSecao id="titulo-adiante" titulo="A seguir" subtitulo="O que já está reservado de hoje em diante" />
+        <ProximasChegadas reservas={reservas} hoje={hoje} onVerTodas={onVerReservas} />
         <div className="grid gap-4 lg:grid-cols-3">
           <Cartao titulo="Ocupação já garantida" subtitulo="Noites reservadas nos próximos dias" className="lg:col-span-2">
             <div className="grid gap-4 sm:grid-cols-3">
@@ -208,9 +250,11 @@ export function VisaoGeral({ dados, reservas, hoje, primeira }: Props) {
           )}
         </div>
 
-        <Destaques itens={destaques} />
+        <Revelar>
+          <Destaques itens={destaques} />
+        </Revelar>
 
-        <div className="grid min-w-0 items-start gap-4 lg:grid-cols-3">
+        <Revelar className="grid min-w-0 items-start gap-4 lg:grid-cols-3">
           <Cartao
             className="lg:col-span-2"
             titulo="Diárias por mês"
@@ -277,9 +321,9 @@ export function VisaoGeral({ dados, reservas, hoje, primeira }: Props) {
               <p className="py-6 text-center text-sm text-muted-foreground">Sem diárias neste período.</p>
             )}
           </Cartao>
-        </div>
+        </Revelar>
 
-        <div className="grid min-w-0 items-start gap-4 lg:grid-cols-2">
+        <Revelar className="grid min-w-0 items-start gap-4 lg:grid-cols-2">
           <Cartao
             titulo="Ocupação mês a mês"
             subtitulo={
@@ -322,9 +366,9 @@ export function VisaoGeral({ dados, reservas, hoje, primeira }: Props) {
               <p className="py-10 text-center text-sm text-muted-foreground">Sem noites reservadas neste período.</p>
             )}
           </Cartao>
-        </div>
+        </Revelar>
 
-        <div className="grid min-w-0 items-start gap-4 lg:grid-cols-3">
+        <Revelar className="grid min-w-0 items-start gap-4 lg:grid-cols-3">
           <Cartao titulo="Por onde chegam as reservas" subtitulo="Diárias por canal, no período">
             {canais.fatias.length > 0 ? (
               <BarraDeCanais fatias={canais.fatias} />
@@ -362,7 +406,22 @@ export function VisaoGeral({ dados, reservas, hoje, primeira }: Props) {
             titulo="De onde vêm os hóspedes"
             subtitulo={origens.conhecidas > 0 ? `Estado pelo DDD · ${origens.conhecidas} reservas com telefone informado` : "Estado ou país de quem reserva"}
           >
-            {origens.lista.length > 0 ? (
+            {origens.lista.length > 0 && estados.length > 0 ? (
+              // mapa em blocos à esquerda; os números ficam na lista
+              <div className="flex items-start gap-4">
+                <MapaBrasil ufs={estados} className="w-[124px] shrink-0" />
+                <ul className="min-w-0 flex-1 space-y-2 pt-0.5">
+                  {origens.lista.map((o) => (
+                    <li key={o.rotulo} className="flex items-baseline justify-between gap-2 text-xs">
+                      <span className="truncate text-muted-foreground">{o.rotulo}</span>
+                      <span className="shrink-0 font-medium tabular-nums">
+                        {o.reservas} · {pct(o.parte)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : origens.lista.length > 0 ? (
               <BarrasHorizontais
                 itens={origens.lista.map((o) => ({ rotulo: o.rotulo, parte: o.parte, valor: o.reservas }))}
                 rotuloValor={(i) => `${i.valor} · ${pct(i.parte)}`}
@@ -371,7 +430,7 @@ export function VisaoGeral({ dados, reservas, hoje, primeira }: Props) {
               <p className="py-6 text-center text-sm text-muted-foreground">Ainda sem origem informada nas reservas do período.</p>
             )}
           </Cartao>
-        </div>
+        </Revelar>
       </section>
     </div>
   );

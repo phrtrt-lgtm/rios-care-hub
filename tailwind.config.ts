@@ -120,6 +120,16 @@ export default {
           "0%": { transform: "scaleY(0)" },
           "100%": { transform: "scaleY(1)" },
         },
+        // Linha de gráfico sendo traçada (o <path> precisa de pathLength={1} e strokeDasharray={1})
+        "desenhar-linha": {
+          "0%": { strokeDashoffset: "1" },
+          "100%": { strokeDashoffset: "0" },
+        },
+        // Foto de capa se aproximando devagar (topo dos resultados e capa do resumo do mês)
+        "aproximar-foto": {
+          "0%": { transform: "scale(1)" },
+          "100%": { transform: "scale(1.14)" },
+        },
         "pulse-subtle": {
           "0%, 100%": { opacity: "1" },
           "50%": { opacity: "0.7" },
@@ -164,6 +174,8 @@ export default {
       },
       animation: {
         "crescer-barra": "crescer-barra 0.55s cubic-bezier(0.22, 1, 0.36, 1) both",
+        "desenhar-linha": "desenhar-linha 1.2s cubic-bezier(0.22, 1, 0.36, 1) both",
+        "aproximar-foto": "aproximar-foto 16s ease-out both",
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "fade-in": "fade-in 0.3s ease-out forwards",

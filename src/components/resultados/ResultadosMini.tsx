@@ -1,13 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueries } from "@tanstack/react-query";
-import { ArrowRight, Building2, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowRight, Building2, ChevronLeft, ChevronRight, Play } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TituloSecao } from "@/components/painel/TituloSecao";
 import { cn } from "@/lib/utils";
 import { coletaEmDia, useColetaHostex } from "@/lib/coletaHostex";
+import { lazyPage } from "@/lib/lazyPage";
+import { mesesComResumo, resumoJaVisto } from "@/lib/resumoDoMes";
 import {
   calcularReserva,
   consultaResultadosImovel,
@@ -38,9 +40,19 @@ import {
  *
  * Usa a mesma consulta da página (mesma chave de cache). Só aparece com a
  * coleta da Hostex em dia — número velho é pior que número nenhum.
+ *
+ * A foto do imóvel ganha um anel quando existe resumo do último mês fechado
+ * (a história "Resumo de outubro"); tocar nela abre o resumo ali mesmo, sem
+ * bloco novo no painel. O anel apaga depois de visto.
  */
+
+// A história do mês só baixa quando a pessoa abre.
+const ResumoDoMes = lazyPage(() => import("./resumo/ResumoDoMes"));
+
 export function ResultadosMini() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const navigate = useNavigate();
+  const [resumoDe, setResumoDe] = useState<ResultadoImovel | null>(null);
   const { data: ultimaColeta } = useColetaHostex();
   const noAr = coletaEmDia(ultimaColeta);
   const { data: imoveis } = useImoveisDeResultados(user?.id, false, noAr);
@@ -104,7 +116,7 @@ export function ResultadosMini() {
         carregando && prontos.length === 0 ? (
           <Skeleton className="h-56 w-full rounded-2xl" />
         ) : (
-          prontos.map((d) => <CartaoMini key={d.imovel.id} dados={d} largo />)
+          prontos.map((d) => <CartaoMini key={d.imovel.id} dados={d} largo onAbrirResumo={() => setResumoDe(d)} />)
         )
       ) : (
         <div
@@ -117,10 +129,21 @@ export function ResultadosMini() {
             ? imoveis.slice(0, 2).map((i) => <Skeleton key={i.id} className={cn(CLASSE_CARTAO_TRILHO, "h-56 rounded-2xl")} />)
             : prontos.map((d) => (
                 <div key={d.imovel.id} className={CLASSE_CARTAO_TRILHO}>
-                  <CartaoMini dados={d} largo={false} />
+                  <CartaoMini dados={d} largo={false} onAbrirResumo={() => setResumoDe(d)} />
                 </div>
               ))}
         </div>
+      )}
+
+      {resumoDe && (
+        <Suspense fallback={null}>
+          <ResumoDoMes
+            dados={resumoDe}
+            nomePessoa={profile?.name}
+            onFechar={() => setResumoDe(null)}
+            onVerCompleto={() => navigate(`/resultados/${resumoDe.imovel.id}`)}
+          />
+        </Suspense>
       )}
     </section>
   );
@@ -132,13 +155,14 @@ const CLASSE_CARTAO_TRILHO = "w-[86%] shrink-0 snap-start sm:w-[70%] lg:w-[calc(
 const DIAS_ADIANTE = 14;
 const MESES_ATRAS = 5;
 
-function CartaoMini({ dados, largo }: { dados: ResultadoImovel; largo: boolean }) {
+function CartaoMini({ dados, largo, onAbrirResumo }: { dados: ResultadoImovel; largo: boolean; onAbrirResumo: () => void }) {
   const navigate = useNavigate();
   const hoje = hojeDia();
 
   const calculo = useMemo(() => {
     const reservas = dados.reservas.map(calcularReserva);
     const primeira = dados.primeira_reserva ? paraDia(dados.primeira_reserva) : null;
+    const mesDoResumo = mesesComResumo(reservas, hoje, primeira, 1)[0];
     const d = deDia(hoje);
     const inicioMes = diaDe(d.getFullYear(), d.getMonth());
     const fimMes = diaDe(d.getFullYear(), d.getMonth() + 1);
@@ -152,11 +176,20 @@ function CartaoMini({ dados, largo }: { dados: ResultadoImovel; largo: boolean }
       adiante: olharAdiante(reservas, hoje),
       ocupadas,
       serie: serieMensal(reservas, dados.referencia, hoje, primeira, MESES_ATRAS, 0),
+      mesDoResumo,
     };
   }, [dados, hoje]);
 
-  const { mes, nomeMes, adiante, ocupadas, serie } = calculo;
+  const { mes, nomeMes, adiante, ocupadas, serie, mesDoResumo } = calculo;
   const abrir = () => navigate(`/resultados/${dados.imovel.id}`);
+
+  // Resumo do último mês fechado: anel na foto enquanto não foi visto.
+  const [resumoVisto, setResumoVisto] = useState(() => (mesDoResumo ? resumoJaVisto(dados.imovel.id, mesDoResumo.chave) : true));
+  const nomeDoResumo = mesDoResumo ? nomeDoMes(mesDoResumo.ano, mesDoResumo.mes0, false) : "";
+  const abrirResumo = () => {
+    setResumoVisto(true);
+    onAbrirResumo();
+  };
 
   let agora: { texto: string; ativo: boolean };
   if (adiante.emCasa) {
@@ -183,13 +216,40 @@ function CartaoMini({ dados, largo }: { dados: ResultadoImovel; largo: boolean }
       <div className="flex flex-col gap-4 p-4 md:p-5">
         {/* imóvel + o que acontece agora */}
         <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-background/10 ring-1 ring-background/20">
-            {dados.imovel.capa ? (
-              <img src={dados.imovel.capa} alt="" loading="lazy" className="h-full w-full object-cover" />
-            ) : (
-              <Building2 className="h-5 w-5 text-secondary-foreground/70" aria-hidden="true" />
-            )}
-          </span>
+          {mesDoResumo ? (
+            // como a foto de um status: anel colorido enquanto o resumo do mês não foi visto
+            <button
+              type="button"
+              onClick={abrirResumo}
+              aria-label={`Ver o resumo de ${nomeDoResumo} de ${dados.imovel.nome}`}
+              title={`Resumo de ${nomeDoResumo}`}
+              className="relative shrink-0 rounded-full p-[3px] transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-foreground active:scale-95 motion-reduce:transition-none"
+              style={{
+                background: resumoVisto
+                  ? "hsl(var(--secondary-foreground) / 0.28)"
+                  : "conic-gradient(from 200deg, hsl(var(--rios-terra)), hsl(var(--rios-terra-light)), hsl(var(--rios-blue-light)), hsl(var(--rios-terra)))",
+              }}
+            >
+              <span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-secondary ring-2 ring-secondary">
+                {dados.imovel.capa ? (
+                  <img src={dados.imovel.capa} alt="" loading="lazy" className="h-full w-full object-cover" />
+                ) : (
+                  <Building2 className="h-5 w-5 text-secondary-foreground/70" aria-hidden="true" />
+                )}
+              </span>
+              <span className="absolute -bottom-0.5 -right-0.5 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-primary text-primary-foreground ring-2 ring-secondary" aria-hidden="true">
+                <Play className="h-2 w-2 translate-x-px fill-current" />
+              </span>
+            </button>
+          ) : (
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-background/10 ring-1 ring-background/20">
+              {dados.imovel.capa ? (
+                <img src={dados.imovel.capa} alt="" loading="lazy" className="h-full w-full object-cover" />
+              ) : (
+                <Building2 className="h-5 w-5 text-secondary-foreground/70" aria-hidden="true" />
+              )}
+            </span>
+          )}
           <div className="min-w-0 flex-1">
             <h3 className="truncate text-base font-semibold leading-tight tracking-tight">{dados.imovel.nome}</h3>
             <p className="mt-0.5 flex items-center gap-1.5 text-xs text-secondary-foreground/80">
@@ -208,6 +268,21 @@ function CartaoMini({ dados, largo }: { dados: ResultadoImovel; largo: boolean }
             <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
           </Button>
         </div>
+
+        {/* chamada do resumo do mês: só enquanto ele é novidade; depois fica o anel na foto */}
+        {mesDoResumo && !resumoVisto && (
+          <button
+            type="button"
+            onClick={abrirResumo}
+            className="-mt-1 inline-flex w-fit max-w-full items-center gap-2 rounded-full bg-secondary-foreground py-1 pl-1 pr-3 text-xs font-semibold text-secondary shadow-sm transition-transform hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-secondary motion-reduce:transition-none"
+          >
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground" aria-hidden="true">
+              <Play className="h-2.5 w-2.5 translate-x-px fill-current" />
+            </span>
+            <span className="truncate">Resumo de {nomeDoResumo}</span>
+            <span className="shrink-0 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">Novo</span>
+          </button>
+        )}
 
         <div className={cn("grid gap-4", largo && "lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:items-end lg:gap-8")}>
           {/* três números */}

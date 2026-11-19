@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import {
   nomeDoMes,
@@ -44,6 +44,31 @@ export function useLargura<T extends HTMLElement>(): [React.RefObject<T>, number
     return () => ro.disconnect();
   }, []);
   return [ref, largura];
+}
+
+/**
+ * O elemento já apareceu na tela? Vira true uma vez e fica. As barras e linhas
+ * só entram (crescendo, sendo traçadas) quando o gráfico é visto: quem rola a
+ * página pega a animação, em vez de ela acontecer lá embaixo sem ninguém ver.
+ */
+export function useNaTela<T extends Element>(ref: React.RefObject<T>): boolean {
+  const [visto, setVisto] = useState(() => typeof IntersectionObserver === "undefined");
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || visto) return;
+    const observador = new IntersectionObserver(
+      (entradas) => {
+        if (entradas.some((e) => e.isIntersecting)) {
+          setVisto(true);
+          observador.disconnect();
+        }
+      },
+      { rootMargin: "0px 0px -32px 0px" },
+    );
+    observador.observe(el);
+    return () => observador.disconnect();
+  }, [ref, visto]);
+  return visto;
 }
 
 /** Teto "redondo" para o eixo: 1, 2, 2,5 ou 5 × 10ⁿ. */
@@ -134,6 +159,7 @@ interface ReceitaMensalProps {
  */
 export function GraficoReceitaMensal({ serie, selecao, onSelecionarMes }: ReceitaMensalProps) {
   const [ref, largura] = useLargura<HTMLDivElement>();
+  const visivel = useNaTela(ref);
   const [ativo, setAtivo] = useState<number | null>(null);
 
   const ALTURA_PLOT = 172;
@@ -193,7 +219,7 @@ export function GraficoReceitaMensal({ serie, selecao, onSelecionarMes }: Receit
                     fill="hsl(var(--foreground) / 0.05)"
                   />
                 )}
-                {hReal > 0 && (
+                {visivel && hReal > 0 && (
                   <path
                     d={colunaArredondada(cx - barra / 2, y(m.realizado), barra, hReal, hRes > 0 ? 0 : 4)}
                     fill={COR.serie1}
@@ -201,7 +227,7 @@ export function GraficoReceitaMensal({ serie, selecao, onSelecionarMes }: Receit
                     style={{ transformBox: "fill-box", animationDelay: `${i * 30}ms` }}
                   />
                 )}
-                {hRes > 0 && (
+                {visivel && hRes > 0 && (
                   <path
                     d={colunaArredondada(cx - barra / 2, y(total), barra, Math.max(0, hRes - vao), 4)}
                     fill={COR.serie1Clara}
@@ -210,7 +236,7 @@ export function GraficoReceitaMensal({ serie, selecao, onSelecionarMes }: Receit
                   />
                 )}
                 {/* rótulo direto só no maior mês */}
-                {m === maior && total > 0 && (
+                {visivel && m === maior && total > 0 && (
                   <text x={cx} y={y(total) - 7} textAnchor="middle" className="fill-foreground text-[11px] font-semibold tabular-nums">
                     {reaisCurto(total)}
                   </text>
@@ -291,7 +317,11 @@ function colunaArredondada(x: number, yTopo: number, w: number, h: number, raio:
  */
 export function GraficoOcupacao({ serie, selecao }: { serie: MesSerie[]; selecao: { inicio: number; fim: number } }) {
   const [ref, largura] = useLargura<HTMLDivElement>();
+  const visivel = useNaTela(ref);
   const [ativo, setAtivo] = useState<number | null>(null);
+  // Linha contínua sendo traçada; a pontilhada (meses à frente) e a área aparecem depois.
+  const TRACO = { pathLength: 1, strokeDasharray: 1, className: "animate-desenhar-linha motion-reduce:animate-none" };
+  const depois = (atraso: number) => ({ opacity: visivel ? 1 : 0, transition: `opacity 0.5s ease ${atraso}s` });
 
   const ALTURA_PLOT = 150;
   const TOPO = 14;
@@ -361,15 +391,43 @@ export function GraficoOcupacao({ serie, selecao }: { serie: MesSerie[]; selecao
             return <rect x={x0} y={TOPO - 6} width={x1 - x0} height={ALTURA_PLOT + 6} rx={6} fill="hsl(var(--primary) / 0.07)" />;
           })()}
 
-          {temRios && (
-            <path d={trecho("ocupacaoRios", () => true)} fill="none" stroke={COR.neutro} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+          {visivel && temRios && (
+            <path
+              d={trecho("ocupacaoRios", () => true)}
+              fill="none"
+              stroke={COR.neutro}
+              strokeWidth={2}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              {...TRACO}
+              style={{ animationDelay: "120ms" }}
+            />
           )}
-          {temMercado && (
-            <path d={trecho("ocupacaoMercado", () => true)} fill="none" stroke={COR.serie2} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+          {visivel && temMercado && (
+            <path
+              d={trecho("ocupacaoMercado", () => true)}
+              fill="none"
+              stroke={COR.serie2}
+              strokeWidth={2}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              {...TRACO}
+              style={{ animationDelay: "240ms" }}
+            />
           )}
 
-          {area && <path d={area} fill="hsl(var(--grafico-1) / 0.1)" />}
-          <path d={trecho("ocupacao", (_m, i) => i <= corte)} fill="none" stroke={COR.serie1} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+          {area && <path d={area} fill="hsl(var(--grafico-1) / 0.1)" style={depois(0.7)} />}
+          {visivel && (
+            <path
+              d={trecho("ocupacao", (_m, i) => i <= corte)}
+              fill="none"
+              stroke={COR.serie1}
+              strokeWidth={2}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              {...TRACO}
+            />
+          )}
           <path
             d={trecho("ocupacao", (_m, i) => i >= corte)}
             fill="none"
@@ -377,6 +435,7 @@ export function GraficoOcupacao({ serie, selecao }: { serie: MesSerie[]; selecao
             strokeWidth={2}
             strokeDasharray="2 5"
             strokeLinecap="round"
+            style={depois(1)}
           />
 
           {serie.map((m, i) => (
@@ -390,7 +449,7 @@ export function GraficoOcupacao({ serie, selecao }: { serie: MesSerie[]; selecao
                 {passo < 28 && (i - corte) % 2 !== 0 ? "" : m.rotulo}
               </text>
               {m.ocupacao != null && (i === corte || ativo === i) && (
-                <circle cx={x(i)} cy={y(m.ocupacao)} r={4.5} fill={COR.serie1} stroke={COR.superficie} strokeWidth={2} />
+                <circle cx={x(i)} cy={y(m.ocupacao)} r={4.5} fill={COR.serie1} stroke={COR.superficie} strokeWidth={2} style={i === corte && ativo !== i ? depois(1) : undefined} />
               )}
               {m.ocupacaoRios != null && ativo === i && (
                 <circle cx={x(i)} cy={y(m.ocupacaoRios)} r={4.5} fill={COR.neutro} stroke={COR.superficie} strokeWidth={2} />
@@ -444,6 +503,7 @@ export function GraficoOcupacao({ serie, selecao }: { serie: MesSerie[]; selecao
 /** Sete colunas (seg a dom). Sexta e sábado em destaque; o resto em cinza. */
 export function GraficoDiasDaSemana({ dias }: { dias: DiaSemana[] }) {
   const [ref, largura] = useLargura<HTMLDivElement>();
+  const visivel = useNaTela(ref);
   const [ativo, setAtivo] = useState<number | null>(null);
 
   const ALTURA_PLOT = 120;
@@ -468,7 +528,7 @@ export function GraficoDiasDaSemana({ dias }: { dias: DiaSemana[] }) {
             return (
               <g key={d.rotulo}>
                 {ativo === i && <rect x={faixa * i + 1} y={TOPO - 8} width={Math.max(0, faixa - 2)} height={ALTURA_PLOT + 8} rx={6} fill="hsl(var(--foreground) / 0.05)" />}
-                {h > 0 && (
+                {visivel && h > 0 && (
                   <path
                     d={colunaArredondada(cx - barra / 2, y(d.ocupacao), barra, h, 4)}
                     fill={d.fimDeSemana ? COR.serie1 : COR.neutro}
@@ -476,7 +536,7 @@ export function GraficoDiasDaSemana({ dias }: { dias: DiaSemana[] }) {
                     style={{ transformBox: "fill-box", animationDelay: `${i * 40}ms` }}
                   />
                 )}
-                {d === melhor && d.ocupacao > 0 && (
+                {visivel && d === melhor && d.ocupacao > 0 && (
                   <text x={cx} y={y(d.ocupacao) - 6} textAnchor="middle" className="fill-foreground text-[11px] font-semibold tabular-nums">
                     {pct(d.ocupacao)}
                   </text>
@@ -564,15 +624,21 @@ export function BarrasHorizontais({
   rotuloValor: (item: { parte: number; valor: number }) => string;
 }) {
   const maximo = Math.max(0.0001, ...itens.map((i) => i.parte));
+  const ref = useRef<HTMLUListElement>(null);
+  const visivel = useNaTela(ref);
   return (
-    <ul className="space-y-2.5">
-      {itens.map((i) => (
+    <ul ref={ref} className="space-y-2.5">
+      {itens.map((i, n) => (
         <li key={i.rotulo} className="grid grid-cols-[minmax(0,7.5rem)_1fr_auto] items-center gap-2.5 text-xs">
           <span className="truncate text-muted-foreground">{i.rotulo}</span>
           <span className="h-2 overflow-hidden rounded-r-full" aria-hidden="true">
             <span
-              className="block h-full rounded-r-full transition-[width] duration-500"
-              style={{ width: `${Math.max(i.parte > 0 ? 3 : 0, (i.parte / maximo) * 100)}%`, background: cor }}
+              className="block h-full rounded-r-full transition-[width] duration-700 ease-out motion-reduce:transition-none"
+              style={{
+                width: visivel ? `${Math.max(i.parte > 0 ? 3 : 0, (i.parte / maximo) * 100)}%` : 0,
+                background: cor,
+                transitionDelay: `${n * 60}ms`,
+              }}
             />
           </span>
           <span className="w-16 text-right font-medium tabular-nums">{rotuloValor(i)}</span>
@@ -589,8 +655,10 @@ export function BarrasHorizontais({
 /** Barra de progresso de uma razão: trilho no mesmo tom, mais claro. */
 export function Medidor({ fracao, rotulo, detalhe }: { fracao: number; rotulo: string; detalhe: string }) {
   const f = Math.max(0, Math.min(1, fracao));
+  const ref = useRef<HTMLDivElement>(null);
+  const visivel = useNaTela(ref);
   return (
-    <div>
+    <div ref={ref}>
       <div className="flex items-baseline justify-between gap-2">
         <span className="text-xs text-muted-foreground">{rotulo}</span>
         <span className="text-sm font-semibold tabular-nums">{pct(f)}</span>
@@ -604,7 +672,10 @@ export function Medidor({ fracao, rotulo, detalhe }: { fracao: number; rotulo: s
         aria-valuenow={Math.round(f * 100)}
         aria-label={rotulo}
       >
-        <div className="h-full rounded-full transition-[width] duration-700" style={{ width: `${f * 100}%`, background: COR.serie1 }} />
+        <div
+          className="h-full rounded-full transition-[width] duration-1000 ease-out motion-reduce:transition-none"
+          style={{ width: visivel ? `${f * 100}%` : 0, background: COR.serie1 }}
+        />
       </div>
       <p className="mt-1 text-[11px] text-muted-foreground">{detalhe}</p>
     </div>

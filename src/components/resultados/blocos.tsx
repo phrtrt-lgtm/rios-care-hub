@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { animate, useReducedMotion } from "framer-motion";
-import { ArrowDownRight, ArrowUpRight, Building2, CalendarClock, MapPin, Minus, RefreshCw, Sparkles } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { animate, motion, useReducedMotion } from "framer-motion";
+import { ArrowDownRight, ArrowUpRight, Building2, CalendarClock, MapPin, Minus, Play, RefreshCw, Sparkles } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -8,6 +8,7 @@ import { TOM, type Tom } from "@/components/painel/tons";
 import { Etiqueta } from "@/components/painel/Etiqueta";
 import { Minigrafico } from "./graficos";
 import {
+  capaGrande,
   formatarDia,
   infoCanal,
   liquidoEstimado,
@@ -19,6 +20,30 @@ import {
   type ReservaCalculada,
   type ResultadoImovel,
 } from "@/lib/resultadosImovel";
+
+/* ------------------------------------------------------------------------ */
+/* Entrada ao rolar                                                          */
+/* ------------------------------------------------------------------------ */
+
+/**
+ * Bloco que sobe de leve quando entra na tela, uma vez só. Envolve a linha
+ * inteira (a grade), não cada cartão, para não mudar o desenho da grade.
+ */
+export function Revelar({ children, className, atraso = 0 }: { children: ReactNode; className?: string; atraso?: number }) {
+  const reduzido = useReducedMotion();
+  if (reduzido) return <div className={className}>{children}</div>;
+  return (
+    <motion.div
+      className={className}
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "0px 0px -48px 0px" }}
+      transition={{ duration: 0.5, delay: atraso, ease: [0.22, 1, 0.36, 1] }}
+    >
+      {children}
+    </motion.div>
+  );
+}
 
 /* ------------------------------------------------------------------------ */
 /* Cartão                                                                    */
@@ -165,16 +190,21 @@ interface HeroProps {
   dados: ResultadoImovel;
   adiante: Adiante;
   hoje: number;
+  /** Botão da história do último mês fechado; ausente quando o imóvel ainda não tem mês fechado com reserva. */
+  resumo?: { rotulo: string; novo: boolean; onAbrir: () => void };
 }
 
 /**
  * Faixa de abertura: nome do imóvel, foto de capa e o que acontece agora.
  * O fundo é a animação "RIOS fluxo" (Remotion, ver motion/rios-fluxo); com
- * "reduzir movimento" ligado fica só o quadro parado.
+ * "reduzir movimento" ligado fica só o quadro parado. No celular não cabe a
+ * foto ao lado, então ela vira o fundo da faixa, se aproximando devagar.
  */
-export function HeroResultados({ dados, adiante, hoje }: HeroProps) {
+export function HeroResultados({ dados, adiante, hoje, resumo }: HeroProps) {
   const reduzido = useReducedMotion();
   const { imovel } = dados;
+  // Capa maior que a miniatura guardada; se o CDN recusar, volta para a original.
+  const [capa, setCapa] = useState(() => capaGrande(imovel.capa, 960));
 
   let agora: { texto: string; ativo: boolean };
   if (adiante.emCasa) {
@@ -195,7 +225,7 @@ export function HeroResultados({ dados, adiante, hoje }: HeroProps) {
   return (
     <section className="relative isolate overflow-hidden rounded-2xl bg-secondary text-secondary-foreground shadow-lg">
       {reduzido ? (
-        <img src="/animacoes/rios-fluxo-poster.jpg" alt="" aria-hidden="true" className="absolute inset-0 -z-10 h-full w-full object-cover" />
+        <img src="/animacoes/rios-fluxo-poster.jpg" alt="" aria-hidden="true" className={cn("absolute inset-0 -z-10 h-full w-full object-cover", capa && "hidden sm:block")} />
       ) : (
         <video
           autoPlay
@@ -206,16 +236,32 @@ export function HeroResultados({ dados, adiante, hoje }: HeroProps) {
           poster="/animacoes/rios-fluxo-poster.jpg"
           aria-hidden="true"
           tabIndex={-1}
-          className="absolute inset-0 -z-10 h-full w-full object-cover"
+          className={cn("absolute inset-0 -z-10 h-full w-full object-cover", capa && "hidden sm:block")}
         >
           <source src="/animacoes/rios-fluxo.webm" type="video/webm" />
           <source src="/animacoes/rios-fluxo.mp4" type="video/mp4" />
         </video>
       )}
-      {/* escurece o lado do texto para a leitura não depender do quadro do vídeo */}
-      <div className="absolute inset-0 -z-10 bg-gradient-to-r from-secondary/90 via-secondary/55 to-transparent" aria-hidden="true" />
+      {/* celular: a foto do imóvel é o fundo */}
+      {capa && (
+        <img
+          src={capa}
+          alt=""
+          aria-hidden="true"
+          onError={() => setCapa((atual) => (atual !== imovel.capa ? imovel.capa : null))}
+          className="absolute inset-0 -z-10 h-full w-full object-cover motion-safe:animate-aproximar-foto sm:hidden"
+        />
+      )}
+      {/* escurece o lado do texto para a leitura não depender do quadro do vídeo (no celular, da foto) */}
+      <div
+        className={cn(
+          "absolute inset-0 -z-10 sm:bg-gradient-to-r sm:from-secondary/90 sm:via-secondary/55 sm:to-transparent",
+          capa ? "bg-gradient-to-t from-secondary via-secondary/85 to-secondary/10" : "bg-gradient-to-r from-secondary/90 via-secondary/55 to-transparent",
+        )}
+        aria-hidden="true"
+      />
 
-      <div className="flex items-center gap-4 p-5 md:gap-8 md:p-7">
+      <div className={cn("flex items-end gap-4 p-5 sm:items-center md:gap-8 md:p-7", capa && "min-h-[330px] sm:min-h-0")}>
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-secondary-foreground/70">
             <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
@@ -244,11 +290,33 @@ export function HeroResultados({ dados, adiante, hoje }: HeroProps) {
               </span>
             )}
           </div>
+
+          {resumo && (
+            <button
+              type="button"
+              onClick={resumo.onAbrir}
+              // claro sobre o azul nos dois temas (bg-background ficaria escuro no tema escuro)
+              className="group mt-4 inline-flex max-w-full items-center gap-2.5 rounded-full bg-secondary-foreground py-1.5 pl-1.5 pr-4 text-sm font-semibold text-secondary shadow-lg transition-transform hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-foreground/70 focus-visible:ring-offset-2 focus-visible:ring-offset-secondary active:scale-[0.98] motion-reduce:transition-none"
+            >
+              <span className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                {resumo.novo && <span className="absolute inset-0 animate-ping rounded-full bg-primary opacity-60 motion-reduce:hidden" aria-hidden="true" />}
+                <Play className="relative h-3.5 w-3.5 translate-x-px fill-current" aria-hidden="true" />
+              </span>
+              <span className="truncate">{resumo.rotulo}</span>
+              {resumo.novo && <span className="shrink-0 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">Novo</span>}
+            </button>
+          )}
         </div>
 
         <div className="hidden w-52 shrink-0 overflow-hidden rounded-xl shadow-xl ring-1 ring-background/20 sm:block md:w-72">
-          {imovel.capa ? (
-            <img src={imovel.capa} alt={`Foto de ${imovel.nome}`} loading="lazy" className="aspect-[16/10] w-full object-cover" />
+          {capa ? (
+            <img
+              src={capa}
+              alt={`Foto de ${imovel.nome}`}
+              loading="lazy"
+              onError={() => setCapa((atual) => (atual !== imovel.capa ? imovel.capa : null))}
+              className="aspect-[16/10] w-full object-cover"
+            />
           ) : (
             <div className="flex aspect-[16/10] w-full items-center justify-center bg-background/10">
               <Building2 className="h-9 w-9 text-secondary-foreground/60" aria-hidden="true" />
@@ -376,6 +444,83 @@ export function DetalheReserva({
         {reserva.antecedencia != null &&
           ` · reservada com ${reserva.antecedencia} ${reserva.antecedencia === 1 ? "dia" : "dias"} de antecedência`}
       </p>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------------ */
+/* Próximas chegadas                                                         */
+/* ------------------------------------------------------------------------ */
+
+/**
+ * Quem está no imóvel agora e as próximas reservas, em cartões: datas, noites,
+ * hóspedes, canal e diárias. No celular os cartões rolam para o lado. Nada de
+ * nome de hóspede aqui (regra nº 5); a equipe vê os nomes na aba Reservas.
+ */
+export function ProximasChegadas({ reservas, hoje, onVerTodas }: { reservas: ReservaCalculada[]; hoje: number; onVerTodas?: () => void }) {
+  const lista = useMemo(() => {
+    const emCasa = reservas.filter((r) => r.ci <= hoje && hoje < r.co);
+    const futuras = reservas.filter((r) => r.ci > hoje).sort((a, b) => a.ci - b.ci);
+    return [...emCasa, ...futuras].slice(0, 4);
+  }, [reservas, hoje]);
+
+  if (lista.length === 0) return null;
+
+  return (
+    <div>
+      <div className="mb-2 flex items-baseline justify-between gap-3">
+        <h3 className="text-sm font-semibold tracking-tight md:text-[15px]">Próximas chegadas</h3>
+        {onVerTodas && (
+          <button
+            type="button"
+            onClick={onVerTodas}
+            className="shrink-0 rounded text-xs font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            Ver todas as reservas
+          </button>
+        )}
+      </div>
+      <ul className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-4 px-4 pb-1 [scrollbar-width:none] md:mx-0 md:grid md:grid-cols-4 md:overflow-visible md:px-0 md:pb-0 [&::-webkit-scrollbar]:hidden">
+        {lista.map((r) => {
+          const canal = infoCanal(r.canal);
+          const emCasa = r.ci <= hoje;
+          const dias = r.ci - hoje;
+          const quando = emCasa ? "No imóvel agora" : dias === 1 ? "Amanhã" : `Em ${dias} dias`;
+          return (
+            <li
+              key={r.id}
+              className={cn(
+                "flex w-[72%] shrink-0 snap-start flex-col rounded-xl border bg-card p-3.5 shadow-sm sm:w-[44%] md:w-auto",
+                emCasa ? "border-success/40" : "border-border/70",
+              )}
+            >
+              <p className={cn("flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide", emCasa ? "text-success" : "text-muted-foreground")}>
+                {emCasa && (
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-70 motion-reduce:hidden" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+                  </span>
+                )}
+                {quando}
+              </p>
+              <p className="mt-1.5 text-base font-semibold tabular-nums leading-tight">
+                {formatarDia(r.ci)} <span className="font-normal text-muted-foreground">→</span> {formatarDia(r.co)}
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {r.noites} {r.noites === 1 ? "noite" : "noites"}
+                {r.hospedes ? ` · ${r.hospedes} ${r.hospedes === 1 ? "hóspede" : "hóspedes"}` : ""}
+              </p>
+              <div className="mt-3 flex items-center justify-between gap-2 border-t border-border/60 pt-2.5">
+                <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                  <span className="h-2 w-2 shrink-0 rounded-[3px]" style={{ background: canal.cor }} aria-hidden="true" />
+                  <span className="truncate">{canal.rotulo}</span>
+                </span>
+                <span className="shrink-0 text-sm font-semibold tabular-nums">{reais(r.diarias)}</span>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }
