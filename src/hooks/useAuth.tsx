@@ -55,6 +55,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     let isMounted = true;
     let loadingTimeout: NodeJS.Timeout;
     let currentUserId: string | null = null;
+    // O perfil do usuário atual já voltou (com dado ou com erro)?
+    let perfilResolvido = false;
+    let guardaPerfil: ReturnType<typeof setTimeout> | undefined;
+
+    // Busca de perfil que não volta (rede travada) não pode deixar a tela em
+    // carregamento para sempre: depois de 12 s cai na tela de erro, com "tentar novamente".
+    const armarGuardaDoPerfil = () => {
+      clearTimeout(guardaPerfil);
+      guardaPerfil = setTimeout(() => {
+        if (isMounted && !perfilResolvido) {
+          console.warn('[useAuth] Perfil demorou demais');
+          setProfileError("A busca do perfil demorou demais.");
+          setLoading(false);
+        }
+      }, 12000);
+    };
+    const perfilVoltou = () => {
+      perfilResolvido = true;
+      clearTimeout(guardaPerfil);
+    };
 
     // Garantir que o loading nunca fique travado
     const ensureLoadingEnds = () => {
@@ -94,23 +114,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // Se INITIAL_SESSION ou SIGNED_IN dispara para o mesmo usuário já carregado, ignorar refetch
         if (newUserId && newUserId === currentUserId && event !== 'SIGNED_OUT') {
           setSession(session);
-          setLoading(false);
+          // Só encerra o carregamento se o perfil já voltou. O segundo evento
+          // (SIGNED_IN logo depois de renovar o token, na volta de quem ficou
+          // mais de uma hora fora) chega com a busca ainda no ar: encerrar aqui
+          // mostrava "Não foi possível carregar seu perfil" por alguns segundos
+          // antes do painel.
+          if (perfilResolvido) setLoading(false);
           return;
         }
 
         currentUserId = newUserId;
+        perfilResolvido = false;
         setSession(session);
         setUser(session?.user ?? null);
-        
+
         if (session?.user) {
           console.log('[useAuth] Fetching profile for user:', session.user.id);
-          
+          armarGuardaDoPerfil();
+
           // Usar setTimeout para evitar deadlock
           setTimeout(async () => {
             try {
               const { data, error } = await buscarPerfil(session.user.id);
 
               if (!isMounted) return;
+              perfilVoltou();
 
               if (error) {
                 console.error('[useAuth] Error fetching profile:', error);
@@ -124,6 +152,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             } catch (error: any) {
               console.error('[useAuth] Exception fetching profile:', error);
               if (isMounted) {
+                perfilVoltou();
                 setProfile(null);
                 setProfileError(error?.message ?? "Falha ao carregar o perfil.");
                 setLoading(false);
@@ -132,6 +161,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           }, 0);
         } else {
           if (isMounted) {
+            perfilVoltou();
             setProfile(null);
             setProfileError(null);
             setLoading(false);
@@ -163,10 +193,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         
         if (session?.user) {
           console.log('[useAuth] Fetching initial profile');
+          armarGuardaDoPerfil();
           try {
             const { data, error } = await buscarPerfil(session.user.id);
 
             if (!isMounted) return;
+            perfilVoltou();
 
             if (error) {
               console.error('[useAuth] Error fetching initial profile:', error);
@@ -180,6 +212,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           } catch (error: any) {
             console.error('[useAuth] Error fetching initial profile:', error);
             if (isMounted) {
+              perfilVoltou();
               setProfile(null);
               setProfileError(error?.message ?? "Falha ao carregar o perfil.");
               setLoading(false);
@@ -203,6 +236,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       isMounted = false;
       clearTimeout(loadingTimeout);
+      clearTimeout(guardaPerfil);
       subscription.unsubscribe();
     };
   }, []);
