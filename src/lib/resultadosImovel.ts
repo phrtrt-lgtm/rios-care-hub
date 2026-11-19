@@ -523,6 +523,22 @@ export function ocupacaoMercadoNoPeriodo(mercado: MercadoMes[], inicio: number, 
   return ocupacaoNoPeriodo(mercado, inicio, fim);
 }
 
+/**
+ * Mercado que serve para comparar. Mês já fechado só vale com o realizado
+ * (`origem: "historico"`): o valor "futuro" é o que estava reservado no dia da
+ * coleta, e depois que o mês acaba ele fica velho e baixo demais. Com a carga
+ * de 07/10/2026, outubro aparecia com 6% de ocupação do mercado em novembro.
+ * Mês em andamento ou à frente continua valendo como "já reservado".
+ */
+export function mercadoComparavel(mercado: MercadoMes[], hoje: number): MercadoMes[] {
+  return mercado.filter((m) => {
+    if (m.origem !== "futuro") return true;
+    const [ano, mes] = m.mes.split("-").map(Number);
+    // diaDe(ano, mes) com o mês contado de 1 é o dia 1 do mês seguinte: o fim do mês
+    return diaDe(ano, mes) > hoje;
+  });
+}
+
 // ===== Recortes =====
 
 export interface FatiaCanal {

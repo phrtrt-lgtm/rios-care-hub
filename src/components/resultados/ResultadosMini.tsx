@@ -125,13 +125,23 @@ export function ResultadosMini() {
           aria-label="Resultados por imóvel, com rolagem horizontal"
           className="custom-scrollbar -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-px-4 px-4 pb-2 md:mx-0 md:scroll-px-0 md:px-0"
         >
-          {carregando && prontos.length === 0
-            ? imoveis.slice(0, 2).map((i) => <Skeleton key={i.id} className={cn(CLASSE_CARTAO_TRILHO, "h-56 rounded-2xl")} />)
-            : prontos.map((d) => (
-                <div key={d.imovel.id} className={CLASSE_CARTAO_TRILHO}>
+          {/* Cada imóvel segura o seu lugar enquanto carrega. Se os cartões entrassem na ordem em que as
+              respostas chegam, o trilho (que prende no cartão à vista) abria deslocado: com três imóveis,
+              o primeiro ficava escondido à esquerda quando o segundo respondia antes. */}
+          {imoveis.map((imovel, n) => {
+            const consulta = consultas[n];
+            const d = consulta?.data;
+            if (d && d.reservas.length > 0) {
+              return (
+                <div key={imovel.id} className={CLASSE_CARTAO_TRILHO}>
                   <CartaoMini dados={d} largo={false} onAbrirResumo={() => setResumoDe(d)} />
                 </div>
-              ))}
+              );
+            }
+            if (!consulta || consulta.isLoading) return <Skeleton key={imovel.id} className={cn(CLASSE_CARTAO_TRILHO, "h-56 rounded-2xl")} />;
+            // sem reserva registrada (ou a consulta falhou): o imóvel não ocupa lugar no trilho
+            return null;
+          })}
         </div>
       )}
 

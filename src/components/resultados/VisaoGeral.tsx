@@ -25,6 +25,7 @@ import {
   formatarDia,
   gerarDestaques,
   liquidoEstimado,
+  mercadoComparavel,
   metricas,
   mixCanais,
   nomeDoMes,
@@ -79,7 +80,8 @@ export function VisaoGeral({ dados, reservas, hoje, primeira, onVerReservas }: P
   const [resumoVisto, setResumoVisto] = useState(() => (mesDoResumo ? resumoJaVisto(dados.imovel.id, mesDoResumo.chave) : true));
 
   const adiante = useMemo(() => olharAdiante(reservas, hoje), [reservas, hoje]);
-  const mercado = useMemo(() => dados.mercado ?? [], [dados.mercado]);
+  // Só o que serve para comparar: mês fechado com dado "futuro" (carga velha) fica de fora.
+  const mercado = useMemo(() => mercadoComparavel(dados.mercado ?? [], hoje), [dados.mercado, hoje]);
   const serie = useMemo(
     () => serieMensal(reservas, dados.referencia, hoje, primeira, 11, 3, mercado),
     [reservas, dados.referencia, hoje, primeira, mercado],

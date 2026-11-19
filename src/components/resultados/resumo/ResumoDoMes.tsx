@@ -61,7 +61,10 @@ export default function ResumoDoMes({ dados, onFechar, mesInicial, nomePessoa, o
 
   const [mes, setMes] = useState<MesRef | undefined>(mesInicial ?? meses[0]);
   const [indice, setIndice] = useState(0);
+  // Duas pausas separadas: a do botão (fica até a pessoa soltar de novo) e a de segurar o dedo na tela.
+  // Juntas num estado só, tirar o ponteiro de cima da tela desfazia a pausa que a pessoa tinha pedido no botão.
   const [pausado, setPausado] = useState(false);
+  const [segurando, setSegurando] = useState(false);
   const [compartilhando, setCompartilhando] = useState(false);
 
   const resumo = useMemo(() => (mes ? montarResumo(dados, reservas, mes, hoje, primeira) : null), [dados, reservas, mes, hoje, primeira]);
@@ -109,7 +112,7 @@ export default function ResumoDoMes({ dados, onFechar, mesInicial, nomePessoa, o
     pintar();
   }, [pintar, mes]);
 
-  const parado = pausado || compartilhando;
+  const parado = pausado || segurando || compartilhando;
   useEffect(() => {
     if (!tela || parado) return;
     // Sem movimento: a pessoa passa as telas no toque; a barra já nasce cheia.
@@ -157,11 +160,11 @@ export default function ResumoDoMes({ dados, onFechar, mesInicial, nomePessoa, o
   const toque = useRef(0);
   const aoApertar = () => {
     toque.current = performance.now();
-    setPausado(true);
+    setSegurando(true);
   };
   const aoSoltar = (e: React.PointerEvent<HTMLDivElement>) => {
     const segurou = performance.now() - toque.current > 260;
-    setPausado(false);
+    setSegurando(false);
     if (segurou) return;
     const caixa = e.currentTarget.getBoundingClientRect();
     if (e.clientX - caixa.left < caixa.width * 0.3) voltar();
@@ -230,8 +233,8 @@ export default function ResumoDoMes({ dados, onFechar, mesInicial, nomePessoa, o
               className="absolute inset-0 z-10 cursor-pointer touch-manipulation select-none"
               onPointerDown={aoApertar}
               onPointerUp={aoSoltar}
-              onPointerCancel={() => setPausado(false)}
-              onPointerLeave={() => setPausado(false)}
+              onPointerCancel={() => setSegurando(false)}
+              onPointerLeave={() => setSegurando(false)}
               onContextMenu={(e) => e.preventDefault()}
               aria-hidden="true"
             />

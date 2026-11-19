@@ -4,6 +4,7 @@ import {
   diaDe,
   infoCanal,
   liquidoEstimado,
+  mercadoComparavel,
   metricas,
   nomeDoMes,
   ocupacaoMercadoNoPeriodo,
@@ -223,7 +224,8 @@ export function montarResumo(
     recorde,
     comparacao: {
       rios: ocupacaoRiosNoPeriodo(dados.referencia, inicio, fim),
-      mercado: ocupacaoMercadoNoPeriodo(dados.mercado ?? [], inicio, fim),
+      // mês fechado só compara com o mercado realizado (ver mercadoComparavel)
+      mercado: ocupacaoMercadoNoPeriodo(mercadoComparavel(dados.mercado ?? [], hoje), inicio, fim),
     },
     origens: origensPorEstado(reservas, inicio, fim),
     curiosidades,
