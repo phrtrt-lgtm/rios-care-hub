@@ -5,17 +5,16 @@ import { formatarDiaExtenso, nomeDoMes, pct, reais, type Adiante, type MesSerie 
 /**
  * O que o Mini Paulo diz no topo da página de resultados. São frases
  * calculadas dos mesmos números da página, sem IA: cada uma aponta para o
- * cartão de onde saiu. Fica fora dos arquivos de 3D de propósito, para o
- * balão funcionar também onde o Paulo aparece parado.
+ * cartão de onde saiu.
  */
 
-/** Nomes das animações do modelo (ver motion/paulo-3d/empacotar.mjs). */
+/** Gestos que uma fala pode pedir; cada um toca um clipe do Paulo (ver PauloDeFilme.tsx). */
 export type GestoPaulo = "greet" | "point" | "cheer" | "look" | "dance";
 
 export interface FalaDoPaulo {
   id: string;
   texto: string;
-  /** Gesto que acompanha a fala ("point" aponta para o balão); sem ele, o Paulo só olha para o balão. */
+  /** Gesto que acompanha a fala ("point" apresenta com a mão, "cheer" é o joinha); sem ele, o Paulo só conversa. */
   gesto?: GestoPaulo;
   /** Botão do balão: leva a um cartão da página (id do elemento) ou faz algo. */
   acao?: { rotulo: string; alvo?: string; aoClicar?: () => void };

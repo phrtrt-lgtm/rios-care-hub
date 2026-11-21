@@ -195,9 +195,9 @@ interface HeroProps {
   /** Botão da história do último mês fechado; ausente quando o imóvel ainda não tem mês fechado com reserva. */
   resumo?: { rotulo: string; novo: boolean; onAbrir: () => void };
   /**
-   * O Mini Paulo em 3D (`PauloNoTopo`), por cima da faixa. Com ele a faixa
-   * muda de desenho: fica mais alta, e a foto do imóvel vira o fundo do lado
-   * direito também em tela larga, com o Paulo na frente dela.
+   * O Mini Paulo (`PauloNoTopo`), por cima da faixa. Com ele a faixa muda de
+   * desenho: fica mais alta, e a foto do imóvel vira o fundo do lado direito
+   * também em tela larga, com o Paulo na frente dela.
    */
   paulo?: ReactNode;
 }
@@ -296,7 +296,7 @@ export function HeroResultados({ dados, adiante, hoje, resumo, paulo }: HeroProp
       <div
         className={cn(
           "flex items-end",
-          comPaulo ? "min-h-[412px] p-5 md:p-7 lg:min-h-[300px] lg:items-center" : "gap-4 p-5 sm:items-center md:gap-8 md:p-7",
+          comPaulo ? "min-h-[424px] p-5 md:p-7 lg:min-h-[300px] lg:items-center" : "gap-4 p-5 sm:items-center md:gap-8 md:p-7",
           !comPaulo && capa && "min-h-[330px] sm:min-h-0",
         )}
       >
