@@ -50,6 +50,8 @@ export function Revelar({ children, className, atraso = 0 }: { children: ReactNo
 /* ------------------------------------------------------------------------ */
 
 interface CartaoProps {
+  /** Para o Paulo do topo apontar para o cartão (ver `irAteOAlvo`). */
+  id?: string;
   titulo: string;
   subtitulo?: ReactNode;
   acoes?: ReactNode;
@@ -58,9 +60,9 @@ interface CartaoProps {
 }
 
 /** Cartão padrão da página: título, linha de apoio e conteúdo. */
-export function Cartao({ titulo, subtitulo, acoes, children, className }: CartaoProps) {
+export function Cartao({ id, titulo, subtitulo, acoes, children, className }: CartaoProps) {
   return (
-    <section className={cn("min-w-0 rounded-xl border border-border/70 bg-card p-4 shadow-sm md:p-5", className)}>
+    <section id={id} className={cn("min-w-0 rounded-xl border border-border/70 bg-card p-4 shadow-sm md:p-5", className)}>
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-sm font-semibold tracking-tight md:text-[15px]">{titulo}</h3>
@@ -192,6 +194,12 @@ interface HeroProps {
   hoje: number;
   /** Botão da história do último mês fechado; ausente quando o imóvel ainda não tem mês fechado com reserva. */
   resumo?: { rotulo: string; novo: boolean; onAbrir: () => void };
+  /**
+   * O Mini Paulo em 3D (`PauloNoTopo`), por cima da faixa. Com ele a faixa
+   * muda de desenho: fica mais alta, e a foto do imóvel vira o fundo do lado
+   * direito também em tela larga, com o Paulo na frente dela.
+   */
+  paulo?: ReactNode;
 }
 
 /**
@@ -200,9 +208,10 @@ interface HeroProps {
  * "reduzir movimento" ligado fica só o quadro parado. No celular não cabe a
  * foto ao lado, então ela vira o fundo da faixa, se aproximando devagar.
  */
-export function HeroResultados({ dados, adiante, hoje, resumo }: HeroProps) {
+export function HeroResultados({ dados, adiante, hoje, resumo, paulo }: HeroProps) {
   const reduzido = useReducedMotion();
   const { imovel } = dados;
+  const comPaulo = !!paulo;
   // Capa maior que a miniatura guardada; se o CDN recusar, volta para a original.
   const [capa, setCapa] = useState(() => capaGrande(imovel.capa, 960));
 
@@ -222,10 +231,13 @@ export function HeroResultados({ dados, adiante, hoje, resumo }: HeroProps) {
     agora = { texto: "Sem reservas futuras no momento", ativo: false };
   }
 
-  return (
+  // Até onde a foto é o fundo da faixa: só no celular; com o Paulo, até a tela larga.
+  const fundoSoNoLargo = capa && (comPaulo ? "hidden lg:block" : "hidden sm:block");
+
+  const faixa = (
     <section className="relative isolate overflow-hidden rounded-2xl bg-secondary text-secondary-foreground shadow-lg">
       {reduzido ? (
-        <img src="/animacoes/rios-fluxo-poster.jpg" alt="" aria-hidden="true" className={cn("absolute inset-0 -z-10 h-full w-full object-cover", capa && "hidden sm:block")} />
+        <img src="/animacoes/rios-fluxo-poster.jpg" alt="" aria-hidden="true" className={cn("absolute inset-0 -z-10 h-full w-full object-cover", fundoSoNoLargo)} />
       ) : (
         <video
           autoPlay
@@ -236,7 +248,7 @@ export function HeroResultados({ dados, adiante, hoje, resumo }: HeroProps) {
           poster="/animacoes/rios-fluxo-poster.jpg"
           aria-hidden="true"
           tabIndex={-1}
-          className={cn("absolute inset-0 -z-10 h-full w-full object-cover", capa && "hidden sm:block")}
+          className={cn("absolute inset-0 -z-10 h-full w-full object-cover", fundoSoNoLargo)}
         >
           <source src="/animacoes/rios-fluxo.webm" type="video/webm" />
           <source src="/animacoes/rios-fluxo.mp4" type="video/mp4" />
@@ -249,31 +261,60 @@ export function HeroResultados({ dados, adiante, hoje, resumo }: HeroProps) {
           alt=""
           aria-hidden="true"
           onError={() => setCapa((atual) => (atual !== imovel.capa ? imovel.capa : null))}
-          className="absolute inset-0 -z-10 h-full w-full object-cover motion-safe:animate-aproximar-foto sm:hidden"
+          className={cn("absolute inset-0 -z-10 h-full w-full object-cover motion-safe:animate-aproximar-foto", comPaulo ? "lg:hidden" : "sm:hidden")}
+        />
+      )}
+      {/* com o Paulo, em tela larga: a foto ocupa o lado direito da faixa e se desfaz no azul do lado do texto */}
+      {capa && comPaulo && (
+        <img
+          src={capa}
+          alt={`Foto de ${imovel.nome}`}
+          onError={() => setCapa((atual) => (atual !== imovel.capa ? imovel.capa : null))}
+          className="absolute inset-y-0 right-0 -z-10 hidden h-full w-[62%] object-cover [mask-image:linear-gradient(to_right,transparent,black_42%)] lg:block"
         />
       )}
       {/* escurece o lado do texto para a leitura não depender do quadro do vídeo (no celular, da foto) */}
       <div
         className={cn(
-          "absolute inset-0 -z-10 sm:bg-gradient-to-r sm:from-secondary/90 sm:via-secondary/55 sm:to-transparent",
-          capa ? "bg-gradient-to-t from-secondary via-secondary/85 to-secondary/10" : "bg-gradient-to-r from-secondary/90 via-secondary/55 to-transparent",
+          "absolute inset-0 -z-10",
+          comPaulo
+            ? cn(
+                // celular: azul cheio atrás do texto, foto limpa em cima (é onde o Paulo e o balão ficam)
+                capa
+                  ? "bg-[linear-gradient(to_top,hsl(var(--secondary))_0%,hsl(var(--secondary)_/_0.95)_36%,hsl(var(--secondary)_/_0.3)_62%,hsl(var(--secondary)_/_0.08)_100%)]"
+                  : "bg-gradient-to-r from-secondary/90 via-secondary/55 to-transparent",
+                "lg:bg-[linear-gradient(to_right,hsl(var(--secondary)_/_0.94)_0%,hsl(var(--secondary)_/_0.78)_38%,hsl(var(--secondary)_/_0.12)_70%,hsl(var(--secondary)_/_0)_100%)]",
+              )
+            : cn(
+                "sm:bg-gradient-to-r sm:from-secondary/90 sm:via-secondary/55 sm:to-transparent",
+                capa ? "bg-gradient-to-t from-secondary via-secondary/85 to-secondary/10" : "bg-gradient-to-r from-secondary/90 via-secondary/55 to-transparent",
+              ),
         )}
         aria-hidden="true"
       />
 
-      <div className={cn("flex items-end gap-4 p-5 sm:items-center md:gap-8 md:p-7", capa && "min-h-[330px] sm:min-h-0")}>
-        <div className="min-w-0 flex-1">
-          <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-secondary-foreground/70">
-            <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-            Resultados do imóvel
-          </p>
-          <h2 className="mt-2 text-2xl font-semibold leading-tight tracking-tight md:text-4xl">{imovel.nome}</h2>
-          {imovel.endereco && (
-            <p className="mt-1.5 flex items-start gap-1.5 text-xs text-secondary-foreground/75 md:text-sm">
-              <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-              <span className="line-clamp-2">{imovel.endereco}</span>
+      <div
+        className={cn(
+          "flex items-end",
+          comPaulo ? "min-h-[412px] p-5 md:p-7 lg:min-h-[300px] lg:items-center" : "gap-4 p-5 sm:items-center md:gap-8 md:p-7",
+          !comPaulo && capa && "min-h-[330px] sm:min-h-0",
+        )}
+      >
+        <div className={cn("min-w-0 flex-1", comPaulo && "lg:max-w-[44%]")}>
+          {/* com o Paulo no celular, o nome fica ao lado das pernas dele: não pode passar por baixo */}
+          <div className={cn(comPaulo && "max-w-[60%] lg:max-w-none")}>
+            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-secondary-foreground/70">
+              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+              Resultados do imóvel
             </p>
-          )}
+            <h2 className="mt-2 text-2xl font-semibold leading-tight tracking-tight md:text-4xl">{imovel.nome}</h2>
+            {imovel.endereco && (
+              <p className="mt-1.5 flex items-start gap-1.5 text-xs text-secondary-foreground/75 md:text-sm">
+                <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                <span className="line-clamp-2">{imovel.endereco}</span>
+              </p>
+            )}
+          </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <span className="inline-flex max-w-full items-center gap-2 rounded-full bg-background/10 px-3 py-1.5 text-xs font-medium backdrop-blur-sm">
@@ -308,23 +349,34 @@ export function HeroResultados({ dados, adiante, hoje, resumo }: HeroProps) {
           )}
         </div>
 
-        <div className="hidden w-52 shrink-0 overflow-hidden rounded-xl shadow-xl ring-1 ring-background/20 sm:block md:w-72">
-          {capa ? (
-            <img
-              src={capa}
-              alt={`Foto de ${imovel.nome}`}
-              loading="lazy"
-              onError={() => setCapa((atual) => (atual !== imovel.capa ? imovel.capa : null))}
-              className="aspect-[16/10] w-full object-cover"
-            />
-          ) : (
-            <div className="flex aspect-[16/10] w-full items-center justify-center bg-background/10">
-              <Building2 className="h-9 w-9 text-secondary-foreground/60" aria-hidden="true" />
-            </div>
-          )}
-        </div>
+        {!comPaulo && (
+          <div className="hidden w-52 shrink-0 overflow-hidden rounded-xl shadow-xl ring-1 ring-background/20 sm:block md:w-72">
+            {capa ? (
+              <img
+                src={capa}
+                alt={`Foto de ${imovel.nome}`}
+                loading="lazy"
+                onError={() => setCapa((atual) => (atual !== imovel.capa ? imovel.capa : null))}
+                className="aspect-[16/10] w-full object-cover"
+              />
+            ) : (
+              <div className="flex aspect-[16/10] w-full items-center justify-center bg-background/10">
+                <Building2 className="h-9 w-9 text-secondary-foreground/60" aria-hidden="true" />
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </section>
+  );
+
+  if (!paulo) return faixa;
+  // O Paulo fica fora da moldura arredondada: a caixa dele passa do topo da faixa.
+  return (
+    <div className="relative">
+      {faixa}
+      {paulo}
+    </div>
   );
 }
 

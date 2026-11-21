@@ -45,6 +45,14 @@ export interface ReservaResultado {
   origem: string | null;
   /** Só vem preenchido para a equipe. */
   hospede: string | null;
+  /**
+   * Quem veio, pela Hostex. Ausentes nas reservas dos relatórios financeiros e
+   * enquanto a consulta do banco for a versão anterior a esta.
+   */
+  adultos?: number | null;
+  criancas?: number | null;
+  bebes?: number | null;
+  pets?: number | null;
 }
 
 export interface DiaAnunciado {
@@ -73,6 +81,16 @@ export interface MercadoMes {
   preco_mediano_cents: number | null;
   listagens: number | null;
   origem: "historico" | "futuro";
+  /** Quando o dado foi coletado no PriceLabs */
+  coletado_em?: string | null;
+}
+
+/** Quanto de um mês à frente já está reservado na média dos imóveis ativos da RIOS. */
+export interface RitmoDaCarteira {
+  /** "aaaa-mm" */
+  mes: string;
+  reservado: number | null;
+  imoveis: number;
 }
 
 export interface ResultadoImovel {
@@ -85,6 +103,8 @@ export interface ResultadoImovel {
   /** Vazio enquanto a coleta do PriceLabs não rodou para o imóvel. */
   mercado?: MercadoMes[];
   mercado_categoria?: string | null;
+  /** Próximos meses na carteira da RIOS. Ausente enquanto a consulta do banco for a versão anterior. */
+  ritmo?: RitmoDaCarteira[];
   coletado_em: string | null;
   visao_equipe: boolean;
 }

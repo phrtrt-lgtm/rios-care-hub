@@ -161,7 +161,7 @@ export default function ResultadosImovel() {
           </div>
         )}
         {aba === "geral" && (
-          <VisaoGeral key={dados.imovel.id} dados={dados} reservas={reservas} hoje={hoje} primeira={primeira} onVerReservas={() => trocarAba("reservas")} />
+          <VisaoGeral key={dados.imovel.id} dados={dados} reservas={reservas} hoje={hoje} primeira={primeira} onVerReservas={() => trocarAba("reservas")} onVerCalendario={() => trocarAba("calendario")} />
         )}
         {aba === "calendario" && (
           <CalendarioReservas

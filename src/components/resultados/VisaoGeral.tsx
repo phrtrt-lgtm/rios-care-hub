@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useCallback, useMemo, useState } from "react";
 import { BedDouble, CalendarCheck, Percent, Table2, TrendingUp, Wallet, X, BarChart3, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AbaPilula, BarraFiltros } from "@/components/painel/PaginaInterna";
@@ -7,8 +7,15 @@ import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { lazyPage } from "@/lib/lazyPage";
 import { mesesComResumo, resumoJaVisto } from "@/lib/resumoDoMes";
+import { ALVO, falasDoPaulo } from "@/lib/falasDoPaulo";
+import { perfilDosHospedes } from "@/lib/perfilDosHospedes";
+import { noitesAVenda, ritmoDeVenda } from "@/lib/resultadosAFrente";
 import { Cartao, Cifra, Destaques, DivisaoDoValor, HeroResultados, ProximasChegadas, Revelar } from "./blocos";
 import { MapaBrasil } from "./MapaBrasil";
+import { NoitesAVenda } from "./NoitesAVenda";
+import { QuemSeHospedou } from "./QuemSeHospedou";
+import { RitmoDeVenda } from "./RitmoDeVenda";
+import { PauloNoTopo } from "./paulo/PauloNoTopo";
 import { suportaWebGL, ufDoEndereco } from "./cena3d/suporte";
 import {
   BarraDeCanais,
@@ -23,6 +30,7 @@ import {
 import {
   PERIODOS,
   deDia,
+  diaDe,
   faixasDeAntecedencia,
   formatarDia,
   gerarDestaques,
@@ -54,10 +62,12 @@ interface Props {
   primeira: number | null;
   /** "Ver todas as reservas", nas próximas chegadas: a página troca para a aba Reservas. */
   onVerReservas?: () => void;
+  /** "Ver o calendário", nas noites à venda: a página troca para a aba Calendário. */
+  onVerCalendario?: () => void;
 }
 
 /** Caixa do mapa de origem em 3D. O mapa plano segura o mesmo lugar enquanto o pacote 3D carrega. */
-const CAIXA_DO_MAPA = "h-[250px] w-full";
+const CAIXA_DO_MAPA = "h-[250px] w-full lg:h-[330px]";
 
 // A história do mês só baixa quando a pessoa abre (vídeos, Mini Paulo e o cartão de compartilhar).
 const ResumoDoMes = lazyPage(() => import("./resumo/ResumoDoMes"));
@@ -76,7 +86,7 @@ const MapaHospedes3D = lazyPage(() => import("./cena3d/MapaHospedes3D"));
  *
  * O botão "Resumo de <mês>" no topo abre a história do último mês fechado.
  */
-export function VisaoGeral({ dados, reservas, hoje, primeira, onVerReservas }: Props) {
+export function VisaoGeral({ dados, reservas, hoje, primeira, onVerReservas, onVerCalendario }: Props) {
   const { profile } = useAuth();
   // "Este ano" é o retrato mais útil; em janeiro e fevereiro ele ainda é curto.
   const [periodo, setPeriodo] = useState<Periodo>(() => periodoPorId(deDia(hoje).getMonth() >= 2 ? "ano" : "12m", hoje));
@@ -116,6 +126,35 @@ export function VisaoGeral({ dados, reservas, hoje, primeira, onVerReservas }: P
     [reservas, periodo, atual, serie, dados.referencia, mercado, adiante, primeira],
   );
 
+  // O que vem pela frente (não depende do filtro) e quem veio (depende).
+  const venda = useMemo(() => noitesAVenda(dados.calendario, reservas, hoje), [dados.calendario, reservas, hoje]);
+  const ritmo = useMemo(() => ritmoDeVenda(reservas, dados, hoje), [reservas, dados, hoje]);
+  const perfil = useMemo(() => perfilDosHospedes(reservas, periodo.inicio, periodo.fim), [reservas, periodo]);
+
+  // O Mini Paulo em 3D no topo, contando os destaques. Sai de cena se o modelo não carregar.
+  const [pauloNoAr, setPauloNoAr] = useState(em3d);
+  const abrirResumo = useCallback(() => {
+    setResumoAberto(true);
+    setResumoVisto(true);
+  }, []);
+  const nomePessoa = dados.visao_equipe ? null : profile?.name;
+  const falas = useMemo(
+    () =>
+      falasDoPaulo({
+        nomePessoa,
+        equipe: dados.visao_equipe,
+        imovel: dados.imovel.nome,
+        hoje,
+        adiante,
+        serie,
+        ritmo,
+        venda,
+        perfilDoAno: perfilDosHospedes(reservas, diaDe(deDia(hoje).getFullYear(), 0), hoje + 1),
+        resumo: mesDoResumo ? { rotulo: `Resumo de ${nomeDoMes(mesDoResumo.ano, mesDoResumo.mes0, false)}`, onAbrir: abrirResumo } : undefined,
+      }),
+    [nomePessoa, dados.visao_equipe, dados.imovel.nome, hoje, adiante, serie, ritmo, venda, reservas, mesDoResumo, abrirResumo],
+  );
+
   const passados = serie.filter((m) => !m.futuro);
   const liquido = liquidoEstimado(atual.base, dados.comissao_pct);
   const liquidoAnterior = anterior ? liquidoEstimado(anterior.base, dados.comissao_pct) : null;
@@ -133,13 +172,11 @@ export function VisaoGeral({ dados, reservas, hoje, primeira, onVerReservas }: P
             ? {
                 rotulo: `Resumo de ${nomeDoMes(mesDoResumo.ano, mesDoResumo.mes0, false)}`,
                 novo: !resumoVisto,
-                onAbrir: () => {
-                  setResumoAberto(true);
-                  setResumoVisto(true);
-                },
+                onAbrir: abrirResumo,
               }
             : undefined
         }
+        paulo={pauloNoAr ? <PauloNoTopo falas={falas} aoFalhar={() => setPauloNoAr(false)} /> : undefined}
       />
 
       {resumoAberto && (
@@ -173,6 +210,21 @@ export function VisaoGeral({ dados, reservas, hoje, primeira, onVerReservas }: P
             }
           />
         </div>
+        {(venda || ritmo.length > 0) && (
+          <Revelar className="grid min-w-0 items-start gap-4 lg:grid-cols-2">
+            {venda && (
+              <NoitesAVenda
+                id={ALVO.noites}
+                venda={venda}
+                hoje={hoje}
+                imovel={{ id: dados.imovel.id, nome: dados.imovel.nome }}
+                podeBloquear={!dados.visao_equipe}
+                onVerCalendario={onVerCalendario}
+              />
+            )}
+            <RitmoDeVenda id={ALVO.ritmo} meses={ritmo} />
+          </Revelar>
+        )}
       </section>
 
       {/* ---------- Desempenho (responde ao filtro) ---------- */}
@@ -399,7 +451,7 @@ export function VisaoGeral({ dados, reservas, hoje, primeira, onVerReservas }: P
           </Cartao>
         </Revelar>
 
-        <Revelar className="grid min-w-0 items-start gap-4 lg:grid-cols-3">
+        <Revelar className="grid min-w-0 items-start gap-4 lg:grid-cols-2">
           <Cartao titulo="Por onde chegam as reservas" subtitulo="Diárias por canal, no período">
             {canais.fatias.length > 0 ? (
               <BarraDeCanais fatias={canais.fatias} />
@@ -432,23 +484,27 @@ export function VisaoGeral({ dados, reservas, hoje, primeira, onVerReservas }: P
               <p className="py-6 text-center text-sm text-muted-foreground">Sem reservas neste período.</p>
             )}
           </Cartao>
+        </Revelar>
 
+        {/* os hóspedes: de onde vêm (o mapa ganha a largura de dois cartões) e quem são */}
+        <Revelar className="grid min-w-0 items-start gap-4 lg:grid-cols-3">
           <Cartao
+            className="lg:col-span-2"
             titulo="De onde vêm os hóspedes"
             subtitulo={origens.conhecidas > 0 ? `Estado pelo DDD · ${origens.conhecidas} reservas com telefone informado` : "Estado ou país de quem reserva"}
           >
             {origens.lista.length > 0 && estados.length > 0 ? (
               // o mapa em blocos e, com ele, os números. Em 3D o mapa ocupa a largura do cartão e a lista vai embaixo;
               // onde o aparelho não desenha 3D fica o mapa plano à esquerda, como antes.
-              <div className={cn(em3d ? "space-y-3" : "flex items-start gap-4")}>
+              <div className={cn(em3d ? "space-y-3 lg:flex lg:items-center lg:gap-6 lg:space-y-0" : "flex items-start gap-4")}>
                 {em3d ? (
-                  <Suspense fallback={<MapaBrasil ufs={estados} className={cn(CAIXA_DO_MAPA, "py-3")} />}>
-                    <MapaHospedes3D ufs={estados} destino={ufDoImovel} emFoco={ufEmFoco} className={CAIXA_DO_MAPA} />
+                  <Suspense fallback={<MapaBrasil ufs={estados} className={cn(CAIXA_DO_MAPA, "py-3 lg:w-[60%] lg:shrink-0")} />}>
+                    <MapaHospedes3D ufs={estados} destino={ufDoImovel} emFoco={ufEmFoco} className={cn(CAIXA_DO_MAPA, "lg:w-[60%] lg:shrink-0")} />
                   </Suspense>
                 ) : (
                   <MapaBrasil ufs={estados} className="w-[124px] shrink-0" />
                 )}
-                <ul className={cn("min-w-0", em3d ? "grid grid-cols-2 gap-x-5 gap-y-2" : "flex-1 space-y-2 pt-0.5")}>
+                <ul className={cn("min-w-0", em3d ? "grid grid-cols-2 gap-x-5 gap-y-2 lg:flex-1 lg:grid-cols-1 lg:gap-y-2.5" : "flex-1 space-y-2 pt-0.5")}>
                   {origens.lista.map((o) => (
                     <li
                       key={o.rotulo}
@@ -473,6 +529,8 @@ export function VisaoGeral({ dados, reservas, hoje, primeira, onVerReservas }: P
               <p className="py-6 text-center text-sm text-muted-foreground">Ainda sem origem informada nas reservas do período.</p>
             )}
           </Cartao>
+
+          <QuemSeHospedou id={ALVO.hospedes} perfil={perfil} />
         </Revelar>
       </section>
     </div>
