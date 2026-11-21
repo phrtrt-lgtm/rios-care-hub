@@ -301,8 +301,8 @@ export function HeroResultados({ dados, adiante, hoje, resumo, paulo }: HeroProp
         )}
       >
         <div className={cn("min-w-0 flex-1", comPaulo && "lg:max-w-[44%]")}>
-          {/* com o Paulo no celular, o nome fica ao lado das pernas dele: não pode passar por baixo */}
-          <div className={cn(comPaulo && "max-w-[60%] lg:max-w-none")}>
+          {/* com o Paulo no celular, o nome fica ao lado dele: não pode passar por baixo (no joinha a mão chega a 56% da largura) */}
+          <div className={cn(comPaulo && "max-w-[54%] lg:max-w-none")}>
             <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-secondary-foreground/70">
               <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
               Resultados do imóvel

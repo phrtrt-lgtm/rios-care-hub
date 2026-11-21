@@ -95,6 +95,8 @@ export function criarTocadorComAlfa(tela: HTMLCanvasElement): TocadorComAlfa | n
   gl.clearColor(0, 0, 0, 0);
 
   const videos = new Map<string, HTMLVideoElement>();
+  /** Endereços locais dos clipes baixados, para devolver a memória ao sair. */
+  const baixados: string[] = [];
   let atual: HTMLVideoElement | null = null;
   let opcoesAtuais: OpcoesDoClipe = {};
   let proximo: HTMLVideoElement | null = null;
@@ -114,9 +116,24 @@ export function criarTocadorComAlfa(tela: HTMLCanvasElement): TocadorComAlfa | n
       v.setAttribute("aria-hidden", "true");
       // fora da tela, mas no documento: o iPhone só decodifica vídeo que está na página
       v.style.cssText = "position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;";
-      v.src = url;
       tela.parentElement?.appendChild(v);
       videos.set(url, v);
+      // O clipe é baixado inteiro e tocado da memória. O servidor do portal responde o arquivo todo a um
+      // pedido de trecho (200 no lugar de 206), e o iPhone costuma recusar vídeo de servidor assim; da
+      // memória ele toca. Os clipes são pequenos (200 a 400 kB), então não se perde nada.
+      const elemento = v;
+      fetch(url)
+        .then((r) => (r.ok ? r.blob() : Promise.reject(new Error(String(r.status)))))
+        .then((arquivo) => {
+          if (destruido) return;
+          const local = URL.createObjectURL(arquivo);
+          baixados.push(local);
+          elemento.src = local;
+          if (proximo === elemento && !pausado) void elemento.play().catch(() => undefined);
+        })
+        .catch(() => {
+          // sem rede: o clipe não toca e quem chama fica com o quadro parado
+        });
     }
     return v;
   }
@@ -173,7 +190,7 @@ export function criarTocadorComAlfa(tela: HTMLCanvasElement): TocadorComAlfa | n
 
   return {
     preparar(url) {
-      video(url).load();
+      video(url);
     },
     tocar(url, opcoes = {}) {
       if (destruido) return;
@@ -216,6 +233,7 @@ export function criarTocadorComAlfa(tela: HTMLCanvasElement): TocadorComAlfa | n
         v.remove();
       }
       videos.clear();
+      for (const local of baixados) URL.revokeObjectURL(local);
       gl.getExtension("WEBGL_lose_context")?.loseContext();
     },
   };
