@@ -131,8 +131,9 @@ export function VisaoGeral({ dados, reservas, hoje, primeira, onVerReservas, onV
   const ritmo = useMemo(() => ritmoDeVenda(reservas, dados, hoje), [reservas, dados, hoje]);
   const perfil = useMemo(() => perfilDosHospedes(reservas, periodo.inicio, periodo.fim), [reservas, periodo]);
 
-  // O Mini Paulo em 3D no topo, contando os destaques. Sai de cena se o modelo não carregar.
-  const [pauloNoAr, setPauloNoAr] = useState(em3d);
+  // O Mini Paulo no topo, contando os destaques. Fora do ar desde 2026-11-21: o boneco 3D do Tripo
+  // ficou tosco de perto (palavra do gestor) e sai até entrar o Paulo dos vídeos no lugar.
+  const [pauloNoAr, setPauloNoAr] = useState(false);
   const abrirResumo = useCallback(() => {
     setResumoAberto(true);
     setResumoVisto(true);
