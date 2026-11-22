@@ -6,6 +6,7 @@ import { TituloSecao } from "@/components/painel/TituloSecao";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { lazyPage } from "@/lib/lazyPage";
+import { ChamadaMelhorias } from "./melhorias/ChamadaMelhorias";
 import { mesesComResumo, resumoJaVisto } from "@/lib/resumoDoMes";
 import { ALVO, falasDoPaulo } from "@/lib/falasDoPaulo";
 import { perfilDosHospedes } from "@/lib/perfilDosHospedes";
@@ -64,6 +65,8 @@ interface Props {
   onVerReservas?: () => void;
   /** "Ver o calendário", nas noites à venda: a página troca para a aba Calendário. */
   onVerCalendario?: () => void;
+  /** Abre a aba do plano de melhorias */
+  onVerMelhorias?: () => void;
 }
 
 /** Caixa do mapa de origem em 3D. O mapa plano segura o mesmo lugar enquanto o pacote 3D carrega. */
@@ -86,7 +89,7 @@ const MapaHospedes3D = lazyPage(() => import("./cena3d/MapaHospedes3D"));
  *
  * O botão "Resumo de <mês>" no topo abre a história do último mês fechado.
  */
-export function VisaoGeral({ dados, reservas, hoje, primeira, onVerReservas, onVerCalendario }: Props) {
+export function VisaoGeral({ dados, reservas, hoje, primeira, onVerReservas, onVerCalendario, onVerMelhorias }: Props) {
   const { profile } = useAuth();
   // "Este ano" é o retrato mais útil; em janeiro e fevereiro ele ainda é curto.
   const [periodo, setPeriodo] = useState<Periodo>(() => periodoPorId(deDia(hoje).getMonth() >= 2 ? "ano" : "12m", hoje));
@@ -150,8 +153,9 @@ export function VisaoGeral({ dados, reservas, hoje, primeira, onVerReservas, onV
         venda,
         perfilDoAno: perfilDosHospedes(reservas, diaDe(deDia(hoje).getFullYear(), 0), hoje + 1),
         resumo: mesDoResumo ? { rotulo: `Resumo de ${nomeDoMes(mesDoResumo.ano, mesDoResumo.mes0, false)}`, onAbrir: abrirResumo } : undefined,
+        melhorias: onVerMelhorias ? { onAbrir: onVerMelhorias } : undefined,
       }),
-    [nomePessoa, dados.visao_equipe, dados.imovel.nome, hoje, adiante, serie, ritmo, venda, reservas, mesDoResumo, abrirResumo],
+    [nomePessoa, dados.visao_equipe, dados.imovel.nome, hoje, adiante, serie, ritmo, venda, reservas, mesDoResumo, abrirResumo, onVerMelhorias],
   );
 
   const passados = serie.filter((m) => !m.futuro);
@@ -180,7 +184,19 @@ export function VisaoGeral({ dados, reservas, hoje, primeira, onVerReservas, onV
 
       {resumoAberto && (
         <Suspense fallback={null}>
-          <ResumoDoMes dados={dados} nomePessoa={dados.visao_equipe ? null : profile?.name} onFechar={() => setResumoAberto(false)} />
+          <ResumoDoMes
+            dados={dados}
+            nomePessoa={dados.visao_equipe ? null : profile?.name}
+            onFechar={() => setResumoAberto(false)}
+            onVerMelhorias={
+              onVerMelhorias
+                ? () => {
+                    setResumoAberto(false);
+                    onVerMelhorias();
+                  }
+                : undefined
+            }
+          />
         </Suspense>
       )}
 
@@ -225,6 +241,12 @@ export function VisaoGeral({ dados, reservas, hoje, primeira, onVerReservas, onV
           </Revelar>
         )}
       </section>
+
+      {onVerMelhorias && (
+        <Revelar>
+          <ChamadaMelhorias equipe={dados.visao_equipe} onAbrir={onVerMelhorias} />
+        </Revelar>
+      )}
 
       {/* ---------- Desempenho (responde ao filtro) ---------- */}
       <section aria-labelledby="titulo-desempenho" className="space-y-4">

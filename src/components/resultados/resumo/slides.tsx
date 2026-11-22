@@ -553,11 +553,13 @@ interface FechoProps {
   outrosMeses: (MesRef & { rotulo: string })[];
   onCompartilhar: () => void;
   onVerCompleto: () => void;
+  /** Abre o plano de melhorias do imóvel. Sem ele, o botão não aparece. */
+  onVerMelhorias?: () => void;
   onRever: () => void;
   onTrocarMes: (mes: MesRef) => void;
 }
 
-export function SlideFecho({ resumo, outrosMeses, onCompartilhar, onVerCompleto, onRever, onTrocarMes }: FechoProps) {
+export function SlideFecho({ resumo, outrosMeses, onCompartilhar, onVerCompleto, onVerMelhorias, onRever, onTrocarMes }: FechoProps) {
   return (
     <div className={CORPO}>
       <Entra>
@@ -582,6 +584,11 @@ export function SlideFecho({ resumo, outrosMeses, onCompartilhar, onVerCompleto,
         <Button onClick={onVerCompleto} variant="secondary" className="h-11 justify-start bg-background text-sm font-semibold text-foreground hover:bg-background/90">
           Ver resultados completos
         </Button>
+        {onVerMelhorias && (
+          <Button onClick={onVerMelhorias} variant="secondary" className="h-11 justify-start bg-background text-sm font-semibold text-foreground hover:bg-background/90">
+            O que faria render mais
+          </Button>
+        )}
         <Button onClick={onRever} variant="ghost" className="h-9 justify-start px-3 text-sm text-secondary-foreground hover:bg-secondary-foreground/10 hover:text-secondary-foreground">
           Ver de novo
         </Button>

@@ -51,6 +51,8 @@ export function falasDoPaulo(a: {
   perfilDoAno: PerfilDosHospedes | null;
   /** Abre a história do último mês fechado */
   resumo?: { rotulo: string; onAbrir: () => void };
+  /** Abre a aba do plano de melhorias */
+  melhorias?: { onAbrir: () => void };
 }): FalaDoPaulo[] {
   const falas: FalaDoPaulo[] = [];
   const nome = primeiroNome(a.nomePessoa);
@@ -138,6 +140,18 @@ export function falasDoPaulo(a: {
         (pequenos > 0 ? `, ${pequenos.toLocaleString("pt-BR")} delas ${pequenos === 1 ? "criança" : "crianças"}.` : "."),
       gesto: "point",
       acao: { rotulo: "Ver quem veio", alvo: ALVO.hospedes },
+    });
+  }
+
+  // ---- plano de melhorias ----
+  if (a.melhorias) {
+    falas.push({
+      id: "melhorias",
+      texto: a.equipe
+        ? "Tem também o plano de melhorias deste imóvel: a maquete e a conta de cada item."
+        : "Montei um plano de melhorias para o seu imóvel, com maquete e a conta de cada item. Quer ver?",
+      gesto: "point",
+      acao: { rotulo: "Ver o plano", aoClicar: a.melhorias.onAbrir },
     });
   }
 

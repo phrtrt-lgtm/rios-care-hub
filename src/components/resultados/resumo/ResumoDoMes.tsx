@@ -50,9 +50,11 @@ interface Props {
   nomePessoa?: string | null;
   /** No fecho: "Ver resultados completos". Sem ele, o botão só fecha a história. */
   onVerCompleto?: () => void;
+  /** No fecho: abre o plano de melhorias do imóvel. Sem ele, o botão não aparece. */
+  onVerMelhorias?: () => void;
 }
 
-export default function ResumoDoMes({ dados, onFechar, mesInicial, nomePessoa, onVerCompleto }: Props) {
+export default function ResumoDoMes({ dados, onFechar, mesInicial, nomePessoa, onVerCompleto, onVerMelhorias }: Props) {
   const reduzido = useReducedMotion();
   const hoje = hojeDia();
   const reservas = useMemo(() => dados.reservas.map(calcularReserva), [dados]);
@@ -254,6 +256,7 @@ export default function ResumoDoMes({ dados, onFechar, mesInicial, nomePessoa, o
                   outrosMeses={outrosMeses}
                   onCompartilhar={() => setCompartilhando(true)}
                   onVerCompleto={onVerCompleto ?? onFechar}
+                  onVerMelhorias={onVerMelhorias}
                   onRever={() => trocarMes(mes)}
                   onTrocarMes={trocarMes}
                 />

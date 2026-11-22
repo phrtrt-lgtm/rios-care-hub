@@ -152,6 +152,7 @@ export function ResultadosMini() {
             nomePessoa={profile?.name}
             onFechar={() => setResumoDe(null)}
             onVerCompleto={() => navigate(`/resultados/${resumoDe.imovel.id}`)}
+            onVerMelhorias={() => navigate(`/resultados/${resumoDe.imovel.id}?aba=melhorias`)}
           />
         </Suspense>
       )}

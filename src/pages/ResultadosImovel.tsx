@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { Suspense, useCallback, useEffect, useMemo } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { AlertTriangle, BarChart3 } from "lucide-react";
 import { format } from "date-fns";
@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { VisaoGeral } from "@/components/resultados/VisaoGeral";
 import { CalendarioReservas } from "@/components/resultados/CalendarioReservas";
 import { ListaReservas } from "@/components/resultados/ListaReservas";
+import { lazyPage } from "@/lib/lazyPage";
 import {
   calcularReserva,
   coletaEmDia,
@@ -20,11 +21,15 @@ import {
   useResultadosImovel,
 } from "@/lib/resultadosImovel";
 
-type Aba = "geral" | "calendario" | "reservas";
-const ABAS: { id: Aba; rotulo: string }[] = [
+// A maquete e a conta das melhorias só são baixadas por quem abre a aba.
+const PlanoDeMelhorias = lazyPage(() => import("@/components/resultados/melhorias/PlanoDeMelhorias"));
+
+type Aba = "geral" | "calendario" | "reservas" | "melhorias";
+const ABAS: { id: Aba; rotulo: string; novo?: boolean }[] = [
   { id: "geral", rotulo: "Visão geral" },
   { id: "calendario", rotulo: "Calendário" },
   { id: "reservas", rotulo: "Reservas" },
+  { id: "melhorias", rotulo: "Melhorias", novo: true },
 ];
 
 /**
@@ -44,7 +49,11 @@ export default function ResultadosImovel() {
   const inicio = equipe ? "/painel" : "/minha-caixa";
 
   const aba = (ABAS.find((a) => a.id === busca.get("aba"))?.id ?? "geral") as Aba;
-  const trocarAba = (id: Aba) => setBusca(id === "geral" ? {} : { aba: id }, { replace: true });
+  const trocarAba = useCallback((id: Aba) => setBusca(id === "geral" ? {} : { aba: id }, { replace: true }), [setBusca]);
+  const abrirMelhorias = useCallback(() => {
+    trocarAba("melhorias");
+    window.scrollTo({ top: 0 });
+  }, [trocarAba]);
 
   // Imóveis que a pessoa pode abrir, para o seletor.
   const { data: imoveis, isLoading: carregandoImoveis } = useImoveisDeResultados(user?.id, equipe, !!profile);
@@ -92,6 +101,7 @@ export default function ResultadosImovel() {
             {ABAS.map((a) => (
               <AbaPilula key={a.id} ativa={aba === a.id} onClick={() => trocarAba(a.id)}>
                 {a.rotulo}
+                {a.novo && aba !== a.id && <span className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-primary align-middle" aria-label="novo" />}
               </AbaPilula>
             ))}
           </BarraFiltros>
@@ -161,7 +171,7 @@ export default function ResultadosImovel() {
           </div>
         )}
         {aba === "geral" && (
-          <VisaoGeral key={dados.imovel.id} dados={dados} reservas={reservas} hoje={hoje} primeira={primeira} onVerReservas={() => trocarAba("reservas")} onVerCalendario={() => trocarAba("calendario")} />
+          <VisaoGeral key={dados.imovel.id} dados={dados} reservas={reservas} hoje={hoje} primeira={primeira} onVerReservas={() => trocarAba("reservas")} onVerCalendario={() => trocarAba("calendario")} onVerMelhorias={abrirMelhorias} />
         )}
         {aba === "calendario" && (
           <CalendarioReservas
@@ -176,6 +186,11 @@ export default function ResultadosImovel() {
         )}
         {aba === "reservas" && (
           <ListaReservas key={dados.imovel.id} reservas={reservas} hoje={hoje} comissaoPct={dados.comissao_pct} visaoEquipe={dados.visao_equipe} />
+        )}
+        {aba === "melhorias" && (
+          <Suspense fallback={<Skeleton className="h-[420px] w-full rounded-2xl" />}>
+            <PlanoDeMelhorias key={dados.imovel.id} propertyId={dados.imovel.id} equipe={dados.visao_equipe} />
+          </Suspense>
         )}
       </>
     );

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -55,7 +55,20 @@ export default function NovoTicket() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Quem chega de outra página com o pedido já escrito (o plano de melhorias, por exemplo) encontra o
+  // formulário preenchido. Nada é enviado sozinho: a pessoa revisa e envia.
+  useEffect(() => {
+    const pronto = location.state as { tipo?: string; assunto?: string; mensagem?: string } | null;
+    if (!pronto) return;
+    if (pronto.tipo && (TIPOS_PROPRIETARIO as string[]).includes(pronto.tipo)) setTicketType(pronto.tipo as TipoProprietario);
+    if (pronto.assunto) setSubject(pronto.assunto);
+    if (pronto.mensagem) setDescription(pronto.mensagem);
+    // só na chegada
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // A rota /novo-ticket é só do proprietário (App.tsx): lista os imóveis dele.
   useEffect(() => {
