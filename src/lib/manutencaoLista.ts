@@ -368,14 +368,21 @@ export async function salvarCampoManutencao({
 
   if (field === "cost_responsible") {
     // Fica no ticket. Já feita e passou a ser do hóspede: mesma regra do
-    // "feito", sai da lista e fica no aviso do painel.
+    // "feito", ganha archived_at (some das outras telas de manutenção) e fica
+    // no quadro "Cobrança de hóspede" da lista e no aviso do painel.
     const hospedeFeito = value === "guest" && ticket?.status === "concluido";
+    // Caminho de volta: feita, era do hóspede e deixou de ser. Sem tirar o
+    // archived_at ela sumiria da lista em vez de ir para "Aguardando envio".
+    const deixouDeSerHospede =
+      value !== "guest" && ticket?.cost_responsible === "guest" && ticket?.status === "concluido";
     const { error } = await supabase
       .from("tickets")
       .update(
         hospedeFeito
           ? { cost_responsible: value as string, archived_at: new Date().toISOString() }
-          : { cost_responsible: value as string },
+          : deixouDeSerHospede
+            ? { cost_responsible: value as string, archived_at: null }
+            : { cost_responsible: value as string },
       )
       .eq("id", id);
     if (error) throw error;
@@ -402,16 +409,20 @@ export async function salvarCampoManutencao({
     // - "feito"        -> ticket.status = "concluido"
     // - "em_progresso" -> reabre como "em_execucao"
     const newTicketStatus = value === "feito" ? "concluido" : "em_execucao";
-    // Cobrança de hóspede feita não tem o que enviar ao proprietário: sai
-    // da lista (vai para o Arquivo) e continua no aviso do painel até
-    // alguém marcar como "Cobrada".
-    const hospedeFeito = value === "feito" && ticket?.cost_responsible === "guest";
+    // Cobrança de hóspede feita não tem o que enviar ao proprietário: ganha
+    // archived_at (some das outras telas de manutenção) e continua no quadro
+    // "Cobrança de hóspede" da lista e no aviso do painel até alguém marcar
+    // como "Cobrada". Reaberta, perde o archived_at.
+    const deHospede = ticket?.cost_responsible === "guest";
+    const hospedeFeito = value === "feito" && deHospede;
     const { error } = await supabase
       .from("tickets")
       .update(
         hospedeFeito
           ? { status: newTicketStatus, archived_at: new Date().toISOString() }
-          : { status: newTicketStatus },
+          : deHospede
+            ? { status: newTicketStatus, archived_at: null }
+            : { status: newTicketStatus },
       )
       .eq("id", id);
     if (error) throw error;

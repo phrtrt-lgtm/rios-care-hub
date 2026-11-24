@@ -3,7 +3,7 @@ import { CelulaCheckout, CelulaEstadoHoje } from "@/components/listas/EstadoImov
 import { ordemCheckout, ordemEstado, type JanelaImovel } from "@/hooks/useJanelaImoveis";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, ChevronRight, Download, Loader2, MessageSquare, MessagesSquare, Paperclip, Pencil, Plus, ShoppingCart, Trash2, Undo2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Download, Loader2, MessageSquare, CheckCheck, MessagesSquare, Paperclip, Pencil, Plus, ShoppingCart, Trash2, Undo2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -21,6 +21,7 @@ import { BOARD_OPTIONS, deriveBoard, hasInfiltracao } from "@/lib/maintenanceBoa
 import {
   COST_RESPONSIBLE_OPTIONS,
   LIST_STATUSES,
+  prazoCobrancaHospede,
   SERVICE_LABELS,
   type GrupoLista,
   type MaintenanceItem,
@@ -59,6 +60,8 @@ interface GroupRowProps {
   onVoltarManutencao?: (item: MaintenanceItem) => void;
   /** Pede uma compra ligada à manutenção. */
   onComprar?: (item: MaintenanceItem) => void;
+  /** Quadro "Cobrança de hóspede": marca que o hóspede já foi cobrado. */
+  onCobrada?: (item: MaintenanceItem) => void;
   /** Estado de hoje e próximo check-out por imóvel (janela_imoveis). */
   janelas?: Map<string, JanelaImovel>;
 }
@@ -88,6 +91,7 @@ export function GroupRow({
   onDebater,
   onVoltarManutencao,
   onComprar,
+  onCobrada,
   janelas,
 }: GroupRowProps) {
   const navigate = useNavigate();
@@ -435,6 +439,27 @@ export function GroupRow({
                     Novo imóvel
                   </Etiqueta>
                 </div>
+              ) : group.id === "cobranca_hospede" ? (
+                // Prazo da cobrança ao hóspede: check-out + 14 dias.
+                <div className="flex justify-center px-1 py-2">
+                  {item.guest_charge_dismissed_at ? (
+                    <Etiqueta tom="neutral" ponto title="O hóspede já foi cobrado; sai da lista quando a manutenção for feita">
+                      Cobrada
+                    </Etiqueta>
+                  ) : (
+                    <Etiqueta
+                      tom={prazoCobrancaHospede(item.guest_checkout_date).tom}
+                      ponto
+                      title={
+                        item.guest_checkout_date
+                          ? `Check-out do hóspede em ${item.guest_checkout_date.slice(0, 10).split("-").reverse().join("/")}; a cobrança pode ser feita 14 dias depois`
+                          : "Informe o check-out do hóspede na edição da manutenção"
+                      }
+                    >
+                      {prazoCobrancaHospede(item.guest_checkout_date).texto}
+                    </Etiqueta>
+                  )}
+                </div>
               ) : isCharge || item.status === "concluido" || group.id === "em_debate" ? (
                 <div className="px-1 py-2 text-sm text-center text-muted-foreground">—</div>
               ) : (
@@ -465,7 +490,8 @@ export function GroupRow({
                 <EditableCell
                   value={item.list_status || "em_progresso"}
                   type="select"
-                  options={LIST_STATUSES}
+                  // Custo de hóspede não tem o que enviar ao proprietário.
+                  options={group.id === "cobranca_hospede" ? LIST_STATUSES.filter((s) => s.value !== "enviar_proprietario") : LIST_STATUSES}
                   onSave={(val) => onUpdateItem(item.id, "list_status", val, false)}
                   className="justify-center"
                 />
@@ -475,7 +501,18 @@ export function GroupRow({
             {/* WhatsApp / Editar / Excluir */}
             <td className={cn("sticky right-0 z-[1] p-0 w-[150px] border-l border-border/60", fundoFixo)} data-no-sheet onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-end gap-1 px-1 py-2">
-                {onDebater && item.status !== "concluido" && ["em_progresso", "novos_imoveis", "infiltracao", "stand_by"].includes(group.id) && (
+                {onCobrada && group.id === "cobranca_hospede" && !item.guest_charge_dismissed_at && (
+                  <button
+                    type="button"
+                    className="p-1.5 rounded hover:bg-success/10 text-muted-foreground hover:text-success transition-colors"
+                    onClick={() => onCobrada(item)}
+                    title="Cobrada: o hóspede já foi cobrado"
+                    aria-label="Marcar como cobrada"
+                  >
+                    <CheckCheck className="h-3.5 w-3.5" />
+                  </button>
+                )}
+                {onDebater && item.status !== "concluido" && ["em_progresso", "novos_imoveis", "infiltracao", "stand_by", "cobranca_hospede"].includes(group.id) && (
                   <button
                     type="button"
                     className="p-1.5 rounded hover:bg-secondary/10 text-muted-foreground hover:text-secondary transition-colors"

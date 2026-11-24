@@ -740,7 +740,7 @@ export function ItensViabilizacao({ viabilizacao, itens, avulsas, userId, ...aco
       try {
         const r = await salvar.mutateAsync({ item, field, value });
         if (r.envio) avisarResultadoEnvio(r.envio);
-        if (r.hospedeArquivada) toast.info("Cobrança de hóspede feita: foi para o Arquivo e continua no aviso do painel.");
+        if (r.hospedeArquivada) toast.info("Cobrança de hóspede feita: fica no quadro Cobrança de hóspede da lista de manutenções até ser marcada como cobrada.");
       } catch (erro) {
         toast.error(textoDoErro(erro));
       }

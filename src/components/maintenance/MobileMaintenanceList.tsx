@@ -15,7 +15,7 @@ import {
   Trash2,
   Wrench,
   Search,
-  ArrowLeft, MessagesSquare, ShoppingCart, Undo2 } from "lucide-react";
+  ArrowLeft, CheckCheck, MessagesSquare, ShoppingCart, Undo2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -60,6 +60,7 @@ export interface MobileMaintenanceItem {
   on_hold?: boolean;
   cost_responsible?: string | null;
   owner?: DonoWhatsapp | null;
+  guest_charge_dismissed_at?: string | null;
   whatsapp_status?: string | null;
   whatsapp_enviado_em?: string | null;
   whatsapp_lembrete_status?: string | null;
@@ -123,6 +124,8 @@ interface Props {
   /** Devolve à lista de manutenções um item em debate. */
   onVoltarManutencao?: (item: MobileMaintenanceItem) => void;
   onComprar?: (item: MobileMaintenanceItem) => void;
+  /** Quadro "Cobrança de hóspede": marca que o hóspede já foi cobrado. */
+  onCobrada?: (item: MobileMaintenanceItem) => void;
   /** Grupos abertos, compartilhados com o desktop (lembrados entre visitas). */
   expanded: Record<string, boolean>;
   onToggleGroup: (id: string) => void;
@@ -227,6 +230,7 @@ export function MobileMaintenanceList({
   onDebater,
   onVoltarManutencao,
   onComprar,
+  onCobrada,
   expanded,
   onToggleGroup,
   filtroQuadro,
@@ -463,7 +467,7 @@ export function MobileMaintenanceList({
                               </div>
                             )}
 
-                            {!isCharge && onUpdateItem && item.list_status !== "feito" && !emDebate && group.id !== "novos_imoveis" && (
+                            {!isCharge && onUpdateItem && item.list_status !== "feito" && !emDebate && group.id !== "novos_imoveis" && group.id !== "cobranca_hospede" && (
                               <div
                                 className="flex items-center gap-2 mt-2"
                                 onClick={(e) => e.stopPropagation()}
@@ -593,7 +597,21 @@ export function MobileMaintenanceList({
                                   </span>
                                 )}
                               </button>
-                              {onDebater && item.list_status !== "feito" && ["em_progresso", "novos_imoveis", "infiltracao", "stand_by"].includes(group.id) && (
+                              {onCobrada && group.id === "cobranca_hospede" && !item.guest_charge_dismissed_at && (
+                                <button
+                                  type="button"
+                                  className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-success/10 hover:text-success text-muted-foreground active:scale-95 transition-all"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onCobrada(item);
+                                  }}
+                                  aria-label="Marcar como cobrada"
+                                  title="Cobrada: o hóspede já foi cobrado"
+                                >
+                                  <CheckCheck className="h-4 w-4" />
+                                </button>
+                              )}
+                              {onDebater && item.list_status !== "feito" && ["em_progresso", "novos_imoveis", "infiltracao", "stand_by", "cobranca_hospede"].includes(group.id) && (
                                 <button
                                   type="button"
                                   className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-secondary/10 hover:text-secondary text-muted-foreground active:scale-95 transition-all"

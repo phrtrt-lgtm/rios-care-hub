@@ -202,7 +202,7 @@ export default function AdminManutencoesLista() {
       const ownerId = prop?.owner_id;
       if (!ownerId) throw new Error("Imóvel sem proprietário associado");
 
-      const isTicketGroup = ["em_progresso", "novos_imoveis", "infiltracao", "stand_by", "concluidas"].includes(inlineAdd.groupId);
+      const isTicketGroup = ["em_progresso", "novos_imoveis", "infiltracao", "stand_by", "concluidas", "cobranca_hospede"].includes(inlineAdd.groupId);
 
       if (isTicketGroup) {
         const { error } = await supabase.from("tickets").insert({
@@ -216,7 +216,9 @@ export default function AdminManutencoesLista() {
           status: inlineAdd.groupId === "concluidas" ? "concluido" : "novo",
           // Created in "Em espera" — hidden from owner, no notifications until
           // the team picks a real cost_responsible from the list.
-          cost_responsible: "pending",
+          // No quadro "Cobrança de hóspede" já nasce como custo do hóspede
+          // (também escondido do proprietário).
+          cost_responsible: inlineAdd.groupId === "cobranca_hospede" ? "guest" : "pending",
           // Criado direto no quadro certo.
           on_hold: inlineAdd.groupId === "stand_by",
           charge_draft_category: inlineAdd.groupId === "infiltracao" ? "infiltracao" : null,
@@ -364,6 +366,7 @@ export default function AdminManutencoesLista() {
           cost_responsible,
           on_hold,
           guest_checkout_date,
+          guest_charge_dismissed_at,
           charge_draft_amount_cents,
           charge_draft_management_contribution_cents,
           charge_draft_category,
@@ -389,7 +392,9 @@ export default function AdminManutencoesLista() {
         .is("reais.archived_at", null)
         .or("status.neq.concluido,reais.is.null")
         .neq("status", "cancelado")
-        .is("archived_at", null)
+        // Custo de hóspede já feito ganha archived_at (some das outras telas),
+        // mas continua aqui, no quadro "Cobrança de hóspede", até ser "Cobrada".
+        .or("archived_at.is.null,and(cost_responsible.eq.guest,status.eq.concluido,guest_charge_dismissed_at.is.null)")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -429,6 +434,10 @@ export default function AdminManutencoesLista() {
           // Se o ticket está concluido E já existe QUALQUER cobrança real (paga, pendente, vencida, etc.),
           // não mostrar aqui — ela aparece nas cobranças (pendentes ou no histórico financeiro)
           if (t.status === "concluido" && ticketsWithRealCharge.has(t.id)) {
+            return false;
+          }
+          // Custo de hóspede feito e já marcado como "Cobrada": acabou.
+          if (t.status === "concluido" && t.cost_responsible === "guest" && t.guest_charge_dismissed_at) {
             return false;
           }
           return true;
@@ -508,8 +517,8 @@ export default function AdminManutencoesLista() {
 
   const avisarHospedeArquivada = () => {
     queryClient.invalidateQueries({ queryKey: ["painel", "guest-charges"] });
-    toast.success("Cobrança de hóspede feita: foi para o Arquivo.", {
-      description: 'Continua no aviso do painel até ser marcada como "Cobrada".',
+    toast.success('Feita: continua no quadro "Cobrança de hóspede".', {
+      description: 'Sai da lista e do aviso do painel quando for marcada como "Cobrada".',
     });
   };
 
@@ -611,6 +620,36 @@ export default function AdminManutencoesLista() {
       queryClient.invalidateQueries({ queryKey: ["pending-charges-list"] });
     },
   });
+
+  // "Cobrada": o hóspede já foi cobrado. Mesmo campo do botão do aviso do
+  // painel (guest_charge_dismissed_at). Feita sai da lista; ainda em progresso
+  // continua no quadro, com a etiqueta "Cobrada", até ser feita.
+  const marcarCobrada = useCallback(async (item: { id: string }, desfazer = false) => {
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      const { error } = await supabase
+        .from("tickets")
+        .update(
+          desfazer
+            ? { guest_charge_dismissed_at: null, guest_charge_dismissed_by: null }
+            : { guest_charge_dismissed_at: new Date().toISOString(), guest_charge_dismissed_by: authUser?.id ?? null },
+        )
+        .eq("id", item.id);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["maintenance-list-view"] });
+      queryClient.invalidateQueries({ queryKey: ["painel", "guest-charges"] });
+      if (desfazer) {
+        toast.success("Voltou a aguardar cobrança.");
+      } else {
+        toast.success("Marcada como cobrada.", {
+          action: { label: "Desfazer", onClick: () => void marcarCobrada(item, true) },
+        });
+      }
+    } catch (erro) {
+      console.error("Erro ao marcar cobrança de hóspede:", erro);
+      toast.error("Não foi possível marcar como cobrada");
+    }
+  }, [queryClient]);
 
   const handleUpdateItem = useCallback((id: string, field: string, value: any, isCharge?: boolean) => {
     if (field === "board") {
@@ -1101,7 +1140,24 @@ export default function AdminManutencoesLista() {
     const emDebate = (t: MaintenanceItem) => !!t.ticket_type && t.ticket_type !== "manutencao";
     // Imóvel em viabilização: a manutenção (aberta ou feita e não enviada) vai
     // para "Novos imóveis", agrupada por imóvel. Em debate continua em debate.
-    const emNovoImovel = (t: MaintenanceItem) => !!t.property && !!imoveisNovos?.has(t.property.id);
+    // Custo de hóspede: em progresso ou feito, fica no quadro próprio e vence
+    // todos os outros quadros de manutenção (pedido do gestor, 2026-11-24).
+    const deHospede = (t: MaintenanceItem) => t.cost_responsible === "guest" && !emDebate(t);
+    const emNovoImovel = (t: MaintenanceItem) =>
+      !deHospede(t) && !!t.property && !!imoveisNovos?.has(t.property.id);
+
+    const cobrancaHospede = (tickets || [])
+      .filter(t =>
+        deHospede(t) &&
+        bateImovel(t.property) &&
+        (t.subject.toLowerCase().includes(searchLower) ||
+         t.property?.name.toLowerCase().includes(searchLower))
+      )
+      // Check-out mais antigo primeiro (é o que libera a cobrança antes); sem data no fim.
+      .sort((a, b) =>
+        (a.guest_checkout_date ?? "9999").localeCompare(b.guest_checkout_date ?? "9999") ||
+        a.created_at.localeCompare(b.created_at),
+      );
 
     const debate = (tickets || []).filter(t =>
       emDebate(t) &&
@@ -1126,6 +1182,7 @@ export default function AdminManutencoesLista() {
 
     const abertos = (tickets || []).filter(t =>
       !emDebate(t) &&
+      !deHospede(t) &&
       !emNovoImovel(t) &&
       t.status !== "concluido" &&
       bateImovel(t.property) &&
@@ -1141,6 +1198,7 @@ export default function AdminManutencoesLista() {
 
     const concluidas = (tickets || []).filter(t =>
       !emDebate(t) &&
+      !deHospede(t) &&
       !emNovoImovel(t) &&
       t.status === "concluido" &&
       bateImovel(t.property) &&
@@ -1191,6 +1249,7 @@ export default function AdminManutencoesLista() {
       stand_by: standBy,
       em_debate: debate,
       concluidas: concluidas,
+      cobranca_hospede: cobrancaHospede,
       cobrancas_vencidas: cobrancasVencidas,
       cobrancas: cobrancasPendentes,
     };
@@ -1470,6 +1529,7 @@ export default function AdminManutencoesLista() {
       stand_by: (groupedItems.stand_by || []).map((t) => ({ ...t, itemType: "ticket" as const })),
       em_debate: (groupedItems.em_debate || []).map((t) => ({ ...t, itemType: "ticket" as const })),
       concluidas: (groupedItems.concluidas || []).map((t) => ({ ...t, itemType: "ticket" as const })),
+      cobranca_hospede: (groupedItems.cobranca_hospede || []).map((t) => ({ ...t, itemType: "ticket" as const })),
       cobrancas_vencidas: groupedItems.cobrancas_vencidas || [],
       cobrancas: groupedItems.cobrancas || [],
     };
@@ -1515,6 +1575,7 @@ export default function AdminManutencoesLista() {
           onDebater={(item) => setItemDebate(item as MaintenanceItem)}
           onVoltarManutencao={(item) => setItemVoltar(item as MaintenanceItem)}
           onComprar={(item) => setItemCompra(item as MaintenanceItem)}
+          onCobrada={(item) => void marcarCobrada(item)}
         />
 
         {dialogosDebate}
@@ -1857,6 +1918,7 @@ export default function AdminManutencoesLista() {
                               onDebater={setItemDebate}
                               onVoltarManutencao={setItemVoltar}
                               onComprar={setItemCompra}
+                              onCobrada={(item) => void marcarCobrada(item)}
                             />
 
                             {/* Linha de inclusão rápida */}

@@ -1,5 +1,6 @@
 import type { Tom } from "@/components/painel/tons";
 import type { DonoWhatsapp } from "@/components/maintenance/WhatsappAcaoLinha";
+import { DIAS_PARA_COBRAR_HOSPEDE } from "@/hooks/useGuestCharges";
 
 /**
  * Tipos e constantes da lista de manutenções (/admin/manutencoes-lista),
@@ -53,6 +54,8 @@ export interface MaintenanceItem {
   guest_checkout_date?: string | null;
   /** Só cobrança: ticket de manutenção que a originou. */
   ticket_id?: string | null;
+  /** Custo de hóspede já marcado como "Cobrada" (tickets.guest_charge_dismissed_at). */
+  guest_charge_dismissed_at?: string | null;
 }
 
 // ===== CONSTANTS =====
@@ -100,7 +103,7 @@ export const COST_RESPONSIBLE_OPTIONS = [
 // campos do ticket (label `infiltracao` e `on_hold`) — ver src/lib/maintenanceBoard.ts.
 // Novos imóveis vem do imóvel (useImoveisEmViabilizacao) e vence os outros quadros de manutenção.
 export interface GrupoLista {
-  id: "em_progresso" | "novos_imoveis" | "infiltracao" | "stand_by" | "em_debate" | "concluidas" | "cobrancas_vencidas" | "cobrancas";
+  id: "em_progresso" | "novos_imoveis" | "infiltracao" | "stand_by" | "em_debate" | "concluidas" | "cobranca_hospede" | "cobrancas_vencidas" | "cobrancas";
   label: string;
   /** Borda esquerda (celular). */
   color: string;
@@ -123,6 +126,10 @@ export const GROUPS: GrupoLista[] = [
   // deixa de ser "manutencao"; kind continua "maintenance"). Volta pelo botão.
   { id: "em_debate", label: "Em debate com o proprietário", color: "border-l-secondary", ponto: "bg-secondary", tom: "secondary", cobranca: false },
   { id: "concluidas", label: "Aguardando envio ao proprietário", color: "border-l-success", ponto: "bg-success", tom: "success", cobranca: false },
+  // Tudo o que é custo de hóspede (tickets.cost_responsible = guest), em
+  // progresso ou já feito: vence todos os outros quadros de manutenção e só
+  // sai pelo botão "Cobrada" (guest_charge_dismissed_at). Os itens são tickets.
+  { id: "cobranca_hospede", label: "Cobrança de hóspede", color: "border-l-warning", ponto: "bg-warning", tom: "warning", cobranca: false },
   { id: "cobrancas_vencidas", label: "Cobranças vencidas", color: "border-l-destructive", ponto: "bg-destructive", tom: "destructive", cobranca: true },
   { id: "cobrancas", label: "Cobranças pendentes", color: "border-l-primary", ponto: "bg-primary", tom: "primary", cobranca: true },
 ];
@@ -157,6 +164,21 @@ export interface InspectionItem {
   is_routine: boolean;
   is_team_inspection: boolean;
   attachments: Array<{ id: string; file_url: string; file_name?: string; file_type?: string }>;
+}
+
+/**
+ * Prazo da cobrança ao hóspede a partir do check-out (coluna DATE, lida como
+ * dia local): dá para cobrar 14 dias depois, a mesma regra do aviso do painel.
+ */
+export function prazoCobrancaHospede(checkout?: string | null): { texto: string; tom: Tom } {
+  if (!checkout) return { texto: "Sem check-out", tom: "neutral" };
+  const [ano, mes, dia] = checkout.slice(0, 10).split("-").map(Number);
+  const libera = new Date(ano, mes - 1, dia + DIAS_PARA_COBRAR_HOSPEDE);
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const faltam = Math.round((libera.getTime() - hoje.getTime()) / 86_400_000);
+  if (faltam <= 0) return { texto: "Pode cobrar", tom: "success" };
+  return { texto: faltam === 1 ? "Cobrar amanhã" : `Cobrar em ${faltam} dias`, tom: "warning" };
 }
 
 /** Pausa entre um envio e outro no lote (e-mail + WhatsApp por item). */
