@@ -5081,6 +5081,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      hostex_ultima_coleta: { Args: never; Returns: string }
       ia_agente_liberado: { Args: never; Returns: boolean }
       invoke_charge_cron: { Args: never; Returns: undefined }
       is_admin_or_maintenance: { Args: { _user_id: string }; Returns: boolean }
@@ -5098,6 +5099,8 @@ export type Database = {
         Args: { p_property_id?: number; p_reservation_code: string }
         Returns: string
       }
+      melhorias_da_ficha: { Args: { p_md: string }; Returns: Json }
+      melhorias_imovel: { Args: { p_property_id: string }; Returns: Json }
       minhas_viabilizacoes: {
         Args: never
         Returns: {
