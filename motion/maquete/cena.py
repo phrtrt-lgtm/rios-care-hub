@@ -1,6 +1,6 @@
 # Maquete do "Plano de melhorias" (página de resultados): a planta em blocos que guia a pintura.
 #
-#   python -I motion/maquete/cena.py <pasta de saída>
+#   python -I motion/maquete/cena.py <pasta de saída> [2048x1360] [modelo = apto2]
 #
 # Desenha o apartamento em caixas, numa vista de maquete (câmera sem perspectiva, de cima e de lado), e grava:
 #   guia-base.png        o apartamento "padrão", sem as melhorias: é a planta exata que o GPT Image pinta
@@ -29,8 +29,16 @@ ST, CT, SP, CP = np.sin(TH), np.cos(TH), np.sin(PH), np.cos(PH)
 CAIXAS = []  # (x0, x1, y0, y1, z0, z1, cor, grupo)
 
 
+ORIGEM = [0.0]  # deslocamento em x das caixas seguintes (plantas com dois blocos lado a lado)
+NIVEL = [0.0]  # altura do piso em que as caixas seguintes entram (nivel(1.3) = andar de cima, erguido)
+
+
+def nivel(z):
+    NIVEL[0] = z
+
+
 def cx(x0, x1, y0, y1, z0, z1, cor, grupo="base"):
-    CAIXAS.append((x0, x1, y0, y1, z0, z1, cor, grupo))
+    CAIXAS.append((x0 + ORIGEM[0], x1 + ORIGEM[0], y0, y1, z0 + NIVEL[0], z1 + NIVEL[0], cor, grupo))
 
 
 # ---------------------------------------------------------------- cores (chapadas, como no guia do jogo)
@@ -53,190 +61,526 @@ VERDE = (76, 140, 84)
 AMARELO = (238, 196, 92)
 INOX = (198, 204, 210)
 
-# ---------------------------------------------------------------- casca: laje, pisos e paredes
-LX, LY, HP = 11.6, 7.0, 2.7
-cx(-0.12, LX, 0, LY + 0.12, -0.28, 0, LAJE)
-# pisos (uma lâmina de 1 cm por cômodo, para a cor mudar)
-cx(0, 3.5, 3.6, LY, 0, 0.01, PISO_QUARTO)  # quarto 1
-cx(3.5, 6.7, 3.6, LY, 0, 0.01, PISO_QUARTO)  # quarto 2
-cx(6.7, 7.8, 3.6, LY, 0, 0.01, PISO_SALA)  # entrada
-cx(7.8, LX, 3.6, LY, 0, 0.01, PISO_COZINHA)  # cozinha e área de serviço
-cx(0, LX, 1.3, 3.6, 0, 0.01, PISO_SALA)  # sala e jantar
-cx(0, LX, 0, 1.3, 0, 0.01, PISO_VARANDA)  # varanda
-# paredes inteiras: fundo e esquerda
-cx(-0.12, LX, LY, LY + 0.12, 0, HP, PAREDE)
-cx(-0.12, 0, 1.3, LY + 0.12, 0, HP, PAREDE)
-cx(-0.12, 0, 0, 1.3, 0, 1.0, PAREDE)  # mureta da varanda, à esquerda
-# divisórias cortadas a 1 m (o topo mais claro mostra o corte)
-for xd, y0 in ((3.5, 3.6), (6.7, 3.6), (7.8, 4.4), (10.2, 5.1)):
-    cx(xd - 0.06, xd + 0.06, y0, LY, 0, 1.0, PAREDE)
-    cx(xd - 0.06, xd + 0.06, y0, LY, 1.0, 1.02, PAREDE_TOPO)
-# soleiras baixas entre os quartos e a sala (com o vão da porta)
-cx(0, 2.45, 3.6, 3.7, 0, 0.3, PAREDE)
-cx(3.56, 5.65, 3.6, 3.7, 0, 0.3, PAREDE)
-# guarda-corpo de vidro da varanda: só o corrimão e os montantes
-cx(0, LX, 0, 0.05, 0.96, 1.0, INOX)
-for xm in (0.02, 2.9, 5.8, 8.7, LX - 0.05):
-    cx(xm, xm + 0.04, 0, 0.05, 0, 0.96, INOX)
-cx(LX - 0.05, LX, 0, 1.3, 0.96, 1.0, INOX)
+# ---------------------------------------------------------------- móveis prontos
+# Usados pelas plantas em modelos/. Convenção: x cresce para a direita, y para o fundo; "yw" é a parede
+# atrás do móvel (a do fundo do cômodo) e "xw" a parede da esquerda. O que é melhoria leva o nome do grupo.
+PISO_GRAMA = (120, 160, 96)
+PISO_PEDRA = (190, 182, 168)
+HP = 2.7
 
-# ---------------------------------------------------------------- quarto 1 (casal)
-cx(1.3, 2.9, 4.9, 6.9, 0, 0.3, MADEIRA)  # cama
-cx(1.3, 2.9, 4.9, 6.88, 0.3, 0.56, BRANCO)  # colchão e lençol
-cx(1.3, 2.9, 4.9, 5.9, 0.56, 0.6, AZUL_CLARO)  # colcha lisa
-cx(1.2, 3.0, 6.9, 7.0, 0, 1.15, MADEIRA_CLARA)  # cabeceira
-cx(1.45, 2.0, 6.45, 6.82, 0.56, 0.7, BRANCO)  # travesseiros
-cx(2.2, 2.75, 6.45, 6.82, 0.56, 0.7, BRANCO)
-cx(0.78, 1.22, 6.5, 6.95, 0, 0.5, MADEIRA_CLARA)  # criados-mudos
-cx(2.98, 3.4, 6.5, 6.95, 0, 0.5, MADEIRA_CLARA)
-cx(0.9, 1.1, 6.62, 6.82, 0.5, 0.85, AMARELO)  # abajures
-cx(3.08, 3.28, 6.62, 6.82, 0.5, 0.85, AMARELO)
-cx(0, 0.6, 5.55, 6.95, 0, 2.1, MADEIRA_CLARA)  # guarda-roupa
-cx(0, 0.04, 4.0, 5.2, 1.0, 2.1, AZUL_CLARO)  # janela na parede da esquerda
-cx(1.65, 2.55, 6.78, 7.0, 2.2, 2.48, BRANCO)  # ar-condicionado
 
-# ---------------------------------------------------------------- quarto 2 (duas camas de solteiro)
-for xa in (3.75, 5.6):
-    cx(xa, xa + 0.9, 4.95, 6.9, 0, 0.3, MADEIRA)
-    cx(xa, xa + 0.9, 4.95, 6.88, 0.3, 0.54, BRANCO)
-    cx(xa, xa + 0.9, 4.95, 5.85, 0.54, 0.58, AZUL_CLARO)
-    cx(xa - 0.05, xa + 0.95, 6.9, 7.0, 0, 1.05, MADEIRA_CLARA)
-    cx(xa + 0.17, xa + 0.73, 6.45, 6.8, 0.54, 0.68, BRANCO)
-cx(4.9, 5.35, 6.5, 6.95, 0, 0.5, MADEIRA_CLARA)  # criado-mudo entre as camas
-cx(5.03, 5.23, 6.62, 6.82, 0.5, 0.85, AMARELO)
-cx(4.68, 5.58, 6.78, 7.0, 2.2, 2.48, BRANCO)  # ar-condicionado
+def laje(x0, x1, y0, y1):
+    cx(x0 - 0.12, x1, y0, y1 + 0.12, -0.28, 0, LAJE)
 
-# ---------------------------------------------------------------- entrada
-cx(6.82, 7.62, 6.95, 7.0, 0, 2.1, MADEIRA)  # porta de entrada
-cx(6.9, 7.55, 6.15, 6.7, 0.01, 0.025, TERRACOTA)  # capacho
 
-# ---------------------------------------------------------------- cozinha
-cx(8.0, 8.7, 6.3, 7.0, 0, 1.8, INOX)  # geladeira
-cx(8.7, 10.14, 6.4, 7.0, 0, 0.9, BRANCO)  # bancada com armários
-cx(8.7, 10.14, 6.38, 7.0, 0.9, 0.94, ESCURO)  # tampo
-cx(8.8, 9.36, 6.5, 6.9, 0.94, 0.96, CINZA)  # fogão
-cx(8.8, 9.36, 6.7, 7.0, 1.6, 1.9, INOX)  # coifa
-cx(9.5, 10.02, 6.52, 6.88, 0.94, 0.955, INOX)  # pia
-cx(9.46, 10.06, 6.97, 7.0, 1.15, 1.95, AZUL_CLARO)  # janela sobre a pia
-cx(8.0, 10.0, 3.5, 4.0, 0, 1.0, BRANCO)  # bancada americana
-cx(7.95, 10.05, 3.45, 4.05, 1.0, 1.05, MADEIRA_CLARA)
-cx(8.15, 8.45, 3.6, 3.9, 1.05, 1.35, ESCURO)  # cafeteira
-cx(8.6, 8.95, 3.58, 3.92, 1.05, 1.38, ESCURO)  # air fryer
-for xb in (8.35, 9.3):  # banquetas
-    cx(xb, xb + 0.36, 3.0, 3.36, 0, 0.7, MADEIRA)
+def piso(x0, x1, y0, y1, cor):
+    cx(x0, x1, y0, y1, 0, 0.01, cor)
 
-# ---------------------------------------------------------------- área de serviço
-cx(10.92, 11.52, 6.4, 7.0, 0, 0.88, BRANCO)  # tanque
-cx(10.3, 11.52, 6.75, 7.0, 1.55, 1.6, MADEIRA_CLARA)  # prateleira
-cx(11.0, 11.4, 6.78, 6.98, 1.6, 1.85, AZUL)  # produtos na prateleira
 
-# ---------------------------------------------------------------- sala
-cx(0, 0.42, 2.0, 3.4, 0, 0.5, MADEIRA_CLARA)  # rack
-cx(0, 0.05, 2.1, 3.3, 1.0, 1.72, ESCURO)  # TV na parede
-cx(1.6, 3.9, 2.75, 3.55, 0, 0.42, AZUL)  # sofá
-cx(1.6, 3.9, 3.35, 3.55, 0.42, 0.86, AZUL)
-cx(1.6, 1.8, 2.75, 3.55, 0.42, 0.62, AZUL)
-cx(3.7, 3.9, 2.75, 3.55, 0.42, 0.62, AZUL)
-cx(3.08, 3.9, 1.85, 2.75, 0, 0.42, AZUL)  # chaise
-cx(1.9, 2.8, 1.75, 2.35, 0, 0.36, MADEIRA)  # mesa de centro
+def parede_fundo(x0, x1, yw, alt=HP):
+    cx(x0 - 0.12, x1, yw, yw + 0.12, 0, alt, PAREDE)
 
-# ---------------------------------------------------------------- jantar
-cx(6.7, 8.3, 1.75, 2.65, 0.7, 0.76, MADEIRA)  # mesa
-for (xp, yp) in ((6.78, 1.83), (8.14, 1.83), (6.78, 2.49), (8.14, 2.49)):
-    cx(xp, xp + 0.08, yp, yp + 0.08, 0, 0.7, MADEIRA)
-for xc in (6.92, 7.66):  # cadeiras
-    cx(xc, xc + 0.42, 2.75, 3.17, 0, 0.45, MADEIRA_CLARA)
-    cx(xc, xc + 0.42, 3.11, 3.17, 0.45, 0.9, MADEIRA_CLARA)
-    cx(xc, xc + 0.42, 1.25 + 0.05, 1.67 + 0.05, 0, 0.45, MADEIRA_CLARA)
-    cx(xc, xc + 0.42, 1.3, 1.36, 0.45, 0.9, MADEIRA_CLARA)
-cx(10.25, 11.05, 1.75, 2.55, 0, 0.42, AZUL)  # poltrona
-cx(10.85, 11.05, 1.75, 2.55, 0.42, 0.86, AZUL)
 
-# ---------------------------------------------------------------- varanda
-cx(1.0, 2.9, 0.35, 1.0, 0.2, 0.32, MADEIRA_CLARA)  # espreguiçadeira
-cx(1.0, 1.6, 0.35, 1.0, 0.32, 0.62, MADEIRA_CLARA)
-cx(4.3, 5.0, 0.3, 1.0, 0.66, 0.7, BRANCO)  # mesinha
-cx(4.6, 4.7, 0.6, 0.7, 0, 0.66, CINZA)
-cx(3.7, 4.12, 0.44, 0.86, 0, 0.44, MADEIRA_CLARA)  # duas cadeiras
-cx(5.18, 5.6, 0.44, 0.86, 0, 0.44, MADEIRA_CLARA)
+def parede_esq(xw, y0, y1, alt=HP):
+    cx(xw - 0.12, xw, y0, y1 + 0.12, 0, alt, PAREDE)
 
-# ================================================================ melhorias (cada grupo vira uma camada)
-# lava e seca, na área de serviço
-cx(10.28, 10.88, 6.36, 7.0, 0, 0.87, BRANCO, "lavadora")
-cx(10.36, 10.8, 6.34, 6.36, 0.2, 0.64, ESCURO, "lavadora")
-# ar-condicionado na sala
-cx(0, 0.24, 2.25, 3.15, 2.2, 2.48, BRANCO, "ar_sala")
-# decoração de curadoria: quadros, tapete, almofadas, plantas, luminária, mantas
-cx(1.55, 2.65, 6.97, 7.0, 1.3, 1.98, TERRACOTA, "decoracao")  # quadro do casal
-cx(3.88, 4.52, 6.97, 7.0, 1.3, 1.9, TERRACOTA, "decoracao")  # quadros das camas de solteiro
-cx(5.73, 6.37, 6.97, 7.0, 1.3, 1.9, AZUL, "decoracao")
-cx(1.3, 2.9, 4.9, 5.4, 0.6, 0.64, TERRACOTA, "decoracao")  # peseira do casal
-cx(1.9, 2.3, 6.25, 6.5, 0.6, 0.78, TERRACOTA, "decoracao")  # almofada do casal
-cx(3.75, 4.65, 4.95, 5.35, 0.58, 0.62, TERRACOTA, "decoracao")  # peseiras de solteiro
-cx(5.6, 6.5, 4.95, 5.35, 0.58, 0.62, TERRACOTA, "decoracao")
-cx(1.5, 4.35, 1.5, 3.05, 0.01, 0.03, TERRACOTA, "decoracao")  # tapete da sala
-cx(1.95, 2.3, 3.0, 3.3, 0.42, 0.72, AMARELO, "decoracao")  # almofadas do sofá
-cx(2.6, 2.95, 3.0, 3.3, 0.42, 0.72, TERRACOTA, "decoracao")
-cx(3.25, 3.6, 3.0, 3.3, 0.42, 0.72, AMARELO, "decoracao")
-cx(4.05, 4.13, 3.25, 3.33, 0, 1.45, ESCURO, "decoracao")  # luminária de piso
-cx(3.93, 4.25, 3.13, 3.45, 1.45, 1.75, AMARELO, "decoracao")
-cx(5.3, 5.7, 1.6, 2.0, 0, 0.45, TERRACOTA, "decoracao")  # vaso grande da sala
-cx(5.15, 5.85, 1.45, 2.15, 0.45, 1.5, VERDE, "decoracao")
-cx(10.75, 11.1, 2.85, 3.2, 0, 0.4, TERRACOTA, "decoracao")  # vaso do jantar
-cx(10.6, 11.25, 2.7, 3.35, 0.4, 1.3, VERDE, "decoracao")
-cx(7.2, 7.8, 2.05, 2.35, 0.76, 0.95, VERDE, "decoracao")  # arranjo na mesa
-cx(6.4, 8.2, 0.1, 0.42, 0, 0.42, TERRACOTA, "decoracao")  # jardineira da varanda
-cx(6.4, 8.2, 0.08, 0.44, 0.42, 0.85, VERDE, "decoracao")
-# kit família: berço no quarto do casal e cadeirão na mesa
-cx(0.12, 0.82, 3.85, 5.05, 0, 0.3, BRANCO, "familia")
-cx(0.12, 0.82, 3.85, 5.05, 0.3, 0.4, AZUL_CLARO, "familia")
-cx(0.12, 0.16, 3.85, 5.05, 0.3, 0.95, BRANCO, "familia")
-cx(0.78, 0.82, 3.85, 5.05, 0.3, 0.95, BRANCO, "familia")
-cx(0.12, 0.82, 3.85, 3.89, 0.3, 0.95, BRANCO, "familia")
-cx(0.12, 0.82, 5.01, 5.05, 0.3, 0.95, BRANCO, "familia")
-cx(6.08, 6.53, 1.98, 2.43, 0, 0.55, BRANCO, "familia")  # cadeirão
-cx(6.08, 6.53, 1.98, 2.43, 0.55, 0.62, AMARELO, "familia")
-cx(6.08, 6.14, 1.98, 2.43, 0.62, 1.0, BRANCO, "familia")
-# mais lugares para dormir: cama auxiliar puxada entre as duas de solteiro
-cx(4.68, 5.55, 4.45, 6.38, 0, 0.14, MADEIRA, "camas")
-cx(4.68, 5.55, 4.45, 6.36, 0.14, 0.32, BRANCO, "camas")
-cx(4.68, 5.55, 4.45, 5.2, 0.32, 0.35, AZUL_CLARO, "camas")
-cx(4.84, 5.39, 5.95, 6.28, 0.32, 0.44, BRANCO, "camas")
-# pet: caminha e potes no canto da sala
-cx(0.14, 0.92, 1.38, 1.96, 0, 0.16, TERRACOTA, "pet")
-cx(0.24, 0.82, 1.48, 1.86, 0.16, 0.2, PAREDE_TOPO, "pet")
-cx(1.02, 1.2, 1.42, 1.6, 0, 0.08, INOX, "pet")
-cx(1.26, 1.44, 1.42, 1.6, 0, 0.08, INOX, "pet")
-# kit praia, na ponta da varanda
-cx(9.3, 9.42, 0.3, 0.9, 0, 0.92, AZUL, "praia")  # cadeiras dobradas, em pé
-cx(9.5, 9.62, 0.3, 0.9, 0, 0.92, AMARELO, "praia")
-cx(9.82, 9.94, 0.52, 0.64, 0, 1.6, TERRACOTA, "praia")  # guarda-sol fechado
-cx(10.1, 10.62, 0.34, 0.72, 0, 0.4, AZUL, "praia")  # caixa térmica
-cx(10.1, 10.62, 0.34, 0.72, 0.4, 0.46, BRANCO, "praia")
-cx(10.8, 11.45, 0.28, 0.82, 0.14, 0.6, AMARELO, "praia")  # carrinho de praia
-cx(10.8, 10.94, 0.2, 0.28, 0, 0.28, ESCURO, "praia")
-cx(11.3, 11.44, 0.2, 0.28, 0, 0.28, ESCURO, "praia")
-# fechadura digital, na porta de entrada
-cx(6.9, 7.02, 6.925, 6.95, 0.9, 1.22, ESCURO, "fechadura")
-cx(6.93, 6.99, 6.92, 6.925, 1.08, 1.18, AZUL_CLARO, "fechadura")
 
-GRUPOS = ["base", "lavadora", "ar_sala", "decoracao", "familia", "camas", "pet", "praia", "fechadura"]
+def divisoria(x, y0, y1, alt=1.0):
+    """Parede entre dois cômodos, cortada a 1 m para a vista entrar."""
+    cx(x - 0.06, x + 0.06, y0, y1, 0, alt, PAREDE)
+    cx(x - 0.06, x + 0.06, y0, y1, alt, alt + 0.02, PAREDE_TOPO)
 
-# cômodos: a caixa que a câmera enquadra ao focar (x0, x1, y0, y1, altura)
-COMODOS = {
-    "quarto1": (0, 3.5, 3.6, 7.0, 2.7),
-    "quarto2": (3.5, 6.7, 3.6, 7.0, 2.7),
-    "entrada": (6.5, 8.0, 4.6, 7.0, 2.4),
-    "cozinha": (7.8, 10.2, 3.3, 7.0, 2.2),
-    "servico": (9.9, 11.6, 5.0, 7.0, 2.0),
-    "sala": (0, 5.6, 1.3, 3.6, 2.7),
-    "jantar": (6.2, 11.6, 1.3, 3.6, 1.6),
-    "varanda": (0, 11.6, 0, 1.3, 1.6),
-}
-ITEM_COMODO = {
-    "lavadora": "servico", "ar_sala": "sala", "decoracao": None, "familia": "quarto1", "camas": "quarto2",
-    "pet": "sala", "praia": "varanda", "fechadura": "entrada",
-}
+
+def soleira(x0, x1, y):
+    cx(x0, x1, y, y + 0.1, 0, 0.3, PAREDE)
+
+
+def guarda_corpo(x0, x1, y0, y1):
+    """Vidro com corrimão na frente (y0) e na direita (x1)."""
+    cx(x0, x1, y0, y0 + 0.05, 0.96, 1.0, INOX)
+    n = max(2, int(round((x1 - x0) / 2.9)) + 1)
+    for i in range(n):
+        xm = x0 + 0.02 + (x1 - x0 - 0.09) * i / (n - 1)
+        cx(xm, xm + 0.04, y0, y0 + 0.05, 0, 0.96, INOX)
+    cx(x1 - 0.05, x1, y0, y1, 0.96, 1.0, INOX)
+
+
+def mureta(x0, x1, y0, y1, alt=0.9):
+    """Muro baixo de quintal, na frente e na direita."""
+    cx(x0, x1, y0, y0 + 0.12, 0, alt, PAREDE)
+    cx(x1 - 0.12, x1, y0, y1, 0, alt, PAREDE)
+
+
+def cama_casal(x, yw, peseira=True):
+    cx(x, x + 1.6, yw - 2.1, yw - 0.1, 0, 0.3, MADEIRA)
+    cx(x, x + 1.6, yw - 2.1, yw - 0.12, 0.3, 0.56, BRANCO)
+    cx(x, x + 1.6, yw - 2.1, yw - 1.1, 0.56, 0.6, AZUL_CLARO)
+    cx(x - 0.1, x + 1.7, yw - 0.1, yw, 0, 1.15, MADEIRA_CLARA)
+    cx(x + 0.15, x + 0.7, yw - 0.55, yw - 0.18, 0.56, 0.7, BRANCO)
+    cx(x + 0.9, x + 1.45, yw - 0.55, yw - 0.18, 0.56, 0.7, BRANCO)
+    if peseira:
+        cx(x, x + 1.6, yw - 2.1, yw - 1.6, 0.6, 0.64, TERRACOTA, "decoracao")
+        cx(x + 0.6, x + 1.0, yw - 0.75, yw - 0.5, 0.6, 0.78, TERRACOTA, "decoracao")
+
+
+def cama_solteiro(x, yw, peseira=True):
+    cx(x, x + 0.9, yw - 2.05, yw - 0.1, 0, 0.3, MADEIRA)
+    cx(x, x + 0.9, yw - 2.05, yw - 0.12, 0.3, 0.54, BRANCO)
+    cx(x, x + 0.9, yw - 2.05, yw - 1.15, 0.54, 0.58, AZUL_CLARO)
+    cx(x - 0.05, x + 0.95, yw - 0.1, yw, 0, 1.05, MADEIRA_CLARA)
+    cx(x + 0.17, x + 0.73, yw - 0.55, yw - 0.2, 0.54, 0.68, BRANCO)
+    if peseira:
+        cx(x, x + 0.9, yw - 2.05, yw - 1.65, 0.58, 0.62, TERRACOTA, "decoracao")
+
+
+def criado(x, yw):
+    cx(x, x + 0.44, yw - 0.5, yw - 0.05, 0, 0.5, MADEIRA_CLARA)
+    cx(x + 0.12, x + 0.32, yw - 0.38, yw - 0.18, 0.5, 0.85, AMARELO)
+
+
+def armario_esq(xw, y0, y1):
+    cx(xw, xw + 0.6, y0, y1, 0, 2.1, MADEIRA_CLARA)
+
+
+def armario_fundo(x0, x1, yw):
+    cx(x0, x1, yw - 0.6, yw - 0.02, 0, 2.1, MADEIRA_CLARA)
+
+
+def janela_esq(xw, y0, y1):
+    cx(xw, xw + 0.04, y0, y1, 1.0, 2.1, AZUL_CLARO)
+
+
+def janela_fundo(x0, x1, yw):
+    cx(x0, x1, yw - 0.03, yw, 1.15, 1.95, AZUL_CLARO)
+
+
+def ar_fundo(x, yw, grupo="base"):
+    cx(x, x + 0.9, yw - 0.22, yw, 2.2, 2.48, BRANCO, grupo)
+
+
+def ar_esq(xw, y, grupo="base"):
+    cx(xw, xw + 0.24, y, y + 0.9, 2.2, 2.48, BRANCO, grupo)
+
+
+def quadro(x0, x1, yw, cor=TERRACOTA):
+    cx(x0, x1, yw - 0.03, yw, 1.3, 1.95, cor, "decoracao")
+
+
+def tv_esq(xw, y0):
+    """Rack baixo e TV na parede da esquerda, a partir de y0 (1,4 m de comprido)."""
+    cx(xw, xw + 0.42, y0, y0 + 1.4, 0, 0.5, MADEIRA_CLARA)
+    cx(xw, xw + 0.05, y0 + 0.1, y0 + 1.3, 1.0, 1.72, ESCURO)
+
+
+def sofa(x, y, almofadas=True):
+    """Sofá de três lugares com chaise, de frente para a câmera; (x, y) é o canto da frente à esquerda do assento."""
+    cx(x, x + 2.3, y, y + 0.8, 0, 0.42, AZUL)
+    cx(x, x + 2.3, y + 0.6, y + 0.8, 0.42, 0.86, AZUL)
+    cx(x, x + 0.2, y, y + 0.8, 0.42, 0.62, AZUL)
+    cx(x + 2.1, x + 2.3, y, y + 0.8, 0.42, 0.62, AZUL)
+    cx(x + 1.48, x + 2.3, y - 0.9, y, 0, 0.42, AZUL)
+    cx(x + 0.3, x + 1.2, y - 1.0, y - 0.4, 0, 0.36, MADEIRA)  # mesa de centro
+    if almofadas:
+        for i, cor in enumerate((AMARELO, TERRACOTA, AMARELO)):
+            cx(x + 0.35 + i * 0.65, x + 0.7 + i * 0.65, y + 0.25, y + 0.55, 0.42, 0.72, cor, "decoracao")
+
+
+def tapete(x0, x1, y0, y1):
+    cx(x0, x1, y0, y1, 0.01, 0.03, TERRACOTA, "decoracao")
+
+
+def luminaria(x, y):
+    cx(x, x + 0.08, y, y + 0.08, 0, 1.45, ESCURO, "decoracao")
+    cx(x - 0.12, x + 0.2, y - 0.12, y + 0.2, 1.45, 1.75, AMARELO, "decoracao")
+
+
+def planta(x, y, alt=1.4):
+    cx(x + 0.15, x + 0.55, y + 0.15, y + 0.55, 0, 0.45, TERRACOTA, "decoracao")
+    cx(x, x + 0.7, y, y + 0.7, 0.45, alt, VERDE, "decoracao")
+
+
+def jardineira(x0, x1, y):
+    cx(x0, x1, y, y + 0.32, 0, 0.42, TERRACOTA, "decoracao")
+    cx(x0, x1, y - 0.02, y + 0.34, 0.42, 0.85, VERDE, "decoracao")
+
+
+def mesa_jantar(x, y, lugares=4, arranjo=True):
+    """Mesa com cadeiras atrás e na frente; (x, y) é o canto da frente à esquerda do tampo."""
+    comp = 1.6 if lugares <= 4 else 2.3
+    cx(x, x + comp, y, y + 0.9, 0.7, 0.76, MADEIRA)
+    for xp in (x + 0.08, x + comp - 0.16):
+        for yp in (y + 0.08, y + 0.74):
+            cx(xp, xp + 0.08, yp, yp + 0.08, 0, 0.7, MADEIRA)
+    n = 2 if lugares <= 4 else 3
+    for i in range(n):
+        xc = x + 0.22 + i * (comp - 0.86) / max(1, n - 1)
+        cx(xc, xc + 0.42, y + 1.0, y + 1.42, 0, 0.45, MADEIRA_CLARA)
+        cx(xc, xc + 0.42, y + 1.36, y + 1.42, 0.45, 0.9, MADEIRA_CLARA)
+        cx(xc, xc + 0.42, y - 0.4, y + 0.02, 0, 0.45, MADEIRA_CLARA)
+        cx(xc, xc + 0.42, y - 0.45, y - 0.39, 0.45, 0.9, MADEIRA_CLARA)
+    if arranjo:
+        cx(x + comp / 2 - 0.3, x + comp / 2 + 0.3, y + 0.3, y + 0.6, 0.76, 0.95, VERDE, "decoracao")
+
+
+def cadeirao(x, y):
+    cx(x, x + 0.45, y, y + 0.45, 0, 0.55, BRANCO, "familia")
+    cx(x, x + 0.45, y, y + 0.45, 0.55, 0.62, AMARELO, "familia")
+    cx(x, x + 0.06, y, y + 0.45, 0.62, 1.0, BRANCO, "familia")
+
+
+def berco(x, y):
+    """Berço de 0,7 x 1,2 m; (x, y) é o canto da frente à esquerda."""
+    cx(x, x + 0.7, y, y + 1.2, 0, 0.3, BRANCO, "familia")
+    cx(x, x + 0.7, y, y + 1.2, 0.3, 0.4, AZUL_CLARO, "familia")
+    cx(x, x + 0.04, y, y + 1.2, 0.3, 0.95, BRANCO, "familia")
+    cx(x + 0.66, x + 0.7, y, y + 1.2, 0.3, 0.95, BRANCO, "familia")
+    cx(x, x + 0.7, y, y + 0.04, 0.3, 0.95, BRANCO, "familia")
+    cx(x, x + 0.7, y + 1.16, y + 1.2, 0.3, 0.95, BRANCO, "familia")
+
+
+def bicama(x, yw):
+    """Cama auxiliar baixa, puxada para fora, com a cabeceira para o fundo."""
+    cx(x, x + 0.87, yw - 2.55, yw - 0.62, 0, 0.14, MADEIRA, "camas")
+    cx(x, x + 0.87, yw - 2.55, yw - 0.64, 0.14, 0.32, BRANCO, "camas")
+    cx(x, x + 0.87, yw - 2.55, yw - 1.8, 0.32, 0.35, AZUL_CLARO, "camas")
+    cx(x + 0.16, x + 0.71, yw - 1.05, yw - 0.72, 0.32, 0.44, BRANCO, "camas")
+
+
+def cama_pet(x, y):
+    cx(x, x + 0.78, y, y + 0.58, 0, 0.16, TERRACOTA, "pet")
+    cx(x + 0.1, x + 0.68, y + 0.1, y + 0.48, 0.16, 0.2, PAREDE_TOPO, "pet")
+    cx(x + 0.88, x + 1.06, y + 0.04, y + 0.22, 0, 0.08, INOX, "pet")
+    cx(x + 0.88, x + 1.06, y + 0.3, y + 0.48, 0, 0.08, INOX, "pet")
+
+
+def kit_praia(x, y):
+    """Cadeiras dobradas, guarda-sol, caixa térmica e carrinho, numa faixa de 2,2 x 0,7 m."""
+    cx(x, x + 0.12, y + 0.1, y + 0.7, 0, 0.92, AZUL, "praia")
+    cx(x + 0.2, x + 0.32, y + 0.1, y + 0.7, 0, 0.92, AMARELO, "praia")
+    cx(x + 0.52, x + 0.64, y + 0.32, y + 0.44, 0, 1.6, TERRACOTA, "praia")
+    cx(x + 0.8, x + 1.32, y + 0.14, y + 0.52, 0, 0.4, AZUL, "praia")
+    cx(x + 0.8, x + 1.32, y + 0.14, y + 0.52, 0.4, 0.46, BRANCO, "praia")
+    cx(x + 1.5, x + 2.15, y + 0.08, y + 0.62, 0.14, 0.6, AMARELO, "praia")
+    cx(x + 1.5, x + 1.64, y, y + 0.08, 0, 0.28, ESCURO, "praia")
+    cx(x + 2.0, x + 2.14, y, y + 0.08, 0, 0.28, ESCURO, "praia")
+
+
+def porta_entrada(x, yw):
+    """Porta de 0,8 m na parede do fundo, com capacho; a fechadura digital é melhoria."""
+    cx(x, x + 0.8, yw - 0.05, yw, 0, 2.1, MADEIRA)
+    cx(x + 0.08, x + 0.73, yw - 0.85, yw - 0.3, 0.01, 0.025, TERRACOTA)
+    cx(x + 0.08, x + 0.2, yw - 0.075, yw - 0.05, 0.9, 1.22, ESCURO, "fechadura")
+    cx(x + 0.11, x + 0.17, yw - 0.08, yw - 0.075, 1.08, 1.18, AZUL_CLARO, "fechadura")
+
+
+def cozinha(x, yw):
+    """Geladeira, bancada com fogão, coifa e pia, e janela sobre a pia: 2,15 m de parede a partir de x."""
+    cx(x, x + 0.7, yw - 0.7, yw, 0, 1.8, INOX)
+    cx(x + 0.7, x + 2.14, yw - 0.6, yw, 0, 0.9, BRANCO)
+    cx(x + 0.7, x + 2.14, yw - 0.62, yw, 0.9, 0.94, ESCURO)
+    cx(x + 0.8, x + 1.36, yw - 0.5, yw - 0.1, 0.94, 0.96, CINZA)
+    cx(x + 0.8, x + 1.36, yw - 0.3, yw, 1.6, 1.9, INOX)
+    cx(x + 1.5, x + 2.02, yw - 0.48, yw - 0.12, 0.94, 0.955, INOX)
+    cx(x + 1.46, x + 2.06, yw - 0.03, yw, 1.15, 1.95, AZUL_CLARO)
+
+
+def balcao(x0, x1, y):
+    """Balcão americano com cafeteira, air fryer e duas banquetas do lado da sala."""
+    cx(x0, x1, y, y + 0.5, 0, 1.0, BRANCO)
+    cx(x0 - 0.05, x1 + 0.05, y - 0.05, y + 0.55, 1.0, 1.05, MADEIRA_CLARA)
+    cx(x0 + 0.15, x0 + 0.45, y + 0.1, y + 0.4, 1.05, 1.35, ESCURO)
+    cx(x0 + 0.6, x0 + 0.95, y + 0.08, y + 0.42, 1.05, 1.38, ESCURO)
+    for xb in (x0 + 0.35, x1 - 0.7):
+        cx(xb, xb + 0.36, y - 0.5, y - 0.14, 0, 0.7, MADEIRA)
+
+
+def servico(x, yw):
+    """Área de serviço: o canto da máquina (melhoria), o tanque e a prateleira. 1,25 m de parede a partir de x."""
+    cx(x + 0.64, x + 1.24, yw - 0.6, yw, 0, 0.88, BRANCO)
+    cx(x + 0.02, x + 1.24, yw - 0.25, yw, 1.55, 1.6, MADEIRA_CLARA)
+    cx(x + 0.72, x + 1.12, yw - 0.22, yw - 0.02, 1.6, 1.85, AZUL)
+    cx(x, x + 0.6, yw - 0.64, yw, 0, 0.87, BRANCO, "lavadora")
+    cx(x + 0.08, x + 0.52, yw - 0.66, yw - 0.64, 0.2, 0.64, ESCURO, "lavadora")
+
+
+def poltrona(x, y):
+    cx(x, x + 0.8, y, y + 0.8, 0, 0.42, AZUL)
+    cx(x + 0.6, x + 0.8, y, y + 0.8, 0.42, 0.86, AZUL)
+
+
+def espreguicadeira(x, y):
+    cx(x, x + 1.9, y, y + 0.65, 0.2, 0.32, MADEIRA_CLARA)
+    cx(x, x + 0.6, y, y + 0.65, 0.32, 0.62, MADEIRA_CLARA)
+
+
+def mesinha(x, y):
+    """Mesinha branca com duas cadeiras, numa faixa de 1,9 x 0,7 m."""
+    cx(x + 0.6, x + 1.3, y, y + 0.7, 0.66, 0.7, BRANCO)
+    cx(x + 0.9, x + 1.0, y + 0.3, y + 0.4, 0, 0.66, CINZA)
+    cx(x, x + 0.42, y + 0.14, y + 0.56, 0, 0.44, MADEIRA_CLARA)
+    cx(x + 1.48, x + 1.9, y + 0.14, y + 0.56, 0, 0.44, MADEIRA_CLARA)
+
+
+def churrasqueira(x, yw):
+    """Churrasqueira de alvenaria encostada no fundo, com bancada (é melhoria)."""
+    cx(x, x + 0.9, yw - 0.7, yw, 0, 0.9, TERRACOTA, "churrasqueira")
+    cx(x, x + 0.9, yw - 0.6, yw, 0.9, 1.9, PAREDE, "churrasqueira")
+    cx(x + 0.15, x + 0.75, yw - 0.62, yw - 0.6, 1.0, 1.5, ESCURO, "churrasqueira")
+    cx(x + 0.9, x + 2.0, yw - 0.6, yw, 0, 0.9, BRANCO, "churrasqueira")
+    cx(x + 0.9, x + 2.0, yw - 0.62, yw, 0.9, 0.94, ESCURO, "churrasqueira")
+
+
+def escada(x0, x1, y0, y1, altura):
+    """Degraus subindo da direita (x1, no chão) para a esquerda (x0, na altura do andar de cima)."""
+    n = 7
+    for i in range(n):
+        xa = x1 - (x1 - x0) * (i + 1) / n
+        cx(xa, xa + (x1 - x0) / n, y0, y1, 0, altura * (i + 1) / n, MADEIRA_CLARA)
+
+
+# ---------------------------------------------------------------- planta pronta de um piso
+COMODOS, ITEM_COMODO, MARCA = {}, {}, {}
+
+
+def origem(dx):
+    ORIGEM[0] = dx
+
+
+def comodo(nome, x0, x1, y0, y1, alt):
+    COMODOS[nome] = (x0 + ORIGEM[0], x1 + ORIGEM[0], y0, y1, alt, NIVEL[0])
+
+
+def item(grupo, nome_comodo, x=None, y=None, z=None, topo=None):
+    """Diz em que cômodo a melhoria fica e, se preciso, onde vai o marcador dela."""
+    ITEM_COMODO[grupo] = nome_comodo
+    if x is not None:
+        MARCA[grupo] = (x + ORIGEM[0], y, z + NIVEL[0], topo + NIVEL[0])
+
+
+def quarto(n, x0, larg, ym, yw, guarda_roupa_esq=False):
+    """Quarto de casal numerado: cama sob a janela, cômoda à direita. Melhorias: ar, TV e blackout."""
+    x1 = x0 + larg
+    piso(x0, x1, ym, yw, PISO_QUARTO)
+    soleira(x0 + 0.06, x1 - 1.1, ym)
+    xb = x1 - 3.25                                   # cama
+    cama_casal(xb, yw)
+    criado(xb - 0.5, yw)
+    criado(xb + 1.66, yw)
+    cx(x1 - 1.02, x1 - 0.12, yw - 0.5, yw - 0.02, 0, 0.8, MADEIRA_CLARA)      # cômoda
+    cx(xb + 0.2, xb + 1.4, yw - 0.03, yw, 1.2, 1.9, AZUL_CLARO)            # janela sobre a cabeceira
+    cx(xb + 0.05, xb + 0.38, yw - 0.07, yw - 0.03, 1.15, 1.98, AZUL, "blackout")
+    cx(xb + 1.22, xb + 1.55, yw - 0.07, yw - 0.03, 1.15, 1.98, AZUL, "blackout")
+    cx(xb + 0.05, xb + 1.55, yw - 0.08, yw - 0.03, 1.96, 2.02, MADEIRA, "blackout")
+    cx(xb + 0.35, xb + 1.25, yw - 0.2, yw, 2.36, 2.6, BRANCO, f"ar_q{n}")
+    cx(x1 - 1.05, x1 - 0.1, yw - 0.05, yw, 1.1, 1.66, ESCURO, f"tv_q{n}")
+    if guarda_roupa_esq:
+        armario_esq(x0, yw - 1.45, yw - 0.05)
+    comodo(f"quarto{n}", x0, x1, ym, yw, 2.7)
+    item(f"ar_q{n}", f"quarto{n}")
+    item(f"tv_q{n}", f"quarto{n}")
+    ITEM_COMODO.setdefault("blackout", "quarto1")
+
+
+def banheiro(x0, ym, yw):
+    """Banheiro de 1,6 m: bancada com espelho, vaso e box de vidro. Melhoria: secador de cabelo."""
+    x1 = x0 + 1.6
+    piso(x0, x1, ym, yw, PISO_COZINHA)
+    cx(x0 + 0.1, x0 + 0.9, yw - 0.5, yw, 0, 0.85, BRANCO)                  # bancada com cuba
+    cx(x0 + 0.1, x0 + 0.9, yw - 0.52, yw, 0.85, 0.89, ESCURO)
+    cx(x0 + 0.15, x0 + 0.85, yw - 0.03, yw, 1.1, 1.9, AZUL_CLARO)          # espelho
+    cx(x0 + 1.02, x0 + 1.42, yw - 0.65, yw - 0.05, 0, 0.42, BRANCO)        # vaso
+    cx(x0 + 1.05, x0 + 1.39, yw - 0.2, yw - 0.05, 0.42, 0.8, BRANCO)
+    cx(x0 + 0.1, x0 + 1.5, ym + 0.2, ym + 1.2, 0, 0.06, CINZA)             # box
+    cx(x0 + 0.1, x0 + 1.5, ym + 1.2, ym + 1.24, 0, 1.0, INOX)
+    cx(x0 + 0.5, x0 + 0.64, yw - 0.34, yw - 0.14, 0.89, 1.14, ESCURO, "secador")
+    cx(x0 + 0.64, x0 + 0.8, yw - 0.28, yw - 0.2, 1.02, 1.1, ESCURO, "secador")
+    comodo("banheiro", x0, x1, ym + 1.0, yw, 2.2)
+    item("secador", "banheiro")
+
+
+def churrasqueira_esq(xw, y):
+    """Churrasqueira de alvenaria encostada na parede da esquerda, com bancada."""
+    cx(xw, xw + 0.7, y, y + 0.9, 0, 0.9, TERRACOTA, "churrasqueira")
+    cx(xw, xw + 0.6, y, y + 0.9, 0.9, 1.9, PAREDE, "churrasqueira")
+    cx(xw + 0.6, xw + 0.62, y + 0.15, y + 0.75, 1.0, 1.5, ESCURO, "churrasqueira")
+    cx(xw, xw + 0.6, y + 0.9, y + 1.9, 0, 0.9, BRANCO, "churrasqueira")
+    cx(xw, xw + 0.62, y + 0.9, y + 1.9, 0.9, 0.94, ESCURO, "churrasqueira")
+
+
+def ducha(x, y):
+    cx(x, x + 0.9, y, y + 0.9, 0, 0.04, PISO_PEDRA, "ducha")
+    cx(x + 0.05, x + 0.13, y + 0.75, y + 0.83, 0, 2.15, INOX, "ducha")
+    cx(x + 0.05, x + 0.4, y + 0.55, y + 0.83, 2.1, 2.16, INOX, "ducha")
+
+
+def rede(x, y):
+    """Rede de descanso com suporte, numa faixa de 2,4 x 0,8 m."""
+    cx(x, x + 2.4, y + 0.3, y + 0.5, 0, 0.08, MADEIRA, "rede")
+    cx(x, x + 0.1, y + 0.3, y + 0.5, 0.08, 1.1, MADEIRA, "rede")
+    cx(x + 2.3, x + 2.4, y + 0.3, y + 0.5, 0.08, 1.1, MADEIRA, "rede")
+    cx(x + 0.25, x + 2.15, y + 0.05, y + 0.75, 0.45, 0.6, TERRACOTA, "rede")
+
+
+def area_externa(x0, x1, y0, y1, nome, com_ducha=False, parede_xw=None):
+    """Varanda, terraço ou quintal: tudo o que fica nela é melhoria (mobília, espreguiçadeiras, rede, ducha, churrasqueira)."""
+    fundo = y1 - y0 > 2.0
+    ye = y0 + (0.35 if not fundo else 0.5)
+    for i in range(2):
+        xe = x0 + 1.7 + i * 2.1
+        cx(xe, xe + 1.9, ye, ye + 0.65, 0.2, 0.32, MADEIRA_CLARA, "espreguicadeiras")
+        cx(xe, xe + 0.6, ye, ye + 0.65, 0.32, 0.62, MADEIRA_CLARA, "espreguicadeiras")
+    xm = x0 + 6.1
+    cx(xm + 0.6, xm + 1.3, ye, ye + 0.7, 0.66, 0.7, BRANCO, "varanda")
+    cx(xm + 0.9, xm + 1.0, ye + 0.3, ye + 0.4, 0, 0.66, CINZA, "varanda")
+    cx(xm, xm + 0.42, ye + 0.14, ye + 0.56, 0, 0.44, MADEIRA_CLARA, "varanda")
+    cx(xm + 1.48, xm + 1.9, ye + 0.14, ye + 0.56, 0, 0.44, MADEIRA_CLARA, "varanda")
+    rede(x1 - 2.9, ye - 0.05)
+    comodo(nome, x0, x1, y0, y1, 1.8)
+    for g in ("espreguicadeiras", "varanda", "rede"):
+        item(g, nome)
+    if fundo and parede_xw is not None:
+        churrasqueira_esq(parede_xw, y0 + 0.4)
+        item("churrasqueira", nome)
+    if com_ducha:
+        ducha(x0 + 7.2 if x1 - x0 > 9 else x1 - 1.2, y1 - 1.0 if fundo else y0 + 0.2)
+        item("ducha", nome)
+
+
+def piso_unico(quartos, frente="varanda", primeiro=1):
+    """Um piso inteiro, com as melhorias no lugar. Devolve a largura.
+
+    quartos: quantos quartos neste piso (numerados a partir de `primeiro`).
+    frente: "varanda" (1,3 m, deck e guarda-corpo de vidro) ou "quintal" (3 m, grama, mureta, churrasqueira e ducha).
+    No fundo, da esquerda para a direita: os quartos, o banheiro, a entrada, a cozinha e a área de serviço.
+    Na frente: sala de estar e jantar, e depois a varanda ou o quintal.
+    """
+    f = 1.3 if frente == "varanda" else 3.0
+    ym, yw = f + 2.3, f + 5.7
+    larguras = [4.5] + [3.8] * (quartos - 1)
+    xq = [0.0]
+    for l in larguras:
+        xq.append(xq[-1] + l)
+    xb = xq[-1]            # banheiro
+    xe = xb + 1.6          # entrada
+    xc = xe + 1.0          # cozinha
+    xs = xc + 3.1          # área de serviço
+    W = xs + 2.0
+    laje(0, W, 0, yw)
+    piso(xe, xc, ym, yw, PISO_SALA)
+    piso(xc, W, ym, yw, PISO_COZINHA)
+    piso(0, W, f, ym, PISO_SALA)
+    piso(0, W, 0, f, PISO_VARANDA if frente == "varanda" else PISO_GRAMA)
+    parede_fundo(0, W, yw)
+    parede_esq(0, f if frente == "varanda" else 0, yw)
+    if frente == "varanda":
+        cx(-0.12, 0, 0, f, 0, 1.0, PAREDE)
+    for x in xq[1:] + [xe]:
+        divisoria(x, ym, yw)
+    divisoria(xc, ym + 0.8, yw)
+    divisoria(xs, ym + 1.5, yw)
+
+    for i in range(quartos):
+        quarto(primeiro + i, xq[i], larguras[i], ym, yw, guarda_roupa_esq=(i == 0))
+    # mesa de trabalho no primeiro quarto, junto à parede da esquerda
+    cx(0.02, 0.62, ym + 0.35, ym + 1.55, 0.7, 0.75, MADEIRA_CLARA, "mesa_trabalho")
+    cx(0.05, 0.12, ym + 0.38, ym + 0.45, 0, 0.7, MADEIRA, "mesa_trabalho")
+    cx(0.05, 0.12, ym + 1.45, ym + 1.52, 0, 0.7, MADEIRA, "mesa_trabalho")
+    cx(0.75, 1.2, ym + 0.7, ym + 1.15, 0, 0.46, ESCURO, "mesa_trabalho")
+    cx(1.14, 1.2, ym + 0.7, ym + 1.15, 0.46, 0.95, ESCURO, "mesa_trabalho")
+    item("mesa_trabalho", f"quarto{primeiro}")
+    item("blackout", f"quarto{primeiro}", xq[1] - 2.45, yw, 1.7, 2.25)
+    banheiro(xb, ym, yw)
+
+    # ---- entrada, cozinha e área de serviço
+    porta_entrada(xe + 0.1, yw)
+    comodo("entrada", xe - 0.2, xc + 0.2, ym + 1.0, yw, 2.4)
+    item("fechadura", "entrada")
+    cx(xc + 0.06, xc + 0.76, yw - 0.7, yw, 0, 1.8, INOX)                         # geladeira
+    cx(xc + 0.76, xc + 3.02, yw - 0.6, yw, 0, 0.9, BRANCO)                       # bancada
+    cx(xc + 0.76, xc + 3.02, yw - 0.62, yw, 0.9, 0.94, ESCURO)
+    cx(xc + 1.5, xc + 2.06, yw - 0.5, yw - 0.1, 0.94, 0.96, CINZA)               # fogão
+    cx(xc + 1.5, xc + 2.06, yw - 0.3, yw, 1.6, 1.9, INOX)                        # coifa
+    cx(xc + 2.16, xc + 2.64, yw - 0.48, yw - 0.12, 0.94, 0.955, INOX)            # pia
+    cx(xc + 0.84, xc + 1.4, yw - 0.64, yw - 0.6, 0.06, 0.86, INOX, "lava_loucas")
+    cx(xc + 0.9, xc + 1.34, yw - 0.66, yw - 0.64, 0.72, 0.78, ESCURO, "lava_loucas")
+    cx(xc + 2.72, xc + 2.96, yw - 0.18, yw, 1.2, 1.62, BRANCO, "purificador")
+    cx(xc + 2.76, xc + 2.92, yw - 0.2, yw - 0.18, 1.26, 1.46, AZUL_CLARO, "purificador")
+    balcao(xc + 0.25, xs - 0.25, ym - 0.1)
+    cx(xs - 0.75, xs - 0.45, ym, ym + 0.3, 1.05, 1.36, TERRACOTA, "cafeteira")   # cafeteira de cápsula
+    cx(xs - 0.7, xs - 0.5, ym - 0.06, ym, 1.05, 1.16, INOX, "cafeteira")
+    comodo("cozinha", xc, xs, ym - 0.3, yw, 2.2)
+    for g in ("purificador", "lava_loucas", "cafeteira"):
+        item(g, "cozinha")
+    # área de serviço: tanque e prateleira; a máquina é melhoria (comum ou lava e seca, no mesmo lugar)
+    cx(xs + 0.84, xs + 1.44, yw - 0.6, yw, 0, 0.88, BRANCO)
+    cx(xs + 0.12, xs + 1.44, yw - 0.25, yw, 1.55, 1.6, MADEIRA_CLARA)
+    cx(xs + 0.92, xs + 1.32, yw - 0.22, yw - 0.02, 1.6, 1.85, AZUL)
+    for g in ("lavadora", "lava_seca"):
+        cx(xs + 0.14, xs + 0.74, yw - 0.64, yw, 0, 0.87, BRANCO, g)
+        cx(xs + 0.22, xs + 0.66, yw - 0.66, yw - 0.64, 0.2, 0.64, ESCURO, g)
+    cx(xs + 0.3, xs + 0.4, yw - 0.66, yw - 0.64, 0.7, 0.8, AZUL_CLARO, "lava_seca")
+    cx(xs + 1.4, xs + 1.75, ym + 0.2, ym + 1.3, 0.82, 0.88, AZUL_CLARO, "ferro")   # tábua de passar aberta
+    cx(xs + 1.52, xs + 1.62, ym + 0.6, ym + 0.9, 0, 0.82, INOX, "ferro")
+    cx(xs + 1.48, xs + 1.68, ym + 0.95, ym + 1.2, 0.88, 1.02, ESCURO, "ferro")
+    comodo("servico", xs - 0.3, W, ym + 1.4, yw, 2.0)
+    for g in ("lavadora", "lava_seca", "ferro"):
+        item(g, "servico")
+
+    # ---- sala de estar e jantar
+    cx(0, 0.42, f + 0.7, f + 2.1, 0, 0.5, MADEIRA_CLARA)                         # rack
+    cx(0, 0.05, f + 0.8, f + 2.0, 1.0, 1.72, ESCURO, "tv_sala")
+    ar_esq(0, f + 0.95, "ar_sala")
+    sofa(1.6, f + 1.45)
+    # sofá-cama aberto, no lugar do sofá (cobre o sofá e a mesa de centro)
+    cx(1.6, 3.9, f + 2.05, f + 2.25, 0.42, 0.86, CINZA, "sofa_cama")
+    cx(1.6, 3.9, f + 0.15, f + 2.05, 0, 0.3, MADEIRA, "sofa_cama")
+    cx(1.6, 3.9, f + 0.15, f + 2.05, 0.3, 0.48, BRANCO, "sofa_cama")
+    cx(1.6, 3.9, f + 0.15, f + 1.0, 0.48, 0.52, AZUL_CLARO, "sofa_cama")
+    cx(1.8, 2.5, f + 1.55, f + 1.95, 0.48, 0.6, BRANCO, "sofa_cama")
+    cx(3.0, 3.7, f + 1.55, f + 1.95, 0.48, 0.6, BRANCO, "sofa_cama")
+    tapete(1.3, 4.35, f + 0.1, f + 1.75)
+    luminaria(4.15, f + 1.95)
+    cama_pet(0.14, f + 0.06)
+    xj = max(xb + 0.4, 6.2)
+    planta(xj - 1.3, f + 0.15, 1.5)
+    mesa_jantar(xj, f + 0.6, 6 if quartos >= 3 else 4)
+    poltrona(W - 1.35, f + 0.45)
+    planta(W - 1.0, f + 1.45, 1.3)
+    comodo("sala", 0, 5.6, f, ym, 2.7)
+    comodo("jantar", xj - 0.8, W, f, ym, 1.6)
+    for g in ("ar_sala", "tv_sala", "sofa_cama", "pet"):
+        item(g, "sala")
+    item("decoracao", None, 2.75, f + 1.85, 0.45, 1.0)
+
+    # ---- frente
+    if frente == "varanda":
+        area_externa(0, W, 0, f, "varanda")
+        guarda_corpo(0, W, 0, f)
+    else:
+        area_externa(0, W, 0, f, "quintal", com_ducha=True, parede_xw=0)
+        mureta(0, W, 0, f)
+    return W
+
+
+# Todas as melhorias que uma planta pode ter. Cada planta usa as que cabem nela (apartamento não tem
+# churrasqueira nem ducha; quarto 3 só existe em quem tem três quartos).
+MELHORIAS = ["decoracao", "ar_sala", "tv_sala", "sofa_cama", "pet", "fechadura",
+             "ar_q1", "ar_q2", "ar_q3", "tv_q1", "tv_q2", "tv_q3", "blackout", "mesa_trabalho", "secador",
+             "lavadora", "lava_seca", "ferro", "lava_loucas", "purificador", "cafeteira",
+             "varanda", "espreguicadeiras", "rede", "ducha", "churrasqueira"]
+GRUPOS = ["base"] + MELHORIAS
+# Em que pintura cada melhoria entra. A decoração vai sozinha (fica atrás de outras coisas); a lava e seca e o
+# sofá-cama vão à parte porque ocupam o lugar da máquina comum e do sofá.
+CENA_DE = {g: "itens" for g in MELHORIAS}
+CENA_DE.update(decoracao="decoracao", lava_seca="trocas", sofa_cama="trocas")
+
+
+# ---------------------------------------------------------------- a planta do modelo
+MODELO = sys.argv[3] if len(sys.argv) > 3 else "apto2"
+exec(compile(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "modelos", MODELO + ".py"), encoding="utf-8").read(), MODELO + ".py", "exec"))
+PRESENTES = [g for g in MELHORIAS if any(c[7] == g for c in CAIXAS)]
+estranhos = sorted({c[7] for c in CAIXAS} - set(GRUPOS))
+assert not estranhos, f"grupo desconhecido em {MODELO}: {estranhos}"
 
 
 def projeta(p):
@@ -349,37 +693,52 @@ os.makedirs(SAIDA, exist_ok=True)
 # Três cenas. A decoração é pintada separada das outras melhorias porque é a única que fica atrás de outra
 # (a manta da cama de solteiro atrás da cama auxiliar): assim a camada dela sai inteira.
 grava("base", {"base"})
-quem_decor = grava("decoracao", {"base", "decoracao"})
-quem_itens = grava("itens", set(GRUPOS) - {"decoracao"})
+quem = {}
+for cena in ("decoracao", "itens", "trocas"):
+    quem[cena] = grava(cena, {"base"} | {g for g in PRESENTES if CENA_DE[g] == cena})
 
 itens = {}
-for g in GRUPOS[1:]:
-    quem = quem_decor if g == "decoracao" else quem_itens
-    m = reduz((quem == GRUPOS.index(g)).astype(np.float32))
+for g in PRESENTES:
+    m = reduz((quem[CENA_DE[g]] == GRUPOS.index(g)).astype(np.float32))
     Image.fromarray((m * 255).astype(np.uint8)).save(os.path.join(SAIDA, f"mascara-{g}.png"))
     ys, xs = np.nonzero(m > 0.05)
+    if len(xs) == 0:
+        print(f"ATENCAO: {g} não aparece na tela")
+        continue
     itens[g] = {
-        "cena": "decoracao" if g == "decoracao" else "itens",
+        "cena": CENA_DE[g],
         "caixa": [int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1],
         "centro": [float(np.average(xs, weights=m[ys, xs])), float(np.average(ys, weights=m[ys, xs]))],
-        "comodo": ITEM_COMODO[g],
+        "visivel": round(float(m.sum()), 1),
+        "comodo": ITEM_COMODO.get(g),
     }
+    if g in MARCA:
+        mx, my, mz, mtopo = MARCA[g]
+        (px1, px2), (py1, py2), (fh, _fh2), (fd, _fd2) = tela(np.array([(mx, my, mz), (mx, my, mtopo)]))
+        itens[g]["marca"] = [float(px1), float(py1), float(py2), float((fh - H0) / (H1 - H0)), float((fd - D0) / (D1 - D0))]
 
 if os.environ.get("CONFERIR"):
-    # fora a decoração, nenhuma melhoria pode cobrir outra na tela: cada uma vira uma camada solta
+    # dentro da mesma pintura, nenhuma melhoria pode cobrir outra na tela: cada uma vira uma camada solta
     silhuetas = {}
-    for g in GRUPOS[1:]:
+    for g in PRESENTES:
         _c, _h, _d, q = desenha({g})
         silhuetas[g] = reduz((q >= 0).astype(np.float32)) > 0.02
-    for i, a in enumerate(GRUPOS[1:]):
-        for b in GRUPOS[i + 2:]:
-            cruza = int((silhuetas[a] & silhuetas[b]).sum())
+        cheio = float(silhuetas[g].sum())
+        if g in itens and itens[g]["visivel"] < 0.45 * cheio:
+            print(f"ATENCAO: {g} está {100 - round(100 * itens[g]['visivel'] / cheio)}% escondido")
+    for i, ga in enumerate(PRESENTES):
+        for gb in PRESENTES[i + 1:]:
+            if CENA_DE[ga] != CENA_DE[gb]:
+                continue
+            cruza = int((silhuetas[ga] & silhuetas[gb]).sum())
             if cruza:
-                print(f"ATENCAO: {a} e {b} se cruzam na tela em {cruza} pontos")
+                print(f"ATENCAO: {ga} e {gb} se cruzam na tela em {cruza} pontos")
 
 comodos = {}
-for nome, (x0, x1, y0, y1, alt) in COMODOS.items():
-    pts = np.array([(x, y, z) for x in (x0, x1) for y in (y0, y1) for z in (0, alt)])
+for nome, medida in COMODOS.items():
+    x0, x1, y0, y1, alt = medida[:5]
+    zc = medida[5] if len(medida) > 5 else 0
+    pts = np.array([(x, y, z) for x in (x0, x1) for y in (y0, y1) for z in (zc, zc + alt)])
     px, py, fh, fd = tela(pts)
     comodos[nome] = {
         "caixa": [float(px.min()), float(py.min()), float(px.max()), float(py.max())],
@@ -393,6 +752,6 @@ json.dump({
     "sen_altura": float(SP),
     # quanto um ponto anda na tela (em px) por radiano de giro: h e d em [0, 1] voltam a metros com estas faixas
     "faixa_h_px": float((H1 - H0) * escala), "faixa_d_px": float((D1 - D0) * escala),
-    "itens": itens, "comodos": comodos,
+    "modelo": MODELO, "itens": itens, "comodos": comodos,
 }, open(os.path.join(SAIDA, "cena.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 print("ok", LARG, ALT, "px/m", round(float(escala), 1), "caixas", len(CAIXAS))

@@ -2,20 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Check, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { MelhoriaId } from "@/lib/melhorias";
-import { criarCenaMaquete, type CenaMaquete } from "./maqueteCena";
-import { MANIFESTO } from "./maqueteManifesto";
-
-const PASTA = "/melhorias";
-
-/**
- * Onde fica o marcador de cada melhoria. O centro que vem do manifesto é o centro de massa da camada,
- * e em duas delas isso cai no meio do nada: a decoração está espalhada pela casa e o kit família tem o
- * berço num cômodo e o cadeirão em outro.
- */
-const MARCADOR: Partial<Record<MelhoriaId, { centro: [number, number]; topo: number; prof: [number, number] }>> = {
-  decoracao: { centro: [668, 626], topo: 578, prof: [0.54, 0.49] },
-  familia: { centro: [512, 500], topo: 416, prof: [0.79, 0.72] },
-};
+import { criarCenaMaquete, type CenaMaquete, type ManifestoMaquete } from "./maqueteCena";
 
 export interface PontoDaMaquete {
   id: MelhoriaId;
@@ -24,6 +11,8 @@ export interface PontoDaMaquete {
 }
 
 interface MaqueteProps {
+  /** O manifesto do modelo (`/melhorias/<modelo>/maquete.json`). Trocar de modelo pede `key` nova. */
+  manifesto: ManifestoMaquete;
   /** Camadas à vista: o que o imóvel já tem e o que está na simulação. */
   ativos: MelhoriaId[];
   /** A camada que acabou de entrar ou sair: a troca nasce nela. */
@@ -62,14 +51,15 @@ function semMovimento(): boolean {
  * A maquete do plano de melhorias: a pintura que gira, com um marcador em cada melhoria.
  * Sem WebGL (ou se a placa de vídeo cair), mostra a mesma pintura parada, em imagens empilhadas.
  */
-export function Maquete({ ativos, revelar, foco, pontos, escolhido, aoEscolher, margemBase = 0, className, children }: MaqueteProps) {
+export function Maquete({ manifesto: MANIFESTO, ativos, revelar, foco, pontos, escolhido, aoEscolher, margemBase = 0, className, children }: MaqueteProps) {
   const tela = useRef<HTMLCanvasElement>(null);
   const cena = useRef<CenaMaquete | null>(null);
   const marcadores = useRef(new Map<MelhoriaId, HTMLButtonElement>());
   const [modo, setModo] = useState<"espera" | "vivo" | "parado">("espera");
   // sem WebGL a pintura não cobre o palco inteiro: o que sobra recebe a cor do fundo da própria pintura
   const [fundo, setFundo] = useState<string | undefined>(undefined);
-  const camadas = useMemo(() => new Map(MANIFESTO.camadas.map((c) => [c.id as MelhoriaId, c])), []);
+  const PASTA = `/melhorias/${MANIFESTO.modelo}`;
+  const camadas = useMemo(() => new Map(MANIFESTO.camadas.map((c) => [c.id as MelhoriaId, c])), [MANIFESTO]);
 
   // estado mais recente, para o desenho de cada quadro ler sem recriar a cena
   const atual = useRef({ ativos, revelar, foco, margemBase });
@@ -90,10 +80,10 @@ export function Maquete({ ativos, revelar, foco, pontos, escolhido, aoEscolher, 
       for (const [id, el] of marcadores.current) {
         const camada = camadas.get(id);
         if (!camada) continue;
-        const ponto = MARCADOR[id] ?? { centro: camada.centro, topo: camada.y + 8, prof: camada.prof };
+        const ponto = camada.marca;
         // item à vista: o marcador sobe para cima dele; item que falta: fica onde ele vai entrar
         const noTopo = el.dataset.estado !== "falta";
-        const p = c.projetar(ponto.centro[0], noTopo ? ponto.topo : ponto.centro[1], ponto.prof[0], ponto.prof[1]);
+        const p = c.projetar(ponto.x, noTopo ? ponto.topo : ponto.y, ponto.prof[0], ponto.prof[1]);
         const fora = p.x < 14 || p.y < 14 || p.x > caixa.width - 14 || p.y > caixa.height - 14;
         el.style.transform = `translate(${p.x.toFixed(1)}px, ${p.y.toFixed(1)}px) translate(-50%, -50%)`;
         el.style.opacity = fora ? "0" : "1";
@@ -107,6 +97,7 @@ export function Maquete({ ativos, revelar, foco, pontos, escolhido, aoEscolher, 
       cena.current = null;
       c.destruir();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [camadas]);
 
   const chave = ativos.join(",");

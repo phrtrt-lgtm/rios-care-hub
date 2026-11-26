@@ -17,14 +17,13 @@ export interface CamadaMaquete {
   y: number;
   l: number;
   a: number;
-  /** Centro do item na imagem (px). */
-  centro: [number, number];
-  /** Profundidade no centro: [fundo no chão, fundo na vista], de 0 a 1. */
-  prof: [number, number];
   comodo: string | null;
+  /** Onde fica o marcador: o meio do item, o topo dele (px da imagem) e a profundidade ali (0 a 1). */
+  marca: { x: number; y: number; topo: number; prof: [number, number] };
 }
 
 export interface ManifestoMaquete {
+  modelo: string;
   largura: number;
   altura: number;
   px_por_metro: number;
@@ -455,7 +454,7 @@ export function criarCenaMaquete(
       compor();
       const c = revelar ? manifesto.camadas.find((k) => k.id === revelar) : null;
       if (c && !opcoes.parado) {
-        const [x, y] = c.centro;
+        const { x, y } = c.marca;
         const longe = Math.max(Math.hypot(x, y), Math.hypot(L - x, y), Math.hypot(x, A - y), Math.hypot(L - x, A - y));
         onda = { x, y, raio: 0, ate: longe + 140, forca: 1 };
       } else {

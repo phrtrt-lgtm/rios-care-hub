@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { useReducedMotion } from "framer-motion";
-import { AirVent, Baby, BedDouble, Check, ChevronDown, Copy, KeyRound, Maximize2, PawPrint, Play, Plus, Send, Share2, Sofa, Umbrella, WashingMachine, X } from "lucide-react";
+import {
+  AirVent, Armchair, Blinds, Check, ChevronDown, Coffee, Copy, Droplets, Flame, KeyRound, Laptop, Maximize2, Palette, PawPrint, Play, Plus, Send,
+  Share2, Shirt, ShowerHead, Sofa, Sun, Tv, Utensils, WashingMachine, Waves, Wind, X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -10,8 +14,10 @@ import { cn } from "@/lib/utils";
 import { nomeDoMes, pct, reais } from "@/lib/resultadosImovel";
 import {
   ESTUDO_BANXICO,
-  MELHORIAS,
+  GRUPOS,
   MELHORIA_POR_ID,
+  MODELOS,
+  alternarNaSimulacao,
   baseDaConta,
   comentarioDe,
   contaDoPlano,
@@ -20,9 +26,11 @@ import {
   faixaDeRetorno,
   faixaEmPct,
   faixaEmReais,
+  ganhoDe,
   ganhoDoItem,
+  melhoriasDoImovel,
   mensagemDoPedido,
-  ordemSugerida,
+  planoSugerido,
   retornoDoItem,
   situacaoDe,
   textoParaCompartilhar,
@@ -32,20 +40,25 @@ import {
   type Melhoria,
   type MelhoriaId,
   type MelhoriasImovel,
+  type ModeloMaquete,
 } from "@/lib/melhorias";
 import { useContagem } from "../blocos";
 import { PauloDeFilme, type ControlePaulo } from "../paulo/PauloDeFilme";
 import { Maquete, type PontoDaMaquete } from "./Maquete";
+import type { ManifestoMaquete } from "./maqueteCena";
 
-const ICONE: Record<MelhoriaId, ComponentType<{ className?: string }>> = {
-  ar_sala: AirVent,
-  lavadora: WashingMachine,
-  decoracao: Sofa,
-  familia: Baby,
-  camas: BedDouble,
-  pet: PawPrint,
-  praia: Umbrella,
-  fechadura: KeyRound,
+const ICONE: Record<Melhoria["icone"], ComponentType<{ className?: string }>> = {
+  ar: AirVent, tv: Tv, cortina: Blinds, mesa: Laptop, secador: Wind, lavadora: WashingMachine, ferro: Shirt, loucas: Utensils, agua: Droplets,
+  cafe: Coffee, sofa: Sofa, pet: PawPrint, chave: KeyRound, decor: Palette, varanda: Armchair, sol: Sun, rede: Waves, ducha: ShowerHead, fogo: Flame,
+};
+
+const NOME_DO_MODELO: Record<ModeloMaquete, string> = {
+  apto1: "apartamento de 1 quarto",
+  apto2: "apartamento de 2 quartos",
+  apto3: "apartamento de 3 quartos",
+  cobertura: "cobertura duplex",
+  casa_terrea: "casa térrea",
+  casa_duplex: "casa de dois andares",
 };
 
 function useTelaLarga(): boolean {
@@ -59,6 +72,19 @@ function useTelaLarga(): boolean {
   return larga;
 }
 
+/** O manifesto da maquete de um modelo: onde cada camada entra e o foco de cada cômodo. */
+function useManifesto(modelo: ModeloMaquete) {
+  return useQuery({
+    queryKey: ["maquete", modelo],
+    staleTime: Infinity,
+    queryFn: async (): Promise<ManifestoMaquete> => {
+      const resposta = await fetch(`/melhorias/${modelo}/maquete.json`);
+      if (!resposta.ok) throw new Error("maquete");
+      return resposta.json();
+    },
+  });
+}
+
 function periodoPorExtenso(dados: MelhoriasImovel): string {
   const [a1, m1] = dados.periodo.de.split("-").map(Number);
   const [a2, m2] = dados.periodo.ate.split("-").map(Number);
@@ -66,47 +92,51 @@ function periodoPorExtenso(dados: MelhoriasImovel): string {
 }
 
 /** Faixa em reais com os dois números contando até o valor. */
-function FaixaAnimada({ faixa, sufixo }: { faixa: Faixa; sufixo?: string }) {
+function FaixaAnimada({ faixa }: { faixa: Faixa }) {
   const min = useContagem(faixa.min, 0.7);
   const max = useContagem(faixa.max, 0.7);
-  return (
-    <span className="tabular-nums">
-      {faixaEmReais({ min, max })}
-      {sufixo}
-    </span>
-  );
+  return <span className="tabular-nums">{faixaEmReais({ min, max })}</span>;
 }
 
 interface Props {
   propertyId: string;
-  /** Equipe conferindo a página: não envia pedido, copia o resumo. */
+  /** Equipe conferindo a página: não envia pedido, copia o plano. */
   equipe: boolean;
 }
 
 /**
- * Plano de melhorias: a maquete com as melhorias em camadas, a conta de quanto cada uma pode render
- * neste imóvel e o pedido de orçamento. Os números e as regras estão em `src/lib/melhorias.ts`.
+ * Plano de melhorias: a maquete do tipo do imóvel com as melhorias em camadas, o que o imóvel tem e o que falta em
+ * cada cômodo, a conta de quanto cada melhoria pode render e o pedido de orçamento. Os números e as regras estão em
+ * `src/lib/melhorias.ts`.
  */
 export default function PlanoDeMelhorias({ propertyId, equipe }: Props) {
   const { data: dados, isLoading, error } = useMelhorias(propertyId);
+  const modelo: ModeloMaquete = dados?.modelo && MODELOS.includes(dados.modelo) ? dados.modelo : "apto2";
+  const { data: manifesto, isLoading: carregandoMaquete, error: erroMaquete } = useManifesto(modelo);
   const reduzido = useReducedMotion();
   const larga = useTelaLarga();
   const navigate = useNavigate();
   const [simulando, setSimulando] = useState<MelhoriaId[]>([]);
   const [escolhido, setEscolhido] = useState<MelhoriaId | null>(null);
   const [revelar, setRevelar] = useState<MelhoriaId | null>(null);
-  const [aberta, setAberta] = useState<MelhoriaId | null>(null);
   const [tocando, setTocando] = useState(false);
   const [fala, setFala] = useState<string | null>(null);
   const controle = useRef<ControlePaulo | null>(null);
   const fila = useRef<number[]>([]);
 
   const base = useMemo(() => (dados ? baseDaConta(dados) : null), [dados]);
-  const ordem = useMemo(() => (dados ? ordemSugerida(dados) : []), [dados]);
-  const jaTem = useMemo(() => (dados ? MELHORIAS.filter((m) => situacaoDe(dados, m.id) === "tem").map((m) => m.id) : []), [dados]);
-  const conta = useMemo(() => (base ? contaDoPlano(simulando, base) : null), [simulando, base]);
-  const potencial = useMemo(() => (base ? contaDoPlano(ordem, base) : null), [ordem, base]);
-  const ativos = useMemo(() => [...jaTem, ...simulando], [jaTem, simulando]);
+  const naMaquete = useMemo(() => (manifesto ? manifesto.camadas.map((c) => c.id) : []), [manifesto]);
+  const disponiveis = useMemo(() => melhoriasDoImovel(dados, naMaquete), [dados, naMaquete]);
+  const jaTem = useMemo(() => disponiveis.filter((m) => situacaoDe(dados, m.id) === "tem").map((m) => m.id), [disponiveis, dados]);
+  const faltam = useMemo(() => disponiveis.filter((m) => situacaoDe(dados, m.id) !== "tem"), [disponiveis, dados]);
+  const sugerido = useMemo(() => (dados ? planoSugerido(dados, disponiveis) : []), [dados, disponiveis]);
+  const conta = useMemo(() => (base ? contaDoPlano(simulando, base, dados) : null), [simulando, base, dados]);
+  const potencial = useMemo(() => (base ? contaDoPlano(sugerido, base, dados) : null), [sugerido, base, dados]);
+  // na maquete: o que o imóvel tem e o que está na simulação; a lava e seca fica no lugar da máquina comum
+  const ativos = useMemo(() => {
+    const lista = [...jaTem, ...simulando];
+    return lista.includes("lava_seca") ? lista.filter((id) => id !== "lavadora") : lista;
+  }, [jaTem, simulando]);
   const meu = equipe ? "Este imóvel" : "Seu imóvel";
 
   const pararPlano = useCallback(() => {
@@ -127,8 +157,8 @@ export default function PlanoDeMelhorias({ propertyId, equipe }: Props) {
       const entra = !simulando.includes(id);
       setRevelar(id);
       setEscolhido(id);
-      setSimulando(entra ? [...simulando, id] : simulando.filter((x) => x !== id));
-      if (entra && dados) dizer(comentarioDe(id, dados), MELHORIA_POR_ID[id].ganho ? "cheer" : "point");
+      setSimulando(alternarNaSimulacao(simulando, id));
+      if (entra && dados) dizer(comentarioDe(id, dados), ganhoDe(MELHORIA_POR_ID[id], dados) ? "cheer" : "point");
       else dizer("Tirei da simulação. A conta voltou.");
     },
     [simulando, dados, pararPlano, dizer],
@@ -146,26 +176,26 @@ export default function PlanoDeMelhorias({ propertyId, equipe }: Props) {
   /** Aplica o plano sugerido uma melhoria por vez, com a câmera passando por cada cômodo. */
   const tocarPlano = useCallback(() => {
     pararPlano();
-    const faltam = ordem.filter((id) => !simulando.includes(id));
-    if (faltam.length === 0 || !base || !dados) return;
+    const fila_ = sugerido.filter((id) => !simulando.includes(id));
+    if (fila_.length === 0 || !base || !dados) return;
     setTocando(true);
     let quando = 0;
     let lista = simulando;
-    for (const id of faltam) {
+    for (const id of fila_) {
       fila.current.push(window.setTimeout(() => setEscolhido(id), quando));
       quando += reduzido ? 60 : 800;
-      const proxima = [...lista, id];
+      const proxima = alternarNaSimulacao(lista, id);
       lista = proxima;
       fila.current.push(
         window.setTimeout(() => {
           setRevelar(id);
           setSimulando(proxima);
-          dizer(comentarioDe(id, dados), MELHORIA_POR_ID[id].ganho ? "cheer" : "point");
+          dizer(comentarioDe(id, dados), "cheer");
         }, quando),
       );
       quando += reduzido ? 200 : 1700;
     }
-    const todas = contaDoPlano(lista, base);
+    const todas = contaDoPlano(lista, base, dados);
     fila.current.push(
       window.setTimeout(() => {
         setEscolhido(null);
@@ -178,40 +208,41 @@ export default function PlanoDeMelhorias({ propertyId, equipe }: Props) {
         );
       }, quando + 200),
     );
-  }, [ordem, simulando, base, dados, reduzido, equipe, pararPlano, dizer]);
+  }, [sugerido, simulando, base, dados, reduzido, equipe, pararPlano, dizer]);
 
   // primeira fala: o retrato do imóvel
   const primeira = useMemo(() => {
     if (!dados) return null;
     if (!dados.tem) return "Esta é uma maquete de exemplo. Toque numa melhoria para ver na maquete e na conta.";
-    if (ordem.length === 0) return `${meu} já tem tudo o que a gente acompanha. É o padrão dos que mais rendem.`;
-    return `${meu} já tem ${jaTem.length} das ${MELHORIAS.length} melhorias que a gente acompanha. ${ordem.length === 1 ? "Falta uma" : `Faltam ${ordem.length}`}: toque para simular.`;
-  }, [dados, ordem, jaTem, meu]);
+    if (faltam.length === 0) return `${meu} já tem tudo o que a gente acompanha. É o padrão dos que mais rendem.`;
+    return `${meu} já tem ${jaTem.length} dos ${disponiveis.length} itens que a gente acompanha. ${faltam.length === 1 ? "Falta um" : `Faltam ${faltam.length}`}: toque para simular.`;
+  }, [dados, faltam, jaTem, disponiveis, meu]);
 
-  if (isLoading) {
+  if (isLoading || carregandoMaquete) {
     return (
       <div className="grid gap-4 lg:grid-cols-12" aria-busy="true" aria-label="Carregando o plano de melhorias">
-        <Skeleton className="aspect-[3/2] w-full rounded-2xl lg:col-span-7" />
+        <Skeleton className="aspect-[4/3] w-full rounded-2xl lg:col-span-7" />
         <div className="space-y-3 lg:col-span-5">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-28 w-full rounded-xl" />
+          {[1, 2, 3, 4, 5].map((i) => (
+            <Skeleton key={i} className="h-16 w-full rounded-xl" />
           ))}
         </div>
       </div>
     );
   }
-  if (error || !dados || !base) {
+  if (error || erroMaquete || !dados || !base || !manifesto) {
     return <EmptyState ilustracao="busca" title="Não foi possível montar o plano de melhorias" description="Tente de novo em instantes." />;
   }
 
-  const pontos: PontoDaMaquete[] = MELHORIAS.map((m) => ({
+  const pontos: PontoDaMaquete[] = disponiveis.map((m) => ({
     id: m.id,
     rotulo: m.curto,
     estado: jaTem.includes(m.id) ? "tem" : simulando.includes(m.id) ? "simulando" : "falta",
   }));
-  const foco = escolhido ? MELHORIA_POR_ID[escolhido].comodo : null;
+  const camadaDe = (id: MelhoriaId) => manifesto.camadas.find((c) => c.id === id);
+  const foco = escolhido ? (camadaDe(escolhido)?.comodo ?? null) : null;
   const pedido = conta && simulando.length > 0 ? mensagemDoPedido(dados, conta) : null;
-  const completo = ordem.length > 0 && ordem.every((id) => simulando.includes(id));
+  const completo = sugerido.length > 0 && sugerido.every((id) => simulando.includes(id));
   const limpar = () => {
     pararPlano();
     setRevelar(null);
@@ -257,11 +288,11 @@ export default function PlanoDeMelhorias({ propertyId, equipe }: Props) {
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">Plano de melhorias</p>
           <h2 className="mt-1 text-xl font-semibold tracking-tight md:text-2xl">O que faria {equipe ? dados.imovel.nome : "o seu imóvel"} render mais</h2>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Cada melhoria aparece na maquete e na conta. Os valores são estimativas, feitas com os dados dos {dados.carteira.imoveis} imóveis que a RIOS
-            acompanha.
+            O que o imóvel tem e o que falta em cada cômodo, na maquete e na conta. Os valores são estimativas, feitas com os dados dos{" "}
+            {dados.carteira.imoveis} imóveis que a RIOS acompanha.
           </p>
         </div>
-        {ordem.length > 0 && (
+        {sugerido.length > 0 && (
           <Button variant={completo && !tocando ? "outline" : "default"} onClick={tocando ? pararPlano : completo ? limpar : tocarPlano}>
             {tocando || completo ? <X className="mr-1.5 h-4 w-4" aria-hidden="true" /> : <Play className="mr-1.5 h-4 w-4" aria-hidden="true" />}
             {tocando ? "Parar" : completo ? "Limpar a simulação" : "Ver o plano sugerido"}
@@ -273,6 +304,8 @@ export default function PlanoDeMelhorias({ propertyId, equipe }: Props) {
         {/* palco: fica à vista enquanto a lista rola */}
         <div className="sticky top-[98px] z-20 -mx-1 bg-background px-1 pb-2 pt-1.5 lg:col-span-7 lg:mx-0 lg:px-0 lg:pb-0 lg:pt-3">
           <Maquete
+            key={manifesto.modelo}
+            manifesto={manifesto}
             ativos={ativos}
             revelar={revelar}
             foco={foco}
@@ -284,7 +317,8 @@ export default function PlanoDeMelhorias({ propertyId, equipe }: Props) {
           >
             <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-2 p-2.5 md:p-3">
               <span className="rounded-full bg-secondary/70 px-2.5 py-1 text-[11px] font-medium text-secondary-foreground backdrop-blur">
-                Maquete de exemplo<span className="hidden sm:inline"> · arraste para girar</span>
+                Maquete de exemplo: {NOME_DO_MODELO[modelo]}
+                <span className="hidden sm:inline"> · arraste para girar</span>
               </span>
               {escolhido && (
                 <button
@@ -341,67 +375,41 @@ export default function PlanoDeMelhorias({ propertyId, equipe }: Props) {
           )}
         </div>
 
-        {/* etapas */}
+        {/* o que tem e o que falta, cômodo a cômodo */}
         <div className="min-w-0 space-y-3 lg:col-span-5">
           {!dados.tem && (
             <p className="rounded-xl border border-border/70 bg-muted/40 p-3 text-xs text-muted-foreground">
-              Não achamos a ficha deste imóvel no portal, então a maquete começa sem nenhuma melhoria marcada. Os valores e a conta são os mesmos.
+              A ficha deste imóvel ainda não foi lida, então a maquete começa sem nada marcado. Os valores e a conta são os mesmos.
             </p>
           )}
-          {ordem.length === 0 && dados.tem && (
-            <p className="rounded-xl border border-success/40 bg-success/10 p-3 text-sm">
-              {meu} já tem as {MELHORIAS.length} melhorias que a gente acompanha. Não há o que acrescentar por aqui.
-            </p>
-          )}
-          {ordem.map((id, i) => (
-            <CartaoMelhoria
-              key={id}
-              m={MELHORIA_POR_ID[id]}
-              etapa={i + 1}
-              dados={dados}
-              base={base}
-              naSimulacao={simulando.includes(id)}
-              escolhida={escolhido === id}
-              aberta={aberta === id}
-              aoAlternar={() => alternar(id)}
-              aoEscolher={() => escolher(id)}
-              aoAbrir={() => setAberta(aberta === id ? null : id)}
-            />
-          ))}
-
-          {jaTem.length > 0 && (
-            <section className="rounded-xl border border-border/70 bg-card p-4 shadow-sm">
-              <h3 className="text-sm font-semibold tracking-tight">O que {equipe ? "o imóvel" : "o seu imóvel"} já tem</h3>
-              <ul className="mt-2 space-y-1">
-                {jaTem.map((id) => {
-                  const m = MELHORIA_POR_ID[id];
-                  const Icone = ICONE[id];
-                  return (
-                    <li key={id}>
-                      <button
-                        type="button"
-                        onClick={() => escolher(id)}
-                        aria-pressed={escolhido === id}
-                        className={cn(
-                          "flex w-full items-start gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                          escolhido === id && "bg-muted/60",
-                        )}
-                      >
-                        <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-success/15 text-success">
-                          <Icone className="h-3.5 w-3.5" aria-hidden="true" />
-                        </span>
-                        <span className="min-w-0">
-                          <span className="block text-sm font-medium">{m.nome}</span>
-                          <span className="block text-xs text-muted-foreground">{m.jaTem}</span>
-                        </span>
-                        <Check className="ml-auto mt-1 h-4 w-4 shrink-0 text-success" aria-hidden="true" />
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-          )}
+          {GRUPOS.map((grupo) => {
+            const itens = disponiveis.filter((m) => m.grupo === grupo.id);
+            if (itens.length === 0) return null;
+            const tem = itens.filter((m) => jaTem.includes(m.id)).length;
+            return (
+              <section key={grupo.id} className="rounded-xl border border-border/70 bg-card shadow-sm">
+                <h3 className="flex items-baseline justify-between gap-2 px-4 pb-1 pt-3 text-sm font-semibold tracking-tight">
+                  {grupo.nome}
+                  <span className="text-xs font-normal text-muted-foreground">{dados.tem ? `tem ${tem} de ${itens.length}` : `${itens.length} ${itens.length === 1 ? "item" : "itens"}`}</span>
+                </h3>
+                <ul className="divide-y divide-border/60">
+                  {itens.map((m) => (
+                    <LinhaMelhoria
+                      key={m.id}
+                      m={m}
+                      dados={dados}
+                      base={base}
+                      tem={jaTem.includes(m.id)}
+                      naSimulacao={simulando.includes(m.id)}
+                      aberta={escolhido === m.id}
+                      aoAlternar={() => alternar(m.id)}
+                      aoEscolher={() => escolher(m.id)}
+                    />
+                  ))}
+                </ul>
+              </section>
+            );
+          })}
         </div>
       </div>
 
@@ -462,7 +470,9 @@ export default function PlanoDeMelhorias({ propertyId, equipe }: Props) {
                 </Button>
               )}
               <p className="max-w-[240px] text-xs text-muted-foreground md:text-right">
-                {equipe ? "Só o proprietário envia o pedido. Você pode copiar o plano e mandar para ele." : "O pedido abre um chamado com o plano já escrito. Você revisa antes de enviar, e nada é comprado sem o seu sim."}
+                {equipe
+                  ? "Só o proprietário envia o pedido. Você pode copiar o plano e mandar para ele."
+                  : "O pedido abre um chamado com o plano já escrito. Você revisa antes de enviar, e nada é comprado sem o seu sim."}
               </p>
             </div>
           </div>
@@ -470,19 +480,19 @@ export default function PlanoDeMelhorias({ propertyId, equipe }: Props) {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
               <h3 className="text-sm font-semibold tracking-tight md:text-[15px]">
-                {ordem.length === 0 ? "Nada a acrescentar por enquanto" : `${ordem.length === 1 ? "Uma melhoria" : `${ordem.length} melhorias`} no plano sugerido`}
+                {sugerido.length === 0 ? "Nada a sugerir por enquanto" : `${sugerido.length === 1 ? "Uma melhoria" : `${sugerido.length} melhorias`} no plano sugerido`}
               </h3>
               <p className="mt-1 text-sm text-muted-foreground">
                 {potencial?.ganhoAno
-                  ? `Com todas, a estimativa é de ${faixaEmReais(potencial.ganhoAno)} a mais por ano, para um investimento de ${faixaEmReais(potencial.investimento)}.`
-                  : ordem.length === 0
-                    ? "Quando a ficha do imóvel mudar, o plano muda junto."
+                  ? `São as que têm estimativa de receita. Com todas, a estimativa é de ${faixaEmReais(potencial.ganhoAno)} a mais por ano, para um investimento de ${faixaEmReais(potencial.investimento)}.`
+                  : sugerido.length === 0
+                    ? "O imóvel já tem tudo o que tem estimativa de receita. Os outros itens ficam na lista, pelo conforto do hóspede."
                     : !base.temHistorico
                       ? "Este imóvel ainda não tem histórico suficiente para a conta em reais: os ganhos aparecem em porcentagem."
                       : "Toque em Simular nas melhorias para montar o plano."}
               </p>
             </div>
-            {ordem.length > 0 && (
+            {sugerido.length > 0 && (
               <Button variant="outline" onClick={tocarPlano}>
                 <Play className="mr-1.5 h-4 w-4" aria-hidden="true" />
                 Ver na maquete
@@ -505,13 +515,14 @@ export default function PlanoDeMelhorias({ propertyId, equipe }: Props) {
             O ganho de cada melhoria é uma faixa conservadora: uma parte da diferença entre os imóveis da RIOS que têm o item e os que não têm, e do que um
             estudo com anúncios de praia mediu. Imóveis diferem em tamanho e localização, então a diferença inteira não é efeito do item.
           </li>
+          <li>Vários itens não têm estimativa de receita: não achamos número confiável. Eles entram no investimento, não no ganho.</li>
           <li>
             "A mais por ano" já desconta a taxa do canal de reserva{base.comComissao ? " e a comissão da RIOS" : ""}. Ganhos de várias melhorias não se somam por
             inteiro.
           </li>
           <li>O investimento é uma faixa de mercado para compra e instalação. O valor real vem no orçamento da equipe.</li>
-          <li>O que o imóvel já tem vem da ficha do imóvel. Se algo estiver desatualizado, avise a equipe.</li>
-          <li>A maquete é um apartamento de exemplo, não a planta {equipe ? "do imóvel" : "do seu imóvel"}.</li>
+          <li>O que o imóvel já tem vem da ficha do imóvel, cômodo a cômodo. Se algo estiver desatualizado, avise a equipe.</li>
+          <li>A maquete é um imóvel de exemplo do mesmo tipo, não a planta {equipe ? "do imóvel" : "do seu imóvel"}. Ela mostra até três quartos.</li>
           <li>
             Estudo citado: {ESTUDO_BANXICO.autores},{" "}
             <a href={ESTUDO_BANXICO.url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground">
@@ -525,90 +536,85 @@ export default function PlanoDeMelhorias({ propertyId, equipe }: Props) {
   );
 }
 
-interface CartaoProps {
+interface LinhaProps {
   m: Melhoria;
-  etapa: number;
   dados: MelhoriasImovel;
   base: BaseDaConta;
+  tem: boolean;
   naSimulacao: boolean;
-  escolhida: boolean;
   aberta: boolean;
   aoAlternar: () => void;
   aoEscolher: () => void;
-  aoAbrir: () => void;
 }
 
-function CartaoMelhoria({ m, etapa, dados, base, naSimulacao, escolhida, aberta, aoAlternar, aoEscolher, aoAbrir }: CartaoProps) {
-  const Icone = ICONE[m.id];
-  const ganho = ganhoDoItem(m, base);
-  const retorno = retornoDoItem(m, base);
-  const provas = aberta ? evidencias(m.id, dados) : [];
+/** Uma melhoria na lista do cômodo: o que é, se o imóvel tem, quanto custa e quanto pode render. Abre ao tocar. */
+function LinhaMelhoria({ m, dados, base, tem, naSimulacao, aberta, aoAlternar, aoEscolher }: LinhaProps) {
+  const Icone = ICONE[m.icone];
+  const g = ganhoDe(m, dados);
+  const ganho = ganhoDoItem(m, base, dados);
+  const retorno = retornoDoItem(m, base, dados);
   return (
-    <article
-      id={`melhoria-${m.id}`}
-      className={cn(
-        "scroll-mt-[460px] rounded-xl border bg-card p-4 shadow-sm transition-[border-color,box-shadow] lg:scroll-mt-32",
-        naSimulacao ? "border-primary/60 ring-1 ring-primary/30" : escolhida ? "border-foreground/30" : "border-border/70",
-      )}
-    >
-      <div className="flex items-start gap-3">
+    <li id={`melhoria-${m.id}`} className={cn("scroll-mt-[460px] px-3 py-2.5 transition-colors lg:scroll-mt-32", naSimulacao && "bg-primary/5", aberta && !naSimulacao && "bg-muted/40")}>
+      <div className="flex items-center gap-2.5">
         <button
           type="button"
           onClick={aoEscolher}
-          aria-label={`Ver ${m.nome} na maquete`}
-          className={cn(
-            "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            naSimulacao ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary hover:bg-primary/20",
-          )}
+          aria-expanded={aberta}
+          aria-label={`${m.nome}: ver na maquete e abrir os detalhes`}
+          className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <Icone className="h-5 w-5" aria-hidden="true" />
+          <span
+            className={cn(
+              "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+              tem ? "bg-success/15 text-success" : naSimulacao ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary",
+            )}
+          >
+            <Icone className="h-4 w-4" aria-hidden="true" />
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate text-[13px] font-medium leading-snug">{m.nome}</span>
+            <span className="block truncate text-xs text-muted-foreground">
+              {tem ? (
+                "Já tem"
+              ) : (
+                <>
+                  {g && (
+                    <span className="font-medium text-success">
+                      {ganho ? `+${faixaEmReais(ganho)}/ano` : `+${faixaEmPct(g)} nas diárias`}
+                      {" · "}
+                    </span>
+                  )}
+                  {faixaDeCusto(m)}
+                </>
+              )}
+            </span>
+          </span>
         </button>
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Etapa {etapa}</p>
-          <h3 className="text-sm font-semibold leading-snug tracking-tight md:text-[15px]">{m.nome}</h3>
-        </div>
-        <Button size="sm" variant={naSimulacao ? "default" : "outline"} onClick={aoAlternar} aria-pressed={naSimulacao} className="shrink-0">
-          {naSimulacao ? <Check className="mr-1 h-3.5 w-3.5" aria-hidden="true" /> : <Plus className="mr-1 h-3.5 w-3.5" aria-hidden="true" />}
-          {naSimulacao ? "Na simulação" : "Simular"}
-        </Button>
-      </div>
-      <p className="mt-2 text-xs leading-relaxed text-muted-foreground md:text-[13px]">{m.oQueE}</p>
-      <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-        <div>
-          <dt className="text-muted-foreground">Investimento</dt>
-          <dd className="mt-0.5 text-[13px] font-semibold tabular-nums">{faixaDeCusto(m)}</dd>
-        </div>
-        <div>
-          <dt className="text-muted-foreground">A mais por ano</dt>
-          <dd className={cn("mt-0.5 text-[13px] font-semibold tabular-nums", m.ganho ? "text-success" : "text-muted-foreground")}>
-            {ganho ? faixaEmReais(ganho) : m.ganho ? `+${faixaEmPct(m.ganho)} nas diárias` : "sem estimativa de receita"}
-          </dd>
-        </div>
-        {retorno && (
-          <div className="col-span-2">
-            <dt className="sr-only">Retorno</dt>
-            <dd className="text-muted-foreground">Se paga {faixaDeRetorno(retorno)}.</dd>
-          </div>
+        {tem ? (
+          <Check className="mr-1 h-4 w-4 shrink-0 text-success" aria-hidden="true" />
+        ) : (
+          <Button size="sm" variant={naSimulacao ? "default" : "outline"} onClick={aoAlternar} aria-pressed={naSimulacao} className="h-8 shrink-0 px-2.5 text-xs">
+            {naSimulacao ? <Check className="mr-1 h-3.5 w-3.5" aria-hidden="true" /> : <Plus className="mr-1 h-3.5 w-3.5" aria-hidden="true" />}
+            {naSimulacao ? "Simulando" : "Simular"}
+          </Button>
         )}
-      </dl>
-      <button
-        type="button"
-        onClick={aoAbrir}
-        aria-expanded={aberta}
-        className="mt-2.5 inline-flex items-center gap-1 rounded text-xs font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        De onde vem este número
-        <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", aberta && "rotate-180")} aria-hidden="true" />
-      </button>
+      </div>
       {aberta && (
-        <ul className="mt-2 space-y-1.5 border-l-2 border-primary/30 pl-3 text-xs leading-relaxed text-muted-foreground">
-          {provas.map((p, i) => (
-            <li key={i}>{p.texto}</li>
-          ))}
-          <li>Custo: {m.custoNota}.</li>
-          {dados.tem && <li>Está no plano porque não consta na ficha do imóvel. Se o imóvel já tiver, avise a equipe.</li>}
-        </ul>
+        <div className="ml-[42px] mt-2 space-y-1.5 text-xs leading-relaxed text-muted-foreground">
+          <p>{m.oQueE}</p>
+          {!tem && (
+            <p>
+              Investimento: {faixaDeCusto(m)} ({m.custoNota}).{retorno ? ` Se paga ${faixaDeRetorno(retorno)}.` : ""}
+            </p>
+          )}
+          <ul className="space-y-1 border-l-2 border-primary/30 pl-2.5">
+            {evidencias(m.id, dados).map((p, i) => (
+              <li key={i}>{p.texto}</li>
+            ))}
+            {!tem && dados.tem && <li>Está na lista porque não consta na ficha do imóvel. Se o imóvel já tiver, avise a equipe.</li>}
+          </ul>
+        </div>
       )}
-    </article>
+    </li>
   );
 }
